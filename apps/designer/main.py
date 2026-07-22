@@ -2,21 +2,27 @@ import hashlib
 import hmac
 import os
 import time
-from typing import Any, Awaitable, Callable, Dict, List, Optional
+from typing import Any, Awaitable, Callable, Dict, List
 
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
-from neo4j import AsyncGraphDatabase
 from pydantic import BaseModel
 
 from apps.designer.db import get_study_projection, terminology_cache
-from apps.designer.delta import get_study_differences
 from apps.designer.mapper import map_study_to_usdm
 from apps.designer.validator import StudyAlignmentReport, generate_alignment_report
-from packages.core_models.usdm import StudyDefinition
 
 
 class DifferenceResult(BaseModel):
+    """
+    Represents a field-level difference between two versions.
+
+    Attributes:
+        field: The name of the field that changed.
+        old_value: The previous value of the field.
+        new_value: The updated value of the field.
+    """
+
     field: str
     old_value: Any
     new_value: Any
@@ -87,36 +93,16 @@ async def gateway_auth_middleware(
     return await call_next(request)
 
 
-driver: Optional[AsyncGraphDatabase] = None
-
-
 @app.on_event("startup")
 async def startup() -> None:
-    """
-    Initialize resources on designer startup.
-
-    Establishes an asynchronous connection pool to the Neo4j graph database.
-    """
-    global driver
-    uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
-    user = os.getenv("NEO4J_USER", "neo4j")
-    password = os.getenv("NEO4J_PASSWORD", "cadence_password")
-    try:
-        driver = AsyncGraphDatabase.driver(uri, auth=(user, password))
-    except Exception as e:
-        print(f"Failed to connect to Neo4j: {e}")
+    """Initialize resources on designer startup."""
+    pass
 
 
 @app.on_event("shutdown")
 async def shutdown() -> None:
-    """
-    Clean up resources on designer shutdown.
-
-    Closes the connection pool to the Neo4j graph database.
-    """
-    global driver
-    if driver:
-        await driver.close()
+    """Clean up resources on designer shutdown."""
+    pass
 
 
 @app.get("/health")
@@ -152,14 +138,14 @@ async def get_legacy_study(study_id: str) -> Dict[str, Any]:
 
 
 @app.get("/api/v2/studies/{study_id}/usdm")
-async def get_usdm_study(study_id: str) -> StudyDefinition:
+async def get_usdm_study(study_id: str) -> Dict[str, Any]:
     """Dynamically processes the internal projection and returns a compliant USDM structure.
 
     Args:
         study_id (str): The unique identifier of the study.
 
     Returns:
-        StudyDefinition: The dynamically mapped USDM study data.
+        Dict[str, Any]: The dynamically mapped USDM study data.
 
     Raises:
         HTTPException: If the study is not found or validation fails.
@@ -213,7 +199,7 @@ async def validate_study_alignment(study_id: str) -> StudyAlignmentReport:
     """
     Generate an alignment validation report for a specific clinical study.
 
-    Analyzes trace links within the graph database to ensure the
+    Analyzes trace links dynamically to ensure the
     Study Data Requirements (SDR) align with Metadata Requirements (MDR).
 
     Args:
@@ -221,25 +207,28 @@ async def validate_study_alignment(study_id: str) -> StudyAlignmentReport:
 
     Returns:
         StudyAlignmentReport: The structured validation report.
-
-    Raises:
-        HTTPException: If the database is unreachable.
     """
-    if not driver:
-        raise HTTPException(
-            status_code=503, detail="Database connection not initialized"
-        )
-    return await generate_alignment_report(driver, study_id)
+    return await generate_alignment_report(study_id)
 
 
 @app.get(
     "/api/v1/studies/{study_id}/differences", response_model=List[DifferenceResult]
 )
-async def study_differences(study_id: str, action_id1: str, action_id2: str):
-    if not driver:
-        raise HTTPException(
-            status_code=503, detail="Database connection not initialized"
-        )
+async def study_differences(
+    study_id: str, action_id1: str, action_id2: str
+) -> List[DifferenceResult]:
+    """
+    Get human-readable field-level differences between two version actions of a study.
 
-    diffs = await get_study_differences(driver, study_id, action_id1, action_id2)
-    return diffs
+    Args:
+        study_id (str): The unique identifier of the study.
+        action_id1 (str): The ID of the first action version.
+        action_id2 (str): The ID of the second action version.
+
+    Returns:
+        List[DifferenceResult]: A list of field-level differences.
+
+    Raises:
+        HTTPException: Raises 503 as the direct database connection is disabled in the API-first design.
+    """
+    raise HTTPException(status_code=503, detail="Database connection not initialized")
