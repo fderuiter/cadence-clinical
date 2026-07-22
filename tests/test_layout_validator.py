@@ -1,16 +1,16 @@
 import os
 import tempfile
+
+import httpx
 import pytest
 import pytest_asyncio
-import xml.etree.ElementTree as ET
-import httpx
-
 from playwright.async_api import async_playwright
 
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import Base, TranslationJob
 from apps.execution.main import app
 from tests.test_translator import get_auth_headers
+
 
 def check_overlap(box1, box2):
     return not (
@@ -124,7 +124,7 @@ async def test_layout_validation_valid():
       </body>
     </html>
     """
-    assert await validate_layout_html(html) == True
+    assert await validate_layout_html(html)
 
 @pytest.mark.asyncio
 async def test_layout_validation_overlap():
@@ -243,4 +243,4 @@ async def test_layout_validation_integration():
         
         openrosa_xml = job["openrosa_payload"]
         
-    assert await validate_layout_html(openrosa_xml) == True
+    assert await validate_layout_html(openrosa_xml)
