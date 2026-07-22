@@ -28,13 +28,25 @@ Traditional clinical trial builds require manual, error-prone translation of pro
   * Real-time edit-check evaluation during site data entry.
   * Discrepancy (query) workflow management.
 
-### C. Shared Core Models (`packages/core-models`)
+### C. Web Client (`apps/web`)
+* **Role:** Primary User Interface.
+* **Core Responsibilities:**
+  * Renders standard clinical forms directly from XML payloads compiled by the backend translation engine.
+  * Provides site investigators and data managers a unified interface for data entry and clinical study management.
+
+### D. Shared UI Components (`packages/ui`)
+* **Role:** Design System Library.
+* **Core Responsibilities:**
+  * Provides reusable, standardized UI components (e.g., inputs, layouts) ensuring design consistency.
+  * Shared seamlessly across frontend packages using the pnpm workspace protocol.
+
+### E. Shared Core Models (`packages/core-models`)
 * **Role:** Unified Type System.
 * **Core Responsibilities:**
   * Pydantic v2 representations of CDISC USDM objects.
   * In-memory bidirectional transformation adapters (USDM JSON ↔ OpenRosa / CDISC ODM).
 
-### D. Gateway & Identity (`apps/gateway`)
+### F. Gateway & Identity (`apps/gateway`)
 * **Role:** Reverse Proxy & Access Control.
 * **Core Responsibilities:**
   * Keycloak OIDC JWT validation.
