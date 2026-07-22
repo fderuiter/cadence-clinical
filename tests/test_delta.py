@@ -1,11 +1,14 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
 from apps.designer.delta import (
-    create_study_root,
     create_library_object_version,
+    create_study_root,
+    get_study_differences,
     update_study_properties,
-    get_study_differences
 )
+
 
 @pytest.mark.asyncio
 async def test_create_study_root():
@@ -24,6 +27,7 @@ async def test_create_study_root():
     session_mock.run.assert_called_once()
     assert "MERGE (s:Study {id: $study_id})" in session_mock.run.call_args[0][0]
 
+
 @pytest.mark.asyncio
 async def test_create_library_object_version_existing():
     driver_mock = MagicMock()
@@ -41,10 +45,13 @@ async def test_create_library_object_version_existing():
     # Setting side effect to return check_res_mock first, then result_mock
     session_mock.run.side_effect = [check_res_mock, result_mock]
 
-    res = await create_library_object_version(driver_mock, "lib_1", {"name": "Test Lib V2"})
+    res = await create_library_object_version(
+        driver_mock, "lib_1", {"name": "Test Lib V2"}
+    )
     assert res == {"name": "Test Lib V2"}
     assert session_mock.run.call_count == 2
     assert "MATCH (old:LibraryObject" in session_mock.run.call_args_list[1][0][0]
+
 
 @pytest.mark.asyncio
 async def test_create_library_object_version_new():
@@ -58,14 +65,19 @@ async def test_create_library_object_version_new():
     check_res_mock.single.return_value = False
 
     result_mock = AsyncMock()
-    result_mock.single.return_value = {"new_props": {"name": "Test Lib V1", "version": 1}}
+    result_mock.single.return_value = {
+        "new_props": {"name": "Test Lib V1", "version": 1}
+    }
 
     session_mock.run.side_effect = [check_res_mock, result_mock]
 
-    res = await create_library_object_version(driver_mock, "lib_2", {"name": "Test Lib V1"})
+    res = await create_library_object_version(
+        driver_mock, "lib_2", {"name": "Test Lib V1"}
+    )
     assert res == {"name": "Test Lib V1", "version": 1}
     assert session_mock.run.call_count == 2
     assert "MERGE (new:LibraryObject" in session_mock.run.call_args_list[1][0][0]
+
 
 @pytest.mark.asyncio
 async def test_update_study_properties():
@@ -80,16 +92,13 @@ async def test_update_study_properties():
     session_mock.run.return_value = result_mock
 
     res = await update_study_properties(
-        driver_mock, 
-        "study_1", 
-        "user_1", 
-        "change reason", 
-        {"title": "New Title"}
+        driver_mock, "study_1", "user_1", "change reason", {"title": "New Title"}
     )
-    
+
     assert res == "action_uuid"
     session_mock.run.assert_called_once()
     assert "CREATE (a:Action" in session_mock.run.call_args[0][0]
+
 
 @pytest.mark.asyncio
 async def test_get_study_differences():
@@ -102,17 +111,22 @@ async def test_get_study_differences():
     result_mock = AsyncMock()
     result_mock.single.return_value = {
         "p1": {"title": "Old Title", "phase": "I", "unchanged": "value"},
-        "p2": {"title": "New Title", "phase": "II", "unchanged": "value", "new_field": "val"},
+        "p2": {
+            "title": "New Title",
+            "phase": "II",
+            "unchanged": "value",
+            "new_field": "val",
+        },
         "t1": 1,
-        "t2": 2
+        "t2": 2,
     }
     session_mock.run.return_value = result_mock
 
     diffs = await get_study_differences(driver_mock, "study_1", "action_1", "action_2")
-    
+
     # We expect 'title', 'phase', and 'new_field' to be in differences
     assert len(diffs) == 3
-    
+
     fields = [d["field"] for d in diffs]
     assert "title" in fields
     assert "phase" in fields

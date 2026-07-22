@@ -1,15 +1,17 @@
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from typing import Any, Optional
+
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
 
 class DatabaseSessionManager:
     """
     Manages the lifecycle of database connections and sessions.
-    
-    This unified manager simplifies initialization and teardown of the 
-    asynchronous SQLAlchemy engine and session makers, facilitating 
+
+    This unified manager simplifies initialization and teardown of the
+    asynchronous SQLAlchemy engine and session makers, facilitating
     both application runtime execution and test configurations.
     """
-    
+
     def __init__(self) -> None:
         """Initialize the DatabaseSessionManager with empty state."""
         self.engine: Any = None
@@ -25,9 +27,7 @@ class DatabaseSessionManager:
         """
         self.engine = create_async_engine(database_url, **kwargs)
         self.session_maker = async_sessionmaker(
-            bind=self.engine,
-            class_=AsyncSession,
-            expire_on_commit=False
+            bind=self.engine, class_=AsyncSession, expire_on_commit=False
         )
 
     async def close(self) -> None:
@@ -50,5 +50,6 @@ class DatabaseSessionManager:
         if not self.session_maker:
             raise Exception("Database session manager is not initialized.")
         return self.session_maker
+
 
 db_manager: DatabaseSessionManager = DatabaseSessionManager()

@@ -1,10 +1,12 @@
+import argparse
 import asyncio
 import os
-import argparse
 import sys
 
 from sqlalchemy.ext.asyncio import create_async_engine
+
 from apps.execution.database.models import Base
+
 
 async def run_migrations(database_url: str) -> None:
     """
@@ -29,22 +31,26 @@ async def run_migrations(database_url: str) -> None:
     finally:
         await engine.dispose()
 
+
 def main() -> None:
     """
     Entry point for the pre-boot migration runner script.
 
     Parses CLI arguments for the database URL and executes the migration routine.
     """
-    parser = argparse.ArgumentParser(description="Pre-boot Database Schema Migration Runner")
+    parser = argparse.ArgumentParser(
+        description="Pre-boot Database Schema Migration Runner"
+    )
     parser.add_argument(
         "--db-url",
         type=str,
         default=os.getenv("DATABASE_URL", "sqlite+aiosqlite:///:memory:"),
-        help="Database URL for migration"
+        help="Database URL for migration",
     )
     args = parser.parse_args()
 
     asyncio.run(run_migrations(args.db_url))
+
 
 if __name__ == "__main__":
     main()

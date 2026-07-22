@@ -1,7 +1,14 @@
-from starlette.middleware.base import BaseHTTPMiddleware
+from typing import Awaitable, Callable
+
 from fastapi import Request, Response
-from typing import Callable, Awaitable
-from apps.execution.database.context import current_user_id, current_change_reason, current_session
+from starlette.middleware.base import BaseHTTPMiddleware
+
+from apps.execution.database.context import (
+    current_change_reason,
+    current_session,
+    current_user_id,
+)
+
 
 class ContextResetMiddleware(BaseHTTPMiddleware):
     """
@@ -26,7 +33,7 @@ class ContextResetMiddleware(BaseHTTPMiddleware):
         """
         user_id = request.headers.get("x-user-id", "system")
         change_reason = request.headers.get("x-change-reason", "system_operation")
-        
+
         user_token = current_user_id.set(user_id)
         reason_token = current_change_reason.set(change_reason)
         # We also want to make sure the session is cleared in case it was accidentally left over,

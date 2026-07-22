@@ -1,7 +1,7 @@
+from . import audit  # ensure audit listener is registered
+from .context import current_change_reason, current_session, current_user_id
 from .core import db_manager
-from .context import current_session, current_user_id, current_change_reason
 from .decorators import transactional
-from . import audit # ensure audit listener is registered
 
 __all__ = [
     "db_manager",
