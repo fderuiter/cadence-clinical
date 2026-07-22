@@ -12,14 +12,19 @@ from apps.execution.trial_lock import TrialLockManager
 import time
 from unittest.mock import patch
 
+
 class LockClinicalRecord(AuditedModel):
     __tablename__ = "lock_clinical_records"
     data_value: Mapped[str] = mapped_column(String(255), nullable=True)
 
+
 @pytest_asyncio.fixture(autouse=True)
 async def setup_db():
     import os
-    db_manager.init_db(os.getenv("TEST_DATABASE_URL", "sqlite+aiosqlite:///:memory:"), echo=False)
+
+    db_manager.init_db(
+        os.getenv("TEST_DATABASE_URL", "sqlite+aiosqlite:///:memory:"), echo=False
+    )
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
@@ -28,10 +33,11 @@ async def setup_db():
         await conn.run_sync(Base.metadata.drop_all)
     await db_manager.close()
 
+
 @pytest.mark.asyncio
-@patch('apps.execution.trial_lock.NotificationRouter.send_email')
-@patch('apps.execution.trial_lock.NotificationRouter.send_sms')
-@patch('apps.execution.trial_lock.NotificationRouter.send_webhook')
+@patch("apps.execution.trial_lock.NotificationRouter.send_email")
+@patch("apps.execution.trial_lock.NotificationRouter.send_sms")
+@patch("apps.execution.trial_lock.NotificationRouter.send_webhook")
 async def test_trial_lock_freeze(mock_webhook, mock_sms, mock_email):
     @transactional(lambda: db_manager.get_session_maker()())
     async def create_record():
@@ -62,7 +68,9 @@ async def test_trial_lock_freeze(mock_webhook, mock_sms, mock_email):
         session.add(record)
         await session.flush()
 
-    with pytest.raises(PermissionError, match="Trial is currently locked in a read-only state"):
+    with pytest.raises(
+        PermissionError, match="Trial is currently locked in a read-only state"
+    ):
         await write_while_locked()
 
     # Read operations should still work
@@ -77,4 +85,3 @@ async def test_trial_lock_freeze(mock_webhook, mock_sms, mock_email):
 
     val = await read_while_locked()
     assert val == "patient_1"
-

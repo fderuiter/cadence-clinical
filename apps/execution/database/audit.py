@@ -21,8 +21,12 @@ def receive_before_flush(session: Session, flush_context, instances):
         return
 
     # Check for read-only freeze
-    if TrialLockManager.is_locked() and (session.new or session.dirty or session.deleted):
-        raise PermissionError("Trial is currently locked in a read-only state due to a security violation.")
+    if TrialLockManager.is_locked() and (
+        session.new or session.dirty or session.deleted
+    ):
+        raise PermissionError(
+            "Trial is currently locked in a read-only state due to a security violation."
+        )
 
     audit_logs = []
     user_id = current_user_id.get()
