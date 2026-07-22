@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import hmac
 import os
@@ -6,10 +7,17 @@ from typing import Any, Dict, Optional
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import JSONResponse
 from jose import JWTError, jwt
 
-app = FastAPI(title="Cadence Clinical - API Gateway", version="0.1.0")
+app = FastAPI(
+    title="Cadence Clinical - API Gateway",
+    version="0.1.0",
+    openapi_url=None,
+    docs_url=None,
+    redoc_url=None,
+)
 
 JWKS_URL = os.getenv(
     "JWKS_URL", "http://keycloak:8080/realms/cadence/protocol/openid-connect/certs"
@@ -146,6 +154,130 @@ def generate_signature(user_id: str, roles: str, timestamp: str) -> str:
     ).hexdigest()
 
 
+@app.get("/openapi.json", include_in_schema=False)
+async def get_openapi_json() -> Response:
+    """
+    Dynamically aggregate OpenAPI schemas from downstream services.
+
+    Fetches the `/openapi.json` endpoints from the designer and execution
+    services concurrently. Rewrites component references to prevent
+    collisions and aggregates them into a single unified OpenAPI schema.
+
+    Returns:
+        Response: A JSONResponse containing the merged OpenAPI 3.1.0 schema.
+    """
+
+    async def fetch_service_openapi(service_url: str) -> Optional[Dict[str, Any]]:
+        """
+        Fetch the OpenAPI schema from a downstream service.
+
+        Args:
+            service_url (str): The base URL of the downstream service.
+
+        Returns:
+            Optional[Dict[str, Any]]: The parsed OpenAPI schema, or None if the fetch fails.
+        """
+        timestamp = str(time.time())
+        user_id = "system_docs_aggregator"
+        roles = "admin,system"
+        signature = generate_signature(user_id, roles, timestamp)
+        headers = {
+            "X-User-Id": user_id,
+            "X-User-Roles": roles,
+            "X-Gateway-Timestamp": timestamp,
+            "X-Gateway-Signature": signature,
+        }
+        try:
+            if http_client:
+                resp = await http_client.get(
+                    f"{service_url}/openapi.json", headers=headers, timeout=5.0
+                )
+                if resp.status_code == 200:
+                    return resp.json()
+        except Exception:
+            pass
+        return None
+
+    def rewrite_references(data: Any, prefix: str) -> Any:
+        """
+        Recursively rewrite component references in an OpenAPI schema payload.
+
+        Appends the given prefix to all `$ref` pointer targets to avoid naming collisions
+        between different service schemas.
+
+        Args:
+            data (Any): A segment of the OpenAPI schema data structure.
+            prefix (str): The string prefix to append to component references.
+
+        Returns:
+            Any: The transformed data structure with rewritten references.
+        """
+        if isinstance(data, dict):
+            new_data = {}
+            for k, v in data.items():
+                if (
+                    k == "$ref"
+                    and isinstance(v, str)
+                    and v.startswith("#/components/schemas/")
+                ):
+                    ref_name = v[len("#/components/schemas/") :]
+                    new_data[k] = f"#/components/schemas/{prefix}{ref_name}"
+                else:
+                    new_data[k] = rewrite_references(v, prefix)
+            return new_data
+        elif isinstance(data, list):
+            return [rewrite_references(item, prefix) for item in data]
+        return data
+
+    merged = {
+        "openapi": "3.1.0",
+        "info": {"title": "Cadence Clinical - Unified API", "version": "0.1.0"},
+        "paths": {},
+        "components": {"schemas": {}},
+    }
+
+    designer_spec, execution_spec = await asyncio.gather(
+        fetch_service_openapi(SERVICES["designer"]),
+        fetch_service_openapi(SERVICES["execution"]),
+    )
+
+    if designer_spec:
+        designer_spec = rewrite_references(designer_spec, "Designer_")
+        for path_str, path_item in designer_spec.get("paths", {}).items():
+            merged["paths"][f"/designer{path_str}"] = path_item
+        for schema_name, schema_val in (
+            designer_spec.get("components", {}).get("schemas", {}).items()
+        ):
+            merged["components"]["schemas"][f"Designer_{schema_name}"] = schema_val
+
+    if execution_spec:
+        execution_spec = rewrite_references(execution_spec, "Execution_")
+        for path_str, path_item in execution_spec.get("paths", {}).items():
+            merged["paths"][f"/execution{path_str}"] = path_item
+        for schema_name, schema_val in (
+            execution_spec.get("components", {}).get("schemas", {}).items()
+        ):
+            merged["components"]["schemas"][f"Execution_{schema_name}"] = schema_val
+
+    return JSONResponse(merged)
+
+
+@app.get("/docs", include_in_schema=False)
+async def get_swagger_ui() -> Response:
+    """
+    Serve the Swagger UI documentation portal.
+
+    Uses FastAPI's built-in Swagger UI HTML generation to render
+    the dynamically aggregated OpenAPI schema.
+
+    Returns:
+        Response: An HTMLResponse containing the Swagger UI.
+    """
+    return get_swagger_ui_html(
+        openapi_url="/openapi.json", title="Cadence Clinical - Unified API Docs"
+    )
+
+
 @app.api_route(
     "/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"]
 )
@@ -194,9 +326,13 @@ async def proxy_requests(request: Request, path: str) -> Response:
             ",".join(roles_list) if isinstance(roles_list, list) else str(roles_list)
         )
 
-    if path.startswith("api/v1/studies") or path.startswith("designer"):
+    if path.startswith("designer/"):
+        target_url = f"{SERVICES['designer']}/{path[len('designer/') :]}"
+    elif path.startswith("execution/"):
+        target_url = f"{SERVICES['execution']}/{path[len('execution/') :]}"
+    elif path.startswith("api/v1/studies"):
         target_url = f"{SERVICES['designer']}/{path}"
-    elif path.startswith("execution") or path.startswith("api/v1/execution"):
+    elif path.startswith("api/v1/execution"):
         target_url = f"{SERVICES['execution']}/{path}"
     else:
         target_url = f"{SERVICES['designer']}/{path}"

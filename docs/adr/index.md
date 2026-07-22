@@ -17,4 +17,5 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-22: Unified Database Management and Pre-Boot Migrations](2026-07-22-unified-database-management-and-pre-boot-migrations.md)
 - [2026-07-22: Centralized API Gateway Authentication and Header Propagation](2026-07-22-gateway-authentication-propagation.md)
 - [2026-07-22: API-First Validation and USDM Integration](2026-07-22-api-first-validation-and-usdm-integration.md)
+- [2026-07-22: Dynamic OpenAPI Schema Aggregation at the Gateway](2026-07-22-gateway-openapi-aggregation.md)
 - [2026-07-22: Metadata-Driven Grid Layouts via Jinja2 Templating](2026-07-22-metadata-driven-grid-layouts.md)
