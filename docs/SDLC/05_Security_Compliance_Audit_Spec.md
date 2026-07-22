@@ -673,9 +673,21 @@ This scenario verifies the cryptographic sealer detection capabilities.
 
 ---
 
-## 8. Document Approval & Lifecycle Governance
+## 8. Architectural Traceability Matrix
 
-### 8.1 Document Reviewers & Signatures
+This section establishes bidirectional traceability between this Security & Compliance Specification and the core architectural decisions (ADRs) that structurally satisfy the GxP requirements.
+
+| **ADR Reference** | **Compliance Control** | **Description** |
+| :--- | :--- | :--- |
+| `[2026-07-22-merkle-root-sealing.md](../adr/2026-07-22-merkle-root-sealing.md)` | Immutable Audit Ledger | Formalizes the decision to use Merkle tree sealing for database logs (Section 7.3). |
+| `[2026-07-22-database-shadow-triggers.md](../adr/2026-07-22-database-shadow-triggers.md)` | Data Mutation Tracking | Formalizes the decision to use Postgres shadow triggers for audit logging (Section 7.1). |
+| `[2026-07-22-signature-re-authentication.md](../adr/2026-07-22-signature-re-authentication.md)` | Non-Repudiation Gates | Formalizes the double-keying re-authentication gate strategy for § 11.50 signatures (Section 7.2). |
+
+---
+
+## 9. Document Approval & Lifecycle Governance
+
+### 9.1 Document Reviewers & Signatures
 This specification has been thoroughly reviewed and authorized by the following GxP Validation team representatives:
 
 - **Authorized System Security Officer:**
@@ -691,5 +703,5 @@ This specification has been thoroughly reviewed and authorized by the following 
   - *Date:* July 24, 2026
   - *Reason:* Confirmed standard alignment with ISO/IEC 27001:2022.
 
-### 8.2 Document Maintenance and Review Cycle
+### 9.2 Document Maintenance and Review Cycle
 This technical specification is a living document maintained within the GxP Validation Repository of the Cadence Clinical monorepo. It undergoes a mandatory annual review to ensure continuous alignment with emerging regulatory updates (such as ICH E6(R3) drafts) and newly integrated platform capabilities. Any updates to this specification must follow the standard change-control branching protocol, require architectural review (ADR generation if infrastructure changes), and receive signature approval from the Security Officer and QA VP.

@@ -685,6 +685,87 @@ Quasi-identifiers are variables that do not directly identify a person but can b
 
 ---
 
+## 5. USDM Graph to Relational System Interoperability
+
+### 5.1 Static Mapping Tables for USDM Clinical Entities
+
+The Cadence Clinical platform synchronizes clinical study design data from the upstream Neo4j graph database to the downstream PostgreSQL relational database. The following mapping tables define the parity between USDM entities in the graph (Nodes and Properties) and the relational schemas (Tables and Columns).
+
+#### 5.1.1 Study Definitions
+
+| Graph Node (USDM) | Graph Property | Relational Table (PostgreSQL) | Relational Column | Data Type / Rules |
+| :--- | :--- | :--- | :--- | :--- |
+| `Study` | `uid` | `clinical_study` | `study_uid` | UUID (Primary Key) |
+| `Study` | `studyTitle` | `clinical_study` | `title` | VARCHAR(255) |
+| `Study` | `studyType` | `clinical_study` | `type` | VARCHAR(50) |
+| `Study` | `studyPhase` | `clinical_study` | `phase` | VARCHAR(50) |
+| `Study` | `status` | `clinical_study` | `status` | VARCHAR(50) |
+
+#### 5.1.2 Study Objectives and Endpoints
+
+| Graph Node (USDM) | Graph Property | Relational Table (PostgreSQL) | Relational Column | Data Type / Rules |
+| :--- | :--- | :--- | :--- | :--- |
+| `Objective` | `uid` | `study_objective` | `objective_uid` | UUID (Primary Key) |
+| `Objective` | `description` | `study_objective` | `description` | TEXT |
+| `Objective` | `level` | `study_objective` | `level` | VARCHAR(50) |
+| `Endpoint` | `uid` | `study_endpoint` | `endpoint_uid` | UUID (Primary Key) |
+| `Endpoint` | `description` | `study_endpoint` | `description` | TEXT |
+| `Endpoint` | `purpose` | `study_endpoint` | `purpose` | VARCHAR(50) |
+
+#### 5.1.3 Study Activities and Assessments
+
+| Graph Node (USDM) | Graph Property | Relational Table (PostgreSQL) | Relational Column | Data Type / Rules |
+| :--- | :--- | :--- | :--- | :--- |
+| `Activity` | `uid` | `study_activity` | `activity_uid` | UUID (Primary Key) |
+| `Activity` | `name` | `study_activity` | `name` | VARCHAR(255) |
+| `Assessment` | `uid` | `study_assessment` | `assessment_uid` | UUID (Primary Key) |
+| `Assessment` | `type` | `study_assessment` | `type` | VARCHAR(100) |
+
+### 5.2 Dynamic Background Translation States
+
+The transformation of clinical study design from the graph database into relational tables relies on an asynchronous background job pipeline. This pipeline translates the clinical study payload in dynamic lifecycle states.
+
+#### 5.2.1 Workflow Diagram: USDM Payload Translation Lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> Draft : Authoring in Designer (Neo4j)
+    Draft --> In_Review : Submit for Approval
+    In_Review --> Approved : QA Sign-off
+    Approved --> Sync_Pending : Trigger Translation Job
+    Sync_Pending --> Translating : Background Job Processing USDM Payload
+    Translating --> Translation_Failed : Schema / Validation Error
+    Translation_Failed --> Sync_Pending : Retry Job
+    Translating --> Sync_Complete : Relational DB Inserted (PostgreSQL)
+    Sync_Complete --> Active : Study Deployed to EDC
+    Active --> [*]
+```
+
+#### 5.2.2 State Definitions
+
+1. **Draft:** Study metadata is actively being created and modified in the Neo4j graph database. Changes are instantaneous in the graph but isolated from downstream execution.
+2. **In_Review:** The design is locked for GxP QA review.
+3. **Approved:** The study design graph is finalized and versioned.
+4. **Sync_Pending:** The translation background job has been enqueued to extract the USDM payload from Neo4j.
+5. **Translating:** The job is actively translating node-edge-node properties into relational database DML statements, executing unit conversions, and mapping constraints.
+6. **Translation_Failed:** An anomaly occurred (e.g., missing property, constraint violation). Alerts are sent to system administrators, and the job queues for a retry.
+7. **Sync_Complete:** Data parity achieved. All graph definitions are successfully persisted in PostgreSQL.
+8. **Active:** The study is released to sites for electronic data capture (EDC).
+
+### 5.3 Manual Verification Protocol for Data Parity
+
+To ensure GxP compliance, engineers must be able to verify data parity between the upstream graph database (Neo4j) and downstream relational database (PostgreSQL) manually. The following protocol provides standard Cypher and SQL query templates that must return exactly matching results when executed on active database configurations.
+
+#### 5.3.1 Verification Queries
+
+| Verification Step | Neo4j Cypher Query | PostgreSQL SQL Query | Expected Result / Pass Criteria |
+| :--- | :--- | :--- | :--- |
+| **Verify Study Definitions** | `MATCH (s:Study {uid: 'STU-SYNC-2026'}) RETURN s.studyTitle AS title, s.studyPhase AS phase, s.status AS status;` | `SELECT title, phase, status FROM clinical_study WHERE study_uid = 'STU-SYNC-2026';` | Both queries must return an identical single row containing the study title, phase, and status. |
+| **Verify Study Objectives Count** | `MATCH (s:Study {uid: 'STU-SYNC-2026'})-[:HAS_OBJECTIVE]->(o:Objective) RETURN count(o) AS obj_count;` | `SELECT count(*) AS obj_count FROM study_objective WHERE study_uid = 'STU-SYNC-2026';` | Both queries must return the exact same integer count. |
+| **Verify Audit Trail Ledger** | `MATCH (s:Study {uid: 'STU-SYNC-2026'})-[a:AUDITED_BY]->(log:AuditLog) RETURN log.action AS action, log.timestamp AS updated_at;` | `SELECT action, updated_at FROM clinical_audit_log WHERE record_id = 'STU-SYNC-2026';` | The audit actions and timestamps (ignoring minor timezone formatting differences) must perfectly align. |
+
+---
+
 ## Document Approval & Verification Sign-Off
 
 The signatures below verify that this Data Standards & Interoperability Blueprint has been reviewed, approved, and established as the GxP-compliant baseline for the Cadence Clinical platform data flows.
