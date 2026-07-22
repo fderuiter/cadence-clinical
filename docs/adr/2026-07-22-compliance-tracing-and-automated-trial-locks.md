@@ -1,13 +1,14 @@
-# ADR-014: Compliance Tracing and Automated Trial Locks
+# ADR-014: 2026-07-22 Compliance Tracing and Automated Trial Locks
 
-* **Status:** Accepted
+## Status
+Accepted
 * **Date:** 2026-07-22
 * **Authors:** @google-labs-jules
 * **Deciders:** @fderuiter
 
 ---
 
-## 1. Context & Problem Statement
+## Context
 To bring the platform into complete alignment with global clinical regulations (21 CFR Part 11 and EU Annex 11), we need to establish database-level audit protections, multi-party cryptographic key splitting, automatic key rotation, and automated read-only trial locks upon safety compromises. This guarantees a zero-loss, tamper-proof audit trail and secure blinding mechanics.
 
 ## 2. Decision Drivers & Constraints
@@ -15,7 +16,7 @@ To bring the platform into complete alignment with global clinical regulations (
 * **Driver 2:** Security and Blinding Mechanics requiring no single point of failure in treatment allocation.
 * **Driver 3:** Patient Safety requiring immediate data freezing upon compromise.
 
-## 3. Options Considered
+## Alternatives Considered
 ### Option 1: Application-level auditing and soft locks
 * **Overview:** Rely on application logic and soft-delete flags for auditing, with application-level checks for trial locking.
 * **Pros:** 
@@ -33,11 +34,11 @@ To bring the platform into complete alignment with global clinical regulations (
 * **Cons:** 
   * ❌ Increased complexity in database transaction management and cryptographic operations.
 
-## 4. Decision Outcome
+## Decision
 * **Chosen Option:** Option 2
 * **Justification:** Only Option 2 provides the necessary guarantees to meet 21 CFR Part 11 and EU Annex 11 compliance, ensuring that no manual intervention or application bug can bypass the audit trail or unblinding mechanisms.
 
-## 5. Consequences & Trade-offs
+## Trade-offs
 * **Positive Impact:** Full regulatory compliance and enhanced security posture.
 * **Negative Impact / Technical Debt:** Added complexity to database operations and key management.
 * **Mitigation Strategy:** Extensive integration and unit testing to ensure smooth operations. Use of established cryptographic algorithms (Shamir's Secret Sharing) to minimize custom cryptography risks.

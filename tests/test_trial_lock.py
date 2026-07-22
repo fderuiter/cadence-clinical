@@ -1,16 +1,15 @@
+from unittest.mock import patch
+
 import pytest
 import pytest_asyncio
 from sqlalchemy import String, select
 from sqlalchemy.orm import Mapped, mapped_column
 
-import apps.execution.database.audit
 from apps.execution.database.context import current_session
 from apps.execution.database.core import db_manager
 from apps.execution.database.decorators import transactional
 from apps.execution.database.models import AuditedModel, Base
 from apps.execution.trial_lock import TrialLockManager
-import time
-from unittest.mock import patch
 
 
 class LockClinicalRecord(AuditedModel):

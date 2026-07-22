@@ -2,9 +2,10 @@ from sqlalchemy import event, inspect
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import get_history
 
+from apps.execution.trial_lock import TrialLockManager
+
 from .context import current_change_reason, current_user_id
 from .models import AuditedModel, AuditLog
-from apps.execution.trial_lock import TrialLockManager
 
 
 def get_primary_key(obj):
