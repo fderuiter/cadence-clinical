@@ -69,6 +69,9 @@ jobs:
       - name: Run dependency audit
         run: uv run pip-audit --ignore-vuln PYSEC-2026-1325
 
+      - name: Install Playwright Browsers
+        run: uv run playwright install --with-deps chromium
+
       - name: Run tests and coverage
         env:
           TEST_DATABASE_URL: "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"
@@ -115,7 +118,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr edit ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --add-label "safe-change"
+          gh label create "safe-change" --repo ${{ github.repository }} --color "0E8A16" --description "Safe non-GxP change" --force || true
+          gh pr edit ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --add-label "safe-change" || echo "Failed to apply label. Ignoring."
 
   automerge:
     name: Approve and Automerge
