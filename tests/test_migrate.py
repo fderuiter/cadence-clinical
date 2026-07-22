@@ -58,9 +58,10 @@ async def test_run_migrations_failure():
 
 
 def test_main_cli():
-    with patch("apps.execution.database.migrate.asyncio.run") as mock_run:
+    with patch("apps.execution.database.migrate.run_migrations") as mock_run_migrations:
+        mock_run_migrations.return_value = AsyncMock()()
         with patch(
             "sys.argv", ["migrate.py", "--db-url", "sqlite+aiosqlite:///:memory:"]
         ):
             main()
-            mock_run.assert_called_once()
+            mock_run_migrations.assert_called_once_with("sqlite+aiosqlite:///:memory:")

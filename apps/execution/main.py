@@ -40,6 +40,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
     # Cleanup database connection
     sealing_task.cancel()
+    try:
+        await sealing_task
+    except asyncio.CancelledError:
+        pass
     await db_manager.close()
 
 
