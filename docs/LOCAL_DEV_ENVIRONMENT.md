@@ -44,7 +44,7 @@ We have provided a verification helper script:
 ```
 
 ### What does `run-checks.sh` do?
-1. **Formatting Checks**: Runs `black --check` on the codebase.
+1. **Formatting Checks**: Runs `ruff format --check` on the codebase.
 2. **Linting Checks**: Runs `ruff check` on the codebase.
 3. **Unit & Integration Tests**: Runs `pytest`. The test suite is configured to target the live containerized PostgreSQL database (`postgres:5432`), guaranteeing that tests assert correctness under a production-like network environment rather than relying on an in-memory SQLite database.
 
@@ -52,8 +52,8 @@ We have provided a verification helper script:
 If you wish to run a specific command (e.g., auto-formatting code), you can execute it inside the `execution` container environment (where all `uv` dependencies are resolved):
 
 ```bash
-# Auto-format your code using Black and Ruff
-docker compose -f docker/docker-compose.yml exec execution black .
+# Auto-format your code using Ruff
+docker compose -f docker/docker-compose.yml exec execution ruff format .
 docker compose -f docker/docker-compose.yml exec execution ruff check --fix .
 
 # Run a specific test file

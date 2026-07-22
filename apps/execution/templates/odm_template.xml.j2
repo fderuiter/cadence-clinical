@@ -1,0 +1,11 @@
+<?xml version="1.0" ?>
+<ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileOID="ODM.{{ study_id }}">
+  <Study OID="Study.{{ study_id }}">
+    <GlobalVariables>Cadence Generated Study</GlobalVariables>
+    <MetaDataVersion OID="MDV.1" Name="Version 1.0">
+      {% for item in items %}
+      <ItemDef OID="{{ item.id }}" Name="{{ item.name }}" DataType="{{ item.type }}"/>
+      {% endfor %}
+    </MetaDataVersion>
+  </Study>
+</ODM>
