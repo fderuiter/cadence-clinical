@@ -135,4 +135,3 @@ jobs:
           GH_TOKEN: ${{ secrets.SERVICE_ACCOUNT_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           gh pr merge ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --auto --squash
-        run: uv run pytest
