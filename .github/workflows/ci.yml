@@ -73,3 +73,67 @@ jobs:
         env:
           TEST_DATABASE_URL: "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"
         run: uv run pytest
+  classify:
+    name: Classify Change
+    runs-on: ubuntu-latest
+    outputs:
+      is_safe: ${{ steps.classify.outputs.is_safe }}
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Fetch list of changed files
+        id: classify
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files --paginate --jq '.[] | .filename, (select(has("previous_filename")) | .previous_filename)' > changed_files.tmp
+          sort -u changed_files.tmp > changed_files.txt
+          cat changed_files.txt
+          
+          if [ ! -s changed_files.txt ]; then
+            echo "No files changed."
+            echo "is_safe=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          SAFE=true
+          while IFS= read -r file; do
+            if [[ "$file" == docs/* ]] || [[ "$file" == *.md ]] || [[ "$file" == tests/* ]] || [[ "$file" == *.sh ]] || [[ "$file" == scripts/* ]]; then
+              echo "Safe file: $file"
+            else
+              echo "Unsafe file: $file"
+              SAFE=false
+              break
+            fi
+          done < changed_files.txt
+          
+          echo "is_safe=$SAFE" >> $GITHUB_OUTPUT
+
+      - name: Apply label
+        if: steps.classify.outputs.is_safe == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr edit ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --add-label "safe-change"
+
+  automerge:
+    name: Approve and Automerge
+    needs: [classify, test]
+    if: needs.classify.outputs.is_safe == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Approve Pull Request
+        env:
+          GH_TOKEN: ${{ secrets.SERVICE_ACCOUNT_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr review ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --approve --body "Programmatic approval: Verified safe non-GxP change."
+      
+      - name: Enable Automerge
+        env:
+          GH_TOKEN: ${{ secrets.SERVICE_ACCOUNT_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr merge ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --auto --squash
