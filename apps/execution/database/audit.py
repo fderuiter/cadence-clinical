@@ -2,6 +2,8 @@ from sqlalchemy import event, inspect
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import get_history
 
+from apps.execution.trial_lock import TrialLockManager
+
 from .context import current_change_reason, current_user_id
 from .models import AuditedModel, AuditLog
 
@@ -18,6 +20,14 @@ def get_primary_key(obj):
 def receive_before_flush(session: Session, flush_context, instances):
     if not session.is_modified:
         return
+
+    # Check for read-only freeze
+    if TrialLockManager.is_locked() and (
+        session.new or session.dirty or session.deleted
+    ):
+        raise PermissionError(
+            "Trial is currently locked in a read-only state due to a security violation."
+        )
 
     audit_logs = []
     user_id = current_user_id.get()
@@ -101,6 +111,10 @@ def receive_before_flush(session: Session, flush_context, instances):
 
     # Prevent hard deletions
     for obj in session.deleted:
+        if isinstance(obj, AuditLog):
+            raise ValueError(
+                "Deletion of AuditLog is strictly forbidden to comply with 21 CFR Part 11."
+            )
         if isinstance(obj, AuditedModel):
             raise ValueError(
                 f"Hard deletion of {obj.__class__.__name__} is forbidden. Use soft deletes by setting is_deleted=True."

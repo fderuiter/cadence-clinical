@@ -41,3 +41,10 @@ The Designer Service utilizes a Neo4j graph database to track the complex evolut
 Regulatory compliance also dictates the strict protection of Personally Identifiable Information (PII) during audit trail exports for external reviews.
 * **User Masking:** During the generation of CSV export files for auditors, the system dynamically applies data masking to sensitive demographic or user identifiers.
 * **Cryptographic Identifier Hashing:** Rather than exposing plain-text user/subject IDs, the export engine outputs deterministic cryptographic hashes of the identifiers. This structural accountability allows auditors to track modifications made by the same individual or applied to the same subject across the audit ledger without exposing actual identities.
+
+## 8. Traceability Mappings for Automated Compliance
+To simplify compliance verification and satisfy 21 CFR Part 11 auditing requirements, this platform explicitly links abstract regulatory rules to verifiable codebase implementation mechanics.
+
+* **Trace 1: Shadow Schema Retention:** Database-level hard deletes are programmatically blocked by the application layer. Deletion attempts against `AuditLog` or `AuditedModel` raise uncatchable exceptions via the SQLAlchemy listener module located in `apps/execution/database/audit.py`, ensuring a permanent shadow ledger of all system transactions.
+* **Trace 2: Cryptographic Key Multi-Sharing & Rotation:** The system utilizes mathematical polynomial splitting (Shamir's Secret Sharing pattern) to split treatment allocation blinding keys, alongside an automatic 365-day rotation scheme for encryption keys. These operations are explicitly enforced by `AllocationKeyManager` in `apps/execution/cryptography.py`.
+* **Trace 3: Read-Only Trial Locks & Alert Routing:** Upon detecting any data compromise, the system immediately freezes clinical transactions by throwing `PermissionError` for write operations (in `audit.py`) while permitting authorized `SELECT` queries. Concurrently, high-priority notifications are dispatched to designated contacts (Email, SMS, Webhook) via the `TrialLockManager` module in `apps/execution/trial_lock.py` within one minute.
