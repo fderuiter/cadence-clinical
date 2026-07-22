@@ -22,6 +22,7 @@ class DifferenceResult(BaseModel):
         old_value: The previous value of the field.
         new_value: The updated value of the field.
     """
+
     field: str
     old_value: Any
     new_value: Any
@@ -90,6 +91,7 @@ async def gateway_auth_middleware(
     request.state.roles = roles
 
     return await call_next(request)
+
 
 @app.on_event("startup")
 async def startup() -> None:
@@ -208,8 +210,13 @@ async def validate_study_alignment(study_id: str) -> StudyAlignmentReport:
     """
     return await generate_alignment_report(study_id)
 
-@app.get("/api/v1/studies/{study_id}/differences", response_model=List[DifferenceResult])
-async def study_differences(study_id: str, action_id1: str, action_id2: str) -> List[DifferenceResult]:
+
+@app.get(
+    "/api/v1/studies/{study_id}/differences", response_model=List[DifferenceResult]
+)
+async def study_differences(
+    study_id: str, action_id1: str, action_id2: str
+) -> List[DifferenceResult]:
     """
     Get human-readable field-level differences between two version actions of a study.
 
@@ -220,7 +227,7 @@ async def study_differences(study_id: str, action_id1: str, action_id2: str) -> 
 
     Returns:
         List[DifferenceResult]: A list of field-level differences.
-    
+
     Raises:
         HTTPException: Raises 503 as the direct database connection is disabled in the API-first design.
     """

@@ -10,12 +10,12 @@ from apps.designer.validator import generate_alignment_report
 async def test_generate_alignment_report() -> None:
     """
     Test the generation of an alignment report for a mock study.
-    
+
     Mocks the external HTTP call to the study registry to return a valid
     USDM payload and verifies the report evaluates structural completeness accurately.
     """
     study_id = str(uuid.uuid4())
-    
+
     mock_payload = {
         "id": study_id,
         "name": "Test Study",
@@ -23,29 +23,28 @@ async def test_generate_alignment_report() -> None:
         "label": None,
         "versions": [],
         "documentedBy": [],
-        "instanceType": "Study"
+        "instanceType": "Study",
     }
 
     mock_response = AsyncMock()
     mock_response.json = MagicMock(return_value=mock_payload)
     mock_response.raise_for_status = MagicMock()
-    
+
     # Mock httpx.AsyncClient
     class MockAsyncClient:
         async def __aenter__(self):
             return self
-        
+
         async def __aexit__(self, exc_type, exc_val, exc_tb):
             pass
-            
+
         async def get(self, url, timeout=None):
             return mock_response
-            
+
     with patch("httpx.AsyncClient", return_value=MockAsyncClient()):
         report = await generate_alignment_report(study_id)
-        
+
     assert report.study_id == study_id
     assert len(report.unmapped_activities) == 0
     assert len(report.complete_activities) == 0
     assert len(report.incomplete_activities) == 0
-

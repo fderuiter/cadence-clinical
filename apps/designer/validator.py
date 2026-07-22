@@ -72,10 +72,10 @@ class StudyAlignmentReport(BaseModel):
 async def generate_alignment_report(study_id: str) -> StudyAlignmentReport:
     """
     Orchestrates the entire alignment validation for a given study and builds a final report.
-    
+
     Fetches the study directly from the OpenStudyBuilder API instead of making direct DB queries,
     then parses the study using the official USDM library to identify unmapped activities.
-    
+
     Args:
         study_id (str): The string identifier of the study to evaluate.
 
@@ -83,17 +83,19 @@ async def generate_alignment_report(study_id: str) -> StudyAlignmentReport:
         StudyAlignmentReport: A comprehensive report model containing structural discrepancies.
     """
     base_url = os.getenv("STUDY_REGISTRY_URL", "http://localhost:8000")
-    
+
     async with httpx.AsyncClient() as client:
-        response = await client.get(f"{base_url}/usdm/v4/studies/{study_id}", timeout=5.0)
+        response = await client.get(
+            f"{base_url}/usdm/v4/studies/{study_id}", timeout=5.0
+        )
         response.raise_for_status()
         data = response.json()
-        
+
     # Use official USDM python standard package (Requirement 1)
     study = usdm_model.Study(**data)
-    
+
     unmapped_activities = []
-    
+
     # Requirement 3: Parse nested USDM payloads
     if study.versions:
         for version in study.versions:
@@ -111,15 +113,15 @@ async def generate_alignment_report(study_id: str) -> StudyAlignmentReport:
                                 activity_def_internal_id=0,
                                 status="unmapped",
                                 unmapped_items=[],
-                                mapped_items=[]
+                                mapped_items=[],
                             )
                         )
-                        
+
     return StudyAlignmentReport(
         study_id=str(study.id),
         complete_activities=[],
         incomplete_activities=[],
         unmapped_activities=unmapped_activities,
         unmapped_odm_items=[],
-        unmapped_crf_item_values=[]
+        unmapped_crf_item_values=[],
     )
