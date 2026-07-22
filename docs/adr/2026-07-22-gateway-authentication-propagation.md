@@ -7,7 +7,7 @@ Accepted
 Downstream microservices (e.g., Designer and Execution) previously did not independently validate OpenID Connect (OIDC) tokens or extract user roles, leaving them vulnerable to unauthorized access if they were exposed or if internal routing bypassed checks. However, duplicating full OIDC validation, JWKS fetching, and cryptographic token verification across every microservice introduces significant latency, operational overhead, and code duplication.
 
 ## Decision
-We decided to centralize authentication and OIDC validation at the API Gateway level. The API Gateway will intercept all incoming requests, validate OIDC tokens against the Keycloak identity provider, and block invalid or missing tokens. 
+We decided to centralize authentication and OIDC validation at the API Gateway level. The API Gateway will intercept all incoming requests, validate OIDC tokens against the Keycloak identity provider, and block invalid or missing tokens.
 
 To securely propagate the user's identity to downstream services without requiring them to re-verify the token, the Gateway will:
 1. Extract the `sub` claim (as `X-User-Id`) and `realm_access` roles (as `X-User-Roles`).

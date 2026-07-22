@@ -37,6 +37,6 @@ The functional maturity of the capabilities detailed in the matrix uses the foll
 
 ## 4. Version References
 * **Minimum API Version:** The earliest REST/GraphQL API version that supports the integration of the corresponding feature.
-* **Minimum Engine Version:** 
+* **Minimum Engine Version:**
   * `PostgreSQL`: 14.0+ (required for advanced JSONB audit fields and efficient trigger execution).
   * `Neo4j`: 5.0+ (required for performant graph traversal of immutable versions).

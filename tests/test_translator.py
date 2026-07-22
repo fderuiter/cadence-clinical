@@ -2,8 +2,8 @@ import hashlib
 import hmac
 import os
 import time
-import xml.etree.ElementTree as ET
 
+import defusedxml.ElementTree as ET
 import httpx
 import pytest
 import pytest_asyncio
