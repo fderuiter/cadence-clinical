@@ -1,16 +1,23 @@
-import secrets
-import json
 import base64
-from typing import List, Tuple, Dict, Any
-from cryptography.fernet import Fernet
-import time
+import json
+import secrets
 from datetime import datetime, timedelta
+from typing import Any, Dict, List, Tuple
+
+from cryptography.fernet import Fernet
+
+"""
+Module providing multi-party threshold cryptography for blinding keys.
+Implements Shamir's Secret Sharing to split and reconstruct treatment allocation keys,
+along with automatic key rotation to ensure secure and compliant operations.
+"""
 
 # A simple prime for Shamir's Secret Sharing (2^127 - 1)
 PRIME = 170141183460469231731687303715884105727
 
 
 def _eval_poly(poly: List[int], x: int) -> int:
+    """Evaluates a polynomial at a given point x using Horner's method."""
     result = 0
     for coeff in reversed(poly):
         result = (result * x + coeff) % PRIME
@@ -18,6 +25,7 @@ def _eval_poly(poly: List[int], x: int) -> int:
 
 
 def _extended_gcd(a: int, b: int) -> Tuple[int, int, int]:
+    """Computes the extended Greatest Common Divisor of two numbers."""
     x, y, u, v = 0, 1, 1, 0
     while a != 0:
         q, r = b // a, b % a
@@ -28,6 +36,7 @@ def _extended_gcd(a: int, b: int) -> Tuple[int, int, int]:
 
 
 def _mod_inverse(k: int, prime: int) -> int:
+    """Computes the modular inverse of k modulo prime."""
     gcd, x, y = _extended_gcd(k, prime)
     if gcd != 1:
         raise ValueError("No modular inverse")

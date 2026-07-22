@@ -1,19 +1,28 @@
 import time
 from typing import List
 
+"""
+Module for managing automated trial locks and security notifications.
+This module intercepts write operations globally or per trial when a security compromise
+is detected, while allowing read operations, ensuring data integrity without blocking safety queries.
+"""
+
 
 class NotificationRouter:
     """Routes alerts to designated safety leads and security representatives."""
 
     def send_email(self, recipients: List[str], message: str):
+        """Sends an email notification to the specified recipients."""
         # Simulate email sending
         pass
 
     def send_sms(self, phone_numbers: List[str], message: str):
+        """Sends an SMS notification to the specified phone numbers."""
         # Simulate SMS sending
         pass
 
     def send_webhook(self, url: str, payload: dict):
+        """Sends a webhook payload to the specified URL."""
         # Simulate webhook
         pass
 
@@ -47,6 +56,7 @@ class TrialLockManager:
 
     @classmethod
     def is_locked(cls) -> bool:
+        """Returns True if the trial is currently locked."""
         return cls._is_locked
 
     @classmethod
