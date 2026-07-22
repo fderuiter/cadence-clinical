@@ -11,7 +11,6 @@ from pydantic import BaseModel
 from apps.designer.db import get_study_projection, terminology_cache
 from apps.designer.mapper import map_study_to_usdm
 from apps.designer.validator import StudyAlignmentReport, generate_alignment_report
-from packages.core_models.usdm import StudyDefinition
 
 
 class DifferenceResult(BaseModel):
@@ -137,14 +136,14 @@ async def get_legacy_study(study_id: str) -> Dict[str, Any]:
 
 
 @app.get("/api/v2/studies/{study_id}/usdm")
-async def get_usdm_study(study_id: str) -> StudyDefinition:
+async def get_usdm_study(study_id: str) -> Dict[str, Any]:
     """Dynamically processes the internal projection and returns a compliant USDM structure.
 
     Args:
         study_id (str): The unique identifier of the study.
 
     Returns:
-        StudyDefinition: The dynamically mapped USDM study data.
+        Dict[str, Any]: The dynamically mapped USDM study data.
 
     Raises:
         HTTPException: If the study is not found or validation fails.
