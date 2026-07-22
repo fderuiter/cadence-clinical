@@ -6,9 +6,6 @@ Traditional clinical trial builds require manual, error-prone translation of pro
 
 **Cadence Clinical** solves this by establishing a single, metadata-driven source of truth that automates the generation of downstream trial infrastructure directly from digitized protocol definitions.
 
-**Related Documentation:**
-* [Data Lifecycle Specification](./docs/SDLC/08_Data_Lifecycle_Specification.md)
-
 ---
 
 ## 2. Core Service Domains

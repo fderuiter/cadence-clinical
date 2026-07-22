@@ -3,9 +3,6 @@
 ## 1. Scope & Introduction
 This document defines the compliant audit and ledger architecture of the Cadence Clinical platform, ensuring traceability and regulatory verification for GxP processes. The system synthesizes upstream Clinical Metadata Management via the Designer Service (Neo4j) with downstream Electronic Data Capture via the Execution Engine (PostgreSQL). By leveraging immutable ledgers, graph-based historical tracking, and comprehensive cryptographic mechanisms, Cadence Clinical guarantees data integrity and simplifies compliance verification.
 
-**Related Documents:**
-* [Data Lifecycle Specification](./SDLC/08_Data_Lifecycle_Specification.md)
-
 ## 2. Dedicated Compliance Section (21 CFR Part 11 / Annex 11)
 Cadence Clinical maps directly to the regulatory mandates established by the FDA (21 CFR Part 11) and EMA (Annex 11) to secure electronic records and signatures.
 

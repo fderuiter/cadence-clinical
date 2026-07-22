@@ -1,6 +1,8 @@
+import os
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
+import httpx
 from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel
 
@@ -157,6 +159,13 @@ async def study_differences(
     """
     Get human-readable field-level differences between two version actions of a study.
 
+    This endpoint uses a decoupled, API-first in-memory diffing architecture. Instead of
+    relying on a direct database connection (which led to 503 errors and tight coupling),
+    it fetches full study payloads from an external registry. The comparison logic runs
+    entirely in-memory by flattening nested dictionary structures to dynamically identify
+    added, modified, and deleted fields. This ensures high availability and fast execution
+    without maintaining direct database connections.
+
     Args:
         study_id (str): The unique identifier of the study.
         action_id1 (str): The ID of the first action version.
@@ -164,8 +173,86 @@ async def study_differences(
 
     Returns:
         List[DifferenceResult]: A list of field-level differences.
-
-    Raises:
-        HTTPException: Raises 503 as the direct database connection is disabled in the API-first design.
     """
-    raise HTTPException(status_code=503, detail="Database connection not initialized")
+    base_url = os.getenv("STUDY_REGISTRY_URL", "http://localhost:8000")
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{base_url}/usdm/v4/studies/{study_id}", timeout=5.0
+            )
+            response.raise_for_status()
+            data = response.json()
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Registry timeout")
+    except httpx.RequestError:
+        raise HTTPException(status_code=502, detail="External registry offline")
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 404:
+            raise HTTPException(status_code=404, detail="Study not found in registry")
+        raise HTTPException(status_code=e.response.status_code, detail="Registry error")
+
+    versions = data.get("versions", [])
+
+    v1_data = None
+    v2_data = None
+    for v in versions:
+        if v.get("id") == action_id1:
+            v1_data = v
+        if v.get("id") == action_id2:
+            v2_data = v
+
+    if not v1_data:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Target version {action_id1} is missing from the registry",
+        )
+    if not v2_data:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Target version {action_id2} is missing from the registry",
+        )
+
+    def flatten_dict(d: Any, parent_key: str = "", sep: str = ".") -> Dict[str, Any]:
+        """
+        Recursively flatten a nested dictionary or list into a flat dictionary.
+
+        This enables efficient 1D in-memory comparison of complex nested JSON
+        payloads (like USDM) by generating unique dot-notated paths for every node.
+
+        Args:
+            d (Any): The dictionary, list, or primitive to flatten.
+            parent_key (str): The accumulated path key.
+            sep (str): The separator used for nested keys.
+
+        Returns:
+            Dict[str, Any]: A flattened dictionary mapping paths to values.
+        """
+        items: List[Tuple[str, Any]] = []
+        if isinstance(d, dict):
+            for k, v in d.items():
+                new_key = f"{parent_key}{sep}{k}" if parent_key else k
+                items.extend(flatten_dict(v, new_key, sep=sep).items())
+        elif isinstance(d, list):
+            for i, v in enumerate(d):
+                new_key = f"{parent_key}{sep}[{i}]" if parent_key else f"[{i}]"
+                items.extend(flatten_dict(v, new_key, sep=sep).items())
+        else:
+            items.append((parent_key, d))
+        return dict(items)
+
+    flat_v1 = flatten_dict(v1_data)
+    flat_v2 = flatten_dict(v2_data)
+
+    all_keys = set(flat_v1.keys()).union(set(flat_v2.keys()))
+    differences = []
+
+    for key in sorted(all_keys):
+        val1 = flat_v1.get(key)
+        val2 = flat_v2.get(key)
+        if val1 != val2:
+            differences.append(
+                DifferenceResult(field=key, old_value=val1, new_value=val2)
+            )
+
+    return differences

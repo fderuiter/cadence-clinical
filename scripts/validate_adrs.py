@@ -9,14 +9,24 @@ IGNORE_FILES = {"TEMPLATE.md", "index.md"}
 # Regex patterns
 FILENAME_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}-.+\.md$")
 DATE_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}")
-TITLE_PATTERN = re.compile(r"^# .*\d{4}-\d{2}-\d{2}.*$")
+TITLE_PATTERN_OLD = re.compile(r"^# .*\d{4}-\d{2}-\d{2}.*$")
+TITLE_PATTERN_NEW = re.compile(r"^# ADR-(?:\d+|\[NUMBER\]): .*$")
 
-REQUIRED_SECTIONS = [
+REQUIRED_SECTIONS_OLD = [
     "## Status",
     "## Context",
     "## Decision",
     "## Alternatives Considered",
     "## Trade-offs",
+]
+
+REQUIRED_SECTIONS_NEW = [
+    "## 1. Context & Problem Statement",
+    "## 2. Decision Drivers & Constraints",
+    "## 3. Options Considered",
+    "## 4. Decision Outcome",
+    "## 5. Consequences & Trade-offs",
+    "## 6. Implementation & Verification",
 ]
 
 
@@ -84,15 +94,21 @@ def main():
         lines = content.split("\n")
 
         # Check title
-        if not lines or not TITLE_PATTERN.match(lines[0]):
+        is_new_format = False
+        if lines and TITLE_PATTERN_NEW.match(lines[0]):
+            is_new_format = True
+        elif not lines or not TITLE_PATTERN_OLD.match(lines[0]):
             print(
-                f"Error: File '{filename}' title (first line) does not contain the correct date format."
+                f"Error: File '{filename}' title (first line) does not contain the correct format (old or new)."
             )
             all_passed = False
 
         # Check required sections
         missing_sections = []
-        for section in REQUIRED_SECTIONS:
+        required_sections = (
+            REQUIRED_SECTIONS_NEW if is_new_format else REQUIRED_SECTIONS_OLD
+        )
+        for section in required_sections:
             if section not in content:
                 missing_sections.append(section)
 
