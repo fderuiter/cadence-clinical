@@ -4,7 +4,7 @@
 Accepted
 
 ## Context
-Cadence Clinical's study design ingestion and validation previously relied on a tightly coupled, database-driven process using a legacy placeholder model. This legacy approach silently truncated rich clinical study setup data and required direct database (Neo4j) coupling to query and validate data, which caused brittle integrations, maintenance overhead, and downtime. 
+Cadence Clinical's study design ingestion and validation previously relied on a tightly coupled, database-driven process using a legacy placeholder model. This legacy approach silently truncated rich clinical study setup data and required direct database (Neo4j) coupling to query and validate data, which caused brittle integrations, maintenance overhead, and downtime.
 
 ## Decision
 We are transitioning to a decoupled, API-first validation approach and integrating the official CDISC USDM standard package.

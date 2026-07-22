@@ -40,10 +40,32 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Install Node dependencies
+        run: pnpm install
+
+      - name: Run frontend checks
+        run: pnpm check
+
       - name: Run linting
         run: |
           uv run ruff check .
           uv run black --check .
+
+      - name: Run static analysis
+        run: poetry run bandit -c pyproject.toml -ll -ii -r apps packages
+
+      - name: Run dependency audit
+        run: poetry run pip-audit --ignore-vuln PYSEC-2026-1325
 
       - name: Run tests and coverage
         env:

@@ -4,9 +4,9 @@ Welcome to the fully containerized local development sandbox for the Cadence Cli
 
 ## Architecture & Decisions
 
-Before making significant changes or starting a new feature, please review the historical design choices and the context behind them. 
+Before making significant changes or starting a new feature, please review the historical design choices and the context behind them.
 
-All past architectural decisions are documented in our **[Architectural Decisions Index](adr/index.md)**. 
+All past architectural decisions are documented in our **[Architectural Decisions Index](adr/index.md)**.
 
 When introducing new architectural changes (e.g., adding a new dependency, modifying data models, or adding a new service), you are required to submit an Architecture Decision Record (ADR) following the mandatory format. A template is provided in the `docs/adr/` directory.
 
@@ -62,7 +62,7 @@ docker compose -f docker/docker-compose.yml exec execution pytest tests/test_aud
 
 ## 3. Dependency Management
 
-The project uses `uv` as the package manager and dependency installer in the sandbox. Dependencies are automatically installed into a virtual environment (`/opt/.venv`) within the containers during the build process via `uv sync --all-extras`. **You do not need to install Python or packages on your host.** 
+The project uses `uv` as the package manager and dependency installer in the sandbox. Dependencies are automatically installed into a virtual environment (`/opt/.venv`) within the containers during the build process via `uv sync --all-extras`. **You do not need to install Python or packages on your host.**
 
 If you prefer to install locally outside the container, you can use `uv sync --all-extras`.
 

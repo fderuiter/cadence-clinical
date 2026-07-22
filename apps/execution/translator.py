@@ -1,7 +1,8 @@
 import uuid
 import xml.etree.ElementTree as ET
 from typing import Any
-from xml.dom import minidom
+
+import defusedxml.minidom as minidom
 
 from apps.execution.database.context import current_session
 from apps.execution.database.models import TranslationJob
