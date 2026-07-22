@@ -1,7 +1,7 @@
 from sqlalchemy import event, inspect
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import get_history
-from .models import AuditLog, AuditedModel, Base
+from .models import AuditLog, AuditedModel
 from .context import current_user_id, current_change_reason
 
 def get_primary_key(obj):

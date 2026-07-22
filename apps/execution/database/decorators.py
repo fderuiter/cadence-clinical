@@ -1,5 +1,5 @@
 import functools
-from typing import Callable, Any, Optional
+from typing import Callable, Any
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from .context import current_session
 

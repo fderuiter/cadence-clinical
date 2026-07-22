@@ -1,27 +1,23 @@
 import pytest
-import uuid
-import contextvars
+import pytest_asyncio
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from sqlalchemy import select, String, Column, String, Integer, Boolean
+from sqlalchemy import select, String
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.pool import StaticPool
 
 from apps.execution.database.models import Base, AuditLog, AuditedModel
-from apps.execution.database.audit import receive_before_flush
 from apps.execution.database.context import current_session, current_user_id, current_change_reason
 from apps.execution.database.decorators import transactional
+import apps.execution.database.audit  # noqa: F401 (Imported for side-effects: registers event listener)
 
 # Create a test model that extends AuditedModel
 class ClinicalRecord(AuditedModel):
     __tablename__ = 'clinical_records'
     data_value: Mapped[str] = mapped_column(String(255), nullable=True)
 
-from sqlalchemy.pool import StaticPool
-
 # Test DB Setup
 engine = create_async_engine("sqlite+aiosqlite:///:memory:", poolclass=StaticPool, echo=False)
 TestingSessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
-
-import pytest_asyncio
 
 @pytest_asyncio.fixture(autouse=True)
 async def setup_db():
