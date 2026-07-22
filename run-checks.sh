@@ -16,3 +16,6 @@ docker compose -f docker/docker-compose.yml exec execution pytest
 echo "Running frontend checks..."
 pnpm install
 pnpm check
+
+echo "Running ADR validation..."
+python3 scripts/validate_adrs.py
