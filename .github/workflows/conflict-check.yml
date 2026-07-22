@@ -1,0 +1,47 @@
+name: Conflict Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  conflict-check:
+    name: Check for Merge Conflicts
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Check mergeable status
+        id: check_status
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          STATUS="UNKNOWN"
+          for i in {1..6}; do
+            STATUS=$(gh pr view "$PR_NUMBER" --json mergeable --jq .mergeable)
+            if [ "$STATUS" != "UNKNOWN" ]; then
+              break
+            fi
+            echo "Mergeable status is UNKNOWN. Retrying in 10 seconds..."
+            sleep 10
+          done
+          echo "Final mergeable status: $STATUS"
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
+
+      - name: Post PR Quality Checklist Comment on Conflict
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          CONFLICT_OUTCOME: ${{ steps.check_status.outputs.status == 'CONFLICTING' && 'failure' || 'success' }}
+        run: python3 scripts/post_pr_comment.py
