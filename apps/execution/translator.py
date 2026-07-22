@@ -1,11 +1,50 @@
+import os
 import uuid
-import xml.etree.ElementTree as ET
 from typing import Any
 
 import defusedxml.minidom as minidom
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from apps.execution.database.context import current_session
 from apps.execution.database.models import TranslationJob
+
+# Setup Jinja2 environment
+TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "templates")
+env = Environment(
+    loader=FileSystemLoader(TEMPLATE_DIR),
+    autoescape=select_autoescape(default_for_string=True, default=True),
+)
+
+
+def extract_appearance(item: dict[str, Any]) -> str | None:
+    """Extract grid layout metadata properties into standard Enketo appearance classes.
+
+    Parses USDM item layout properties (`cols`, `column_span`, `span`) directly or from
+    a nested layout/grid object, converting width factors into OpenRosa/Enketo classes (`w1`-`w4`).
+
+    Args:
+        item (dict[str, Any]): The USDM study item definition dictionary.
+
+    Returns:
+        str | None: The computed appearance class, or None if no layout is specified.
+    """
+    # Check item.cols, item.column_span, item.span
+    keys = ["cols", "column_span", "span"]
+    for k in keys:
+        if k in item:
+            val = item[k]
+            if str(val) in ["1", "2", "3", "4"]:
+                return f"w{val}"
+
+    # Check layout sub-objects
+    for sub in ["layout", "grid"]:
+        if sub in item and isinstance(item[sub], dict):
+            for k in keys:
+                if k in item[sub]:
+                    val = item[sub][k]
+                    if str(val) in ["1", "2", "3", "4"]:
+                        return f"w{val}"
+    return None
 
 
 async def process_translation(
@@ -39,70 +78,66 @@ async def process_translation(
                         "Validation Failed: 'protocol' missing from study definition."
                     )
 
-                # Proceed to translation
-                # Requirement 2: CDISC ODM schemas
-                odm_root = ET.Element(
-                    "ODM",
-                    xmlns="http://www.cdisc.org/ns/odm/v1.3",
-                    FileOID=f"ODM.{study_id}",
-                )
-                study = ET.SubElement(odm_root, "Study", OID=f"Study.{study_id}")
-                ET.SubElement(study, "GlobalVariables").text = "Cadence Generated Study"
-                meta_odm = ET.SubElement(
-                    study, "MetaDataVersion", OID="MDV.1", Name="Version 1.0"
-                )
-
-                # Requirement 3: OpenRosa XML forms
-                ns_attribs = {
-                    "xmlns": "http://www.w3.org/1999/xhtml",
-                    "xmlns:xf": "http://www.w3.org/2002/xforms",
-                    "xmlns:ev": "http://www.w3.org/2001/xml-events",
-                }
-                openrosa_root = ET.Element("html", attrib=ns_attribs)
-                head = ET.SubElement(openrosa_root, "head")
-                title = ET.SubElement(head, "title")
-                title.text = payload.get("name", f"Study {study_id}")
-                model = ET.SubElement(head, "xf:model")
-                instance = ET.SubElement(model, "xf:instance")
-                data = ET.SubElement(instance, "data", id=study_id)
-                body = ET.SubElement(openrosa_root, "body")
-
-                # Requirement 5: Cached/Predictable Identifiers mapped identically
-                items = payload.get("protocol", {}).get("items", [])
-                for item in items:
+                # Process items for templates
+                raw_items = payload.get("protocol", {}).get("items", [])
+                processed_items = []
+                for item in raw_items:
                     item_id = item.get("id")
                     if not item_id:
                         item_id = f"item_{uuid.uuid4().hex[:8]}"
 
                     item_name = item.get("name", "Unknown Field")
                     item_type = item.get("type", "string")
+                    appearance = extract_appearance(item)
 
-                    # Add ODM Definition
-                    ET.SubElement(
-                        meta_odm,
-                        "ItemDef",
-                        OID=item_id,
-                        Name=item_name,
-                        DataType=item_type,
+                    processed_items.append(
+                        {
+                            "id": item_id,
+                            "name": item_name,
+                            "type": item_type,
+                            "appearance": appearance,
+                        }
                     )
 
-                    # Add OpenRosa XForm Elements
-                    ET.SubElement(data, item_id)
-                    ET.SubElement(
-                        model, "xf:bind", nodeset=f"/{item_id}", type=f"{item_type}"
-                    )
+                template_data = {
+                    "study_id": study_id,
+                    "name": payload.get("name", f"Study {study_id}"),
+                    "items": processed_items,
+                }
 
-                    ui_input = ET.SubElement(body, "xf:input", ref=f"/{item_id}")
-                    label = ET.SubElement(ui_input, "xf:label")
-                    label.text = item_name
+                # Render templates
+                odm_template = env.get_template("odm_template.xml.j2")
+                odm_xml_str = odm_template.render(**template_data)
 
-                # Format outputs
-                odm_str = minidom.parseString(ET.tostring(odm_root)).toprettyxml(
-                    indent="  "
-                )
-                openrosa_str = minidom.parseString(
-                    ET.tostring(openrosa_root)
-                ).toprettyxml(indent="  ")
+                openrosa_template = env.get_template("openrosa_template.xml.j2")
+                openrosa_xml_str = openrosa_template.render(**template_data)
+
+                # Format outputs via minidom to guarantee compatibility with existing expectations
+                # We strip out whitespace-only text nodes created by jinja templating before formatting
+                def pretty_print(xml_string: str) -> str:
+                    """
+                    Format an XML string with indentation for better readability.
+
+                    Removes whitespace-only text nodes generated by Jinja2 templates before
+                    applying standard formatting via minidom to ensure expected line breaks.
+
+                    Args:
+                        xml_string (str): The raw XML string to format.
+
+                    Returns:
+                        str: The pretty-printed XML string.
+                    """
+                    dom = minidom.parseString(xml_string)
+                    # Remove blank text nodes so toprettyxml doesn't add extra newlines
+                    for node in dom.getElementsByTagName("*"):
+                        for child in list(node.childNodes):
+                            # 3 is the integer value for Node.TEXT_NODE
+                            if child.nodeType == 3 and not child.data.strip():
+                                node.removeChild(child)
+                    return dom.toprettyxml(indent="  ")
+
+                odm_str = pretty_print(odm_xml_str)
+                openrosa_str = pretty_print(openrosa_xml_str)
 
                 job.odm_payload = odm_str
                 job.openrosa_payload = openrosa_str

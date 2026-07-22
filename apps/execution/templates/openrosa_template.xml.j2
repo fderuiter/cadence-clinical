@@ -1,0 +1,30 @@
+<?xml version="1.0" ?>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:xf="http://www.w3.org/2002/xforms"
+      xmlns:ev="http://www.w3.org/2001/xml-events"
+      xmlns:or="http://openrosa.org/xforms"
+      xmlns:orx="http://openrosa.org/xforms"
+      xmlns:odk="http://www.opendatakit.org/xforms">
+  <head>
+    <title>{{ name }}</title>
+    <xf:model>
+      <xf:instance>
+        <data id="{{ study_id }}">
+          {% for item in items %}
+          <{{ item.id }}/>
+          {% endfor %}
+        </data>
+      </xf:instance>
+      {% for item in items %}
+      <xf:bind nodeset="/{{ item.id }}" type="{{ item.type }}"/>
+      {% endfor %}
+    </xf:model>
+  </head>
+  <body>
+    {% for item in items %}
+    <xf:input ref="/{{ item.id }}"{% if item.appearance %} appearance="{{ item.appearance }}"{% endif %}>
+      <xf:label>{{ item.name }}</xf:label>
+    </xf:input>
+    {% endfor %}
+  </body>
+</html>
