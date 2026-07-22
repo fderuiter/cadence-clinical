@@ -47,3 +47,82 @@ Follow this step-by-step checklist to verify that USDM study model versions accu
 - [ ] **Step 6:** **Verify Version Indicator:** Inspect the output and confirm that the version number has correctly incremented and matches the USDM version extraction rules.
 - [ ] **Step 7:** **Verify Metadata Translation:** Check that the updated status and metadata accurately map to the core USDM definitions in the new export.
 - [ ] **Step 8:** **Verify Graph History:** Query the local graph database to ensure the new version node links to the previous version node via a `PREVIOUS_VERSION` relationship, leaving the historical version intact.
+
+---
+
+## 4. Schedule of Activities (SoA) Parity
+
+### 4.1 Specification: SoA Definitions
+The system must correctly map visits, epochs, and scheduled activities in alignment with CDISC USDM standards.
+- **Epochs:** Trial periods (e.g., Screening, Treatment, Follow-up) must map correctly to USDM `Epoch` entities.
+- **Visits:** Study visits and encounters must be defined within their respective epochs as `StudyEventDef` entities.
+- **Activities:** Clinical procedures and assessments must map to scheduled activities and link to the relevant forms/CRFs.
+
+### 4.2 Manual Verification Checklist: SoA Definitions
+- [ ] **Step 1:** Define a study protocol with multiple epochs, visits, and assigned activities.
+- [ ] **Step 2:** Export the study definition to USDM format.
+- [ ] **Step 3:** **Verify Epochs:** Confirm all defined epochs are correctly mapped.
+- [ ] **Step 4:** **Verify Visits:** Ensure study events align with their parent epochs.
+- [ ] **Step 5:** **Verify Activities:** Check that scheduled procedures map to the correct CRFs and encounters.
+
+---
+
+## 5. OpenRosa/Enketo XForm Rendering Parity
+
+### 5.1 Specification: XForm Rendering Rules
+The system must render clinical data capture forms compliant with OpenRosa standards.
+- **Form UI Controls:** Data constraints and item definitions must map to valid XForm input controls.
+- **Relevance & Skip Logic:** Branching logic must correctly map to XForm `relevant` attributes.
+- **Calculations:** Computed fields must correctly translate to XForm `calculate` bindings.
+
+### 5.2 Manual Verification Checklist: XForm Rendering
+- [ ] **Step 1:** Define a CRF containing conditional logic and calculated fields.
+- [ ] **Step 2:** Generate the OpenRosa XForm XML payload.
+- [ ] **Step 3:** **Verify UI Controls:** Check that inputs match their defined data types.
+- [ ] **Step 4:** **Verify Skip Logic:** Confirm that `relevant` attributes hide/show fields properly.
+- [ ] **Step 5:** **Verify Calculations:** Test computed bindings in an Enketo-compatible renderer.
+
+---
+
+## 6. Subject State Machine Parity
+
+### 6.1 Specification: Subject State Transitions
+The system must govern participant statuses (e.g., Enrolled, Active, Completed, Withdrawn) via strict state machines.
+- **State Integrity:** Participants can only transition between allowed states.
+- **Transition Logs:** Every state change must record the timestamp and responsible user.
+
+### 6.2 Manual Verification Checklist: Subject State Transitions
+- [ ] **Step 1:** Create a test subject in the "Enrolled" state.
+- [ ] **Step 2:** Attempt valid and invalid status transitions.
+- [ ] **Step 3:** **Verify Integrity:** Confirm invalid transitions are rejected by the system.
+- [ ] **Step 4:** **Verify Transition Logs:** Ensure valid state changes are recorded accurately.
+
+---
+
+## 7. Query Management Parity
+
+### 7.1 Specification: Query Workflows
+The system must support the complete lifecycle of clinical data queries (Open, Answered, Closed).
+- **Query Creation:** Automated rules and manual reviewers can flag discrepancies.
+- **Query Resolution:** Sites can provide answers, which data managers can subsequently close or re-open.
+
+### 7.2 Manual Verification Checklist: Query Management
+- [ ] **Step 1:** Trigger a validation discrepancy on an eCRF to generate a query.
+- [ ] **Step 2:** Submit an answer to the query.
+- [ ] **Step 3:** **Verify Workflow:** Ensure the query state moves from "Open" to "Answered".
+- [ ] **Step 4:** **Verify Resolution:** Close the query and confirm it is locked.
+
+---
+
+## 8. Audit Log Parity
+
+### 8.1 Specification: 21 CFR Part 11 Audit Logs
+The system must capture comprehensive, immutable audit trails for all critical data modifications.
+- **Required Fields:** `created_at`, `created_by`, `reason_for_change`, and `version_index`.
+- **Immutability:** Audit records must never be updated or deleted.
+
+### 8.2 Manual Verification Checklist: Audit Logs
+- [ ] **Step 1:** Perform a data mutation (e.g., update a clinical observation).
+- [ ] **Step 2:** Require a "reason for change" during the modification.
+- [ ] **Step 3:** **Verify Fields:** Check the database to ensure the audit row contains the correct user, timestamp, and reason.
+- [ ] **Step 4:** **Verify Immutability:** Confirm that standard API endpoints reject any attempts to modify the audit record.
