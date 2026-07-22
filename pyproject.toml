@@ -22,6 +22,7 @@ sqlalchemy = "^2.0.28"
 asyncpg = "^0.29.0"
 # Gateway & Auth
 python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+usdm = "0.65.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"
