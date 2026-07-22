@@ -29,9 +29,6 @@ QA & Validation Director:  ___________________________   Date: _______________
 Chief Technology Officer:  ___________________________   Date: _______________
 ```
 
-### 1.4 Related SDLC Documents
-* [Data Lifecycle Specification](./08_Data_Lifecycle_Specification.md)
-
 ---
 
 ## 2. Executive Summary & System Objectives

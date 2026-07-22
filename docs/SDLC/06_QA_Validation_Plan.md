@@ -5,7 +5,6 @@
 **Effective Date:** 2026-07-22
 **Applicability:** Cadence Clinical Unified Platform (Designer & Execution Subsystems)
 **Standards Compliance:** IEC 62304:2006/AMD1:2015, ISO 14155:2020, FDA 21 CFR Part 11, EU Annex 11, GAMP 5 (Second Edition)
-**Related Documentation:** [Data Lifecycle Specification](./08_Data_Lifecycle_Specification.md)
 
 ---
 
