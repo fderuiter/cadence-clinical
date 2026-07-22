@@ -4,10 +4,17 @@ on:
   pull_request:
     branches: [ main ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: Test and Coverage
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     services:
       postgres:
         image: postgres:15-alpine
@@ -26,6 +33,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v3
@@ -54,28 +63,56 @@ jobs:
         run: pnpm install
 
       - name: Run frontend checks
+        id: run_frontend
+        if: always()
         run: pnpm check
 
       - name: Run linting
+        id: run_linting
+        if: always()
         run: |
           uv run ruff check .
           uv run ruff format --check .
 
       - name: Run ADR validation
+        id: run_adr
+        if: always()
         run: python3 scripts/validate_adrs.py
+
       - name: Run static analysis
+        id: run_static
+        if: always()
         run: uv run bandit -c pyproject.toml -ll -ii -r apps packages
 
       - name: Run dependency audit
+        id: run_audit
+        if: always()
         run: uv run pip-audit --ignore-vuln PYSEC-2026-1325
 
       - name: Install Playwright Browsers
+        if: always()
         run: uv run playwright install --with-deps chromium
 
       - name: Run tests and coverage
+        id: run_tests
+        if: always()
         env:
           TEST_DATABASE_URL: "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"
         run: uv run pytest
+
+      - name: Post PR Quality Checklist Comment
+        if: always() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          LINTING_OUTCOME: ${{ steps.run_linting.outcome }}
+          TEST_OUTCOME: ${{ steps.run_tests.outcome }}
+          FRONTEND_OUTCOME: ${{ steps.run_frontend.outcome }}
+          ADR_OUTCOME: ${{ steps.run_adr.outcome }}
+          AUDIT_OUTCOME: ${{ steps.run_audit.outcome }}
+          STATIC_OUTCOME: ${{ steps.run_static.outcome }}
+          JOB_STATUS: ${{ job.status }}
+        run: python3 scripts/post_pr_comment.py
   classify:
     name: Classify Change
     runs-on: ubuntu-latest
