@@ -51,7 +51,7 @@ To maintain code health, architectural transparency, and GxP audit readiness acr
 ### Gate 1: Comprehensive Documentation & Docstrings
 Every new module, class, function, and public API endpoint must be thoroughly documented.
 * **Python Codebases (`apps/`, `packages/`):** All functions and classes must include clear docstrings following Google or NumPy style guidelines. Complex business logic (such as USDM-to-ODM transformers or state transition machines) must include inline comments explaining *why* a specific transformation pattern is applied.
-* **Workspace Documentation (`docs/`):** If a PR introduces a new service boundary or changes an existing data flow, the corresponding Markdown documents (`docs/SRS.md`, `docs/DATA_LIFECYCLE.md`, etc.) must be updated to reflect the new state.
+* **Workspace Documentation (`docs/`):** If a PR introduces a new service boundary or changes an existing data flow, the corresponding Markdown documents must be updated to reflect the new state.
 
 ### Gate 2: Architecture Decision Records (ADRs)
 Cadence Clinical enforces a strict **"Code + Context"** design policy. Any PR that introduces significant architectural changes must include an Architecture Decision Record.
@@ -71,6 +71,10 @@ No code is merged untested. Every feature, bug fix, or data transformation must 
   * Integration tests must mock database interactions or spin up test containers where appropriate.
 * **Automated Validation:** CI/CD execution environments will automatically execute `uv run pytest` and linting checks (`uv run ruff check`) prior to opening a Pull Request. Any test failures or un-typed functions will block the merge queue.
 
+### Gate 4: Centralized Data Lifecycle Maintenance
+* **Rule:** Any change impacting clinical data models, metadata entities, database schemas, or export formats must include updates to `./docs/SDLC/08_Data_Lifecycle_Specification.md`.
+* **Verification:** During pull requests, manual peer review gates will verify that the modifications to data schemas/flows are correctly documented in the centralized specification. Ensure all bidirectional links remain valid.
+
 ---
 
 ## Summary Checklist for Pull Requests
@@ -82,3 +86,4 @@ Before submitting a PR, verify it meets this checklist:
 * [ ] Unit and/or integration tests are added under `tests/`.
 * [ ] An Architectural Decision Record (ADR) is added to `docs/adr/` if introducing major new design patterns.
 * [ ] All local checks (`uv run pytest`, `uv run ruff check`) pass successfully.
+* [ ] Any schema or model changes are documented in the [Data Lifecycle Specification](./docs/SDLC/08_Data_Lifecycle_Specification.md) for manual peer review validation.
