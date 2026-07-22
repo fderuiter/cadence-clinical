@@ -115,7 +115,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr edit ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --add-label "safe-change"
+          gh label create "safe-change" --repo ${{ github.repository }} --color "0E8A16" --description "Safe non-GxP change" --force || true
+          gh pr edit ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --add-label "safe-change" || echo "Failed to apply label. Ignoring."
 
   automerge:
     name: Approve and Automerge
