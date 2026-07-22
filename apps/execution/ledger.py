@@ -36,7 +36,7 @@ def is_safety_freeze_active() -> bool:
 def enable_safety_freeze():
     """
     Activate the global safety freeze.
-    
+
     This locks the system into read-only mode by rejecting flush events.
     """
     global _SAFETY_FREEZE_ACTIVE

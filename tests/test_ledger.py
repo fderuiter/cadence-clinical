@@ -121,4 +121,5 @@ async def test_safety_freeze_prevents_writes():
                 await session.commit()
     finally:
         import apps.execution.ledger as ledger
+
         ledger._SAFETY_FREEZE_ACTIVE = False

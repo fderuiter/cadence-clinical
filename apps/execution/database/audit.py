@@ -41,7 +41,7 @@ def receive_before_flush(session: Session, flush_context, instances):
     Automatically tracks all inserted, updated, and deleted objects in the current
     session and generates corresponding `AuditLog` records. If the global safety freeze
     is active, this will raise an exception to prevent any database modifications.
-    
+
     Args:
         session (Session): The active database session.
         flush_context: The flush context.

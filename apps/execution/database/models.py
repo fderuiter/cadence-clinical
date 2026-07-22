@@ -12,10 +12,11 @@ class Base(DeclarativeBase):
 class AuditLog(Base):
     """
     Represents an atomic, immutable change record for a database row.
-    
+
     Captures old and new values, action type, user, and timestamps.
     Part of the cryptographic audit ledger.
     """
+
     __tablename__ = "audit_logs"
 
     id: Mapped[str] = mapped_column(
@@ -38,10 +39,11 @@ class AuditLog(Base):
 class AuditLedgerBlock(Base):
     """
     Represents a sealed block in the cryptographic audit ledger.
-    
+
     Groups multiple `AuditLog` entries, computes a Merkle root, and chains to the previous
     block using a cryptographic hash to ensure chronological non-repudiation.
     """
+
     __tablename__ = "audit_ledger_blocks"
 
     id: Mapped[str] = mapped_column(
