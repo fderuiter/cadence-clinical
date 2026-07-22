@@ -7,6 +7,7 @@
 * **Target Audience:** Principal Architects, Lead Engineers, GxP Compliance Auditors, Regulatory Officers
 * **Primary System:** Cadence Clinical EDC & Metadata Repository (MDR)
 * **Standards Mapping:** IEC 62304:2006/AMD1:2015 (Class C Compliance), ISO 14971:2019 (Risk Management), FDA 21 CFR Part 11, EU Annex 11
+* **Related Documentation:** [Data Lifecycle Specification](./08_Data_Lifecycle_Specification.md)
 
 ---
 
