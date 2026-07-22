@@ -41,3 +41,21 @@ Cadence Clinical operates as a modular, API-first monorepo designed around clean
 │ Neo4j Graph DB   │                                │ PostgreSQL DB    │
 │ (Study Metadata) │                                │ (Trial Data)     │
 └──────────────────┘                                └──────────────────┘
+
+```
+### Repo Layout
+```text
+cadence-clinical/
+├── apps/
+│   ├── designer/         # Study Design & Metadata Authoring Service (FastAPI / Neo4j)
+│   ├── execution/        # EDC Execution Service (eCRF, Subjects, Queries, PostgreSQL)
+│   └── gateway/          # Central API Gateway & JWT Auth Middleware
+├── packages/
+│   └── core-models/      # Shared Pydantic v2 schemas for CDISC USDM, CDASH, and ODM
+├── docker/               # Orchestration blueprints (PostgreSQL, Neo4j, Keycloak)
+├── tests/                # Cross-service integration & transformation suites
+├── AGENTS.md             # AI Agent guidelines & workspace constraints
+├── ARCHITECTURE.md       # In-depth architectural specification
+├── pyproject.toml        # Workspace dependencies (Python 3.11+)
+└── README.md
+```
