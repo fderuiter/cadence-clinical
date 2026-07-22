@@ -6,6 +6,7 @@
 - **Document Identifier:** CAD-SDLC-SEC-005
 - **Version:** 1.0.0
 - **Effective Date:** July 24, 2026
+- **Related Documentation:** [Data Lifecycle Specification](./08_Data_Lifecycle_Specification.md)
 - **Regulatory Standards Alignment:**
   - FDA 21 CFR Part 11 (Electronic Records; Electronic Signatures)
   - EMA EudraLex Volume 4, Annex 11 (Computerised Systems)

@@ -5,6 +5,7 @@
 - **Status:** APPROVED / GxP-BASELINE
 - **Target Audience:** Clinical Data Managers, Biostatisticians, System Integration Architects, Medical Directors
 - **Standards Alignment:** CDISC SDTM v2.0 / ADaM v1.3 / CDASH v2.1, ISO 14155:2020, ICH E6(R2)/E9, 21 CFR Part 11, EU Annex 11, HIPAA Safe Harbor, GDPR.
+- **Related Documentation:** [Data Lifecycle Specification](./08_Data_Lifecycle_Specification.md)
 
 ---
 
