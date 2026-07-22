@@ -1,10 +1,19 @@
 # Local Development Sandbox Guide
 
-Welcome to the fully containerized local development sandbox for Cadence Clinical. This guide details how to launch, use, and validate the local environment without installing dependencies on your host machine.
+Welcome to the fully containerized local development sandbox for the Cadence Clinical Platform. This guide is intended to help developers navigate the local development environment and understand the core architectural constraints.
+
+## Architecture & Decisions
+
+Before making significant changes or starting a new feature, please review the historical design choices and the context behind them. 
+
+All past architectural decisions are documented in our **[Architectural Decisions Index](adr/index.md)**. 
+
+When introducing new architectural changes (e.g., adding a new dependency, modifying data models, or adding a new service), you are required to submit an Architecture Decision Record (ADR) following the mandatory format. A template is provided in the `docs/adr/` directory.
 
 ## Prerequisites
 - Docker Engine installed (or Docker Desktop/OrbStack).
 - Docker Compose v2 (usually included with Docker).
+- Python 3.11+ installed (if you wish to install dependencies locally).
 
 ## 1. Running the Sandbox
 
@@ -26,7 +35,7 @@ The source directories (`apps/`, `packages/`, `tests/`, etc.) are mounted into t
 
 ## 2. Validation & Verification
 
-Before submitting code, you must ensure all styling, linting, and tests pass successfully inside the containerized sandbox against the live containerized database.
+Before submitting code, you must ensure all styling, linting, and tests pass successfully inside the containerized sandbox against the live containerized database. Review the API guidelines and Pydantic models in `packages/core-models/`.
 
 We have provided a verification helper script:
 
@@ -53,10 +62,14 @@ docker compose -f docker/docker-compose.yml exec execution pytest tests/test_aud
 
 ## 3. Dependency Management
 
-The project uses `uv` as the package manager and dependency installer. Dependencies are automatically installed into a virtual environment (`/opt/.venv`) within the containers during the build process via `uv sync --all-extras`. **You do not need to install Python or packages on your host.**
+The project uses `uv` as the package manager and dependency installer in the sandbox. Dependencies are automatically installed into a virtual environment (`/opt/.venv`) within the containers during the build process via `uv sync --all-extras`. **You do not need to install Python or packages on your host.** 
+
+If you prefer to install locally outside the container, you can use `poetry install`.
 
 If you add new dependencies to `pyproject.toml`, you must rebuild the sandbox containers to pull in the new packages:
 
 ```bash
 docker compose -f docker/docker-compose.yml up -d --build
 ```
+
+For detailed submission guidelines, please refer to the main repository documentation.
