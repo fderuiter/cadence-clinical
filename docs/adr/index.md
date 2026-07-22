@@ -22,3 +22,5 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-22: Merkle Root Sealing](2026-07-22-merkle-root-sealing.md)
 - [2026-07-22: Database Shadow Triggers](2026-07-22-database-shadow-triggers.md)
 - [2026-07-22: Signature Re-Authentication](2026-07-22-signature-re-authentication.md)
+- [2026-07-22: Schema Mapping Design](2026-07-22-schema-mapping-design.md)
+- [2026-07-22: Audit Log Design](2026-07-22-audit-log-design.md)
