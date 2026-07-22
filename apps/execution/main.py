@@ -3,13 +3,15 @@ import hmac
 import os
 import time
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator, Awaitable, Callable
+from typing import Any, AsyncGenerator, Awaitable, Callable
 
-from fastapi import FastAPI, Request, Response
+from fastapi import BackgroundTasks, FastAPI, Request, Response
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 from apps.execution.database.core import db_manager
 from apps.execution.database.middleware import ContextResetMiddleware
+from apps.execution.translator import process_translation
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
@@ -115,3 +117,38 @@ async def health_check() -> dict[str, str]:
         dict[str, str]: The health status payload.
     """
     return {"status": "ok", "service": "execution"}
+
+
+class StudyEvent(BaseModel):
+    """Pydantic model representing an incoming study publication event.
+
+    Attributes:
+        study_id (str): The unique identifier of the study.
+        payload (dict[str, Any]): The raw USDM protocol payload.
+    """
+
+    study_id: str
+    payload: dict[str, Any]
+
+
+@app.post("/events/study-published")
+async def study_published(
+    event: StudyEvent, background_tasks: BackgroundTasks
+) -> dict[str, str]:
+    """Ingest study publication events and trigger layout generation asynchronously.
+
+    Args:
+        event (StudyEvent): The incoming study event payload.
+        background_tasks (BackgroundTasks): FastAPI background task manager.
+
+    Returns:
+        dict[str, str]: A status message confirming job acceptance.
+    """
+    # Requirement 1: Listen for study publication events and trigger translation processes in the background.
+    background_tasks.add_task(
+        process_translation,
+        event.study_id,
+        event.payload,
+        db_manager.get_session_maker(),
+    )
+    return {"status": "accepted", "message": "Translation job queued in background."}
