@@ -36,7 +36,7 @@ async def setup_test_db():
     db_manager.init_db(
         os.getenv(
             "TEST_DATABASE_URL",
-            "postgresql+asyncpg://cadence:cadence_password@postgres:5432/cadence_edc",
+            "sqlite+aiosqlite:///:memory:",
         )
     )
     async with db_manager.engine.begin() as conn:
