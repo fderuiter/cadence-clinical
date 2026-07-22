@@ -4,7 +4,13 @@ from unittest.mock import AsyncMock, patch
 from apps.designer.validator import generate_alignment_report
 
 @pytest.mark.asyncio
-async def test_generate_alignment_report():
+async def test_generate_alignment_report() -> None:
+    """
+    Test the generation of an alignment report for a mock study.
+    
+    Mocks the external HTTP call to the study registry to return a valid
+    USDM payload and verifies the report evaluates structural completeness accurately.
+    """
     study_id = str(uuid.uuid4())
     
     mock_payload = {

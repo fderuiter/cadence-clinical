@@ -13,6 +13,14 @@ from apps.designer.mapper import map_study_to_usdm
 from apps.designer.validator import generate_alignment_report, StudyAlignmentReport
 
 class DifferenceResult(BaseModel):
+    """
+    Represents a field-level difference between two versions.
+
+    Attributes:
+        field: The name of the field that changed.
+        old_value: The previous value of the field.
+        new_value: The updated value of the field.
+    """
     field: str
     old_value: Any
     new_value: Any
