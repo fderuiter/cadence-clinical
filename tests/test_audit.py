@@ -8,20 +8,16 @@ from sqlalchemy.pool import StaticPool
 from apps.execution.database.models import Base, AuditLog, AuditedModel
 from apps.execution.database.context import current_session, current_user_id, current_change_reason
 from apps.execution.database.decorators import transactional
-from apps.execution.database.audit import receive_before_flush  # noqa: F401
+import apps.execution.database.audit  # noqa: F401 (Imported for side-effects: registers event listener)
 
 # Create a test model that extends AuditedModel
 class ClinicalRecord(AuditedModel):
     __tablename__ = 'clinical_records'
     data_value: Mapped[str] = mapped_column(String(255), nullable=True)
 
-
-
 # Test DB Setup
 engine = create_async_engine("sqlite+aiosqlite:///:memory:", poolclass=StaticPool, echo=False)
 TestingSessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
-
-
 
 @pytest_asyncio.fixture(autouse=True)
 async def setup_db():
