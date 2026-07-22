@@ -3,12 +3,13 @@ import time
 from typing import Any, Dict, List, Tuple
 
 import httpx
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, UploadFile, File
 from pydantic import BaseModel
 
 from apps.designer.db import get_study_projection, terminology_cache
 from apps.designer.mapper import map_study_to_usdm
 from apps.designer.validator import StudyAlignmentReport, generate_alignment_report
+from apps.designer.xml_mapping import validate_mapping_csv
 from packages.security.middleware import GatewayAuthMiddleware
 
 
@@ -256,3 +257,20 @@ async def study_differences(
             )
 
     return differences
+
+@app.post("/api/v1/mappings/upload", status_code=status.HTTP_200_OK)
+async def upload_mapping_csv(file: UploadFile = File(...)):
+    """
+    Validates a CSV mapping configuration to ensure target names meet standard W3C XML naming specifications.
+    
+    Raises:
+        HTTPException: If the CSV format is invalid or if target XML names violate naming rules.
+    """
+    try:
+        content = (await file.read()).decode("utf-8")
+        rows = validate_mapping_csv(content)
+        return {"status": "success", "rows_processed": len(rows)}
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=f"Validation Error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Processing Error: {str(e)}")
