@@ -4,6 +4,10 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   conflict-check:
     name: Check for Merge Conflicts
@@ -13,7 +17,9 @@ jobs:
       pull-requests: write
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Check mergeable status
         id: check_status
@@ -38,9 +44,4 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           CONFLICT_OUTCOME: ${{ steps.check_status.outputs.status == 'CONFLICTING' && 'failure' || 'success' }}
-          LINTING_OUTCOME: success
-          TEST_OUTCOME: success
-          FRONTEND_OUTCOME: success
-          ADR_OUTCOME: success
-          AUDIT_OUTCOME: success
         run: python3 scripts/post_pr_comment.py

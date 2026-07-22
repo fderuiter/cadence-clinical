@@ -1,17 +1,37 @@
 #!/usr/bin/env python3
 import json
 import os
+import re
 import subprocess
 import sys
 
+ROW_KEYS: dict[str, str] = {
+    "Linting & Formatting": "lint",
+    "Backend Tests & Coverage": "test",
+    "Frontend Checks": "frontend",
+    "ADR Validation": "adr",
+    "Dependency & Static Audit": "audit",
+    "Git Merge Conflicts": "conflict",
+}
 
-def run_command(args, check=True):
-    """Run a system command and return output."""
+
+def run_command(args: list[str], check: bool = True) -> tuple[str, str]:
+    """Run a system command and return output with a finite timeout."""
     try:
         res = subprocess.run(
-            args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=check
+            args,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=check,
+            timeout=30,  # Prevent hanging runs
         )
         return res.stdout.strip(), res.stderr.strip()
+    except subprocess.TimeoutExpired as e:
+        print(f"Command timed out (30s limit): {' '.join(args)}")
+        if check:
+            raise e
+        return "", "Timeout expired"
     except subprocess.CalledProcessError as e:
         print(f"Command failed: {' '.join(args)}")
         print(f"Stdout: {e.stdout}")
@@ -21,7 +41,7 @@ def run_command(args, check=True):
         return "", e.stderr.strip()
 
 
-def get_status_emoji(outcome):
+def get_status_emoji(outcome: str | None) -> str:
     if not outcome:
         return "⚪ Skip/Unknown"
     outcome = outcome.lower()
@@ -37,13 +57,59 @@ def get_status_emoji(outcome):
         return f"⚪ {outcome.capitalize()}"
 
 
-def build_comment_body(outcomes, has_failures):
+def parse_existing_outcomes(comment_body: str) -> dict[str, str]:
+    """Parse existing comment body to extract previously stored outcomes."""
+    outcomes: dict[str, str] = {}
+    pattern = re.compile(r"\|\s*\*\*(.*?)\*\*.*?\s*\|\s*(.*?)\s*\|")
+    for match in pattern.finditer(comment_body):
+        raw_key = match.group(1).strip()
+        raw_status = match.group(2).strip()
+
+        key: str | None = None
+        for rk, k in ROW_KEYS.items():
+            if rk in raw_key:
+                key = k
+                break
+
+        if key:
+            if "Passed" in raw_status or "No Conflicts" in raw_status:
+                outcomes[key] = "success"
+            elif "Failed" in raw_status or "Conflicts Detected" in raw_status:
+                outcomes[key] = "failure"
+            elif "Skipped" in raw_status or "Skip" in raw_status:
+                outcomes[key] = "skipped"
+            elif "Warning" in raw_status:
+                outcomes[key] = "warning"
+            else:
+                outcomes[key] = "skipped"
+    return outcomes
+
+
+def merge_outcomes(
+    new_outcomes: dict[str, str], existing_outcomes: dict[str, str]
+) -> dict[str, str]:
+    """Merge newly supplied outcomes with existing ones to avoid state erasure."""
+    merged: dict[str, str] = {}
+    for key in ["lint", "test", "frontend", "adr", "audit", "conflict"]:
+        new_val = new_outcomes.get(key)
+        existing_val = existing_outcomes.get(key)
+
+        # Only overwrite existing status if we got a fresh, non-skipped run
+        if new_val and new_val.lower() not in ("skipped", "skip", "unknown", ""):
+            merged[key] = new_val
+        elif existing_val:
+            merged[key] = existing_val
+        else:
+            merged[key] = new_val or "skipped"
+    return merged
+
+
+def build_comment_body(outcomes: dict[str, str], has_failures: bool) -> str:
     emoji_lint = get_status_emoji(outcomes.get("lint"))
     emoji_test = get_status_emoji(outcomes.get("test"))
     emoji_frontend = get_status_emoji(outcomes.get("frontend"))
     emoji_adr = get_status_emoji(outcomes.get("adr"))
     emoji_audit = get_status_emoji(outcomes.get("audit"))
-    emoji_conflict = get_status_emoji(outcomes.get("conflict"))
 
     # Turn the conflict emoji into a positive "No Conflict" if it's success (Passed), or "Conflict Detected" if it's failure
     conflict_val = outcomes.get("conflict", "success").lower()
@@ -142,7 +208,7 @@ Before approving a PR or signing off on a merged state, verify completion of thi
     return body
 
 
-def main():
+def main() -> None:
     repo = os.environ.get("GITHUB_REPOSITORY")
     pr_number = os.environ.get("PR_NUMBER")
 
@@ -152,49 +218,64 @@ def main():
         )
         sys.exit(0)
 
-    outcomes = {
-        "lint": os.environ.get("LINTING_OUTCOME", "success"),
-        "test": os.environ.get("TEST_OUTCOME", "success"),
-        "frontend": os.environ.get("FRONTEND_OUTCOME", "success"),
-        "adr": os.environ.get("ADR_OUTCOME", "success"),
-        "audit": os.environ.get("AUDIT_OUTCOME", "success"),
-        "conflict": os.environ.get("CONFLICT_OUTCOME", "success"),
+    audit_outcome = os.environ.get("AUDIT_OUTCOME", "").lower()
+    static_outcome = os.environ.get("STATIC_OUTCOME", "").lower()
+    combined_audit = ""
+    if "failure" in (audit_outcome, static_outcome):
+        combined_audit = "failure"
+    elif audit_outcome == "success" and static_outcome == "success":
+        combined_audit = "success"
+    else:
+        # Fallback to whichever non-empty outcome is present
+        combined_audit = audit_outcome or static_outcome
+
+    raw_new_outcomes: dict[str, str] = {
+        "lint": os.environ.get("LINTING_OUTCOME", ""),
+        "test": os.environ.get("TEST_OUTCOME", ""),
+        "frontend": os.environ.get("FRONTEND_OUTCOME", ""),
+        "adr": os.environ.get("ADR_OUTCOME", ""),
+        "audit": combined_audit,
+        "conflict": os.environ.get("CONFLICT_OUTCOME", ""),
     }
 
-    job_status = os.environ.get("JOB_STATUS", "success")
-    has_failures = job_status.lower() == "failure" or any(
-        val.lower() in ("failure", "failed", "true", "yes") for val in outcomes.values()
-    )
-
-    # Check if we should only post when there are failures or conflicts
-    # Or if an existing comment needs to be updated.
-    # We will list the existing comments first.
+    # Fetch existing comments to see if we have an existing checklist comment
     comments_json, _ = run_command(
         [
             "gh",
             "api",
             f"repos/{repo}/issues/{pr_number}/comments",
             "--paginate",
-        ]
+        ],
+        check=False,
     )
 
-    existing_comment_id = None
+    existing_comment_id: str | None = None
+    existing_outcomes: dict[str, str] = {}
     if comments_json:
         try:
             comments = json.loads(comments_json)
             for comment in comments:
-                if "<!-- ID: CADENCE_PR_QUALITY_GATE_CHECKLIST -->" in comment.get(
-                    "body", ""
-                ):
+                body = comment.get("body", "")
+                if "<!-- ID: CADENCE_PR_QUALITY_GATE_CHECKLIST -->" in body:
                     existing_comment_id = comment["id"]
+                    existing_outcomes = parse_existing_outcomes(body)
                     break
         except Exception as e:
             print(f"Error parsing comments JSON: {e}")
 
-    comment_body = build_comment_body(outcomes, has_failures)
+    # Merge fresh outcomes with existing ones
+    merged_outcomes = merge_outcomes(raw_new_outcomes, existing_outcomes)
 
-    # We want to post a comment if there is a failure/conflict, OR
-    # if an existing comment already exists (in which case we update it to show success/fixed state)
+    # Compute overall job failure status
+    job_status = os.environ.get("JOB_STATUS", "success")
+    has_failures = job_status.lower() == "failure" or any(
+        val.lower() in ("failure", "failed", "true", "yes")
+        for val in merged_outcomes.values()
+    )
+
+    comment_body = build_comment_body(merged_outcomes, has_failures)
+
+    # We post/update if we have failures/conflicts, OR if we already had a comment before
     if has_failures or existing_comment_id:
         if existing_comment_id:
             print(f"Updating existing comment {existing_comment_id}...")

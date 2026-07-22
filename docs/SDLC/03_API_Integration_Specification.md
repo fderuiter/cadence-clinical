@@ -12,9 +12,6 @@ This specification serves as the absolute, contract-complete reference for all e
 
 Every endpoint, data structure, authentication handshake, cryptographic payload signature, and synchronization mechanism described herein is designed to comply with **ISO 14155:2020** (Clinical investigation of medical devices for human subjects — Good clinical practice) and **21 CFR Part 11** (Electronic Records; Electronic Signatures). This document guarantees data integrity, auditability, trace-to-source traceability, and schema completeness across all external system borders and internal microservice bounds.
 
-**Related Documentation:**
-* [Data Lifecycle Specification](./08_Data_Lifecycle_Specification.md)
-
 ---
 
 ## 2. Architectural Paradigm & System Boundaries

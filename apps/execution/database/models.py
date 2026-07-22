@@ -63,35 +63,3 @@ class TranslationJob(AuditedModel):
     odm_payload: Mapped[str] = mapped_column(String, nullable=True)
     openrosa_payload: Mapped[str] = mapped_column(String, nullable=True)
     error_message: Mapped[str] = mapped_column(String, nullable=True)
-
-
-class Cohort(AuditedModel):
-    """Represents a trial cohort configuration."""
-
-    __tablename__ = "cohorts"
-
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
-    status: Mapped[str] = mapped_column(
-        String(50), nullable=False, default="active", index=True
-    )
-    target_enrollment: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-
-
-class Subject(AuditedModel):
-    """Represents a subject enrolled in a trial."""
-
-    __tablename__ = "subjects"
-
-    subject_uid: Mapped[str] = mapped_column(
-        String(255), nullable=False, unique=True, index=True
-    )
-    cohort_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
-
-
-class AllocationPath(AuditedModel):
-    """Represents an allocation path for subjects."""
-
-    __tablename__ = "allocation_paths"
-
-    cohort_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
-    path_name: Mapped[str] = mapped_column(String(255), nullable=False)

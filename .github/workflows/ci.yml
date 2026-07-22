@@ -4,6 +4,10 @@ on:
   pull_request:
     branches: [ main ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: Test and Coverage
@@ -28,15 +32,17 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@f98633be6e60b2c650e26b1772c57805cb22d059 # v3.1.2
         with:
           enable-cache: true
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@0b93645e9fae4979ced4efde35617be65c2b62d4 # v5.3.0
         with:
           python-version: '3.11'
 
@@ -44,12 +50,12 @@ jobs:
         run: uv sync --all-extras
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@396506212c90e0cdd9853c1304ec693ce8516d8e # v4.2.0
         with:
           node-version: '20'
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@fe704eeaa42574e9da40d96c4a4ecd99f02931fc # v3
         with:
           version: 9
 
@@ -58,31 +64,38 @@ jobs:
 
       - name: Run frontend checks
         id: run_frontend
+        if: always()
         run: pnpm check
 
       - name: Run linting
         id: run_linting
+        if: always()
         run: |
           uv run ruff check .
           uv run ruff format --check .
 
       - name: Run ADR validation
         id: run_adr
+        if: always()
         run: python3 scripts/validate_adrs.py
 
       - name: Run static analysis
         id: run_static
+        if: always()
         run: uv run bandit -c pyproject.toml -ll -ii -r apps packages
 
       - name: Run dependency audit
         id: run_audit
+        if: always()
         run: uv run pip-audit --ignore-vuln PYSEC-2026-1325
 
       - name: Install Playwright Browsers
+        if: always()
         run: uv run playwright install --with-deps chromium
 
       - name: Run tests and coverage
         id: run_tests
+        if: always()
         env:
           TEST_DATABASE_URL: "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"
         run: uv run pytest
@@ -96,7 +109,8 @@ jobs:
           TEST_OUTCOME: ${{ steps.run_tests.outcome }}
           FRONTEND_OUTCOME: ${{ steps.run_frontend.outcome }}
           ADR_OUTCOME: ${{ steps.run_adr.outcome }}
-          AUDIT_OUTCOME: ${{ steps.run_audit.outcome || steps.run_static.outcome }}
+          AUDIT_OUTCOME: ${{ steps.run_audit.outcome }}
+          STATIC_OUTCOME: ${{ steps.run_static.outcome }}
           JOB_STATUS: ${{ job.status }}
         run: python3 scripts/post_pr_comment.py
   classify:
