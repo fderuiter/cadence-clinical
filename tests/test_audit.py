@@ -20,6 +20,7 @@ class ClinicalRecord(AuditedModel):
     __tablename__ = "clinical_records"
     data_value: Mapped[str] = mapped_column(String(255), nullable=True)
 
+
 @pytest_asyncio.fixture(autouse=True)
 async def setup_db():
     db_manager.init_db("sqlite+aiosqlite:///:memory:", poolclass=StaticPool, echo=False)

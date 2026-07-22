@@ -40,6 +40,7 @@ class AuditedModel(Base):
             kwargs["id"] = str(uuid.uuid4())
         super().__init__(**kwargs)
 
+
 class TranslationJob(AuditedModel):
     """Represents an asynchronous study translation job.
 
@@ -52,10 +53,13 @@ class TranslationJob(AuditedModel):
         openrosa_payload (str): The generated OpenRosa XML layout payload.
         error_message (str): An error message if the translation failed.
     """
-    __tablename__ = 'translation_jobs'
+
+    __tablename__ = "translation_jobs"
 
     study_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    status: Mapped[str] = mapped_column(String(50), nullable=False) # PENDING, COMPLETED, FAILED
+    status: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # PENDING, COMPLETED, FAILED
     odm_payload: Mapped[str] = mapped_column(String, nullable=True)
     openrosa_payload: Mapped[str] = mapped_column(String, nullable=True)
     error_message: Mapped[str] = mapped_column(String, nullable=True)
