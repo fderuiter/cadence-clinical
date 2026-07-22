@@ -27,7 +27,7 @@ When operating within the multi-repository workspace, you have access to three c
 - **Language & Runtime:** Python 3.11+
 - **Frameworks:** FastAPI, Pydantic v2 (strict typing required), HTTPX (async REST)
 - **Code Style:** Black formatting, Ruff linting
-- **Database Access:** 
+- **Database Access:**
   - `apps/designer`: Async Neo4j Python Driver
   - `apps/execution`: Async SQLAlchemy / SQLModel for PostgreSQL
 - **Standards:** CDISC USDM (v3.0/v4.0), CDISC ODM XML/JSON, 21 CFR Part 11 compliant audit fields (`created_at`, `created_by`, `reason_for_change`, `version_index`).

@@ -61,6 +61,11 @@ jobs:
 
       - name: Run ADR validation
         run: python3 scripts/validate_adrs.py
+      - name: Run static analysis
+        run: poetry run bandit -c pyproject.toml -ll -ii -r apps packages
+
+      - name: Run dependency audit
+        run: poetry run pip-audit --ignore-vuln PYSEC-2026-1325
 
       - name: Run tests and coverage
         env:
