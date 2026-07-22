@@ -15,6 +15,7 @@
 *.p12
 secrets/
 secrets.yaml
+!.secrets.baseline
 
 # ------------------------------------------
 # Python & Bytecode
