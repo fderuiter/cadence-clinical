@@ -64,7 +64,7 @@ docker compose -f docker/docker-compose.yml exec execution pytest tests/test_aud
 
 The project uses `uv` as the package manager and dependency installer in the sandbox. Dependencies are automatically installed into a virtual environment (`/opt/.venv`) within the containers during the build process via `uv sync --all-extras`. **You do not need to install Python or packages on your host.**
 
-If you prefer to install locally outside the container, you can use `poetry install`.
+If you prefer to install locally outside the container, you can use `uv sync --all-extras`.
 
 If you add new dependencies to `pyproject.toml`, you must rebuild the sandbox containers to pull in the new packages:
 
