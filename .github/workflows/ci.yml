@@ -61,6 +61,8 @@ jobs:
           uv run ruff check .
           uv run black --check .
 
+      - name: Run ADR validation
+        run: python3 scripts/validate_adrs.py
       - name: Run static analysis
         run: uv run bandit -c pyproject.toml -ll -ii -r apps packages
 
