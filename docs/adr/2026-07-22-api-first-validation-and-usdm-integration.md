@@ -1,4 +1,4 @@
-# ADR 0003: API-First Validation and USDM Integration
+# ADR 2026-07-22: API-First Validation and USDM Integration
 
 ## Status
 Accepted
@@ -13,6 +13,10 @@ We are transitioning to a decoupled, API-first validation approach and integrati
 2. **Removing Direct Database (Neo4j) Coupling**: We removed the Neo4j driver initialization process on startup in the designer application. Moving validation to the API layer decouples Cadence from the underlying data store of the external registry, significantly improving system boundaries and reliability. The differences endpoint has also been transitioned away from direct database coupling.
 3. **API-Driven On-Demand Validation**: The alignment validation engine now dynamically retrieves nested study definitions via the `/usdm/v4` HTTP endpoints, utilizing `httpx.AsyncClient` with strict timeouts.
 
-## Consequences
+## Alternatives Considered
+- **Maintaining custom parser models**: This was rejected because maintaining parity with the evolving CDISC USDM standard would require significant ongoing manual effort and risk data truncation.
+- **Keeping direct Neo4j database coupling**: This was rejected because it violates architectural boundaries and makes the system brittle and heavily dependent on the external registry's internal data store rather than its API.
+
+## Trade-offs
 - **Positive**: 100% schema validation without direct database queries, elimination of data truncation errors, cleaner architecture, and improved reliability.
 - **Negative**: Adds a network dependency on the external registry's HTTP endpoints for validation, meaning validation is subject to potential latency or network errors.

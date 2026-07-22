@@ -1,4 +1,4 @@
-# ADR 0001: Background Translation Job and Layout Engine Data Contract
+# ADR 2026-07-22: Background Translation Job and Layout Engine Data Contract
 
 ## Status
 Accepted
@@ -16,6 +16,10 @@ The `TranslationJob` schema tracks:
 - `openrosa_payload`: The OpenRosa XML representation generated for mobile data collection.
 - `error_message`: A structured error description if the job fails.
 
-## Consequences
+## Alternatives Considered
+- **Synchronous API Execution:** Keeping the translation within the HTTP request cycle was considered but rejected because of the high latency and blocking of the event loop.
+- **Microservice Segregation:** Creating a completely separate microservice for translation was deemed too complex and heavy for the current system architecture constraints.
+
+## Trade-offs
 - **Positive:** API endpoints remain responsive; resource-intensive XML generation occurs in the background. Complete immutability and auditing are retained because `TranslationJob` automatically hooks into the SQLAlchemy audit logger.
 - **Negative:** Eventual consistency – clients cannot immediately consume the XML payload in the same HTTP transaction and must query the status instead.
