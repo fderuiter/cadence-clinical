@@ -1,13 +1,28 @@
 from fastapi.testclient import TestClient
 import time
+import hmac
+import hashlib
 from apps.designer.main import app
 from apps.designer.db import db_query_counts, terminology_cache, MOCK_TERMINOLOGY
 
 client = TestClient(app)
 
+def get_auth_headers():
+    user_id = "test-user"
+    roles = "test-role"
+    timestamp = str(time.time())
+    message = f"{user_id}:{roles}:{timestamp}"
+    signature = hmac.new(b"internal-gateway-secret-12345", message.encode(), hashlib.sha256).hexdigest()
+    return {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": signature
+    }
+
 def test_legacy_endpoint_returns_original_schema():
     # Requirement: Requesting resources from versioned legacy endpoints returns original schemas
-    response = client.get("/api/v1/studies/study_1")
+    response = client.get("/api/v1/studies/study_1", headers=get_auth_headers())
     assert response.status_code == 200
     data = response.json()
     assert data["study_id"] == "study_1"
@@ -18,7 +33,7 @@ def test_legacy_endpoint_returns_original_schema():
 def test_usdm_endpoint_returns_nested_schema_and_fast():
     # Requirement: Requesting a USDM study export constructs and returns the full nested JSON structure within 200ms
     start = time.perf_counter()
-    response = client.get("/api/v2/studies/study_1/usdm")
+    response = client.get("/api/v2/studies/study_1/usdm", headers=get_auth_headers())
     duration_ms = (time.perf_counter() - start) * 1000
     
     assert response.status_code == 200
@@ -45,14 +60,14 @@ def test_terminology_cache_prevents_db_queries():
     initial_queries = db_query_counts["terminology_lookups"]
     
     # First request: populates cache
-    response = client.get("/api/v2/studies/study_1/usdm")
+    response = client.get("/api/v2/studies/study_1/usdm", headers=get_auth_headers())
     assert response.status_code == 200
     
     queries_after_first = db_query_counts["terminology_lookups"]
     assert queries_after_first > initial_queries
     
     # Second request: identical lookups, should hit cache
-    response2 = client.get("/api/v2/studies/study_1/usdm")
+    response2 = client.get("/api/v2/studies/study_1/usdm", headers=get_auth_headers())
     assert response2.status_code == 200
     
     queries_after_second = db_query_counts["terminology_lookups"]
@@ -61,19 +76,19 @@ def test_terminology_cache_prevents_db_queries():
 def test_admin_cache_clear_forces_fresh_read():
     # Requirement: Sending an authorized trigger to the administrative endpoint flushes cache
     # First populate cache
-    client.get("/api/v2/studies/study_1/usdm")
+    client.get("/api/v2/studies/study_1/usdm", headers=get_auth_headers())
     queries_before_clear = db_query_counts["terminology_lookups"]
     
     # Trigger clear
-    clear_response = client.post("/api/admin/cache/clear")
+    clear_response = client.post("/api/admin/cache/clear", headers=get_auth_headers())
     assert clear_response.status_code == 200
     
-    status_response = client.get("/api/admin/cache/status")
+    status_response = client.get("/api/admin/cache/status", headers=get_auth_headers())
     assert status_response.status_code == 200
     assert status_response.json()["size"] == 0
     
     # Request again, should force new queries
-    client.get("/api/v2/studies/study_1/usdm")
+    client.get("/api/v2/studies/study_1/usdm", headers=get_auth_headers())
     queries_after_clear = db_query_counts["terminology_lookups"]
     assert queries_after_clear > queries_before_clear, "Fresh DB reads were not triggered after cache clear"
 
@@ -87,7 +102,7 @@ def test_usdm_validation_error_on_invalid_data():
     MOCK_STUDIES["study_1"]["arms"][0]["type_concept_id"] = "INVALID_CONCEPT"
     
     try:
-        response = client.get("/api/v2/studies/study_1/usdm")
+        response = client.get("/api/v2/studies/study_1/usdm", headers=get_auth_headers())
         assert response.status_code == 422
         assert "Validation Error" in response.json()["detail"]
     finally:
