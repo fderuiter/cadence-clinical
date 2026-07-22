@@ -33,6 +33,10 @@ This document defines the central specification for clinical data flows, metadat
   - **Cryptographic Chaining (`public.audit_ledger_seals`):** Background process runs every 60 seconds (or after 100 raw logs) to generate SHA-256 block hashes chaining previous blocks:
     $$\text{Block\_Hash}_N = \text{SHA-256}\left( \text{Block\_Hash}_{N-1} \parallel \sum \text{Record\_Hash} \right)$$
   - **Integrity Sweeps:** Daily cron jobs recalculate the Merkle root and block hashes, flagging alerts if a schema/database drift is detected.
+- **Application-Level Security & Blinding Controls:**
+  - **Database-Level Audit Protection:** Application-level soft-deletes are complemented by hard-delete blocks on ORM flush listeners, guaranteeing no administrative bypass.
+  - **Multi-Party Cryptographic Key Splitting:** Treatment allocation blinding keys are distributed using threshold cryptography to prevent unilateral unblinding, coupled with automatic annual key rotation (365-day lifecycle).
+  - **Automated Trial Locks:** Safety compromises automatically trigger a read-only lock (blocking `INSERT`, `UPDATE`, `DELETE`, while permitting `SELECT` for safety) globally or per trial, coupled with instant multi-channel alerts (SMS, Email, Webhook) under 60 seconds.
 
 ## Section C: Clinical Data Export Boundaries & Transmission States
 - **CDISC Standards Integration:**
