@@ -1,12 +1,12 @@
 import threading
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 # --- Mock Database Content ---
 MOCK_TERMINOLOGY = {
     "C123": {"code": "C123", "decode": "Treatment Arm", "system": "NCI"},
     "C456": {"code": "C456", "decode": "Placebo Arm", "system": "NCI"},
     "C789": {"code": "C789", "decode": "Screening Visit", "system": "NCI"},
-    "C012": {"code": "C012", "decode": "Follow-up Visit", "system": "NCI"}
+    "C012": {"code": "C012", "decode": "Follow-up Visit", "system": "NCI"},
 }
 
 MOCK_STUDIES = {
@@ -27,19 +27,18 @@ MOCK_STUDIES = {
                         "visit_type_concept_id": "C789",
                         "activities": [
                             {"activity_id": "act_1", "name": "Blood Draw"},
-                            {"activity_id": "act_2", "name": "Vitals"}
-                        ]
+                            {"activity_id": "act_2", "name": "Vitals"},
+                        ],
                     }
-                ]
+                ],
             }
-        ]
+        ],
     }
 }
 
 # --- Counters for Acceptance Criteria Tests ---
-db_query_counts = {
-    "terminology_lookups": 0
-}
+db_query_counts = {"terminology_lookups": 0}
+
 
 def get_study_projection(study_id: str) -> Optional[Dict[str, Any]]:
     """Retrieves a study projection from the database.
@@ -52,6 +51,7 @@ def get_study_projection(study_id: str) -> Optional[Dict[str, Any]]:
     """
     # Simulates an optimized database projection query returning multi-level relationships
     return MOCK_STUDIES.get(study_id)
+
 
 def get_terminology_from_db(concept_id: str) -> Optional[Dict[str, Any]]:
     """Retrieves controlled terminology data from the database.
@@ -66,6 +66,7 @@ def get_terminology_from_db(concept_id: str) -> Optional[Dict[str, Any]]:
     db_query_counts["terminology_lookups"] += 1
     return MOCK_TERMINOLOGY.get(concept_id)
 
+
 # --- Controlled Terminology Cache ---
 class TerminologyCache:
     """Thread-safe in-memory cache for controlled terminology lookups."""
@@ -79,7 +80,7 @@ class TerminologyCache:
         self.max_size: int = max_size
         self._cache: Dict[str, Dict[str, Any]] = {}
         self._lock: threading.Lock = threading.Lock()
-    
+
     def get(self, concept_id: str) -> Optional[Dict[str, Any]]:
         """Retrieves a terminology concept from the cache or database.
 
@@ -92,7 +93,7 @@ class TerminologyCache:
         with self._lock:
             if concept_id in self._cache:
                 return self._cache[concept_id]
-        
+
         # Miss - fetch from DB
         data = get_terminology_from_db(concept_id)
         if data:
@@ -107,7 +108,7 @@ class TerminologyCache:
         """Clears all items from the cache."""
         with self._lock:
             self._cache.clear()
-            
+
     def get_status(self) -> Dict[str, int]:
         """Retrieves the current status of the cache.
 
@@ -115,9 +116,7 @@ class TerminologyCache:
             Dict[str, int]: A dictionary containing 'size' and 'max_size'.
         """
         with self._lock:
-            return {
-                "size": len(self._cache),
-                "max_size": self.max_size
-            }
+            return {"size": len(self._cache), "max_size": self.max_size}
+
 
 terminology_cache = TerminologyCache()
