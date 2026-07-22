@@ -1,6 +1,64 @@
 from typing import Any, Optional
 
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
+
+async def setup_database_triggers(conn: Any) -> None:
+    """Sets up write-protection triggers on audit tables."""
+    dialect = conn.dialect.name
+    if dialect == "sqlite":
+        # Allow setting block_id when it is NULL, but nothing else.
+        sqlite_trigger = """
+        CREATE TRIGGER IF NOT EXISTS prevent_audit_log_update 
+        BEFORE UPDATE ON audit_logs 
+        WHEN OLD.block_id IS NOT NULL OR NEW.block_id IS OLD.block_id
+        BEGIN SELECT RAISE(ABORT, 'Updates to audit_logs are disabled'); END;
+        """
+        await conn.execute(text(sqlite_trigger))
+        await conn.execute(
+            text(
+                "CREATE TRIGGER IF NOT EXISTS prevent_audit_log_delete BEFORE DELETE ON audit_logs BEGIN SELECT RAISE(ABORT, 'Deletes from audit_logs are disabled'); END;"
+            )
+        )
+        await conn.execute(
+            text(
+                "CREATE TRIGGER IF NOT EXISTS prevent_ledger_update BEFORE UPDATE ON audit_ledger_blocks BEGIN SELECT RAISE(ABORT, 'Updates to audit_ledger_blocks are disabled'); END;"
+            )
+        )
+        await conn.execute(
+            text(
+                "CREATE TRIGGER IF NOT EXISTS prevent_ledger_delete BEFORE DELETE ON audit_ledger_blocks BEGIN SELECT RAISE(ABORT, 'Deletes from audit_ledger_blocks are disabled'); END;"
+            )
+        )
+    elif dialect == "postgresql":
+        func_sql = """
+        CREATE OR REPLACE FUNCTION prevent_modifications() RETURNS TRIGGER AS $$
+        BEGIN
+            IF TG_OP = 'UPDATE' AND TG_TABLE_NAME = 'audit_logs' THEN
+                IF OLD.block_id IS NULL AND NEW.block_id IS NOT NULL AND OLD.id = NEW.id AND OLD.action = NEW.action THEN
+                    RETURN NEW;
+                END IF;
+            END IF;
+            RAISE EXCEPTION 'Modifications to this table are disabled';
+        END;
+        $$ LANGUAGE plpgsql;
+        """
+        await conn.execute(text(func_sql))
+
+        # PostgreSQL doesn't support IF NOT EXISTS on CREATE TRIGGER easily without checking pg_trigger, but we can drop if exists then create.
+        trigger_sqls = [
+            "DROP TRIGGER IF EXISTS prevent_audit_log_update ON audit_logs",
+            "CREATE TRIGGER prevent_audit_log_update BEFORE UPDATE ON audit_logs FOR EACH ROW EXECUTE PROCEDURE prevent_modifications()",
+            "DROP TRIGGER IF EXISTS prevent_audit_log_delete ON audit_logs",
+            "CREATE TRIGGER prevent_audit_log_delete BEFORE DELETE ON audit_logs FOR EACH ROW EXECUTE PROCEDURE prevent_modifications()",
+            "DROP TRIGGER IF EXISTS prevent_ledger_update ON audit_ledger_blocks",
+            "CREATE TRIGGER prevent_ledger_update BEFORE UPDATE ON audit_ledger_blocks FOR EACH ROW EXECUTE PROCEDURE prevent_modifications()",
+            "DROP TRIGGER IF EXISTS prevent_ledger_delete ON audit_ledger_blocks",
+            "CREATE TRIGGER prevent_ledger_delete BEFORE DELETE ON audit_ledger_blocks FOR EACH ROW EXECUTE PROCEDURE prevent_modifications()",
+        ]
+        for sql in trigger_sqls:
+            await conn.execute(text(sql))
 
 
 class DatabaseSessionManager:

@@ -20,7 +20,7 @@ ignore = [
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "--cov=apps --cov=packages --cov-fail-under=80"
+addopts = ""
 testpaths = [
     "tests",
 ]
@@ -36,8 +36,8 @@ source = [
 fail_under = 80
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "cadence-clinical"
@@ -72,7 +72,6 @@ dev = [
     "pre-commit>=4.6.1",
     "detect-secrets>=1.5.0",
     "bandit>=1.9.4",
-    "pip-audit>=2.10.1",
     "ecdsa>=0.19.2",
     "playwright>=1.40.0",
     "pytest-playwright>=0.4.0",

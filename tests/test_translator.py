@@ -41,6 +41,9 @@ async def setup_test_db():
     )
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        from apps.execution.database.core import setup_database_triggers
+
+        await setup_database_triggers(conn)
     yield
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)

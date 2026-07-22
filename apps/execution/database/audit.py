@@ -2,6 +2,8 @@ from sqlalchemy import event, inspect
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import get_history
 
+from apps.execution.ledger import is_safety_freeze_active
+
 from .context import current_change_reason, current_user_id
 from .models import AuditedModel, AuditLog
 
@@ -18,6 +20,17 @@ def get_primary_key(obj):
 def receive_before_flush(session: Session, flush_context, instances):
     if not session.is_modified:
         return
+
+    if is_safety_freeze_active():
+        # Check if there are any non-ledger modifications
+        for obj in session.new.union(session.dirty).union(session.deleted):
+            if hasattr(obj, "__tablename__") and obj.__tablename__ not in (
+                "audit_ledger_blocks",
+                "audit_logs",
+            ):
+                raise RuntimeError(
+                    "SAFETY FREEZE ACTIVE: Database is in read-only mode due to integrity breach."
+                )
 
     audit_logs = []
     user_id = current_user_id.get()

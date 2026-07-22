@@ -24,6 +24,10 @@ class ClinicalRecord(AuditedModel):
 async def setup_db():
     import os
 
+    import apps.execution.ledger as ledger
+
+    ledger._SAFETY_FREEZE_ACTIVE = False
+
     db_manager.init_db(
         os.getenv(
             "TEST_DATABASE_URL",
@@ -33,6 +37,9 @@ async def setup_db():
     )
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        from apps.execution.database.core import setup_database_triggers
+
+        await setup_database_triggers(conn)
     yield
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)

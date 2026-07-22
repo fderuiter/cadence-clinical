@@ -26,6 +26,21 @@ class AuditLog(Base):
     new_values: Mapped[dict] = mapped_column(JSON, nullable=True)
     version_index: Mapped[int] = mapped_column(Integer, default=1)
     change_reason: Mapped[str] = mapped_column(String(255), nullable=True)
+    block_id: Mapped[str] = mapped_column(String(36), nullable=True)
+
+
+class AuditLedgerBlock(Base):
+    __tablename__ = "audit_ledger_blocks"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    block_number: Mapped[int] = mapped_column(Integer, unique=True, nullable=False)
+    merkle_root: Mapped[str] = mapped_column(String(64), nullable=False)
+    previous_block_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    block_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    sealed_log_ids: Mapped[list] = mapped_column(JSON, nullable=True)
 
 
 class AuditedModel(Base):
