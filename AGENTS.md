@@ -69,7 +69,7 @@ No code is merged untested. Every feature, bug fix, or data transformation must 
 * **Framework Requirements:**
   * Tests must run successfully using `pytest` and `pytest-asyncio`.
   * Integration tests must mock database interactions or spin up test containers where appropriate.
-* **Automated Validation:** CI/CD execution environments will automatically execute `poetry run pytest` and linting checks (`poetry run ruff check`) prior to opening a Pull Request. Any test failures or un-typed functions will block the merge queue.
+* **Automated Validation:** CI/CD execution environments will automatically execute `uv run pytest` and linting checks (`uv run ruff check`) prior to opening a Pull Request. Any test failures or un-typed functions will block the merge queue.
 
 ---
 
@@ -81,4 +81,4 @@ Before submitting a PR, verify it meets this checklist:
 * [ ] Comprehensive docstrings are included on all public functions and classes.
 * [ ] Unit and/or integration tests are added under `tests/`.
 * [ ] An Architectural Decision Record (ADR) is added to `docs/adr/` if introducing major new design patterns.
-* [ ] All local checks (`poetry run pytest`, `poetry run ruff check`) pass successfully.
+* [ ] All local checks (`uv run pytest`, `uv run ruff check`) pass successfully.
