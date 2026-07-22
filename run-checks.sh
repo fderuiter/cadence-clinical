@@ -12,3 +12,7 @@ docker compose -f docker/docker-compose.yml exec execution ruff check .
 
 echo "Running tests (Pytest)..."
 docker compose -f docker/docker-compose.yml exec execution pytest
+
+echo "Running frontend checks..."
+pnpm install
+pnpm check

@@ -1,0 +1,35 @@
+{
+  "name": "cadence-clinical-workspace",
+  "version": "1.0.0",
+  "description": "> **The Metadata-Driven Clinical Execution Platform.** > *Unifying Clinical Study Design (MDR/SDR) and Electronic Data Capture (EDC) into a single, automated digital data flow.*",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "format": "pnpm -r format",
+    "check": "pnpm format && pnpm lint && pnpm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fderuiter/cadence-clinical.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/fderuiter/cadence-clinical/issues"
+  },
+  "homepage": "https://github.com/fderuiter/cadence-clinical#readme",
+  "private": true,
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.7.0",
+    "prettier": "^3.9.6",
+    "vitest": "^4.1.10"
+  }
+}
