@@ -3,7 +3,7 @@ import time
 from typing import Any, Dict, List, Tuple
 
 import httpx
-from fastapi import FastAPI, HTTPException, status, UploadFile, File
+from fastapi import FastAPI, File, HTTPException, UploadFile, status
 from pydantic import BaseModel
 
 from apps.designer.db import get_study_projection, terminology_cache
@@ -258,11 +258,12 @@ async def study_differences(
 
     return differences
 
+
 @app.post("/api/v1/mappings/upload", status_code=status.HTTP_200_OK)
 async def upload_mapping_csv(file: UploadFile = File(...)):
     """
     Validates a CSV mapping configuration to ensure target names meet standard W3C XML naming specifications.
-    
+
     Raises:
         HTTPException: If the CSV format is invalid or if target XML names violate naming rules.
     """
