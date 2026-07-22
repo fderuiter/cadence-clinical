@@ -1,6 +1,5 @@
 import pytest
 import pytest_asyncio
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy import select, String
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.pool import StaticPool
@@ -8,6 +7,7 @@ from sqlalchemy.pool import StaticPool
 from apps.execution.database.models import Base, AuditLog, AuditedModel
 from apps.execution.database.context import current_session, current_user_id, current_change_reason
 from apps.execution.database.decorators import transactional
+from apps.execution.database.core import db_manager
 import apps.execution.database.audit  # noqa: F401 (Imported for side-effects: registers event listener)
 
 # Create a test model that extends AuditedModel
@@ -15,24 +15,25 @@ class ClinicalRecord(AuditedModel):
     __tablename__ = 'clinical_records'
     data_value: Mapped[str] = mapped_column(String(255), nullable=True)
 
-# Test DB Setup
-engine = create_async_engine("sqlite+aiosqlite:///:memory:", poolclass=StaticPool, echo=False)
-TestingSessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+
 
 @pytest_asyncio.fixture(autouse=True)
 async def setup_db():
-    async with engine.begin() as conn:
+    db_manager.init_db("sqlite+aiosqlite:///:memory:", poolclass=StaticPool, echo=False)
+    async with db_manager.engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
-    async with engine.begin() as conn:
+    async with db_manager.engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
+    await db_manager.close()
 
 @pytest.mark.asyncio
 async def test_insert_generates_audit_log():
     current_user_id.set("user_123")
     current_change_reason.set("initial setup")
 
-    @transactional(TestingSessionLocal)
+    # Pass the getter method from db_manager so transactional gets the factory
+    @transactional(lambda: db_manager.get_session_maker()())
     async def create_record():
         session = current_session.get()
         record = ClinicalRecord(data_value="patient_a")
@@ -43,7 +44,7 @@ async def test_insert_generates_audit_log():
 
     record = await create_record()
 
-    async with TestingSessionLocal() as session:
+    async with db_manager.get_session_maker()() as session:
         result = await session.execute(select(AuditLog))
         logs = result.scalars().all()
         
@@ -60,7 +61,7 @@ async def test_insert_generates_audit_log():
 @pytest.mark.asyncio
 async def test_update_generates_audit_log():
     # Insert initially
-    @transactional(TestingSessionLocal)
+    @transactional(lambda: db_manager.get_session_maker()())
     async def create_record():
         session = current_session.get()
         record = ClinicalRecord(data_value="patient_a")
@@ -74,7 +75,7 @@ async def test_update_generates_audit_log():
     current_user_id.set("user_456")
     current_change_reason.set("correction")
 
-    @transactional(TestingSessionLocal)
+    @transactional(lambda: db_manager.get_session_maker()())
     async def update_record():
         session = current_session.get()
         result = await session.execute(select(ClinicalRecord).where(ClinicalRecord.id == record_id))
@@ -85,7 +86,7 @@ async def test_update_generates_audit_log():
 
     new_version = await update_record()
 
-    async with TestingSessionLocal() as session:
+    async with db_manager.get_session_maker()() as session:
         result = await session.execute(select(AuditLog).order_by(AuditLog.timestamp))
         logs = result.scalars().all()
         
@@ -100,7 +101,7 @@ async def test_update_generates_audit_log():
 
 @pytest.mark.asyncio
 async def test_soft_delete_generates_audit_log():
-    @transactional(TestingSessionLocal)
+    @transactional(lambda: db_manager.get_session_maker()())
     async def create_record():
         session = current_session.get()
         record = ClinicalRecord(data_value="patient_to_delete")
@@ -110,7 +111,7 @@ async def test_soft_delete_generates_audit_log():
 
     record_id = await create_record()
 
-    @transactional(TestingSessionLocal)
+    @transactional(lambda: db_manager.get_session_maker()())
     async def delete_record():
         session = current_session.get()
         result = await session.execute(select(ClinicalRecord).where(ClinicalRecord.id == record_id))
@@ -119,7 +120,7 @@ async def test_soft_delete_generates_audit_log():
 
     await delete_record()
 
-    async with TestingSessionLocal() as session:
+    async with db_manager.get_session_maker()() as session:
         result = await session.execute(select(AuditLog).order_by(AuditLog.timestamp))
         logs = result.scalars().all()
         
@@ -130,7 +131,7 @@ async def test_soft_delete_generates_audit_log():
 
 @pytest.mark.asyncio
 async def test_hard_delete_is_prevented():
-    @transactional(TestingSessionLocal)
+    @transactional(lambda: db_manager.get_session_maker()())
     async def create_record():
         session = current_session.get()
         record = ClinicalRecord(data_value="patient_to_delete")
@@ -140,7 +141,7 @@ async def test_hard_delete_is_prevented():
 
     record_id = await create_record()
 
-    @transactional(TestingSessionLocal)
+    @transactional(lambda: db_manager.get_session_maker()())
     async def hard_delete_record():
         session = current_session.get()
         result = await session.execute(select(ClinicalRecord).where(ClinicalRecord.id == record_id))
@@ -152,11 +153,11 @@ async def test_hard_delete_is_prevented():
 
 @pytest.mark.asyncio
 async def test_rollback_prevents_orphan_audit_logs():
-    async with TestingSessionLocal() as session:
+    async with db_manager.get_session_maker()() as session:
         result = await session.execute(select(AuditLog))
         initial_count = len(result.scalars().all())
 
-    @transactional(TestingSessionLocal)
+    @transactional(lambda: db_manager.get_session_maker()())
     async def failing_transaction():
         session = current_session.get()
         record = ClinicalRecord(data_value="will_fail")
@@ -170,14 +171,14 @@ async def test_rollback_prevents_orphan_audit_logs():
         await failing_transaction()
 
     # Verify no audit logs were persisted
-    async with TestingSessionLocal() as session:
+    async with db_manager.get_session_maker()() as session:
         result = await session.execute(select(AuditLog))
         final_count = len(result.scalars().all())
         assert final_count == initial_count
 
 @pytest.mark.asyncio
 async def test_read_only_queries_do_not_generate_audit_logs():
-    @transactional(TestingSessionLocal)
+    @transactional(lambda: db_manager.get_session_maker()())
     async def create_record():
         session = current_session.get()
         record = ClinicalRecord(data_value="read_only_test")
@@ -189,11 +190,11 @@ async def test_read_only_queries_do_not_generate_audit_logs():
     record_id = await create_record()
     
     # Check current audit count
-    async with TestingSessionLocal() as session:
+    async with db_manager.get_session_maker()() as session:
         result = await session.execute(select(AuditLog))
         initial_count = len(result.scalars().all())
         
-    @transactional(TestingSessionLocal)
+    @transactional(lambda: db_manager.get_session_maker()())
     async def read_record():
         session = current_session.get()
         result = await session.execute(select(ClinicalRecord).where(ClinicalRecord.id == record_id))
@@ -204,7 +205,7 @@ async def test_read_only_queries_do_not_generate_audit_logs():
     assert val == "read_only_test"
     
     # Verify count did not increase
-    async with TestingSessionLocal() as session:
+    async with db_manager.get_session_maker()() as session:
         result = await session.execute(select(AuditLog))
         final_count = len(result.scalars().all())
         assert final_count == initial_count
