@@ -31,3 +31,5 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-22: Decoupled API-First In-Memory Diffing](2026-07-22-api-first-in-memory-diffing.md)
 - [2026-07-24: FHIR / eSource & eCOA Sync Gateway](2026-07-24-fhir-esource-ecoa-sync-gateway.md)
 - [2026-07-24: Code Formatting and Style Standardization](2026-07-24-code-formatting-and-style-standardization.md)
+- [2026-07-23: Core Service-Oriented Clinical Engine](2026-07-23-core-service-oriented-clinical-engine.md)
+- [2026-07-24: FHIR / eSource & eCOA Sync Gateway](2026-07-24-fhir-esource-ecoa-sync-gateway.md)

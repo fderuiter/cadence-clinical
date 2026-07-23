@@ -17,11 +17,13 @@ When introducing new architectural changes (e.g., adding a new dependency, modif
 
 ## 1. Running the Sandbox
 
-To launch all backend applications (Gateway, Designer, Execution) and databases (PostgreSQL, Neo4j) in isolated virtual networks, run a single command from the root of the repository:
+To launch all backend applications (Gateway, Designer, Execution, eTMF), databases (PostgreSQL, Neo4j), and Keycloak identity server in isolated virtual networks, run a single command from the root of the repository:
 
 ```bash
 docker compose -f docker/docker-compose.yml up -d --build
 ```
+
+On container startup, the automatic database migration runner (`apps/execution/database/migrate.py`) runs inside the execution service container to set up the database schema and native GxP write-protection and mutation capture triggers automatically, eliminating any manual setup steps.
 
 ### Hot Reloading
 The source directories (`apps/`, `packages/`, `tests/`, etc.) are mounted into the containers as volumes. The FastAPI services are running with `uvicorn --reload`. This means **any code changes you make on your local host will immediately synchronize and reload the running services**.
@@ -30,6 +32,9 @@ The source directories (`apps/`, `packages/`, `tests/`, etc.) are mounted into t
 - **Gateway API**: [http://localhost:8000](http://localhost:8000)
 - **Designer API**: [http://localhost:8001](http://localhost:8001)
 - **Execution API**: [http://localhost:8002](http://localhost:8002)
+- **eTMF API**: [http://localhost:8003](http://localhost:8003)
+- **Keycloak Identity Server**: [http://localhost:8080](http://localhost:8080) (Admin User: `admin` / Password: `admin_password`) <!-- pragma: allowlist secret -->
+  - A pre-configured Keycloak realm (`cadence`) is automatically imported on startup, featuring default roles: `Sponsor Admin`, `CRA`, `Data Manager`, `Site Investigator`, and `Auditor`.
 - **PostgreSQL**: `localhost:5432` (User: `cadence` / Password: `cadence_password`)
 - **Neo4j**: `localhost:7474` (UI) and `localhost:7687` (Bolt) (User: `neo4j` / Password: `cadence_password`)
 

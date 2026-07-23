@@ -1,0 +1,43 @@
+{
+  "id": "cadence",
+  "realm": "cadence",
+  "enabled": true,
+  "displayName": "Cadence Clinical Platform",
+  "roles": {
+    "realm": [
+      {
+        "name": "Sponsor Admin",
+        "description": "Sponsor Administrator with full oversight over studies."
+      },
+      {
+        "name": "CRA",
+        "description": "Clinical Research Associate responsible for monitoring sites."
+      },
+      {
+        "name": "Data Manager",
+        "description": "Data Manager responsible for CDISC metadata and database locking."
+      },
+      {
+        "name": "Site Investigator",
+        "description": "Site Investigator responsible for capturing patient EDC data."
+      },
+      {
+        "name": "Auditor",
+        "description": "Auditor with read-only access to audit trails and eTMF."
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "cadence-web",
+      "enabled": true,
+      "publicClient": true,
+      "redirectUris": [
+        "http://localhost:3000/*"
+      ],
+      "webOrigins": [
+        "*"
+      ]
+    }
+  ]
+}
