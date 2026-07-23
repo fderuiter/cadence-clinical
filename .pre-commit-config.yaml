@@ -22,3 +22,4 @@ repos:
     hooks:
       - id: detect-secrets
         args: ['--baseline', '.secrets.baseline']
+        exclude: 'pnpm-lock.yaml|uv.lock'
