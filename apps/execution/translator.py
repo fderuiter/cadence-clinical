@@ -48,7 +48,7 @@ def extract_appearance(item: dict[str, Any]) -> str | None:
 
 
 async def process_translation(
-    study_id: str, payload: dict[str, Any], session_factory: Any
+    study_id: str, payload: dict[str, Any], session_factory: Any, version: int = 1
 ) -> None:
     """Background worker that translates USDM payload into CDISC ODM and OpenRosa XML layouts.
 
@@ -56,6 +56,7 @@ async def process_translation(
         study_id (str): The unique identifier of the source study.
         payload (dict[str, Any]): The raw USDM protocol payload.
         session_factory (Any): The SQLAlchemy asynchronous session factory.
+        version (int): The validated study version number.
 
     Returns:
         None
@@ -65,7 +66,9 @@ async def process_translation(
             # Setup the DB session in context so our audit logger can find it
             token = current_session.set(session)
 
-            job = TranslationJob(study_id=study_id, status="PROCESSING")
+            job = TranslationJob(
+                study_id=study_id, status="PROCESSING", version=version
+            )
             session.add(job)
             await session.flush()
 

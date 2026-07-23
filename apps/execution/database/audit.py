@@ -92,7 +92,11 @@ def receive_before_flush(session: Session, flush_context, instances):
                 action = "DELETE"
 
             # Increment version index
-            if hasattr(obj, "version") and "version" not in new_values:
+            if (
+                hasattr(obj, "version")
+                and "version" not in new_values
+                and getattr(obj, "__tablename__", None) != "translation_jobs"
+            ):
                 obj.version += 1
                 new_values["version"] = obj.version
 

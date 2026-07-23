@@ -247,7 +247,7 @@ async def test_layout_validation_integration():
         response = await client.post(
             "/events/study-published", json=study_payload, headers=get_auth_headers()
         )
-    assert response.status_code == 200
+    assert response.status_code == 202
 
     async with db_manager.get_session_maker()() as session:
         result = await session.execute(

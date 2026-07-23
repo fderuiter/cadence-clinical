@@ -32,7 +32,7 @@ class AuditedModel(Base):
     __abstract__ = True
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    version: Mapped[int] = mapped_column(Integer, default=1)
+    version: Mapped[int] = mapped_column(Integer, default=1, index=True)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
 
     def __init__(self, **kwargs):
