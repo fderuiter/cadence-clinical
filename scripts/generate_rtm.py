@@ -301,12 +301,6 @@ def generate_rtm_md(
                         m["test_name"],
                     )
                     test_res = test_results.get(test_key)
-                    if not test_res:
-                        # Fallback match by test_name only
-                        for (c, n), r in test_results.items():
-                            if n == m["test_name"]:
-                                test_res = r
-                                break
 
                     test_status = (
                         test_res.get("status", "UNTESTED") if test_res else "UNTESTED"
@@ -452,9 +446,10 @@ def generate_qualification_report(
             matching_reqs = []
             for req_id, mapped in test_mappings.items():
                 for m in mapped:
-                    if m["test_name"] == name and classname in m["file"].replace(
-                        "/", "."
-                    ):
+                    m_classname = (
+                        f"tests.{os.path.splitext(os.path.basename(m['file']))[0]}"
+                    )
+                    if m["test_name"] == name and m_classname == classname:
                         matching_reqs.append(req_id)
 
             reqs_str = (

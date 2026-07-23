@@ -1,3 +1,4 @@
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -43,16 +44,20 @@ async def setup_db():
 @patch("apps.execution.trial_lock.NotificationRouter.send_email")
 @patch("apps.execution.trial_lock.NotificationRouter.send_sms")
 @patch("apps.execution.trial_lock.NotificationRouter.send_webhook")
-async def test_trial_lock_freeze(mock_webhook, mock_sms, mock_email):
+async def test_trial_lock_freeze(
+    mock_webhook: Any, mock_sms: Any, mock_email: Any
+) -> None:
     # @req:Trace-3
     # @req:PRD-SYS-003
-    @transactional(lambda: db_manager.get_session_maker()())
-    async def create_record():
+    session_maker = db_manager.get_session_maker()
+
+    @transactional(session_maker)
+    async def create_record() -> str:
         session = current_session.get()
         record = LockClinicalRecord(data_value="patient_1")
         session.add(record)
         await session.flush()
-        return record.id
+        return str(record.id)
 
     # Normal state
     record_id = await create_record()
@@ -68,8 +73,8 @@ async def test_trial_lock_freeze(mock_webhook, mock_sms, mock_email):
     mock_webhook.assert_called_once()
 
     # Try write operations (should fail)
-    @transactional(lambda: db_manager.get_session_maker()())
-    async def write_while_locked():
+    @transactional(session_maker)
+    async def write_while_locked() -> None:
         session = current_session.get()
         record = LockClinicalRecord(data_value="patient_2")
         session.add(record)
@@ -81,60 +86,65 @@ async def test_trial_lock_freeze(mock_webhook, mock_sms, mock_email):
         await write_while_locked()
 
     # Read operations should still work
-    @transactional(lambda: db_manager.get_session_maker()())
-    async def read_while_locked():
+    @transactional(session_maker)
+    async def read_while_locked() -> str | None:
         session = current_session.get()
         result = await session.execute(
             select(LockClinicalRecord).where(LockClinicalRecord.id == record_id)
         )
         record = result.scalars().first()
-        return record.data_value
+        return record.data_value if record else None
 
     val = await read_while_locked()
     assert val == "patient_1"
 
 
 @pytest.mark.asyncio
-async def test_site_and_visit_locks():
+async def test_site_and_visit_locks() -> None:
+    session_maker = db_manager.get_session_maker()
+
     # 1. Test helpers
-    @transactional(lambda: db_manager.get_session_maker()())
-    async def create_record(site=None, visit=None):
+    @transactional(session_maker)
+    async def create_record(site: str | None = None, visit: str | None = None) -> str:
         session = current_session.get()
         record = LockClinicalRecord(
             data_value="patient_x", site_id=site, visit_id=visit
         )
         session.add(record)
         await session.flush()
-        return record.id
+        return str(record.id)
 
-    @transactional(lambda: db_manager.get_session_maker()())
-    async def update_record(rec_id, new_value):
+    @transactional(session_maker)
+    async def update_record(rec_id: str, new_value: str) -> None:
         session = current_session.get()
         result = await session.execute(
             select(LockClinicalRecord).where(LockClinicalRecord.id == rec_id)
         )
         record = result.scalars().first()
-        record.data_value = new_value
+        if record:
+            record.data_value = new_value
         await session.flush()
 
-    @transactional(lambda: db_manager.get_session_maker()())
-    async def soft_delete_record(rec_id):
+    @transactional(session_maker)
+    async def soft_delete_record(rec_id: str) -> None:
         session = current_session.get()
         result = await session.execute(
             select(LockClinicalRecord).where(LockClinicalRecord.id == rec_id)
         )
         record = result.scalars().first()
-        record.is_deleted = True
+        if record:
+            record.is_deleted = True
         await session.flush()
 
-    @transactional(lambda: db_manager.get_session_maker()())
-    async def hard_delete_record(rec_id):
+    @transactional(session_maker)
+    async def hard_delete_record(rec_id: str) -> None:
         session = current_session.get()
         result = await session.execute(
             select(LockClinicalRecord).where(LockClinicalRecord.id == rec_id)
         )
         record = result.scalars().first()
-        await session.delete(record)
+        if record:
+            await session.delete(record)
         await session.flush()
 
     rec_id = await create_record(site="site_001", visit="visit_001")

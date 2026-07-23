@@ -2,7 +2,10 @@ import contextvars
 import functools
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from typing import Any, Callable, Generator
+from typing import Any, Callable, Generator, ParamSpec, TypeVar
+
+P = ParamSpec("P")
+R = TypeVar("R")
 
 # Context variables for the current execution context
 current_user_id = contextvars.ContextVar("current_user_id", default="system")
@@ -70,9 +73,9 @@ def audit_context_decorator(
         ip_address_getter (Callable): A function that extracts the IP address from the decorated function's arguments.
     """
 
-    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+    def decorator(func: Callable[P, R]) -> Callable[P, R]:
         @functools.wraps(func)
-        async def async_wrapper(*args, **kwargs) -> Any:
+        async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> Any:
             user_id = user_id_getter(*args, **kwargs) if user_id_getter else None
             change_reason = (
                 change_reason_getter(*args, **kwargs) if change_reason_getter else None
@@ -83,10 +86,10 @@ def audit_context_decorator(
             with audit_context(
                 user_id=user_id, change_reason=change_reason, ip_address=ip_address
             ):
-                return await func(*args, **kwargs)
+                return await func(*args, **kwargs)  # type: ignore
 
         @functools.wraps(func)
-        def sync_wrapper(*args, **kwargs) -> Any:
+        def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             user_id = user_id_getter(*args, **kwargs) if user_id_getter else None
             change_reason = (
                 change_reason_getter(*args, **kwargs) if change_reason_getter else None
@@ -101,6 +104,8 @@ def audit_context_decorator(
 
         import asyncio
 
-        return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
+        if asyncio.iscoroutinefunction(func):
+            return async_wrapper  # type: ignore
+        return sync_wrapper  # type: ignore
 
     return decorator
