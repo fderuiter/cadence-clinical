@@ -222,7 +222,9 @@ def main() -> None:
     audit_outcome = os.environ.get("AUDIT_OUTCOME", "").lower()
     static_outcome = os.environ.get("STATIC_OUTCOME", "").lower()
     # fmt: skip
-    secrets_outcome = os.environ.get("SECRETS_OUTCOME", "").lower()  # pragma: allowlist secret
+    secrets_outcome = os.environ.get(
+        "SECRETS_OUTCOME", ""
+    ).lower()  # pragma: allowlist secret
     combined_audit = ""
     if "failure" in (
         audit_outcome,

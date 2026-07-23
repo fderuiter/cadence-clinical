@@ -1,9 +1,11 @@
 import os
 import time
-from typing import Any, Dict, List, Tuple
+from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
-from fastapi import FastAPI, File, HTTPException, UploadFile, status
+from fastapi import FastAPI, File, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel
 
 from apps.designer.db import get_study_projection, terminology_cache
@@ -275,3 +277,142 @@ async def upload_mapping_csv(file: UploadFile = File(...)):
         raise HTTPException(status_code=422, detail=f"Validation Error: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Processing Error: {str(e)}")
+
+
+# ==========================================
+# Biomedical Concepts (MDR) API Contracts
+# ==========================================
+
+
+class TerminologyEnum(str, Enum):
+    SNOMED_CT = "SNOMED-CT"
+    LOINC = "LOINC"
+    MedDRA = "MedDRA"
+    WHODrug = "WHODrug"
+
+
+class CDASHMapping(BaseModel):
+    domain: str
+    variable_name: str
+    data_type: str
+
+
+class AllowableUnit(BaseModel):
+    ucum_code: str
+    name: str
+
+
+class ConceptDetail(BaseModel):
+    id: str
+    concept_code: str
+    terminology: str
+    display_name: str
+    definition: str
+    cdash_mapping: Optional[CDASHMapping] = None
+    allowable_units: Optional[List[AllowableUnit]] = None
+    version: str
+    status: str
+    created_at: datetime
+    created_by: str
+    updated_at: Optional[datetime] = None
+    updated_by: Optional[str] = None
+    reason_for_change: Optional[str] = None
+
+
+class ConceptListResponse(BaseModel):
+    object: str
+    data: List[ConceptDetail]
+    has_more: bool
+    next_cursor: Optional[str] = None
+
+
+class CreateConceptRequest(BaseModel):
+    concept_code: str
+    terminology: str
+    display_name: str
+    definition: str
+    cdash_mapping: Optional[CDASHMapping] = None
+    allowable_units: Optional[List[AllowableUnit]] = None
+    change_reason: str
+
+
+class UpdateConceptRequest(BaseModel):
+    display_name: str
+    definition: str
+    cdash_mapping: Optional[CDASHMapping] = None
+    allowable_units: Optional[List[AllowableUnit]] = None
+    reason_for_change: str
+
+
+@app.get("/api/v1/mdr/concepts", response_model=ConceptListResponse)
+async def get_concepts(
+    terminology: Optional[TerminologyEnum] = None,
+    domain: Optional[str] = None,
+    limit: int = Query(50, le=250),
+    starting_after: Optional[str] = None,
+) -> ConceptListResponse:
+    """Fetches a paginated list of Biomedical Concepts."""
+    # This is a static contract endpoint
+    return ConceptListResponse(
+        object="list",
+        data=[
+            ConceptDetail(
+                id="bc_sys_bp_001",
+                concept_code="271649006",
+                terminology="SNOMED-CT",
+                display_name="Systolic blood pressure",
+                definition="The pressure exerted by circulating blood upon the walls of blood vessels when the heart ventricles contract.",
+                cdash_mapping=CDASHMapping(
+                    domain="VS", variable_name="VSSBP", data_type="NUMERIC"
+                ),
+                allowable_units=[
+                    AllowableUnit(ucum_code="mm[Hg]", name="millimeter of mercury")
+                ],
+                version="1.0.0",
+                status="APPROVED",
+                created_at=datetime.fromisoformat("2026-01-15T08:00:00Z"),
+                created_by="usr_9921a88b2c410",
+            )
+        ],
+        has_more=False,
+        next_cursor=None,
+    )
+
+
+@app.post("/api/v1/mdr/concepts", response_model=ConceptDetail, status_code=201)
+async def create_concept(payload: CreateConceptRequest) -> ConceptDetail:
+    """Creates a new Biomedical Concept inside the MDR graph repository."""
+    return ConceptDetail(
+        id="bc_heart_rate_002",
+        concept_code=payload.concept_code,
+        terminology=payload.terminology,
+        display_name=payload.display_name,
+        definition=payload.definition,
+        cdash_mapping=payload.cdash_mapping,
+        allowable_units=payload.allowable_units,
+        version="1.0.0",
+        status="DRAFT",
+        created_at=datetime.now(),
+        created_by="usr_9921a88b2c410",
+    )
+
+
+@app.put("/api/v1/mdr/concepts/{id}", response_model=ConceptDetail)
+async def update_concept(id: str, payload: UpdateConceptRequest) -> ConceptDetail:
+    """Updates an existing concept, creating a new audit history and incrementing version index."""
+    return ConceptDetail(
+        id=id,
+        concept_code="364075005",
+        terminology="SNOMED-CT",
+        display_name=payload.display_name,
+        definition=payload.definition,
+        cdash_mapping=payload.cdash_mapping,
+        allowable_units=payload.allowable_units,
+        version="1.1.0",
+        status="APPROVED",
+        created_at=datetime.now(),
+        created_by="usr_9921a88b2c410",
+        updated_at=datetime.now(),
+        updated_by="usr_9921a88b2c410",
+        reason_for_change=payload.reason_for_change,
+    )
