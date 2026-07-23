@@ -39,7 +39,7 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
                         OLD.new_values IS DISTINCT FROM NEW.new_values OR
                         OLD.version_index IS DISTINCT FROM NEW.version_index OR
                         OLD.change_reason IS DISTINCT FROM NEW.change_reason) THEN
-                        RAISE EXCEPTION 'GxP Compliance Violation: Modification of audit log records is strictly prohibited.';
+                        RAISE EXCEPTION 'GxP Compliance Violation: Modification or deletion of audit logs is strictly prohibited.';
                     END IF;
                     -- Also ensure cryptographic_seal can only transition from NULL to a value
                     IF (OLD.cryptographic_seal IS NOT NULL AND OLD.cryptographic_seal IS DISTINCT FROM NEW.cryptographic_seal) THEN
@@ -48,6 +48,17 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
                 END IF;
 
                 RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        """)
+        )
+
+        await conn.execute(
+            text("""
+            CREATE OR REPLACE FUNCTION audit_schema.prevent_seal_mutation()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                RAISE EXCEPTION 'GxP Compliance Violation: Modification or deletion of audit logs is strictly prohibited.';
             END;
             $$ LANGUAGE plpgsql;
         """)
@@ -75,7 +86,7 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
             text("""
             CREATE TRIGGER trg_lock_audit_trail_seals
             BEFORE UPDATE OR DELETE ON audit_schema.audit_ledger_seals
-            FOR EACH ROW EXECUTE FUNCTION audit_schema.prevent_audit_mutation();
+            FOR EACH ROW EXECUTE FUNCTION audit_schema.prevent_seal_mutation();
         """)
         )
 
