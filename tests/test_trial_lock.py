@@ -15,8 +15,8 @@ from apps.execution.trial_lock import TrialLockManager
 class LockClinicalRecord(AuditedModel):
     __tablename__ = "lock_clinical_records"
     data_value: Mapped[str] = mapped_column(String(255), nullable=True)
-    site_id: Mapped[str] = mapped_column(String(50), nullable=True)
-    visit_id: Mapped[str] = mapped_column(String(50), nullable=True)
+    site_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    visit_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -96,7 +96,7 @@ async def test_trial_lock_freeze(mock_webhook, mock_sms, mock_email):
 
 @pytest.mark.asyncio
 async def test_site_and_visit_locks():
-    # 1. Test normal write
+    # 1. Test helpers
     @transactional(lambda: db_manager.get_session_maker()())
     async def create_record(site=None, visit=None):
         session = current_session.get()
@@ -106,6 +106,36 @@ async def test_site_and_visit_locks():
         session.add(record)
         await session.flush()
         return record.id
+
+    @transactional(lambda: db_manager.get_session_maker()())
+    async def update_record(rec_id, new_value):
+        session = current_session.get()
+        result = await session.execute(
+            select(LockClinicalRecord).where(LockClinicalRecord.id == rec_id)
+        )
+        record = result.scalars().first()
+        record.data_value = new_value
+        await session.flush()
+
+    @transactional(lambda: db_manager.get_session_maker()())
+    async def soft_delete_record(rec_id):
+        session = current_session.get()
+        result = await session.execute(
+            select(LockClinicalRecord).where(LockClinicalRecord.id == rec_id)
+        )
+        record = result.scalars().first()
+        record.is_deleted = True
+        await session.flush()
+
+    @transactional(lambda: db_manager.get_session_maker()())
+    async def hard_delete_record(rec_id):
+        session = current_session.get()
+        result = await session.execute(
+            select(LockClinicalRecord).where(LockClinicalRecord.id == rec_id)
+        )
+        record = result.scalars().first()
+        await session.delete(record)
+        await session.flush()
 
     rec_id = await create_record(site="site_001", visit="visit_001")
     assert rec_id is not None
@@ -123,10 +153,23 @@ async def test_site_and_visit_locks():
     with pytest.raises(PermissionError, match="Site site_999 is currently locked"):
         await create_record(site="site_999", visit="visit_001")
 
-    # 3. Unlock site and write should succeed
+    # Creating a record for locked site and then modifying it
     TrialLockManager.unlock_site("site_999")
-    unlocked_rec_id = await create_record(site="site_999", visit="visit_001")
-    assert unlocked_rec_id is not None
+    locked_site_rec_id = await create_record(site="site_999", visit="visit_001")
+    assert locked_site_rec_id is not None
+
+    # Re-lock site and try to modify / soft-delete the record
+    TrialLockManager.lock_site("site_999")
+    with pytest.raises(PermissionError, match="Site site_999 is currently locked"):
+        await update_record(locked_site_rec_id, "updated_val")
+
+    with pytest.raises(PermissionError, match="Site site_999 is currently locked"):
+        await soft_delete_record(locked_site_rec_id)
+
+    # 3. Unlock site and write/soft-delete should succeed
+    TrialLockManager.unlock_site("site_999")
+    await update_record(locked_site_rec_id, "updated_val")
+    await soft_delete_record(locked_site_rec_id)
 
     # 4. Lock a specific visit
     TrialLockManager.lock_visit("visit_999")
@@ -141,7 +184,26 @@ async def test_site_and_visit_locks():
     with pytest.raises(PermissionError, match="Visit visit_999 is currently locked"):
         await create_record(site="site_001", visit="visit_999")
 
-    # 5. Unlock visit and write should succeed
+    # Creating a record for locked visit and then modifying it
     TrialLockManager.unlock_visit("visit_999")
-    unlocked_visit_rec_id = await create_record(site="site_001", visit="visit_999")
-    assert unlocked_visit_rec_id is not None
+    locked_visit_rec_id = await create_record(site="site_001", visit="visit_999")
+    assert locked_visit_rec_id is not None
+
+    # Re-lock visit and try to modify / soft-delete the record
+    TrialLockManager.lock_visit("visit_999")
+    with pytest.raises(PermissionError, match="Visit visit_999 is currently locked"):
+        await update_record(locked_visit_rec_id, "updated_val_visit")
+
+    with pytest.raises(PermissionError, match="Visit visit_999 is currently locked"):
+        await soft_delete_record(locked_visit_rec_id)
+
+    # 5. Unlock visit and write/soft-delete should succeed
+    TrialLockManager.unlock_visit("visit_999")
+    await update_record(locked_visit_rec_id, "updated_val_visit")
+    await soft_delete_record(locked_visit_rec_id)
+
+    # 6. Hard delete attempt should be prevented by GxP trigger policy regardless of locks
+    with pytest.raises(
+        ValueError, match="Hard deletion of LockClinicalRecord is forbidden"
+    ):
+        await hard_delete_record(locked_visit_rec_id)
