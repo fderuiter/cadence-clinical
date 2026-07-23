@@ -60,7 +60,7 @@ async def test_prevent_audit_log_mutation():
             )
             session.add(log)
 
-    # Try to modify it directly via raw SQL
+    # Try to modify it directly via raw SQL - UPDATE
     async with db_manager.get_session_maker()() as session:
         async with session.begin():
             with pytest.raises(
@@ -76,6 +76,9 @@ async def test_prevent_audit_log_mutation():
                     )
                 )
 
+    # Try to modify it directly via raw SQL - DELETE
+    async with db_manager.get_session_maker()() as session:
+        async with session.begin():
             with pytest.raises(
                 Exception,
                 match="Modification or deletion of audit logs is strictly prohibited",
@@ -103,7 +106,7 @@ async def test_prevent_audit_ledger_seals_mutation():
             )
             session.add(seal)
 
-    # Try to modify it directly via raw SQL
+    # Try to modify it directly via raw SQL - UPDATE
     async with db_manager.get_session_maker()() as session:
         async with session.begin():
             with pytest.raises(
@@ -119,6 +122,9 @@ async def test_prevent_audit_ledger_seals_mutation():
                     )
                 )
 
+    # Try to modify it directly via raw SQL - DELETE
+    async with db_manager.get_session_maker()() as session:
+        async with session.begin():
             with pytest.raises(
                 Exception,
                 match="Modification or deletion of audit logs is strictly prohibited",
