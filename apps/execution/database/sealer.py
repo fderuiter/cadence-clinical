@@ -107,9 +107,9 @@ async def execute_audit_sealing_cycle(
             "old_values": clean_json_val(rec.old_values),
             "new_values": clean_json_val(rec.new_values),
             "version_index": int(rec.version_index),
-            "change_reason": str(rec.change_reason)
-            if rec.change_reason is not None
-            else None,
+            "change_reason": (
+                str(rec.change_reason) if rec.change_reason is not None else None
+            ),
         }
         serialized = json.dumps(record_payload, sort_keys=True).encode("utf-8")
         rec_hash = hashlib.sha256(serialized).hexdigest()
@@ -233,9 +233,11 @@ async def validate_ledger_integrity(db: AsyncSession) -> bool:
                     "old_values": clean_json_val(rec.old_values),
                     "new_values": clean_json_val(rec.new_values),
                     "version_index": int(rec.version_index),
-                    "change_reason": str(rec.change_reason)
-                    if rec.change_reason is not None
-                    else None,
+                    "change_reason": (
+                        str(rec.change_reason)
+                        if rec.change_reason is not None
+                        else None
+                    ),
                 }
                 serialized = json.dumps(record_payload, sort_keys=True).encode("utf-8")
                 rec_hash = hashlib.sha256(serialized).hexdigest()

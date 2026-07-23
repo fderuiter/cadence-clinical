@@ -318,9 +318,7 @@ def generate_rtm_md(
                     status_emoji = (
                         "🟢"
                         if test_status == "PASSED"
-                        else "🔴"
-                        if test_status in ("FAILED", "ERROR")
-                        else "⚪"
+                        else "🔴" if test_status in ("FAILED", "ERROR") else "⚪"
                     )
                     test_links.append(
                         f"`{m['test_name']}` ({m['file']}) {status_emoji}"
@@ -463,9 +461,11 @@ def generate_qualification_report(
             status_emoji = (
                 "🟢 PASSED"
                 if res["status"] == "PASSED"
-                else "🔴 FAILED"
-                if res["status"] in ("FAILED", "ERROR")
-                else "⚪ SKIPPED"
+                else (
+                    "🔴 FAILED"
+                    if res["status"] in ("FAILED", "ERROR")
+                    else "⚪ SKIPPED"
+                )
             )
             f.write(
                 f"| `{name}` | `{classname}` | {reqs_str} | {status_emoji} | {res['time']}s |\n"
