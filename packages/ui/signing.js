@@ -40,7 +40,7 @@ export function canonicalSerialize(payload) {
  */
 export async function generateCanonicalSignature(payload, secret) {
   const secretKeyData =
-    typeof secret === "string" ? new TextEncoder().encode(secret) : secret;
+    typeof secret === "string" ? new TextEncoder().encode(secret) : secret; // pragma: allowlist secret
   const serialized = canonicalSerialize(payload);
   const data = new TextEncoder().encode(serialized);
 
@@ -110,7 +110,7 @@ export async function generateGatewaySignature(
   } else {
     const message = `${userId}:${roles}:${timestamp}`;
     const secretKeyData =
-      typeof secret === "string" ? new TextEncoder().encode(secret) : secret;
+      typeof secret === "string" ? new TextEncoder().encode(secret) : secret; // pragma: allowlist secret
     const data = new TextEncoder().encode(message);
 
     const key = await globalThis.crypto.subtle.importKey(

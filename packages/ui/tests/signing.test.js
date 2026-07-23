@@ -40,9 +40,9 @@ describe("canonicalSerialize", () => {
 describe("generateCanonicalSignature and verifyCanonicalSignature", () => {
   it("matches Python generate_canonical_signature output exactly", async () => {
     const payload = { a: 1, b: "hello", c: [1, 2, { x: "y" }] };
-    const secret = "my-test-secret";
+    const secret = "my-test-secret"; // pragma: allowlist secret
     const expectedSig =
-      "a5acdf4504e338fce8ede5b65cb5be3c972692fb0dd797cc0cff8e88d35fa2d2";
+      "a5acdf4504e338fce8ede5b65cb5be3c972692fb0dd797cc0cff8e88d35fa2d2"; // pragma: allowlist secret
 
     const sig = await generateCanonicalSignature(payload, secret);
     expect(sig).toBe(expectedSig);
@@ -57,7 +57,7 @@ describe("generateCanonicalSignature and verifyCanonicalSignature", () => {
 
   it("returns false for tampered payload or signature", async () => {
     const payload = { a: 1, b: "hello", c: [1, 2, { x: "y" }] };
-    const secret = "my-test-secret";
+    const secret = "my-test-secret"; // pragma: allowlist secret
     const sig = await generateCanonicalSignature(payload, secret);
 
     const tamperedPayload = { a: 2, b: "hello", c: [1, 2, { x: "y" }] };
@@ -78,14 +78,14 @@ describe("generateCanonicalSignature and verifyCanonicalSignature", () => {
 });
 
 describe("generateGatewaySignature and verifyGatewaySignature", () => {
-  const secret = "internal-gateway-secret-12345";
+  const secret = "internal-gateway-secret-12345"; // pragma: allowlist secret
   const userId = "user1";
   const roles = "admin";
   const timestamp = "123456";
 
   it("generates correct Version 1 signature matching Python", async () => {
     const expectedV1 =
-      "c5e5a9640f9c8aa044267bcc24cf0043938e5a95743755383f95fcec7f5458ad";
+      "c5e5a9640f9c8aa044267bcc24cf0043938e5a95743755383f95fcec7f5458ad"; // pragma: allowlist secret
     const sig = await generateGatewaySignature(
       userId,
       roles,
@@ -110,7 +110,7 @@ describe("generateGatewaySignature and verifyGatewaySignature", () => {
 
   it("generates correct Version 2 signature matching Python", async () => {
     const expectedV2 =
-      "0c66fa2bdfc9792e0c3bb45337d9c1e87be8a72f37f68e8f3998f88f45f5b1f3";
+      "0c66fa2bdfc9792e0c3bb45337d9c1e87be8a72f37f68e8f3998f88f45f5b1f3"; // pragma: allowlist secret
     const changeReason = "Clinical reason for test";
 
     const sig = await generateGatewaySignature(
