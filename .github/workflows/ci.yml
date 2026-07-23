@@ -152,7 +152,7 @@ jobs:
 
           SAFE=true
           while IFS= read -r file; do
-            if [[ "$file" == docs/* ]] || [[ "$file" == *.md ]] || [[ "$file" == tests/* ]] || [[ "$file" == *.sh ]] || [[ "$file" == scripts/* ]]; then
+            if [[ "$file" == docs/* ]] || [[ "$file" == *.md ]]; then
               echo "Safe file: $file"
             else
               echo "Unsafe file: $file"
