@@ -10,7 +10,7 @@ import xml.etree.ElementTree as ET
 def get_stable_timestamp():
     try:
         result = subprocess.run(
-            ["git", "log", "-1", "--format=%ct"],
+            ["git", "log", "-1", "--format=%ct", "--", ".", ":!docs/SDLC"],
             capture_output=True,
             text=True,
             check=True
