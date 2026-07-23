@@ -36,6 +36,7 @@ class RateLimiter:
     """
     An in-memory sliding window rate limiter.
     """
+
     def __init__(self, window_seconds: float = 60.0, max_requests: int = 100) -> None:
         self.window_seconds = window_seconds
         self.max_requests = max_requests
@@ -55,7 +56,9 @@ class RateLimiter:
         if key not in self.requests:
             self.requests[key] = []
         # Prune older than window
-        self.requests[key] = [t for t in self.requests[key] if now - t < self.window_seconds]
+        self.requests[key] = [
+            t for t in self.requests[key] if now - t < self.window_seconds
+        ]
         if len(self.requests[key]) >= self.max_requests:
             return True
         self.requests[key].append(now)
@@ -64,13 +67,16 @@ class RateLimiter:
 
 RATE_LIMIT_WINDOW = float(os.getenv("RATE_LIMIT_WINDOW", "60.0"))
 RATE_LIMIT_MAX_REQUESTS = int(os.getenv("RATE_LIMIT_MAX_REQUESTS", "100"))
-rate_limiter = RateLimiter(window_seconds=RATE_LIMIT_WINDOW, max_requests=RATE_LIMIT_MAX_REQUESTS)
+rate_limiter = RateLimiter(
+    window_seconds=RATE_LIMIT_WINDOW, max_requests=RATE_LIMIT_MAX_REQUESTS
+)
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """
     Middleware to enforce rate limiting on incoming API Gateway requests.
     """
+
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
