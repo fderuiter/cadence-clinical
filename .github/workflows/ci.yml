@@ -117,7 +117,7 @@ jobs:
       - name: Post PR Quality Checklist Comment
         if: always() && github.event_name == 'pull_request'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PAT_FDERUITER }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           LINTING_OUTCOME: ${{ steps.run_linting.outcome }}
           TEST_OUTCOME: ${{ steps.run_tests.outcome }}

@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import hmac
+import json
 import os
 import time
 
@@ -21,17 +22,27 @@ from apps.execution.translator import process_translation
 GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
 
 
-def get_auth_headers(user_id="test_user", roles="admin"):
+def get_auth_headers(
+    user_id="test_user", roles="admin", change_reason="system_operation"
+):
     timestamp = str(time.time())
-    message = f"{user_id}:{roles}:{timestamp}"
+    payload = {
+        "change_reason": change_reason,
+        "roles": roles,
+        "timestamp": timestamp,
+        "user_id": user_id,
+    }
+    serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     signature = hmac.new(
-        GATEWAY_SECRET.encode(), message.encode(), hashlib.sha256
+        GATEWAY_SECRET.encode(), serialized.encode(), hashlib.sha256
     ).hexdigest()
     return {
         "X-User-Id": user_id,
         "X-User-Roles": roles,
         "X-Gateway-Timestamp": timestamp,
         "X-Gateway-Signature": signature,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": change_reason,
     }
 
 
