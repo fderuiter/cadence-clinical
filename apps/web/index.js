@@ -19,14 +19,19 @@ export function renderFormFromXML(xmlString) {
   if (!formMatch) return "";
 
   const innerXML = formMatch[1];
-  const fieldRegex = /<field id="([^"]+)" label="([^"]+)"\s*\/>/g;
+  const fieldRegex = /<field\b([^>]*?)\/?>/gi;
 
   let html = `<form class="clinical-form">`;
   let match;
   while ((match = fieldRegex.exec(innerXML)) !== null) {
-    const id = match[1];
-    const label = match[2];
-    html += createClinicalInput(id, label);
+    const attrString = match[1];
+    const idMatch = attrString.match(/\bid="([^"]*)"/);
+    const labelMatch = attrString.match(/\blabel="([^"]*)"/);
+    if (idMatch && labelMatch) {
+      const id = idMatch[1];
+      const label = labelMatch[1];
+      html += createClinicalInput(id, label);
+    }
   }
   html += `</form>`;
 

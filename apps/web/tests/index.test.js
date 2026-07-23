@@ -10,6 +10,24 @@ describe("renderFormFromXML", () => {
     expect(html).toContain('class="clinical-input');
   });
 
+  it("renders a form when the label attribute precedes the id attribute", () => {
+    const xml = `<form><field label="Date of Birth" id="dob" /><field label="Blood Type" id="bloodType" /></form>`;
+    const html = renderFormFromXML(xml);
+    expect(html).toContain("Date of Birth");
+    expect(html).toContain("Blood Type");
+    expect(html).toContain('id="dob"');
+    expect(html).toContain('id="bloodType"');
+  });
+
+  it("renders a form when the id attribute precedes the label attribute", () => {
+    const xml = `<form><field id="dob" label="Date of Birth" /><field id="bloodType" label="Blood Type" /></form>`;
+    const html = renderFormFromXML(xml);
+    expect(html).toContain("Date of Birth");
+    expect(html).toContain("Blood Type");
+    expect(html).toContain('id="dob"');
+    expect(html).toContain('id="bloodType"');
+  });
+
   it("returns empty string if no form tag", () => {
     expect(renderFormFromXML("<root></root>")).toBe("");
   });

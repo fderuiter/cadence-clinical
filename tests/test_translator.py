@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import json
 import os
 import time
 
@@ -20,17 +21,27 @@ from apps.execution.main import app
 GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
 
 
-def get_auth_headers(user_id="test_user", roles="admin"):
+def get_auth_headers(
+    user_id="test_user", roles="admin", change_reason="system_operation"
+):
     timestamp = str(time.time())
-    message = f"{user_id}:{roles}:{timestamp}"
+    payload = {
+        "change_reason": change_reason,
+        "roles": roles,
+        "timestamp": timestamp,
+        "user_id": user_id,
+    }
+    serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     signature = hmac.new(
-        GATEWAY_SECRET.encode(), message.encode(), hashlib.sha256
+        GATEWAY_SECRET.encode(), serialized.encode(), hashlib.sha256
     ).hexdigest()
     return {
         "X-User-Id": user_id,
         "X-User-Roles": roles,
         "X-Gateway-Timestamp": timestamp,
         "X-Gateway-Signature": signature,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": change_reason,
     }
 
 
@@ -222,8 +233,9 @@ async def test_background_translation_records_user_audit():
     }
 
     # Post with X-User-Id header as test_user_audit
-    headers = get_auth_headers(user_id="test_user_audit", roles="researcher")
-    headers["X-Change-Reason"] = "translation test"
+    headers = get_auth_headers(
+        user_id="test_user_audit", roles="researcher", change_reason="translation test"
+    )
 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
@@ -268,3 +280,82 @@ async def test_background_translation_records_user_audit():
             and rec["change_reason"] == "translation test"
             for rec in audit_records
         )
+
+
+@pytest.mark.asyncio
+async def test_study_published_invalid_signature_rejection():
+    """Verify that execution service rejects requests with a 403 Forbidden if the signature does not match the computed hash of the payload."""
+    study_payload = {
+        "study_id": "test_study_invalid_sig",
+        "payload": {
+            "name": "Acme Clinical Trial",
+            "protocol": {
+                "items": [
+                    {"id": "sys_bp", "name": "Systolic Blood Pressure", "type": "int"},
+                ]
+            },
+        },
+    }
+
+    headers = get_auth_headers(
+        user_id="test_user", roles="admin", change_reason="system_operation"
+    )
+    # Tamper with the signature
+    headers["X-Gateway-Signature"] = "a" * 64
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        response = await client.post(
+            "/events/study-published", json=study_payload, headers=headers
+        )
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Invalid gateway signature"
+
+
+@pytest.mark.asyncio
+async def test_study_published_expired_timestamp_rejection():
+    """Verify that execution service rejects requests where the timestamp is older than 300 seconds."""
+    study_payload = {
+        "study_id": "test_study_expired",
+        "payload": {
+            "name": "Acme Clinical Trial",
+            "protocol": {
+                "items": [
+                    {"id": "sys_bp", "name": "Systolic Blood Pressure", "type": "int"},
+                ]
+            },
+        },
+    }
+
+    # Generate headers with an expired timestamp
+    timestamp = str(time.time() - 310)
+    change_reason = "system_operation"
+    payload = {
+        "change_reason": change_reason,
+        "roles": "admin",
+        "timestamp": timestamp,
+        "user_id": "test_user",
+    }
+    serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    signature = hmac.new(
+        GATEWAY_SECRET.encode(), serialized.encode(), hashlib.sha256
+    ).hexdigest()
+
+    headers = {
+        "X-User-Id": "test_user",
+        "X-User-Roles": "admin",
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": signature,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": change_reason,
+    }
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        response = await client.post(
+            "/events/study-published", json=study_payload, headers=headers
+        )
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Gateway signature expired"

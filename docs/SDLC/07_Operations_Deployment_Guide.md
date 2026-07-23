@@ -369,6 +369,7 @@ from apps.execution.database.models import Base
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("TenantProvisioner")
 
+
 async def provision_new_tenant(sponsor_id: str, admin_user_email: str):
     """
     Provisions a completely isolated relational schema for a new sponsor.
@@ -386,12 +387,16 @@ async def provision_new_tenant(sponsor_id: str, admin_user_email: str):
 
     async with async_session_maker() as session:
         # Step 1: Create isolated schema namespace
-        await session.execute(text(f"CREATE SCHEMA IF NOT EXISTS {clean_tenant_schema};"))
+        await session.execute(
+            text(f"CREATE SCHEMA IF NOT EXISTS {clean_tenant_schema};")
+        )
         logger.info(f"Schema {clean_tenant_schema} created successfully.")
 
         # Step 2: Bind tables to the newly provisioned schema
         # Temporarily overrides default schema path for SQLAlchemy compilation
-        await session.execute(text(f"SET search_path TO {clean_tenant_schema}, public;"))
+        await session.execute(
+            text(f"SET search_path TO {clean_tenant_schema}, public;")
+        )
 
         # Create standard schema structures (subjects, forms, queries, audit_logs)
         # Note: Base metadata generates the actual table structures
@@ -467,13 +472,20 @@ async def provision_new_tenant(sponsor_id: str, admin_user_email: str):
         """
         await session.execute(
             text(register_tenant_sql),
-            {"id": sponsor_id, "schema": clean_tenant_schema, "admin": admin_user_email}
+            {
+                "id": sponsor_id,
+                "schema": clean_tenant_schema,
+                "admin": admin_user_email,
+            },
         )
         await session.commit()
         logger.info(f"Sponsor {sponsor_id} provisioned and globally registered.")
 
+
 if __name__ == "__main__":
-    db_manager.init_db("postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc")
+    db_manager.init_db(
+        "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"
+    )
     asyncio.run(provision_new_tenant("novartis", "lead_admin@novartis.com"))
 ```
 
@@ -539,6 +551,7 @@ from apps.execution.database.core import db_manager
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("PostgresMigrator")
 
+
 async def run_migrations():
     """
     Executes ordered SQL migration sequences.
@@ -549,28 +562,37 @@ async def run_migrations():
 
     async with async_session_maker() as session:
         # Check current database compatibility level
-        res = await session.execute(text("SELECT current_setting('server_version_num')::int;"))
+        res = await session.execute(
+            text("SELECT current_setting('server_version_num')::int;")
+        )
         pg_version = res.scalar()
         if pg_version < 150000:
-            logger.error(f"Incompatible database version: {pg_version}. PostgreSQL 15+ required.")
+            logger.error(
+                f"Incompatible database version: {pg_version}. PostgreSQL 15+ required."
+            )
             sys.exit(1)
 
         # Enforce DDL lock timeout to prevent active study entry freeze
         await session.execute(text("SET lock_timeout = '10s';"))
 
         # Step 1: Initialize metadata structure tracking schema
-        await session.execute(text("""
+        await session.execute(
+            text("""
             CREATE TABLE IF NOT EXISTS public.schema_versions (
                 version_index INT PRIMARY KEY,
                 applied_at TIMESTAMP DEFAULT NOW(),
                 description VARCHAR(255) NOT NULL,
                 checksum VARCHAR(64) NOT NULL
             );
-        """))
+        """)
+        )
 
         # Step 2: Define Migration Batches
         migrations = [
-            (1, "Create core execution tables", """
+            (
+                1,
+                "Create core execution tables",
+                """
                 CREATE TABLE IF NOT EXISTS public.subjects (
                     id VARCHAR(255) PRIMARY KEY,
                     site_id VARCHAR(255) NOT NULL,
@@ -590,18 +612,25 @@ async def run_migrations():
                     timestamp TIMESTAMP,
                     version_index INT
                 );
-            """),
-            (2, "Add external telemetry links to subjects", """
+            """,
+            ),
+            (
+                2,
+                "Add external telemetry links to subjects",
+                """
                 ALTER TABLE public.subjects ADD COLUMN IF NOT EXISTS telemetry_device_id VARCHAR(255) NULL;
-            """)
+            """,
+            ),
         ]
 
         # Step 3: Run migration sequences transactionally
         for idx, desc, query in migrations:
             # Check if already executed
             check_res = await session.execute(
-                text("SELECT count(*) FROM public.schema_versions WHERE version_index = :idx"),
-                {"idx": idx}
+                text(
+                    "SELECT count(*) FROM public.schema_versions WHERE version_index = :idx"
+                ),
+                {"idx": idx},
             )
             if check_res.scalar() > 0:
                 logger.info(f"Migration {idx} ({desc}) already applied. Skipping.")
@@ -611,19 +640,27 @@ async def run_migrations():
             try:
                 await session.execute(text(query))
                 await session.execute(
-                    text("INSERT INTO public.schema_versions (version_index, description, checksum) VALUES (:idx, :desc, 'sha256-mock-hash')"),
-                    {"idx": idx, "desc": desc}
+                    text(
+                        "INSERT INTO public.schema_versions (version_index, description, checksum) VALUES (:idx, :desc, 'sha256-mock-hash')"
+                    ),
+                    {"idx": idx, "desc": desc},
                 )
                 await session.commit()
                 logger.info(f"Migration {idx} successfully applied.")
             except Exception as ex:
                 await session.rollback()
-                logger.critical(f"CRITICAL ERROR applying migration {idx}. Rolled back transaction. Error: {ex}")
+                logger.critical(
+                    f"CRITICAL ERROR applying migration {idx}. Rolled back transaction. Error: {ex}"
+                )
                 raise ex
+
 
 if __name__ == "__main__":
     import asyncio
-    db_manager.init_db("postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc")
+
+    db_manager.init_db(
+        "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"
+    )
     asyncio.run(run_migrations())
 ```
 
@@ -642,6 +679,7 @@ from apps.execution.database.core import db_manager
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("PostgresRollback")
 
+
 async def rollback_schema_to_version(target_version: int):
     """
     Safely rolls back Postgres schema changes to the specified target version.
@@ -650,16 +688,22 @@ async def rollback_schema_to_version(target_version: int):
     Args:
         target_version (int): Schema index version to rollback to.
     """
-    logger.warning(f"ROLLBACK COMMAND ISSUED: Moving database schema to Version {target_version}")
+    logger.warning(
+        f"ROLLBACK COMMAND ISSUED: Moving database schema to Version {target_version}"
+    )
     async_session_maker = db_manager.get_session_maker()
 
     async with async_session_maker() as session:
         # Check current version
-        res = await session.execute(text("SELECT MAX(version_index) FROM public.schema_versions"))
+        res = await session.execute(
+            text("SELECT MAX(version_index) FROM public.schema_versions")
+        )
         current_version = res.scalar() or 0
 
         if current_version <= target_version:
-            logger.info(f"Current version ({current_version}) is already at or below target ({target_version}). No rollback needed.")
+            logger.info(
+                f"Current version ({current_version}) is already at or below target ({target_version}). No rollback needed."
+            )
             return
 
         # Perform step-by-step rolling rollback
@@ -667,24 +711,32 @@ async def rollback_schema_to_version(target_version: int):
             2: {
                 "desc": "Remove external telemetry links from subjects",
                 "check_gxp": "SELECT COUNT(*) FROM public.subjects WHERE telemetry_device_id IS NOT NULL;",
-                "ddl": "ALTER TABLE public.subjects DROP COLUMN IF EXISTS telemetry_device_id;"
+                "ddl": "ALTER TABLE public.subjects DROP COLUMN IF EXISTS telemetry_device_id;",
             }
         }
 
         for version in range(current_version, target_version, -1):
             if version not in rollback_steps:
-                logger.critical(f"No rollback step mapped for Version {version}. Manual SRE intervention required.")
+                logger.critical(
+                    f"No rollback step mapped for Version {version}. Manual SRE intervention required."
+                )
                 sys.exit(1)
 
             step = rollback_steps[version]
-            logger.warning(f"Executing rollback step for Version {version}: {step['desc']}")
+            logger.warning(
+                f"Executing rollback step for Version {version}: {step['desc']}"
+            )
 
             # Safety validation: Verify if we are about to destroy valuable, unrecoverable data
             check_val = await session.execute(text(step["check_gxp"]))
             orphans_count = check_val.scalar()
             if orphans_count > 0:
-                logger.error(f"ABORTING ROLLBACK. Found {orphans_count} records containing active telemetry data in the targeted column.")
-                logger.error("A rollback will trigger irreversible data loss. Export records prior to force-dropping.")
+                logger.error(
+                    f"ABORTING ROLLBACK. Found {orphans_count} records containing active telemetry data in the targeted column."
+                )
+                logger.error(
+                    "A rollback will trigger irreversible data loss. Export records prior to force-dropping."
+                )
                 sys.exit(1)
 
             try:
@@ -692,18 +744,24 @@ async def rollback_schema_to_version(target_version: int):
                 await session.execute(text(step["ddl"]))
                 await session.execute(
                     text("DELETE FROM public.schema_versions WHERE version_index = :v"),
-                    {"v": version}
+                    {"v": version},
                 )
                 await session.commit()
                 logger.info(f"Successfully rolled back version {version}")
             except Exception as e:
                 await session.rollback()
-                logger.critical(f"FAILED TO ROLLBACK VERSION {version}. Database status state is uncertain: {e}")
+                logger.critical(
+                    f"FAILED TO ROLLBACK VERSION {version}. Database status state is uncertain: {e}"
+                )
                 sys.exit(1)
+
 
 if __name__ == "__main__":
     import asyncio
-    db_manager.init_db("postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc")
+
+    db_manager.init_db(
+        "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"
+    )
     asyncio.run(rollback_schema_to_version(1))
 ```
 
@@ -723,6 +781,7 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("Neo4jMigrator")
+
 
 class Neo4jMigrator:
     def __init__(self, uri, user, password):
@@ -757,7 +816,9 @@ class Neo4jMigrator:
                 FOR (sv:StudyVersion) ON (sv.version_index)
             """)
 
-            logger.info("Neo4j database indexes and constraints established successfully.")
+            logger.info(
+                "Neo4j database indexes and constraints established successfully."
+            )
 
     def rollback_constraints(self):
         """
@@ -768,6 +829,7 @@ class Neo4jMigrator:
             session.run("DROP CONSTRAINT unique_study_id IF EXISTS")
             session.run("DROP CONSTRAINT unique_biomedical_concept_id IF EXISTS")
             logger.info("Neo4j constraints successfully removed.")
+
 
 if __name__ == "__main__":
     migrator = Neo4jMigrator("bolt://localhost:7687", "neo4j", "cadence_password")
