@@ -53,6 +53,7 @@ async def process_translation(
     session_factory: Any,
     user_id: str | None = None,
     change_reason: str | None = None,
+    job_id: str | None = None,
 ) -> None:
     """Background worker that translates USDM payload into CDISC ODM and OpenRosa XML layouts.
 
@@ -62,99 +63,107 @@ async def process_translation(
         session_factory (Any): The SQLAlchemy asynchronous session factory.
         user_id (str | None): The user ID to attribute database modifications to.
         change_reason (str | None): The reason/justification for database modifications.
+        job_id (str | None): The pre-generated UUID for the translation job.
 
     Returns:
         None
     """
+    token = None
     with audit_context(user_id, change_reason):
-        async with session_factory() as session:
-            async with session.begin():
-                # Setup the DB session in context so our audit logger can find it
+        try:
+            async with session_factory() as session:
                 token = current_session.set(session)
-
-                job = TranslationJob(study_id=study_id, status="PROCESSING")
-                session.add(job)
-                await session.flush()
+                actual_job_id = job_id if job_id else str(uuid.uuid4())
 
                 try:
-                    # Requirement 6: Validate input structures against schema translation rules
-                    if not payload or not isinstance(payload, dict):
-                        raise ValueError("Payload must be a dictionary.")
-                    if "protocol" not in payload:
-                        raise ValueError(
-                            "Validation Failed: 'protocol' missing from study definition."
-                        )
+                    async with session.begin():
+                        job = TranslationJob(id=actual_job_id, study_id=study_id, status="PROCESSING")
+                        session.add(job)
+                        await session.flush()
 
-                    # Process items for templates
-                    raw_items = payload.get("protocol", {}).get("items", [])
-                    processed_items = []
-                    for item in raw_items:
-                        item_id = item.get("id")
-                        if not item_id:
-                            item_id = f"item_{uuid.uuid4().hex[:8]}"
+                        # Requirement 6: Validate input structures against schema translation rules
+                        if not payload or not isinstance(payload, dict):
+                            raise ValueError("Payload must be a dictionary.")
+                        if "protocol" not in payload:
+                            raise ValueError(
+                                "Validation Failed: 'protocol' missing from study definition."
+                            )
 
-                        item_name = item.get("name", "Unknown Field")
-                        item_type = item.get("type", "string")
-                        appearance = extract_appearance(item)
+                        # Process items for templates
+                        raw_items = payload.get("protocol", {}).get("items", [])
+                        processed_items = []
+                        for item in raw_items:
+                            item_id = item.get("id")
+                            if not item_id:
+                                item_id = f"item_{uuid.uuid4().hex[:8]}"
 
-                        processed_items.append(
-                            {
-                                "id": item_id,
-                                "name": item_name,
-                                "type": item_type,
-                                "appearance": appearance,
-                            }
-                        )
+                            item_name = item.get("name", "Unknown Field")
+                            item_type = item.get("type", "string")
+                            appearance = extract_appearance(item)
 
-                    template_data = {
-                        "study_id": study_id,
-                        "name": payload.get("name", f"Study {study_id}"),
-                        "items": processed_items,
-                    }
+                            processed_items.append(
+                                {
+                                    "id": item_id,
+                                    "name": item_name,
+                                    "type": item_type,
+                                    "appearance": appearance,
+                                }
+                            )
 
-                    # Render templates
-                    odm_template = env.get_template("odm_template.xml.j2")
-                    odm_xml_str = odm_template.render(**template_data)
+                        template_data = {
+                            "study_id": study_id,
+                            "name": payload.get("name", f"Study {study_id}"),
+                            "items": processed_items,
+                        }
 
-                    openrosa_template = env.get_template("openrosa_template.xml.j2")
-                    openrosa_xml_str = openrosa_template.render(**template_data)
+                        # Render templates
+                        odm_template = env.get_template("odm_template.xml.j2")
+                        odm_xml_str = odm_template.render(**template_data)
 
-                    # Format outputs via minidom to guarantee compatibility with existing expectations
-                    # We strip out whitespace-only text nodes created by jinja templating before formatting
-                    def pretty_print(xml_string: str) -> str:
-                        """
-                        Format an XML string with indentation for better readability.
+                        openrosa_template = env.get_template("openrosa_template.xml.j2")
+                        openrosa_xml_str = openrosa_template.render(**template_data)
 
-                        Removes whitespace-only text nodes generated by Jinja2 templates before
-                        applying standard formatting via minidom to ensure expected line breaks.
+                        # Format outputs via minidom to guarantee compatibility with existing expectations
+                        # We strip out whitespace-only text nodes created by jinja templating before formatting
+                        def pretty_print(xml_string: str) -> str:
+                            """
+                            Format an XML string with indentation for better readability.
 
-                        Args:
-                            xml_string (str): The raw XML string to format.
+                            Removes whitespace-only text nodes generated by Jinja2 templates before
+                            applying standard formatting via minidom to ensure expected line breaks.
 
-                        Returns:
-                            str: The pretty-printed XML string.
-                        """
-                        dom = minidom.parseString(xml_string)
-                        # Remove blank text nodes so toprettyxml doesn't add extra newlines
-                        for node in dom.getElementsByTagName("*"):
-                            for child in list(node.childNodes):
-                                # 3 is the integer value for Node.TEXT_NODE
-                                if child.nodeType == 3 and not child.data.strip():
-                                    node.removeChild(child)
-                        return dom.toprettyxml(indent="  ")
+                            Args:
+                                xml_string (str): The raw XML string to format.
 
-                    odm_str = pretty_print(odm_xml_str)
-                    openrosa_str = pretty_print(openrosa_xml_str)
+                            Returns:
+                                str: The pretty-printed XML string.
+                            """
+                            dom = minidom.parseString(xml_string)
+                            # Remove blank text nodes so toprettyxml doesn't add extra newlines
+                            for node in dom.getElementsByTagName("*"):
+                                for child in list(node.childNodes):
+                                    # 3 is the integer value for Node.TEXT_NODE
+                                    if child.nodeType == 3 and not child.data.strip():
+                                        node.removeChild(child)
+                            return dom.toprettyxml(indent="  ")
 
-                    job.odm_payload = odm_str
-                    job.openrosa_payload = openrosa_str
-                    job.status = "COMPLETED"
+                        odm_str = pretty_print(odm_xml_str)
+                        openrosa_str = pretty_print(openrosa_xml_str)
+
+                        job.odm_payload = odm_str
+                        job.openrosa_payload = openrosa_str
+                        job.status = "COMPLETED"
 
                 except Exception as e:
-                    # Constraint: fail gracefully
-                    job.status = "FAILED"
-                    job.error_message = str(e)
-                finally:
-                    # Update job execution status
-                    await session.flush()
-                    current_session.reset(token)
+                    # Transaction has been rolled back. Now save the failed status in a new transaction.
+                    async with session.begin():
+                        failed_job = TranslationJob(
+                            id=actual_job_id,
+                            study_id=study_id,
+                            status="FAILED",
+                            error_message=str(e),
+                        )
+                        session.add(failed_job)
+        finally:
+            if token is not None:
+                current_session.reset(token)

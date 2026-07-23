@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, AsyncGenerator, Optional
@@ -18,6 +19,7 @@ from apps.execution.database.models import (
     ClinicalObservation,
     ClinicalSubject,
     ClinicalVisit,
+    TranslationJob,
 )
 from apps.execution.outliers import recalculate_cohort_outliers
 from apps.execution.translator import process_translation
@@ -136,6 +138,7 @@ async def study_published(
     """
     user_id = current_user_id.get()
     change_reason = current_change_reason.get()
+    job_id = str(uuid.uuid4())
     background_tasks.add_task(
         process_translation,
         event.study_id,
@@ -143,8 +146,64 @@ async def study_published(
         db_manager.get_session_maker(),
         user_id=user_id,
         change_reason=change_reason,
+        job_id=job_id,
     )
-    return {"status": "accepted", "message": "Translation job queued in background."}
+    return {
+        "status": "accepted",
+        "message": "Translation job queued in background.",
+        "job_id": job_id,
+        "id": job_id,
+    }
+
+
+class TranslationJobResponse(BaseModel):
+    """Pydantic schema returning translation job status and metadata."""
+
+    id: str
+    study_id: str
+    status: str
+    odm_payload: Optional[str] = None
+    openrosa_payload: Optional[str] = None
+    error_message: Optional[str] = None
+
+
+@app.get("/api/v1/execution/translation/jobs", response_model=list[TranslationJobResponse])
+async def list_translation_jobs() -> list[TranslationJobResponse]:
+    """Retrieve a list of historical translation jobs."""
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(TranslationJob)
+        res = await session.execute(stmt)
+        jobs = res.scalars().all()
+        return [
+            TranslationJobResponse(
+                id=job.id,
+                study_id=job.study_id,
+                status=job.status,
+                odm_payload=job.odm_payload,
+                openrosa_payload=job.openrosa_payload,
+                error_message=job.error_message,
+            )
+            for job in jobs
+        ]
+
+
+@app.get("/api/v1/execution/translation/jobs/{job_id}", response_model=TranslationJobResponse)
+async def get_translation_job(job_id: str) -> TranslationJobResponse:
+    """Query the execution status, output metadata, and error messages of a single translation job by ID."""
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(TranslationJob).where(TranslationJob.id == job_id)
+        res = await session.execute(stmt)
+        job = res.scalars().first()
+        if not job:
+            raise HTTPException(status_code=404, detail="Translation job not found")
+        return TranslationJobResponse(
+            id=job.id,
+            study_id=job.study_id,
+            status=job.status,
+            odm_payload=job.odm_payload,
+            openrosa_payload=job.openrosa_payload,
+            error_message=job.error_message,
+        )
 
 
 # ==========================================
