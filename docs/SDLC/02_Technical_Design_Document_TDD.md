@@ -392,21 +392,19 @@ def compute_graph_diff(tx, old_version_id: str, new_version_id: str) -> dict:
     Traverses study tree levels: StudyVersion -> Epoch -> Visit -> Form -> BiomedicalConcept.
     Identifies additions, modifications, and deletions.
     """
-    diff_results = {
-        "added_nodes": [],
-        "modified_nodes": [],
-        "deleted_nodes": []
-    }
+    diff_results = {"added_nodes": [], "modified_nodes": [], "deleted_nodes": []}
 
     # Retrieve structured maps for old and new subgraphs
     old_nodes = tx.run(
         "MATCH (sv:StudyVersion {id: $id})-[:HAS_EPOCH]->(e)-[:HAS_VISIT]->(v)-[:HAS_FORM]->(f) "
-        "RETURN e.id, v.id, f.id, f.form_key, f.xform_definition_xml", id=old_version_id
+        "RETURN e.id, v.id, f.id, f.form_key, f.xform_definition_xml",
+        id=old_version_id,
     ).data()
 
     new_nodes = tx.run(
         "MATCH (sv:StudyVersion {id: $id})-[:HAS_EPOCH]->(e)-[:HAS_VISIT]->(v)-[:HAS_FORM]->(f) "
-        "RETURN e.id, v.id, f.id, f.form_key, f.xform_definition_xml", id=new_version_id
+        "RETURN e.id, v.id, f.id, f.form_key, f.xform_definition_xml",
+        id=new_version_id,
     ).data()
 
     old_map = {n["f.form_key"]: n for n in old_nodes}
@@ -415,28 +413,28 @@ def compute_graph_diff(tx, old_version_id: str, new_version_id: str) -> dict:
     # Check for additions and modifications
     for form_key, node in new_map.items():
         if form_key not in old_map:
-            diff_results["added_nodes"].append({
-                "type": "Form",
-                "key": form_key,
-                "payload": node
-            })
+            diff_results["added_nodes"].append(
+                {"type": "Form", "key": form_key, "payload": node}
+            )
         else:
             # Check if properties have changed
-            if node["f.xform_definition_xml"] != old_map[form_key]["f.xform_definition_xml"]:
-                diff_results["modified_nodes"].append({
-                    "type": "Form",
-                    "key": form_key,
-                    "old_value": old_map[form_key]["f.xform_definition_xml"],
-                    "new_value": node["f.xform_definition_xml"]
-                })
+            if (
+                node["f.xform_definition_xml"]
+                != old_map[form_key]["f.xform_definition_xml"]
+            ):
+                diff_results["modified_nodes"].append(
+                    {
+                        "type": "Form",
+                        "key": form_key,
+                        "old_value": old_map[form_key]["f.xform_definition_xml"],
+                        "new_value": node["f.xform_definition_xml"],
+                    }
+                )
 
     # Check for deletions
     for form_key, node in old_map.items():
         if form_key not in new_map:
-            diff_results["deleted_nodes"].append({
-                "type": "Form",
-                "key": form_key
-            })
+            diff_results["deleted_nodes"].append({"type": "Form", "key": form_key})
 
     return diff_results
 ```
@@ -473,38 +471,47 @@ Below is the structural definition of an AST parser node implemented in the exec
 ```python
 from typing import List, Dict, Any, Union
 
+
 class ASTNode:
     def __init__(self, node_type: str, value: Any = None):
         self.node_type = node_type  # 'LITERAL', 'XPATH', 'OPERATOR', 'FUNCTION'
-        self.value = value          # '>=', 'indexed-repeat', 18
-        self.children: List['ASTNode'] = []
+        self.value = value  # '>=', 'indexed-repeat', 18
+        self.children: List["ASTNode"] = []
 
-    def evaluate(self, context_data: Dict[str, Any], current_indices: Dict[str, int]) -> Any:
-        if self.node_type == 'LITERAL':
+    def evaluate(
+        self, context_data: Dict[str, Any], current_indices: Dict[str, int]
+    ) -> Any:
+        if self.node_type == "LITERAL":
             return self.value
 
-        elif self.node_type == 'XPATH':
+        elif self.node_type == "XPATH":
             # Resolve complex relative paths
             resolved_path = self.resolve_relative_path(self.value, current_indices)
             return context_data.get(resolved_path, None)
 
-        elif self.node_type == 'OPERATOR':
+        elif self.node_type == "OPERATOR":
             left = self.children[0].evaluate(context_data, current_indices)
             right = self.children[1].evaluate(context_data, current_indices)
 
             if left is None or right is None:
                 return False
 
-            if self.value == '==': return left == right
-            if self.value == '!=': return left != right
-            if self.value == '>=': return float(left) >= float(right)
-            if self.value == '<=': return float(left) <= float(right)
-            if self.value == '>': return float(left) > float(right)
-            if self.value == '<': return float(left) < float(right)
+            if self.value == "==":
+                return left == right
+            if self.value == "!=":
+                return left != right
+            if self.value == ">=":
+                return float(left) >= float(right)
+            if self.value == "<=":
+                return float(left) <= float(right)
+            if self.value == ">":
+                return float(left) > float(right)
+            if self.value == "<":
+                return float(left) < float(right)
 
-        elif self.node_type == 'FUNCTION':
+        elif self.node_type == "FUNCTION":
             # Resolve native XForm engine functions like indexed-repeat
-            if self.value == 'indexed-repeat':
+            if self.value == "indexed-repeat":
                 return self.evaluate_indexed_repeat(context_data, current_indices)
 
         return None
@@ -520,7 +527,9 @@ class ASTNode:
             return "/clinical_data/subject/" + path.replace("../", "")
         return path
 
-    def evaluate_indexed_repeat(self, context_data: Dict[str, Any], current_indices: Dict[str, int]) -> Any:
+    def evaluate_indexed_repeat(
+        self, context_data: Dict[str, Any], current_indices: Dict[str, int]
+    ) -> Any:
         # Mechanics of resolving repeating grid nodes
         # Node structures: children[0] = target field path, children[1] = repeat container, children[2] = exact index literal
         target_path = self.children[0].value
@@ -615,7 +624,10 @@ Cadence EDC utilizes a deterministic field-level timestamp-based merging algorit
 import datetime
 from typing import Dict, Any
 
-def resolve_sync_conflict(server_state: Dict[str, Any], client_payload: Dict[str, Any]) -> Dict[str, Any]:
+
+def resolve_sync_conflict(
+    server_state: Dict[str, Any], client_payload: Dict[str, Any]
+) -> Dict[str, Any]:
     """
     Implements a strict, field-level Last-Write-Wins (LWW) conflict resolution logic.
     Supports atomic property merges.
@@ -647,17 +659,25 @@ def resolve_sync_conflict(server_state: Dict[str, Any], client_payload: Dict[str
             # Field doesn't exist on server, merge instantly
             merged_payload["data"][field] = client_val
             merged_payload["metadata"]["timestamps"][field] = client_time_str
-            merged_payload["metadata"]["modified_by"][field] = client_meta.get("modified_by", {}).get(field)
+            merged_payload["metadata"]["modified_by"][field] = client_meta.get(
+                "modified_by", {}
+            ).get(field)
             continue
 
-        client_ts = datetime.datetime.fromisoformat(client_time_str.replace("Z", "+00:00"))
-        server_ts = datetime.datetime.fromisoformat(server_time_str.replace("Z", "+00:00"))
+        client_ts = datetime.datetime.fromisoformat(
+            client_time_str.replace("Z", "+00:00")
+        )
+        server_ts = datetime.datetime.fromisoformat(
+            server_time_str.replace("Z", "+00:00")
+        )
 
         if client_ts > server_ts:
             # Client write is newer, update field
             merged_payload["data"][field] = client_val
             merged_payload["metadata"]["timestamps"][field] = client_time_str
-            merged_payload["metadata"]["modified_by"][field] = client_meta.get("modified_by", {}).get(field)
+            merged_payload["metadata"]["modified_by"][field] = client_meta.get(
+                "modified_by", {}
+            ).get(field)
 
         elif client_ts == server_ts:
             # Timestamps are identical, resolve by deterministic sorting of user identifier string

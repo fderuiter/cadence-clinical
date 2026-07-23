@@ -7,7 +7,7 @@ Accepted
 The platform manages highly sensitive clinical metadata that transitions across multiple system boundaries, specifically translating upstream CDISC USDM schemas to downstream eCRF structures. We need a reliable mechanism to strictly type, parse, and validate data structures within the Python runtime to prevent silent failures and ensure domain model integrity.
 
 ## Decision
-We decided to mandate the use of Pydantic v2 for all domain models, CDISC schemas, and data validation layers (especially within `packages/core-models/`). This enforces strict type-checking and automated runtime validation across the entire Cadence Clinical monorepo.
+We decided to mandate the use of Pydantic v2 for all domain models, CDISC schemas, and data validation layers (leveraging the official CDISC USDM standard package as an external dependency). This enforces strict type-checking and automated runtime validation across the entire Cadence Clinical monorepo.
 
 ## Alternatives Considered
 - **Standard Library Dataclasses:** Native to Python but lack powerful built-in validation, recursive type-checking, and out-of-the-box JSON serialization tailored for API endpoints.

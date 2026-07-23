@@ -52,7 +52,7 @@ def is_architectural_file(filepath: str) -> bool:
     Checks if a file path is considered an architectural change according to:
     - Dependencies configuration (pyproject.toml, package.json)
     - API Gateway modifications (apps/gateway/)
-    - Core data models (packages/core-models/)
+    - Security and UI shared packages (packages/security/, packages/ui/)
     - Database/storage model changes/migrations (apps/execution/database/, 'migrations', 'models')
 
     Ignores tests, docs, scripts, github workflows, markdown/txt files, etc.
@@ -77,8 +77,8 @@ def is_architectural_file(filepath: str) -> bool:
     if filepath.startswith("apps/gateway/"):
         return True
 
-    # 3. Core data models
-    if filepath.startswith("packages/core-models/"):
+    # 3. Active shared folders
+    if filepath.startswith("packages/security/") or filepath.startswith("packages/ui/"):
         return True
 
     # 4. Storage model changes or migrations under execution
