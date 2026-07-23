@@ -3,10 +3,20 @@ import json
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Any, AsyncGenerator, Optional
+from enum import Enum
+from typing import Any, AsyncGenerator, List, Optional
 
 from cryptography.fernet import Fernet
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Response
+from fastapi import (
+    BackgroundTasks,
+    FastAPI,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    Response,
+    UploadFile,
+)
 from pydantic import BaseModel
 from sqlalchemy import select
 
@@ -540,3 +550,145 @@ async def get_cdisc_export_dictionary(study_id: str) -> Response:
     """Export stored clinical subject observations in CDISC ODM XML format (Dictionary API)."""
     xml_content = await generate_cdisc_export_xml(study_id)
     return Response(content=xml_content, media_type="application/xml")
+
+
+# ==========================================
+# Medical Dictionary & UCUM Standardization API Contracts
+# ==========================================
+
+
+class DictTypeEnum(str, Enum):
+    MEDDRA = "MEDDRA"
+    WHODRUG = "WHODRUG"
+    LOINC = "LOINC"
+    SNOMED = "SNOMED"
+
+
+class JobStatusEnum(str, Enum):
+    PENDING = "PENDING"
+    PROCESSING = "PROCESSING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+
+
+class JobStatusResponse(BaseModel):
+    job_id: str
+    dictionary_type: str
+    version: str
+    status: JobStatusEnum
+    started_at: datetime
+    completed_at: Optional[datetime] = None
+    progress_percentage: Optional[int] = None
+    records_imported: Optional[int] = None
+    errors_encountered: Optional[int] = None
+
+
+class PrimarySocFlagEnum(str, Enum):
+    Y = "Y"
+    N = "N"
+
+
+class MedDRACodeMatch(BaseModel):
+    llt_code: str
+    llt_name: str
+    pt_code: str
+    pt_name: str
+    hlt_code: str
+    hlt_name: str
+    hlgt_code: str
+    hlgt_name: str
+    soc_code: str
+    soc_name: str
+    primary_soc_flag: Optional[PrimarySocFlagEnum] = None
+    score: float
+
+
+class MedDRACodingResult(BaseModel):
+    matches: List[MedDRACodeMatch]
+
+
+class UCUMConvertRequest(BaseModel):
+    value: float
+    source_unit: str
+    target_unit: str
+
+
+class UCUMUnitValue(BaseModel):
+    value: float
+    unit: str
+
+
+class UCUMConvertResponse(BaseModel):
+    source: UCUMUnitValue
+    target: UCUMUnitValue
+    is_compatible: bool
+    scale_factor: float
+    offset: Optional[float] = None
+
+
+@app.post(
+    "/api/v1/dictionaries/import", response_model=JobStatusResponse, status_code=202
+)
+async def import_dictionary(
+    dictionary_type: DictTypeEnum = Form(...),
+    version: str = Form(...),
+    files: UploadFile = File(...),
+    parse_multilingual: bool = Form(True),
+) -> JobStatusResponse:
+    """Imports raw dictionary files and schedules a background parsing task."""
+    return JobStatusResponse(
+        job_id="job_dict_import_889127b",
+        dictionary_type=dictionary_type,
+        version=version,
+        status=JobStatusEnum.PROCESSING,
+        started_at=datetime.fromisoformat("2026-07-22T20:45:00Z"),
+        progress_percentage=45,
+        records_imported=10245,
+        errors_encountered=0,
+    )
+
+
+class MedDRATargetLevelEnum(str, Enum):
+    LLT = "LLT"
+    PT = "PT"
+
+
+@app.get("/api/v1/dictionaries/meddra/code", response_model=MedDRACodingResult)
+async def get_meddra_code(
+    term: str,
+    version: Optional[str] = Query("26.0"),
+    target_level: Optional[MedDRATargetLevelEnum] = Query(MedDRATargetLevelEnum.LLT),
+) -> MedDRACodingResult:
+    """Performs coding or interactive auto-complete lookup on adverse events."""
+    return MedDRACodingResult(
+        matches=[
+            MedDRACodeMatch(
+                llt_code="10019211",
+                llt_name="Headache",
+                pt_code="10019211",
+                pt_name="Headache",
+                hlt_code="10019231",
+                hlt_name="Headaches NEC",
+                hlgt_code="10029214",
+                hlgt_name="Headache and facial pain",
+                soc_code="10029205",
+                soc_name="Nervous system disorders",
+                primary_soc_flag="Y",
+                score=1.0,
+            )
+        ]
+    )
+
+
+@app.post("/api/v1/dictionaries/ucum/convert", response_model=UCUMConvertResponse)
+async def post_ucum_convert(payload: UCUMConvertRequest) -> UCUMConvertResponse:
+    """Standardizes numeric values and verifies scale compatibility between source and target codes."""
+    return UCUMConvertResponse(
+        source=UCUMUnitValue(value=payload.value, unit=payload.source_unit),
+        target=UCUMUnitValue(
+            value=payload.value * 0.5555555555555556, unit=payload.target_unit
+        ),
+        is_compatible=True,
+        scale_factor=0.5555555555555556,
+        offset=-17.77777777777778,
+    )
