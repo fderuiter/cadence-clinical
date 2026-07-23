@@ -178,7 +178,7 @@ def parse_test_results(report_xml_path):
         return results
 
     try:
-        tree = ET.parse(report_xml_path)
+        tree = ET.parse(report_xml_path)  # nosec B314
         root = tree.getroot()
         for testcase in root.iter("testcase"):
             classname = testcase.get("classname", "")

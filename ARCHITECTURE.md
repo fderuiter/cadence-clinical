@@ -40,11 +40,11 @@ Traditional clinical trial builds require manual, error-prone translation of pro
   * Provides reusable, standardized UI components (e.g., inputs, layouts) ensuring design consistency.
   * Shared seamlessly across frontend packages using the pnpm workspace protocol.
 
-### E. Shared Core Models (`packages/core-models`)
-* **Role:** Unified Type System.
+### E. Clinical Metadata Validation & Translation (`apps/designer` and `apps/execution`)
+* **Role:** Unified Standard Domain Modeling & Validation.
 * **Core Responsibilities:**
-  * Pydantic v2 representations of CDISC USDM objects.
-  * In-memory bidirectional transformation adapters (USDM JSON ↔ OpenRosa / CDISC ODM).
+  * Official CDISC USDM standard representation using the `usdm` package inside the Designer (`apps/designer/`).
+  * In-memory bidirectional transformation adapters (USDM JSON ↔ OpenRosa / CDISC ODM) in the Execution engine (`apps/execution/`).
 
 ### F. Gateway & Identity (`apps/gateway`)
 * **Role:** Reverse Proxy & Access Control.

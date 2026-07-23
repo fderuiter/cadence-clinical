@@ -32,7 +32,7 @@ The Cadence Clinical microservices topology consists of:
 1. **API Gateway & Auth Service (`apps/gateway`)**: Central access point utilizing Keycloak for OpenID Connect (OIDC) identity federation and JWT propagation.
 2. **Designer Service (`apps/designer`)**: Metadata-driven Study Design Repository (MDR) leveraging CDISC USDM v3.0/v4.0 modeled inside Neo4j.
 3. **Execution Service (`apps/execution`)**: Downstream Electronic Data Capture (EDC) engine storing clinical subjects, forms, and audit trails in PostgreSQL.
-4. **Shared Models (`packages/core-models`)**: Unified Pydantic models for USDM and ODM.
+4. **Shared Utilities (`packages/security`)**: Shared cryptographic context and auth token validation layers.
 
 ---
 
@@ -113,7 +113,7 @@ helm upgrade --install cadence-clinical ./docker/helm/cadence-clinical \
   --atomic --timeout 15m0s
 
 # 4. Trigger automated GxP validation verification suite
-pytest tests/validation/gxp_compliance_suite.py --junitxml=gxp_results.xml
+pytest tests/test_ledger_and_triggers.py tests/test_audit.py tests/test_trial_lock.py tests/test_cryptography.py --junitxml=gxp_results.xml
 ```
 
 ### Step 3: Promote Validation to Production
@@ -147,9 +147,9 @@ curl -f https://blue.cadence.clinical/health
 Under **IEC 62304 Section 8.1.1** (Software configuration management) and **8.2** (Software release verification), a software release must meet rigorous criteria before entering live validation or production environments.
 
 ### Sign-off Checklist Criteria
-1. **Traceability Matrix Approved (QA-VAL-01):** Every feature requirement, bug fix, and architectural shift must be traceably mapped to corresponding tests.
+1. **Traceability Matrix Approved (QA-VAL-01):** Every feature requirement, bug fix, and architectural shift must be traceably mapped to corresponding tests. View the active, automatically generated **[Requirements Traceability Matrix](Requirements_Traceability_Matrix.md)**.
 2. **Zero Known Critical Vulnerabilities:** Security scan must report 0 CVEs (Critical/High) in production container layers.
-3. **90% Unit Test & Integration Coverage:** Code coverage in python apps (`gateway`, `designer`, `execution`) must not drop below 80% (Cadence enforces 80% minimum, target is 90% for clinical calculations).
+3. **90% Unit Test & Integration Coverage:** Code coverage in python apps (`gateway`, `designer`, `execution`) must not drop below 80% (Cadence enforces 80% minimum, target is 90% for clinical calculations). See the latest **[Qualification Execution Report](IQ_OQ_PQ_Execution_Report.md)** for detailed test outcomes.
 4. **Sign-off Protocol:**
 
 ```
@@ -484,7 +484,7 @@ if __name__ == "__main__":
 Clinical trials frequently require custom dictionary translation layers. CDISC domains (e.g., SDTM DM, AE, VS) must adapt to sponsor-specific verbiage variations or localized linguistic outputs without breaking underlying graph data schemas.
 
 ### Directory Mapping
-* Translators reside in `packages/core-models/localization/`
+* Translators and translation templates reside in `apps/execution/` and `apps/execution/templates/`
 * Terminology databases map overrides via the Neo4j schema relationships:
   `(Concept) -[:LOCALIZED_TO {sponsor_id: 'novartis', locale: 'ja_JP'}]-> (OverrideValue)`
 
@@ -492,14 +492,11 @@ Clinical trials frequently require custom dictionary translation layers. CDISC d
 To load and apply a localization dictionary to a specific clinical study workspace:
 
 ```bash
-# Executing terminology mapping override script
-uv run python -m packages.core_models.localization.apply_override \
+# Executing terminology mapping override via the translator module
+uv run python -m apps.execution.translator \
   --study-id "STUDY-2026-ONC" \
   --sponsor-id "novartis" \
-  --locale-file "./packages/core-models/localization/dict/novartis_ja_override.json" \
-  --neo4j-uri "bolt://localhost:7687" \
-  --neo4j-user "neo4j" \
-  --neo4j-pass "cadence_password"
+  --locale-file "./apps/execution/templates/novartis_ja_override.json"
 ```
 
 ---
@@ -977,7 +974,7 @@ Prior to putting this system into production service, SREs and Validation Engine
 
 ```bash
 # Executing standard operational readiness validation command
-pytest tests/validation/environment_integrity_tests.py -v
+pytest tests/test_migrate.py tests/test_audit.py -v
 ```
 
 This ensures full operational readiness, zero unapplied migrations, functional multi-tenant separation triggers, complete configuration mapping overrides, and high-availability health checks. The platform is now fully qualified for active Clinical Trial usage under GxP regulatory structures.

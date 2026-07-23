@@ -31,27 +31,28 @@ Cadence Clinical operates as a modular, API-first monorepo designed around clean
           ┌──────────────┴─────────┐         ┌─┴──────────────────────┐
           │                        │         │                        │
           ▼                        ▼         ▼                        ▼
-┌──────────────────┐    ┌──────────────────────┐    ┌──────────────────┐
-│  Designer App    │    │  Core Models Package │    │  Execution App   │
-│  (MDR / USDM)    │───►│  (USDM ↔ ODM Models) │◄───│  (EDC & eCRFs)   │
-└─────────┬────────┘    └──────────────────────┘    └─────────┬────────┘
-          │                                                   │
-          ▼                                                   ▼
-┌──────────────────┐                                ┌──────────────────┐
-│ Neo4j Graph DB   │                                │ PostgreSQL DB    │
-│ (Study Metadata) │                                │ (Trial Data)     │
-└──────────────────┘                                └──────────────────┘
+┌──────────────────┐                         ┌──────────────────┐
+│  Designer App    │────────────────────────►│  Execution App   │
+│  (MDR / USDM)    │  (DDF Study Published)  │  (EDC & eCRFs)   │
+└─────────┬────────┘                         └─────────┬────────┘
+          │                                            │
+          ▼                                            ▼
+┌──────────────────┐                         ┌──────────────────┐
+│ Neo4j Graph DB   │                         │ PostgreSQL DB    │
+│ (Study Metadata) │                         │ (Trial Data)     │
+└──────────────────┘                         └──────────────────┘
 
 ```
 ### Repo Layout
 ```text
 cadence-clinical/
 ├── apps/
-│   ├── designer/         # Study Design & Metadata Authoring Service (FastAPI / Neo4j)
-│   ├── execution/        # EDC Execution Service (eCRF, Subjects, Queries, PostgreSQL)
+│   ├── designer/         # Study Design & Metadata Authoring Service (FastAPI / Neo4j, CDISC USDM standard representation)
+│   ├── execution/        # EDC Execution Service (eCRF, Subjects, Queries, PostgreSQL, USDM ↔ ODM transformation engine)
 │   └── gateway/          # Central API Gateway & JWT Auth Middleware
 ├── packages/
-│   └── core-models/      # Shared Pydantic v2 schemas for CDISC USDM, CDASH, and ODM
+│   ├── security/         # Cryptographic context listeners, auth token validation layers
+│   └── ui/               # Standard clinical UI elements & design library
 ├── docker/               # Orchestration blueprints (PostgreSQL, Neo4j, Keycloak)
 ├── tests/                # Cross-service integration & transformation suites
 ├── AGENTS.md             # AI Agent guidelines & workspace constraints

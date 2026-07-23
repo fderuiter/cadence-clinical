@@ -17,5 +17,8 @@ echo "Running frontend checks..."
 pnpm install
 pnpm check
 
+echo "Running markdown link verification..."
+node scripts/check-links.js
+
 echo "Running ADR validation..."
 python3 scripts/validate_adrs.py

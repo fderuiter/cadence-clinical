@@ -56,7 +56,7 @@ async def validate_layout_html(html_content: str):
                     const rect = node.getBoundingClientRect();
                     const style = window.getComputedStyle(node);
                     const isVisible = style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
-                    
+
                     let parent = node.parentElement;
                     const ancestorIndices = [];
                     while(parent) {
@@ -66,7 +66,7 @@ async def validate_layout_html(html_content: str):
                         }
                         parent = parent.parentElement;
                     }
-                    
+
                     results.push({
                         id: index,
                         tag: node.tagName.toLowerCase(),

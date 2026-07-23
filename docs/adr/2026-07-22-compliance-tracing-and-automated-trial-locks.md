@@ -19,19 +19,19 @@ To bring the platform into complete alignment with global clinical regulations (
 ## 3. Options Considered
 ### Option 1: Application-level auditing and soft locks
 * **Overview:** Rely on application logic and soft-delete flags for auditing, with application-level checks for trial locking.
-* **Pros:** 
+* **Pros:**
   * ✅ Easier to implement.
-* **Cons:** 
+* **Cons:**
   * ❌ Susceptible to bypass via direct database access or bugs.
   * ❌ Does not fully satisfy strict regulatory requirements for tamper-proof logs.
 
 ### Option 2: Database-level audit protection with threshold cryptography and global locks
 * **Overview:** Hard-delete blocks at the database flush listener level. Multi-party threshold cryptography for blinding keys. Immediate global read-only lock with multi-channel alerting.
-* **Pros:** 
+* **Pros:**
   * ✅ Meets stringent regulatory standards for immutable audit logs.
   * ✅ Eliminates single point of failure for unblinding.
   * ✅ Ensures rapid response to safety compromises.
-* **Cons:** 
+* **Cons:**
   * ❌ Increased complexity in database transaction management and cryptographic operations.
 
 ## 4. Decision Outcome

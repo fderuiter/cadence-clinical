@@ -40,7 +40,7 @@ The source directories (`apps/`, `packages/`, `tests/`, etc.) are mounted into t
 
 ## 2. Validation & Verification
 
-Before submitting code, you must ensure all styling, linting, and tests pass successfully inside the containerized sandbox against the live containerized database. Review the API guidelines and Pydantic models in `packages/core-models/`.
+Before submitting code, you must ensure all styling, linting, and tests pass successfully inside the containerized sandbox against the live containerized database. Review the API guidelines and Pydantic models in `apps/designer/` and `apps/execution/`.
 
 We have provided a verification helper script:
 

@@ -36,7 +36,7 @@ When operating within the multi-repository workspace, you have access to three c
 
 ## Directory Target Rules for Generated Code
 
-- Data models & CDISC schemas ──► `packages/core-models/`
+- Data models & CDISC schemas ──► `apps/designer/` and `apps/execution/`
 - Study authoring / MDR logic ──► `apps/designer/`
 - Data capture / eCRF logic ──► `apps/execution/`
 - OIDC Auth & Routers ──► `apps/gateway/`
@@ -51,7 +51,7 @@ To maintain code health, architectural transparency, and GxP audit readiness acr
 ### Gate 1: Comprehensive Documentation & Docstrings
 Every new module, class, function, and public API endpoint must be thoroughly documented.
 * **Python Codebases (`apps/`, `packages/`):** All functions and classes must include clear docstrings following Google or NumPy style guidelines. Complex business logic (such as USDM-to-ODM transformers or state transition machines) must include inline comments explaining *why* a specific transformation pattern is applied.
-* **Workspace Documentation (`docs/`):** If a PR introduces a new service boundary or changes an existing data flow, the corresponding Markdown documents (`docs/SRS.md`, `docs/DATA_LIFECYCLE.md`, etc.) must be updated to reflect the new state.
+* **Workspace Documentation (`docs/`):** If a PR introduces a new service boundary or changes an existing data flow, the corresponding Markdown documents (`docs/SRS.md`, `docs/SDLC/04_Data_Standards_Interoperability_Blueprint.md`, etc.) must be updated to reflect the new state.
 
 ### Gate 2: Architecture Decision Records (ADRs)
 Cadence Clinical enforces a strict **"Code + Context"** design policy. Any PR that introduces significant architectural changes must include an Architecture Decision Record.

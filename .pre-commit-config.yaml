@@ -23,3 +23,12 @@ repos:
       - id: detect-secrets
         args: ['--baseline', '.secrets.baseline']
         exclude: 'pnpm-lock.yaml|uv.lock'
+
+  - repo: local
+    hooks:
+      - id: check-markdown-links
+        name: Check Markdown Links
+        entry: node scripts/check-links.js
+        language: system
+        files: \.md$
+        pass_filenames: false
