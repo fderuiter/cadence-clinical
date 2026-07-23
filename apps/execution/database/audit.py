@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import event, inspect
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import get_history
@@ -14,6 +16,12 @@ def get_primary_key(obj):
     if not pk_cols:
         return "unknown"
     return str(getattr(obj, pk_cols[0].name))
+
+
+def serialize_for_json(val):
+    if isinstance(val, datetime):
+        return val.isoformat()
+    return val
 
 
 @event.listens_for(Session, "before_flush")
@@ -42,7 +50,7 @@ def receive_before_flush(session: Session, flush_context, instances):
         mapper = inspect(obj).mapper
         for attr in mapper.column_attrs:
             val = getattr(obj, attr.key)
-            new_values[attr.key] = val
+            new_values[attr.key] = serialize_for_json(val)
 
         audit_logs.append(
             AuditLog(
@@ -79,8 +87,8 @@ def receive_before_flush(session: Session, flush_context, instances):
 
                 # Verify that it actually changed
                 if old_val != new_val:
-                    old_values[attr.key] = old_val
-                    new_values[attr.key] = new_val
+                    old_values[attr.key] = serialize_for_json(old_val)
+                    new_values[attr.key] = serialize_for_json(new_val)
 
         if old_values or new_values:
             # Check if this is a soft delete

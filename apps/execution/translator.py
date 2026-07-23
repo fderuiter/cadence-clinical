@@ -1,11 +1,13 @@
+import asyncio
 import os
 import uuid
+from datetime import datetime
 from typing import Any
 
 import defusedxml.minidom as minidom
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from apps.execution.database.context import current_session
+from apps.execution.database.context import current_change_reason, current_session
 from apps.execution.database.models import TranslationJob
 
 # Setup Jinja2 environment
@@ -151,3 +153,125 @@ async def process_translation(
                 # Update job execution status
                 await session.flush()
                 current_session.reset(token)
+
+
+async def execute_translation_job(job_id: str, session_factory: Any) -> None:
+    """Core translation execution of a queued job.
+
+    Loads the job payload, compiles ODM and OpenRosa XML templates, formats them,
+    and updates the job status to COMPLETED or FAILED. Runs a concurrent heartbeat loop
+    while the translation is active to prove the worker is alive.
+
+    Args:
+        job_id (str): The unique ID of the TranslationJob in the database.
+        session_factory (Any): The SQLAlchemy asynchronous session factory.
+    """
+    # 1. Fetch the payload and study_id
+    async with session_factory() as session:
+        job = await session.get(TranslationJob, job_id)
+        if not job:
+            return
+        study_id = job.study_id
+        payload = job.payload
+
+    # 2. Start a background heartbeat task to keep heartbeat_at updated while we do in-memory translation
+    stop_event = asyncio.Event()
+
+    async def heartbeat_loop() -> None:
+        while not stop_event.is_set():
+            try:
+                async with session_factory() as session:
+                    async with session.begin():
+                        token = current_session.set(session)
+                        try:
+                            current_change_reason.set("worker_heartbeat")
+                            db_job = await session.get(TranslationJob, job_id)
+                            if db_job and db_job.status == "PROCESSING":
+                                db_job.heartbeat_at = datetime.utcnow()
+                        finally:
+                            current_session.reset(token)
+            except Exception:
+                # AC 4: Recover from transient database disconnection events without crashing the host process
+                pass
+            try:
+                await asyncio.wait_for(stop_event.wait(), timeout=2.0)
+            except asyncio.TimeoutError:
+                pass
+
+    heartbeat_task = asyncio.create_task(heartbeat_loop())
+
+    try:
+        # Perform translation in memory
+        if not payload or not isinstance(payload, dict):
+            raise ValueError("Payload must be a dictionary.")
+        if "protocol" not in payload:
+            raise ValueError(
+                "Validation Failed: 'protocol' missing from study definition."
+            )
+
+        # Process items for templates
+        raw_items = payload.get("protocol", {}).get("items", [])
+        processed_items = []
+        for item in raw_items:
+            item_id = item.get("id")
+            if not item_id:
+                item_id = f"item_{uuid.uuid4().hex[:8]}"
+
+            item_name = item.get("name", "Unknown Field")
+            item_type = item.get("type", "string")
+            appearance = extract_appearance(item)
+
+            processed_items.append(
+                {
+                    "id": item_id,
+                    "name": item_name,
+                    "type": item_type,
+                    "appearance": appearance,
+                }
+            )
+
+        template_data = {
+            "study_id": study_id,
+            "name": payload.get("name", f"Study {study_id}"),
+            "items": processed_items,
+        }
+
+        # Render templates
+        odm_template = env.get_template("odm_template.xml.j2")
+        odm_xml_str = odm_template.render(**template_data)
+
+        openrosa_template = env.get_template("openrosa_template.xml.j2")
+        openrosa_xml_str = openrosa_template.render(**template_data)
+
+        def pretty_print(xml_string: str) -> str:
+            dom = minidom.parseString(xml_string)
+            for node in dom.getElementsByTagName("*"):
+                for child in list(node.childNodes):
+                    if child.nodeType == 3 and not child.data.strip():
+                        node.removeChild(child)
+            return dom.toprettyxml(indent="  ")
+
+        odm_str = pretty_print(odm_xml_str)
+        openrosa_str = pretty_print(openrosa_xml_str)
+
+        # 4. Save results and set to COMPLETED
+        async with session_factory() as session:
+            async with session.begin():
+                token = current_session.set(session)
+                try:
+                    current_change_reason.set("translation_completed")
+                    db_job = await session.get(TranslationJob, job_id)
+                    if db_job:
+                        db_job.odm_payload = odm_str
+                        db_job.openrosa_payload = openrosa_str
+                        db_job.status = "COMPLETED"
+                finally:
+                    current_session.reset(token)
+
+    except Exception as e:
+        # Re-raise to let the QueueWorker handle the failure/retry/status updates
+        raise e
+    finally:
+        # Stop the heartbeat task
+        stop_event.set()
+        await heartbeat_task
