@@ -1,6 +1,6 @@
 # GxP Installation & Operational Qualification (IQ/OQ/PQ) Execution Report
 
-*Execution Date:* 2026-07-23 17:28:52 UTC
+*Execution Date:* 2026-07-23 17:28:29 UTC
 *Regulatory Protocol:* FDA 21 CFR Part 11, EU Annex 11, GAMP 5 Category 4/5, IEC 62304 Class B
 
 ## 1. Executive Summary & Verification Declaration
@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 121
-- **Passed:** 121 🟢
+- **Total Automated Test Cases Run:** 129
+- **Passed:** 129 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -145,6 +145,13 @@ The Operational Qualification verifies that individual clinical operations, stat
 ### 3.1 Traceability Mappings Verification
 | Test Case Name | Classname / Suite | Target Req | Status | Duration |
 | :--- | :--- | :--- | :--- | :--- |
+| `test_api_parameters_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_api_paths_and_methods_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_api_request_bodies_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_api_responses_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_markdown_spec_extract_and_parse` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_markdown_spec_syntax_checks_malformed_yaml` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_validation_fails_on_route_path_mismatch` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_audit_records_ip_and_custom_timestamp` | `tests.test_audit` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_hard_delete_is_prevented` | `tests.test_audit` | Trace-1 | 🟢 PASSED | 0.01s |
 | `test_insert_generates_audit_log` | `tests.test_audit` | PRD-SYS-001 | 🟢 PASSED | 0.01s |
@@ -217,6 +224,14 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_invalid_spacing` | `tests.test_mapping_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_multiple_colons` | `tests.test_mapping_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_valid_csv` | `tests.test_mapping_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_clean_token` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_is_potential_path_ref` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_process_markdown_file_e2e` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_resolve_path` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_validate_cli_command_flag_checks` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_validate_cli_command_python_and_pytest` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_validate_docker_compose_scenarios` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_validate_path` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_main_cli` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_run_migrations_failure` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_run_migrations_real_sqlite` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | 0.01s |

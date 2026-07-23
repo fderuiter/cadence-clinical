@@ -22,3 +22,6 @@ node scripts/check-links.js
 
 echo "Running ADR validation..."
 python3 scripts/validate_adrs.py
+
+echo "Running Markdown validation..."
+python3 scripts/validate_markdown.py

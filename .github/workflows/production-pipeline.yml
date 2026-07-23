@@ -1,0 +1,11 @@
+# Placeholder for production pipeline workflow
+name: Production Pipeline
+on:
+  push:
+    branches: [main]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dummy step
+        run: echo "Hello"
