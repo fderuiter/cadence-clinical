@@ -541,25 +541,39 @@ def impute_ae_start_date(ae_partial_date, treatment_start_date):
     Dates represented as dictionary of components: { 'year': YYYY, 'month': MM, 'day': DD }
     """
     # Case 1: Only Year is known (e.g., "2026-UN-UN")
-    if ae_partial_date['year'] and not ae_partial_date['month'] and not ae_partial_date['day']:
-        if ae_partial_date['year'] == treatment_start_date['year']:
+    if (
+        ae_partial_date["year"]
+        and not ae_partial_date["month"]
+        and not ae_partial_date["day"]
+    ):
+        if ae_partial_date["year"] == treatment_start_date["year"]:
             # If same year as treatment start, impute to treatment start date to assume treatment-emergent
             return treatment_start_date
         else:
             # Otherwise, set to January 1st of that year
-            return { 'year': ae_partial_date['year'], 'month': 1, 'day': 1 }
+            return {"year": ae_partial_date["year"], "month": 1, "day": 1}
 
     # Case 2: Year and Month are known, Day is missing (e.g., "2026-06-UN")
-    if ae_partial_date['year'] and ae_partial_date['month'] and not ae_partial_date['day']:
-        if (ae_partial_date['year'] == treatment_start_date['year'] and
-            ae_partial_date['month'] == treatment_start_date['month']):
+    if (
+        ae_partial_date["year"]
+        and ae_partial_date["month"]
+        and not ae_partial_date["day"]
+    ):
+        if (
+            ae_partial_date["year"] == treatment_start_date["year"]
+            and ae_partial_date["month"] == treatment_start_date["month"]
+        ):
             # Same year and month as treatment start, set to treatment start day
             return treatment_start_date
         else:
             # Otherwise, set to the 1st of the month
-            return { 'year': ae_partial_date['year'], 'month': ae_partial_date['month'], 'day': 1 }
+            return {
+                "year": ae_partial_date["year"],
+                "month": ae_partial_date["month"],
+                "day": 1,
+            }
 
-    return ae_partial_date # Date is fully complete
+    return ae_partial_date  # Date is fully complete
 ```
 
 ##### Concomitant Medication / Adverse Event End Date (`AEENDTC`) Imputation:
