@@ -30,7 +30,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         async with db_manager.engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
+    from apps.etmf.sealer import (
+        start_background_etmf_sealer,
+        stop_background_etmf_sealer,
+    )
+
+    await start_background_etmf_sealer(db_manager.get_session_maker())
+
     yield
+
+    await stop_background_etmf_sealer()
 
     await db_manager.close()
 
@@ -200,6 +209,51 @@ async def ingest_document(
             detail="Forbidden: Inspectors are restricted to read-only access.",
         )
 
+    # Restrict affected trial to read-only state if trial is locked
+    from apps.execution.trial_lock import TrialLockManager
+
+    if TrialLockManager.is_locked():
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Trial is currently locked in a read-only state due to a security violation.",
+        )
+
+    # Validate embedded X.509 signature
+    from apps.etmf.cryptography import (
+        extract_signature_from_content,
+        validate_document_signature,
+    )
+
+    is_valid, status_msg = validate_document_signature(
+        artifact_type=payload.artifact_type,
+        content=payload.content,
+        metadata_json=payload.metadata_json,
+    )
+    if not is_valid:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Validation Error: {status_msg}",
+        )
+
+    # Extract signature to set signature verification status in metadata
+    cert_pem, _, _ = extract_signature_from_content(payload.content)
+    if not cert_pem and payload.metadata_json:
+        for key in ["signature", "digital_signature", "x509_signature"]:
+            sig_obj = payload.metadata_json.get(key)
+            if isinstance(sig_obj, dict):
+                cert_pem = (
+                    sig_obj.get("certificate")
+                    or sig_obj.get("x509_certificate")
+                    or sig_obj.get("cert")
+                )
+                break
+
+    # Record verification status in metadata_json
+    metadata_json = dict(payload.metadata_json) if payload.metadata_json else {}
+    metadata_json["signature_verification_status"] = (
+        "VERIFIED" if cert_pem else "NOT_REQUIRED"
+    )
+
     # Determine TMF Zone and Section
     zone, section = map_artifact_to_tmf(payload.artifact_type)
 
@@ -227,7 +281,7 @@ async def ingest_document(
         mime_type=payload.mime_type,
         created_by=user_id,
         version_index=new_version_index,
-        metadata_json=payload.metadata_json,
+        metadata_json=metadata_json,
     )
 
     session.add(doc)
