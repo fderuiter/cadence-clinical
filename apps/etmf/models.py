@@ -33,9 +33,7 @@ class TMFDocument(Base):
     )
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
-    metadata_json: Mapped[Optional[Dict[str, Any]]] = mapped_column(
-        JSON, nullable=True
-    )
+    metadata_json: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
 
 
 class TMFAuditLog(Base):

@@ -75,7 +75,8 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
             if abs(time.time() - ts) > 300:
                 status_code = 403 if is_mutation else 401
                 return JSONResponse(
-                    status_code=status_code, content={"detail": "Gateway signature expired"}
+                    status_code=status_code,
+                    content={"detail": "Gateway signature expired"},
                 )
         except ValueError:
             status_code = 400 if is_mutation else 401
@@ -134,8 +135,7 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
 
         # Extract IP address for context injection
         ip_address = request.headers.get(
-            "x-forwarded-for",
-            request.client.host if request.client else "127.0.0.1"
+            "x-forwarded-for", request.client.host if request.client else "127.0.0.1"
         )
         if "," in ip_address:
             ip_address = ip_address.split(",")[0].strip()
@@ -144,7 +144,9 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
         user_token = current_user_id.set(user_id)
         reason_token = current_change_reason.set(change_reason or "system_operation")
         ip_token = current_ip_address.set(ip_address)
-        ts_token = current_timestamp.set(datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None))
+        ts_token = current_timestamp.set(
+            datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+        )
 
         try:
             return await call_next(request)
