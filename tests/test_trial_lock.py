@@ -42,6 +42,8 @@ async def setup_db():
 @patch("apps.execution.trial_lock.NotificationRouter.send_sms")
 @patch("apps.execution.trial_lock.NotificationRouter.send_webhook")
 async def test_trial_lock_freeze(mock_webhook, mock_sms, mock_email):
+    # @req:Trace-3
+    # @req:PRD-SYS-003
     @transactional(lambda: db_manager.get_session_maker()())
     async def create_record():
         session = current_session.get()

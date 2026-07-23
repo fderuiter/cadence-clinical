@@ -61,6 +61,7 @@ share/python-wheels/
 .coverage.*
 nosetests.xml
 coverage.xml
+report.xml
 *.cover
 *.pyo
 htmlcov/

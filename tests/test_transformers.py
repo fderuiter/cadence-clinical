@@ -38,6 +38,8 @@ def test_legacy_endpoint_returns_original_schema():
 
 
 def test_usdm_endpoint_returns_nested_schema_and_fast():
+    # @req:PRD-MDR-003
+    # @req:PRD-MDR-004
     # Requirement: Requesting a USDM study export constructs and returns the full nested JSON structure within 200ms
     start = time.perf_counter()
     response = client.get("/api/v2/studies/study_1/usdm", headers=get_auth_headers())
@@ -63,6 +65,7 @@ def test_usdm_endpoint_returns_nested_schema_and_fast():
 
 
 def test_terminology_cache_prevents_db_queries():
+    # @req:PRD-MDR-001
     # Requirement: Identical Terminology requests run zero additional DB queries
     terminology_cache.clear()
     initial_queries = db_query_counts["terminology_lookups"]
@@ -107,6 +110,7 @@ def test_admin_cache_clear_forces_fresh_read():
 
 
 def test_usdm_validation_error_on_invalid_data():
+    # @req:PRD-MDR-001
     # Insert invalid mock data temporarily
     MOCK_TERMINOLOGY["INVALID_CONCEPT"] = {
         "code": "INV",

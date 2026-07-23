@@ -31,6 +31,7 @@ def test_generate_signature() -> None:
 
 def test_proxy_requests_no_auth() -> None:
     """
+    # @req:PRD-UNI-001
     Test proxy endpoint without an authorization header.
 
     Ensures that requests without a Bearer token receive a 401 Unauthorized response.
@@ -275,6 +276,7 @@ def test_proxy_requests_v2_headers(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_gateway_cors_headers() -> None:
     """
+    # @req:PRD-UNI-001
     Test that the API gateway correctly handles CORS requests.
 
     Ensures that preflight OPTIONS requests return standard CORS response headers
@@ -297,6 +299,7 @@ def test_gateway_cors_headers() -> None:
 
 def test_gateway_rate_limiting(monkeypatch: pytest.MonkeyPatch) -> None:
     """
+    # @req:PRD-UNI-001
     Test that the API gateway correctly enforces rate limits on public endpoints.
 
     Mocks a tight rate limit threshold and sends consecutive requests to verify
