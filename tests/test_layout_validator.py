@@ -253,18 +253,25 @@ async def test_layout_validation_integration():
         )
     assert response.status_code == 200
 
-    async with db_manager.get_session_maker()() as session:
-        result = await session.execute(
-            TranslationJob.__table__.select().where(
-                TranslationJob.study_id == "test_layout_study_123"
+    import asyncio
+
+    job = None
+    for _ in range(50):
+        async with db_manager.get_session_maker()() as session:
+            result = await session.execute(
+                TranslationJob.__table__.select().where(
+                    TranslationJob.study_id == "test_layout_study_123"
+                )
             )
-        )
-        job = result.mappings().first()
+            job = result.mappings().first()
+            if job and job["status"] in ("COMPLETED", "FAILED"):
+                break
+        await asyncio.sleep(0.1)
 
-        assert job is not None
-        assert job["status"] == "COMPLETED"
-        assert job["openrosa_payload"] is not None
+    assert job is not None
+    assert job["status"] == "COMPLETED"
+    assert job["openrosa_payload"] is not None
 
-        openrosa_xml = job["openrosa_payload"]
+    openrosa_xml = job["openrosa_payload"]
 
     assert await validate_layout_html(openrosa_xml)
