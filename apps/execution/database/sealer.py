@@ -3,7 +3,7 @@ import hashlib
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from sqlalchemy import text
@@ -136,7 +136,7 @@ async def execute_audit_sealing_cycle(
         {
             "prev": previous_hash,
             "curr": current_block_hash,
-            "timestamp": datetime.utcnow(),
+            "timestamp": datetime.now(timezone.utc).replace(tzinfo=None),
             "count": len(records),
             "merkle": merkle_root,
         },
