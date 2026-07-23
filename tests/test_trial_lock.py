@@ -1,3 +1,4 @@
+import uuid
 from typing import Any
 from unittest.mock import patch
 
@@ -217,3 +218,86 @@ async def test_site_and_visit_locks() -> None:
         ValueError, match="Hard deletion of LockClinicalRecord is forbidden"
     ):
         await hard_delete_record(locked_visit_rec_id)
+
+
+class DummyEPROSubmission(Base):
+    __tablename__ = "epro_submissions"
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    answers: Mapped[str] = mapped_column(String(255), nullable=True)
+
+
+@pytest.mark.asyncio
+async def test_db_backed_trial_lock_requirements() -> None:
+    session_maker = db_manager.get_session_maker()
+
+    # Helpers
+    @transactional(session_maker)
+    async def create_clinical_record() -> str:
+        session = current_session.get()
+        record = LockClinicalRecord(data_value="clinical_data")
+        session.add(record)
+        await session.flush()
+        return str(record.id)
+
+    @transactional(session_maker)
+    async def create_epro_record() -> str:
+        session = current_session.get()
+        record = DummyEPROSubmission(answers="answers_data")
+        session.add(record)
+        await session.flush()
+        return str(record.id)
+
+    # 1. Normal state - writes to both should succeed
+    clinical_id = await create_clinical_record()
+    epro_id = await create_epro_record()
+    assert clinical_id is not None
+    assert epro_id is not None
+
+    # 2. Lock persistent across container restarts (Scenario 1)
+    # Activate lock
+    TrialLockManager.lock_trial("Security breach")
+    assert TrialLockManager.is_locked()
+
+    # Clear in-memory state to simulate container reboot
+    TrialLockManager._is_locked = False
+    TrialLockManager._locked_at = None
+    TrialLockManager._locked_sites.clear()
+    TrialLockManager._locked_visits.clear()
+
+    # Clinical writes should STILL be blocked because of pre-flush DB query
+    with pytest.raises(
+        PermissionError, match="Trial is currently locked in a read-only state"
+    ):
+        await create_clinical_record()
+
+    # 3. Multi-pod lock synchronization (Scenario 2)
+    # Reset lock manager
+    TrialLockManager.reset()
+    assert not TrialLockManager.is_locked()
+
+    # Manually write a lock to the DB to simulate another pod/instance writing it
+    from apps.execution.database.models import TrialLockStatus
+
+    @transactional(session_maker)
+    async def simulate_external_lock() -> None:
+        session = current_session.get()
+        new_lock = TrialLockStatus(
+            lock_type="TRIAL", is_locked=True, reason="External block"
+        )
+        session.add(new_lock)
+        await session.flush()
+
+    await simulate_external_lock()
+
+    # Clinical write should get blocked immediately upon next transaction flush
+    with pytest.raises(
+        PermissionError, match="Trial is currently locked in a read-only state"
+    ):
+        await create_clinical_record()
+
+    # 4. Operational continuity for exempted workflows (Scenario 3)
+    # Active lock in DB remains, but writing to epro_submissions should succeed
+    epro_id_2 = await create_epro_record()
+    assert epro_id_2 is not None

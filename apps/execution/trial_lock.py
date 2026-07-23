@@ -39,41 +39,217 @@ class TrialLockManager:
     _locked_visits = set()
 
     @classmethod
+    def _save_lock_status_to_db(
+        cls, lock_type: str, is_locked: bool, target_id: str = None, reason: str = None
+    ):
+        """Helper to persist lock status to the database synchronously."""
+        # Update our in-memory cache as well
+        if lock_type == "TRIAL":
+            cls._is_locked = is_locked
+            if is_locked:
+                cls._locked_at = time.time()
+            else:
+                cls._locked_at = None
+        elif lock_type == "SITE":
+            if is_locked:
+                cls._locked_sites.add(str(target_id))
+            else:
+                cls._locked_sites.discard(str(target_id))
+        elif lock_type == "VISIT":
+            if is_locked:
+                cls._locked_visits.add(str(target_id))
+            else:
+                cls._locked_visits.discard(str(target_id))
+
+        # Persist to database
+        from sqlalchemy import select
+
+        from apps.execution.database.core import db_manager
+        from apps.execution.database.models import TrialLockStatus
+
+        if not db_manager or not db_manager.engine:
+            return
+
+        async def _async_save():
+            async_session = db_manager.get_session_maker()()
+            try:
+                stmt = select(TrialLockStatus).where(
+                    TrialLockStatus.lock_type == lock_type,
+                    TrialLockStatus.target_id == target_id,
+                )
+                res = await async_session.execute(stmt)
+                existing = res.scalars().first()
+                if existing:
+                    existing.is_locked = is_locked
+                    if reason:
+                        existing.reason = reason
+                    from datetime import datetime
+
+                    existing.locked_at = datetime.now()
+                else:
+                    new_lock = TrialLockStatus(
+                        lock_type=lock_type,
+                        target_id=target_id,
+                        is_locked=is_locked,
+                        reason=reason,
+                    )
+                    async_session.add(new_lock)
+                await async_session.commit()
+            except Exception as e:
+                await async_session.rollback()
+                raise e
+            finally:
+                await async_session.close()
+
+        import asyncio
+        import threading
+
+        err = []
+
+        def target():
+            try:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                loop.run_until_complete(_async_save())
+            except Exception as e:
+                err.append(e)
+            finally:
+                loop.close()
+
+        t = threading.Thread(target=target)
+        t.start()
+        t.join()
+        if err:
+            raise err[0]
+
+    @classmethod
+    def _sync_cache_from_db(cls):
+        """Synchronizes the in-memory lock cache with the database state."""
+        from sqlalchemy import select
+
+        from apps.execution.database.core import db_manager
+        from apps.execution.database.models import TrialLockStatus
+
+        if not db_manager or not db_manager.engine:
+            return
+
+        async def _async_load():
+            async_session = db_manager.get_session_maker()()
+            try:
+                stmt = select(TrialLockStatus).where(TrialLockStatus.is_locked)
+                res = await async_session.execute(stmt)
+                locks = res.scalars().all()
+                return locks
+            except Exception:
+                return None
+            finally:
+                await async_session.close()
+
+        import asyncio
+        import threading
+
+        res = []
+
+        def target():
+            try:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                val = loop.run_until_complete(_async_load())
+                res.append(val)
+            except Exception:
+                res.append(None)
+            finally:
+                loop.close()
+
+        t = threading.Thread(target=target)
+        t.start()
+        t.join()
+
+        locks = res[0]
+        if locks is not None:
+            cls._is_locked = False
+            cls._locked_at = None
+            cls._locked_sites.clear()
+            cls._locked_visits.clear()
+            for lock in locks:
+                if lock.lock_type == "TRIAL":
+                    cls._is_locked = True
+                    import datetime
+
+                    if isinstance(lock.locked_at, datetime.datetime):
+                        cls._locked_at = lock.locked_at.timestamp()
+                elif lock.lock_type == "SITE":
+                    cls._locked_sites.add(str(lock.target_id))
+                elif lock.lock_type == "VISIT":
+                    cls._locked_visits.add(str(lock.target_id))
+
+    @classmethod
+    def sync_from_session(cls, session):
+        """Query persistent database lock status synchronously using the active session."""
+        from sqlalchemy import select
+
+        from apps.execution.database.models import TrialLockStatus
+
+        with session.no_autoflush:
+            try:
+                stmt = select(TrialLockStatus).where(TrialLockStatus.is_locked)
+                locks = session.execute(stmt).scalars().all()
+
+                cls._is_locked = False
+                cls._locked_at = None
+                cls._locked_sites.clear()
+                cls._locked_visits.clear()
+                for lock in locks:
+                    if lock.lock_type == "TRIAL":
+                        cls._is_locked = True
+                        import datetime
+
+                        if isinstance(lock.locked_at, datetime.datetime):
+                            cls._locked_at = lock.locked_at.timestamp()
+                    elif lock.lock_type == "SITE":
+                        cls._locked_sites.add(str(lock.target_id))
+                    elif lock.lock_type == "VISIT":
+                        cls._locked_visits.add(str(lock.target_id))
+            except Exception:
+                pass
+
+    @classmethod
     def lock_site(cls, site_id: str):
         """Locks a specific site by site_id."""
-        cls._locked_sites.add(str(site_id))
+        cls._save_lock_status_to_db("SITE", True, target_id=str(site_id))
 
     @classmethod
     def unlock_site(cls, site_id: str):
         """Unlocks a specific site by site_id."""
-        cls._locked_sites.discard(str(site_id))
+        cls._save_lock_status_to_db("SITE", False, target_id=str(site_id))
 
     @classmethod
     def is_site_locked(cls, site_id: str) -> bool:
         """Checks if a site is locked."""
+        cls._sync_cache_from_db()
         return str(site_id) in cls._locked_sites
 
     @classmethod
     def lock_visit(cls, visit_id: str):
         """Locks a specific visit by visit_id."""
-        cls._locked_visits.add(str(visit_id))
+        cls._save_lock_status_to_db("VISIT", True, target_id=str(visit_id))
 
     @classmethod
     def unlock_visit(cls, visit_id: str):
         """Unlocks a specific visit by visit_id."""
-        cls._locked_visits.discard(str(visit_id))
+        cls._save_lock_status_to_db("VISIT", False, target_id=str(visit_id))
 
     @classmethod
     def is_visit_locked(cls, visit_id: str) -> bool:
         """Checks if a visit is locked."""
+        cls._sync_cache_from_db()
         return str(visit_id) in cls._locked_visits
 
     @classmethod
     def lock_trial(cls, reason: str = "Security violation detected"):
         """Freezes the trial into a read-only state and dispatches alerts."""
-        if not cls._is_locked:
-            cls._is_locked = True
-            cls._locked_at = time.time()
+        if not cls.is_locked():
+            cls._save_lock_status_to_db("TRIAL", True, reason=reason)
 
             # Dispatch high-priority notifications to designated contacts
             message = f"URGENT: Trial locked. Reason: {reason}"
@@ -89,6 +265,7 @@ class TrialLockManager:
     @classmethod
     def is_locked(cls) -> bool:
         """Returns True if the trial is currently locked."""
+        cls._sync_cache_from_db()
         return cls._is_locked
 
     @classmethod
@@ -98,3 +275,38 @@ class TrialLockManager:
         cls._locked_at = None
         cls._locked_sites.clear()
         cls._locked_visits.clear()
+
+        from apps.execution.database.core import db_manager
+        from apps.execution.database.models import TrialLockStatus
+
+        if not db_manager or not db_manager.engine:
+            return
+
+        async def _async_reset():
+            async_session = db_manager.get_session_maker()()
+            try:
+                from sqlalchemy import delete
+
+                await async_session.execute(delete(TrialLockStatus))
+                await async_session.commit()
+            except Exception:
+                await async_session.rollback()
+            finally:
+                await async_session.close()
+
+        import asyncio
+        import threading
+
+        def target():
+            try:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                loop.run_until_complete(_async_reset())
+            except Exception:
+                pass
+            finally:
+                loop.close()
+
+        t = threading.Thread(target=target)
+        t.start()
+        t.join()

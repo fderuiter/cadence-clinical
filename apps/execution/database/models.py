@@ -45,6 +45,23 @@ class AuditLedgerSeal(Base):
     merkle_root_hash: Mapped[str] = mapped_column(String(64), nullable=False)
 
 
+class TrialLockStatus(Base):
+    __tablename__ = "trial_lock_statuses"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    lock_type: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # "TRIAL", "SITE", "VISIT"
+    target_id: Mapped[str] = mapped_column(String(255), nullable=True)
+    is_locked: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    locked_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    reason: Mapped[str] = mapped_column(String(255), nullable=True)
+
+
 class AuditedModel(Base):
     __abstract__ = True
 

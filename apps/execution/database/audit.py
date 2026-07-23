@@ -28,7 +28,25 @@ def receive_before_flush(session: Session, flush_context, instances):
     if not session.is_modified:
         return
 
+    # Check if we are modifying any restricted tables
+    has_restricted_modifications = False
+    for obj in list(session.new) + list(session.dirty) + list(session.deleted):
+        if not hasattr(obj, "__tablename__") or obj.__tablename__ in (
+            "audit_logs",
+            "trial_lock_statuses",
+        ):
+            continue
+        if obj.__tablename__ not in (
+            "tmf_documents",
+            "tmf_audit_logs",
+            "epro_submissions",
+            "interop_audit_logs",
+        ):
+            has_restricted_modifications = True
+            break
+
     # If the session contains eTMF or Interop objects, skip execution auditing
+    is_documentation_or_interop = False
     for obj in list(session.new) + list(session.dirty) + list(session.deleted):
         if hasattr(obj, "__tablename__") and obj.__tablename__ in (
             "tmf_documents",
@@ -36,32 +54,48 @@ def receive_before_flush(session: Session, flush_context, instances):
             "epro_submissions",
             "interop_audit_logs",
         ):
-            return
+            is_documentation_or_interop = True
+            break
 
-    # Check for read-only freeze
-    if TrialLockManager.is_locked() and (
-        session.new or session.dirty or session.deleted
-    ):
-        raise PermissionError(
-            "Trial is currently locked in a read-only state due to a security violation."
-        )
+    if has_restricted_modifications:
+        # Sync the lock state from the database synchronously
+        TrialLockManager.sync_from_session(session)
 
-    # Check for site-level and visit-level locks
-    for obj in list(session.new) + list(session.dirty) + list(session.deleted):
-        if not hasattr(obj, "__tablename__") or obj.__tablename__ == "audit_logs":
-            continue
-
-        site_id = getattr(obj, "site_id", None) or getattr(obj, "site", None)
-        if site_id is not None and TrialLockManager.is_site_locked(str(site_id)):
+        # Enforce global trial lock
+        if TrialLockManager._is_locked:
             raise PermissionError(
-                f"Site {site_id} is currently locked in a read-only state."
+                "Trial is currently locked in a read-only state due to a security violation."
             )
 
-        visit_id = getattr(obj, "visit_id", None) or getattr(obj, "visit", None)
-        if visit_id is not None and TrialLockManager.is_visit_locked(str(visit_id)):
-            raise PermissionError(
-                f"Visit {visit_id} is currently locked in a read-only state."
-            )
+        # Enforce site and visit level locks
+        for obj in list(session.new) + list(session.dirty) + list(session.deleted):
+            if not hasattr(obj, "__tablename__") or obj.__tablename__ in (
+                "audit_logs",
+                "trial_lock_statuses",
+                "tmf_documents",
+                "tmf_audit_logs",
+                "epro_submissions",
+                "interop_audit_logs",
+            ):
+                continue
+
+            site_id = getattr(obj, "site_id", None) or getattr(obj, "site", None)
+            if site_id is not None and str(site_id) in TrialLockManager._locked_sites:
+                raise PermissionError(
+                    f"Site {site_id} is currently locked in a read-only state."
+                )
+
+            visit_id = getattr(obj, "visit_id", None) or getattr(obj, "visit", None)
+            if (
+                visit_id is not None
+                and str(visit_id) in TrialLockManager._locked_visits
+            ):
+                raise PermissionError(
+                    f"Visit {visit_id} is currently locked in a read-only state."
+                )
+
+    if is_documentation_or_interop:
+        return
 
     audit_logs = []
     user_id = current_user_id.get()
