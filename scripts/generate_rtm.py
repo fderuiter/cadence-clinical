@@ -239,7 +239,7 @@ def generate_rtm_md(
     with open(output_path, "w", encoding="utf-8") as f:
         f.write("# Requirements Traceability Matrix (RTM)\n\n")
         f.write(
-            f"*Generated on:* {datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}\n"
+            f"*Generated on:* {datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%d UTC')}\n"
         )
         f.write(
             "*Regulatory Compliance Standards:* FDA 21 CFR Part 11, EU Annex 11, GAMP 5, IEC 62304 Section 5.7 & 5.8\n\n"
@@ -373,7 +373,7 @@ def generate_qualification_report(
             "# GxP Installation & Operational Qualification (IQ/OQ/PQ) Execution Report\n\n"
         )
         f.write(
-            f"*Execution Date:* {datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}\n"
+            f"*Execution Date:* {datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%d UTC')}\n"
         )
         f.write(
             "*Regulatory Protocol:* FDA 21 CFR Part 11, EU Annex 11, GAMP 5 Category 4/5, IEC 62304 Class B\n\n"

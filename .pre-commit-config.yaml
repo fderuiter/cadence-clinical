@@ -26,6 +26,27 @@ repos:
 
   - repo: local
     hooks:
+      - id: clean-secrets-baseline
+        name: Clean Secrets Baseline Line Numbers
+        entry: python3 scripts/clean_secrets_baseline.py
+        language: system
+        files: \.secrets\.baseline$
+        pass_filenames: false
+
+      - id: generate-adr-index
+        name: Generate ADR Index Log
+        entry: python3 scripts/generate_adr_index.py
+        language: system
+        files: ^docs/adr/
+        pass_filenames: false
+
+      - id: generate-rtm
+        name: Generate SDLC Requirements Traceability Matrix and Reports
+        entry: python3 scripts/generate_rtm.py
+        language: system
+        files: ^(apps/|tests/|docs/SRS\.md|docs/SDLC/01_Product_Requirements_Document_PRD\.md)
+        pass_filenames: false
+
       - id: check-markdown-links
         name: Check Markdown Links
         entry: node scripts/check-links.js
