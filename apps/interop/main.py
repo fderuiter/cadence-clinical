@@ -21,15 +21,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     Handle the lifespan events for the Interop application.
 
-    Initializes the database session manager on startup, creates the required
-    schemas, and securely cleans up connections on shutdown.
+    Initializes the database session manager on startup and securely
+    cleans up connections on shutdown.
     """
     db_manager.init_db(DATABASE_URL)
-
-    # Automatically create tables for sqlite in-memory/file databases
-    if DATABASE_URL.startswith("sqlite"):
-        async with db_manager.engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
 
     yield
 
