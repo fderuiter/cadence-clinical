@@ -35,6 +35,38 @@ class TrialLockManager:
     _is_locked = False
     _locked_at = None
     _router = NotificationRouter()
+    _locked_sites = set()
+    _locked_visits = set()
+
+    @classmethod
+    def lock_site(cls, site_id: str):
+        """Locks a specific site by site_id."""
+        cls._locked_sites.add(str(site_id))
+
+    @classmethod
+    def unlock_site(cls, site_id: str):
+        """Unlocks a specific site by site_id."""
+        cls._locked_sites.discard(str(site_id))
+
+    @classmethod
+    def is_site_locked(cls, site_id: str) -> bool:
+        """Checks if a site is locked."""
+        return str(site_id) in cls._locked_sites
+
+    @classmethod
+    def lock_visit(cls, visit_id: str):
+        """Locks a specific visit by visit_id."""
+        cls._locked_visits.add(str(visit_id))
+
+    @classmethod
+    def unlock_visit(cls, visit_id: str):
+        """Unlocks a specific visit by visit_id."""
+        cls._locked_visits.discard(str(visit_id))
+
+    @classmethod
+    def is_visit_locked(cls, visit_id: str) -> bool:
+        """Checks if a visit is locked."""
+        return str(visit_id) in cls._locked_visits
 
     @classmethod
     def lock_trial(cls, reason: str = "Security violation detected"):
@@ -64,3 +96,5 @@ class TrialLockManager:
         """Resets lock (mostly for testing)."""
         cls._is_locked = False
         cls._locked_at = None
+        cls._locked_sites.clear()
+        cls._locked_visits.clear()

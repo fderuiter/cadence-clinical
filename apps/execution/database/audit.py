@@ -46,6 +46,23 @@ def receive_before_flush(session: Session, flush_context, instances):
             "Trial is currently locked in a read-only state due to a security violation."
         )
 
+    # Check for site-level and visit-level locks
+    for obj in list(session.new) + list(session.dirty) + list(session.deleted):
+        if not hasattr(obj, "__tablename__") or obj.__tablename__ == "audit_logs":
+            continue
+
+        site_id = getattr(obj, "site_id", None) or getattr(obj, "site", None)
+        if site_id is not None and TrialLockManager.is_site_locked(str(site_id)):
+            raise PermissionError(
+                f"Site {site_id} is currently locked in a read-only state."
+            )
+
+        visit_id = getattr(obj, "visit_id", None) or getattr(obj, "visit", None)
+        if visit_id is not None and TrialLockManager.is_visit_locked(str(visit_id)):
+            raise PermissionError(
+                f"Visit {visit_id} is currently locked in a read-only state."
+            )
+
     audit_logs = []
     user_id = current_user_id.get()
     reason = current_change_reason.get()

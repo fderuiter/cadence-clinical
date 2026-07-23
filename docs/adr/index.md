@@ -21,6 +21,8 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-22: Dynamic OpenAPI Schema Aggregation at the Gateway](2026-07-22-gateway-openapi-aggregation.md)
 - [2026-07-22: Metadata-Driven Grid Layouts via Jinja2 Templating](2026-07-22-metadata-driven-grid-layouts.md)
 - [2026-07-22: Compliance Tracing and Automated Trial Locks](2026-07-22-compliance-tracing-and-automated-trial-locks.md)
+- [2026-07-23: Targeted Integration with Path Isolation](2026-07-23-targeted-integration-path-isolation.md)
+- [2026-07-24: FHIR / eSource & eCOA Sync Gateway](2026-07-24-fhir-esource-ecoa-sync-gateway.md)
 - [2026-07-23: Targeted Integration with Path Isolation](2026-07-23-core-service-oriented-clinical-engine.md)
 - [2026-07-23: Secure API Signatures with Canonical JSON and Rolling Versioning](2026-07-23-canonical-json-signatures-and-rolling-versioning.md)
 - [2026-07-22: Transactional SQL Engine with Standard GxP Auditing](2026-07-22-compliance-tracing-and-automated-trial-locks.md)

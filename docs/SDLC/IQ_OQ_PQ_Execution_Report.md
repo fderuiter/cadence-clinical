@@ -271,6 +271,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_background_translation_records_user_audit` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_study_published_event_triggers_translation` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_translation_validation_failure` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_site_and_visit_locks` | `tests.test_trial_lock` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_trial_lock_freeze` | `tests.test_trial_lock` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_trial_lock_freeze` | `tests.test_trial_lock` | Trace-3, PRD-SYS-003 | 🟢 PASSED | 0.01s |
 | `test_check_architectural_changes_require_adr_missing_adr` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_check_architectural_changes_require_adr_no_changes` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | 0.01s |
