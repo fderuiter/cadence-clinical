@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cadence Clinical - Interactive Web Demo</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <!-- Header -->
+    <header>
+      <div class="header-title-area">
+        <h1>Cadence <span>Clinical</span></h1>
+        <p>Interactive Web Demo & Regulatory Validation Sandbox</p>
+      </div>
+      <div class="header-badges">
+        <span class="badge gxp">21 CFR Part 11</span>
+        <span class="badge">GAMP 5</span>
+        <span class="badge">IEC 62304</span>
+      </div>
+    </header>
+
+    <div class="app-container">
+      <!-- Sidebar -->
+      <aside>
+        <div>
+          <div class="nav-title">Showcase Modules</div>
+          <ul class="nav-menu">
+            <li class="nav-item active" id="tab-btn-mdr">
+              <button type="button">
+                <span>📋</span> MDR Protocol Designer
+              </button>
+            </li>
+            <li class="nav-item" id="tab-btn-ecrf">
+              <button type="button"><span>🩺</span> eCRF Form Engine</button>
+            </li>
+            <li class="nav-item" id="tab-btn-audit">
+              <button type="button">
+                <span>🔒</span> Cryptographic Ledger
+              </button>
+            </li>
+          </ul>
+        </div>
+        <div
+          style="
+            margin-top: auto;
+            padding: 12px;
+            font-size: 0.8rem;
+            color: #64748b;
+            background-color: #f8fafc;
+            border-radius: 8px;
+          "
+        >
+          <strong>Offline Engine:</strong> All operations run securely inside
+          your browser's VM using in-memory mock handlers and cryptographic
+          APIs.
+        </div>
+      </aside>
+
+      <!-- Main Workspace -->
+      <main>
+        <!-- Section 1: MDR Protocol Designer -->
+        <section id="section-mdr" class="dashboard-section active">
+          <div class="section-header">
+            <h2>MDR / Protocol Visualizer</h2>
+            <p>
+              Unify upstream clinical study definitions (USDM metadata) directly
+              into a visual Schedule of Activities matrix.
+            </p>
+          </div>
+
+          <div class="grid-2">
+            <!-- USDM study JSON -->
+            <div class="card json-editor-container">
+              <div class="card-title">
+                <span>CDISC USDM Study Protocol JSON</span>
+                <button
+                  id="btn-reset-usdm"
+                  class="badge"
+                  style="
+                    cursor: pointer;
+                    background-color: var(--accent);
+                    color: white;
+                    border: none;
+                  "
+                >
+                  Reset Mock JSON
+                </button>
+              </div>
+              <textarea
+                id="usdm-json"
+                class="json-editor"
+                spellcheck="false"
+              ></textarea>
+              <p style="font-size: 0.8rem; color: #64748b; margin-top: 8px">
+                Edit this mock USDM JSON definition and click "Update
+                Visualizer" below to dynamically re-render the Schedule of
+                Activities Matrix.
+              </p>
+              <div
+                style="
+                  margin-top: 12px;
+                  display: flex;
+                  justify-content: flex-end;
+                "
+              >
+                <button id="btn-update-soa" class="btn btn-primary">
+                  Update Visualizer
+                </button>
+              </div>
+            </div>
+
+            <!-- Schedule of Activities table -->
+            <div class="card">
+              <div class="card-title">Schedule of Activities (SoA) Matrix</div>
+              <div id="soa-matrix-container">
+                <!-- Rendered table will go here -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Section 2: eCRF Form Engine -->
+        <section id="section-ecrf" class="dashboard-section">
+          <div class="section-header">
+            <h2>eCRF Runtime Renderer</h2>
+            <p>
+              Live, dynamic data entry form populated from CDASH metadata with
+              client-side field validation and real-time query management.
+            </p>
+          </div>
+
+          <div class="grid-2">
+            <!-- Dynamic eCRF Form -->
+            <div class="card">
+              <div class="card-title">Subject eCRF Data Entry Form</div>
+              <div id="ecrf-form-container">
+                <!-- Rendered dynamic form will go here -->
+              </div>
+              <div class="form-actions">
+                <button id="btn-clear-ecrf" class="btn">Clear Form</button>
+                <button id="btn-submit-ecrf" class="btn btn-primary">
+                  Submit eCRF Session
+                </button>
+              </div>
+            </div>
+
+            <!-- Live Form State & Meta -->
+            <div
+              class="card"
+              style="display: flex; flex-direction: column; gap: 16px"
+            >
+              <div>
+                <div class="card-title">CDASH Metadata Specification</div>
+                <p
+                  style="font-size: 0.85rem; color: #475569; margin-bottom: 8px"
+                >
+                  The fields on the left are dynamically rendered using
+                  structural CDASH metadata tags (e.g. <code>DM.BRTHDT</code>,
+                  <code>VS.VSSBP</code>).
+                </p>
+              </div>
+
+              <div
+                style="
+                  border: 1px solid var(--border);
+                  border-radius: 8px;
+                  padding: 12px;
+                  background-color: #f8fafc;
+                "
+              >
+                <h3
+                  style="
+                    font-size: 0.9rem;
+                    font-weight: 700;
+                    margin-bottom: 8px;
+                    color: var(--primary);
+                  "
+                >
+                  Real-time Field Validation Rules:
+                </h3>
+                <ul
+                  style="
+                    font-size: 0.8rem;
+                    padding-left: 20px;
+                    color: #475569;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 6px;
+                  "
+                >
+                  <li>
+                    <strong>Birth Date:</strong> Must match YYYY-MM-DD pattern.
+                  </li>
+                  <li>
+                    <strong>Systolic BP:</strong> Numeric value between 50 and
+                    250 mmHg.
+                  </li>
+                  <li>
+                    <strong>Diastolic BP:</strong> Numeric value between 30 and
+                    150 mmHg.
+                  </li>
+                  <li>
+                    <strong>Pulse Rate:</strong> Numeric value between 30 and
+                    200 bpm.
+                  </li>
+                </ul>
+              </div>
+
+              <div
+                style="
+                  border: 1px solid var(--border);
+                  border-radius: 8px;
+                  padding: 12px;
+                  background-color: #f8fafc;
+                "
+              >
+                <h3
+                  style="
+                    font-size: 0.9rem;
+                    font-weight: 700;
+                    margin-bottom: 8px;
+                    color: var(--primary);
+                  "
+                >
+                  Query Management Actions:
+                </h3>
+                <p style="font-size: 0.8rem; color: #475569; line-height: 1.4">
+                  Click the 💬 / ⚠️ flags next to input fields to raise, answer,
+                  close, or reopen discrepancy notes. All query transitions are
+                  audit-logged in real-time.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Section 3: Cryptographic Ledger -->
+        <section id="section-audit" class="dashboard-section">
+          <div class="section-header">
+            <h2>Cryptographic Audit Log Inspector</h2>
+            <p>
+              Visual blockchain-style ledger feed showing live SHA-256 signature
+              stamping as forms are loaded, fields are modified, or queries are
+              transitioned.
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-title">
+              <span>21 CFR Part 11 Cryptographic Audit Ledger</span>
+              <button
+                id="btn-clear-ledger"
+                class="badge"
+                style="
+                  cursor: pointer;
+                  background-color: var(--error);
+                  color: white;
+                  border: none;
+                "
+              >
+                Purge Audit Trail
+              </button>
+            </div>
+            <div id="ledger-timeline-container" class="ledger-container">
+              <!-- Ledger blocks go here -->
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Reason for Change Modal Dialog -->
+    <div class="modal-overlay" id="reason-modal">
+      <div class="modal">
+        <div class="modal-header">Reason for Change Required</div>
+        <div class="modal-body">
+          <p>
+            To comply with <strong>21 CFR Part 11 / EU Annex 11</strong>, you
+            must document a reason for changing this clinical data field.
+          </p>
+          <div class="form-group" style="margin-bottom: 12px">
+            <label for="change-reason-select">Select Standard Reason</label>
+            <select id="change-reason-select">
+              <option value="Initial Entry">Initial Data Entry</option>
+              <option value="Typographical Error">
+                Correction of typographical error
+              </option>
+              <option value="Re-measurement">Re-measurement of vitals</option>
+              <option value="Transcription Error">
+                Correction of transcription error
+              </option>
+              <option value="Other">Other (specify below)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="change-reason-text"
+              >Custom Explanation (Optional)</label
+            >
+            <textarea
+              id="change-reason-text"
+              placeholder="Explain the clinical reason for this modification..."
+            ></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="btn-cancel-change" class="btn">Cancel Change</button>
+          <button id="btn-save-change" class="btn btn-primary">
+            Sign & Save
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Script entry point -->
+    <script type="module" src="./index.js"></script>
+  </body>
+</html>

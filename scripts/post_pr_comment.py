@@ -221,9 +221,14 @@ def main() -> None:
 
     audit_outcome = os.environ.get("AUDIT_OUTCOME", "").lower()
     static_outcome = os.environ.get("STATIC_OUTCOME", "").lower()
-    secrets_outcome = os.environ.get("SECRETS_OUTCOME", "").lower()
+    # fmt: skip
+    secrets_outcome = os.environ.get("SECRETS_OUTCOME", "").lower()  # pragma: allowlist secret
     combined_audit = ""
-    if "failure" in (audit_outcome, static_outcome, secrets_outcome):
+    if "failure" in (
+        audit_outcome,
+        static_outcome,
+        secrets_outcome,  # pragma: allowlist secret
+    ):
         combined_audit = "failure"
     elif (
         audit_outcome == "success"
@@ -234,7 +239,8 @@ def main() -> None:
     else:
         # Fallback to whichever non-empty outcome is present
         combined_audit = next(
-            (val for val in (audit_outcome, static_outcome, secrets_outcome) if val), ""
+            (val for val in (audit_outcome, static_outcome, secrets_outcome) if val),
+            "",  # pragma: allowlist secret
         )
 
     raw_new_outcomes: dict[str, str] = {

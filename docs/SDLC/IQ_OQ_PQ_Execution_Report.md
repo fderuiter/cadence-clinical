@@ -1,6 +1,6 @@
 # GxP Installation & Operational Qualification (IQ/OQ/PQ) Execution Report
 
-*Execution Date:* 2026-07-23 17:09:58 UTC
+*Execution Date:* 2026-07-23 17:52:44 UTC
 *Regulatory Protocol:* FDA 21 CFR Part 11, EU Annex 11, GAMP 5 Category 4/5, IEC 62304 Class B
 
 ## 1. Executive Summary & Verification Declaration
@@ -145,131 +145,131 @@ The Operational Qualification verifies that individual clinical operations, stat
 ### 3.1 Traceability Mappings Verification
 | Test Case Name | Classname / Suite | Target Req | Status | Duration |
 | :--- | :--- | :--- | :--- | :--- |
-| `test_audit_records_ip_and_custom_timestamp` | `tests.test_audit` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_hard_delete_is_prevented` | `tests.test_audit` | Trace-1 | 🟢 PASSED | 0.01s |
-| `test_insert_generates_audit_log` | `tests.test_audit` | PRD-SYS-001 | 🟢 PASSED | 0.01s |
-| `test_read_only_queries_do_not_generate_audit_logs` | `tests.test_audit` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_rollback_prevents_orphan_audit_logs` | `tests.test_audit` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_soft_delete_generates_audit_log` | `tests.test_audit` | PRD-SYS-002 | 🟢 PASSED | 0.01s |
-| `test_update_generates_audit_log` | `tests.test_audit` | PRD-SYS-001 | 🟢 PASSED | 0.01s |
-| `test_api_gateway_routing` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_cdisc_export_and_validation` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_demographics_encryption` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_outlier_detection_performance` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_relational_persistence_and_recalculation` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_unit_conversions` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_encryption_decryption_with_rotation` | `tests.test_cryptography` | Trace-2, PRD-MDR-005 | 🟢 PASSED | 0.01s |
-| `test_key_splitting` | `tests.test_cryptography` | Trace-2, PRD-MDR-005 | 🟢 PASSED | 0.01s |
-| `test_concurrent_library_version_increments` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_concurrent_study_saves_serialization` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_create_library_object_version_existing` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_create_library_object_version_new` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_create_study_root` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_get_study_differences` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_update_study_properties` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_study_differences_missing_version` | `tests.test_designer_differences` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_study_differences_registry_404` | `tests.test_designer_differences` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_study_differences_registry_error` | `tests.test_designer_differences` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_study_differences_registry_offline` | `tests.test_designer_differences` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_study_differences_registry_timeout` | `tests.test_designer_differences` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_study_differences_success` | `tests.test_designer_differences` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_automated_ingestion_and_version_indexing` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_completeness_checking_transitions` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_inspector_portal_read_only_access_limits` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_tmf_taxonomy_mapping` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_view_download_audit_logging` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_gateway_cors_headers` | `tests.test_gateway` | PRD-UNI-001 | 🟢 PASSED | 0.01s |
-| `test_gateway_rate_limiting` | `tests.test_gateway` | PRD-UNI-001 | 🟢 PASSED | 0.01s |
-| `test_generate_signature` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_generate_signature_v2` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_get_openapi_json` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_get_openapi_json_error` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_get_swagger_ui` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_proxy_requests_change_reason_too_long` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_proxy_requests_invalid_auth` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_proxy_requests_no_auth` | `tests.test_gateway` | PRD-UNI-001 | 🟢 PASSED | 0.01s |
-| `test_proxy_requests_paths` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_proxy_requests_v2_headers` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_proxy_requests_valid_auth` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_verify_token_invalid` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_bulk_offline_sync` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_epro_submission_and_conflict_resolution` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_fhir_prefill_bundle_pipeline` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_pseudonymization_and_pii_stripping` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_layout_validation_scrambled_sequence` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_layout_validation_valid` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_ledger_sealing_and_validation` | `tests.test_ledger_and_triggers` | PRD-SYS-003 | 🟢 PASSED | 0.01s |
-| `test_out_of_band_update_triggers_audit_entry` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_prevent_audit_ledger_seals_mutation` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_prevent_audit_log_mutation` | `tests.test_ledger_and_triggers` | PRD-SYS-001, Trace-1 | 🟢 PASSED | 0.01s |
-| `test_prevent_hard_delete_on_audited_model` | `tests.test_ledger_and_triggers` | PRD-SYS-002, Trace-1 | 🟢 PASSED | 0.01s |
-| `test_designer_gateway_auth_expired_timestamp` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_designer_gateway_auth_invalid_signature` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_designer_gateway_auth_invalid_timestamp` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_designer_gateway_auth_missing_headers` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_designer_health` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_execution_health` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_gateway_health` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_invalid_leading_number` | `tests.test_mapping_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_invalid_spacing` | `tests.test_mapping_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_multiple_colons` | `tests.test_mapping_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_valid_csv` | `tests.test_mapping_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_main_cli` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_run_migrations_failure` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_run_migrations_real_sqlite` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_run_migrations_success` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_build_comment_body` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_combined_audit_logic` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_get_status_emoji` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_merge_outcomes` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_parse_existing_outcomes` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_audit_context_variables_and_decorator` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_canonical_json_signing_and_verification` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_middleware_expired_timestamp` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_middleware_health_bypass` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_middleware_invalid_timestamp_format` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_middleware_missing_headers` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_middleware_v1_explicit_success` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_middleware_v1_invalid_signature` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_middleware_v1_legacy_fallback_success` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_middleware_v2_invalid_signature` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_middleware_v2_mismatched_reason` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_middleware_v2_missing_reason` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_middleware_v2_safe_method_no_reason_success` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_middleware_v2_success` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_mutation_unsigned_and_non_compliant_rejections` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_terminology_cache_capacity_eviction` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_terminology_cache_hit_and_expiration` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_terminology_cache_thread_safety` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_terminology_cache_ttl_config` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_terminology_cache_unreachable_db_fallback` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_admin_cache_clear_forces_fresh_read` | `tests.test_transformers` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_legacy_endpoint_returns_original_schema` | `tests.test_transformers` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_terminology_cache_prevents_db_queries` | `tests.test_transformers` | PRD-MDR-001 | 🟢 PASSED | 0.01s |
-| `test_usdm_endpoint_returns_nested_schema_and_fast` | `tests.test_transformers` | PRD-MDR-003, PRD-MDR-004 | 🟢 PASSED | 0.01s |
-| `test_usdm_validation_error_on_invalid_data` | `tests.test_transformers` | PRD-MDR-001 | 🟢 PASSED | 0.01s |
-| `test_security_gate_unauthenticated_requests` | `tests.test_translation_recovery` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_translation_error_status_and_rollback` | `tests.test_translation_recovery` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_translation_status_and_listing_success` | `tests.test_translation_recovery` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_worker_context_and_session_cleanup` | `tests.test_translation_recovery` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_audit_safe_context_binds_and_cleans_up` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_audit_safe_context_cleans_up_on_error` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_background_translation_records_user_audit` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_study_published_event_triggers_translation` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_translation_validation_failure` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_trial_lock_freeze` | `tests.test_trial_lock` | Trace-3, PRD-SYS-003 | 🟢 PASSED | 0.01s |
-| `test_check_architectural_changes_require_adr_missing_adr` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_check_architectural_changes_require_adr_no_changes` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_check_architectural_changes_require_adr_with_deleted_adr` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_check_architectural_changes_require_adr_with_valid_adr` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_get_changed_files_from_git_fallbacks` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_get_changed_files_from_txt` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_is_architectural_file` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_validate_existing_adrs_valid_case` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_generate_alignment_report` | `tests.test_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_audit_records_ip_and_custom_timestamp` | `tests.test_audit` | *Regression/Helper* | 🟢 PASSED | 0.156s |
+| `test_hard_delete_is_prevented` | `tests.test_audit` | Trace-1 | 🟢 PASSED | 0.158s |
+| `test_insert_generates_audit_log` | `tests.test_audit` | PRD-SYS-001 | 🟢 PASSED | 0.233s |
+| `test_read_only_queries_do_not_generate_audit_logs` | `tests.test_audit` | *Regression/Helper* | 🟢 PASSED | 0.173s |
+| `test_rollback_prevents_orphan_audit_logs` | `tests.test_audit` | *Regression/Helper* | 🟢 PASSED | 0.166s |
+| `test_soft_delete_generates_audit_log` | `tests.test_audit` | PRD-SYS-002 | 🟢 PASSED | 0.158s |
+| `test_update_generates_audit_log` | `tests.test_audit` | PRD-SYS-001 | 🟢 PASSED | 0.184s |
+| `test_api_gateway_routing` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | 0.096s |
+| `test_cdisc_export_and_validation` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | 0.185s |
+| `test_demographics_encryption` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | 0.068s |
+| `test_outlier_detection_performance` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | 0.086s |
+| `test_relational_persistence_and_recalculation` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | 0.395s |
+| `test_unit_conversions` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | 0.079s |
+| `test_encryption_decryption_with_rotation` | `tests.test_cryptography` | Trace-2, PRD-MDR-005 | 🟢 PASSED | 0.003s |
+| `test_key_splitting` | `tests.test_cryptography` | Trace-2, PRD-MDR-005 | 🟢 PASSED | 0.002s |
+| `test_concurrent_library_version_increments` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | 0.106s |
+| `test_concurrent_study_saves_serialization` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | 0.106s |
+| `test_create_library_object_version_existing` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | 0.011s |
+| `test_create_library_object_version_new` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | 0.010s |
+| `test_create_study_root` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | 0.010s |
+| `test_get_study_differences` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | 0.007s |
+| `test_update_study_properties` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | 0.011s |
+| `test_study_differences_missing_version` | `tests.test_designer_differences` | *Regression/Helper* | 🟢 PASSED | 0.048s |
+| `test_study_differences_registry_404` | `tests.test_designer_differences` | *Regression/Helper* | 🟢 PASSED | 0.049s |
+| `test_study_differences_registry_error` | `tests.test_designer_differences` | *Regression/Helper* | 🟢 PASSED | 0.048s |
+| `test_study_differences_registry_offline` | `tests.test_designer_differences` | *Regression/Helper* | 🟢 PASSED | 0.049s |
+| `test_study_differences_registry_timeout` | `tests.test_designer_differences` | *Regression/Helper* | 🟢 PASSED | 0.045s |
+| `test_study_differences_success` | `tests.test_designer_differences` | *Regression/Helper* | 🟢 PASSED | 0.168s |
+| `test_automated_ingestion_and_version_indexing` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | 0.101s |
+| `test_completeness_checking_transitions` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | 0.210s |
+| `test_inspector_portal_read_only_access_limits` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | 0.044s |
+| `test_tmf_taxonomy_mapping` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | 0.036s |
+| `test_view_download_audit_logging` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | 0.135s |
+| `test_gateway_cors_headers` | `tests.test_gateway` | PRD-UNI-001 | 🟢 PASSED | 0.057s |
+| `test_gateway_rate_limiting` | `tests.test_gateway` | PRD-UNI-001 | 🟢 PASSED | 0.064s |
+| `test_generate_signature` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.002s |
+| `test_generate_signature_v2` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.002s |
+| `test_get_openapi_json` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.058s |
+| `test_get_openapi_json_error` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.053s |
+| `test_get_swagger_ui` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.061s |
+| `test_proxy_requests_change_reason_too_long` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.061s |
+| `test_proxy_requests_invalid_auth` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.056s |
+| `test_proxy_requests_no_auth` | `tests.test_gateway` | PRD-UNI-001 | 🟢 PASSED | 0.069s |
+| `test_proxy_requests_paths` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.078s |
+| `test_proxy_requests_v2_headers` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.056s |
+| `test_proxy_requests_valid_auth` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.067s |
+| `test_verify_token_invalid` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.002s |
+| `test_bulk_offline_sync` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | 0.073s |
+| `test_epro_submission_and_conflict_resolution` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | 0.121s |
+| `test_fhir_prefill_bundle_pipeline` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | 0.060s |
+| `test_pseudonymization_and_pii_stripping` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | 0.032s |
+| `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | 1.109s |
+| `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | 1.098s |
+| `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | 1.079s |
+| `test_layout_validation_scrambled_sequence` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | 1.076s |
+| `test_layout_validation_valid` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | 1.081s |
+| `test_ledger_sealing_and_validation` | `tests.test_ledger_and_triggers` | PRD-SYS-003 | 🟢 PASSED | 0.175s |
+| `test_out_of_band_update_triggers_audit_entry` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | 0.153s |
+| `test_prevent_audit_ledger_seals_mutation` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | 0.274s |
+| `test_prevent_audit_log_mutation` | `tests.test_ledger_and_triggers` | Trace-1, PRD-SYS-001 | 🟢 PASSED | 0.152s |
+| `test_prevent_hard_delete_on_audited_model` | `tests.test_ledger_and_triggers` | Trace-1, PRD-SYS-002 | 🟢 PASSED | 0.155s |
+| `test_designer_gateway_auth_expired_timestamp` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | 0.012s |
+| `test_designer_gateway_auth_invalid_signature` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | 0.011s |
+| `test_designer_gateway_auth_invalid_timestamp` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | 0.012s |
+| `test_designer_gateway_auth_missing_headers` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | 0.012s |
+| `test_designer_health` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | 0.013s |
+| `test_execution_health` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | 0.035s |
+| `test_gateway_health` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | 0.058s |
+| `test_invalid_leading_number` | `tests.test_mapping_validator` | *Regression/Helper* | 🟢 PASSED | 0.013s |
+| `test_invalid_spacing` | `tests.test_mapping_validator` | *Regression/Helper* | 🟢 PASSED | 0.012s |
+| `test_multiple_colons` | `tests.test_mapping_validator` | *Regression/Helper* | 🟢 PASSED | 0.013s |
+| `test_valid_csv` | `tests.test_mapping_validator` | *Regression/Helper* | 🟢 PASSED | 0.015s |
+| `test_main_cli` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | 0.004s |
+| `test_run_migrations_failure` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | 0.006s |
+| `test_run_migrations_real_sqlite` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | 0.107s |
+| `test_run_migrations_success` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | 0.009s |
+| `test_build_comment_body` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | 0.002s |
+| `test_combined_audit_logic` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | 0.002s |
+| `test_get_status_emoji` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | 0.002s |
+| `test_merge_outcomes` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | 0.002s |
+| `test_parse_existing_outcomes` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | 0.005s |
+| `test_audit_context_variables_and_decorator` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.003s |
+| `test_canonical_json_signing_and_verification` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.002s |
+| `test_middleware_expired_timestamp` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.008s |
+| `test_middleware_health_bypass` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.011s |
+| `test_middleware_invalid_timestamp_format` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.008s |
+| `test_middleware_missing_headers` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.008s |
+| `test_middleware_v1_explicit_success` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.010s |
+| `test_middleware_v1_invalid_signature` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.008s |
+| `test_middleware_v1_legacy_fallback_success` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.014s |
+| `test_middleware_v2_invalid_signature` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.007s |
+| `test_middleware_v2_mismatched_reason` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.008s |
+| `test_middleware_v2_missing_reason` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.007s |
+| `test_middleware_v2_safe_method_no_reason_success` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.009s |
+| `test_middleware_v2_success` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.009s |
+| `test_mutation_unsigned_and_non_compliant_rejections` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.031s |
+| `test_terminology_cache_capacity_eviction` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | 0.002s |
+| `test_terminology_cache_hit_and_expiration` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | 0.064s |
+| `test_terminology_cache_thread_safety` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | 0.010s |
+| `test_terminology_cache_ttl_config` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | 0.003s |
+| `test_terminology_cache_unreachable_db_fallback` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | 0.028s |
+| `test_admin_cache_clear_forces_fresh_read` | `tests.test_transformers` | *Regression/Helper* | 🟢 PASSED | 0.030s |
+| `test_legacy_endpoint_returns_original_schema` | `tests.test_transformers` | *Regression/Helper* | 🟢 PASSED | 0.011s |
+| `test_terminology_cache_prevents_db_queries` | `tests.test_transformers` | PRD-MDR-001 | 🟢 PASSED | 0.017s |
+| `test_usdm_endpoint_returns_nested_schema_and_fast` | `tests.test_transformers` | PRD-MDR-003, PRD-MDR-004 | 🟢 PASSED | 0.010s |
+| `test_usdm_validation_error_on_invalid_data` | `tests.test_transformers` | PRD-MDR-001 | 🟢 PASSED | 0.009s |
+| `test_security_gate_unauthenticated_requests` | `tests.test_translation_recovery` | *Regression/Helper* | 🟢 PASSED | 0.071s |
+| `test_translation_error_status_and_rollback` | `tests.test_translation_recovery` | *Regression/Helper* | 🟢 PASSED | 0.105s |
+| `test_translation_status_and_listing_success` | `tests.test_translation_recovery` | *Regression/Helper* | 🟢 PASSED | 0.110s |
+| `test_worker_context_and_session_cleanup` | `tests.test_translation_recovery` | *Regression/Helper* | 🟢 PASSED | 0.083s |
+| `test_audit_safe_context_binds_and_cleans_up` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.069s |
+| `test_audit_safe_context_cleans_up_on_error` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.067s |
+| `test_background_translation_records_user_audit` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.114s |
+| `test_study_published_event_triggers_translation` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.103s |
+| `test_translation_validation_failure` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.093s |
+| `test_trial_lock_freeze` | `tests.test_trial_lock` | PRD-SYS-003, Trace-3 | 🟢 PASSED | 0.102s |
+| `test_check_architectural_changes_require_adr_missing_adr` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | 0.002s |
+| `test_check_architectural_changes_require_adr_no_changes` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | 0.002s |
+| `test_check_architectural_changes_require_adr_with_deleted_adr` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | 0.002s |
+| `test_check_architectural_changes_require_adr_with_valid_adr` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | 0.002s |
+| `test_get_changed_files_from_git_fallbacks` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | 0.003s |
+| `test_get_changed_files_from_txt` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | 0.011s |
+| `test_is_architectural_file` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | 0.002s |
+| `test_validate_existing_adrs_valid_case` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | 0.059s |
+| `test_generate_alignment_report` | `tests.test_validator` | *Regression/Helper* | 🟢 PASSED | 0.007s |
 
 ## 4. Performance Qualification (PQ) & Scenario Validation
 

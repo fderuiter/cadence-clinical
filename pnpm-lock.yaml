@@ -26,6 +26,10 @@ importers:
       ui:
         specifier: workspace:*
         version: link:../../packages/ui
+    devDependencies:
+      vite:
+        specifier: ^8.1.5
+        version: 8.1.5
 
   packages/ui: {}
 
