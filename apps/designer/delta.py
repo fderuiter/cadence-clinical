@@ -1,7 +1,39 @@
+import asyncio
+import functools
 import uuid
 from typing import Any, Dict, List
 
+from neo4j.exceptions import TransientError
 
+
+def with_transaction_retry(
+    max_retries: int = 5, initial_delay: float = 0.05, backoff_factor: float = 2.0
+):
+    """
+    Decorator to transparently retry transactions that fail due to transient database locking conflicts.
+    """
+
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs):
+            retries = 0
+            delay = initial_delay
+            while True:
+                try:
+                    return await func(*args, **kwargs)
+                except TransientError as e:
+                    if retries >= max_retries:
+                        raise e
+                    retries += 1
+                    await asyncio.sleep(delay)
+                    delay *= backoff_factor
+
+        return wrapper
+
+    return decorator
+
+
+@with_transaction_retry()
 async def create_study_root(driver, study_id: str):
     """
     Creates a stable root node for a study.
@@ -12,11 +44,14 @@ async def create_study_root(driver, study_id: str):
     RETURN s.id as id
     """
     async with driver.session() as session:
-        result = await session.run(query, study_id=study_id)
-        record = await result.single()
-        return record["id"]
+        tx = await session.begin_transaction()
+        async with tx:
+            result = await tx.run(query, study_id=study_id)
+            record = await result.single()
+            return record["id"]
 
 
+@with_transaction_retry()
 async def create_library_object_version(
     driver, object_id: str, new_properties: Dict[str, Any]
 ):
@@ -38,22 +73,34 @@ async def create_library_object_version(
     RETURN properties(new) as new_props
     """
     async with driver.session() as session:
-        # Check if exists
-        check_query = "MATCH (n:LibraryObject {id: $object_id}) RETURN n LIMIT 1"
-        check_res = await session.run(check_query, object_id=object_id)
-        exists = await check_res.single()
+        tx = await session.begin_transaction()
+        async with tx:
+            # Check if exists
+            check_query = "MATCH (n:LibraryObject {id: $object_id}) RETURN n LIMIT 1"
+            check_res = await tx.run(check_query, object_id=object_id)
+            exists = await check_res.single()
 
-        if exists:
-            result = await session.run(query, object_id=object_id, props=new_properties)
-        else:
-            result = await session.run(
-                create_query, object_id=object_id, props=new_properties
-            )
+            if exists:
+                # Lock the most recent library object version exclusively to prevent parallel versioning
+                lock_query = """
+                MATCH (old:LibraryObject {id: $object_id})
+                WHERE NOT (old)<-[:PREVIOUS_VERSION]-()
+                SET old._lock = true
+                RETURN old.id as id
+                """
+                await tx.run(lock_query, object_id=object_id)
 
-        record = await result.single()
-        return record["new_props"]
+                result = await tx.run(query, object_id=object_id, props=new_properties)
+            else:
+                result = await tx.run(
+                    create_query, object_id=object_id, props=new_properties
+                )
+
+            record = await result.single()
+            return record["new_props"]
 
 
+@with_transaction_retry()
 async def update_study_properties(
     driver, study_id: str, user_id: str, change_reason: str, properties: Dict[str, Any]
 ):
@@ -96,16 +143,26 @@ async def update_study_properties(
     RETURN a.id as action_id
     """
     async with driver.session() as session:
-        result = await session.run(
-            query,
-            study_id=study_id,
-            action_id=action_id,
-            user_id=user_id,
-            change_reason=change_reason,
-            properties=properties,
-        )
-        record = await result.single()
-        return record["action_id"] if record else None
+        tx = await session.begin_transaction()
+        async with tx:
+            # Lock the study root node exclusively to serialize concurrent saves to this study
+            lock_query = """
+            MATCH (s:Study {id: $study_id})
+            SET s._lock = true
+            RETURN s.id as id
+            """
+            await tx.run(lock_query, study_id=study_id)
+
+            result = await tx.run(
+                query,
+                study_id=study_id,
+                action_id=action_id,
+                user_id=user_id,
+                change_reason=change_reason,
+                properties=properties,
+            )
+            record = await result.single()
+            return record["action_id"] if record else None
 
 
 async def get_study_differences(

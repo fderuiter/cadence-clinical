@@ -71,15 +71,30 @@ def get_terminology_from_db(concept_id: str) -> Optional[Dict[str, Any]]:
 class TerminologyCache:
     """Thread-safe in-memory cache for controlled terminology lookups."""
 
-    def __init__(self, max_size: int = 1000) -> None:
+    def __init__(self, max_size: int = 1000, ttl: Optional[float] = None) -> None:
         """Initializes the terminology cache.
 
         Args:
             max_size (int, optional): The maximum number of items to cache. Defaults to 1000.
+            ttl (float, optional): Time-to-live in seconds. If not provided, looks up from environment.
         """
         self.max_size: int = max_size
-        self._cache: Dict[str, Dict[str, Any]] = {}
+        self._cache: Dict[str, tuple[Dict[str, Any], float]] = {}
         self._lock: threading.Lock = threading.Lock()
+
+        if ttl is not None:
+            self.ttl = float(ttl)
+        else:
+            import os
+
+            env_ttl = os.getenv("TERMINOLOGY_CACHE_TTL") or os.getenv("CACHE_TTL")
+            if env_ttl is not None:
+                try:
+                    self.ttl = float(env_ttl)
+                except ValueError:
+                    self.ttl = 3600.0
+            else:
+                self.ttl = 3600.0
 
     def get(self, concept_id: str) -> Optional[Dict[str, Any]]:
         """Retrieves a terminology concept from the cache or database.
@@ -90,18 +105,37 @@ class TerminologyCache:
         Returns:
             Optional[Dict[str, Any]]: The terminology data, or None if not found.
         """
+        import time
+
+        now = time.time()
+        expired_data = None
+
         with self._lock:
             if concept_id in self._cache:
-                return self._cache[concept_id]
+                data, timestamp = self._cache[concept_id]
+                if now - timestamp < self.ttl:
+                    return data
+                expired_data = data
 
-        # Miss - fetch from DB
-        data = get_terminology_from_db(concept_id)
+        # Miss or Expired - fetch from DB
+        try:
+            data = get_terminology_from_db(concept_id)
+        except Exception as e:
+            if expired_data is not None:
+                # DB is temporarily unreachable, fallback to expired data
+                return expired_data
+            raise e
+
         if data:
             with self._lock:
-                if len(self._cache) >= self.max_size:
-                    # Basic eviction policy
-                    self._cache.pop(next(iter(self._cache)))
-                self._cache[concept_id] = data
+                if concept_id in self._cache:
+                    self._cache[concept_id] = (data, now)
+                else:
+                    if len(self._cache) >= self.max_size:
+                        # Basic eviction policy
+                        self._cache.pop(next(iter(self._cache)))
+                    self._cache[concept_id] = (data, now)
+            return data
         return data
 
     def clear(self) -> None:

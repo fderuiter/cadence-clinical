@@ -8,6 +8,11 @@ import httpx
 import pytest
 import pytest_asyncio
 
+from apps.execution.database.context import (
+    audit_context,
+    current_change_reason,
+    current_user_id,
+)
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import AuditLog, Base, TranslationJob
 from apps.execution.main import app
@@ -40,6 +45,10 @@ async def setup_test_db():
         )
     )
     async with db_manager.engine.begin() as conn:
+        from sqlalchemy import text
+
+        if db_manager.engine.dialect.name == "postgresql":
+            await conn.execute(text("CREATE SCHEMA IF NOT EXISTS audit_schema;"))
         await conn.run_sync(Base.metadata.create_all)
     yield
     async with db_manager.engine.begin() as conn:
@@ -148,3 +157,89 @@ async def test_translation_validation_failure():
         assert job is not None
         assert job["status"] == "FAILED"
         assert "protocol" in job["error_message"]
+
+
+@pytest.mark.asyncio
+async def test_audit_safe_context_binds_and_cleans_up():
+    # 1. Verify defaults before
+    assert current_user_id.get() == "system"
+    assert current_change_reason.get() == "system_operation"
+
+    # 2. Bind custom user & reason
+    with audit_context(user_id="user_abc", change_reason="publishing study"):
+        assert current_user_id.get() == "user_abc"
+        assert current_change_reason.get() == "publishing study"
+
+    # 3. Verify they are restored and cleaned up
+    assert current_user_id.get() == "system"
+    assert current_change_reason.get() == "system_operation"
+
+
+@pytest.mark.asyncio
+async def test_audit_safe_context_cleans_up_on_error():
+    assert current_user_id.get() == "system"
+    assert current_change_reason.get() == "system_operation"
+
+    with pytest.raises(ValueError):
+        with audit_context(user_id="user_err", change_reason="testing errors"):
+            assert current_user_id.get() == "user_err"
+            assert current_change_reason.get() == "testing errors"
+            raise ValueError("Intentional error")
+
+    # Verify context was restored
+    assert current_user_id.get() == "system"
+    assert current_change_reason.get() == "system_operation"
+
+
+@pytest.mark.asyncio
+async def test_background_translation_records_user_audit():
+    study_payload = {
+        "study_id": "test_background_audit_study",
+        "payload": {
+            "name": "Audit Safe Background Study",
+            "protocol": {
+                "items": [
+                    {"id": "bp", "name": "Blood Pressure", "type": "int"},
+                ]
+            },
+        },
+    }
+
+    # Post with X-User-Id header as test_user_audit
+    headers = get_auth_headers(user_id="test_user_audit", roles="researcher")
+    headers["X-Change-Reason"] = "translation test"
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        response = await client.post(
+            "/events/study-published", json=study_payload, headers=headers
+        )
+    assert response.status_code == 200
+
+    # Retrieve translation job and its audit logs
+    async with db_manager.get_session_maker()() as session:
+        result = await session.execute(
+            TranslationJob.__table__.select().where(
+                TranslationJob.study_id == "test_background_audit_study"
+            )
+        )
+        job = result.mappings().first()
+        assert job is not None
+        assert job["status"] == "COMPLETED"
+
+        # Check audit log to verify the initiating user is captured
+        audit_res = await session.execute(
+            AuditLog.__table__.select().where(AuditLog.table_name == "translation_jobs")
+        )
+        logs = list(audit_res.mappings().all())
+        assert len(logs) >= 1
+
+        # At least one log should have the user_id matching test_user_audit and change_reason matching the passed header
+        audit_records = [log for log in logs if log["record_id"] == job["id"]]
+        assert len(audit_records) >= 1
+        assert any(
+            rec["user_id"] == "test_user_audit"
+            and rec["change_reason"] == "translation test"
+            for rec in audit_records
+        )
