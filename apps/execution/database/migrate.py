@@ -216,7 +216,7 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
                 await conn.execute(
                     text(f"""
                     CREATE TRIGGER trg_audit_{table_name}
-                    AFTER INSERT OR UPDATE OR DELETE ON {table_name}
+                    BEFORE INSERT OR UPDATE OR DELETE ON {table_name}
                     FOR EACH ROW EXECUTE FUNCTION public.capture_model_mutation();
                 """)
                 )

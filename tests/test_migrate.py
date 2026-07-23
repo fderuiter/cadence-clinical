@@ -58,7 +58,16 @@ async def test_run_migrations_failure():
 
 
 def test_main_cli():
-    with patch("apps.execution.database.migrate.asyncio.run") as mock_run:
+    # To prevent the "coroutine never awaited" runtime warning, we consume the coroutine in the mock.
+    def mock_run_impl(coro):
+        try:
+            coro.close()
+        except Exception:
+            pass
+
+    with patch(
+        "apps.execution.database.migrate.asyncio.run", side_effect=mock_run_impl
+    ) as mock_run:
         with patch(
             "sys.argv", ["migrate.py", "--db-url", "sqlite+aiosqlite:///:memory:"]
         ):

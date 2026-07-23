@@ -45,6 +45,10 @@ async def setup_test_db():
         )
     )
     async with db_manager.engine.begin() as conn:
+        from sqlalchemy import text
+
+        if db_manager.engine.dialect.name == "postgresql":
+            await conn.execute(text("CREATE SCHEMA IF NOT EXISTS audit_schema;"))
         await conn.run_sync(Base.metadata.create_all)
     yield
     async with db_manager.engine.begin() as conn:
