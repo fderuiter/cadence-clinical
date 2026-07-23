@@ -133,25 +133,50 @@ def verify_token(token: str) -> Dict[str, Any]:
         raise HTTPException(status_code=401, detail="Invalid token")
 
 
-def generate_signature(user_id: str, roles: str, timestamp: str) -> str:
+def generate_signature(
+    user_id: str,
+    roles: str,
+    timestamp: str,
+    version: str = "1",
+    change_reason: Optional[str] = None,
+) -> str:
     """
     Generate an HMAC-SHA256 signature for identity headers.
 
     Uses a shared secret to cryptographically sign the user identity
     and timestamp, allowing downstream services to trust the injected headers.
 
+    Supports Version 1 (colon-separated format) and Version 2 (canonical JSON format).
+
     Args:
         user_id (str): The unique user identifier.
         roles (str): Comma-separated roles assigned to the user.
         timestamp (str): The exact timestamp when the signature was created.
+        version (str): The signature format version ("1" or "2").
+        change_reason (Optional[str]): The justification reason for the modification (Version 2).
 
     Returns:
         str: A hexadecimal representation of the HMAC signature.
     """
-    message = f"{user_id}:{roles}:{timestamp}"
-    return hmac.new(
-        GATEWAY_SECRET.encode(), message.encode(), hashlib.sha256
-    ).hexdigest()
+    if version in ("2", "v2"):
+        import json
+
+        cr = change_reason if change_reason is not None else ""
+        payload = {
+            "change_reason": cr,
+            "roles": roles,
+            "timestamp": timestamp,
+            "user_id": user_id,
+        }
+        serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+        return hmac.new(
+            GATEWAY_SECRET.encode(), serialized.encode(), hashlib.sha256
+        ).hexdigest()
+    else:
+        message = f"{user_id}:{roles}:{timestamp}"
+        return hmac.new(
+            GATEWAY_SECRET.encode(), message.encode(), hashlib.sha256
+        ).hexdigest()
 
 
 @app.get("/openapi.json", include_in_schema=False)
@@ -180,12 +205,21 @@ async def get_openapi_json() -> Response:
         timestamp = str(time.time())
         user_id = "system_docs_aggregator"
         roles = "admin,system"
-        signature = generate_signature(user_id, roles, timestamp)
+        change_reason = "system_operation"
+        signature = generate_signature(
+            user_id,
+            roles,
+            timestamp,
+            version="2",
+            change_reason=change_reason,
+        )
         headers = {
             "X-User-Id": user_id,
             "X-User-Roles": roles,
             "X-Gateway-Timestamp": timestamp,
             "X-Gateway-Signature": signature,
+            "X-Signature-Version": "2",
+            "X-Change-Reason": change_reason,
         }
         try:
             if http_client:
@@ -340,13 +374,29 @@ async def proxy_requests(request: Request, path: str) -> Response:
     headers = dict(request.headers)
     headers.pop("host", None)
 
+    change_reason = request.headers.get("x-change-reason")
+    for k in list(headers.keys()):
+        if k.lower() == "x-change-reason":
+            headers.pop(k, None)
+
+    if change_reason is not None:
+        if len(change_reason) > 255:
+            return JSONResponse(
+                status_code=400,
+                content={"detail": "Change reason exceeds 255 characters"},
+            )
+        headers["X-Change-Reason"] = change_reason
+
     timestamp = str(time.time())
-    signature = generate_signature(user_id, roles, timestamp)
+    signature = generate_signature(
+        user_id, roles, timestamp, version="2", change_reason=change_reason
+    )
 
     headers["X-User-Id"] = user_id
     headers["X-User-Roles"] = roles
     headers["X-Gateway-Timestamp"] = timestamp
     headers["X-Gateway-Signature"] = signature
+    headers["X-Signature-Version"] = "2"
 
     try:
         body: bytes = await request.body()
