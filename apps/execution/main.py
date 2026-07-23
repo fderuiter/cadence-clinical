@@ -892,9 +892,8 @@ def verify_change_justification(request: Request) -> None:
 
 def verify_roles(request: Request, allowed_roles: List[str]) -> None:
     """Verify that the user possesses at least one of the allowed roles."""
-    roles_str = (
-        getattr(request.state, "roles", None)
-        or request.headers.get("X-User-Roles", "")
+    roles_str = getattr(request.state, "roles", None) or request.headers.get(
+        "X-User-Roles", ""
     )
     if not roles_str:
         raise HTTPException(status_code=403, detail="Missing role credentials.")
@@ -1001,9 +1000,7 @@ async def list_queries(
         return responses
 
 
-@app.get(
-    "/api/v1/execution/queries/{query_id}", response_model=ClinicalQueryResponse
-)
+@app.get("/api/v1/execution/queries/{query_id}", response_model=ClinicalQueryResponse)
 async def get_query(query_id: str) -> ClinicalQueryResponse:
     """Query a single clinical query by ID, returning its full audit history.
 
@@ -1044,9 +1041,7 @@ async def get_query(query_id: str) -> ClinicalQueryResponse:
     response_model=ClinicalQueryResponse,
     status_code=201,
 )
-async def open_query(
-    request: Request, payload: QueryCreate
-) -> ClinicalQueryResponse:
+async def open_query(request: Request, payload: QueryCreate) -> ClinicalQueryResponse:
     """Raise a new clinical query on a specific field coordinate.
 
     Args:
@@ -1175,9 +1170,7 @@ async def respond_query(
     "/api/v1/execution/queries/{query_id}/close",
     response_model=ClinicalQueryResponse,
 )
-async def close_query(
-    query_id: str, request: Request
-) -> ClinicalQueryResponse:
+async def close_query(query_id: str, request: Request) -> ClinicalQueryResponse:
     """Close an answered query (resolving the discrepancy loop).
 
     Args:
@@ -1233,9 +1226,7 @@ async def close_query(
     "/api/v1/execution/queries/{query_id}/reopen",
     response_model=ClinicalQueryResponse,
 )
-async def reopen_query(
-    query_id: str, request: Request
-) -> ClinicalQueryResponse:
+async def reopen_query(query_id: str, request: Request) -> ClinicalQueryResponse:
     """Reopen an answered or closed clinical query for further clarification.
 
     Args:

@@ -93,13 +93,13 @@ def assert_schema_parity(
 
     if not isinstance(s_resolved, dict) or not isinstance(c_resolved, dict):
         # Leaf level check
-        assert type(s_resolved) is type(c_resolved), (
-            f"Type mismatch at {path_context}: spec={s_resolved}, code={c_resolved}"
-        )
+        assert type(s_resolved) is type(
+            c_resolved
+        ), f"Type mismatch at {path_context}: spec={s_resolved}, code={c_resolved}"
         if isinstance(s_resolved, (str, int, float, bool)):
-            assert s_resolved == c_resolved, (
-                f"Value mismatch at {path_context}: spec={s_resolved}, code={c_resolved}"
-            )
+            assert (
+                s_resolved == c_resolved
+            ), f"Value mismatch at {path_context}: spec={s_resolved}, code={c_resolved}"
         return
 
     # Handle nullable equivalence in OpenAPI 3.1 vs 3.0
@@ -115,18 +115,18 @@ def assert_schema_parity(
     s_type = s_resolved.get("type")
     c_type = c_resolved.get("type")
     if s_type and c_type:
-        assert compare_types(s_type, c_type), (
-            f"Mismatched type at {path_context}: spec={s_type}, code={c_type}"
-        )
+        assert compare_types(
+            s_type, c_type
+        ), f"Mismatched type at {path_context}: spec={s_type}, code={c_type}"
 
     # Compare Enum values
     if "enum" in s_resolved:
-        assert "enum" in c_resolved, (
-            f"Missing enum constraint in codebase schema at {path_context}"
-        )
-        assert set(s_resolved["enum"]) == set(c_resolved["enum"]), (
-            f"Mismatched enum values at {path_context}: spec={s_resolved['enum']}, code={c_resolved['enum']}"
-        )
+        assert (
+            "enum" in c_resolved
+        ), f"Missing enum constraint in codebase schema at {path_context}"
+        assert (
+            set(s_resolved["enum"]) == set(c_resolved["enum"])
+        ), f"Mismatched enum values at {path_context}: spec={s_resolved['enum']}, code={c_resolved['enum']}"
 
     # Compare Properties for objects
     if s_type == "object" or "properties" in s_resolved:
@@ -135,9 +135,9 @@ def assert_schema_parity(
 
         # Verify that all properties defined in spec exist in code and match
         for prop_name, prop_spec in s_props.items():
-            assert prop_name in c_props, (
-                f"Property '{prop_name}' defined in contract specification is missing in codebase at {path_context}"
-            )
+            assert (
+                prop_name in c_props
+            ), f"Property '{prop_name}' defined in contract specification is missing in codebase at {path_context}"
             assert_schema_parity(
                 prop_spec,
                 c_props[prop_name],
@@ -151,15 +151,13 @@ def assert_schema_parity(
         c_req = set(c_resolved.get("required", []))
         # Ensure that required fields in specification are also required in codebase
         missing_reqs = s_req - c_req
-        assert not missing_reqs, (
-            f"Required properties {missing_reqs} in spec contract are not marked required in codebase at {path_context}"
-        )
+        assert not missing_reqs, f"Required properties {missing_reqs} in spec contract are not marked required in codebase at {path_context}"
 
     # Compare Items for arrays
     if s_type == "array" or "items" in s_resolved:
-        assert "items" in c_resolved, (
-            f"Array schema missing 'items' property in codebase at {path_context}"
-        )
+        assert (
+            "items" in c_resolved
+        ), f"Array schema missing 'items' property in codebase at {path_context}"
         assert_schema_parity(
             s_resolved["items"],
             c_resolved["items"],
@@ -217,9 +215,9 @@ def loaded_specs():
 def test_markdown_spec_extract_and_parse():
     """Verify that we can locate, extract, and successfully parse the YAML OpenAPI schema block."""
     spec_yaml = extract_openapi_yaml("docs/SDLC/03_API_Integration_Specification.md")
-    assert spec_yaml.startswith("openapi:"), (
-        "Extracted contract block does not start with openapi key"
-    )
+    assert spec_yaml.startswith(
+        "openapi:"
+    ), "Extracted contract block does not start with openapi key"
 
     # Verify parsing succeeds
     parsed = yaml.safe_load(spec_yaml)
@@ -256,18 +254,18 @@ def test_api_paths_and_methods_parity(loaded_specs):
     for spec_path, path_item in spec_dict.get("paths", {}).items():
         # Find matching route in the codebase
         code_route_info = find_code_route(spec_path, code_routes)
-        assert code_route_info is not None, (
-            f"API contract path '{spec_path}' defined in documentation is missing in codebase"
-        )
+        assert (
+            code_route_info is not None
+        ), f"API contract path '{spec_path}' defined in documentation is missing in codebase"
 
         for method in path_item.keys():
             method_lower = method.lower()
             # Skip openapi description/parameters elements at the path level
             if method_lower in ["parameters", "summary", "description"]:
                 continue
-            assert method_lower in code_route_info, (
-                f"HTTP Method '{method.upper()}' on path '{spec_path}' is missing in codebase"
-            )
+            assert (
+                method_lower in code_route_info
+            ), f"HTTP Method '{method.upper()}' on path '{spec_path}' is missing in codebase"
 
 
 def test_api_parameters_parity(loaded_specs):
@@ -294,20 +292,20 @@ def test_api_parameters_parity(loaded_specs):
             code_param_map = {p["name"]: p for p in code_params}
 
             for name, p_spec in spec_param_map.items():
-                assert name in code_param_map, (
-                    f"Request parameter '{name}' on '{method.upper()} {spec_path}' is missing in codebase"
-                )
+                assert (
+                    name in code_param_map
+                ), f"Request parameter '{name}' on '{method.upper()} {spec_path}' is missing in codebase"
                 p_code = code_param_map[name]
 
                 # Check placement (query vs path)
-                assert p_spec["in"] == p_code["in"], (
-                    f"Placement mismatch for parameter '{name}' on '{method.upper()} {spec_path}'"
-                )
+                assert (
+                    p_spec["in"] == p_code["in"]
+                ), f"Placement mismatch for parameter '{name}' on '{method.upper()} {spec_path}'"
 
                 # Check required flag
-                assert p_spec.get("required", False) == p_code.get("required", False), (
-                    f"Requirement flag mismatch for parameter '{name}' on '{method.upper()} {spec_path}'"
-                )
+                assert (
+                    p_spec.get("required", False) == p_code.get("required", False)
+                ), f"Requirement flag mismatch for parameter '{name}' on '{method.upper()} {spec_path}'"
 
                 # Check schemas (type, enum)
                 if "schema" in p_spec and "schema" in p_code:
@@ -341,26 +339,26 @@ def test_api_request_bodies_parity(loaded_specs):
             code_req = code_op.get("requestBody")
 
             if spec_req:
-                assert code_req is not None, (
-                    f"RequestBody is required on '{method.upper()} {spec_path}' but missing in codebase"
-                )
+                assert (
+                    code_req is not None
+                ), f"RequestBody is required on '{method.upper()} {spec_path}' but missing in codebase"
 
                 # Check media types (e.g., application/json or multipart/form-data)
                 spec_content = spec_req.get("content", {})
                 code_content = code_req.get("content", {})
 
                 for media_type, spec_media in spec_content.items():
-                    assert media_type in code_content, (
-                        f"RequestBody media type '{media_type}' on '{method.upper()} {spec_path}' is missing in codebase"
-                    )
+                    assert (
+                        media_type in code_content
+                    ), f"RequestBody media type '{media_type}' on '{method.upper()} {spec_path}' is missing in codebase"
                     code_media = code_content[media_type]
 
-                    assert "schema" in spec_media, (
-                        f"Schema missing in spec RequestBody media type '{media_type}' on '{method.upper()} {spec_path}'"
-                    )
-                    assert "schema" in code_media, (
-                        f"Schema missing in codebase RequestBody media type '{media_type}' on '{method.upper()} {spec_path}'"
-                    )
+                    assert (
+                        "schema" in spec_media
+                    ), f"Schema missing in spec RequestBody media type '{media_type}' on '{method.upper()} {spec_path}'"
+                    assert (
+                        "schema" in code_media
+                    ), f"Schema missing in codebase RequestBody media type '{media_type}' on '{method.upper()} {spec_path}'"
 
                     assert_schema_parity(
                         spec_media["schema"],
@@ -399,9 +397,9 @@ def test_api_responses_parity(loaded_specs):
                 if status_code in ["401", "403", "404", "429", "500", "400"]:
                     continue
 
-                assert status_code in code_responses, (
-                    f"Expected response status code '{status_code}' on '{method.upper()} {spec_path}' is missing in codebase"
-                )
+                assert (
+                    status_code in code_responses
+                ), f"Expected response status code '{status_code}' on '{method.upper()} {spec_path}' is missing in codebase"
                 c_resp = code_responses[status_code]
 
                 # If schema is defined in spec response, verify that it also matches in codebase
@@ -409,15 +407,15 @@ def test_api_responses_parity(loaded_specs):
                 c_content = c_resp.get("content", {})
 
                 for media_type, s_media in s_content.items():
-                    assert media_type in c_content, (
-                        f"Response media type '{media_type}' on '{method.upper()} {spec_path}' ({status_code}) is missing in codebase"
-                    )
+                    assert (
+                        media_type in c_content
+                    ), f"Response media type '{media_type}' on '{method.upper()} {spec_path}' ({status_code}) is missing in codebase"
                     c_media = c_content[media_type]
 
                     if "schema" in s_media:
-                        assert "schema" in c_media, (
-                            f"Response schema missing in codebase on '{method.upper()} {spec_path}' ({status_code})"
-                        )
+                        assert (
+                            "schema" in c_media
+                        ), f"Response schema missing in codebase on '{method.upper()} {spec_path}' ({status_code})"
                         assert_schema_parity(
                             s_media["schema"],
                             c_media["schema"],

@@ -16,7 +16,7 @@ from apps.execution.database.models import (
 )
 from apps.execution.main import app
 
-GATEWAY_SECRET = "internal-gateway-secret-12345"
+GATEWAY_SECRET = "internal-gateway-secret-12345"  # pragma: allowlist secret
 
 
 def get_v2_auth_headers(
@@ -187,9 +187,7 @@ async def test_create_clinical_query_authorization_failures() -> None:
 @pytest.mark.asyncio
 async def test_duplicate_active_query_rejected() -> None:
     """Test that duplicate active queries on the exact same coordinate are rejected."""
-    headers = get_v2_auth_headers(
-        roles="Data Manager", change_reason="First raise"
-    )
+    headers = get_v2_auth_headers(roles="Data Manager", change_reason="First raise")
     payload = {
         "study_id": "STUDY-ABC",
         "subject_id": "SUBJ-101",
@@ -368,9 +366,7 @@ async def test_reopen_transitions() -> None:
 @pytest.mark.asyncio
 async def test_database_events_prevent_deletions() -> None:
     """Test that direct database-level deletions are blocked by triggers / SQLAlchemy event listeners."""
-    dm_headers = get_v2_auth_headers(
-        roles="Data Manager", change_reason="Create query"
-    )
+    dm_headers = get_v2_auth_headers(roles="Data Manager", change_reason="Create query")
     payload = {
         "study_id": "S1",
         "subject_id": "SUBJ-A",
