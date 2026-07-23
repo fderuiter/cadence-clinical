@@ -3,8 +3,13 @@ from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import get_history
 
 from apps.execution.trial_lock import TrialLockManager
+from packages.security.context import (
+    current_change_reason,
+    current_ip_address,
+    current_timestamp,
+    current_user_id,
+)
 
-from .context import current_change_reason, current_user_id
 from .models import AuditedModel, AuditLog
 
 
@@ -32,6 +37,8 @@ def receive_before_flush(session: Session, flush_context, instances):
     audit_logs = []
     user_id = current_user_id.get()
     reason = current_change_reason.get()
+    ip_address = current_ip_address.get()
+    timestamp = current_timestamp.get()
 
     # Track Inserts
     for obj in session.new:
@@ -44,18 +51,21 @@ def receive_before_flush(session: Session, flush_context, instances):
             val = getattr(obj, attr.key)
             new_values[attr.key] = val
 
-        audit_logs.append(
-            AuditLog(
-                table_name=obj.__tablename__,
-                record_id=get_primary_key(obj) or "pending",
-                action="INSERT",
-                user_id=user_id,
-                old_values=None,
-                new_values=new_values,
-                version_index=getattr(obj, "version", 1),
-                change_reason=reason,
-            )
-        )
+        kwargs = {
+            "table_name": obj.__tablename__,
+            "record_id": get_primary_key(obj) or "pending",
+            "action": "INSERT",
+            "user_id": user_id,
+            "ip_address": ip_address,
+            "old_values": None,
+            "new_values": new_values,
+            "version_index": getattr(obj, "version", 1),
+            "change_reason": reason,
+        }
+        if timestamp is not None:
+            kwargs["timestamp"] = timestamp
+
+        audit_logs.append(AuditLog(**kwargs))
 
     # Track Updates
     for obj in session.dirty:
@@ -96,18 +106,21 @@ def receive_before_flush(session: Session, flush_context, instances):
                 obj.version += 1
                 new_values["version"] = obj.version
 
-            audit_logs.append(
-                AuditLog(
-                    table_name=obj.__tablename__,
-                    record_id=get_primary_key(obj),
-                    action=action,
-                    user_id=user_id,
-                    old_values=old_values,
-                    new_values=new_values,
-                    version_index=getattr(obj, "version", 1),
-                    change_reason=reason,
-                )
-            )
+            kwargs = {
+                "table_name": obj.__tablename__,
+                "record_id": get_primary_key(obj),
+                "action": action,
+                "user_id": user_id,
+                "ip_address": ip_address,
+                "old_values": old_values,
+                "new_values": new_values,
+                "version_index": getattr(obj, "version", 1),
+                "change_reason": reason,
+            }
+            if timestamp is not None:
+                kwargs["timestamp"] = timestamp
+
+            audit_logs.append(AuditLog(**kwargs))
 
     # Prevent hard deletions
     for obj in session.deleted:
@@ -130,18 +143,21 @@ def receive_before_flush(session: Session, flush_context, instances):
         for attr in mapper.column_attrs:
             old_values[attr.key] = getattr(obj, attr.key)
 
-        audit_logs.append(
-            AuditLog(
-                table_name=obj.__tablename__,
-                record_id=get_primary_key(obj),
-                action="DELETE",
-                user_id=user_id,
-                old_values=old_values,
-                new_values=None,
-                version_index=getattr(obj, "version", 1),
-                change_reason=reason,
-            )
-        )
+        kwargs = {
+            "table_name": obj.__tablename__,
+            "record_id": get_primary_key(obj),
+            "action": "DELETE",
+            "user_id": user_id,
+            "ip_address": ip_address,
+            "old_values": old_values,
+            "new_values": None,
+            "version_index": getattr(obj, "version", 1),
+            "change_reason": reason,
+        }
+        if timestamp is not None:
+            kwargs["timestamp"] = timestamp
+
+        audit_logs.append(AuditLog(**kwargs))
 
     if audit_logs:
         session.add_all(audit_logs)

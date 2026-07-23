@@ -1,3 +1,5 @@
+import datetime
+
 import pytest
 import pytest_asyncio
 from sqlalchemy import String, select
@@ -12,6 +14,9 @@ from apps.execution.database.context import (
 from apps.execution.database.core import db_manager
 from apps.execution.database.decorators import transactional
 from apps.execution.database.models import AuditedModel, AuditLog, Base
+from packages.security.context import (
+    audit_context,
+)
 
 
 # Create a test model that extends AuditedModel
@@ -243,3 +248,39 @@ async def test_read_only_queries_do_not_generate_audit_logs():
         result = await session.execute(select(AuditLog))
         final_count = len(result.scalars().all())
         assert final_count == initial_count
+
+
+@pytest.mark.asyncio
+async def test_audit_records_ip_and_custom_timestamp():
+    """
+    Verify that custom IP address and custom timestamp are correctly recorded in the audit logs.
+    """
+    custom_time = datetime.datetime(2026, 7, 24, 14, 32, 1, 0)
+
+    with audit_context(
+        user_id="dr_john_doe",
+        change_reason="GCP protocol validation",
+        ip_address="192.168.42.105",
+        timestamp=custom_time,
+    ):
+        @transactional(lambda: db_manager.get_session_maker()())
+        async def create_record():
+            session = current_session.get()
+            record = ClinicalRecord(data_value="patient_b")
+            session.add(record)
+            await session.flush()
+            return record.id
+
+        record_id = await create_record()
+
+    async with db_manager.get_session_maker()() as session:
+        result = await session.execute(
+            select(AuditLog).where(AuditLog.record_id == record_id)
+        )
+        log = result.scalars().first()
+
+        assert log is not None
+        assert log.user_id == "dr_john_doe"
+        assert log.change_reason == "GCP protocol validation"
+        assert log.ip_address == "192.168.42.105"
+        assert log.timestamp == custom_time

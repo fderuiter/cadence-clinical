@@ -1,11 +1,14 @@
+import datetime
 from typing import Awaitable, Callable
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from apps.execution.database.context import (
+from apps.execution.database.context import current_session
+from packages.security.context import (
     current_change_reason,
-    current_session,
+    current_ip_address,
+    current_timestamp,
     current_user_id,
 )
 
@@ -34,10 +37,20 @@ class ContextResetMiddleware(BaseHTTPMiddleware):
         user_id = request.headers.get("x-user-id", "system")
         change_reason = request.headers.get("x-change-reason", "system_operation")
 
+        # Extract IP Address
+        ip_address = request.headers.get(
+            "x-forwarded-for",
+            request.client.host if request.client else "127.0.0.1"
+        )
+        if "," in ip_address:
+            ip_address = ip_address.split(",")[0].strip()
+
         user_token = current_user_id.set(user_id)
         reason_token = current_change_reason.set(change_reason)
-        # We also want to make sure the session is cleared in case it was accidentally left over,
-        # but session token is usually set in @transactional. We'll capture its token if we need to.
+        ip_token = current_ip_address.set(ip_address)
+        ts_token = current_timestamp.set(datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None))
+
+        # Reset the database session token if any
         session_token = current_session.set(None)
 
         try:
@@ -46,4 +59,6 @@ class ContextResetMiddleware(BaseHTTPMiddleware):
         finally:
             current_user_id.reset(user_token)
             current_change_reason.reset(reason_token)
+            current_ip_address.reset(ip_token)
+            current_timestamp.reset(ts_token)
             current_session.reset(session_token)

@@ -22,6 +22,7 @@ class AuditLog(Base):
         String(50), nullable=False
     )  # INSERT, UPDATE, DELETE
     user_id: Mapped[str] = mapped_column(String(255), nullable=True)
+    ip_address: Mapped[str] = mapped_column(String(45), nullable=True)
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=func.now())
     old_values: Mapped[dict] = mapped_column(JSON, nullable=True)
     new_values: Mapped[dict] = mapped_column(JSON, nullable=True)
