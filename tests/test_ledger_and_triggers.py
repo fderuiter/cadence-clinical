@@ -8,6 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import AuditedModel, AuditLedgerSeal, AuditLog, Base
 from apps.execution.database.sealer import (
+    clean_query,
     execute_audit_sealing_cycle,
     validate_ledger_integrity,
 )
@@ -67,7 +68,10 @@ async def test_prevent_audit_log_mutation():
             ):
                 await session.execute(
                     text(
-                        "UPDATE audit_logs SET user_id = 'hacker' WHERE record_id = 'rec_1';"
+                        clean_query(
+                            "UPDATE audit_schema.audit_logs SET user_id = 'hacker' WHERE record_id = 'rec_1';",
+                            session,
+                        )
                     )
                 )
 
@@ -76,7 +80,12 @@ async def test_prevent_audit_log_mutation():
                 match="Modification or deletion of audit logs is strictly prohibited",
             ):
                 await session.execute(
-                    text("DELETE FROM audit_logs WHERE record_id = 'rec_1';")
+                    text(
+                        clean_query(
+                            "DELETE FROM audit_schema.audit_logs WHERE record_id = 'rec_1';",
+                            session,
+                        )
+                    )
                 )
 
 
@@ -103,7 +112,10 @@ async def test_prevent_audit_ledger_seals_mutation():
             ):
                 await session.execute(
                     text(
-                        "UPDATE audit_ledger_seals SET current_block_hash = 'tampered';"
+                        clean_query(
+                            "UPDATE audit_schema.audit_ledger_seals SET current_block_hash = 'tampered';",
+                            session,
+                        )
                     )
                 )
 
@@ -111,7 +123,14 @@ async def test_prevent_audit_ledger_seals_mutation():
                 Exception,
                 match="Modification or deletion of audit logs is strictly prohibited",
             ):
-                await session.execute(text("DELETE FROM audit_ledger_seals;"))
+                await session.execute(
+                    text(
+                        clean_query(
+                            "DELETE FROM audit_schema.audit_ledger_seals;",
+                            session,
+                        )
+                    )
+                )
 
 
 @pytest.mark.asyncio
@@ -231,12 +250,22 @@ async def test_ledger_sealing_and_validation():
     # Tampering: Simulate a DB Admin dropping the lock trigger and modifying a sealed audit log
     async with db_manager.get_session_maker()() as session:
         async with session.begin():
-            await session.execute(
-                text("DROP TRIGGER trg_lock_audit_trail_logs_update;")
-            )
+            if db_manager.engine.dialect.name == "postgresql":
+                await session.execute(
+                    text(
+                        "DROP TRIGGER IF EXISTS trg_lock_audit_trail_logs ON audit_schema.audit_logs;"
+                    )
+                )
+            else:
+                await session.execute(
+                    text("DROP TRIGGER IF EXISTS trg_lock_audit_trail_logs_update;")
+                )
             await session.execute(
                 text(
-                    "UPDATE audit_logs SET change_reason = 'tampered' WHERE id = 'log_1';"
+                    clean_query(
+                        "UPDATE audit_schema.audit_logs SET change_reason = 'tampered' WHERE id = 'log_1';",
+                        session,
+                    )
                 )
             )
             await session.commit()
