@@ -73,3 +73,12 @@ def test_main_cli():
         ):
             main()
             mock_run.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_run_migrations_real_sqlite():
+    """
+    Test executing run_migrations against a real SQLite database
+    to ensure full coverage of SQLite trigger generation branches.
+    """
+    await run_migrations("sqlite+aiosqlite:///:memory:")

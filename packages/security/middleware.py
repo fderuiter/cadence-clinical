@@ -74,10 +74,13 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
         if version in ("2", "v2"):
             change_reason = request.headers.get("X-Change-Reason")
             if not change_reason:
-                return JSONResponse(
-                    status_code=401,
-                    content={"detail": "Missing change justification reason"},
-                )
+                if request.method in ("GET", "HEAD", "OPTIONS"):
+                    change_reason = ""
+                else:
+                    return JSONResponse(
+                        status_code=401,
+                        content={"detail": "Missing change justification reason"},
+                    )
 
             import json
 

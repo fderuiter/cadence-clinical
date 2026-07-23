@@ -16,6 +16,11 @@ async def secure_endpoint():
     return {"status": "success", "message": "Access Granted"}
 
 
+@test_app.post("/secure-endpoint")
+async def secure_endpoint_post():
+    return {"status": "success", "message": "Access Granted"}
+
+
 @test_app.get("/health")
 async def health_endpoint():
     return {"status": "ok"}
@@ -165,7 +170,7 @@ def test_middleware_v2_success() -> None:
 
 def test_middleware_v2_missing_reason() -> None:
     """
-    Test that V2 signature verification rejects requests with missing or empty change reason.
+    Test that V2 signature verification rejects mutation requests with missing or empty change reason.
     """
     client = TestClient(test_app)
     timestamp = str(time.time())
@@ -182,7 +187,7 @@ def test_middleware_v2_missing_reason() -> None:
         "X-Gateway-Signature": sig,
         "X-Signature-Version": "2",
     }
-    response = client.get("/secure-endpoint", headers=headers)
+    response = client.post("/secure-endpoint", headers=headers)
     assert response.status_code == 401
     assert "Missing change justification reason" in response.json()["detail"]
 
@@ -234,3 +239,26 @@ def test_middleware_v2_mismatched_reason() -> None:
     response = client.get("/secure-endpoint", headers=headers)
     assert response.status_code == 401
     assert "Invalid gateway signature" in response.json()["detail"]
+
+
+def test_middleware_v2_safe_method_no_reason_success() -> None:
+    """
+    Test that V2 signature verification permits safe HTTP methods (GET) without X-Change-Reason.
+    """
+    client = TestClient(test_app)
+    timestamp = str(time.time())
+    user_id = "v2_user"
+    roles = "admin"
+
+    sig = generate_signature(user_id, roles, timestamp, version="2", change_reason="")
+
+    # Missing X-Change-Reason entirely, but using GET
+    headers = {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": sig,
+        "X-Signature-Version": "2",
+    }
+    response = client.get("/secure-endpoint", headers=headers)
+    assert response.status_code == 200
