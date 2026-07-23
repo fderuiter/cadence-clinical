@@ -77,7 +77,9 @@ async def process_translation(
 
                 try:
                     async with session.begin():
-                        job = TranslationJob(id=actual_job_id, study_id=study_id, status="PROCESSING")
+                        job = TranslationJob(
+                            id=actual_job_id, study_id=study_id, status="PROCESSING"
+                        )
                         session.add(job)
                         await session.flush()
 

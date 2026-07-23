@@ -1,19 +1,20 @@
+import asyncio
 import hashlib
 import hmac
 import os
 import time
-import asyncio
+
+import httpx
 import pytest
 import pytest_asyncio
-import httpx
 
 from apps.execution.database.context import (
+    current_change_reason,
     current_session,
     current_user_id,
-    current_change_reason,
 )
 from apps.execution.database.core import db_manager
-from apps.execution.database.models import Base, TranslationJob, AuditLog
+from apps.execution.database.models import Base
 from apps.execution.main import app
 from apps.execution.translator import process_translation
 
@@ -85,7 +86,7 @@ async def test_translation_status_and_listing_success():
         for _ in range(50):
             status_response = await client.get(
                 f"/api/v1/execution/translation/jobs/{job_id}",
-                headers=get_auth_headers()
+                headers=get_auth_headers(),
             )
             assert status_response.status_code == 200
             status_json = status_response.json()
@@ -102,8 +103,7 @@ async def test_translation_status_and_listing_success():
 
         # Verify listing endpoint
         list_response = await client.get(
-            "/api/v1/execution/translation/jobs",
-            headers=get_auth_headers()
+            "/api/v1/execution/translation/jobs", headers=get_auth_headers()
         )
         assert list_response.status_code == 200
         list_json = list_response.json()
@@ -137,7 +137,7 @@ async def test_translation_error_status_and_rollback():
         for _ in range(50):
             status_response = await client.get(
                 f"/api/v1/execution/translation/jobs/{job_id}",
-                headers=get_auth_headers()
+                headers=get_auth_headers(),
             )
             assert status_response.status_code == 200
             status_json = status_response.json()

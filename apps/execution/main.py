@@ -167,7 +167,9 @@ class TranslationJobResponse(BaseModel):
     error_message: Optional[str] = None
 
 
-@app.get("/api/v1/execution/translation/jobs", response_model=list[TranslationJobResponse])
+@app.get(
+    "/api/v1/execution/translation/jobs", response_model=list[TranslationJobResponse]
+)
 async def list_translation_jobs() -> list[TranslationJobResponse]:
     """Retrieve a list of historical translation jobs."""
     async with db_manager.get_session_maker()() as session:
@@ -187,7 +189,9 @@ async def list_translation_jobs() -> list[TranslationJobResponse]:
         ]
 
 
-@app.get("/api/v1/execution/translation/jobs/{job_id}", response_model=TranslationJobResponse)
+@app.get(
+    "/api/v1/execution/translation/jobs/{job_id}", response_model=TranslationJobResponse
+)
 async def get_translation_job(job_id: str) -> TranslationJobResponse:
     """Query the execution status, output metadata, and error messages of a single translation job by ID."""
     async with db_manager.get_session_maker()() as session:
