@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -456,11 +456,16 @@ async def check_completeness(
     elif milestone_normalized in ("CONDUCT", "DATA COLLECTION"):
         mandatory = ["Approved Protocol", "Define-XML", "Blank CRF"]
     elif milestone_normalized in ("CLOSEOUT", "STUDY CLOSED", "LOCK"):
-        mandatory = ["Approved Protocol", "Define-XML", "Blank CRF", "Data Lock Certificate"]
+        mandatory = [
+            "Approved Protocol",
+            "Define-XML",
+            "Blank CRF",
+            "Data Lock Certificate",
+        ]
     else:
         raise HTTPException(
             status_code=400,
-            detail=f"Unknown milestone. Supported: INITIATION, CONDUCT, CLOSEOUT",
+            detail="Unknown milestone. Supported: INITIATION, CONDUCT, CLOSEOUT",
         )
 
     # Query all archived artifact types for this study

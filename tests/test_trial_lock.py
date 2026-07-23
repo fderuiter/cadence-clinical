@@ -100,7 +100,9 @@ async def test_site_and_visit_locks():
     @transactional(lambda: db_manager.get_session_maker()())
     async def create_record(site=None, visit=None):
         session = current_session.get()
-        record = LockClinicalRecord(data_value="patient_x", site_id=site, visit_id=visit)
+        record = LockClinicalRecord(
+            data_value="patient_x", site_id=site, visit_id=visit
+        )
         session.add(record)
         await session.flush()
         return record.id

@@ -1,12 +1,10 @@
-import os
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from scripts.validate_adrs import (
-    is_architectural_file,
     check_architectural_changes_require_adr,
-    validate_existing_adrs,
     get_changed_files,
+    is_architectural_file,
+    validate_existing_adrs,
 )
 
 
@@ -62,8 +60,17 @@ def test_get_changed_files_from_txt():
     # If changed_files.txt exists, it should read from it
     mock_content = "pyproject.toml\n\napps/gateway/main.py\n"
 
-    with patch("os.path.exists", return_value=True), \
-         patch("builtins.open", MagicMock(return_value=MagicMock(__enter__=MagicMock(return_value=mock_content.splitlines())))):
+    with (
+        patch("os.path.exists", return_value=True),
+        patch(
+            "builtins.open",
+            MagicMock(
+                return_value=MagicMock(
+                    __enter__=MagicMock(return_value=mock_content.splitlines())
+                )
+            ),
+        ),
+    ):
         changed = get_changed_files()
         assert "pyproject.toml" in changed
         assert "apps/gateway/main.py" in changed

@@ -12,22 +12,22 @@
 
 ## 2. Decision Drivers & Constraints
 *List the primary criteria driving this decision (e.g., performance, developer velocity, cost, security, compliance).*
-* **Driver 1:** 
-* **Driver 2:** 
+* **Driver 1:**
+* **Driver 2:**
 
 ## 3. Options Considered
 ### Option 1: [Name of Option 1]
 * **Overview:** Brief description.
-* **Pros:** 
+* **Pros:**
   * ✅ ...
-* **Cons:** 
+* **Cons:**
   * ❌ ...
 
 ### Option 2: [Name of Option 2 - Selected]
 * **Overview:** Brief description.
-* **Pros:** 
+* **Pros:**
   * ✅ ...
-* **Cons:** 
+* **Cons:**
   * ❌ ...
 
 ## 4. Decision Outcome

@@ -39,8 +39,7 @@ class ContextResetMiddleware(BaseHTTPMiddleware):
 
         # Extract IP Address
         ip_address = request.headers.get(
-            "x-forwarded-for",
-            request.client.host if request.client else "127.0.0.1"
+            "x-forwarded-for", request.client.host if request.client else "127.0.0.1"
         )
         if "," in ip_address:
             ip_address = ip_address.split(",")[0].strip()
@@ -48,7 +47,9 @@ class ContextResetMiddleware(BaseHTTPMiddleware):
         user_token = current_user_id.set(user_id)
         reason_token = current_change_reason.set(change_reason)
         ip_token = current_ip_address.set(ip_address)
-        ts_token = current_timestamp.set(datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None))
+        ts_token = current_timestamp.set(
+            datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+        )
 
         # Reset the database session token if any
         session_token = current_session.set(None)

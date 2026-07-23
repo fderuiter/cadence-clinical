@@ -245,14 +245,17 @@ def pytest_sessionfinish(session, exitstatus):
     """
     import subprocess
     import sys
-    print("\n--- Running Automated Requirements Traceability Matrix (RTM) Generator ---")
+
+    print(
+        "\n--- Running Automated Requirements Traceability Matrix (RTM) Generator ---"
+    )
     try:
         # Run the script using the same python interpreter
         result = subprocess.run(
             [sys.executable, "scripts/generate_rtm.py"],
             capture_output=True,
             text=True,
-            check=False
+            check=False,
         )
         print(result.stdout)
         if result.stderr:

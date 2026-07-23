@@ -3,8 +3,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request
-from fastapi.responses import JSONResponse
+from fastapi import Depends, FastAPI, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -90,7 +89,9 @@ class FHIRPrefillRequest(BaseModel):
     """
 
     study_id: str = Field(..., description="Unique identifier of the clinical study")
-    bundle: Dict[str, Any] = Field(..., description="The standard FHIR Bundle JSON payload")
+    bundle: Dict[str, Any] = Field(
+        ..., description="The standard FHIR Bundle JSON payload"
+    )
 
 
 class OfflineSyncMarkers(BaseModel):
@@ -98,7 +99,9 @@ class OfflineSyncMarkers(BaseModel):
     Offline queue reconciliation and conflict resolution parameters.
     """
 
-    sequence_number: int = Field(..., description="The queue order sequence from device")
+    sequence_number: int = Field(
+        ..., description="The queue order sequence from device"
+    )
     client_id: str = Field(..., description="Unique identifier for the mobile device")
     conflict_strategy: str = Field(
         "CLIENT_WINS",
@@ -116,7 +119,9 @@ class EPROSubmissionPayload(BaseModel):
     device_timestamp: datetime = Field(
         ..., description="ISO 8601 timestamp when the entry was created on device"
     )
-    answers: Dict[str, Any] = Field(..., description="The questionnaire response key-values")
+    answers: Dict[str, Any] = Field(
+        ..., description="The questionnaire response key-values"
+    )
     offline_sync_markers: OfflineSyncMarkers = Field(
         ..., description="The offline sync queue conflict tracking parameters"
     )

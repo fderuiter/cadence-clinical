@@ -267,6 +267,7 @@ async def test_audit_records_ip_and_custom_timestamp():
         ip_address="192.168.42.105",
         timestamp=custom_time,
     ):
+
         @transactional(lambda: db_manager.get_session_maker()())
         async def create_record():
             session = current_session.get()

@@ -18,25 +18,25 @@ Currently, the `/api/v1/studies/{study_id}/differences` endpoint requires a dire
 ## 3. Options Considered
 ### Option 1: Direct Database Diffing (Status Quo)
 * **Overview:** Retaining the direct Neo4j connection for this single endpoint to compute differences within the database.
-* **Pros:** 
+* **Pros:**
   * ✅ No new architecture or algorithm needed.
-* **Cons:** 
+* **Cons:**
   * ❌ Violates the API-first separation of concerns.
   * ❌ Creates tight coupling to the database schema and drivers.
 
 ### Option 2: Dedicated Diffing Microservice
 * **Overview:** Spinning up an entirely new microservice solely for diffing JSON payloads.
-* **Pros:** 
+* **Pros:**
   * ✅ Strong isolation of diffing logic.
-* **Cons:** 
+* **Cons:**
   * ❌ High overhead of deploying, maintaining, and monitoring a new service for a lightweight capability.
 
 ### Option 3: Decoupled API-First In-Memory Diffing - Selected
 * **Overview:** Asynchronously fetch complete study payloads from an external registry (`STUDY_REGISTRY_URL`) and perform a dynamic, high-performance in-memory comparison by flattening nested payloads.
-* **Pros:** 
+* **Pros:**
   * ✅ Decouples the designer service from the database completely.
   * ✅ Extremely fast for standard payload sizes.
-* **Cons:** 
+* **Cons:**
   * ❌ Increased memory footprint when comparing very large payloads.
   * ❌ Dependency on external registry uptime and network latency.
 
@@ -47,7 +47,7 @@ Currently, the `/api/v1/studies/{study_id}/differences` endpoint requires a dire
 ## 5. Consequences & Trade-offs
 * **Positive Impact:** Decouples the designer service from the database layer, ensures high availability, and executes extremely fast for standard payload sizes.
 * **Negative Impact / Technical Debt:** Increased memory footprint on the service when processing very large payloads (>10MB). Introduces a network dependency on the external registry.
-* **Mitigation Strategy:** Implemented graceful timeouts and `502/504` error handling to manage registry availability issues. 
+* **Mitigation Strategy:** Implemented graceful timeouts and `502/504` error handling to manage registry availability issues.
 
 ## 6. Implementation & Verification
 * **Affected Repositories / Services:** `apps/designer/main.py`

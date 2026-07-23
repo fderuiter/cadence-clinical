@@ -9,10 +9,10 @@ Previously, the background translation engine compiled clinical data into flat, 
 To support robust responsive forms that accurately render clinical designs on multiple device formats natively, we needed a way to interpret multi-column properties from the USDM specifications and compile them into OpenRosa XForms constraints and visual classes without impacting strict CDISC ODM structures.
 
 ## Decision
-We will shift to **Metadata-Driven Grid Layouts** natively mapped from USDM definitions. 
+We will shift to **Metadata-Driven Grid Layouts** natively mapped from USDM definitions.
 1. **Declarative Jinja2 Templating:** We transition away from imperative XML construction and instead use Jinja2 templates (`odm_template.xml.j2` and `openrosa_template.xml.j2`).
 2. **Metadata Extraction:** USDM parsing now intercepts formatting attributes such as `cols`, `column_span`, and `span`, converting layout configurations into compliant Enketo appearance classes (`w1`-`w4`).
-3. **Decoupled Architecture:** Schema structure generation (CDISC ODM) remains strictly decoupled from visual representation (OpenRosa / Enketo layouts). 
+3. **Decoupled Architecture:** Schema structure generation (CDISC ODM) remains strictly decoupled from visual representation (OpenRosa / Enketo layouts).
 
 ## Alternatives Considered
 - **Enhancing ElementTree Logic:** Maintaining Python-based imperative XML generation was considered, but embedding UI-layer layout mapping mixed with ODM schema rules inside a background worker rapidly decreased maintainability.

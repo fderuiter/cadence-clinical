@@ -1,15 +1,15 @@
 import time
-from datetime import datetime, timezone
+
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from apps.gateway.main import generate_signature
-from apps.interop.main import app
 from apps.interop.database import db_manager
-from apps.interop.models import Base, EPROSubmission, InteropAuditLog
 from apps.interop.fhir_adapter import pseudonymize_identifier, strip_pii_from_patient
+from apps.interop.main import app
+from apps.interop.models import Base, EPROSubmission, InteropAuditLog
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -91,7 +91,9 @@ async def test_fhir_prefill_bundle_pipeline():
     to designated CDASH fields correctly.
     """
     client = TestClient(app)
-    headers = get_auth_headers(roles="admin,sponsor_dm", change_reason="Ingest FHIR records")
+    headers = get_auth_headers(
+        roles="admin,sponsor_dm", change_reason="Ingest FHIR records"
+    )
 
     mock_bundle = {
         "resourceType": "Bundle",
@@ -101,7 +103,9 @@ async def test_fhir_prefill_bundle_pipeline():
                 "resource": {
                     "resourceType": "Patient",
                     "id": "EHR-9988",
-                    "identifier": [{"system": "http://hospital.org/mrn", "value": "MRN-9988"}],
+                    "identifier": [
+                        {"system": "http://hospital.org/mrn", "value": "MRN-9988"}
+                    ],
                     "name": [{"family": "Doe", "given": ["Jane"]}],
                     "telecom": [{"system": "email", "value": "jane.doe@example.com"}],
                     "gender": "female",
@@ -206,7 +210,9 @@ async def test_fhir_prefill_bundle_pipeline():
 
     payload = {"study_id": "study_test_99", "bundle": mock_bundle}
 
-    response = client.post("/api/v1/interop/fhir/prefill", json=payload, headers=headers)
+    response = client.post(
+        "/api/v1/interop/fhir/prefill", json=payload, headers=headers
+    )
     assert response.status_code == 200
     data = response.json()
 
@@ -297,7 +303,9 @@ async def test_epro_submission_and_conflict_resolution():
             "conflict_strategy": "CLIENT_WINS",
         },
     }
-    resp = client.post("/api/v1/interop/epro/submit", json=sub_payload_client_wins, headers=headers)
+    resp = client.post(
+        "/api/v1/interop/epro/submit", json=sub_payload_client_wins, headers=headers
+    )
     assert resp.status_code == 201
     data = resp.json()
     assert data["status"] == "UPDATED_CLIENT_WINS"
@@ -316,7 +324,9 @@ async def test_epro_submission_and_conflict_resolution():
             "conflict_strategy": "SERVER_WINS",
         },
     }
-    resp = client.post("/api/v1/interop/epro/submit", json=sub_payload_server_wins, headers=headers)
+    resp = client.post(
+        "/api/v1/interop/epro/submit", json=sub_payload_server_wins, headers=headers
+    )
     assert resp.status_code == 201
     data = resp.json()
     assert data["status"] == "IGNORED_SERVER_WINS"
@@ -335,7 +345,9 @@ async def test_epro_submission_and_conflict_resolution():
             "conflict_strategy": "MERGE",
         },
     }
-    resp = client.post("/api/v1/interop/epro/submit", json=sub_payload_merge, headers=headers)
+    resp = client.post(
+        "/api/v1/interop/epro/submit", json=sub_payload_merge, headers=headers
+    )
     assert resp.status_code == 201
     data = resp.json()
     assert data["status"] == "MERGED"
