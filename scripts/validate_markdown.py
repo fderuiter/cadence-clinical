@@ -129,7 +129,7 @@ def is_potential_path_ref(token, root_dirs, root_files):
             "/proc/",
             "/sys/",
             "/var/",
-            "/tmp/",
+            "/tmp/",  # nosec B108
         )
     ):
         return False
