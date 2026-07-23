@@ -57,3 +57,23 @@ class TMFAuditLog(Base):
         String(36), nullable=True, index=True
     )
     details: Mapped[str] = mapped_column(String(1000), nullable=False)
+    cryptographic_seal: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+
+
+class TMFAuditLedgerSeal(Base):
+    """
+    Represents a cryptographic block seal for the eTMF audit logs.
+    """
+
+    __tablename__ = "tmf_audit_ledger_seals"
+
+    block_index: Mapped[int] = mapped_column(
+        Integer, primary_key=True, autoincrement=True
+    )
+    previous_block_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    current_block_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    sealed_record_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    merkle_root_hash: Mapped[str] = mapped_column(String(64), nullable=False)
