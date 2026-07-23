@@ -1,3 +1,4 @@
+import asyncio
 import os
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator
@@ -7,7 +8,12 @@ from pydantic import BaseModel
 
 from apps.execution.database.core import db_manager
 from apps.execution.database.middleware import ContextResetMiddleware
-from apps.execution.translator import process_translation
+from apps.execution.database.models import TranslationJob
+from apps.execution.translator import (
+    poll_and_process_jobs,
+    polling_daemon_loop,
+    recover_active_jobs,
+)
 from packages.security.middleware import GatewayAuthMiddleware
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
@@ -15,11 +21,11 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """
-    Handle the lifespan events for the FastAPI application.
+    """Handle the lifespan events for the FastAPI application.
 
-    Initializes the database session manager on startup and securely
-    cleans up connections on shutdown.
+    Initializes the database session manager on startup, recovers active jobs,
+    starts the background polling daemon, and securely cleans up connections
+    on shutdown.
 
     Args:
         app (FastAPI): The FastAPI application instance.
@@ -29,7 +35,23 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     # Initialize shared database library
     db_manager.init_db(DATABASE_URL)
+
+    # 1. Recover any jobs left in "PROCESSING" status back to "PENDING"
+    await recover_active_jobs()
+
+    # 2. Start background polling daemon
+    daemon_task = asyncio.create_task(polling_daemon_loop())
+    app.state.polling_daemon = daemon_task
+
     yield
+
+    # 3. Cancel the background polling daemon on shutdown
+    daemon_task.cancel()
+    try:
+        await daemon_task
+    except asyncio.CancelledError:
+        pass
+
     # Cleanup database connection
     await db_manager.close()
 
@@ -81,11 +103,16 @@ async def study_published(
     Returns:
         dict[str, str]: A status message confirming job acceptance.
     """
-    # Requirement 1: Listen for study publication events and trigger translation processes in the background.
-    background_tasks.add_task(
-        process_translation,
-        event.study_id,
-        event.payload,
-        db_manager.get_session_maker(),
-    )
+    # Requirement 1: Save persistent pending task entry immediately
+    async with db_manager.get_session_maker()() as session:
+        async with session.begin():
+            job = TranslationJob(
+                study_id=event.study_id,
+                status="PENDING",
+                payload=event.payload,
+            )
+            session.add(job)
+
+    # Requirement 2: Background polling process picks it up; we trigger immediate check for lower latency.
+    background_tasks.add_task(poll_and_process_jobs)
     return {"status": "accepted", "message": "Translation job queued in background."}

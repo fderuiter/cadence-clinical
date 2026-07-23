@@ -60,6 +60,7 @@ class TranslationJob(AuditedModel):
     status: Mapped[str] = mapped_column(
         String(50), nullable=False
     )  # PENDING, COMPLETED, FAILED
+    payload: Mapped[dict] = mapped_column(JSON, nullable=True)
     odm_payload: Mapped[str] = mapped_column(String, nullable=True)
     openrosa_payload: Mapped[str] = mapped_column(String, nullable=True)
     error_message: Mapped[str] = mapped_column(String, nullable=True)
