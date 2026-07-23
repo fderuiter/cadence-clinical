@@ -349,7 +349,7 @@ def test_canonical_json_signing_and_verification() -> None:
         "study_id": "study_100",
         "version_index": 2,
         "is_locked": True,
-        "meta": {"author": "Dr. John Doe", "approved": True}
+        "meta": {"author": "Dr. John Doe", "approved": True},
     }
 
     # Generate canonical signature
@@ -376,7 +376,9 @@ def test_audit_context_variables_and_decorator() -> None:
     assert current_timestamp.get() is None
 
     # 2. Test context manager
-    with audit_context(user_id="user_abc", change_reason="updating drug design", ip_address="10.0.0.5"):
+    with audit_context(
+        user_id="user_abc", change_reason="updating drug design", ip_address="10.0.0.5"
+    ):
         assert current_user_id.get() == "user_abc"
         assert current_change_reason.get() == "updating drug design"
         assert current_ip_address.get() == "10.0.0.5"
@@ -413,7 +415,10 @@ def test_audit_context_variables_and_decorator() -> None:
 
     # Run async decorated fn
     import asyncio
-    res_async = asyncio.run(decorated_async_fn(user="admin_user", reason="locking study", ip="192.168.1.1"))
+
+    res_async = asyncio.run(
+        decorated_async_fn(user="admin_user", reason="locking study", ip="192.168.1.1")
+    )
     assert res_async == {
         "user": "admin_user",
         "reason": "locking study",
@@ -421,7 +426,9 @@ def test_audit_context_variables_and_decorator() -> None:
     }
 
     # Run sync decorated fn
-    res_sync = decorated_sync_fn(user="pi_investigator", reason="signoff", ip="172.16.0.2")
+    res_sync = decorated_sync_fn(
+        user="pi_investigator", reason="signoff", ip="172.16.0.2"
+    )
     assert res_sync == {
         "user": "pi_investigator",
         "reason": "signoff",

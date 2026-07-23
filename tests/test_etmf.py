@@ -1,13 +1,14 @@
 import time
+
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
-from apps.gateway.main import generate_signature
-from apps.etmf.main import app, map_artifact_to_tmf
 from apps.etmf.database import db_manager
-from apps.etmf.models import Base, TMFDocument, TMFAuditLog
+from apps.etmf.main import app, map_artifact_to_tmf
+from apps.etmf.models import Base, TMFAuditLog, TMFDocument
+from apps.gateway.main import generate_signature
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -74,7 +75,9 @@ async def test_automated_ingestion_and_version_indexing():
     perform DIA TMF taxonomy assignment, increment version indices, and log to the audit ledger.
     """
     client = TestClient(app)
-    headers = get_auth_headers(roles="admin,sponsor_dm", change_reason="Ingest study data")
+    headers = get_auth_headers(
+        roles="admin,sponsor_dm", change_reason="Ingest study data"
+    )
 
     # Ingest Version 1
     payload = {
@@ -151,7 +154,9 @@ async def test_inspector_portal_read_only_access_limits():
         "content": "Secret protocol",
         "mime_type": "application/pdf",
     }
-    response = client.post("/api/v1/etmf/ingest", json=payload, headers=inspector_headers)
+    response = client.post(
+        "/api/v1/etmf/ingest", json=payload, headers=inspector_headers
+    )
     assert response.status_code == 403
     assert "restricted to read-only" in response.json()["detail"]
 

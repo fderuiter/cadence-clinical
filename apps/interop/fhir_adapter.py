@@ -216,7 +216,11 @@ class FHIRAdapter:
             elif "8462-4" in loinc_code or "diastolic" in display_name.lower():
                 record["cdash_testcd"] = "DIABP"
                 record["cdash_test"] = "Diastolic Blood Pressure"
-            elif "8867-4" in loinc_code or "heart" in display_name.lower() or "pulse" in display_name.lower():
+            elif (
+                "8867-4" in loinc_code
+                or "heart" in display_name.lower()
+                or "pulse" in display_name.lower()
+            ):
                 record["cdash_testcd"] = "PULSE"
                 record["cdash_test"] = "Pulse Rate"
             elif "8310-5" in loinc_code or "temp" in display_name.lower():

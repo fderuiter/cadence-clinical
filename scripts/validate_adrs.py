@@ -1,7 +1,7 @@
 import os
 import re
-import sys
 import subprocess
+import sys
 
 ADR_DIR = "docs/adr"
 INDEX_FILE = os.path.join(ADR_DIR, "index.md")
@@ -82,7 +82,11 @@ def is_architectural_file(filepath: str) -> bool:
         return True
 
     # 4. Storage model changes or migrations under execution
-    if filepath.startswith("apps/execution/database/") or "migrations" in filepath or "models" in filepath:
+    if (
+        filepath.startswith("apps/execution/database/")
+        or "migrations" in filepath
+        or "models" in filepath
+    ):
         if filepath.startswith("apps/execution/"):
             return True
 
@@ -152,11 +156,15 @@ def check_architectural_changes_require_adr(changed_files: set[str]) -> bool:
                 break
 
     if not new_adr_added:
-        print("Error: Architectural changes detected, but no corresponding ADR found in docs/adr/.")
+        print(
+            "Error: Architectural changes detected, but no corresponding ADR found in docs/adr/."
+        )
         print("Architectural files changed:")
         for f in architectural_changes:
             print(f"  - {f}")
-        print("Please add a new ADR markdown file under docs/adr/ following the template.")
+        print(
+            "Please add a new ADR markdown file under docs/adr/ following the template."
+        )
         return False
 
     return True

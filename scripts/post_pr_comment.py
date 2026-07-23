@@ -225,7 +225,11 @@ def main() -> None:
     combined_audit = ""
     if "failure" in (audit_outcome, static_outcome, secrets_outcome):
         combined_audit = "failure"
-    elif audit_outcome == "success" and static_outcome == "success" and secrets_outcome == "success":
+    elif (
+        audit_outcome == "success"
+        and static_outcome == "success"
+        and secrets_outcome == "success"  # pragma: allowlist secret
+    ):
         combined_audit = "success"
     else:
         # Fallback to whichever non-empty outcome is present
