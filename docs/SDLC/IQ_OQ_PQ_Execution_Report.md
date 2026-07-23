@@ -21,7 +21,7 @@ The Installation Qualification verifies that the software execution environment,
 
 ### 2.1 System Environment Metadata
 - **Operating System / Platform:** linux
-- **Python Version:** 3.12.13 (main, Mar  6 2026, 16:37:31) [GCC 13.3.0]
+- **Python Version:** 3.12.13 (main, May 18 2026, 19:23:51) [GCC 13.3.0]
 - **Database Provider (Execution Engine):** PostgreSQL / SQLite in-memory fallback
 - **Graph Database Provider (Designer Engine):** Neo4j (mocked in unit suite)
 - **Identity Management Gateway:** Keycloak OIDC Router
@@ -152,6 +152,12 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_rollback_prevents_orphan_audit_logs` | `tests.test_audit` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_soft_delete_generates_audit_log` | `tests.test_audit` | PRD-SYS-002 | 🟢 PASSED | 0.01s |
 | `test_update_generates_audit_log` | `tests.test_audit` | PRD-SYS-001 | 🟢 PASSED | 0.01s |
+| `test_api_gateway_routing` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_cdisc_export_and_validation` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_demographics_encryption` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_outlier_detection_performance` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_relational_persistence_and_recalculation` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_unit_conversions` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_encryption_decryption_with_rotation` | `tests.test_cryptography` | Trace-2, PRD-MDR-005 | 🟢 PASSED | 0.01s |
 | `test_key_splitting` | `tests.test_cryptography` | Trace-2, PRD-MDR-005 | 🟢 PASSED | 0.01s |
 | `test_concurrent_library_version_increments` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | 0.01s |
@@ -200,6 +206,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_prevent_audit_ledger_seals_mutation` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_prevent_audit_log_mutation` | `tests.test_ledger_and_triggers` | Trace-1, PRD-SYS-001 | 🟢 PASSED | 0.01s |
 | `test_prevent_hard_delete_on_audited_model` | `tests.test_ledger_and_triggers` | Trace-1, PRD-SYS-002 | 🟢 PASSED | 0.01s |
+| `test_prevent_audit_log_mutation` | `tests.test_ledger_and_triggers` | PRD-SYS-001, Trace-1 | 🟢 PASSED | 0.01s |
+| `test_prevent_hard_delete_on_audited_model` | `tests.test_ledger_and_triggers` | PRD-SYS-002, Trace-1 | 🟢 PASSED | 0.01s |
 | `test_designer_gateway_auth_expired_timestamp` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_designer_gateway_auth_invalid_signature` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_designer_gateway_auth_invalid_timestamp` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | 0.01s |

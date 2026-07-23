@@ -34,6 +34,25 @@ services:
       timeout: 5s
       retries: 5
 
+  keycloak:
+    image: quay.io/keycloak/keycloak:22.0.3
+    container_name: cadence-keycloak
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin_password
+      - KC_DB=dev-mem
+      - KC_HEALTH_ENABLED=true
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./cadence-realm.json:/opt/keycloak/data/import/realm.json
+    command: ["start-dev", "--import-realm"]
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080 && echo -e \"GET /health HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n\" >&3 && cat <&3 | grep \"200 OK\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   designer:
     build:
       context: ..
@@ -57,7 +76,7 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: cadence-execution
-    command: ["uvicorn", "apps.execution.main:app", "--host", "0.0.0.0", "--port", "8002", "--reload"]
+    command: ["sh", "-c", "python -m apps.execution.database.migrate && uvicorn apps.execution.main:app --host 0.0.0.0 --port 8002 --reload"]
     volumes:
       - ..:/app
     environment:
@@ -73,6 +92,22 @@ services:
       postgres:
         condition: service_healthy
 
+  etmf:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: cadence-etmf
+    command: ["uvicorn", "apps.etmf.main:app", "--host", "0.0.0.0", "--port", "8003", "--reload"]
+    volumes:
+      - ..:/app
+    environment:
+      - ETMF_DATABASE_URL=sqlite+aiosqlite:////app/tmf.db
+    ports:
+      - "8003:8003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   gateway:
     build:
       context: ..
@@ -84,11 +119,18 @@ services:
     environment:
       - DESIGNER_URL=http://designer:8001
       - EXECUTION_URL=http://execution:8002
+      - ETMF_URL=http://etmf:8003
     ports:
       - "8000:8000"
     depends_on:
-      - designer
-      - execution
+      designer:
+        condition: service_started
+      execution:
+        condition: service_started
+      etmf:
+        condition: service_started
+      keycloak:
+        condition: service_healthy
 
 volumes:
   postgres_data:

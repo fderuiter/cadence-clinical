@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, Integer, String, func
+from sqlalchemy import JSON, Boolean, DateTime, Float, Integer, String, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -80,3 +80,80 @@ class TranslationJob(AuditedModel):
     odm_payload: Mapped[str] = mapped_column(String, nullable=True)
     openrosa_payload: Mapped[str] = mapped_column(String, nullable=True)
     error_message: Mapped[str] = mapped_column(String, nullable=True)
+
+
+class ClinicalSubject(AuditedModel):
+    """Represents a pseudonymized clinical subject.
+
+    This class stores subject identification details strictly without storing direct, unencrypted
+    personally identifiable information (PII) to comply with HIPAA, GDPR, and GxP standards.
+
+    Attributes:
+        subject_id (str): The unique pseudonymized identifier of the subject (e.g. SUBJ-001).
+        study_id (str): The identifier of the clinical trial study.
+        encrypted_demographics (str): Securely encrypted demographic details if provided.
+    """
+
+    __tablename__ = "clinical_subjects"
+
+    subject_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    encrypted_demographics: Mapped[str] = mapped_column(String, nullable=True)
+
+
+class ClinicalVisit(AuditedModel):
+    """Represents a scheduled clinical event/visit for a subject.
+
+    Maintains scheduled trial encounters like Screening, Baseline, Week 4, etc.
+
+    Attributes:
+        subject_id (str): The unique identifier of the subject.
+        visit_name (str): The name or description of the visit.
+        visit_date (datetime): The actual datetime of the visit encounter.
+        study_id (str): The identifier of the clinical trial study.
+    """
+
+    __tablename__ = "clinical_visits"
+
+    subject_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    visit_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    visit_date: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False)
+
+
+class ClinicalObservation(AuditedModel):
+    """Represents a specific clinical trial measurement observation.
+
+    Stores normalized values, original and normalized units, and outlier flags
+    for individual parameters (e.g., vital signs, lab test measurements).
+
+    Attributes:
+        subject_id (str): The unique identifier of the subject.
+        visit_id (str): Reference to the clinical visit ID if applicable.
+        domain (str): The CDISC domain code (e.g., 'VS', 'LB').
+        observation_date (datetime): The datetime when the measurement was captured.
+        test_code (str): The standard CDASH/SDTM test code (e.g., 'SYSBP', 'TEMP').
+        test_name (str): The full descriptive name of the test parameter.
+        value (float): The raw numeric value of the observation if applicable.
+        value_string (str): The raw nominal or text value of the observation.
+        unit (str): The standard UCUM or clinical unit.
+        normalized_value (float): The normalized numeric value in standard reference units.
+        normalized_unit (str): The standard normalized UCUM unit.
+        is_outlier (bool): Flag indicating if this is a statistical outlier within the cohort.
+    """
+
+    __tablename__ = "clinical_observations"
+
+    subject_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    visit_id: Mapped[str] = mapped_column(String(255), nullable=True)
+    domain: Mapped[str] = mapped_column(String(50), nullable=False)
+    observation_date: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    test_code: Mapped[str] = mapped_column(String(100), nullable=False)
+    test_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    value: Mapped[float] = mapped_column(Float, nullable=True)
+    value_string: Mapped[str] = mapped_column(String, nullable=True)
+    unit: Mapped[str] = mapped_column(String(50), nullable=True)
+    normalized_value: Mapped[float] = mapped_column(Float, nullable=True)
+    normalized_unit: Mapped[str] = mapped_column(String(50), nullable=True)
+    is_outlier: Mapped[bool] = mapped_column(Boolean, default=False)
