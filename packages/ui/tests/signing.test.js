@@ -85,14 +85,7 @@ describe("generateGatewaySignature and verifyGatewaySignature", () => {
 
   it("rejects Version 1 signature generation", async () => {
     await expect(
-      generateGatewaySignature(
-        userId,
-        roles,
-        timestamp,
-        "1",
-        null,
-        secret
-      )
+      generateGatewaySignature(userId, roles, timestamp, "1", null, secret)
     ).rejects.toThrow("Version 2 canonical JSON signature is required.");
   });
 
@@ -158,14 +151,7 @@ describe("generateGatewaySignature and verifyGatewaySignature", () => {
 
   it("rejects unsupported versions", async () => {
     await expect(
-      generateGatewaySignature(
-        userId,
-        roles,
-        timestamp,
-        "3",
-        null,
-        secret
-      )
+      generateGatewaySignature(userId, roles, timestamp, "3", null, secret)
     ).rejects.toThrow("Version 2 canonical JSON signature is required.");
 
     const isValid = await verifyGatewaySignature(

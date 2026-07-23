@@ -98,7 +98,9 @@ export async function generateGatewaySignature(
   secret
 ) {
   if (version !== "2" && version !== "v2") {
-    throw new Error("Missing or obsolete signature format. Version 2 canonical JSON signature is required.");
+    throw new Error(
+      "Missing or obsolete signature format. Version 2 canonical JSON signature is required."
+    );
   }
   const cr =
     changeReason !== null && changeReason !== undefined ? changeReason : "";
