@@ -4,6 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "dev": "vite",
+    "build": "vite build --base=/cadence-clinical/",
     "test": "vitest run",
     "lint": "eslint .",
     "format": "prettier --write ."
@@ -14,5 +16,8 @@
   "type": "module",
   "dependencies": {
     "ui": "workspace:*"
+  },
+  "devDependencies": {
+    "vite": "^8.1.5"
   }
 }
