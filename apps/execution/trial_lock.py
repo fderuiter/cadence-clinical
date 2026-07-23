@@ -70,8 +70,28 @@ class TrialLockManager:
         if not db_manager or not db_manager.engine:
             return
 
+        url_str = str(db_manager.engine.url)
+        is_memory_sqlite = "sqlite" in url_str and ":memory:" in url_str
+
         async def _async_save():
-            async_session = db_manager.get_session_maker()()
+            if is_memory_sqlite:
+                temp_engine = None
+                async_session = db_manager.get_session_maker()()
+            else:
+                from sqlalchemy.ext.asyncio import (
+                    AsyncSession,
+                    async_sessionmaker,
+                    create_async_engine,
+                )
+                from sqlalchemy.pool import NullPool
+
+                temp_engine = create_async_engine(
+                    db_manager.engine.url, poolclass=NullPool
+                )
+                temp_session_maker = async_sessionmaker(
+                    bind=temp_engine, class_=AsyncSession, expire_on_commit=False
+                )
+                async_session = temp_session_maker()
             try:
                 stmt = select(TrialLockStatus).where(
                     TrialLockStatus.lock_type == lock_type,
@@ -100,6 +120,8 @@ class TrialLockManager:
                 raise e
             finally:
                 await async_session.close()
+                if temp_engine:
+                    await temp_engine.dispose()
 
         import asyncio
         import threading
@@ -133,8 +155,28 @@ class TrialLockManager:
         if not db_manager or not db_manager.engine:
             return
 
+        url_str = str(db_manager.engine.url)
+        is_memory_sqlite = "sqlite" in url_str and ":memory:" in url_str
+
         async def _async_load():
-            async_session = db_manager.get_session_maker()()
+            if is_memory_sqlite:
+                temp_engine = None
+                async_session = db_manager.get_session_maker()()
+            else:
+                from sqlalchemy.ext.asyncio import (
+                    AsyncSession,
+                    async_sessionmaker,
+                    create_async_engine,
+                )
+                from sqlalchemy.pool import NullPool
+
+                temp_engine = create_async_engine(
+                    db_manager.engine.url, poolclass=NullPool
+                )
+                temp_session_maker = async_sessionmaker(
+                    bind=temp_engine, class_=AsyncSession, expire_on_commit=False
+                )
+                async_session = temp_session_maker()
             try:
                 stmt = select(TrialLockStatus).where(TrialLockStatus.is_locked)
                 res = await async_session.execute(stmt)
@@ -144,6 +186,8 @@ class TrialLockManager:
                 return None
             finally:
                 await async_session.close()
+                if temp_engine:
+                    await temp_engine.dispose()
 
         import asyncio
         import threading
@@ -282,8 +326,28 @@ class TrialLockManager:
         if not db_manager or not db_manager.engine:
             return
 
+        url_str = str(db_manager.engine.url)
+        is_memory_sqlite = "sqlite" in url_str and ":memory:" in url_str
+
         async def _async_reset():
-            async_session = db_manager.get_session_maker()()
+            if is_memory_sqlite:
+                temp_engine = None
+                async_session = db_manager.get_session_maker()()
+            else:
+                from sqlalchemy.ext.asyncio import (
+                    AsyncSession,
+                    async_sessionmaker,
+                    create_async_engine,
+                )
+                from sqlalchemy.pool import NullPool
+
+                temp_engine = create_async_engine(
+                    db_manager.engine.url, poolclass=NullPool
+                )
+                temp_session_maker = async_sessionmaker(
+                    bind=temp_engine, class_=AsyncSession, expire_on_commit=False
+                )
+                async_session = temp_session_maker()
             try:
                 from sqlalchemy import delete
 
@@ -293,6 +357,8 @@ class TrialLockManager:
                 await async_session.rollback()
             finally:
                 await async_session.close()
+                if temp_engine:
+                    await temp_engine.dispose()
 
         import asyncio
         import threading
