@@ -53,6 +53,7 @@ async def setup_db():
 
 @pytest.mark.asyncio
 async def test_insert_generates_audit_log():
+    # @req:PRD-SYS-001
     current_user_id.set("user_123")
     current_change_reason.set("initial setup")
 
@@ -85,6 +86,7 @@ async def test_insert_generates_audit_log():
 
 @pytest.mark.asyncio
 async def test_update_generates_audit_log():
+    # @req:PRD-SYS-001
     # Insert initially
     @transactional(lambda: db_manager.get_session_maker()())
     async def create_record():
@@ -129,6 +131,7 @@ async def test_update_generates_audit_log():
 
 @pytest.mark.asyncio
 async def test_soft_delete_generates_audit_log():
+    # @req:PRD-SYS-002
     @transactional(lambda: db_manager.get_session_maker()())
     async def create_record():
         session = current_session.get()
@@ -162,6 +165,7 @@ async def test_soft_delete_generates_audit_log():
 
 @pytest.mark.asyncio
 async def test_hard_delete_is_prevented():
+    # @req:Trace-1
     @transactional(lambda: db_manager.get_session_maker()())
     async def create_record():
         session = current_session.get()

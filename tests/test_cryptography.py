@@ -2,6 +2,8 @@ from apps.execution.cryptography import AllocationKeyManager
 
 
 def test_key_splitting():
+    # @req:Trace-2
+    # @req:PRD-MDR-005
     manager = AllocationKeyManager()
     master_key = manager.generate_master_key()
     shares = manager.split_key(master_key, n=5, k=3)
@@ -17,6 +19,8 @@ def test_key_splitting():
 
 
 def test_encryption_decryption_with_rotation():
+    # @req:Trace-2
+    # @req:PRD-MDR-005
     manager = AllocationKeyManager()
     data = {"treatment": "Drug A"}
 

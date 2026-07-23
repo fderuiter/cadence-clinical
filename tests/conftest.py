@@ -236,3 +236,27 @@ class ConcurrencyRunner:
 def concurrency_runner():
     """Provides a reusable database concurrency runner to validate concurrent execution safety."""
     return ConcurrencyRunner()
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """
+    Hook to run after the test session finishes to generate/update the
+    Requirements Traceability Matrix (RTM) and GxP Qualification Report.
+    """
+    import subprocess
+    import sys
+    print("\n--- Running Automated Requirements Traceability Matrix (RTM) Generator ---")
+    try:
+        # Run the script using the same python interpreter
+        result = subprocess.run(
+            [sys.executable, "scripts/generate_rtm.py"],
+            capture_output=True,
+            text=True,
+            check=False
+        )
+        print(result.stdout)
+        if result.stderr:
+            print("Errors from RTM Generator:")
+            print(result.stderr)
+    except Exception as e:
+        print(f"Error executing RTM generator: {e}")

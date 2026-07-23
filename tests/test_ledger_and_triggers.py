@@ -48,6 +48,8 @@ async def setup_db():
 
 @pytest.mark.asyncio
 async def test_prevent_audit_log_mutation():
+    # @req:Trace-1
+    # @req:PRD-SYS-001
     # Insert an audit log record first
     async with db_manager.get_session_maker()() as session:
         async with session.begin():
@@ -141,6 +143,8 @@ async def test_prevent_audit_ledger_seals_mutation():
 
 @pytest.mark.asyncio
 async def test_prevent_hard_delete_on_audited_model():
+    # @req:Trace-1
+    # @req:PRD-SYS-002
     # Insert an audited record first
     async with db_manager.get_session_maker()() as session:
         async with session.begin():
@@ -200,6 +204,7 @@ async def test_out_of_band_update_triggers_audit_entry():
 
 @pytest.mark.asyncio
 async def test_ledger_sealing_and_validation():
+    # @req:PRD-SYS-003
     # Generate some unsealed audit logs
     async with db_manager.get_session_maker()() as session:
         async with session.begin():
