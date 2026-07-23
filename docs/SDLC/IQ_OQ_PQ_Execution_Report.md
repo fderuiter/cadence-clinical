@@ -1,6 +1,6 @@
 # GxP Installation & Operational Qualification (IQ/OQ/PQ) Execution Report
 
-*Execution Date:* 2026-07-23 22:01:47 UTC
+*Execution Date:* 2026-07-23 22:03:25 UTC
 *Regulatory Protocol:* FDA 21 CFR Part 11, EU Annex 11, GAMP 5 Category 4/5, IEC 62304 Class B
 
 ## 1. Executive Summary & Verification Declaration
@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 144
-- **Passed:** 144 🟢
+- **Total Automated Test Cases Run:** 146
+- **Passed:** 146 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -277,6 +277,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_audit_safe_context_cleans_up_on_error` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_background_translation_records_user_audit` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_study_published_event_triggers_translation` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_study_published_expired_timestamp_rejection` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_study_published_invalid_signature_rejection` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_translation_validation_failure` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_site_and_visit_locks` | `tests.test_trial_lock` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_trial_lock_freeze` | `tests.test_trial_lock` | *Regression/Helper* | 🟢 PASSED | 0.01s |
