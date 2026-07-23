@@ -69,10 +69,33 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
                 status_code=401, content={"detail": "Invalid gateway timestamp"}
             )
 
-        message = f"{user_id}:{roles}:{timestamp}"
-        expected_signature = hmac.new(
-            self.gateway_secret, message.encode(), hashlib.sha256
-        ).hexdigest()
+        version = request.headers.get("X-Signature-Version", "1")
+
+        if version in ("2", "v2"):
+            change_reason = request.headers.get("X-Change-Reason")
+            if not change_reason:
+                return JSONResponse(
+                    status_code=401,
+                    content={"detail": "Missing change justification reason"},
+                )
+
+            import json
+
+            payload = {
+                "change_reason": change_reason,
+                "roles": roles,
+                "timestamp": timestamp,
+                "user_id": user_id,
+            }
+            serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+            expected_signature = hmac.new(
+                self.gateway_secret, serialized.encode(), hashlib.sha256
+            ).hexdigest()
+        else:
+            message = f"{user_id}:{roles}:{timestamp}"
+            expected_signature = hmac.new(
+                self.gateway_secret, message.encode(), hashlib.sha256
+            ).hexdigest()
 
         if not hmac.compare_digest(expected_signature, signature):
             return JSONResponse(
@@ -81,5 +104,7 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
 
         request.state.user_id = user_id
         request.state.roles = roles
+        if version in ("2", "v2"):
+            request.state.change_reason = change_reason
 
         return await call_next(request)

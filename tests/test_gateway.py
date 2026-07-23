@@ -186,3 +186,88 @@ def test_proxy_requests_paths(monkeypatch: pytest.MonkeyPatch) -> None:
         assert (
             str(mock_send.call_args.args[0].url) == "http://localhost:8001/unknown/path"
         )
+
+
+def test_generate_signature_v2() -> None:
+    """
+    Test Version 2 signature generation.
+
+    Ensures that signature is key-sorted JSON canonical format,
+    and is different from Version 1 signature.
+    """
+
+    user_id = "user1"
+    roles = "admin"
+    timestamp = "123456"
+    change_reason = "Clinical reason for test"
+
+    sig_v1 = generate_signature(user_id, roles, timestamp, version="1")
+    sig_v2 = generate_signature(
+        user_id, roles, timestamp, version="2", change_reason=change_reason
+    )
+
+    assert sig_v1 != sig_v2
+
+    # Check key ordering stability
+    sig_v2_alt = generate_signature(
+        user_id, roles, timestamp, version="2", change_reason=change_reason
+    )
+    assert sig_v2 == sig_v2_alt
+
+
+def test_proxy_requests_change_reason_too_long(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Test that a change reason exceeding 255 characters is rejected with 400 Bad Request.
+    """
+    monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
+    token = jwt.encode(
+        {"sub": "user1", "roles": ["admin"]}, "test_secret", algorithm="HS256"
+    )
+
+    long_reason = "A" * 256
+    with TestClient(app) as client:
+        response = client.get(
+            "/api/v1/studies/study_1",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "X-Change-Reason": long_reason,
+            },
+        )
+        assert response.status_code == 400
+        assert "exceeds 255 characters" in response.json()["detail"]
+
+
+def test_proxy_requests_v2_headers(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Test that the proxy correctly attaches X-Signature-Version and other required V2 headers.
+    """
+    monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
+    token = jwt.encode(
+        {"sub": "user1", "roles": ["admin"]}, "test_secret", algorithm="HS256"
+    )
+
+    mock_send = AsyncMock()
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.content = b'{"status": "ok"}'
+    mock_resp.headers = {"content-type": "application/json"}
+    mock_send.return_value = mock_resp
+    monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
+
+    with TestClient(app) as client:
+        res = client.get(
+            "/designer/test",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "X-Change-Reason": "Valid reason",
+            },
+        )
+        assert res.status_code == 200
+
+        # Retrieve request headers sent downstream
+        sent_request = mock_send.call_args.args[0]
+        sent_headers = sent_request.headers
+
+        assert sent_headers.get("X-Signature-Version") == "2"
+        assert sent_headers.get("X-Change-Reason") == "Valid reason"
+        assert sent_headers.get("X-Gateway-Signature") is not None
