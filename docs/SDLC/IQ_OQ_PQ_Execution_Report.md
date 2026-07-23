@@ -1,6 +1,6 @@
 # GxP Installation & Operational Qualification (IQ/OQ/PQ) Execution Report
 
-*Execution Date:* 2026-07-23 22:23:27 UTC
+*Execution Date:* 2026-07-23 22:23:35 UTC
 *Regulatory Protocol:* FDA 21 CFR Part 11, EU Annex 11, GAMP 5 Category 4/5, IEC 62304 Class B
 
 ## 1. Executive Summary & Verification Declaration
@@ -20,8 +20,8 @@ Based on the executed automated verification suite, the platform meets all prede
 The Installation Qualification verifies that the software execution environment, external dependencies, package environments, and static quality checks are fully compliant.
 
 ### 2.1 System Environment Metadata
-- **Operating System / Platform:** linux
-- **Python Version:** 3.12.13 (main, May 18 2026, 19:23:51) [GCC 13.3.0]
+- **Operating System / Platform:** linux (containerized target specification)
+- **Python Version:** 3.12.13 (Docker execution environment baseline)
 - **Database Provider (Execution Engine):** PostgreSQL / SQLite in-memory fallback
 - **Graph Database Provider (Designer Engine):** Neo4j (mocked in unit suite)
 - **Identity Management Gateway:** Keycloak OIDC Router
@@ -47,7 +47,7 @@ bandit                  1.9.4
 beautifulsoup4          4.15.0
 boolean-py              5.0
 cachecontrol            0.14.4
-cadence-clinical        0.1.0       /app
+cadence-clinical         0.1.0       /app
 certifi                 2026.7.22
 cffi                    2.1.0
 cfgv                    3.5.0
@@ -145,149 +145,149 @@ The Operational Qualification verifies that individual clinical operations, stat
 ### 3.1 Traceability Mappings Verification
 | Test Case Name | Classname / Suite | Target Req | Status | Duration |
 | :--- | :--- | :--- | :--- | :--- |
-| `test_api_parameters_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_api_paths_and_methods_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_api_request_bodies_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_api_responses_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_markdown_spec_extract_and_parse` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_markdown_spec_syntax_checks_malformed_yaml` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_validation_fails_on_route_path_mismatch` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_audit_records_ip_and_custom_timestamp` | `tests.test_audit` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_hard_delete_is_prevented` | `tests.test_audit` | Trace-1 | 🟢 PASSED | 0.01s |
-| `test_insert_generates_audit_log` | `tests.test_audit` | PRD-SYS-001 | 🟢 PASSED | 0.01s |
-| `test_read_only_queries_do_not_generate_audit_logs` | `tests.test_audit` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_rollback_prevents_orphan_audit_logs` | `tests.test_audit` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_soft_delete_generates_audit_log` | `tests.test_audit` | PRD-SYS-002 | 🟢 PASSED | 0.01s |
-| `test_update_generates_audit_log` | `tests.test_audit` | PRD-SYS-001 | 🟢 PASSED | 0.01s |
-| `test_api_gateway_routing` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_cdisc_export_and_validation` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_demographics_encryption` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_outlier_detection_performance` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_relational_persistence_and_recalculation` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_unit_conversions` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_encryption_decryption_with_rotation` | `tests.test_cryptography` | Trace-2, PRD-MDR-005 | 🟢 PASSED | 0.01s |
-| `test_key_splitting` | `tests.test_cryptography` | Trace-2, PRD-MDR-005 | 🟢 PASSED | 0.01s |
-| `test_concurrent_library_version_increments` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_concurrent_study_saves_serialization` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_create_library_object_version_existing` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_create_library_object_version_new` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_create_study_root` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_get_study_differences` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_update_study_properties` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_study_differences_missing_version` | `tests.test_designer_differences` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_study_differences_registry_404` | `tests.test_designer_differences` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_study_differences_registry_error` | `tests.test_designer_differences` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_study_differences_registry_offline` | `tests.test_designer_differences` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_study_differences_registry_timeout` | `tests.test_designer_differences` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_study_differences_success` | `tests.test_designer_differences` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_automated_ingestion_and_version_indexing` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_completeness_checking_transitions` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_inspector_portal_read_only_access_limits` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_tmf_taxonomy_mapping` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_view_download_audit_logging` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_gateway_cors_headers` | `tests.test_gateway` | PRD-UNI-001 | 🟢 PASSED | 0.01s |
-| `test_gateway_rate_limiting` | `tests.test_gateway` | PRD-UNI-001 | 🟢 PASSED | 0.01s |
-| `test_generate_signature` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_generate_signature_v2` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_get_openapi_json` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_get_openapi_json_error` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_get_swagger_ui` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_proxy_requests_change_reason_too_long` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_proxy_requests_invalid_auth` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_proxy_requests_no_auth` | `tests.test_gateway` | PRD-UNI-001 | 🟢 PASSED | 0.01s |
-| `test_proxy_requests_paths` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_proxy_requests_v2_headers` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_proxy_requests_valid_auth` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_verify_token_invalid` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_bulk_offline_sync` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_epro_submission_and_conflict_resolution` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_fhir_prefill_bundle_pipeline` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_pseudonymization_and_pii_stripping` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_layout_validation_scrambled_sequence` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_layout_validation_valid` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_ledger_sealing_and_validation` | `tests.test_ledger_and_triggers` | PRD-SYS-003 | 🟢 PASSED | 0.01s |
-| `test_out_of_band_update_triggers_audit_entry` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_prevent_audit_ledger_seals_mutation` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_prevent_audit_log_mutation` | `tests.test_ledger_and_triggers` | PRD-SYS-001, Trace-1 | 🟢 PASSED | 0.01s |
-| `test_prevent_hard_delete_on_audited_model` | `tests.test_ledger_and_triggers` | PRD-SYS-002, Trace-1 | 🟢 PASSED | 0.01s |
-| `test_designer_gateway_auth_expired_timestamp` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_designer_gateway_auth_invalid_signature` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_designer_gateway_auth_invalid_timestamp` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_designer_gateway_auth_missing_headers` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_designer_health` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_execution_health` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_gateway_health` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_invalid_leading_number` | `tests.test_mapping_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_invalid_spacing` | `tests.test_mapping_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_multiple_colons` | `tests.test_mapping_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_valid_csv` | `tests.test_mapping_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_clean_token` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_is_potential_path_ref` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_process_markdown_file_e2e` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_resolve_path` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_validate_cli_command_flag_checks` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_validate_cli_command_python_and_pytest` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_validate_docker_compose_scenarios` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_validate_path` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_main_cli` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_run_migrations_failure` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_run_migrations_real_sqlite` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_run_migrations_success` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_build_comment_body` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_combined_audit_logic` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_get_status_emoji` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_merge_outcomes` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_parse_existing_outcomes` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_audit_context_variables_and_decorator` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_canonical_json_signing_and_verification` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_middleware_expired_timestamp` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_middleware_explicit_legacy_version_rejected` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_middleware_health_bypass` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_middleware_invalid_timestamp_format` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_middleware_missing_headers` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_middleware_missing_signature_version_rejected` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_middleware_unsupported_version_rejected` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_middleware_v2_invalid_signature` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_middleware_v2_mismatched_reason` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_middleware_v2_missing_reason` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_middleware_v2_safe_method_no_reason_success` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_middleware_v2_success` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_mutation_unsigned_and_non_compliant_rejections` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_terminology_cache_capacity_eviction` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_terminology_cache_hit_and_expiration` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_terminology_cache_thread_safety` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_terminology_cache_ttl_config` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_terminology_cache_unreachable_db_fallback` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_admin_cache_clear_forces_fresh_read` | `tests.test_transformers` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_legacy_endpoint_returns_original_schema` | `tests.test_transformers` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_terminology_cache_prevents_db_queries` | `tests.test_transformers` | PRD-MDR-001 | 🟢 PASSED | 0.01s |
-| `test_usdm_endpoint_returns_nested_schema_and_fast` | `tests.test_transformers` | PRD-MDR-003, PRD-MDR-004 | 🟢 PASSED | 0.01s |
-| `test_usdm_validation_error_on_invalid_data` | `tests.test_transformers` | PRD-MDR-001 | 🟢 PASSED | 0.01s |
-| `test_security_gate_unauthenticated_requests` | `tests.test_translation_recovery` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_translation_error_status_and_rollback` | `tests.test_translation_recovery` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_translation_status_and_listing_success` | `tests.test_translation_recovery` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_worker_context_and_session_cleanup` | `tests.test_translation_recovery` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_audit_safe_context_binds_and_cleans_up` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_audit_safe_context_cleans_up_on_error` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_background_translation_records_user_audit` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_study_published_event_triggers_translation` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_study_published_expired_timestamp_rejection` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_study_published_invalid_signature_rejection` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_translation_validation_failure` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_site_and_visit_locks` | `tests.test_trial_lock` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_trial_lock_freeze` | `tests.test_trial_lock` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_check_architectural_changes_require_adr_missing_adr` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_check_architectural_changes_require_adr_no_changes` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_check_architectural_changes_require_adr_with_deleted_adr` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_check_architectural_changes_require_adr_with_valid_adr` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_get_changed_files_from_git_fallbacks` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_get_changed_files_from_txt` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_is_architectural_file` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_validate_existing_adrs_valid_case` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | 0.01s |
-| `test_generate_alignment_report` | `tests.test_validator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_api_parameters_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_paths_and_methods_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_request_bodies_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_responses_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_markdown_spec_extract_and_parse` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_markdown_spec_syntax_checks_malformed_yaml` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_validation_fails_on_route_path_mismatch` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_audit_records_ip_and_custom_timestamp` | `tests.test_audit` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_hard_delete_is_prevented` | `tests.test_audit` | Trace-1 | 🟢 PASSED | < 1s |
+| `test_insert_generates_audit_log` | `tests.test_audit` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_read_only_queries_do_not_generate_audit_logs` | `tests.test_audit` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_rollback_prevents_orphan_audit_logs` | `tests.test_audit` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_soft_delete_generates_audit_log` | `tests.test_audit` | PRD-SYS-002 | 🟢 PASSED | < 1s |
+| `test_update_generates_audit_log` | `tests.test_audit` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_api_gateway_routing` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cdisc_export_and_validation` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_demographics_encryption` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_outlier_detection_performance` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_relational_persistence_and_recalculation` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_unit_conversions` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_encryption_decryption_with_rotation` | `tests.test_cryptography` | Trace-2, PRD-MDR-005 | 🟢 PASSED | < 1s |
+| `test_key_splitting` | `tests.test_cryptography` | Trace-2, PRD-MDR-005 | 🟢 PASSED | < 1s |
+| `test_concurrent_library_version_increments` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_concurrent_study_saves_serialization` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_create_library_object_version_existing` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_create_library_object_version_new` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_create_study_root` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_get_study_differences` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_update_study_properties` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_study_differences_missing_version` | `tests.test_designer_differences` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_study_differences_registry_404` | `tests.test_designer_differences` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_study_differences_registry_error` | `tests.test_designer_differences` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_study_differences_registry_offline` | `tests.test_designer_differences` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_study_differences_registry_timeout` | `tests.test_designer_differences` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_study_differences_success` | `tests.test_designer_differences` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_automated_ingestion_and_version_indexing` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_completeness_checking_transitions` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_inspector_portal_read_only_access_limits` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_tmf_taxonomy_mapping` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_view_download_audit_logging` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gateway_cors_headers` | `tests.test_gateway` | PRD-UNI-001 | 🟢 PASSED | < 1s |
+| `test_gateway_rate_limiting` | `tests.test_gateway` | PRD-UNI-001 | 🟢 PASSED | < 1s |
+| `test_generate_signature` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_generate_signature_v2` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_get_openapi_json` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_get_openapi_json_error` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_get_swagger_ui` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_proxy_requests_change_reason_too_long` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_proxy_requests_invalid_auth` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_proxy_requests_no_auth` | `tests.test_gateway` | PRD-UNI-001 | 🟢 PASSED | < 1s |
+| `test_proxy_requests_paths` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_proxy_requests_v2_headers` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_proxy_requests_valid_auth` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_verify_token_invalid` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_bulk_offline_sync` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_epro_submission_and_conflict_resolution` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_fhir_prefill_bundle_pipeline` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_pseudonymization_and_pii_stripping` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_scrambled_sequence` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_valid` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_ledger_sealing_and_validation` | `tests.test_ledger_and_triggers` | PRD-SYS-003 | 🟢 PASSED | < 1s |
+| `test_out_of_band_update_triggers_audit_entry` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_prevent_audit_ledger_seals_mutation` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_prevent_audit_log_mutation` | `tests.test_ledger_and_triggers` | PRD-SYS-001, Trace-1 | 🟢 PASSED | < 1s |
+| `test_prevent_hard_delete_on_audited_model` | `tests.test_ledger_and_triggers` | PRD-SYS-002, Trace-1 | 🟢 PASSED | < 1s |
+| `test_designer_gateway_auth_expired_timestamp` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_designer_gateway_auth_invalid_signature` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_designer_gateway_auth_invalid_timestamp` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_designer_gateway_auth_missing_headers` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_designer_health` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_execution_health` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gateway_health` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_invalid_leading_number` | `tests.test_mapping_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_invalid_spacing` | `tests.test_mapping_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_multiple_colons` | `tests.test_mapping_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_valid_csv` | `tests.test_mapping_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_clean_token` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_is_potential_path_ref` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_process_markdown_file_e2e` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_resolve_path` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_validate_cli_command_flag_checks` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_validate_cli_command_python_and_pytest` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_validate_docker_compose_scenarios` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_validate_path` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_main_cli` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_run_migrations_failure` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_run_migrations_real_sqlite` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_run_migrations_success` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_build_comment_body` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_combined_audit_logic` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_get_status_emoji` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_merge_outcomes` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_parse_existing_outcomes` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_audit_context_variables_and_decorator` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_canonical_json_signing_and_verification` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_middleware_expired_timestamp` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_middleware_explicit_legacy_version_rejected` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_middleware_health_bypass` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_middleware_invalid_timestamp_format` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_middleware_missing_headers` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_middleware_missing_signature_version_rejected` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_middleware_unsupported_version_rejected` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_middleware_v2_invalid_signature` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_middleware_v2_mismatched_reason` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_middleware_v2_missing_reason` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_middleware_v2_safe_method_no_reason_success` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_middleware_v2_success` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_mutation_unsigned_and_non_compliant_rejections` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_terminology_cache_capacity_eviction` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_terminology_cache_hit_and_expiration` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_terminology_cache_thread_safety` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_terminology_cache_ttl_config` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_terminology_cache_unreachable_db_fallback` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_admin_cache_clear_forces_fresh_read` | `tests.test_transformers` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_legacy_endpoint_returns_original_schema` | `tests.test_transformers` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_terminology_cache_prevents_db_queries` | `tests.test_transformers` | PRD-MDR-001 | 🟢 PASSED | < 1s |
+| `test_usdm_endpoint_returns_nested_schema_and_fast` | `tests.test_transformers` | PRD-MDR-003, PRD-MDR-004 | 🟢 PASSED | < 1s |
+| `test_usdm_validation_error_on_invalid_data` | `tests.test_transformers` | PRD-MDR-001 | 🟢 PASSED | < 1s |
+| `test_security_gate_unauthenticated_requests` | `tests.test_translation_recovery` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_translation_error_status_and_rollback` | `tests.test_translation_recovery` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_translation_status_and_listing_success` | `tests.test_translation_recovery` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_worker_context_and_session_cleanup` | `tests.test_translation_recovery` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_audit_safe_context_binds_and_cleans_up` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_audit_safe_context_cleans_up_on_error` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_background_translation_records_user_audit` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_study_published_event_triggers_translation` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_study_published_expired_timestamp_rejection` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_study_published_invalid_signature_rejection` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_translation_validation_failure` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_site_and_visit_locks` | `tests.test_trial_lock` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_trial_lock_freeze` | `tests.test_trial_lock` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_check_architectural_changes_require_adr_missing_adr` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_check_architectural_changes_require_adr_no_changes` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_check_architectural_changes_require_adr_with_deleted_adr` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_check_architectural_changes_require_adr_with_valid_adr` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_get_changed_files_from_git_fallbacks` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_get_changed_files_from_txt` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_is_architectural_file` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_validate_existing_adrs_valid_case` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_generate_alignment_report` | `tests.test_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 
 ## 4. Performance Qualification (PQ) & Scenario Validation
 
