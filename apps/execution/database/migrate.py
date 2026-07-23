@@ -35,8 +35,8 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
                         OLD.action IS DISTINCT FROM NEW.action OR
                         OLD.user_id IS DISTINCT FROM NEW.user_id OR
                         OLD.timestamp IS DISTINCT FROM NEW.timestamp OR
-                        OLD.old_values IS DISTINCT FROM NEW.old_values OR
-                        OLD.new_values IS DISTINCT FROM NEW.new_values OR
+                        OLD.old_values::jsonb IS DISTINCT FROM NEW.old_values::jsonb OR
+                        OLD.new_values::jsonb IS DISTINCT FROM NEW.new_values::jsonb OR
                         OLD.version_index IS DISTINCT FROM NEW.version_index OR
                         OLD.change_reason IS DISTINCT FROM NEW.change_reason) THEN
                         RAISE EXCEPTION 'GxP Compliance Violation: Modification or deletion of audit logs is strictly prohibited.';
