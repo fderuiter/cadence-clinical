@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, Integer, String, func
+from sqlalchemy import JSON, Boolean, DateTime, Float, Index, Integer, String, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -174,3 +174,49 @@ class ClinicalObservation(AuditedModel):
     normalized_value: Mapped[float] = mapped_column(Float, nullable=True)
     normalized_unit: Mapped[str] = mapped_column(String(50), nullable=True)
     is_outlier: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class ClinicalQuery(AuditedModel):
+    """Represents a clinical query state record for GxP data discrepancy tracking.
+
+    Inherits from AuditedModel to maintain an immutable audit log of status changes and history,
+    and prevent hard deletions through automatic trigger-based protection.
+
+    Attributes:
+        study_id (str): The unique identifier of the study.
+        subject_id (str): The unique identifier of the subject (target coordinate).
+        visit_id (str): Reference to the clinical visit ID if applicable (target coordinate).
+        domain (str): The CDISC domain code if applicable (target coordinate).
+        test_code (str): The standard CDASH/SDTM test code (target coordinate).
+        status (str): The query status (e.g., 'NONE', 'OPEN', 'ANSWERED', 'CLOSED', 'REOPENED').
+        explanation (str): The user-inputted explanation/justification when opening the query.
+        response (str): The investigator-submitted response when answering the query.
+        created_at (datetime): Timestamp of query creation.
+        updated_at (datetime): Timestamp of last query modification.
+    """
+
+    __tablename__ = "clinical_queries"
+    __table_args__ = (
+        Index(
+            "idx_query_target",
+            "study_id",
+            "subject_id",
+            "visit_id",
+            "domain",
+            "test_code",
+        ),
+    )
+
+    study_id: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
+    subject_id: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
+    visit_id: Mapped[str] = mapped_column(String(255), index=True, nullable=True)
+    domain: Mapped[str] = mapped_column(String(50), index=True, nullable=True)
+    test_code: Mapped[str] = mapped_column(String(100), index=True, nullable=False)
+
+    status: Mapped[str] = mapped_column(String(50), default="NONE", nullable=False)
+    explanation: Mapped[str] = mapped_column(String(255), nullable=True)
+    response: Mapped[str] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), onupdate=func.now()
+    )

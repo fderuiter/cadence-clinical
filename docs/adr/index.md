@@ -37,3 +37,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-23: Core Service-Oriented Clinical Engine](2026-07-23-core-service-oriented-clinical-engine.md)
 - [2026-07-24: FHIR / eSource & eCOA Sync Gateway](2026-07-24-fhir-esource-ecoa-sync-gateway.md)
 - [2026-07-23: Database-Backed Transactional Trial Lock](2026-07-23-db-backed-trial-lock.md)
+- [2026-07-23: Declarative Ruleset and Automerge Integration](2026-07-23-declarative-ruleset-automerge.md)
