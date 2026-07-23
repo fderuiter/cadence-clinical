@@ -89,6 +89,13 @@ jobs:
         if: always()
         run: uv run pip-audit --ignore-vuln PYSEC-2026-1325
 
+      - name: Run secret detection
+        id: run_secrets
+        if: always()
+        run: |
+          git add .secrets.baseline
+          uv run pre-commit run detect-secrets --all-files
+
       - name: Install Playwright Browsers
         if: always()
         run: uv run playwright install --with-deps chromium
@@ -111,6 +118,7 @@ jobs:
           ADR_OUTCOME: ${{ steps.run_adr.outcome }}
           AUDIT_OUTCOME: ${{ steps.run_audit.outcome }}
           STATIC_OUTCOME: ${{ steps.run_static.outcome }}
+          SECRETS_OUTCOME: ${{ steps.run_secrets.outcome }}
           JOB_STATUS: ${{ job.status }}
         run: python3 scripts/post_pr_comment.py
   classify:

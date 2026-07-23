@@ -11,6 +11,7 @@ ROW_KEYS: dict[str, str] = {
     "Frontend Checks": "frontend",
     "ADR Validation": "adr",
     "Dependency & Static Audit": "audit",
+    "Dependency, Static Audit & Secrets Scan": "audit",
     "Git Merge Conflicts": "conflict",
 }
 
@@ -146,7 +147,7 @@ def build_comment_body(outcomes: dict[str, str], has_failures: bool) -> str:
 | **Backend Tests & Coverage** (pytest) | {emoji_test} |
 | **Frontend Checks** (pnpm check) | {emoji_frontend} |
 | **ADR Validation** (validate_adrs.py) | {emoji_adr} |
-| **Dependency & Static Audit** (pip-audit/bandit) | {emoji_audit} |
+| **Dependency, Static Audit & Secrets Scan** (pip-audit/bandit/detect-secrets) | {emoji_audit} |
 | **Git Merge Conflicts** | {emoji_conflict} |
 
 ---
@@ -220,14 +221,17 @@ def main() -> None:
 
     audit_outcome = os.environ.get("AUDIT_OUTCOME", "").lower()
     static_outcome = os.environ.get("STATIC_OUTCOME", "").lower()
+    secrets_outcome = os.environ.get("SECRETS_OUTCOME", "").lower()
     combined_audit = ""
-    if "failure" in (audit_outcome, static_outcome):
+    if "failure" in (audit_outcome, static_outcome, secrets_outcome):
         combined_audit = "failure"
-    elif audit_outcome == "success" and static_outcome == "success":
+    elif audit_outcome == "success" and static_outcome == "success" and secrets_outcome == "success":
         combined_audit = "success"
     else:
         # Fallback to whichever non-empty outcome is present
-        combined_audit = audit_outcome or static_outcome
+        combined_audit = next(
+            (val for val in (audit_outcome, static_outcome, secrets_outcome) if val), ""
+        )
 
     raw_new_outcomes: dict[str, str] = {
         "lint": os.environ.get("LINTING_OUTCOME", ""),
