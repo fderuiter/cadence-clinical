@@ -41,7 +41,7 @@ jobs:
 
       - name: Post PR Quality Checklist Comment on Conflict
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PAT_FDERUITER}}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           CONFLICT_OUTCOME: ${{ steps.check_status.outputs.status == 'CONFLICTING' && 'failure' || 'success' }}
         run: python3 scripts/post_pr_comment.py
