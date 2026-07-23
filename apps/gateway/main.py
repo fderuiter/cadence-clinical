@@ -3,13 +3,15 @@ import hashlib
 import hmac
 import os
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Awaitable, Callable, Dict, Optional
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import JSONResponse
 from jose import JWTError, jwt
+from starlette.middleware.base import BaseHTTPMiddleware
 
 app = FastAPI(
     title="Cadence Clinical - API Gateway",
@@ -18,6 +20,86 @@ app = FastAPI(
     docs_url=None,
     redoc_url=None,
 )
+
+# CORS configuration
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=True if "*" not in allowed_origins else False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+class RateLimiter:
+    """
+    An in-memory sliding window rate limiter.
+    """
+    def __init__(self, window_seconds: float = 60.0, max_requests: int = 100) -> None:
+        self.window_seconds = window_seconds
+        self.max_requests = max_requests
+        self.requests: Dict[str, list[float]] = {}
+
+    def is_rate_limited(self, key: str) -> bool:
+        """
+        Check if a request key exceeds the permitted rate.
+
+        Args:
+            key (str): A unique string identifying the requester (e.g. IP address or user ID).
+
+        Returns:
+            bool: True if rate limit is exceeded, False otherwise.
+        """
+        now = time.time()
+        if key not in self.requests:
+            self.requests[key] = []
+        # Prune older than window
+        self.requests[key] = [t for t in self.requests[key] if now - t < self.window_seconds]
+        if len(self.requests[key]) >= self.max_requests:
+            return True
+        self.requests[key].append(now)
+        return False
+
+
+RATE_LIMIT_WINDOW = float(os.getenv("RATE_LIMIT_WINDOW", "60.0"))
+RATE_LIMIT_MAX_REQUESTS = int(os.getenv("RATE_LIMIT_MAX_REQUESTS", "100"))
+rate_limiter = RateLimiter(window_seconds=RATE_LIMIT_WINDOW, max_requests=RATE_LIMIT_MAX_REQUESTS)
+
+
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    """
+    Middleware to enforce rate limiting on incoming API Gateway requests.
+    """
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
+        # Exclude health check from rate limiting if appropriate
+        if request.url.path == "/health" or request.url.path == "":
+            return await call_next(request)
+
+        # Build key using client IP or authenticated sub claim if bearer token is present
+        key = request.client.host if request.client else "unknown"
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            try:
+                token = auth_header.split(" ")[1]
+                claims = jwt.get_unverified_claims(token)
+                user_id = claims.get("sub")
+                if user_id:
+                    key = f"user:{user_id}"
+            except Exception:
+                pass
+
+        if rate_limiter.is_rate_limited(key):
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Too Many Requests. Rate limit exceeded."},
+            )
+        return await call_next(request)
+
+
+app.add_middleware(RateLimitMiddleware)
 
 JWKS_URL = os.getenv(
     "JWKS_URL", "http://keycloak:8080/realms/cadence/protocol/openid-connect/certs"

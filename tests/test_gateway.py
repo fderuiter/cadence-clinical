@@ -271,3 +271,67 @@ def test_proxy_requests_v2_headers(monkeypatch: pytest.MonkeyPatch) -> None:
         assert sent_headers.get("X-Signature-Version") == "2"
         assert sent_headers.get("X-Change-Reason") == "Valid reason"
         assert sent_headers.get("X-Gateway-Signature") is not None
+
+
+def test_gateway_cors_headers() -> None:
+    """
+    Test that the API gateway correctly handles CORS requests.
+
+    Ensures that preflight OPTIONS requests return standard CORS response headers
+    such as Access-Control-Allow-Origin, Access-Control-Allow-Methods, and
+    Access-Control-Allow-Headers.
+    """
+    with TestClient(app) as client:
+        response = client.options(
+            "/openapi.json",
+            headers={
+                "Origin": "http://localhost:3000",
+                "Access-Control-Request-Method": "GET",
+                "Access-Control-Request-Headers": "Authorization",
+            },
+        )
+        assert response.status_code == 200
+        assert response.headers.get("access-control-allow-origin") == "*"
+        assert "GET" in response.headers.get("access-control-allow-methods", "")
+
+
+def test_gateway_rate_limiting(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Test that the API gateway correctly enforces rate limits on public endpoints.
+
+    Mocks a tight rate limit threshold and sends consecutive requests to verify
+    that the rate limiter successfully returns a 429 Too Many Requests status
+    once the limit has been exceeded.
+    """
+    from apps.gateway.main import rate_limiter
+
+    # Store old rate limiter configuration
+    old_max = rate_limiter.max_requests
+    old_window = rate_limiter.window_seconds
+
+    # Set tight limits for testing
+    rate_limiter.max_requests = 2
+    rate_limiter.window_seconds = 5.0
+    rate_limiter.requests.clear()
+
+    try:
+        with TestClient(app) as client:
+            # First request - should be allowed (returns 200 for openapi.json)
+            # Use mock to prevent actual HTTP calls or use path that doesn't trigger remote fetches
+            response1 = client.get("/docs")
+            assert response1.status_code == 200
+
+            # Second request - should be allowed
+            response2 = client.get("/docs")
+            assert response2.status_code == 200
+
+            # Third request - exceeds rate limit, should be blocked with 429
+            response3 = client.get("/docs")
+            assert response3.status_code == 429
+            assert "Rate limit exceeded" in response3.json()["detail"]
+
+    finally:
+        # Restore rate limiter configuration and clean up
+        rate_limiter.max_requests = old_max
+        rate_limiter.window_seconds = old_window
+        rate_limiter.requests.clear()
