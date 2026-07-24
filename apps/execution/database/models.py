@@ -1,8 +1,19 @@
+import enum
 import uuid
 from datetime import datetime
 
 from sqlalchemy import JSON, Boolean, DateTime, Float, Index, Integer, String, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+
+class QueryStatus(str, enum.Enum):
+    NONE = "NONE"
+    CANDIDATE = "CANDIDATE"
+    OPEN = "OPEN"
+    ANSWERED = "ANSWERED"
+    CLOSED = "CLOSED"
+    REOPENED = "REOPENED"
+    CANCELLED = "CANCELLED"
 
 
 class Base(DeclarativeBase):
@@ -213,6 +224,19 @@ class ClinicalQuery(AuditedModel):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), onupdate=func.now()
     )
+
+    observation_id: Mapped[str] = mapped_column(String(255), index=True, nullable=True)
+    field_link: Mapped[str] = mapped_column(String(255), index=True, nullable=True)
+    message: Mapped[str] = mapped_column(String(1000), nullable=True)
+    origin: Mapped[str] = mapped_column(String(50), nullable=True)
+    priority: Mapped[str] = mapped_column(String(50), nullable=True)
+    rule_id: Mapped[str] = mapped_column(String(255), nullable=True)
+    created_by: Mapped[str] = mapped_column(String(255), nullable=True)
+    responder: Mapped[str] = mapped_column(String(255), nullable=True)
+    resolver: Mapped[str] = mapped_column(String(255), nullable=True)
+    resolved_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    cancellation_reason: Mapped[str] = mapped_column(String(1000), nullable=True)
+    escalated_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
 
 class SDVSignOff(AuditedModel):

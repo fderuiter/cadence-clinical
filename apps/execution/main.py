@@ -799,6 +799,19 @@ class ClinicalQueryResponse(BaseModel):
     updated_at: datetime
     history: List[QueryHistoryItem] = []
 
+    observation_id: Optional[str] = None
+    field_link: Optional[str] = None
+    message: Optional[str] = None
+    origin: Optional[str] = None
+    priority: Optional[str] = None
+    rule_id: Optional[str] = None
+    created_by: Optional[str] = None
+    responder: Optional[str] = None
+    resolver: Optional[str] = None
+    resolved_at: Optional[datetime] = None
+    cancellation_reason: Optional[str] = None
+    escalated_at: Optional[datetime] = None
+
 
 class QueryCreate(BaseModel):
     """Pydantic schema for raising a new query."""
@@ -810,11 +823,20 @@ class QueryCreate(BaseModel):
     test_code: str
     explanation: str
 
+    observation_id: Optional[str] = None
+    field_link: Optional[str] = None
+    message: Optional[str] = None
+    origin: Optional[str] = None
+    priority: Optional[str] = None
+    rule_id: Optional[str] = None
+    created_by: Optional[str] = None
+
 
 class QueryRespond(BaseModel):
     """Pydantic schema for responding to an open query."""
 
     response: str
+    responder: Optional[str] = None
 
 
 class QueryUpdate(BaseModel):
@@ -823,6 +845,19 @@ class QueryUpdate(BaseModel):
     status: str
     explanation: Optional[str] = None
     response: Optional[str] = None
+
+    observation_id: Optional[str] = None
+    field_link: Optional[str] = None
+    message: Optional[str] = None
+    origin: Optional[str] = None
+    priority: Optional[str] = None
+    rule_id: Optional[str] = None
+    created_by: Optional[str] = None
+    responder: Optional[str] = None
+    resolver: Optional[str] = None
+    resolved_at: Optional[datetime] = None
+    cancellation_reason: Optional[str] = None
+    escalated_at: Optional[datetime] = None
 
 
 def _is_data_manager(roles_str: str) -> bool:
@@ -995,6 +1030,18 @@ async def list_queries(
                     created_at=q.created_at,
                     updated_at=q.updated_at,
                     history=history,
+                    observation_id=q.observation_id,
+                    field_link=q.field_link,
+                    message=q.message,
+                    origin=q.origin,
+                    priority=q.priority,
+                    rule_id=q.rule_id,
+                    created_by=q.created_by,
+                    responder=q.responder,
+                    resolver=q.resolver,
+                    resolved_at=q.resolved_at,
+                    cancellation_reason=q.cancellation_reason,
+                    escalated_at=q.escalated_at,
                 )
             )
         return responses
@@ -1033,6 +1080,18 @@ async def get_query(query_id: str) -> ClinicalQueryResponse:
             created_at=q.created_at,
             updated_at=q.updated_at,
             history=history,
+            observation_id=q.observation_id,
+            field_link=q.field_link,
+            message=q.message,
+            origin=q.origin,
+            priority=q.priority,
+            rule_id=q.rule_id,
+            created_by=q.created_by,
+            responder=q.responder,
+            resolver=q.resolver,
+            resolved_at=q.resolved_at,
+            cancellation_reason=q.cancellation_reason,
+            escalated_at=q.escalated_at,
         )
 
 
@@ -1080,6 +1139,13 @@ async def open_query(request: Request, payload: QueryCreate) -> ClinicalQueryRes
             test_code=payload.test_code,
             status="OPEN",
             explanation=payload.explanation,
+            observation_id=payload.observation_id,
+            field_link=payload.field_link,
+            message=payload.message or payload.explanation,
+            origin=payload.origin or "manual",
+            priority=payload.priority,
+            rule_id=payload.rule_id,
+            created_by=payload.created_by or current_user_id.get(),
         )
         session.add(q)
         await session.commit()
@@ -1103,6 +1169,18 @@ async def open_query(request: Request, payload: QueryCreate) -> ClinicalQueryRes
             created_at=q_db.created_at,
             updated_at=q_db.updated_at,
             history=history,
+            observation_id=q_db.observation_id,
+            field_link=q_db.field_link,
+            message=q_db.message,
+            origin=q_db.origin,
+            priority=q_db.priority,
+            rule_id=q_db.rule_id,
+            created_by=q_db.created_by,
+            responder=q_db.responder,
+            resolver=q_db.resolver,
+            resolved_at=q_db.resolved_at,
+            cancellation_reason=q_db.cancellation_reason,
+            escalated_at=q_db.escalated_at,
         )
 
 
@@ -1142,6 +1220,7 @@ async def respond_query(
 
         q.status = "ANSWERED"
         q.response = payload.response
+        q.responder = payload.responder or current_user_id.get()
         await session.commit()
 
         # Refresh
@@ -1163,6 +1242,18 @@ async def respond_query(
             created_at=q_db.created_at,
             updated_at=q_db.updated_at,
             history=history,
+            observation_id=q_db.observation_id,
+            field_link=q_db.field_link,
+            message=q_db.message,
+            origin=q_db.origin,
+            priority=q_db.priority,
+            rule_id=q_db.rule_id,
+            created_by=q_db.created_by,
+            responder=q_db.responder,
+            resolver=q_db.resolver,
+            resolved_at=q_db.resolved_at,
+            cancellation_reason=q_db.cancellation_reason,
+            escalated_at=q_db.escalated_at,
         )
 
 
@@ -1198,6 +1289,8 @@ async def close_query(query_id: str, request: Request) -> ClinicalQueryResponse:
             raise HTTPException(status_code=400, detail=str(e))
 
         q.status = "CLOSED"
+        q.resolver = current_user_id.get()
+        q.resolved_at = datetime.now()
         await session.commit()
 
         # Refresh
@@ -1219,6 +1312,18 @@ async def close_query(query_id: str, request: Request) -> ClinicalQueryResponse:
             created_at=q_db.created_at,
             updated_at=q_db.updated_at,
             history=history,
+            observation_id=q_db.observation_id,
+            field_link=q_db.field_link,
+            message=q_db.message,
+            origin=q_db.origin,
+            priority=q_db.priority,
+            rule_id=q_db.rule_id,
+            created_by=q_db.created_by,
+            responder=q_db.responder,
+            resolver=q_db.resolver,
+            resolved_at=q_db.resolved_at,
+            cancellation_reason=q_db.cancellation_reason,
+            escalated_at=q_db.escalated_at,
         )
 
 
@@ -1254,6 +1359,8 @@ async def reopen_query(query_id: str, request: Request) -> ClinicalQueryResponse
             raise HTTPException(status_code=400, detail=str(e))
 
         q.status = "REOPENED"
+        q.resolver = None
+        q.resolved_at = None
         await session.commit()
 
         # Refresh
@@ -1275,6 +1382,18 @@ async def reopen_query(query_id: str, request: Request) -> ClinicalQueryResponse
             created_at=q_db.created_at,
             updated_at=q_db.updated_at,
             history=history,
+            observation_id=q_db.observation_id,
+            field_link=q_db.field_link,
+            message=q_db.message,
+            origin=q_db.origin,
+            priority=q_db.priority,
+            rule_id=q_db.rule_id,
+            created_by=q_db.created_by,
+            responder=q_db.responder,
+            resolver=q_db.resolver,
+            resolved_at=q_db.resolved_at,
+            cancellation_reason=q_db.cancellation_reason,
+            escalated_at=q_db.escalated_at,
         )
 
 
@@ -1323,6 +1442,39 @@ async def update_query_state(
             q.explanation = payload.explanation
         if payload.response is not None:
             q.response = payload.response
+        if payload.observation_id is not None:
+            q.observation_id = payload.observation_id
+        if payload.field_link is not None:
+            q.field_link = payload.field_link
+        if payload.message is not None:
+            q.message = payload.message
+        if payload.origin is not None:
+            q.origin = payload.origin
+        if payload.priority is not None:
+            q.priority = payload.priority
+        if payload.rule_id is not None:
+            q.rule_id = payload.rule_id
+        if payload.created_by is not None:
+            q.created_by = payload.created_by
+        if payload.responder is not None:
+            q.responder = payload.responder
+        if payload.resolver is not None:
+            q.resolver = payload.resolver
+        if payload.resolved_at is not None:
+            q.resolved_at = payload.resolved_at
+        if payload.cancellation_reason is not None:
+            q.cancellation_reason = payload.cancellation_reason
+        if payload.escalated_at is not None:
+            q.escalated_at = payload.escalated_at
+
+        if target_status == "CLOSED":
+            q.resolver = current_user_id.get()
+            q.resolved_at = datetime.now()
+        elif target_status == "REOPENED":
+            q.resolver = None
+            q.resolved_at = None
+        elif target_status == "ANSWERED":
+            q.responder = current_user_id.get()
 
         await session.commit()
 
@@ -1345,4 +1497,16 @@ async def update_query_state(
             created_at=q_db.created_at,
             updated_at=q_db.updated_at,
             history=history,
+            observation_id=q_db.observation_id,
+            field_link=q_db.field_link,
+            message=q_db.message,
+            origin=q_db.origin,
+            priority=q_db.priority,
+            rule_id=q_db.rule_id,
+            created_by=q_db.created_by,
+            responder=q_db.responder,
+            resolver=q_db.resolver,
+            resolved_at=q_db.resolved_at,
+            cancellation_reason=q_db.cancellation_reason,
+            escalated_at=q_db.escalated_at,
         )

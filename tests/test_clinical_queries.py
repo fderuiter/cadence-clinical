@@ -395,3 +395,79 @@ async def test_database_events_prevent_deletions() -> None:
             await session.commit()
 
         assert "Hard deletion of ClinicalQuery is forbidden" in str(excinfo.value)
+
+
+@pytest.mark.asyncio
+async def test_clinical_query_creation_with_all_audited_fields() -> None:
+    """Test creating a clinical query with all new audited persistence fields."""
+    headers = get_v2_auth_headers(
+        user_id="dm_user_001",
+        roles="Data Manager",
+        change_reason="Raise query with extended metadata",
+    )
+    payload = {
+        "study_id": "STUDY-ABC",
+        "subject_id": "SUBJ-101",
+        "visit_id": "VISIT-01",
+        "domain": "VS",
+        "test_code": "SYSBP",
+        "explanation": "Too high",
+        "observation_id": "obs-123",
+        "field_link": "ecrf_link_321",
+        "message": "Message body here",
+        "origin": "SYSTEM",
+        "priority": "HIGH",
+        "rule_id": "rule_01_sysbp_max",
+        "created_by": "dm_user_001",
+    }
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        response = await client.post(
+            "/api/v1/execution/queries", json=payload, headers=headers
+        )
+
+    assert response.status_code == 201
+    data = response.json()
+    assert data["observation_id"] == "obs-123"
+    assert data["field_link"] == "ecrf_link_321"
+    assert data["message"] == "Message body here"
+    assert data["origin"] == "SYSTEM"
+    assert data["priority"] == "HIGH"
+    assert data["rule_id"] == "rule_01_sysbp_max"
+    assert data["created_by"] == "dm_user_001"
+
+
+@pytest.mark.asyncio
+async def test_clinical_query_trial_lock_enforcement_at_visit_level() -> None:
+    """Test that clinical query updates are blocked when the visit is locked."""
+    from apps.execution.trial_lock import TrialLockManager
+
+    # Lock the visit
+    TrialLockManager.lock_visit("VISIT-LOCKED")
+
+    dm_headers = get_v2_auth_headers(
+        roles="Data Manager", change_reason="DM raises query on locked visit"
+    )
+    payload = {
+        "study_id": "STUDY-ABC",
+        "subject_id": "SUBJ-101",
+        "visit_id": "VISIT-LOCKED",
+        "domain": "VS",
+        "test_code": "SYSBP",
+        "explanation": "Locked visit test",
+    }
+
+    try:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            with pytest.raises(PermissionError) as excinfo:
+                await client.post(
+                    "/api/v1/execution/queries", json=payload, headers=dm_headers
+                )
+            assert "locked in a read-only state" in str(excinfo.value)
+    finally:
+        # Cleanup lock state
+        TrialLockManager.unlock_visit("VISIT-LOCKED")
