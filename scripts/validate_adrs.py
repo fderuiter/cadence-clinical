@@ -108,7 +108,11 @@ def get_changed_files() -> set[str]:
             pass
 
     # Union all git diff methods to ensure we capture the complete history of changes in multi-commit PRs
-    for diff_arg in (["git", "diff", "--name-only", "HEAD^"], ["git", "diff", "--name-only", "origin/main"], ["git", "diff", "--name-only", "HEAD~1"]):
+    for diff_arg in (
+        ["git", "diff", "--name-only", "HEAD^"],
+        ["git", "diff", "--name-only", "origin/main"],
+        ["git", "diff", "--name-only", "HEAD~1"],
+    ):
         stdout, _ = run_git_command(diff_arg)
         if stdout:
             changed_files.update(stdout.splitlines())
