@@ -22,7 +22,9 @@ class ExpectedDocument(Base):
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
     study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    site_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
+    site_id: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True, index=True
+    )
     milestone: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     artifact_type: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     zone: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
