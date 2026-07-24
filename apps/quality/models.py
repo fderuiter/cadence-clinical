@@ -148,7 +148,9 @@ class CAPARecord(Base):
         nullable=True,
         index=True,
     )
-    capa_type: Mapped[str] = mapped_column(String(50), nullable=False)  # "PREVENTIVE" or "CORRECTIVE"
+    capa_type: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # "PREVENTIVE" or "CORRECTIVE"
     action_plan: Mapped[str] = mapped_column(String, nullable=False)
     status: Mapped[CAPAStatus] = mapped_column(
         String(50), default=CAPAStatus.INITIATED, nullable=False

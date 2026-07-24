@@ -1,5 +1,5 @@
 import time
-from datetime import datetime, UTC
+from datetime import datetime
 
 import pytest
 import pytest_asyncio
@@ -8,20 +8,20 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
+from apps.gateway.main import generate_signature
 from apps.quality.database import db_manager
 from apps.quality.main import app, write_audit_log
 from apps.quality.models import (
     Base,
-    Deviation,
-    RootCauseAnalysis,
     CAPARecord,
-    QualityAuditLog,
-    DeviationStatus,
     CAPAStatus,
+    Deviation,
     DeviationSeverity,
+    DeviationStatus,
     DeviationType,
+    QualityAuditLog,
+    RootCauseAnalysis,
 )
-from apps.gateway.main import generate_signature
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -126,7 +126,10 @@ async def test_deviation_lifecycle_and_traceability_fields():
         assert retrieved.is_protocol_violation is True
         assert retrieved.created_by == "auditor_jane"
         assert retrieved.version_index == 1
-        assert retrieved.reason_for_change == "Initial reporting of informed consent deviation."
+        assert (
+            retrieved.reason_for_change
+            == "Initial reporting of informed consent deviation."
+        )
         assert isinstance(retrieved.created_at, datetime)
 
 
@@ -207,7 +210,9 @@ async def test_deviation_rca_capa_relationships_and_cascading():
         assert len(retrieved_dev.capa_records) == 1
         assert retrieved_dev.capa_records[0].capa_type == "PREVENTIVE"
         assert retrieved_dev.capa_records[0].rca is not None
-        assert retrieved_dev.capa_records[0].rca.id == retrieved_dev.root_cause_analysis.id
+        assert (
+            retrieved_dev.capa_records[0].rca.id == retrieved_dev.root_cause_analysis.id
+        )
 
     # Verify cascading deletes (on deleting Deviation, RCA and CAPAs are deleted)
     async with db_manager.get_session_maker()() as session:

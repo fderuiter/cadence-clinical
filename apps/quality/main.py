@@ -2,7 +2,7 @@ import os
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-from fastapi import Depends, FastAPI, Request
+from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.quality.database import db_manager
