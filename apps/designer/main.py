@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
 from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile, status
+from neo4j import AsyncGraphDatabase
 from pydantic import BaseModel
 
 from apps.designer.db import (
@@ -37,7 +38,12 @@ from apps.designer.rules import (
     detect_circular_dependencies,
     detect_unknown_fields,
 )
-from apps.designer.validator import StudyAlignmentReport, generate_alignment_report
+from apps.designer.validator import (
+    StudyAlignmentReport,
+    StudyTerminologyValidationReport,
+    generate_alignment_report,
+    validate_study_terminology,
+)
 from apps.designer.xml_mapping import validate_mapping_csv
 from packages.security.middleware import GatewayAuthMiddleware
 
@@ -88,16 +94,28 @@ async def invalid_signature_handler(request: Request, exc: InvalidSignatureError
     )
 
 
+async def get_neo4j_driver(request: Request):
+    """
+    Lightweight dependency/accessor to retrieve the active Neo4j driver.
+    """
+    return getattr(request.app.state, "driver", None)
+
+
 @app.on_event("startup")
 async def startup() -> None:
     """Initialize resources on designer startup."""
-    pass
+    uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+    user = os.getenv("NEO4J_USER", "neo4j")
+    password = os.getenv("NEO4J_PASSWORD", "password")
+    app.state.driver = AsyncGraphDatabase.driver(uri, auth=(user, password))
 
 
 @app.on_event("shutdown")
 async def shutdown() -> None:
     """Clean up resources on designer shutdown."""
-    pass
+    driver = getattr(app.state, "driver", None)
+    if driver is not None:
+        await driver.close()
 
 
 @app.get("/health")
@@ -198,6 +216,31 @@ async def validate_study_alignment(study_id: str) -> StudyAlignmentReport:
         StudyAlignmentReport: The structured validation report.
     """
     return await generate_alignment_report(study_id)
+
+
+@app.get(
+    "/api/v1/studies/{study_id}/terminology-validation",
+    response_model=StudyTerminologyValidationReport,
+)
+async def validate_study_terminology_endpoint(
+    study_id: str,
+) -> StudyTerminologyValidationReport:
+    """
+    Generate a terminology validation report for a specific clinical study.
+
+    Traverses study concept references and aggregates validation outcomes
+    such as identifying affected elements and references.
+
+    Args:
+        study_id (str): The unique identifier of the study to validate.
+
+    Returns:
+        StudyTerminologyValidationReport: The structured validation report.
+    """
+    try:
+        return validate_study_terminology(study_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
 
 @app.get(
