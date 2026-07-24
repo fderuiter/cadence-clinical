@@ -18,6 +18,11 @@ from apps.etmf.models import (
     TMFDocument,
 )
 from packages.security.middleware import GatewayAuthMiddleware
+from tmf_reference_model import (
+    resolve_artifact,
+    validate_hierarchy,
+    get_active_catalog,
+)
 
 DATABASE_URL = os.getenv("ETMF_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
@@ -59,19 +64,19 @@ async def seed_default_edl(
 
     # Map milestone to mandatory artifacts
     if canonical == "INITIATION":
-        artifacts = [("Approved Protocol", 1, "1.1 Protocol")]
+        artifacts = [("Clinical Trial Protocol", 1, "01.01")]
     elif canonical == "CONDUCT":
         artifacts = [
-            ("Approved Protocol", 1, "1.1 Protocol"),
-            ("Define-XML", 10, "10.1 Data Management Specifications"),
-            ("Blank CRF", 10, "10.2 Case Report Forms"),
+            ("Clinical Trial Protocol", 1, "01.01"),
+            ("Define-XML Specifications", 10, "10.01"),
+            ("Blank CRF", 10, "10.02"),
         ]
     else:  # CLOSEOUT
         artifacts = [
-            ("Approved Protocol", 1, "1.1 Protocol"),
-            ("Define-XML", 10, "10.1 Data Management Specifications"),
-            ("Blank CRF", 10, "10.2 Case Report Forms"),
-            ("Data Lock Certificate", 11, "11.1 Statistical Analysis"),
+            ("Clinical Trial Protocol", 1, "01.01"),
+            ("Define-XML Specifications", 10, "10.01"),
+            ("Blank CRF", 10, "10.02"),
+            ("Data Lock Certificate", 11, "11.01"),
         ]
 
     for art, zone, sec in artifacts:
@@ -161,26 +166,22 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
 # Helper to map standard artifact types to DIA TMF Zones
 def map_artifact_to_tmf(artifact_type: str) -> tuple[int, str]:
     """
-    Maps standard clinical artifacts to DIA TMF Reference Model Zones and Sections.
-
-    Args:
-        artifact_type (str): The name of the artifact.
-
-    Returns:
-        tuple[int, str]: A tuple of (Zone, Section Description).
+    Maps standard clinical artifacts to DIA TMF Zones and Sections using the active catalog.
+    Uses the active taxonomy catalog version under the hood.
+    Raises ValueError if artifact cannot be resolved.
     """
-    norm = artifact_type.strip().lower()
-    if "protocol" in norm:
-        return 1, "1.1 Protocol"
-    elif "define" in norm:
-        return 10, "10.1 Data Management Specifications"
-    elif "crf" in norm:
-        return 10, "10.2 Case Report Forms"
-    elif "lock" in norm:
-        return 11, "11.1 Statistical Analysis"
+    version = get_active_catalog().version
+    is_code = False
+    cleaned_type = artifact_type.strip()
+    if cleaned_type and cleaned_type.replace(".", "").isdigit():
+        is_code = True
+
+    if is_code:
+        res = resolve_artifact(version, code=cleaned_type)
     else:
-        # Default fallback to central files (Zone 2)
-        return 2, "2.1 Study Files"
+        res = resolve_artifact(version, name=cleaned_type)
+
+    return res["zone"].code, res["section"].code
 
 
 # Pydantic models for eTMF
@@ -196,6 +197,10 @@ class IngestionRequest(BaseModel):
     filename: str = Field(..., description="Document filename")
     content: str = Field(..., description="Indexed, searchable content of the document")
     mime_type: str = Field(..., description="MIME type of the document")
+    zone: Optional[int] = Field(None, description="Optional expected DIA TMF Zone")
+    section: Optional[str] = Field(None, description="Optional expected DIA TMF Section")
+    artifact_code: Optional[str] = Field(None, description="Optional canonical artifact code")
+    taxonomy_version: Optional[str] = Field(None, description="Optional taxonomy version")
     metadata_json: Optional[Dict[str, Any]] = Field(
         None, description="Optional metadata fields"
     )
@@ -217,6 +222,8 @@ class DocumentResponse(BaseModel):
     created_by: str
     version_index: int
     status: str
+    taxonomy_version: str
+    artifact_code: str
     metadata_json: Optional[Dict[str, Any]] = None
 
 
@@ -397,6 +404,59 @@ async def ingest_document(
             detail="Forbidden: Trial is currently locked in a read-only state due to a security violation.",
         )
 
+    # Determine TMF taxonomy version
+    taxonomy_version = payload.taxonomy_version or get_active_catalog().version
+
+    # Resolve artifact, section, and zone via the shared catalog API
+    try:
+        code_input = payload.artifact_code
+        name_input = payload.artifact_type
+
+        # If artifact_code is not explicitly supplied, check if artifact_type is a code
+        if not code_input and name_input and name_input.strip().replace(".", "").isdigit():
+            code_input = name_input.strip()
+            name_input = None
+
+        resolved = resolve_artifact(
+            version=taxonomy_version,
+            code=code_input,
+            name=name_input
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Validation Error: {str(e)}",
+        )
+
+    zone = resolved["zone"].code
+    section = resolved["section"].code
+    artifact_obj = resolved["artifact"]
+    artifact_code = artifact_obj.code
+    canonical_artifact_type = artifact_obj.name
+
+    # Validate hierarchy if user supplied specific zone/section hierarchy
+    supplied_zone = payload.zone
+    supplied_section = payload.section
+    if payload.metadata_json:
+        if supplied_zone is None:
+            supplied_zone = payload.metadata_json.get("zone")
+        if supplied_section is None:
+            supplied_section = payload.metadata_json.get("section")
+
+    if supplied_zone is not None or supplied_section is not None:
+        try:
+            validate_hierarchy(
+                version=taxonomy_version,
+                zone_code=supplied_zone if supplied_zone is not None else zone,
+                section_code=supplied_section if supplied_section is not None else section,
+                artifact_code=artifact_code
+            )
+        except ValueError as e:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Validation Error: {str(e)}",
+            )
+
     # Validate embedded X.509 signature
     from apps.etmf.cryptography import (
         extract_signature_from_content,
@@ -404,7 +464,7 @@ async def ingest_document(
     )
 
     is_valid, status_msg = validate_document_signature(
-        artifact_type=payload.artifact_type,
+        artifact_type=canonical_artifact_type,
         content=payload.content,
         metadata_json=payload.metadata_json,
     )
@@ -433,14 +493,11 @@ async def ingest_document(
         "VERIFIED" if cert_pem else "NOT_REQUIRED"
     )
 
-    # Determine TMF Zone and Section
-    zone, section = map_artifact_to_tmf(payload.artifact_type)
-
-    # Check if a document version already exists (for study_id + artifact_type)
+    # Check if a document version already exists (for study_id + artifact_code)
     stmt = (
         select(TMFDocument)
         .where(TMFDocument.study_id == payload.study_id)
-        .where(TMFDocument.artifact_type == payload.artifact_type)
+        .where(TMFDocument.artifact_code == artifact_code)
         .order_by(TMFDocument.version_index.desc())
     )
     result = await session.execute(stmt)
@@ -454,12 +511,14 @@ async def ingest_document(
         study_id=payload.study_id,
         zone=zone,
         section=section,
-        artifact_type=payload.artifact_type,
+        artifact_type=canonical_artifact_type,
         filename=payload.filename,
         content=payload.content,
         mime_type=payload.mime_type,
         created_by=user_id,
         version_index=new_version_index,
+        taxonomy_version=taxonomy_version,
+        artifact_code=artifact_code,
         metadata_json=metadata_json,
     )
 
@@ -473,7 +532,7 @@ async def ingest_document(
         user_role=user_roles,
         action="INGEST",
         document_id=doc.id,
-        details=f"Ingested artifact type '{payload.artifact_type}' for study '{payload.study_id}' as Version {new_version_index} (TMF Zone {zone}, Section {section}).",
+        details=f"Ingested artifact type '{canonical_artifact_type}' for study '{payload.study_id}' as Version {new_version_index} (TMF Zone {zone}, Section {section}).",
     )
 
     return {
@@ -482,6 +541,8 @@ async def ingest_document(
         "zone": zone,
         "section": section,
         "version_index": new_version_index,
+        "taxonomy_version": taxonomy_version,
+        "artifact_code": artifact_code,
     }
 
 
@@ -536,6 +597,8 @@ async def list_documents(
             created_by=doc.created_by,
             version_index=doc.version_index,
             status=doc.status,
+            taxonomy_version=doc.taxonomy_version,
+            artifact_code=doc.artifact_code,
             metadata_json=doc.metadata_json,
         )
         for doc in docs
@@ -584,6 +647,8 @@ async def view_document(
         created_by=doc.created_by,
         version_index=doc.version_index,
         status=doc.status,
+        taxonomy_version=doc.taxonomy_version,
+        artifact_code=doc.artifact_code,
         metadata_json=doc.metadata_json,
     )
 

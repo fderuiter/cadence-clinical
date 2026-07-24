@@ -56,7 +56,7 @@ async def test_new_document_defaults_to_draft():
 
     payload = {
         "study_id": "study_001",
-        "artifact_type": "Approved Protocol",
+        "artifact_type": "Clinical Trial Protocol",
         "filename": "protocol_v1.pdf",
         "content": "This is the clinical trial protocol for study 001. Enforces double blind randomized controls.",
         "mime_type": "application/pdf",
@@ -85,7 +85,7 @@ async def test_invalid_status_transition_raises_error():
 
     payload = {
         "study_id": "study_001",
-        "artifact_type": "Approved Protocol",
+        "artifact_type": "Clinical Trial Protocol",
         "filename": "protocol.pdf",
         "content": "Protocol Content",
         "mime_type": "application/pdf",
@@ -134,7 +134,7 @@ async def test_role_based_access_controls_and_gates():
     # Ingest document
     payload = {
         "study_id": "study_001",
-        "artifact_type": "Approved Protocol",
+        "artifact_type": "Clinical Trial Protocol",
         "filename": "protocol.pdf",
         "content": "Protocol Content",
         "mime_type": "application/pdf",
@@ -185,7 +185,7 @@ async def test_part11_change_reason_enforcement():
     # Ingest document
     payload = {
         "study_id": "study_001",
-        "artifact_type": "Approved Protocol",
+        "artifact_type": "Clinical Trial Protocol",
         "filename": "protocol.pdf",
         "content": "Protocol Content",
         "mime_type": "application/pdf",
@@ -221,7 +221,7 @@ async def test_append_only_transition_history():
     # Ingest document
     payload = {
         "study_id": "study_001",
-        "artifact_type": "Approved Protocol",
+        "artifact_type": "Clinical Trial Protocol",
         "filename": "protocol.pdf",
         "content": "Protocol Content",
         "mime_type": "application/pdf",

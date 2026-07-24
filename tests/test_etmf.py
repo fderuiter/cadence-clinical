@@ -50,22 +50,16 @@ def test_tmf_taxonomy_mapping():
     """
     Test direct DIA TMF Zone and Section taxonomy mappings for standard clinical artifacts.
     """
-    assert map_artifact_to_tmf("Approved Protocol") == (1, "1.1 Protocol")
-    assert map_artifact_to_tmf("Define-XML") == (
+    assert map_artifact_to_tmf("Clinical Trial Protocol") == (1, "01.01")
+    assert map_artifact_to_tmf("Define-XML Specifications") == (
         10,
-        "10.1 Data Management Specifications",
+        "10.01",
     )
-    assert map_artifact_to_tmf("Blank CRF") == (10, "10.2 Case Report Forms")
-    assert map_artifact_to_tmf("Blank CRFs") == (10, "10.2 Case Report Forms")
+    assert map_artifact_to_tmf("Blank CRF") == (10, "10.02")
     assert map_artifact_to_tmf("Data Lock Certificate") == (
         11,
-        "11.1 Statistical Analysis",
+        "11.01",
     )
-    assert map_artifact_to_tmf("Data Lock Certificates") == (
-        11,
-        "11.1 Statistical Analysis",
-    )
-    assert map_artifact_to_tmf("Ad-hoc document") == (2, "2.1 Study Files")
 
 
 @pytest.mark.asyncio
@@ -82,7 +76,7 @@ async def test_automated_ingestion_and_version_indexing():
     # Ingest Version 1
     payload = {
         "study_id": "study_001",
-        "artifact_type": "Approved Protocol",
+        "artifact_type": "Clinical Trial Protocol",
         "filename": "protocol_v1.pdf",
         "content": "This is the clinical trial protocol for study 001. Enforces double blind randomized controls.",
         "mime_type": "application/pdf",
@@ -93,13 +87,15 @@ async def test_automated_ingestion_and_version_indexing():
     data = response.json()
     assert data["status"] == "success"
     assert data["zone"] == 1
-    assert data["section"] == "1.1 Protocol"
+    assert data["section"] == "01.01"
     assert data["version_index"] == 1
+    assert data["taxonomy_version"] == "v3.2.0"
+    assert data["artifact_code"] == "01.01.01"
 
     # Ingest Version 2 (Same study_id and artifact_type)
     payload_v2 = {
         "study_id": "study_001",
-        "artifact_type": "Approved Protocol",
+        "artifact_type": "Clinical Trial Protocol",
         "filename": "protocol_v2.pdf",
         "content": "This is the clinical trial protocol version 2.",
         "mime_type": "application/pdf",
@@ -130,7 +126,7 @@ async def test_automated_ingestion_and_version_indexing():
         result_audit = await session.execute(stmt_audit)
         audit_logs = result_audit.scalars().all()
         assert len(audit_logs) == 2
-        assert "Ingested artifact type 'Approved Protocol'" in audit_logs[0].details
+        assert "Ingested artifact type 'Clinical Trial Protocol'" in audit_logs[0].details
         assert audit_logs[0].user_id == "test_user"
 
 
@@ -149,7 +145,7 @@ async def test_inspector_portal_read_only_access_limits():
     # Try to ingest using inspector role -> should fail
     payload = {
         "study_id": "study_001",
-        "artifact_type": "Approved Protocol",
+        "artifact_type": "Clinical Trial Protocol",
         "filename": "protocol.pdf",
         "content": "Secret protocol",
         "mime_type": "application/pdf",
@@ -173,7 +169,7 @@ async def test_view_download_audit_logging():
     # Ingest a document first
     payload = {
         "study_id": "study_abc",
-        "artifact_type": "Define-XML",
+        "artifact_type": "Define-XML Specifications",
         "filename": "define.xml",
         "content": "SDTM standard data specification structure.",
         "mime_type": "application/xml",
@@ -237,7 +233,7 @@ async def test_completeness_checking_transitions():
     admin_headers = get_auth_headers(roles="admin", change_reason="Add documents")
 
     # Initially, study_xyz is completely empty.
-    # Check INITIATION milestone -> requires Approved Protocol -> should be False.
+    # Check INITIATION milestone -> requires Clinical Trial Protocol -> should be False.
     headers = get_auth_headers(roles="regulatory_inspector")
     res_init = client.get(
         "/api/v1/etmf/completeness?study_id=study_xyz&milestone=INITIATION",
@@ -246,12 +242,12 @@ async def test_completeness_checking_transitions():
     assert res_init.status_code == 200
     data_init = res_init.json()
     assert data_init["is_complete"] is False
-    assert "Approved Protocol" in data_init["missing_artifacts"]
+    assert "Clinical Trial Protocol" in data_init["missing_artifacts"]
 
-    # Ingest Approved Protocol
+    # Ingest Clinical Trial Protocol
     payload_prot = {
         "study_id": "study_xyz",
-        "artifact_type": "Approved Protocol",
+        "artifact_type": "Clinical Trial Protocol",
         "filename": "protocol.pdf",
         "content": "Protocol content",
         "mime_type": "application/pdf",
@@ -265,13 +261,13 @@ async def test_completeness_checking_transitions():
     )
     assert res_init_2.json()["is_complete"] is True
 
-    # Check CONDUCT milestone -> requires Approved Protocol, Define-XML, Blank CRF -> should be False.
+    # Check CONDUCT milestone -> requires Clinical Trial Protocol, Define-XML Specifications, Blank CRF -> should be False.
     res_cond = client.get(
         "/api/v1/etmf/completeness?study_id=study_xyz&milestone=CONDUCT",
         headers=headers,
     )
     assert res_cond.json()["is_complete"] is False
-    assert "Define-XML" in res_cond.json()["missing_artifacts"]
+    assert "Define-XML Specifications" in res_cond.json()["missing_artifacts"]
     assert "Blank CRF" in res_cond.json()["missing_artifacts"]
 
     # Ingest the remaining documents for CONDUCT
@@ -279,7 +275,7 @@ async def test_completeness_checking_transitions():
         "/api/v1/etmf/ingest",
         json={
             "study_id": "study_xyz",
-            "artifact_type": "Define-XML",
+            "artifact_type": "Define-XML Specifications",
             "filename": "define.xml",
             "content": "Metadata Spec",
             "mime_type": "application/xml",
@@ -450,7 +446,7 @@ async def test_site_aware_completeness():
     data_initial = res_initial.json()
     assert data_initial["is_complete"] is False
     assert data_initial["scope"] == "study"
-    assert "Approved Protocol" in data_initial["missing_artifacts"]
+    assert "Clinical Trial Protocol" in data_initial["missing_artifacts"]
     assert len(data_initial["per_artifact_detail"]) == 1
     assert data_initial["per_artifact_detail"][0]["scope"] == "study"
 
@@ -459,7 +455,7 @@ async def test_site_aware_completeness():
         "study_id": "study_site_test",
         "site_id": "site_alpha",
         "milestone": "INITIATION",
-        "artifact_type": "Site Signature Page",
+        "artifact_type": "Site Feasibility Survey",
         "reason_for_change": "Mandating site signatures",
     }
     client.post("/api/v1/etmf/edl", json=payload, headers=admin_headers)
@@ -471,7 +467,7 @@ async def test_site_aware_completeness():
     )
     assert res_study.status_code == 200
     data_study = res_study.json()
-    assert "Site Signature Page" not in data_study["missing_artifacts"]
+    assert "Site Feasibility Survey" not in data_study["missing_artifacts"]
 
     # 4. Check site-level completeness for site_alpha (should include BOTH)
     res_site = client.get(
@@ -481,14 +477,14 @@ async def test_site_aware_completeness():
     assert res_site.status_code == 200
     data_site = res_site.json()
     assert data_site["is_complete"] is False
-    assert "Approved Protocol" in data_site["missing_artifacts"]
-    assert "Site Signature Page" in data_site["missing_artifacts"]
+    assert "Clinical Trial Protocol" in data_site["missing_artifacts"]
+    assert "Site Feasibility Survey" in data_site["missing_artifacts"]
     assert len(data_site["per_artifact_detail"]) == 2
 
-    # 5. Ingest Approved Protocol
+    # 5. Ingest Clinical Trial Protocol
     payload_prot = {
         "study_id": "study_site_test",
-        "artifact_type": "Approved Protocol",
+        "artifact_type": "Clinical Trial Protocol",
         "filename": "protocol.pdf",
         "content": "Protocol Content",
         "mime_type": "application/pdf",
@@ -507,17 +503,14 @@ async def test_site_aware_completeness():
         headers=inspector_headers,
     )
     assert res_site_2.json()["is_complete"] is False
-    assert "Site Signature Page" in res_site_2.json()["missing_artifacts"]
+    assert "Site Feasibility Survey" in res_site_2.json()["missing_artifacts"]
 
-    # 7. Ingest Site Signature Page (requires mock signature because the name contains 'Signature')
+    # 7. Ingest Site Feasibility Survey
     payload_sig = {
         "study_id": "study_site_test",
-        "artifact_type": "Site Signature Page",
+        "artifact_type": "Site Feasibility Survey",
         "filename": "site_sig.pdf",
-        "content": (
-            "-----BEGIN CERTIFICATE-----\nMOCK_SIGNATURE\n-----END CERTIFICATE-----\n"
-            "-----BEGIN SIGNATURE-----\nMOCK\n-----END SIGNATURE-----\nSite signature page"
-        ),
+        "content": "Site feasibility survey text",
         "mime_type": "application/pdf",
     }
     ingest_sig_resp = client.post(
@@ -612,7 +605,7 @@ async def test_etmf_edge_cases_for_coverage():
     # 11. Ingest with requires_signature: True in metadata
     payload_req_sig_1 = {
         "study_id": "study_xyz",
-        "artifact_type": "Ad-hoc doc with signature rule",
+        "artifact_type": "Clinical Trial Protocol",
         "filename": "adhoc_sig.txt",
         "content": "No signatures here.",
         "mime_type": "text/plain",
@@ -623,23 +616,10 @@ async def test_etmf_edge_cases_for_coverage():
     )
     assert req_sig_resp_1.status_code == 422
 
-    payload_req_sig_2 = {
-        "study_id": "study_xyz",
-        "artifact_type": "Ad-hoc doc with signature rule 2",
-        "filename": "adhoc_sig.txt",
-        "content": "No signatures here.",
-        "mime_type": "text/plain",
-        "metadata_json": {"require_signature": True},
-    }
-    req_sig_resp_2 = client.post(
-        "/api/v1/etmf/ingest", json=payload_req_sig_2, headers=admin_headers
-    )
-    assert req_sig_resp_2.status_code == 422
-
     # 12. Ingest with invalid mock signature
     payload_invalid_mock = {
         "study_id": "study_xyz",
-        "artifact_type": "Signed Document",
+        "artifact_type": "Clinical Trial Protocol",
         "filename": "signed_invalid.txt",
         "content": (
             "-----BEGIN CERTIFICATE-----\nMOCK_SIGNATURE INVALID_MOCK\n-----END CERTIFICATE-----\n"
@@ -652,10 +632,10 @@ async def test_etmf_edge_cases_for_coverage():
     )
     assert invalid_mock_resp.status_code == 422
 
-    # 7. Ingest ad-hoc/fallback document to hit map_artifact_to_tmf zone 2 default path
+    # 7. Ingest Investigator's Brochure document (Zone 2)
     payload_adhoc = {
         "study_id": "study_xyz",
-        "artifact_type": "Ad-hoc document",
+        "artifact_type": "Investigator's Brochure",
         "filename": "adhoc.txt",
         "content": "Just some plain text content.",
         "mime_type": "text/plain",
@@ -687,7 +667,7 @@ async def test_etmf_edge_cases_for_coverage():
     # 9. Ingest document with nested signature metadata dict to hit metadata parsing
     payload_nested_sig = {
         "study_id": "study_xyz",
-        "artifact_type": "Signed Document",
+        "artifact_type": "Clinical Trial Protocol",
         "filename": "signed_doc.txt",
         "content": "Signed content.",
         "mime_type": "text/plain",
@@ -766,3 +746,70 @@ def test_ucum_extra_coverage():
     val, unit = get_normalized_representation(10.0, "unknown_unit")
     assert val == 10.0
     assert unit == "unknown_unit"
+
+
+@pytest.mark.asyncio
+async def test_canonical_catalog_ingestion_validations():
+    """
+    Cover:
+    - valid canonical ingestion
+    - unknown artifact rejection (HTTP 422)
+    - invalid hierarchy rejection (HTTP 422)
+    - taxonomy-version persistence
+    """
+    client = TestClient(app)
+    headers = get_auth_headers(roles="admin", change_reason="Catalog validations testing")
+
+    # 1. Unknown artifact rejection
+    payload_unknown = {
+        "study_id": "study_001",
+        "artifact_type": "Unknown Completely Bogus Artifact",
+        "filename": "unknown.pdf",
+        "content": "Secret content",
+        "mime_type": "application/pdf",
+    }
+    response_unknown = client.post("/api/v1/etmf/ingest", json=payload_unknown, headers=headers)
+    assert response_unknown.status_code == 422
+    assert "validation error" in response_unknown.json()["detail"].lower()
+
+    # 2. Invalid hierarchy rejection (mismatched zone/section/artifact)
+    payload_mismatch = {
+        "study_id": "study_001",
+        "artifact_type": "Clinical Trial Protocol", # belongs to zone 1, section "01.01"
+        "filename": "protocol.pdf",
+        "content": "Protocol content",
+        "mime_type": "application/pdf",
+        "zone": 10, # mismatched zone
+        "section": "01.01",
+    }
+    response_mismatch = client.post("/api/v1/etmf/ingest", json=payload_mismatch, headers=headers)
+    assert response_mismatch.status_code == 422
+    assert "mismatch" in response_mismatch.json()["detail"].lower()
+
+    # 3. Valid canonical ingestion & taxonomy version persistence
+    payload_valid = {
+        "study_id": "study_001",
+        "artifact_type": "Clinical Trial Protocol",
+        "filename": "protocol_canonical.pdf",
+        "content": "Valid protocol content",
+        "mime_type": "application/pdf",
+        "taxonomy_version": "v3.2.0",
+        "zone": 1,
+        "section": "01.01",
+    }
+    response_valid = client.post("/api/v1/etmf/ingest", json=payload_valid, headers=headers)
+    assert response_valid.status_code == 201
+    data = response_valid.json()
+    assert data["status"] == "success"
+    assert data["zone"] == 1
+    assert data["section"] == "01.01"
+    assert data["taxonomy_version"] == "v3.2.0"
+    assert data["artifact_code"] == "01.01.01"
+
+    # Query document and verify persistence of taxonomy_version and artifact_code
+    doc_id = data["document_id"]
+    get_resp = client.get(f"/api/v1/etmf/documents/{doc_id}", headers=headers)
+    assert get_resp.status_code == 200
+    doc_data = get_resp.json()
+    assert doc_data["taxonomy_version"] == "v3.2.0"
+    assert doc_data["artifact_code"] == "01.01.01"

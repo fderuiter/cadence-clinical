@@ -73,6 +73,8 @@ class TMFDocument(Base):
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     status: Mapped[str] = mapped_column(String(50), default="DRAFT", nullable=False)
+    taxonomy_version: Mapped[str] = mapped_column(String(50), default="v3.2.0", nullable=False)
+    artifact_code: Mapped[str] = mapped_column(String(50), default="01.01.01", nullable=False, index=True)
     metadata_json: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
 
 
