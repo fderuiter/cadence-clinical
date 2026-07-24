@@ -188,7 +188,7 @@ async def test_missing_and_invalid_signature_ingestion():
     # 1. Missing required signature
     payload_missing = {
         "study_id": "study_123",
-        "artifact_type": "Approved Protocol",
+        "artifact_type": "Clinical Trial Protocol",
         "filename": "protocol.pdf",
         "content": "Protocol body without signature.",
         "mime_type": "application/pdf",
@@ -201,7 +201,7 @@ async def test_missing_and_invalid_signature_ingestion():
     # 2. Invalid/corrupted signature (valid base64 that decodes to 'INVALID')
     payload_invalid = {
         "study_id": "study_123",
-        "artifact_type": "Approved Protocol",
+        "artifact_type": "Clinical Trial Protocol",
         "filename": "protocol.pdf",
         "content": "Protocol body.\n-----BEGIN CERTIFICATE-----\nMOCK_SIGNATURE\n-----END CERTIFICATE-----\n-----BEGIN SIGNATURE-----\nSU5WQUxJRA==\n-----END SIGNATURE-----",
         "mime_type": "application/pdf",
@@ -221,7 +221,7 @@ async def test_audit_logs_group_sealing_and_chaining():
     # Ingest a non-signed document to generate audit logs
     payload = {
         "study_id": "study_xyz",
-        "artifact_type": "Define-XML",
+        "artifact_type": "Define-XML Specifications",
         "filename": "define.xml",
         "content": "Define content",
         "mime_type": "application/xml",
@@ -280,7 +280,7 @@ async def test_tampering_detection_and_lockout_propagation():
         "/api/v1/etmf/ingest",
         json={
             "study_id": "study_111",
-            "artifact_type": "Define-XML",
+            "artifact_type": "Define-XML Specifications",
             "filename": "define.xml",
             "content": "Define content",
             "mime_type": "application/xml",
@@ -327,7 +327,7 @@ async def test_tampering_detection_and_lockout_propagation():
         "/api/v1/etmf/ingest",
         json={
             "study_id": "study_111",
-            "artifact_type": "Define-XML",
+            "artifact_type": "Define-XML Specifications",
             "filename": "define2.xml",
             "content": "More content",
             "mime_type": "application/xml",
