@@ -86,6 +86,6 @@ async def test_run_migrations_real_sqlite():
 
 def test_placeholders():
     from apps.execution.database import provision_tenant, rollback
+
     provision_tenant.main()
     rollback.main()
-

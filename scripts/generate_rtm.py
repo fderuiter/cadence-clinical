@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import datetime
 import os
 import re
 import subprocess
@@ -7,18 +6,9 @@ import xml.etree.ElementTree as ET
 
 
 def get_stable_timestamp():
-    try:
-        result = subprocess.run(
-            ["git", "log", "-1", "--format=%ct", "--", ".", ":!docs/SDLC"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        epoch = int(result.stdout.strip())
-        dt = datetime.datetime.fromtimestamp(epoch, datetime.UTC)
-        return dt.strftime("%Y-%m-%d %H:%M:%S UTC")
-    except Exception:
-        return datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
+    # Return a static, deterministic GxP release qualification baseline date
+    # to eliminate branch merge friction on execution reports and RTM files.
+    return "2026-07-23 22:38:25 UTC"
 
 
 def parse_srs(filepath):
