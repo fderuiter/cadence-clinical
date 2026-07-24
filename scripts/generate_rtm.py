@@ -7,16 +7,16 @@ import sys
 import xml.etree.ElementTree as ET
 
 
-def get_deterministic_timestamp():
+def get_stable_timestamp():
     try:
         result = subprocess.run(
-            ["git", "log", "-1", "--format=%ct"],
+            ["git", "log", "-1", "--format=%ct", "--", ".", ":!docs/SDLC"],
             capture_output=True,
             text=True,
             check=True,
         )
-        timestamp = int(result.stdout.strip())
-        dt = datetime.datetime.fromtimestamp(timestamp, datetime.UTC)
+        epoch = int(result.stdout.strip())
+        dt = datetime.datetime.fromtimestamp(epoch, datetime.UTC)
         return dt.strftime("%Y-%m-%d %H:%M:%S UTC")
     except Exception:
         return datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -253,7 +253,7 @@ def generate_rtm_md(
 
     with open(output_path, "w", encoding="utf-8") as f:
         f.write("# Requirements Traceability Matrix (RTM)\n\n")
-        f.write(f"*Generated on:* {get_deterministic_timestamp()}\n")
+        f.write(f"*Generated on:* {get_stable_timestamp()}\n")
         f.write(
             "*Regulatory Compliance Standards:* FDA 21 CFR Part 11, EU Annex 11, GAMP 5, IEC 62304 Section 5.7 & 5.8\n\n"
         )
@@ -385,7 +385,7 @@ def generate_qualification_report(
         f.write(
             "# GxP Installation & Operational Qualification (IQ/OQ/PQ) Execution Report\n\n"
         )
-        f.write(f"*Execution Date:* {get_deterministic_timestamp()}\n")
+        f.write(f"*Execution Date:* {get_stable_timestamp()}\n")
         f.write(
             "*Regulatory Protocol:* FDA 21 CFR Part 11, EU Annex 11, GAMP 5 Category 4/5, IEC 62304 Class B\n\n"
         )

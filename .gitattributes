@@ -1,5 +1,5 @@
 # Auto-resolve parallel additions in generated SDLC reports, index documents, and secrets baselines
+.secrets.baseline merge=union
 docs/SDLC/IQ_OQ_PQ_Execution_Report.md merge=union
 docs/SDLC/Requirements_Traceability_Matrix.md merge=union
 docs/adr/index.md merge=union
-.secrets.baseline merge=union
