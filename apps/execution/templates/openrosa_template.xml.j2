@@ -4,7 +4,8 @@
       xmlns:ev="http://www.w3.org/2001/xml-events"
       xmlns:or="http://openrosa.org/xforms"
       xmlns:orx="http://openrosa.org/xforms"
-      xmlns:odk="http://www.opendatakit.org/xforms">
+      xmlns:odk="http://www.opendatakit.org/xforms"
+      xmlns:jr="http://openrosa.org/javarosa">
   <head>
     <title>{{ name }}</title>
     <xf:model>
@@ -16,7 +17,7 @@
         </data>
       </xf:instance>
       {% for item in items %}
-      <xf:bind nodeset="/{{ item.id }}" type="{{ item.type }}"/>
+      <xf:bind nodeset="/{{ item.id }}" type="{{ item.type }}"{% if item.relevant %} relevant="{{ item.relevant }}"{% endif %}{% if item.constraint %} constraint="{{ item.constraint }}"{% endif %}{% if item.constraint_message %} jr:constraintMsg="{{ item.constraint_message }}"{% endif %}/>
       {% endfor %}
     </xf:model>
   </head>

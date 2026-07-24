@@ -1,6 +1,9 @@
 import json
 import os
+import shutil
+import tempfile
 import uuid
+import zipfile
 from contextlib import asynccontextmanager
 from datetime import datetime
 from enum import Enum
@@ -22,6 +25,8 @@ from pydantic import BaseModel
 from sqlalchemy import select
 
 from apps.execution.cdisc_validator import validate_cdisc_xml_structure
+from apps.execution.coding.importer import process_dictionary_import
+from apps.execution.coding.parsers import MedDRAParser, WHODrugParser
 from apps.execution.database.context import current_change_reason, current_user_id
 from apps.execution.database.core import db_manager
 from apps.execution.database.middleware import ContextResetMiddleware
@@ -31,8 +36,13 @@ from apps.execution.database.models import (
     ClinicalQuery,
     ClinicalSubject,
     ClinicalVisit,
+    DictionaryImportJob,
     FormSubmission,
+    ImportState,
     TranslationJob,
+)
+from apps.execution.database.models import (
+    DictionaryType as DBDictionaryType,
 )
 from apps.execution.demographics import (
     decrypt_demographics as decrypt_demographics,
@@ -85,13 +95,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         start_background_sealer,
         stop_background_sealer,
     )
+    from apps.execution.queries_escalation import (
+        start_background_query_escalation,
+        stop_background_query_escalation,
+    )
 
     await start_background_sealer(db_manager.get_session_maker())
+    await start_background_query_escalation(db_manager.get_session_maker())
 
     yield
 
     # Stop background ledger sealer
     await stop_background_sealer()
+    # Stop background query escalation
+    await stop_background_query_escalation()
     # Cleanup database connection
     await db_manager.close()
 
@@ -709,26 +726,169 @@ class UCUMConvertResponse(BaseModel):
     offset: Optional[float] = None
 
 
+def validate_archive_layout(temp_zip_path: str, dictionary_type: DictTypeEnum) -> None:
+    if not zipfile.is_zipfile(temp_zip_path):
+        raise HTTPException(
+            status_code=400,
+            detail="The uploaded file is not a valid zip archive.",
+        )
+
+    with zipfile.ZipFile(temp_zip_path) as z:
+        names = z.namelist()
+        if dictionary_type == DictTypeEnum.MEDDRA:
+            parser = MedDRAParser(dictionary_version="temp")
+            valid_found = False
+            for name in names:
+                if name.lower().endswith(".asc"):
+                    try:
+                        parser.detect_file_type(name)
+                        valid_found = True
+                        break
+                    except ValueError:
+                        continue
+            if not valid_found:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid MedDRA archive layout. Expected at least one of llt.asc, pt.asc, hlt.asc, hlgt.asc, soc.asc, or mdhier.asc.",
+                )
+        elif dictionary_type == DictTypeEnum.WHODRUG:
+            parser = WHODrugParser(dictionary_version="temp")
+            valid_found = False
+            for name in names:
+                if name.lower().endswith((".txt", ".asc", ".csv")):
+                    try:
+                        parser.detect_file_type(name)
+                        valid_found = True
+                        break
+                    except ValueError:
+                        continue
+            if not valid_found:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid WHODrug archive layout. Expected at least one of drugs, ingredients, atc, drug_atc, or drug_ingredients files.",
+                )
+
+
 @app.post(
     "/api/v1/dictionaries/import", response_model=JobStatusResponse, status_code=202
 )
 async def import_dictionary(
+    background_tasks: BackgroundTasks,
     dictionary_type: DictTypeEnum = Form(...),
     version: str = Form(...),
     files: UploadFile = File(...),
     parse_multilingual: bool = Form(True),
+    roles: list[str] = Depends(require_roles("TERMINOLOGY_MANAGER", "SYSTEM_ADMIN")),
 ) -> JobStatusResponse:
     """Imports raw dictionary files and schedules a background parsing task."""
-    return JobStatusResponse(
-        job_id="job_dict_import_889127b",
-        dictionary_type=dictionary_type,
+    if dictionary_type not in (DictTypeEnum.MEDDRA, DictTypeEnum.WHODRUG):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Import not supported for dictionary type: {dictionary_type.value}",
+        )
+
+    if not version or not version.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Version must be a non-empty string.",
+        )
+
+    # 1. Persist the uploaded file to secure temporary storage
+    # Create temporary file
+    temp_dir = tempfile.gettempdir()
+    temp_file_path = os.path.join(temp_dir, f"dict_import_{uuid.uuid4().hex}.zip")
+
+    try:
+        with open(temp_file_path, "wb") as buffer:
+            shutil.copyfileobj(files.file, buffer)
+
+        # 2. Perform layout validation synchronously
+        validate_archive_layout(temp_file_path, dictionary_type)
+    except HTTPException:
+        # Clean up temporary file on layout validation failure
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+        raise
+    except Exception as e:
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to process file upload: {str(e)}",
+        )
+
+    # Convert parameter enum to database model enum
+    db_type = DBDictionaryType[dictionary_type.value]
+
+    # 3. Create the initial DictionaryImportJob record in PENDING status
+    async with db_manager.get_session_maker()() as session:
+        async with session.begin():
+            job = DictionaryImportJob(
+                dictionary_type=db_type,
+                dictionary_version=version,
+                status=ImportState.PENDING,
+                started_at=datetime.utcnow(),
+                progress_percentage=0,
+                records_imported=0,
+                errors_encountered=0,
+            )
+            session.add(job)
+            await session.flush()
+            job_id = job.id
+            started_at = job.started_at
+
+    # 4. Schedule the background parsing task
+    user_id = current_user_id.get()
+    change_reason = current_change_reason.get()
+
+    background_tasks.add_task(
+        process_dictionary_import,
+        job_id=job_id,
+        dictionary_type=dictionary_type.value,
         version=version,
-        status=JobStatusEnum.PROCESSING,
-        started_at=datetime.fromisoformat("2026-07-22T20:45:00Z"),
-        progress_percentage=45,
-        records_imported=10245,
+        temp_zip_path=temp_file_path,
+        session_maker=db_manager.get_session_maker(),
+        user_id=user_id,
+        change_reason=change_reason,
+    )
+
+    return JobStatusResponse(
+        job_id=job_id,
+        dictionary_type=dictionary_type.value,
+        version=version,
+        status=JobStatusEnum.PENDING,
+        started_at=started_at,
+        progress_percentage=0,
+        records_imported=0,
         errors_encountered=0,
     )
+
+
+@app.get("/api/v1/dictionaries/jobs/{job_id}", response_model=JobStatusResponse)
+async def get_dictionary_import_job(
+    job_id: str,
+) -> JobStatusResponse:
+    """Query the execution status, progress, and import counts of a dictionary import job by ID."""
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(DictionaryImportJob).where(DictionaryImportJob.id == job_id)
+        res = await session.execute(stmt)
+        job = res.scalars().first()
+        if not job:
+            raise HTTPException(
+                status_code=404, detail="Dictionary import job not found"
+            )
+
+        return JobStatusResponse(
+            job_id=job.id,
+            dictionary_type=job.dictionary_type.value,
+            version=job.dictionary_version,
+            status=JobStatusEnum(job.status.value),
+            started_at=job.started_at,
+            completed_at=job.completed_at,
+            progress_percentage=job.progress_percentage,
+            records_imported=job.records_imported,
+            errors_encountered=job.errors_encountered,
+        )
 
 
 class MedDRATargetLevelEnum(str, Enum):

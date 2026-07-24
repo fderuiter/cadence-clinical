@@ -1,5 +1,7 @@
-# apps/execution/biostat subpackage for SDTM exports
+# apps/execution/biostat subpackage for SDTM exports and ADaM derivations
 
+from apps.execution.biostat.adae import derive_adae
+from apps.execution.biostat.adsl import derive_adsl
 from apps.execution.biostat.extractors import (
     extract_ae,
     extract_dm,
@@ -8,4 +10,12 @@ from apps.execution.biostat.extractors import (
     extract_vs,
 )
 
-__all__ = ["extract_ae", "extract_dm", "extract_lb", "extract_mh", "extract_vs"]
+__all__ = [
+    "extract_ae",
+    "extract_dm",
+    "extract_lb",
+    "extract_mh",
+    "extract_vs",
+    "derive_adsl",
+    "derive_adae",
+]

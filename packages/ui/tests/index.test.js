@@ -161,3 +161,53 @@ describe("createQueryPanel", () => {
     expect(html).not.toContain('data-action="close-query"');
   });
 });
+
+import { createConditionRow, createRuleEditorContainer } from "../index.js";
+
+describe("createConditionRow", () => {
+  const mockForms = [{ id: "form_dm", name: "Demographics" }];
+  const mockFields = [{ id: "brthdt", name: "Date of Birth" }];
+
+  it("renders accessible fieldset and legends for condition rows", () => {
+    const html = createConditionRow(0, mockForms, mockFields);
+    expect(html).toContain("<fieldset");
+    expect(html).toContain("Condition Element #1");
+    expect(html).toContain('id="cond-form-0"');
+    expect(html).toContain('id="cond-field-0"');
+    expect(html).toContain('id="cond-operator-0"');
+    expect(html).toContain("form_dm");
+    expect(html).toContain("brthdt");
+  });
+
+  it("supports pre-populating values", () => {
+    const html = createConditionRow(1, mockForms, mockFields, {
+      formId: "form_dm",
+      fieldId: "brthdt",
+      operator: "<",
+      rightType: "constant",
+      rightValue: "2026-01-01",
+    });
+    expect(html).toContain("Condition Element #2");
+    expect(html).toContain('value="form_dm" selected');
+    expect(html).toContain('value="brthdt" selected');
+    expect(html).toContain('value="<" selected');
+    expect(html).toContain('value="2026-01-01"');
+  });
+});
+
+describe("createRuleEditorContainer", () => {
+  const mockForms = [{ id: "form_dm", name: "Demographics" }];
+  const mockFields = [{ id: "brthdt", name: "Date of Birth" }];
+
+  it("renders correct rule editor container with dropdown fields and accessibility specs", () => {
+    const html = createRuleEditorContainer(mockForms, mockFields);
+    expect(html).toContain('id="rule-editor-form"');
+    expect(html).toContain('id="rule-type"');
+    expect(html).toContain('id="rule-target-field"');
+    expect(html).toContain('id="rule-action"');
+    expect(html).toContain('id="rule-message"');
+    expect(html).toContain('id="conditions-list"');
+    expect(html).toContain('id="btn-add-condition"');
+    expect(html).toContain('id="btn-save-rule"');
+  });
+});
