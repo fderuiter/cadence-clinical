@@ -26,6 +26,11 @@ class NotificationRouter:
         # Simulate webhook
         pass
 
+    def send_dashboard_notification(self, recipients: List[str], payload: dict):
+        """Sends a dashboard notification to the specified recipients."""
+        # Simulate dashboard notification sending or print/log for testing
+        pass
+
 
 class TrialLockManager:
     """
