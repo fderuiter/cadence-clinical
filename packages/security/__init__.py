@@ -7,6 +7,14 @@ from packages.security.context import (
     current_timestamp,
     current_user_id,
 )
+from packages.security.delegation import (
+    DelegationChecker,
+    StaffRole,
+    normalize_and_validate_staff_role,
+    require_delegation,
+    validate_request_staff_roles,
+    verify_delegation_scope,
+)
 from packages.security.rbac import (
     ROLE_AUDITOR,
     ROLE_CRA,
@@ -52,4 +60,10 @@ __all__ = [
     "ROLE_AUDITOR",
     "ROLE_SPONSOR_ADMIN",
     "require_roles",
+    "StaffRole",
+    "normalize_and_validate_staff_role",
+    "validate_request_staff_roles",
+    "verify_delegation_scope",
+    "DelegationChecker",
+    "require_delegation",
 ]

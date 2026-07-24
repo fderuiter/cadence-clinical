@@ -71,6 +71,13 @@ MEDICAL_RECORD_ACCOUNT_REGEX = re.compile(
     re.IGNORECASE,
 )
 
+# Standard age patterns matching "age: 95", "age 92", "aged 84", "91 years old", "93-year-old", "91yo", "91-yo", etc.
+AGE_REGEX = re.compile(
+    r"\b(?:age[sd]?|age of)\s*[:\- ]?\s*\d{1,3}\b"
+    r"|\b\d{1,3}\s*(?:years?\s*(?:of\s*age)?\s*old|-years?-old|yo|-yo)\b",
+    re.IGNORECASE,
+)
+
 
 def resolve_overlaps(results: List[DetectionResult]) -> List[DetectionResult]:
     """
@@ -241,6 +248,17 @@ class DeidDetector:
                 candidates.append(
                     DetectionResult(
                         category=DetectorCategory.MEDICAL_RECORD_ACCOUNT,
+                        start=m.start(),
+                        end=m.end(),
+                        value=m.group(),
+                    )
+                )
+
+        if DetectorCategory.AGE in active_categories:
+            for m in AGE_REGEX.finditer(text):
+                candidates.append(
+                    DetectionResult(
+                        category=DetectorCategory.AGE,
                         start=m.start(),
                         end=m.end(),
                         value=m.group(),

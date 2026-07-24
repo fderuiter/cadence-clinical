@@ -3,8 +3,9 @@ import hmac
 import os
 from typing import Any, Dict, List, Optional
 
-from packages.deid.detector import DeidDetector, redact_text
+from packages.deid.detector import DeidDetector
 from packages.deid.models import ComplianceProfile
+from packages.deid.transforms import apply_deid_transforms
 
 
 def deidentify_free_text(
@@ -14,11 +15,14 @@ def deidentify_free_text(
 ) -> str:
     """
     De-identify free-text clinical narrative, notes, or patient data using the
-    shared de-identification package.
+    shared de-identification package with right-to-left transforms.
     """
     detector = DeidDetector()
     results = detector.detect(text, profile=profile, custom_terms=custom_terms)
-    return redact_text(text, results)
+
+    # Standard mask strategy is the default, which maps each category to standard masking.
+    redacted_text, _ = apply_deid_transforms(text, results, default_strategy="mask")
+    return redacted_text
 
 
 def pseudonymize_identifier(identifier: str) -> str:
