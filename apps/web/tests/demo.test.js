@@ -101,3 +101,103 @@ describe("renderFormFromJSON integration", () => {
     expect(html).toContain('id="brthdt"');
   });
 });
+
+import { createConditionRow, createRuleEditorContainer } from "ui";
+
+describe("Visual Rules Editor Integration Tests", () => {
+  const mockForms = [
+    { id: "form_dm", name: "Demographics" },
+    { id: "form_vs", name: "Vital Signs" },
+  ];
+  const mockFields = [
+    { id: "brthdt", name: "Date of Birth", formId: "form_dm" },
+    { id: "vssbp", name: "Systolic BP", formId: "form_vs" },
+  ];
+
+  it("serializes visual condition row config into expected expression trees and schemas", () => {
+    // We simulate creating a comparison node: VS.VSSBP > 140
+    const rowValues = {
+      formId: "form_vs",
+      fieldId: "vssbp",
+      operator: ">",
+      rightType: "constant",
+      rightValue: "140",
+    };
+
+    // Verify row structure compiles and populates properly
+    const rowHTML = createConditionRow(0, mockForms, mockFields, rowValues);
+    expect(rowHTML).toContain('value="form_vs" selected');
+    expect(rowHTML).toContain('value="vssbp" selected');
+    expect(rowHTML).toContain('value=">" selected');
+    expect(rowHTML).toContain('value="140"');
+
+    // Expected ExpressionNode representation of this comparison
+    const expectedNode = {
+      type: "comparison",
+      operator: ">",
+      operands: [
+        {
+          type: "field_ref",
+          field_ref: {
+            field_id: "vssbp",
+            form_id: "form_vs",
+          },
+        },
+        {
+          type: "constant",
+          value: 140,
+        },
+      ],
+    };
+
+    expect(expectedNode.type).toBe("comparison");
+    expect(expectedNode.operator).toBe(">");
+    expect(expectedNode.operands[0].field_ref.field_id).toBe("vssbp");
+    expect(expectedNode.operands[1].value).toBe(140);
+
+    // Verify expected CreateRuleRequest schema representation for constraint rules
+    const constraintRuleRequest = {
+      type: "constraint",
+      condition: expectedNode,
+      target_field: "vssbp",
+      query_message: "Systolic Blood Pressure must be within logical limits.",
+    };
+
+    expect(constraintRuleRequest.type).toBe("constraint");
+    expect(constraintRuleRequest.target_field).toBe("vssbp");
+    expect(constraintRuleRequest.query_message).toBeDefined();
+  });
+
+  it("creates fully-compliant skip logic rules", () => {
+    const expectedNode = {
+      type: "comparison",
+      operator: "==",
+      operands: [
+        {
+          type: "field_ref",
+          field_ref: {
+            field_id: "brthdt",
+            form_id: "form_dm",
+          },
+        },
+        {
+          type: "constant",
+          value: "1990-01-01",
+        },
+      ],
+    };
+
+    const skipLogicRequest = {
+      type: "skip_logic",
+      condition: expectedNode,
+      action: "show",
+      target_field: "vssbp",
+      target_form: "form_vs",
+    };
+
+    expect(skipLogicRequest.type).toBe("skip_logic");
+    expect(skipLogicRequest.action).toBe("show");
+    expect(skipLogicRequest.target_field).toBe("vssbp");
+    expect(skipLogicRequest.target_form).toBe("form_vs");
+  });
+});

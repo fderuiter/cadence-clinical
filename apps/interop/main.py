@@ -1,6 +1,7 @@
 import os
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
+from enum import Enum
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -9,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.interop.auth import (
+    has_subject_role,
     require_staff_role,
     verify_subject_bulk_identity,
     verify_subject_identity,
@@ -79,6 +81,7 @@ async def write_audit_log(
     user_role: str,
     action: str,
     details: str,
+    change_reason: Optional[str] = None,
 ) -> None:
     """
     Utility function to write to the immutable interop audit ledger.
@@ -88,6 +91,7 @@ async def write_audit_log(
         user_role=user_role,
         action=action,
         details=details,
+        change_reason=change_reason,
     )
     session.add(log_entry)
     await session.flush()
@@ -105,6 +109,16 @@ class FHIRPrefillRequest(BaseModel):
     )
 
 
+class ConflictStrategy(str, Enum):
+    """
+    Explicit validated conflict resolution strategies.
+    """
+
+    CLIENT_WINS = "CLIENT_WINS"
+    SERVER_WINS = "SERVER_WINS"
+    MERGE = "MERGE"
+
+
 class OfflineSyncMarkers(BaseModel):
     """
     Offline queue reconciliation and conflict resolution parameters.
@@ -114,8 +128,8 @@ class OfflineSyncMarkers(BaseModel):
         ..., description="The queue order sequence from device"
     )
     client_id: str = Field(..., description="Unique identifier for the mobile device")
-    conflict_strategy: str = Field(
-        "CLIENT_WINS",
+    conflict_strategy: ConflictStrategy = Field(
+        ConflictStrategy.CLIENT_WINS,
         description="Conflict strategy to resolve duplicate submissions. Supported: CLIENT_WINS, SERVER_WINS, MERGE",
     )
 
@@ -165,9 +179,14 @@ async def resolve_and_save_submission(
     result = await session.execute(stmt)
     existing: Optional[EPROSubmission] = result.scalars().first()
 
-    strategy = payload.offline_sync_markers.conflict_strategy.upper()
+    strategy = payload.offline_sync_markers.conflict_strategy
+    if isinstance(strategy, ConflictStrategy):
+        strategy = strategy.value
+    strategy = strategy.upper()
     if strategy not in ("CLIENT_WINS", "SERVER_WINS", "MERGE"):
         strategy = "CLIENT_WINS"
+
+    markers_dict = payload.offline_sync_markers.model_dump(mode="json")
 
     if not existing:
         # Easy case, no conflict
@@ -176,7 +195,7 @@ async def resolve_and_save_submission(
             diary_id=payload.diary_id,
             device_timestamp=payload.device_timestamp,
             answers=payload.answers,
-            offline_sync_markers=payload.offline_sync_markers.model_dump(),
+            offline_sync_markers=markers_dict,
             sync_status="RESOLVED",
             version_index=1,
         )
@@ -197,7 +216,7 @@ async def resolve_and_save_submission(
         # Overwrite with incoming
         existing.answers = payload.answers
         existing.device_timestamp = payload.device_timestamp
-        existing.offline_sync_markers = payload.offline_sync_markers.model_dump()
+        existing.offline_sync_markers = markers_dict
         existing.version_index += 1
         existing.sync_status = "RESOLVED"
         session.add(existing)
@@ -219,7 +238,7 @@ async def resolve_and_save_submission(
             diary_id=payload.diary_id,
             device_timestamp=payload.device_timestamp,
             answers=payload.answers,
-            offline_sync_markers=payload.offline_sync_markers.model_dump(),
+            offline_sync_markers=markers_dict,
             sync_status="CONFLICT_IGNORED",
             version_index=1,
         )
@@ -242,7 +261,7 @@ async def resolve_and_save_submission(
 
         existing.answers = merged_answers
         existing.device_timestamp = payload.device_timestamp
-        existing.offline_sync_markers = payload.offline_sync_markers.model_dump()
+        existing.offline_sync_markers = markers_dict
         existing.version_index += 1
         existing.sync_status = "RESOLVED"
         session.add(existing)
@@ -281,6 +300,7 @@ async def fhir_prefill(
     require_staff_role(request)
     user_id = getattr(request.state, "user_id", "system")
     user_roles = getattr(request.state, "roles", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
 
     # Map FHIR using adapter
     adapter = FHIRAdapter(payload.study_id)
@@ -293,6 +313,7 @@ async def fhir_prefill(
         user_role=user_roles,
         action="FHIR_PREFILL",
         details=f"Parsed FHIR Bundle for study '{payload.study_id}'. Pseudonymized Subject: '{result['subject_pseudonym']}'.",
+        change_reason=change_reason,
     )
 
     return result
@@ -311,6 +332,7 @@ async def epro_submit(
     verify_subject_identity(request, payload.subject_id)
     user_id = getattr(request.state, "user_id", "system")
     user_roles = getattr(request.state, "roles", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
 
     # Process and resolve conflict
     resolved = await resolve_and_save_submission(session, payload)
@@ -322,6 +344,7 @@ async def epro_submit(
         user_role=user_roles,
         action="EPRO_SUBMIT",
         details=f"Processed ePRO submission for Subject '{payload.subject_id}', Diary '{payload.diary_id}'. Result: {resolved['status']}.",
+        change_reason=change_reason,
     )
 
     return resolved
@@ -342,6 +365,7 @@ async def epro_sync(
     )
     user_id = getattr(request.state, "user_id", "system")
     user_roles = getattr(request.state, "roles", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
 
     results = []
     created_count = 0
@@ -366,6 +390,7 @@ async def epro_sync(
         user_role=user_roles,
         action="EPRO_BULK_SYNC",
         details=f"Processed bulk ePRO sync containing {len(payload.submissions)} items. Created: {created_count}, Reconciled/Updated: {updated_count}, Ignored: {ignored_count}.",
+        change_reason=change_reason,
     )
 
     return {
@@ -433,6 +458,25 @@ class SubjectAssignmentResponse(BaseModel):
     version_index: int
 
 
+class AssignmentComplianceDetail(BaseModel):
+    assignment_id: str
+    instrument_id: str
+    instrument_name: str
+    status: str  # "COMPLETED", "PENDING", "OVERDUE"
+    due_at: Optional[datetime]
+    end_date: datetime
+    submitted_at: Optional[datetime] = None
+
+
+class SubjectComplianceResponse(BaseModel):
+    subject_id: str
+    compliance_rate: float  # completed / total assignments * 100.0
+    completed_count: int
+    pending_count: int
+    overdue_count: int
+    assignments: List[AssignmentComplianceDetail]
+
+
 @app.post(
     "/api/v1/interop/instruments", response_model=InstrumentResponse, status_code=201
 )
@@ -470,6 +514,7 @@ async def create_instrument(
         user_role=user_roles,
         action="CREATE_INSTRUMENT",
         details=f"Created instrument '{payload.name}' with ID '{instrument.id}'.",
+        change_reason=change_reason,
     )
 
     return instrument
@@ -532,6 +577,7 @@ async def create_subject_assignment(
         user_role=user_roles,
         action="CREATE_ASSIGNMENT",
         details=f"Assigned instrument '{instrument.name}' (ID: '{instrument.id}') to subject '{payload.subject_id}'.",
+        change_reason=change_reason,
     )
 
     return assignment
@@ -545,7 +591,22 @@ async def get_instrument(
 ) -> InstrumentResponse:
     """
     Retrieve an Instrument definition by ID.
+    Enforces subject assignment checks for Subject role.
     """
+    if has_subject_role(request):
+        user_id = getattr(request.state, "user_id", "")
+        # Subject must be assigned this instrument to retrieve it
+        stmt_assign = select(SubjectAssignment).where(
+            SubjectAssignment.subject_id == user_id,
+            SubjectAssignment.instrument_id == id,
+        )
+        res_assign = await session.execute(stmt_assign)
+        if not res_assign.scalars().first():
+            raise HTTPException(
+                status_code=403,
+                detail="Access denied: Subject is not assigned this instrument.",
+            )
+
     stmt = select(Instrument).where(Instrument.id == id)
     result = await session.execute(stmt)
     instrument = result.scalars().first()
@@ -575,3 +636,138 @@ async def get_subject_assignments(
     result = await session.execute(stmt)
     assignments = result.scalars().all()
     return list(assignments)
+
+
+@app.get(
+    "/api/v1/interop/subjects/{subject_id}/instruments",
+    response_model=List[InstrumentResponse],
+)
+async def get_subject_assigned_instruments(
+    request: Request,
+    subject_id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> List[InstrumentResponse]:
+    """
+    Retrieve all unique assigned instruments for a given subject.
+    Enforces subject-scoped identity boundary (Subject can only view their own instruments).
+    """
+    verify_subject_identity(request, subject_id)
+
+    stmt = select(SubjectAssignment).where(SubjectAssignment.subject_id == subject_id)
+    result = await session.execute(stmt)
+    assignments = result.scalars().all()
+
+    if not assignments:
+        return []
+
+    instrument_ids = {a.instrument_id for a in assignments}
+
+    inst_stmt = select(Instrument).where(Instrument.id.in_(list(instrument_ids)))
+    inst_result = await session.execute(inst_stmt)
+    return list(inst_result.scalars().all())
+
+
+@app.get(
+    "/api/v1/interop/subjects/{subject_id}/compliance",
+    response_model=SubjectComplianceResponse,
+)
+async def get_subject_compliance(
+    request: Request,
+    subject_id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> SubjectComplianceResponse:
+    """
+    Retrieve/compute eCOA compliance status metrics for a subject.
+    """
+    verify_subject_identity(request, subject_id)
+
+    from sqlalchemy.orm import selectinload
+
+    # Fetch all assignments and their instruments
+    stmt = (
+        select(SubjectAssignment)
+        .where(SubjectAssignment.subject_id == subject_id)
+        .options(selectinload(SubjectAssignment.instrument))
+    )
+    res_assigns = await session.execute(stmt)
+    assignments = res_assigns.scalars().all()
+
+    # Fetch all submissions for the subject
+    stmt_subs = select(EPROSubmission).where(EPROSubmission.subject_id == subject_id)
+    res_subs = await session.execute(stmt_subs)
+    submissions = res_subs.scalars().all()
+
+    # Reconcile using chronological order per instrument
+    assignments_by_inst = {}
+    for a in assignments:
+        assignments_by_inst.setdefault(a.instrument_id, []).append(a)
+    for inst_id in assignments_by_inst:
+        assignments_by_inst[inst_id].sort(key=lambda x: x.start_date)
+
+    subs_by_inst = {}
+    for s in submissions:
+        subs_by_inst.setdefault(s.diary_id, []).append(s)
+    for inst_id in subs_by_inst:
+        subs_by_inst[inst_id].sort(key=lambda x: x.device_timestamp)
+
+    assignment_submission_map = {}
+    for inst_id, inst_assigns in assignments_by_inst.items():
+        inst_subs = subs_by_inst.get(inst_id, [])
+        sub_idx = 0
+        for assign in inst_assigns:
+            if sub_idx < len(inst_subs):
+                assignment_submission_map[assign.id] = inst_subs[sub_idx]
+                sub_idx += 1
+
+    # Determine status and build details list
+    now = (
+        datetime.now(timezone.utc).replace(tzinfo=None)
+        if hasattr(timezone, "utc")
+        else datetime.utcnow()
+    )
+    details = []
+    completed_cnt = 0
+    pending_cnt = 0
+    overdue_cnt = 0
+
+    for assign in assignments:
+        matched_sub = assignment_submission_map.get(assign.id)
+        inst_name = assign.instrument.name if assign.instrument else "Unknown"
+
+        if matched_sub:
+            status = "COMPLETED"
+            submitted_at = matched_sub.device_timestamp
+            completed_cnt += 1
+        else:
+            submitted_at = None
+            threshold = assign.due_at if assign.due_at else assign.end_date
+            if now > threshold:
+                status = "OVERDUE"
+                overdue_cnt += 1
+            else:
+                status = "PENDING"
+                pending_cnt += 1
+
+        details.append(
+            AssignmentComplianceDetail(
+                assignment_id=assign.id,
+                instrument_id=assign.instrument_id,
+                instrument_name=inst_name,
+                status=status,
+                due_at=assign.due_at,
+                end_date=assign.end_date,
+                submitted_at=submitted_at,
+            )
+        )
+
+    total = len(assignments)
+    compliance_rate = (completed_cnt / total * 100.0) if total > 0 else 100.0
+
+    return SubjectComplianceResponse(
+        subject_id=subject_id,
+        compliance_rate=round(compliance_rate, 2),
+        completed_count=completed_cnt,
+        pending_count=pending_cnt,
+        overdue_count=overdue_cnt,
+        assignments=details,
+    )

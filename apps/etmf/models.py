@@ -40,6 +40,12 @@ class ExpectedDocument(Base):
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
 
+class TMFDocumentType:
+    FORM_1572 = "FORM_1572"
+    FINANCIAL_DISCLOSURE = "FINANCIAL_DISCLOSURE"
+    PROTOCOL_SIGNOFF = "PROTOCOL_SIGNOFF"
+
+
 class DocumentStatus:
     DRAFT = "DRAFT"
     TECHNICAL_QC = "TECHNICAL_QC"
@@ -83,6 +89,21 @@ class TMFDocument(Base):
         String(50), default="01.01.01", nullable=False, index=True
     )
     metadata_json: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
+
+    # Signature and lifecycle fields
+    document_type: Mapped[Optional[str]] = mapped_column(
+        String(50), nullable=True, index=True
+    )
+    approval_status: Mapped[str] = mapped_column(
+        String(50), default="PENDING", nullable=False
+    )
+    signature_manifestation: Mapped[Optional[Dict[str, Any]]] = mapped_column(
+        JSON, nullable=True
+    )
+    signer: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    signing_timestamp: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, nullable=True
+    )
 
 
 class DocumentQCTransition(Base):

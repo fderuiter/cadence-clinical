@@ -39,6 +39,11 @@
                 <span>📊</span> CTMS Dashboard
               </button>
             </li>
+            <li class="nav-item" id="tab-btn-rules">
+              <button type="button">
+                <span>⚙️</span> Rules Designer
+              </button>
+            </li>
             <li class="nav-item" id="tab-btn-audit">
               <button type="button">
                 <span>🔒</span> Cryptographic Ledger
@@ -294,6 +299,37 @@
               </div>
               <div style="margin-top: 12px; display: flex; gap: 8px;">
                 <button id="btn-update-recruitment" class="btn btn-primary">Log Recruitment Update</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Section 5: Rules Designer -->
+        <section id="section-rules" class="dashboard-section">
+          <div class="section-header">
+            <h2>Interactive Rules Designer</h2>
+            <p>
+              Declarative visual rule builder supporting skip logic, constraint checks, and cross-form edit validations.
+            </p>
+          </div>
+
+          <div class="grid-2">
+            <!-- Rules list / manager -->
+            <div class="card">
+              <div class="card-title">Study Active Ruleset</div>
+              <div id="rules-list-container">
+                <!-- Active study rules will list here -->
+              </div>
+              <div style="margin-top: 12px; display: flex; gap: 8px;">
+                <button id="btn-new-rule" class="btn btn-primary">➕ Create New Rule</button>
+              </div>
+            </div>
+
+            <!-- Rules editor workspace -->
+            <div class="card" id="rules-editor-workspace" style="display: none;">
+              <div class="card-title" id="rules-editor-title">Compose Clinical Rule</div>
+              <div id="rules-editor-container">
+                <!-- Rule Editor UI widgets will be injected here -->
               </div>
             </div>
           </div>

@@ -800,3 +800,167 @@ async def test_instrument_and_assignment_endpoints_and_auditing():
         actions = [log.action for log in logs]
         assert "CREATE_INSTRUMENT" in actions
         assert "CREATE_ASSIGNMENT" in actions
+        for log in logs:
+            assert log.change_reason is not None
+
+
+@pytest.mark.asyncio
+async def test_subject_content_submission_and_compliance_apis():
+    """
+    Test retrieving assigned instruments, response capture/submission, and dashboard compliance status
+    for a Subject role end-to-end.
+    """
+    client = TestClient(app)
+
+    staff_headers = get_auth_headers(
+        roles="admin,sponsor_dm", change_reason="Staff setup"
+    )
+    subject_alice_headers = get_auth_headers(
+        roles="Subject", change_reason="Alice login", user_id="alice_subject"
+    )
+    subject_bob_headers = get_auth_headers(
+        roles="Subject", change_reason="Bob login", user_id="bob_subject"
+    )
+
+    # 1. Author an Instrument as staff
+    inst_payload = {
+        "name": "Sleep Quality Survey",
+        "description": "Daily survey tracking patient sleep patterns.",
+        "items": {"q1": "How many hours of restful sleep did you get?"},
+        "response_types": {"q1": {"type": "integer"}},
+        "scoring_metadata": {},
+        "reason_for_change": "Sleep standard",
+    }
+    resp = client.post(
+        "/api/v1/interop/instruments", json=inst_payload, headers=staff_headers
+    )
+    assert resp.status_code == 201
+    inst_id = resp.json()["id"]
+
+    # 2. Assign to alice
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    assign_payload = {
+        "subject_id": "alice_subject",
+        "instrument_id": inst_id,
+        "start_date": (now_utc - timedelta(days=2)).isoformat(),
+        "end_date": (now_utc + timedelta(days=1)).isoformat(),
+        "due_at": (
+            now_utc - timedelta(hours=12)
+        ).isoformat(),  # Overdue since past due_at
+        "recurrence_pattern": "DAILY",
+        "reason_for_change": "Alice assignment",
+    }
+    resp = client.post(
+        "/api/v1/interop/assignments", json=assign_payload, headers=staff_headers
+    )
+    assert resp.status_code == 201
+    resp.json()["id"]
+
+    # Assign another pending to Alice
+    assign_payload_pending = {
+        "subject_id": "alice_subject",
+        "instrument_id": inst_id,
+        "start_date": now_utc.isoformat(),
+        "end_date": (now_utc + timedelta(days=5)).isoformat(),
+        "due_at": (now_utc + timedelta(days=1)).isoformat(),  # Pending
+        "recurrence_pattern": "DAILY",
+        "reason_for_change": "Alice pending assignment",
+    }
+    client.post(
+        "/api/v1/interop/assignments",
+        json=assign_payload_pending,
+        headers=staff_headers,
+    )
+
+    # 3. Retrieve Alice's assigned instruments
+    resp = client.get(
+        "/api/v1/interop/subjects/alice_subject/instruments",
+        headers=subject_alice_headers,
+    )
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+    assert resp.json()[0]["id"] == inst_id
+
+    # 4. Cross-subject validation: Bob cannot fetch Alice's assignments or instruments
+    resp = client.get(
+        "/api/v1/interop/subjects/alice_subject/instruments",
+        headers=subject_bob_headers,
+    )
+    assert resp.status_code == 403
+
+    resp = client.get(
+        "/api/v1/interop/assignments/subject/alice_subject", headers=subject_bob_headers
+    )
+    assert resp.status_code == 403
+
+    # 5. Access control for Instrument definition retrieval:
+    # Bob is not assigned the Instrument, so Bob's attempt to retrieve it should yield a 403.
+    resp = client.get(
+        f"/api/v1/interop/instruments/{inst_id}", headers=subject_bob_headers
+    )
+    assert resp.status_code == 403
+
+    # Alice IS assigned the Instrument and should retrieve it successfully.
+    resp = client.get(
+        f"/api/v1/interop/instruments/{inst_id}", headers=subject_alice_headers
+    )
+    assert resp.status_code == 200
+    assert resp.json()["name"] == "Sleep Quality Survey"
+
+    # 6. Compliance calculations before submission
+    # We should have 1 overdue and 1 pending assignment
+    resp = client.get(
+        "/api/v1/interop/subjects/alice_subject/compliance",
+        headers=subject_alice_headers,
+    )
+    assert resp.status_code == 200
+    comp_data = resp.json()
+    assert comp_data["subject_id"] == "alice_subject"
+    assert comp_data["completed_count"] == 0
+    assert comp_data["overdue_count"] == 1
+    assert comp_data["pending_count"] == 1
+    assert comp_data["compliance_rate"] == 0.0
+
+    # 7. Alice submits response
+    sub_payload = {
+        "subject_id": "alice_subject",
+        "diary_id": inst_id,
+        "device_timestamp": now_utc.isoformat(),
+        "answers": {"q1": 8},
+        "offline_sync_markers": {
+            "sequence_number": 1,
+            "client_id": "device_alice",
+            "conflict_strategy": "CLIENT_WINS",
+        },
+    }
+    resp = client.post(
+        "/api/v1/interop/epro/submit", json=sub_payload, headers=subject_alice_headers
+    )
+    assert resp.status_code == 201
+    assert resp.json()["status"] == "CREATED"
+
+    # 8. Compliance calculations after first submission
+    # The submission reconciles with the first assignment chronologically, marking it COMPLETED.
+    # The remaining assignment is pending.
+    resp = client.get(
+        "/api/v1/interop/subjects/alice_subject/compliance",
+        headers=subject_alice_headers,
+    )
+    assert resp.status_code == 200
+    comp_data_post = resp.json()
+    assert comp_data_post["completed_count"] == 1
+    assert comp_data_post["overdue_count"] == 0
+    assert comp_data_post["pending_count"] == 1
+    assert comp_data_post["compliance_rate"] == 50.0
+
+    # 9. Verify InteropAuditLog tracks action, role, and change_reason
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(InteropAuditLog).where(
+            InteropAuditLog.action == "EPRO_SUBMIT",
+            InteropAuditLog.user_id == "alice_subject",
+        )
+        res = await session.execute(stmt)
+        log_entry = res.scalars().first()
+        assert log_entry is not None
+        assert log_entry.user_role == "Subject"
+        assert log_entry.change_reason == "Alice login"

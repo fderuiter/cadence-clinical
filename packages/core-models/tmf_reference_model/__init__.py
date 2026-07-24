@@ -29,6 +29,7 @@ DIA_V3_2_0_RAW = {
                 [
                     ("01.01.01", "Clinical Trial Protocol"),
                     ("01.01.02", "Clinical Trial Protocol Amendment"),
+                    ("01.01.03", "Protocol Sign-off"),
                 ],
             )
         },
@@ -52,7 +53,16 @@ DIA_V3_2_0_RAW = {
     ),
     5: (
         "Site Management",
-        {"05.01": ("Site Selection", [("05.01.01", "Site Feasibility Survey")])},
+        {
+            "05.01": ("Site Selection", [("05.01.01", "Site Feasibility Survey")]),
+            "05.02": (
+                "Investigator Qualification",
+                [
+                    ("05.02.01", "FDA Form 1572"),
+                    ("05.02.02", "Financial Disclosure"),
+                ],
+            ),
+        },
     ),
     6: (
         "IP & Trial Supplies",

@@ -62,6 +62,7 @@ class InteropAuditLog(Base):
     user_role: Mapped[str] = mapped_column(String(255), nullable=False)
     action: Mapped[str] = mapped_column(String(50), nullable=False)
     details: Mapped[str] = mapped_column(String(1000), nullable=False)
+    change_reason: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
 
 class Instrument(Base):
