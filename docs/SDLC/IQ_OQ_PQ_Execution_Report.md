@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 612
-- **Passed:** 612 🟢
+- **Total Automated Test Cases Run:** 619
+- **Passed:** 619 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -159,6 +159,14 @@ The Operational Qualification verifies that individual clinical operations, stat
 ### 3.1 Traceability Mappings Verification
 | Test Case Name | Classname / Suite | Target Req | Status | Duration |
 | :--- | :--- | :--- | :--- | :--- |
+| `test_derive_adae_basic_join` | `tests.test_adae` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_derive_adae_missing_dates_and_ongoing` | `tests.test_adae` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_derive_adae_partial_dates_imputation` | `tests.test_adae` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_derive_adae_relative_day_formula` | `tests.test_adae` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_derive_adae_severity_mappings` | `tests.test_adae` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_derive_adae_treatment_emergent_safety_window` | `tests.test_adae` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_derive_adae_unmatched_subject_skipped` | `tests.test_adae` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_from_sas_date` | `tests.test_adae` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_derive_adsl_additional_branches` | `tests.test_adsl` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_derive_adsl_basic` | `tests.test_adsl` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_derive_adsl_edge_cases` | `tests.test_adsl` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -420,6 +428,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_valid_data_element_detail_validation` | `tests.test_global_library` | PRD-MDR-001 | 🟢 PASSED | < 1s |
 | `test_valid_form_detail_validation` | `tests.test_global_library` | PRD-MDR-001 | 🟢 PASSED | < 1s |
 | `test_valid_visit_detail_validation` | `tests.test_global_library` | PRD-MDR-001 | 🟢 PASSED | < 1s |
+| `test_mock_flow_library_version_chain_and_immutability` | `tests.test_global_library_neo4j` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_mock_list_filtering_and_pagination` | `tests.test_global_library_neo4j` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_neo4j_library_object_version_chain_queries` | `tests.test_global_library_neo4j` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_bulk_offline_sync` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_epro_submission_and_conflict_resolution` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_fhir_prefill_bundle_pipeline` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
