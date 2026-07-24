@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 533
-- **Passed:** 533 🟢
+- **Total Automated Test Cases Run:** 567
+- **Passed:** 567 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -159,6 +159,17 @@ The Operational Qualification verifies that individual clinical operations, stat
 ### 3.1 Traceability Mappings Verification
 | Test Case Name | Classname / Suite | Target Req | Status | Duration |
 | :--- | :--- | :--- | :--- | :--- |
+| `test_derive_adsl_additional_branches` | `tests.test_adsl` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_derive_adsl_basic` | `tests.test_adsl` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_derive_adsl_edge_cases` | `tests.test_adsl` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_derive_adsl_observation_based_death_and_actarm` | `tests.test_adsl` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_derive_adsl_partial_dates_and_population_flags` | `tests.test_adsl` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_derive_adsl_various_fallback_branches` | `tests.test_adsl` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_derive_adsl_with_datetime_objects` | `tests.test_adsl` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_impute_partial_date` | `tests.test_adsl` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_parse_partial_date` | `tests.test_adsl` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_to_date_obj` | `tests.test_adsl` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_to_sas_date` | `tests.test_adsl` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_parameters_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_paths_and_methods_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_request_bodies_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
