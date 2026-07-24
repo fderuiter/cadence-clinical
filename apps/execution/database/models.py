@@ -161,7 +161,9 @@ class ClinicalObservation(AuditedModel):
     normalized_value: Mapped[float] = mapped_column(Float, nullable=True)
     normalized_unit: Mapped[str] = mapped_column(String(50), nullable=True)
     is_outlier: Mapped[bool] = mapped_column(Boolean, default=False)
-    is_sdv_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_sdv_verified: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
     sdv_verified_by: Mapped[str] = mapped_column(String(255), nullable=True)
     sdv_verified_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     page_id: Mapped[str] = mapped_column(String(255), nullable=True)
@@ -233,7 +235,9 @@ class SDVSignOff(AuditedModel):
 
     __tablename__ = "sdv_sign_offs"
 
-    scope: Mapped[str] = mapped_column(String(50), nullable=False)  # FIELD, PAGE, or VISIT
+    scope: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # FIELD, PAGE, or VISIT
     target_id: Mapped[str] = mapped_column(String(255), nullable=False)
     subject_id: Mapped[str] = mapped_column(String(255), nullable=False)
     study_id: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -264,9 +268,15 @@ class TSDVConfig(AuditedModel):
     __tablename__ = "tsdv_configs"
 
     study_id: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
-    sampling_model: Mapped[str] = mapped_column(String(50), nullable=False)  # SUBJECT_BASED, FIELD_BASED, or COMBINED
-    initial_full_sdv_subject_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    random_sample_percentage: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    sampling_model: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # SUBJECT_BASED, FIELD_BASED, or COMBINED
+    initial_full_sdv_subject_count: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False
+    )
+    random_sample_percentage: Mapped[float] = mapped_column(
+        Float, default=0.0, nullable=False
+    )
     full_sdv_domains: Mapped[list] = mapped_column(JSON, nullable=True)
     safety_endpoints: Mapped[list] = mapped_column(JSON, nullable=True)
     zero_sdv_domains: Mapped[list] = mapped_column(JSON, nullable=True)

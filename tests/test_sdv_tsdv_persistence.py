@@ -1,17 +1,17 @@
-import os
 from datetime import datetime
+
 import pytest
 from sqlalchemy import select, text
 
 from apps.execution.database.core import db_manager
+from apps.execution.database.migrate import deploy_database_triggers
 from apps.execution.database.models import (
+    AuditLog,
     Base,
     ClinicalObservation,
     SDVSignOff,
     TSDVConfig,
-    AuditLog,
 )
-from apps.execution.database.migrate import run_migrations, deploy_database_triggers
 from apps.execution.trial_lock import TrialLockManager
 
 
@@ -45,7 +45,9 @@ async def test_clinical_observation_sdv_defaults():
     async with db_manager.get_session_maker()() as session:
         async with session.begin():
             # Silence DB triggers to let SQLAlchemy listener record the audit log
-            await session.execute(text("SELECT set_config('cadence.app_writing', 'true', 1);"))
+            await session.execute(
+                text("SELECT set_config('cadence.app_writing', 'true', 1);")
+            )
             obs = ClinicalObservation(
                 subject_id="SUBJ-001",
                 study_id="STUDY-XYZ",
@@ -58,7 +60,9 @@ async def test_clinical_observation_sdv_defaults():
 
     async with db_manager.get_session_maker()() as session:
         result = await session.execute(
-            select(ClinicalObservation).where(ClinicalObservation.subject_id == "SUBJ-001")
+            select(ClinicalObservation).where(
+                ClinicalObservation.subject_id == "SUBJ-001"
+            )
         )
         saved_obs = result.scalar_one()
 
@@ -69,7 +73,9 @@ async def test_clinical_observation_sdv_defaults():
         assert saved_obs.page_id is None
 
         # Modify values and verify persistence
-        await session.execute(text("SELECT set_config('cadence.app_writing', 'true', 1);"))
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', 1);")
+        )
         saved_obs.is_sdv_verified = True
         saved_obs.sdv_verified_by = "CRA-007"
         saved_obs.sdv_verified_at = datetime(2026, 7, 28, 12, 0, 0)
@@ -78,7 +84,9 @@ async def test_clinical_observation_sdv_defaults():
 
     async with db_manager.get_session_maker()() as session:
         result = await session.execute(
-            select(ClinicalObservation).where(ClinicalObservation.subject_id == "SUBJ-001")
+            select(ClinicalObservation).where(
+                ClinicalObservation.subject_id == "SUBJ-001"
+            )
         )
         updated_obs = result.scalar_one()
         assert updated_obs.is_sdv_verified is True
@@ -97,7 +105,9 @@ async def test_sdv_sign_off_persistence_and_audit():
     async with db_manager.get_session_maker()() as session:
         async with session.begin():
             # Silence DB triggers to let SQLAlchemy listener record the audit log
-            await session.execute(text("SELECT set_config('cadence.app_writing', 'true', 1);"))
+            await session.execute(
+                text("SELECT set_config('cadence.app_writing', 'true', 1);")
+            )
             sign_off = SDVSignOff(
                 scope="PAGE",
                 target_id="PAGE-01",
@@ -125,7 +135,9 @@ async def test_sdv_sign_off_persistence_and_audit():
     # Drop verification and check update auditing
     async with db_manager.get_session_maker()() as session:
         async with session.begin():
-            await session.execute(text("SELECT set_config('cadence.app_writing', 'true', 1);"))
+            await session.execute(
+                text("SELECT set_config('cadence.app_writing', 'true', 1);")
+            )
             result = await session.execute(
                 select(SDVSignOff).where(SDVSignOff.target_id == "PAGE-01")
             )
@@ -137,7 +149,9 @@ async def test_sdv_sign_off_persistence_and_audit():
     # Verify update auditing
     async with db_manager.get_session_maker()() as session:
         result = await session.execute(
-            select(AuditLog).where(AuditLog.table_name == "sdv_sign_offs").order_by(AuditLog.timestamp)
+            select(AuditLog)
+            .where(AuditLog.table_name == "sdv_sign_offs")
+            .order_by(AuditLog.timestamp)
         )
         logs = result.scalars().all()
         assert len(logs) == 2
@@ -149,8 +163,12 @@ async def test_sdv_sign_off_persistence_and_audit():
     # Verify hard deletion prevention
     async with db_manager.get_session_maker()() as session:
         async with session.begin():
-            with pytest.raises(Exception, match="Hard deletions are strictly forbidden"):
-                await session.execute(text("DELETE FROM sdv_sign_offs WHERE target_id = 'PAGE-01';"))
+            with pytest.raises(
+                Exception, match="Hard deletions are strictly forbidden"
+            ):
+                await session.execute(
+                    text("DELETE FROM sdv_sign_offs WHERE target_id = 'PAGE-01';")
+                )
 
 
 @pytest.mark.asyncio
@@ -162,7 +180,9 @@ async def test_tsdv_config_persistence():
     """
     async with db_manager.get_session_maker()() as session:
         async with session.begin():
-            await session.execute(text("SELECT set_config('cadence.app_writing', 'true', 1);"))
+            await session.execute(
+                text("SELECT set_config('cadence.app_writing', 'true', 1);")
+            )
             cfg = TSDVConfig(
                 study_id="STUDY-SAMPLING",
                 sampling_model="FIELD_BASED",
