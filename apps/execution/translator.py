@@ -93,6 +93,113 @@ def extract_appearance(item: dict[str, Any]) -> str | None:
     return None
 
 
+def compile_condition_to_xpath(node: Any) -> str:
+    """Recursively compiles a structured rule condition (dict or ExpressionNode) into an XPath expression string.
+
+    References to fields are sanitized using `sanitize_identifier`.
+    """
+    if not node:
+        return ""
+
+    # Standardize dictionary vs ExpressionNode
+    node_type = getattr(node, "type", None) or node.get("type")
+    if not node_type:
+        return ""
+
+    if node_type == "constant":
+        val = (
+            getattr(node, "value", None)
+            if hasattr(node, "value")
+            else node.get("value")
+        )
+        if val is True:
+            return "true()"
+        if val is False:
+            return "false()"
+        if val is None:
+            return ""
+        if isinstance(val, str):
+            return f"'{val}'"
+        return str(val)
+
+    elif node_type == "field_ref":
+        ref = (
+            getattr(node, "field_ref", None)
+            if hasattr(node, "field_ref")
+            else node.get("field_ref")
+        )
+        if not ref:
+            return ""
+        field_id = (
+            getattr(ref, "field_id", None)
+            if hasattr(ref, "field_id")
+            else ref.get("field_id")
+        )
+        if not field_id:
+            return ""
+        sanitized = sanitize_identifier(field_id)
+        return f"/{sanitized}"
+
+    elif node_type == "logical":
+        operator = (
+            getattr(node, "operator", None)
+            if hasattr(node, "operator")
+            else node.get("operator")
+        )
+        operands = (
+            getattr(node, "operands", None)
+            if hasattr(node, "operands")
+            else node.get("operands")
+        )
+        if not operator or not operands:
+            return ""
+        if operator == "not":
+            return f"not({compile_condition_to_xpath(operands[0])})"
+        op_lower = f" {operator.lower()} "
+        compiled_ops = [compile_condition_to_xpath(op) for op in operands]
+        return f"({op_lower.join(compiled_ops)})"
+
+    elif node_type == "comparison":
+        operator = (
+            getattr(node, "operator", None)
+            if hasattr(node, "operator")
+            else node.get("operator")
+        )
+        operands = (
+            getattr(node, "operands", None)
+            if hasattr(node, "operands")
+            else node.get("operands")
+        )
+        if not operator or not operands or len(operands) < 2:
+            return ""
+        op_symbol = "=" if operator == "==" else operator
+        left = compile_condition_to_xpath(operands[0])
+        right = compile_condition_to_xpath(operands[1])
+        return f"({left} {op_symbol} {right})"
+
+    elif node_type == "function":
+        operator = (
+            getattr(node, "operator", None)
+            if hasattr(node, "operator")
+            else node.get("operator")
+        )
+        operands = (
+            getattr(node, "operands", None)
+            if hasattr(node, "operands")
+            else node.get("operands")
+        )
+        if not operator or not operands:
+            return ""
+        if operator == "is_empty":
+            return f"empty({compile_condition_to_xpath(operands[0])})"
+        elif operator == "is_not_empty":
+            return f"not(empty({compile_condition_to_xpath(operands[0])}))"
+        compiled_ops = [compile_condition_to_xpath(op) for op in operands]
+        return f"{operator}({', '.join(compiled_ops)})"
+
+    return ""
+
+
 async def process_translation(
     study_id: str,
     payload: dict[str, Any],
@@ -147,12 +254,66 @@ async def process_translation(
                             item_type = item.get("type", "string")
                             appearance = extract_appearance(item)
 
+                            # Parse and compile rules
+                            relevants = []
+                            constraints = []
+                            constraint_messages = []
+                            item_rules = item.get("rules", [])
+                            for r in item_rules:
+                                r_type = r.get("type")
+                                condition = r.get("condition")
+                                if not condition:
+                                    continue
+
+                                compiled_xpath = compile_condition_to_xpath(condition)
+                                if not compiled_xpath:
+                                    continue
+
+                                if r_type == "skip_logic":
+                                    action = r.get("action", "show")
+                                    if action == "hide":
+                                        expr = f"not({compiled_xpath})"
+                                    else:
+                                        expr = compiled_xpath
+                                    relevants.append(expr)
+
+                                elif r_type == "constraint":
+                                    constraints.append(compiled_xpath)
+                                    msg = r.get("query_message")
+                                    if msg:
+                                        constraint_messages.append(msg)
+
+                            relevant_expr = (
+                                " and ".join(
+                                    f"({r})" if len(relevants) > 1 else r
+                                    for r in relevants
+                                )
+                                if relevants
+                                else None
+                            )
+                            constraint_expr = (
+                                " and ".join(
+                                    f"({c})" if len(constraints) > 1 else c
+                                    for c in constraints
+                                )
+                                if constraints
+                                else None
+                            )
+                            constraint_msg = (
+                                "; ".join(constraint_messages)
+                                if constraint_messages
+                                else None
+                            )
+
                             processed_items.append(
                                 {
                                     "id": item_id,
                                     "name": item_name,
                                     "type": item_type,
                                     "appearance": appearance,
+                                    "relevant": relevant_expr,
+                                    "constraint": constraint_expr,
+                                    "constraint_message": constraint_msg,
                                 }
                             )
 

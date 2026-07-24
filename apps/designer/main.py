@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
 from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile, status
+from neo4j import AsyncGraphDatabase
 from pydantic import BaseModel
 
 from apps.designer.db import (
@@ -88,16 +89,28 @@ async def invalid_signature_handler(request: Request, exc: InvalidSignatureError
     )
 
 
+async def get_neo4j_driver(request: Request):
+    """
+    Lightweight dependency/accessor to retrieve the active Neo4j driver.
+    """
+    return getattr(request.app.state, "driver", None)
+
+
 @app.on_event("startup")
 async def startup() -> None:
     """Initialize resources on designer startup."""
-    pass
+    uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+    user = os.getenv("NEO4J_USER", "neo4j")
+    password = os.getenv("NEO4J_PASSWORD", "password")
+    app.state.driver = AsyncGraphDatabase.driver(uri, auth=(user, password))
 
 
 @app.on_event("shutdown")
 async def shutdown() -> None:
     """Clean up resources on designer shutdown."""
-    pass
+    driver = getattr(app.state, "driver", None)
+    if driver is not None:
+        await driver.close()
 
 
 @app.get("/health")
