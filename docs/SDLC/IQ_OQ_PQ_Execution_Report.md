@@ -1,6 +1,6 @@
 # GxP Installation & Operational Qualification (IQ/OQ/PQ) Execution Report
 
-*Execution Date:* 2026-07-23 23:29:04 UTC
+*Execution Date:* 2026-07-23 23:29:18 UTC
 *Regulatory Protocol:* FDA 21 CFR Part 11, EU Annex 11, GAMP 5 Category 4/5, IEC 62304 Class B
 
 ## 1. Executive Summary & Verification Declaration
@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 141
-- **Passed:** 141 🟢
+- **Total Automated Test Cases Run:** 165
+- **Passed:** 165 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -165,6 +165,12 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_outlier_detection_performance` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_relational_persistence_and_recalculation` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_unit_conversions` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_create_clinical_query_authorization_failures` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_create_clinical_query_success` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_database_events_prevent_deletions` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_duplicate_active_query_rejected` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_query_state_transition_and_role_boundaries` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_reopen_transitions` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_encryption_decryption_with_rotation` | `tests.test_cryptography` | Trace-2, PRD-MDR-005 | 🟢 PASSED | 0.01s |
 | `test_key_splitting` | `tests.test_cryptography` | Trace-2, PRD-MDR-005 | 🟢 PASSED | 0.01s |
 | `test_concurrent_library_version_increments` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | 0.01s |
@@ -185,6 +191,14 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_inspector_portal_read_only_access_limits` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_tmf_taxonomy_mapping` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_view_download_audit_logging` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_actual_cryptographic_verification` | `tests.test_etmf_compliance` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_audit_logs_group_sealing_and_chaining` | `tests.test_etmf_compliance` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_background_sealer_lifecycle` | `tests.test_etmf_compliance` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_missing_and_invalid_signature_ingestion` | `tests.test_etmf_compliance` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_mock_signature_bypass` | `tests.test_etmf_compliance` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_signature_extraction_formats` | `tests.test_etmf_compliance` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_signature_requirement_rules` | `tests.test_etmf_compliance` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_tampering_detection_and_lockout_propagation` | `tests.test_etmf_compliance` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_gateway_cors_headers` | `tests.test_gateway` | PRD-UNI-001 | 🟢 PASSED | 0.01s |
 | `test_gateway_rate_limiting` | `tests.test_gateway` | PRD-UNI-001 | 🟢 PASSED | 0.01s |
 | `test_generate_signature` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | 0.01s |
@@ -256,6 +270,13 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_middleware_v2_safe_method_no_reason_success` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_middleware_v2_success` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_mutation_unsigned_and_non_compliant_rejections` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_get_repository_fallback` | `tests.test_sync_ruleset` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_get_repository_from_env` | `tests.test_sync_ruleset` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_get_repository_from_git_https` | `tests.test_sync_ruleset` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_get_repository_from_git_ssh` | `tests.test_sync_ruleset` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_sync_ruleset_create_new` | `tests.test_sync_ruleset` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_sync_ruleset_dry_run` | `tests.test_sync_ruleset` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_sync_ruleset_update_existing` | `tests.test_sync_ruleset` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_terminology_cache_capacity_eviction` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_terminology_cache_hit_and_expiration` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_terminology_cache_thread_safety` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | 0.01s |
@@ -273,7 +294,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_audit_safe_context_binds_and_cleans_up` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_audit_safe_context_cleans_up_on_error` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_background_translation_records_user_audit` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_identifier_sanitization_during_translation` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_study_published_event_triggers_translation` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_study_published_expired_timestamp_rejection` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
+| `test_study_published_invalid_signature_rejection` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_translation_validation_failure` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_site_and_visit_locks` | `tests.test_trial_lock` | *Regression/Helper* | 🟢 PASSED | 0.01s |
 | `test_trial_lock_freeze` | `tests.test_trial_lock` | *Regression/Helper* | 🟢 PASSED | 0.01s |

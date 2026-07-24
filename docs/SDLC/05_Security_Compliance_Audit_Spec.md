@@ -279,8 +279,13 @@ import contextvars
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 
-current_user_id: contextvars.ContextVar[str] = contextvars.ContextVar("user_id", default="system")
-current_change_reason: contextvars.ContextVar[str] = contextvars.ContextVar("change_reason", default="System Modification")
+current_user_id: contextvars.ContextVar[str] = contextvars.ContextVar(
+    "user_id", default="system"
+)
+current_change_reason: contextvars.ContextVar[str] = contextvars.ContextVar(
+    "change_reason", default="System Modification"
+)
+
 
 async def propagate_db_session_context(db_session: AsyncSession):
     user_id = current_user_id.get()
@@ -289,11 +294,11 @@ async def propagate_db_session_context(db_session: AsyncSession):
     # Inject context safely into PostgreSQL transaction session variables
     await db_session.execute(
         text("SELECT set_config('cadence.current_user_id', :user_id, true);"),
-        {"user_id": user_id}
+        {"user_id": user_id},
     )
     await db_session.execute(
         text("SELECT set_config('cadence.current_change_reason', :reason, true);"),
-        {"reason": reason}
+        {"reason": reason},
     )
 ```
 
@@ -341,18 +346,23 @@ import json
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+
 async def execute_audit_sealing_cycle(db: AsyncSession):
     # 1. Fetch the last valid block hash
     last_block_query = await db.execute(
-        text("SELECT current_block_hash FROM public.audit_ledger_seals ORDER BY block_index DESC LIMIT 1;")
+        text(
+            "SELECT current_block_hash FROM public.audit_ledger_seals ORDER BY block_index DESC LIMIT 1;"
+        )
     )
     result = last_block_query.fetchone()
     previous_hash = result[0] if result else "0" * 64
 
     # 2. Fetch all unsealed audit records
     unsealed_query = await db.execute(
-        text("SELECT id, table_name, record_id, action, user_id, timestamp, old_values, new_values, version_index, change_reason "
-             "FROM public.audit_logs WHERE cryptographic_seal IS NULL ORDER BY timestamp ASC LIMIT 100;")
+        text(
+            "SELECT id, table_name, record_id, action, user_id, timestamp, old_values, new_values, version_index, change_reason "
+            "FROM public.audit_logs WHERE cryptographic_seal IS NULL ORDER BY timestamp ASC LIMIT 100;"
+        )
     )
     records = unsealed_query.fetchall()
     if not records:
@@ -373,32 +383,41 @@ async def execute_audit_sealing_cycle(db: AsyncSession):
             "old_values": json.dumps(rec.old_values, sort_keys=True),
             "new_values": json.dumps(rec.new_values, sort_keys=True),
             "version_index": rec.version_index,
-            "change_reason": rec.change_reason
+            "change_reason": rec.change_reason,
         }
-        serialized = json.dumps(record_payload, sort_keys=True).encode('utf-8')
+        serialized = json.dumps(record_payload, sort_keys=True).encode("utf-8")
         rec_hash = hashlib.sha256(serialized).hexdigest()
         record_hashes.append(rec_hash)
         record_ids.append(rec.id)
 
     # 3. Calculate Merkle Root of records
-    combined_records_payload = "".join(record_hashes).encode('utf-8')
+    combined_records_payload = "".join(record_hashes).encode("utf-8")
     merkle_root = hashlib.sha256(combined_records_payload).hexdigest()
 
     # 4. Calculate Block Hash
-    block_input = (previous_hash + merkle_root).encode('utf-8')
+    block_input = (previous_hash + merkle_root).encode("utf-8")
     current_block_hash = hashlib.sha256(block_input).hexdigest()
 
     # 5. Insert Ledger Seal Record
     await db.execute(
-        text("INSERT INTO public.audit_ledger_seals (previous_block_hash, current_block_hash, timestamp, sealed_record_count, merkle_root_hash) "
-             "VALUES (:prev, :curr, TIMEZONE('utc', NOW()), :count, :merkle);"),
-        {"prev": previous_hash, "curr": current_block_hash, "count": len(records), "merkle": merkle_root}
+        text(
+            "INSERT INTO public.audit_ledger_seals (previous_block_hash, current_block_hash, timestamp, sealed_record_count, merkle_root_hash) "
+            "VALUES (:prev, :curr, TIMEZONE('utc', NOW()), :count, :merkle);"
+        ),
+        {
+            "prev": previous_hash,
+            "curr": current_block_hash,
+            "count": len(records),
+            "merkle": merkle_root,
+        },
     )
 
     # 6. Apply cryptographic seal to audited records in database
     await db.execute(
-        text("UPDATE public.audit_logs SET cryptographic_seal = :seal WHERE id IN :ids;"),
-        {"seal": current_block_hash, "ids": tuple(record_ids)}
+        text(
+            "UPDATE public.audit_logs SET cryptographic_seal = :seal WHERE id IN :ids;"
+        ),
+        {"seal": current_block_hash, "ids": tuple(record_ids)},
     )
 
     await db.commit()
@@ -564,6 +583,7 @@ The `Trial_Salt` is stored in the vault, accessible only by the automated data e
 ```python
 import hashlib
 
+
 def generate_subject_pseudonym(raw_subject_id: str, trial_salt: str) -> str:
     """Generates a secure, irreversible, deterministic pseudonym for export compliance.
 
@@ -576,7 +596,7 @@ def generate_subject_pseudonym(raw_subject_id: str, trial_salt: str) -> str:
     """
     input_payload = f"{raw_subject_id}:{trial_salt}"
     hasher = hashlib.sha256()
-    hasher.update(input_payload.encode('utf-8'))
+    hasher.update(input_payload.encode("utf-8"))
     return hasher.hexdigest()
 ```
 
