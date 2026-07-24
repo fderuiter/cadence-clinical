@@ -52,7 +52,7 @@ def is_architectural_file(filepath: str) -> bool:
     Checks if a file path is considered an architectural change according to:
     - Dependencies configuration (pyproject.toml, package.json)
     - API Gateway modifications (apps/gateway/)
-    - Core data models (packages/core-models/)
+    - Security and UI shared packages (packages/security/, packages/ui/)
     - Database/storage model changes/migrations (apps/execution/database/, 'migrations', 'models')
 
     Ignores tests, docs, scripts, github workflows, markdown/txt files, etc.
@@ -77,8 +77,8 @@ def is_architectural_file(filepath: str) -> bool:
     if filepath.startswith("apps/gateway/"):
         return True
 
-    # 3. Core data models
-    if filepath.startswith("packages/core-models/"):
+    # 3. Active shared folders
+    if filepath.startswith("packages/security/") or filepath.startswith("packages/ui/"):
         return True
 
     # 4. Storage model changes or migrations under execution
@@ -107,21 +107,13 @@ def get_changed_files() -> set[str]:
         except Exception:
             pass
 
-    # 2. Try git diff HEAD^ (standard on PR branch checks)
-    if not changed_files:
-        stdout, _ = run_git_command(["git", "diff", "--name-only", "HEAD^"])
-        if stdout:
-            changed_files.update(stdout.splitlines())
-
-    # 3. Try git diff against origin/main
-    if not changed_files:
-        stdout, _ = run_git_command(["git", "diff", "--name-only", "origin/main"])
-        if stdout:
-            changed_files.update(stdout.splitlines())
-
-    # 4. Try git diff against HEAD~1
-    if not changed_files:
-        stdout, _ = run_git_command(["git", "diff", "--name-only", "HEAD~1"])
+    # Union all git diff methods to ensure we capture the complete history of changes in multi-commit PRs
+    for diff_arg in (
+        ["git", "diff", "--name-only", "HEAD^"],
+        ["git", "diff", "--name-only", "origin/main"],
+        ["git", "diff", "--name-only", "HEAD~1"],
+    ):
+        stdout, _ = run_git_command(diff_arg)
         if stdout:
             changed_files.update(stdout.splitlines())
 

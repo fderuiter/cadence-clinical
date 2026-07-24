@@ -13,7 +13,9 @@ def test_is_architectural_file():
     assert is_architectural_file("pyproject.toml") is True
     assert is_architectural_file("package.json") is True
     assert is_architectural_file("apps/gateway/main.py") is True
-    assert is_architectural_file("packages/core-models/model.py") is True
+    assert is_architectural_file("packages/security/model.py") is True
+    assert is_architectural_file("packages/ui/model.py") is True
+    assert is_architectural_file("packages/core-models/model.py") is False
     assert is_architectural_file("apps/execution/database/audit.py") is True
     assert is_architectural_file("apps/execution/models.py") is True
     assert is_architectural_file("apps/execution/migrations/0001_init.py") is True

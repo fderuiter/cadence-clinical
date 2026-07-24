@@ -495,21 +495,31 @@ if __name__ == "__main__":
 
 Clinical trials frequently require custom dictionary translation layers. CDISC domains (e.g., SDTM DM, AE, VS) must adapt to sponsor-specific verbiage variations or localized linguistic outputs without breaking underlying graph data schemas.
 
-### Directory Mapping
-* Translators and translation templates reside in `apps/execution/` and `apps/execution/templates/`
-* Terminology databases map overrides via the Neo4j schema relationships:
-  `(Concept) -[:LOCALIZED_TO {sponsor_id: 'novartis', locale: 'ja_JP'}]-> (OverrideValue)`
+Instead of relying on rigid, manual CLI utilities, the platform uses an active, in-memory **Terminology Override and Cache System** integrated directly within the **Designer Service (`apps/designer`)**.
 
-### Terminology Override Activation Command
-To load and apply a localization dictionary to a specific clinical study workspace:
+### Directory Mapping & Active Utilities
+* Active mapping utilities reside in `apps/designer/mapper.py`.
+* Controlled terminology lookups and custom localization translations utilize the active `TerminologyCache` defined in `apps/designer/db.py`.
+* In-memory bidirectional transformation adapters flatten and process these mappings dynamically during active USDM exports.
 
-```bash
-# Executing terminology mapping override via the translator module
-uv run python -m apps.execution.translator \
-  --study-id "STUDY-2026-ONC" \
-  --sponsor-id "novartis" \
-  --locale-file "./apps/execution/templates/novartis_ja_override.json"
-```
+### Local Study Translation Management Process
+To load and apply a localization dictionary without requiring a service restart, system operators and administrators must follow the standard cache-refresh workflow:
+
+1. **Load/Update Terminology Mappings:** Update translation dictionaries or configure localized terminology overrides in the Neo4j database utilizing the platform's localization schema relations:
+   ```
+   (Concept) -[:LOCALIZED_TO {sponsor_id: 'novartis', locale: 'ja_JP'}]-> (OverrideValue)
+   ```
+2. **Flush the In-Memory Cache:** To propagate the updated dictionary mappings immediately across the active Design service without restart, execute an on-demand flush of the in-memory terminology cache by hitting the administrative clear endpoint:
+   ```bash
+   curl -X POST https://designer.cadence-clinical.internal/api/admin/cache/clear \
+     -H "Authorization: Bearer <ADMIN_TOKEN>"
+   ```
+3. **Verify Cache Status:** Query the cache status endpoint to ensure the cache size is reset and ready to capture subsequent dynamic lookups:
+   ```bash
+   curl -X GET https://designer.cadence-clinical.internal/api/admin/cache/status \
+     -H "Authorization: Bearer <ADMIN_TOKEN>"
+   ```
+4. **Dynamic Mapping Execution:** Subsequent requests for USDM study projections will automatically route through the active `map_study_to_usdm` mapper, dynamically fetch the new localized mappings from the database, and repopulate the in-memory terminology cache.
 
 ---
 

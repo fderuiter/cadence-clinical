@@ -475,9 +475,11 @@ def generate_qualification_report(
             status_emoji = (
                 "🟢 PASSED"
                 if res["status"] == "PASSED"
-                else "🔴 FAILED"
-                if res["status"] in ("FAILED", "ERROR")
-                else "⚪ SKIPPED"
+                else (
+                    "🔴 FAILED"
+                    if res["status"] in ("FAILED", "ERROR")
+                    else "⚪ SKIPPED"
+                )
             )
             f.write(
                 f"| `{name}` | `{classname}` | {reqs_str} | {status_emoji} | < 1s |\n"
