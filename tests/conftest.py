@@ -3,6 +3,9 @@ import uuid
 from typing import Any, Dict
 
 import pytest
+
+# Initialize packages which configures sys.path for packages/core-models
+import packages
 from neo4j.exceptions import TransientError
 
 

@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 176
-- **Passed:** 176 🟢
+- **Total Automated Test Cases Run:** 184
+- **Passed:** 184 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -293,6 +293,14 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_terminology_cache_thread_safety` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_terminology_cache_ttl_config` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_terminology_cache_unreachable_db_fallback` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_active_version_and_selection` | `tests.test_tmf_reference_model` | PRD-EDL-001 | 🟢 PASSED | < 1s |
+| `test_canonical_dia_zones_coverage` | `tests.test_tmf_reference_model` | PRD-EDL-001 | 🟢 PASSED | < 1s |
+| `test_case_insensitive_and_code_lookups` | `tests.test_tmf_reference_model` | PRD-EDL-001 | 🟢 PASSED | < 1s |
+| `test_helper_methods_coverage` | `tests.test_tmf_reference_model` | PRD-EDL-001 | 🟢 PASSED | < 1s |
+| `test_hierarchy_relationships_and_lookup` | `tests.test_tmf_reference_model` | PRD-EDL-001 | 🟢 PASSED | < 1s |
+| `test_immutability_at_runtime` | `tests.test_tmf_reference_model` | PRD-EDL-001 | 🟢 PASSED | < 1s |
+| `test_registry_error_paths_coverage` | `tests.test_tmf_reference_model` | PRD-EDL-001 | 🟢 PASSED | < 1s |
+| `test_version_isolation` | `tests.test_tmf_reference_model` | PRD-EDL-001 | 🟢 PASSED | < 1s |
 | `test_admin_cache_clear_forces_fresh_read` | `tests.test_transformers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_legacy_endpoint_returns_original_schema` | `tests.test_transformers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_terminology_cache_prevents_db_queries` | `tests.test_transformers` | PRD-MDR-001 | 🟢 PASSED | < 1s |
