@@ -6,8 +6,8 @@
 ## 1. Traceability Summary
 
 - **Total Documented Requirements:** 50
-- **Total Mapped to Automated Tests:** 24
-- **Traceability Coverage:** 48.0%
+- **Total Mapped to Automated Tests:** 23
+- **Traceability Coverage:** 46.0%
 - **SRS Requirements Mapped:** 5 of 6 (83.3%)
 
 ⚠️ **WARNING:** SRS coverage is below 100%. GxP validation requires 100% of functional requirements defined in the SRS to map to automated test cases.
@@ -45,14 +45,14 @@
 | PRD-QRY-005 | PRD | **Field-Level SDV Flags and Audit Retention** | `test_clinical_observation_sdv_defaults` (tests/test_sdv_tsdv_persistence.py) 🟢<br>`test_sdv_sign_off_persistence_and_audit` (tests/test_sdv_tsdv_persistence.py) 🟢 | ✅ **Passed** |
 | PRD-QRY-006 | PRD | **Automatic Verification Drop upon Data Modification** | *None* | ❌ **Unmapped** |
 | PRD-QRY-007 | PRD | **Targeted SDV (tSDV) Sampling Algorithm** | `test_clinical_observation_sdv_defaults` (tests/test_sdv_tsdv_persistence.py) 🟢<br>`test_tsdv_config_persistence` (tests/test_sdv_tsdv_persistence.py) 🟢 | ✅ **Passed** |
-| PRD-SUB-001 | PRD | **State Transition Matrix & Enforcements** | `test_capa_creation_validations` (tests/test_quality_workflow.py) 🟢<br>`test_capa_lifecycle_transitions` (tests/test_quality_workflow.py) 🟢<br>`test_capa_updates_and_concurrency` (tests/test_quality_workflow.py) 🟢 | ✅ **Passed** |
+| PRD-SUB-001 | PRD | **State Transition Matrix & Enforcements** | *None* | ❌ **Unmapped** |
 | PRD-SUB-002 | PRD | **Partial Visit Query Capability on Withdrawn Subjects** | *None* | ❌ **Unmapped** |
 | PRD-SUB-003 | PRD | **Stratified Block Randomization** | *None* | ❌ **Unmapped** |
 | PRD-SUB-004 | PRD | **Dynamic Minimization Algorithm** | *None* | ❌ **Unmapped** |
 | PRD-SUB-005 | PRD | **Triggering and Authorizing Emergency Unblinding** | *None* | ❌ **Unmapped** |
 | PRD-SUB-006 | PRD | **Immediate Unblinding State Mutation & System Actions** | *None* | ❌ **Unmapped** |
 | PRD-SUB-007 | PRD | **Re-Consent Gating on Visits** | *None* | ❌ **Unmapped** |
-| PRD-SYS-001 | PRD | **Standard Audit Logging (21 CFR Part 11 § 11.10(e))** | `test_prevent_audit_log_mutation` (tests/test_ledger_and_triggers.py) 🟢<br>`test_create_and_list_deviations` (tests/test_quality_workflow.py) 🟢<br>`test_create_and_update_rca` (tests/test_quality_workflow.py) 🟢<br>`test_insert_generates_audit_log` (tests/test_audit.py) 🟢<br>`test_update_generates_audit_log` (tests/test_audit.py) 🟢 | ✅ **Passed** |
+| PRD-SYS-001 | PRD | **Standard Audit Logging (21 CFR Part 11 § 11.10(e))** | `test_prevent_audit_log_mutation` (tests/test_ledger_and_triggers.py) 🟢<br>`test_insert_generates_audit_log` (tests/test_audit.py) 🟢<br>`test_update_generates_audit_log` (tests/test_audit.py) 🟢 | ✅ **Passed** |
 | PRD-SYS-002 | PRD | **Soft-Delete Enforcement and Shadow Schema Preservation** | `test_prevent_hard_delete_on_audited_model` (tests/test_ledger_and_triggers.py) 🟢<br>`test_soft_delete_generates_audit_log` (tests/test_audit.py) 🟢 | ✅ **Passed** |
 | PRD-SYS-003 | PRD | **Cryptographic Ledger Hashing & Chain Validation** | `test_ledger_sealing_and_validation` (tests/test_ledger_and_triggers.py) 🟢 | ✅ **Passed** |
 | PRD-SYS-004 | PRD | **Universal Site Isolation Constraint** | *None* | ❌ **Unmapped** |
@@ -87,6 +87,7 @@
 - **PRD-QRY-003** (PRD): Cross-Form Edit Check Execution
 - **PRD-QRY-004** (PRD): Longitudinal Validation and Repeat-Visit Logic
 - **PRD-QRY-006** (PRD): Automatic Verification Drop upon Data Modification
+- **PRD-SUB-001** (PRD): State Transition Matrix & Enforcements
 - **PRD-SUB-002** (PRD): Partial Visit Query Capability on Withdrawn Subjects
 - **PRD-SUB-003** (PRD): Stratified Block Randomization
 - **PRD-SUB-004** (PRD): Dynamic Minimization Algorithm

@@ -299,8 +299,15 @@ async def test_monitoring_visit_workflow_happy_path():
     )
 
     # 3. Monitor supervisory sign-off (Monitor role)
+    from jose import jwt
+    sig_token = jwt.encode(
+        {"sub": "test_user", "action": f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off", "exp": time.time() + 3600},
+        "internal-gateway-secret-12345",
+        algorithm="HS256"
+    )
+    headers = {**monitor_headers, "X-Sig-Token": sig_token}
     response_signoff = client.post(
-        f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off", headers=monitor_headers
+        f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off", headers=headers
     )
     assert response_signoff.status_code == 200
     signed_data = response_signoff.json()
@@ -390,8 +397,15 @@ async def test_monitoring_visit_workflow_rbac_denials():
     assert response_comp.status_code == 200
 
     # 4. CRA attempting to sign off -> 403 (Only Monitor / Admin)
+    from jose import jwt
+    sig_token = jwt.encode(
+        {"sub": "test_user", "action": f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off", "exp": time.time() + 3600},
+        "internal-gateway-secret-12345",
+        algorithm="HS256"
+    )
+    headers = {**cra_headers, "X-Sig-Token": sig_token}
     response_cra_signoff = client.post(
-        f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off", headers=cra_headers
+        f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off", headers=headers
     )
     assert response_cra_signoff.status_code == 403
 
@@ -434,8 +448,15 @@ async def test_monitoring_visit_invalid_state_and_findings():
     visit_id = response_create.json()["id"]
 
     # Try signing off a scheduled visit -> 400
+    from jose import jwt
+    sig_token = jwt.encode(
+        {"sub": "test_user", "action": f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off", "exp": time.time() + 3600},
+        "internal-gateway-secret-12345",
+        algorithm="HS256"
+    )
+    headers = {**monitor_headers, "X-Sig-Token": sig_token}
     response_invalid_signoff = client.post(
-        f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off", headers=monitor_headers
+        f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off", headers=headers
     )
     assert response_invalid_signoff.status_code == 400
     assert "Only completed" in response_invalid_signoff.json()["detail"]

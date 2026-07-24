@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 533
-- **Passed:** 533 🟢
+- **Total Automated Test Cases Run:** 553
+- **Passed:** 553 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -479,24 +479,27 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_rendered_protocol_document_with_usdm_study` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_soa_matrix_view` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_synopsis_view_parsing` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_audit_log_endpoint_properties_api` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_capa_approval_closure_requires_quality_oversight_api` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_capa_creation_for_closed_or_resolved_deviation` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_capa_creation_validations_api` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_capa_endpoints_404_and_409` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_capa_lifecycle_transitions_api` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_capa_updates_and_concurrency_api` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_create_and_list_deviations_api` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_create_and_update_rca_api` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_database_manager_uninitialized_raises_exception` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_deviation_lifecycle_and_traceability_fields` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_deviation_rca_capa_relationships_and_cascading` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_quality_audit_log_append_only` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_mutation_without_change_reason_rejected_api` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_permission_failure_leaves_no_misleading_audit_entry_api` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_quality_database_schema_creation` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_quality_health_check` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_quality_lifespan_via_testclient` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_read_only_roles_forbidden_api` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_route_handlers_missing_change_reason` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_sqlite_foreign_key_constraints` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_audit_log_endpoint_properties` | `tests.test_quality_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_capa_approval_closure_requires_quality_oversight` | `tests.test_quality_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_capa_creation_validations` | `tests.test_quality_workflow` | PRD-SUB-001 | 🟢 PASSED | < 1s |
-| `test_capa_lifecycle_transitions` | `tests.test_quality_workflow` | PRD-SUB-001 | 🟢 PASSED | < 1s |
-| `test_capa_updates_and_concurrency` | `tests.test_quality_workflow` | PRD-SUB-001 | 🟢 PASSED | < 1s |
-| `test_create_and_list_deviations` | `tests.test_quality_workflow` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_create_and_update_rca` | `tests.test_quality_workflow` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_mutation_without_change_reason_rejected` | `tests.test_quality_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_permission_failure_leaves_no_misleading_audit_entry` | `tests.test_quality_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_read_only_roles_forbidden` | `tests.test_quality_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_successful_mutation_creates_audit_log_and_is_atomic` | `tests.test_quality_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_successful_mutation_creates_audit_log_and_is_atomic_api` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_randomization_entities_audit_trail_and_soft_delete` | `tests.test_randomization_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_randomization_entities_hard_delete_prevented` | `tests.test_randomization_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_randomization_entities_trial_lock_conformity` | `tests.test_randomization_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
