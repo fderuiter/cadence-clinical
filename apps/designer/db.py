@@ -42,6 +42,7 @@ MOCK_RULES: Dict[str, List[Dict[str, Any]]] = {}
 # --- Mock Study Version Content ---
 MOCK_STUDY_VERSIONS: Dict[str, List[Dict[str, Any]]] = {}
 MOCK_STUDY_PROJECTIONS_BY_VERSION: Dict[str, Dict[str, Any]] = {}
+MOCK_LIBRARY_OBJECTS: Dict[str, List[Dict[str, Any]]] = {}
 
 
 def create_mock_study_version(study_id: str, version_data: Dict[str, Any]):
