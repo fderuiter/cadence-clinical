@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import DateTime, Integer, String, Float, Boolean, ForeignKey, func
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -255,7 +255,10 @@ class BudgetLineItem(Base):
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
     grant_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("ctms_investigator_grants.id", ondelete="CASCADE"), nullable=False, index=True
+        String(36),
+        ForeignKey("ctms_investigator_grants.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     category: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -281,7 +284,10 @@ class PaymentMilestone(Base):
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
     grant_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("ctms_investigator_grants.id", ondelete="CASCADE"), nullable=False, index=True
+        String(36),
+        ForeignKey("ctms_investigator_grants.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     milestone_name: Mapped[str] = mapped_column(String(255), nullable=False)
     trigger_condition: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -309,13 +315,21 @@ class InvestigatorPayable(Base):
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
     grant_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("ctms_investigator_grants.id", ondelete="CASCADE"), nullable=False, index=True
+        String(36),
+        ForeignKey("ctms_investigator_grants.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     milestone_id: Mapped[Optional[str]] = mapped_column(
-        String(36), ForeignKey("ctms_payment_milestones.id", ondelete="SET NULL"), nullable=True, index=True
+        String(36),
+        ForeignKey("ctms_payment_milestones.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
     amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
-    payment_status: Mapped[str] = mapped_column(String(50), default="PENDING", nullable=False)
+    payment_status: Mapped[str] = mapped_column(
+        String(50), default="PENDING", nullable=False
+    )
     due_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     paid_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 

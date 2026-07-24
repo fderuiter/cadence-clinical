@@ -43,6 +43,10 @@ from apps.execution.demographics import (
 from apps.execution.demographics import (
     get_safe_demographics as get_safe_demographics,
 )
+from apps.execution.edit_checks import (
+    run_asynchronous_edit_checks,
+    run_synchronous_edit_checks,
+)
 from apps.execution.outliers import recalculate_cohort_outliers
 from apps.execution.query_service import QueryService, StateTransitionError
 from apps.execution.translator import process_translation
@@ -81,13 +85,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         start_background_sealer,
         stop_background_sealer,
     )
+    from apps.execution.queries_escalation import (
+        start_background_query_escalation,
+        stop_background_query_escalation,
+    )
 
     await start_background_sealer(db_manager.get_session_maker())
+    await start_background_query_escalation(db_manager.get_session_maker())
 
     yield
 
     # Stop background ledger sealer
     await stop_background_sealer()
+    # Stop background query escalation
+    await stop_background_query_escalation()
     # Cleanup database connection
     await db_manager.close()
 
@@ -357,6 +368,7 @@ async def create_visit(
 @app.post("/api/v1/execution/observations", response_model=ObservationResponse)
 async def create_observation(
     payload: ObservationCreate,
+    background_tasks: BackgroundTasks,
     roles: list[str] = Depends(verify_not_auditor),
 ) -> ObservationResponse:
     """Create a new clinical observation, performing unit normalization and outlier checks."""
@@ -405,6 +417,21 @@ async def create_observation(
         stmt_obs = select(ClinicalObservation).where(ClinicalObservation.id == obs.id)
         res_obs = await session.execute(stmt_obs)
         obs_db = res_obs.scalar_one()
+
+        # Invoke synchronous field-level same-record edit checks directly in the active session
+        await run_synchronous_edit_checks(session, obs_db)
+        await session.commit()
+
+        # Propagate audit and user context to background tasks
+        user_id = current_user_id.get()
+        change_reason = current_change_reason.get()
+        background_tasks.add_task(
+            run_asynchronous_edit_checks,
+            db_manager.get_session_maker(),
+            obs_db.id,
+            user_id=user_id,
+            change_reason=change_reason,
+        )
 
         return ObservationResponse(
             id=obs_db.id,

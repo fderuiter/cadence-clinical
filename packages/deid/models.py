@@ -16,6 +16,7 @@ class DetectorCategory(str, Enum):
     URLS = "urls"
     IP_MAC_ADDRESSES = "ip_mac_addresses"
     MEDICAL_RECORD_ACCOUNT = "medical_record_account"
+    AGE = "age"
     CUSTOM = "custom"
 
 
@@ -40,6 +41,7 @@ PROFILE_CATEGORIES = {
         DetectorCategory.URLS,
         DetectorCategory.IP_MAC_ADDRESSES,
         DetectorCategory.MEDICAL_RECORD_ACCOUNT,
+        DetectorCategory.AGE,
         DetectorCategory.CUSTOM,
     },
     ComplianceProfile.GDPR: {
@@ -51,6 +53,7 @@ PROFILE_CATEGORIES = {
         DetectorCategory.URLS,
         DetectorCategory.IP_MAC_ADDRESSES,
         DetectorCategory.MEDICAL_RECORD_ACCOUNT,
+        DetectorCategory.AGE,
         DetectorCategory.CUSTOM,
     },
     ComplianceProfile.EU_CTR: {
@@ -60,6 +63,7 @@ PROFILE_CATEGORIES = {
         DetectorCategory.SSN_NATIONAL_ID,
         DetectorCategory.DATES,
         DetectorCategory.MEDICAL_RECORD_ACCOUNT,
+        DetectorCategory.AGE,
         DetectorCategory.CUSTOM,
     },
 }
