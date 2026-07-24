@@ -128,6 +128,18 @@ Site users (PIs, Study Coordinators) must be mathematically restricted to subjec
 #### PRD-EDL-001: Data-Driven Expected Document Lists (EDLs) & Completeness Tracking
 The system must implement a data-driven Expected Document List (EDL) reference data model and endpoints (`/api/v1/etmf/edl` and `/api/v1/etmf/completeness`) to track required study-scope and site-scope documents against clinical milestones. This replaces hardcoded milestone mappings with a data-driven configuration. Each `ExpectedDocument` record must include the four standard Part 11 audit fields as defined in `PRD-SYS-001` (specifically `created_at`, `created_by`, `reason_for_change`, and `version_index`).
 
+#### PRD-TMF-001: TMF Taxonomy Catalog Hierarchy and Version Selection
+The system must support loading different versions of the versioned DIA TMF Reference Model (e.g., v3.2.0, v4.0.0) from the `tmf_reference_model` taxonomy package in memory. Consumers must be able to retrieve any registered catalog version or set the active default catalog version dynamically.
+
+#### PRD-TMF-002: Strict Taxonomy Validation and Ingestion Rejection
+During document ingestion or modification, the eTMF engine must perform strict hierarchical verification against the active catalog taxonomy version. If the provided zone_code, section_code, or artifact_code are unknown or create an invalid/mismatched combination, the transaction must be aborted and rejected with an HTTP 422 error.
+
+#### PRD-TMF-003: Taxonomy Version and Artifact Persistence
+Every ingested document successfully validated against the active catalog must persist the exact `taxonomy_version` and canonical `artifact_code` alongside standard metadata fields inside the relational eTMF database, providing permanent, version-specific traceability of the classification.
+
+#### PRD-TMF-004: Catalog-Driven Completeness and Milestone Alignment
+Completeness audits and expected document list seeding must dynamically query mandatory artifacts per milestone directly from the catalog's public APIs (e.g., `get_mandatory_artifacts`), matching exact canonical `artifact_code` identities across study and site scopes.
+
 ---
 
 ## 4. Study Design & Clinical Metadata Repository (MDR)

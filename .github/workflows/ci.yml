@@ -187,13 +187,13 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.SERVICE_ACCOUNT_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
-          gh pr review ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --approve --body "Programmatic approval: Verified safe non-GxP change."
+          gh pr review ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --approve --body "Programmatic approval: Verified safe non-GxP change." || echo "Programmatic approval failed or not permitted."
 
       - name: Enable Automerge
         env:
           GH_TOKEN: ${{ secrets.SERVICE_ACCOUNT_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
-          gh pr merge ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --auto --squash
+          gh pr merge ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --auto --squash || echo "Automerge enablement failed or not permitted."
 
   sync-ruleset:
     name: Sync Branch Ruleset

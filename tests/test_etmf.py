@@ -759,6 +759,9 @@ async def test_canonical_catalog_ingestion_validations():
     - invalid hierarchy rejection (HTTP 422)
     - taxonomy-version persistence
     """
+    # @req:PRD-TMF-002
+    # @req:PRD-TMF-003
+    # @req:Trace-5
     client = TestClient(app)
     headers = get_auth_headers(
         roles="admin", change_reason="Catalog validations testing"
@@ -832,6 +835,7 @@ async def test_completeness_from_catalog():
     reject unsupported milestones, match exact canonical artifact identities,
     and accurately handle changes to the shared catalog metadata.
     """
+    # @req:PRD-TMF-004
     from tmf_reference_model import MILESTONE_MANDATORY_ARTIFACTS
 
     client = TestClient(app)

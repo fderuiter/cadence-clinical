@@ -14,6 +14,7 @@ def test_active_version_selection():
     """
     Test that a consumer can obtain the active default version and get registered versions.
     """
+    # @req:PRD-TMF-001
     active_catalog = get_active_catalog()
     assert active_catalog is not None
     assert active_catalog.version == "v3.2.0"
@@ -26,6 +27,7 @@ def test_explicit_version_selection():
     """
     Test that a consumer can select a catalog by explicit version.
     """
+    # @req:PRD-TMF-001
     catalog = get_catalog("v3.2.0")
     assert catalog is not None
     assert catalog.version == "v3.2.0"
@@ -49,6 +51,7 @@ def test_canonical_11_zones():
     - Data Management
     - Statistics
     """
+    # @req:PRD-TMF-001
     catalog = get_active_catalog()
     assert len(catalog.zones) == 11
 
@@ -75,6 +78,7 @@ def test_artifact_parent_identification():
     """
     Test that each artifact uniquely and deterministically identifies its parent section and zone.
     """
+    # @req:PRD-TMF-001
     catalog = get_active_catalog()
 
     # Test specific well-known artifacts
@@ -107,6 +111,7 @@ def test_version_isolation():
     Test that adding a future catalog version does not alter data returned for an existing version,
     and the registry rejects duplicate registrations to ensure immutability of registry mappings.
     """
+    # @req:PRD-TMF-001
     # Create a new future catalog version
     future_raw = {
         1: (
@@ -151,6 +156,7 @@ def test_immutability_properties():
     """
     Verify that Zone, Section, Artifact, and TaxonomyCatalog records are immutable at runtime.
     """
+    # @req:PRD-TMF-001
     catalog = get_active_catalog()
     zone = catalog.zones[0]
     section = zone.sections[0]
@@ -176,6 +182,7 @@ def test_no_database_dependencies():
     """
     Verify catalog construction is pure in-memory and requires no external connections or database.
     """
+    # @req:PRD-TMF-001
     raw_minimal = {
         1: ("Trial Management", {"01.01": ("Trial Design", [("01.01.01", "Protocol")])})
     }
@@ -192,6 +199,7 @@ def test_resolve_artifact_success():
     - lookup by case-insensitive name
     - lookup by both
     """
+    # @req:PRD-TMF-001
     from tmf_reference_model import resolve_artifact
 
     # Lookup by exact canonical code
@@ -224,6 +232,7 @@ def test_resolve_artifact_failures():
     - mismatched code and name combination
     - neither code nor name provided
     """
+    # @req:PRD-TMF-001
     from tmf_reference_model import build_catalog, register_catalog, resolve_artifact
 
     # Unknown catalog version
@@ -274,6 +283,7 @@ def test_validate_hierarchy_success():
     """
     Test validate_hierarchy success path with valid combinations.
     """
+    # @req:PRD-TMF-002
     from tmf_reference_model import validate_hierarchy
 
     # Valid: zone 1, section 01.01, artifact 01.01.01 in version v3.2.0
@@ -293,6 +303,7 @@ def test_validate_hierarchy_failures():
     - mismatched artifact in section
     - mismatched artifact in zone
     """
+    # @req:PRD-TMF-002
     from tmf_reference_model import validate_hierarchy
 
     # Unknown version
@@ -344,6 +355,7 @@ def test_get_mandatory_artifacts_success():
     - CONDUCT / DATA COLLECTION
     - CLOSEOUT / LOCK
     """
+    # @req:PRD-TMF-004
     from tmf_reference_model import get_mandatory_artifacts
 
     # INITIATION
@@ -375,6 +387,7 @@ def test_get_mandatory_artifacts_failures():
     - unknown milestone
     - mandatory artifact not in the requested version
     """
+    # @req:PRD-TMF-004
     from tmf_reference_model import (
         build_catalog,
         get_mandatory_artifacts,

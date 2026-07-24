@@ -11,6 +11,7 @@ This matrix details the distribution of core compliance and tracking features ac
 | **Hard-Delete Capture** | Soft deletes via relationships | Database-level trigger / shadow schema | v1.0.0 | Supported |
 | **Masked CSV Export** | Structural hashing of authors | Dynamic PII masking & hashing | v1.3.0 | Supported |
 | **21 CFR Part 11 Fields**| Enforced on all mutations | Enforced on all transactions | v1.0.0 | Supported |
+| **eTMF Taxonomy Classification** | API Gateway resolution via catalog | Enforced strict ingestion hierarchy validations | v1.4.0 | Supported |
 
 ---
 
@@ -25,6 +26,7 @@ The table below specifies how individual clinical domain entities are processed,
 | **Subjects** | Execution | PostgreSQL | App-Layer Event Interceptor |
 | **eCRF Form Submissions** | Execution | PostgreSQL | App-Layer Event Interceptor |
 | **System Audit Logs** | Execution | PostgreSQL | Background Cryptographic Sealer & DB Triggers |
+| **TMF Documents** | eTMF Service | SQLite/PostgreSQL | Ingestion-driven validation, QC transition logging, and TMFAuditLog ledger |
 
 ---
 
