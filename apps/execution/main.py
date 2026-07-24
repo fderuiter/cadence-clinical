@@ -15,6 +15,7 @@ from fastapi import (
     Form,
     HTTPException,
     Query,
+    Request,
     Response,
     UploadFile,
 )
@@ -26,7 +27,9 @@ from apps.execution.database.context import current_change_reason, current_user_
 from apps.execution.database.core import db_manager
 from apps.execution.database.middleware import ContextResetMiddleware
 from apps.execution.database.models import (
+    AuditLog,
     ClinicalObservation,
+    ClinicalQuery,
     ClinicalSubject,
     ClinicalVisit,
     TranslationJob,
@@ -755,3 +758,591 @@ async def post_ucum_convert(payload: UCUMConvertRequest) -> UCUMConvertResponse:
         scale_factor=0.5555555555555556,
         offset=-17.77777777777778,
     )
+
+
+# ==========================================
+# Clinical Query Management API
+# ==========================================
+
+
+class StateTransitionError(ValueError):
+    """Exception raised when an invalid state transition is attempted."""
+
+    pass
+
+
+class QueryHistoryItem(BaseModel):
+    """Pydantic schema representing a single audited event in query history."""
+
+    action: str
+    user_id: Optional[str] = None
+    timestamp: datetime
+    old_values: Optional[dict[str, Any]] = None
+    new_values: Optional[dict[str, Any]] = None
+    change_reason: Optional[str] = None
+    version_index: int
+
+
+class ClinicalQueryResponse(BaseModel):
+    """Pydantic schema returning query details and full audit history."""
+
+    id: str
+    study_id: str
+    subject_id: str
+    visit_id: Optional[str] = None
+    domain: Optional[str] = None
+    test_code: str
+    status: str
+    explanation: Optional[str] = None
+    response: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    history: List[QueryHistoryItem] = []
+
+
+class QueryCreate(BaseModel):
+    """Pydantic schema for raising a new query."""
+
+    study_id: str
+    subject_id: str
+    visit_id: Optional[str] = None
+    domain: Optional[str] = None
+    test_code: str
+    explanation: str
+
+
+class QueryRespond(BaseModel):
+    """Pydantic schema for responding to an open query."""
+
+    response: str
+
+
+class QueryUpdate(BaseModel):
+    """Pydantic schema for general state transitions."""
+
+    status: str
+    explanation: Optional[str] = None
+    response: Optional[str] = None
+
+
+def _is_data_manager(roles_str: str) -> bool:
+    """Check if the roles include Data Manager role variations."""
+    roles = [r.strip().lower() for r in roles_str.split(",")]
+    dm_roles = {
+        "data manager",
+        "data_manager",
+        "data-manager",
+        "sponsor_dm",
+        "dm",
+        "admin",
+    }
+    return any(r in dm_roles for r in roles)
+
+
+def _is_investigator(roles_str: str) -> bool:
+    """Check if the roles include Investigator role variations."""
+    roles = [r.strip().lower() for r in roles_str.split(",")]
+    inv_roles = {
+        "investigator",
+        "site_investigator",
+        "site-investigator",
+        "investigator_user",
+    }
+    return any(r in inv_roles for r in roles)
+
+
+ALLOWED_TRANSITIONS = {
+    "NONE": ["OPEN"],
+    "OPEN": ["ANSWERED"],
+    "ANSWERED": ["CLOSED", "REOPENED"],
+    "REOPENED": ["ANSWERED"],
+    "CLOSED": ["REOPENED"],
+}
+
+
+def validate_transition(current_status: str, new_status: str) -> None:
+    """Validate transition according to strict sequence rules.
+
+    Args:
+        current_status (str): The current query status.
+        new_status (str): The requested target status.
+
+    Raises:
+        StateTransitionError: If the transition is not allowed.
+    """
+    if current_status == new_status:
+        return
+    allowed = ALLOWED_TRANSITIONS.get(current_status, [])
+    if new_status not in allowed:
+        raise StateTransitionError(
+            f"Invalid transition from {current_status} to {new_status}. Allowed transitions are: {allowed}"
+        )
+
+
+def verify_change_justification(request: Request) -> None:
+    """Enforce presence of gateway-signed change justification header (version 2 signature)."""
+    version = request.headers.get("X-Signature-Version")
+    change_reason = request.headers.get("X-Change-Reason")
+    if version not in ("2", "v2") or not change_reason:
+        raise HTTPException(
+            status_code=403,
+            detail="API rejects any state modifications that do not contain a verified, gateway-signed change justification header.",
+        )
+
+
+def verify_roles(request: Request, allowed_roles: List[str]) -> None:
+    """Verify that the user possesses at least one of the allowed roles."""
+    roles_str = getattr(request.state, "roles", None) or request.headers.get(
+        "X-User-Roles", ""
+    )
+    if not roles_str:
+        raise HTTPException(status_code=403, detail="Missing role credentials.")
+
+    if "data_manager" in allowed_roles:
+        if _is_data_manager(roles_str):
+            return
+    if "investigator" in allowed_roles:
+        if _is_investigator(roles_str):
+            return
+
+    raise HTTPException(
+        status_code=403, detail="User role is not authorized for this action."
+    )
+
+
+async def fetch_history(session: Any, query_id: str) -> List[QueryHistoryItem]:
+    """Fetch and parse audit logs for a specific query."""
+    stmt_history = (
+        select(AuditLog)
+        .where(
+            AuditLog.table_name == "clinical_queries",
+            AuditLog.record_id == query_id,
+        )
+        .order_by(AuditLog.timestamp.asc())
+    )
+    res_history = await session.execute(stmt_history)
+    logs = res_history.scalars().all()
+    history = []
+    for log in logs:
+        old_val = log.old_values
+        new_val = log.new_values
+        if isinstance(old_val, str):
+            try:
+                old_val = json.loads(old_val)
+            except Exception:
+                pass
+        if isinstance(new_val, str):
+            try:
+                new_val = json.loads(new_val)
+            except Exception:
+                pass
+        history.append(
+            QueryHistoryItem(
+                action=log.action,
+                user_id=log.user_id,
+                timestamp=log.timestamp,
+                old_values=old_val,
+                new_values=new_val,
+                change_reason=log.change_reason,
+                version_index=log.version_index,
+            )
+        )
+    return history
+
+
+@app.get("/api/v1/execution/queries", response_model=List[ClinicalQueryResponse])
+async def list_queries(
+    study_id: Optional[str] = None,
+    subject_id: Optional[str] = None,
+    status: Optional[str] = None,
+) -> List[ClinicalQueryResponse]:
+    """Retrieve a list of clinical queries with optional filtering.
+
+    Args:
+        study_id (Optional[str]): Filter by study identifier.
+        subject_id (Optional[str]): Filter by subject identifier.
+        status (Optional[str]): Filter by query status.
+
+    Returns:
+        List[ClinicalQueryResponse]: List of matching queries including audit history.
+    """
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(ClinicalQuery).where(ClinicalQuery.is_deleted.is_(False))
+        if study_id:
+            stmt = stmt.where(ClinicalQuery.study_id == study_id)
+        if subject_id:
+            stmt = stmt.where(ClinicalQuery.subject_id == subject_id)
+        if status:
+            stmt = stmt.where(ClinicalQuery.status == status)
+
+        res = await session.execute(stmt)
+        queries = res.scalars().all()
+
+        responses = []
+        for q in queries:
+            history = await fetch_history(session, q.id)
+            responses.append(
+                ClinicalQueryResponse(
+                    id=q.id,
+                    study_id=q.study_id,
+                    subject_id=q.subject_id,
+                    visit_id=q.visit_id,
+                    domain=q.domain,
+                    test_code=q.test_code,
+                    status=q.status,
+                    explanation=q.explanation,
+                    response=q.response,
+                    created_at=q.created_at,
+                    updated_at=q.updated_at,
+                    history=history,
+                )
+            )
+        return responses
+
+
+@app.get("/api/v1/execution/queries/{query_id}", response_model=ClinicalQueryResponse)
+async def get_query(query_id: str) -> ClinicalQueryResponse:
+    """Query a single clinical query by ID, returning its full audit history.
+
+    Args:
+        query_id (str): The unique database identifier of the query.
+
+    Returns:
+        ClinicalQueryResponse: The query record including detailed history.
+    """
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(ClinicalQuery).where(
+            ClinicalQuery.id == query_id, ClinicalQuery.is_deleted.is_(False)
+        )
+        res = await session.execute(stmt)
+        q = res.scalars().first()
+        if not q:
+            raise HTTPException(status_code=404, detail="Clinical query not found")
+
+        history = await fetch_history(session, q.id)
+        return ClinicalQueryResponse(
+            id=q.id,
+            study_id=q.study_id,
+            subject_id=q.subject_id,
+            visit_id=q.visit_id,
+            domain=q.domain,
+            test_code=q.test_code,
+            status=q.status,
+            explanation=q.explanation,
+            response=q.response,
+            created_at=q.created_at,
+            updated_at=q.updated_at,
+            history=history,
+        )
+
+
+@app.post(
+    "/api/v1/execution/queries",
+    response_model=ClinicalQueryResponse,
+    status_code=201,
+)
+async def open_query(request: Request, payload: QueryCreate) -> ClinicalQueryResponse:
+    """Raise a new clinical query on a specific field coordinate.
+
+    Args:
+        request (Request): The incoming FastAPI request.
+        payload (QueryCreate): The coordinate details and query explanation.
+
+    Returns:
+        ClinicalQueryResponse: The newly opened clinical query.
+    """
+    verify_change_justification(request)
+    verify_roles(request, ["data_manager"])
+
+    async with db_manager.get_session_maker()() as session:
+        # Check if active query already exists on this coordinate
+        stmt = select(ClinicalQuery).where(
+            ClinicalQuery.study_id == payload.study_id,
+            ClinicalQuery.subject_id == payload.subject_id,
+            ClinicalQuery.visit_id == payload.visit_id,
+            ClinicalQuery.domain == payload.domain,
+            ClinicalQuery.test_code == payload.test_code,
+            ClinicalQuery.status.in_(["OPEN", "ANSWERED", "REOPENED"]),
+            ClinicalQuery.is_deleted.is_(False),
+        )
+        res = await session.execute(stmt)
+        if res.scalars().first():
+            raise HTTPException(
+                status_code=400,
+                detail="An active query already exists on this target field coordinates.",
+            )
+
+        q = ClinicalQuery(
+            study_id=payload.study_id,
+            subject_id=payload.subject_id,
+            visit_id=payload.visit_id,
+            domain=payload.domain,
+            test_code=payload.test_code,
+            status="OPEN",
+            explanation=payload.explanation,
+        )
+        session.add(q)
+        await session.commit()
+
+        # Refresh to get timestamps and trigger-generated IDs
+        stmt_ref = select(ClinicalQuery).where(ClinicalQuery.id == q.id)
+        res_ref = await session.execute(stmt_ref)
+        q_db = res_ref.scalar_one()
+
+        history = await fetch_history(session, q_db.id)
+        return ClinicalQueryResponse(
+            id=q_db.id,
+            study_id=q_db.study_id,
+            subject_id=q_db.subject_id,
+            visit_id=q_db.visit_id,
+            domain=q_db.domain,
+            test_code=q_db.test_code,
+            status=q_db.status,
+            explanation=q_db.explanation,
+            response=q_db.response,
+            created_at=q_db.created_at,
+            updated_at=q_db.updated_at,
+            history=history,
+        )
+
+
+@app.post(
+    "/api/v1/execution/queries/{query_id}/respond",
+    response_model=ClinicalQueryResponse,
+)
+async def respond_query(
+    query_id: str, request: Request, payload: QueryRespond
+) -> ClinicalQueryResponse:
+    """Submit an investigator response/answer to an open or reopened clinical query.
+
+    Args:
+        query_id (str): Unique database identifier of the query.
+        request (Request): The incoming FastAPI request.
+        payload (QueryRespond): The investigator's response explanation.
+
+    Returns:
+        ClinicalQueryResponse: The updated query with ANSWERED status.
+    """
+    verify_change_justification(request)
+    verify_roles(request, ["investigator"])
+
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(ClinicalQuery).where(
+            ClinicalQuery.id == query_id, ClinicalQuery.is_deleted.is_(False)
+        )
+        res = await session.execute(stmt)
+        q = res.scalars().first()
+        if not q:
+            raise HTTPException(status_code=404, detail="Clinical query not found")
+
+        try:
+            validate_transition(q.status, "ANSWERED")
+        except StateTransitionError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+        q.status = "ANSWERED"
+        q.response = payload.response
+        await session.commit()
+
+        # Refresh
+        stmt_ref = select(ClinicalQuery).where(ClinicalQuery.id == q.id)
+        res_ref = await session.execute(stmt_ref)
+        q_db = res_ref.scalar_one()
+
+        history = await fetch_history(session, q_db.id)
+        return ClinicalQueryResponse(
+            id=q_db.id,
+            study_id=q_db.study_id,
+            subject_id=q_db.subject_id,
+            visit_id=q_db.visit_id,
+            domain=q_db.domain,
+            test_code=q_db.test_code,
+            status=q_db.status,
+            explanation=q_db.explanation,
+            response=q_db.response,
+            created_at=q_db.created_at,
+            updated_at=q_db.updated_at,
+            history=history,
+        )
+
+
+@app.post(
+    "/api/v1/execution/queries/{query_id}/close",
+    response_model=ClinicalQueryResponse,
+)
+async def close_query(query_id: str, request: Request) -> ClinicalQueryResponse:
+    """Close an answered query (resolving the discrepancy loop).
+
+    Args:
+        query_id (str): Unique database identifier of the query.
+        request (Request): The incoming FastAPI request.
+
+    Returns:
+        ClinicalQueryResponse: The updated query with CLOSED status.
+    """
+    verify_change_justification(request)
+    verify_roles(request, ["data_manager"])
+
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(ClinicalQuery).where(
+            ClinicalQuery.id == query_id, ClinicalQuery.is_deleted.is_(False)
+        )
+        res = await session.execute(stmt)
+        q = res.scalars().first()
+        if not q:
+            raise HTTPException(status_code=404, detail="Clinical query not found")
+
+        try:
+            validate_transition(q.status, "CLOSED")
+        except StateTransitionError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+        q.status = "CLOSED"
+        await session.commit()
+
+        # Refresh
+        stmt_ref = select(ClinicalQuery).where(ClinicalQuery.id == q.id)
+        res_ref = await session.execute(stmt_ref)
+        q_db = res_ref.scalar_one()
+
+        history = await fetch_history(session, q_db.id)
+        return ClinicalQueryResponse(
+            id=q_db.id,
+            study_id=q_db.study_id,
+            subject_id=q_db.subject_id,
+            visit_id=q_db.visit_id,
+            domain=q_db.domain,
+            test_code=q_db.test_code,
+            status=q_db.status,
+            explanation=q_db.explanation,
+            response=q_db.response,
+            created_at=q_db.created_at,
+            updated_at=q_db.updated_at,
+            history=history,
+        )
+
+
+@app.post(
+    "/api/v1/execution/queries/{query_id}/reopen",
+    response_model=ClinicalQueryResponse,
+)
+async def reopen_query(query_id: str, request: Request) -> ClinicalQueryResponse:
+    """Reopen an answered or closed clinical query for further clarification.
+
+    Args:
+        query_id (str): Unique database identifier of the query.
+        request (Request): The incoming FastAPI request.
+
+    Returns:
+        ClinicalQueryResponse: The updated query with REOPENED status.
+    """
+    verify_change_justification(request)
+    verify_roles(request, ["data_manager"])
+
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(ClinicalQuery).where(
+            ClinicalQuery.id == query_id, ClinicalQuery.is_deleted.is_(False)
+        )
+        res = await session.execute(stmt)
+        q = res.scalars().first()
+        if not q:
+            raise HTTPException(status_code=404, detail="Clinical query not found")
+
+        try:
+            validate_transition(q.status, "REOPENED")
+        except StateTransitionError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+        q.status = "REOPENED"
+        await session.commit()
+
+        # Refresh
+        stmt_ref = select(ClinicalQuery).where(ClinicalQuery.id == q.id)
+        res_ref = await session.execute(stmt_ref)
+        q_db = res_ref.scalar_one()
+
+        history = await fetch_history(session, q_db.id)
+        return ClinicalQueryResponse(
+            id=q_db.id,
+            study_id=q_db.study_id,
+            subject_id=q_db.subject_id,
+            visit_id=q_db.visit_id,
+            domain=q_db.domain,
+            test_code=q_db.test_code,
+            status=q_db.status,
+            explanation=q_db.explanation,
+            response=q_db.response,
+            created_at=q_db.created_at,
+            updated_at=q_db.updated_at,
+            history=history,
+        )
+
+
+@app.patch(
+    "/api/v1/execution/queries/{query_id}",
+    response_model=ClinicalQueryResponse,
+)
+async def update_query_state(
+    query_id: str, request: Request, payload: QueryUpdate
+) -> ClinicalQueryResponse:
+    """Transition a query through the designated state sequence and perform role checks.
+
+    Args:
+        query_id (str): Unique database identifier of the query.
+        request (Request): The incoming FastAPI request.
+        payload (QueryUpdate): Target status and optional explanation/response fields.
+
+    Returns:
+        ClinicalQueryResponse: The updated query record and audit trail.
+    """
+    verify_change_justification(request)
+
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(ClinicalQuery).where(
+            ClinicalQuery.id == query_id, ClinicalQuery.is_deleted.is_(False)
+        )
+        res = await session.execute(stmt)
+        q = res.scalars().first()
+        if not q:
+            raise HTTPException(status_code=404, detail="Clinical query not found")
+
+        target_status = payload.status
+        try:
+            validate_transition(q.status, target_status)
+        except StateTransitionError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+        # Enforce role boundaries depending on target transition state
+        if target_status in ("OPEN", "CLOSED", "REOPENED"):
+            verify_roles(request, ["data_manager"])
+        elif target_status == "ANSWERED":
+            verify_roles(request, ["investigator"])
+
+        q.status = target_status
+        if payload.explanation is not None:
+            q.explanation = payload.explanation
+        if payload.response is not None:
+            q.response = payload.response
+
+        await session.commit()
+
+        # Refresh
+        stmt_ref = select(ClinicalQuery).where(ClinicalQuery.id == q.id)
+        res_ref = await session.execute(stmt_ref)
+        q_db = res_ref.scalar_one()
+
+        history = await fetch_history(session, q_db.id)
+        return ClinicalQueryResponse(
+            id=q_db.id,
+            study_id=q_db.study_id,
+            subject_id=q_db.subject_id,
+            visit_id=q_db.visit_id,
+            domain=q_db.domain,
+            test_code=q_db.test_code,
+            status=q_db.status,
+            explanation=q_db.explanation,
+            response=q_db.response,
+            created_at=q_db.created_at,
+            updated_at=q_db.updated_at,
+            history=history,
+        )

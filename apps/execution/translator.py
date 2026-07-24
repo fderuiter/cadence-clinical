@@ -1,4 +1,5 @@
 import os
+import re
 import uuid
 from typing import Any
 
@@ -14,6 +15,51 @@ env = Environment(
     loader=FileSystemLoader(TEMPLATE_DIR),
     autoescape=select_autoescape(default_for_string=True, default=True),
 )
+
+
+def sanitize_identifier(raw_id: Any) -> str:
+    """Sanitize identifier values to be valid XML tag names deterministically.
+
+    Replacing spaces and non-alphanumeric characters, and adjusting leading digits.
+    Existing valid identifier formats (alphanumeric strings starting with letters)
+    remain unchanged during translation.
+    Falls back to standard unique ID generation if the original identifier is entirely missing.
+    """
+    if not raw_id or not isinstance(raw_id, str) or not raw_id.strip():
+        return f"item_{uuid.uuid4().hex[:8]}"
+
+    # Strip leading and trailing whitespaces
+    stripped_id = raw_id.strip()
+
+    # If it is already a valid identifier (starts with letter, followed by alphanumeric/underscore), return it unchanged
+    if re.match(r"^[a-zA-Z][a-zA-Z0-9_]*$", stripped_id):
+        return stripped_id
+
+    # Otherwise, perform sanitization
+    # 1. Adjust leading digits: if it starts with a digit, prepend "item_"
+    starts_with_digit = re.match(r"^\d", stripped_id) is not None
+
+    # 2. Map characters: replace spaces and non-alphanumeric characters
+    sanitized_chars = []
+    for c in stripped_id:
+        if c.isalnum() or c == "_":
+            sanitized_chars.append(c)
+        elif c == " ":
+            sanitized_chars.append("_")
+        else:
+            # Deterministic mapping for special characters to avoid collisions with other sanitized values
+            sanitized_chars.append(f"_{ord(c):02x}")
+
+    sanitized_str = "".join(sanitized_chars)
+
+    if starts_with_digit:
+        sanitized_str = f"item_{sanitized_str}"
+
+    # Ensure it starts with a valid character
+    if not re.match(r"^[a-zA-Z_]", sanitized_str):
+        sanitized_str = f"item_{sanitized_str}"
+
+    return sanitized_str
 
 
 def extract_appearance(item: dict[str, Any]) -> str | None:
@@ -95,9 +141,7 @@ async def process_translation(
                         raw_items = payload.get("protocol", {}).get("items", [])
                         processed_items = []
                         for item in raw_items:
-                            item_id = item.get("id")
-                            if not item_id:
-                                item_id = f"item_{uuid.uuid4().hex[:8]}"
+                            item_id = sanitize_identifier(item.get("id"))
 
                             item_name = item.get("name", "Unknown Field")
                             item_type = item.get("type", "string")

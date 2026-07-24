@@ -1,0 +1,4 @@
+# Minimize merge conflicts for auto-generated or frequently updated baseline/report files
+.secrets.baseline merge=union
+docs/SDLC/IQ_OQ_PQ_Execution_Report.md merge=union
+docs/SDLC/Requirements_Traceability_Matrix.md merge=union
