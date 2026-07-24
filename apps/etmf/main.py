@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.etmf.database import db_manager
-from apps.etmf.models import Base, TMFAuditLog, TMFDocument, ExpectedDocument
+from apps.etmf.models import Base, ExpectedDocument, TMFAuditLog, TMFDocument
 from packages.security.middleware import GatewayAuthMiddleware
 
 DATABASE_URL = os.getenv("ETMF_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
@@ -29,7 +29,9 @@ def normalize_milestone(milestone: str) -> str:
     return norm
 
 
-async def seed_default_edl(session: AsyncSession, study_id: str, milestone: str) -> None:
+async def seed_default_edl(
+    session: AsyncSession, study_id: str, milestone: str
+) -> None:
     """
     Idempotently seeds default study-scope ExpectedDocument rows for a given study and milestone.
     """
@@ -41,7 +43,7 @@ async def seed_default_edl(session: AsyncSession, study_id: str, milestone: str)
     stmt = select(ExpectedDocument).where(
         ExpectedDocument.study_id == study_id,
         ExpectedDocument.milestone == canonical,
-        ExpectedDocument.site_id.is_(None)
+        ExpectedDocument.site_id.is_(None),
     )
     result = await session.execute(stmt)
     existing = result.scalars().all()
@@ -75,7 +77,7 @@ async def seed_default_edl(session: AsyncSession, study_id: str, milestone: str)
             created_by="system",
             reason_for_change="System-initiated default seeding of expected documents list",
             version_index=1,
-            metadata_json={"default_seeded": True}
+            metadata_json={"default_seeded": True},
         )
         session.add(doc)
     await session.flush()
@@ -99,7 +101,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Idempotently seed default EDL configurations
     session_maker = db_manager.get_session_maker()
     async with session_maker() as session:
-        for study_id in ["study_001", "study_abc", "study_xyz", "study_123", "study_111"]:
+        for study_id in [
+            "study_001",
+            "study_abc",
+            "study_xyz",
+            "study_123",
+            "study_111",
+        ]:
             for milestone in ["INITIATION", "CONDUCT", "CLOSEOUT"]:
                 await seed_default_edl(session, study_id, milestone)
         await session.commit()
@@ -222,20 +230,30 @@ class ExpectedDocumentCreate(BaseModel):
     """
     Payload to create/update an Expected Document List (EDL) expectation.
     """
+
     study_id: str = Field(..., description="Unique identifier of the clinical study")
-    site_id: Optional[str] = Field(None, description="Optional site identifier (null = study-scope)")
-    milestone: str = Field(..., description="Milestone name (e.g. INITIATION, CONDUCT, CLOSEOUT)")
+    site_id: Optional[str] = Field(
+        None, description="Optional site identifier (null = study-scope)"
+    )
+    milestone: str = Field(
+        ..., description="Milestone name (e.g. INITIATION, CONDUCT, CLOSEOUT)"
+    )
     artifact_type: str = Field(..., description="Mandatory artifact type")
     zone: Optional[int] = Field(None, description="Optional DIA TMF Zone")
     section: Optional[str] = Field(None, description="Optional DIA TMF Section")
-    metadata_json: Optional[Dict[str, Any]] = Field(None, description="Optional metadata rules or notes")
-    reason_for_change: str = Field(..., min_length=10, max_length=1000, description="Part 11 justification reason")
+    metadata_json: Optional[Dict[str, Any]] = Field(
+        None, description="Optional metadata rules or notes"
+    )
+    reason_for_change: str = Field(
+        ..., min_length=10, max_length=1000, description="Part 11 justification reason"
+    )
 
 
 class ExpectedDocumentResponse(BaseModel):
     """
     Representation of an EDL expectation record.
     """
+
     id: str
     study_id: str
     site_id: Optional[str] = None
@@ -254,6 +272,7 @@ class ArtifactDetail(BaseModel):
     """
     Enriched per-artifact completeness detail.
     """
+
     artifact_type: str
     scope: str
     status: str
@@ -265,6 +284,7 @@ class CompletenessResponse(BaseModel):
     """
     Completeness dashboard check response.
     """
+
     study_id: str
     site_id: Optional[str] = None
     milestone: str
@@ -680,6 +700,7 @@ async def create_expectation(
         )
 
     from apps.execution.trial_lock import TrialLockManager
+
     if TrialLockManager.is_locked():
         raise HTTPException(
             status_code=403,
@@ -751,6 +772,7 @@ async def update_expectation(
         )
 
     from apps.execution.trial_lock import TrialLockManager
+
     if TrialLockManager.is_locked():
         raise HTTPException(
             status_code=403,
@@ -762,7 +784,9 @@ async def update_expectation(
     exp = result.scalars().first()
 
     if not exp:
-        raise HTTPException(status_code=404, detail="ExpectedDocument expectation not found")
+        raise HTTPException(
+            status_code=404, detail="ExpectedDocument expectation not found"
+        )
 
     milestone_normalized = normalize_milestone(payload.milestone)
 
@@ -827,10 +851,12 @@ async def check_completeness(
     # Query expected documents for this study, milestone and site_id (if provided)
     stmt = select(ExpectedDocument).where(
         ExpectedDocument.study_id == study_id,
-        ExpectedDocument.milestone == milestone_normalized
+        ExpectedDocument.milestone == milestone_normalized,
     )
     if site_id:
-        stmt = stmt.where((ExpectedDocument.site_id.is_(None)) | (ExpectedDocument.site_id == site_id))
+        stmt = stmt.where(
+            (ExpectedDocument.site_id.is_(None)) | (ExpectedDocument.site_id == site_id)
+        )
     else:
         stmt = stmt.where(ExpectedDocument.site_id.is_(None))
 
