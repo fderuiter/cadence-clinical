@@ -18,9 +18,7 @@ class Zone(BaseModel):
 
     model_config = {
         "frozen": True,
-        "json_schema_extra": {
-            "example": {"number": 1, "name": "Trial Management"}
-        },
+        "json_schema_extra": {"example": {"number": 1, "name": "Trial Management"}},
     }
 
 
@@ -105,9 +103,7 @@ class Catalog(BaseModel):
         """
         Retrieve all Sections belonging to a specific Zone.
         """
-        return [
-            sec for sec in self.sections.values() if sec.zone_number == zone_number
-        ]
+        return [sec for sec in self.sections.values() if sec.zone_number == zone_number]
 
     def get_artifacts_by_zone(self, zone_number: int) -> List[Artifact]:
         """
@@ -122,7 +118,5 @@ class Catalog(BaseModel):
         Retrieve all Artifacts belonging to a specific Section.
         """
         return [
-            art
-            for art in self.artifacts.values()
-            if art.section_code == section_code
+            art for art in self.artifacts.values() if art.section_code == section_code
         ]

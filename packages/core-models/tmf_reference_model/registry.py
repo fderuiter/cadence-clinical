@@ -81,9 +81,7 @@ _sections = {
     # Zone 1
     "1.1": Section(code="1.1", name="Protocol", zone_number=1),
     "1.2": Section(code="1.2", name="Trial Design & Strategy", zone_number=1),
-    "1.3": Section(
-        code="1.3", name="Trial Committees & Oversight", zone_number=1
-    ),
+    "1.3": Section(code="1.3", name="Trial Committees & Oversight", zone_number=1),
     # Zone 2
     "2.1": Section(code="2.1", name="Study Files", zone_number=2),
     "2.2": Section(code="2.2", name="Master Files", zone_number=2),
@@ -93,9 +91,7 @@ _sections = {
     "4.1": Section(code="4.1", name="IRB/IEC Approval", zone_number=4),
     # Zone 5
     "5.1": Section(code="5.1", name="Site Contacts", zone_number=5),
-    "5.2": Section(
-        code="5.2", name="Site Recruitment & Selection", zone_number=5
-    ),
+    "5.2": Section(code="5.2", name="Site Recruitment & Selection", zone_number=5),
     # Zone 6
     "6.1": Section(code="6.1", name="Investigational Product", zone_number=6),
     # Zone 7
@@ -105,9 +101,7 @@ _sections = {
     # Zone 9
     "9.1": Section(code="9.1", name="Vendors & Third Parties", zone_number=9),
     # Zone 10
-    "10.1": Section(
-        code="10.1", name="Data Management Specifications", zone_number=10
-    ),
+    "10.1": Section(code="10.1", name="Data Management Specifications", zone_number=10),
     "10.2": Section(code="10.2", name="Case Report Forms", zone_number=10),
     # Zone 11
     "11.1": Section(code="11.1", name="Statistical Analysis", zone_number=11),
