@@ -17,10 +17,11 @@ GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
 
 
 def get_auth_headers(
-    user_id="test_user", roles="admin", change_reason="system_operation"
+    user_id="test_user", roles="admin", change_reason="system_operation", action=None
 ):
     """Generate Gateway signature-compliant authentication headers."""
     import json
+    from jose import jwt
 
     timestamp = str(time.time())
     payload = {
@@ -33,7 +34,7 @@ def get_auth_headers(
     signature = hmac.new(
         GATEWAY_SECRET.encode(), serialized.encode(), hashlib.sha256
     ).hexdigest()
-    return {
+    headers = {
         "X-User-Id": user_id,
         "X-User-Roles": roles,
         "X-Gateway-Timestamp": timestamp,
@@ -41,6 +42,18 @@ def get_auth_headers(
         "X-Signature-Version": "2",
         "X-Change-Reason": change_reason,
     }
+    if action:
+        sig_payload = {
+            "sub": user_id,
+            "username": "test_user",
+            "action": action,
+            "roles": [roles],
+            "iat": time.time(),
+            "exp": time.time() + 300.0,
+        }
+        sig_token = jwt.encode(sig_payload, GATEWAY_SECRET, algorithm="HS256")
+        headers["X-Sig-Token"] = sig_token
+    return headers
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -116,7 +129,7 @@ async def test_form_submission_lifecycle_happy_path() -> None:
         res_app = await client.post(
             f"/api/v1/execution/form-submissions/{submission_id}/approve",
             json=approve_payload,
-            headers=get_auth_headers(roles="investigator"),
+            headers=get_auth_headers(roles="investigator", action=f"/api/v1/execution/form-submissions/{submission_id}/approve"),
         )
         assert res_app.status_code == 200
         data_app = res_app.json()
@@ -178,7 +191,7 @@ async def test_form_submission_invalid_transitions() -> None:
         res_app_fail = await client.post(
             f"/api/v1/execution/form-submissions/{submission_id}/approve",
             json=approve_payload,
-            headers=get_auth_headers(roles="investigator"),
+            headers=get_auth_headers(roles="investigator", action=f"/api/v1/execution/form-submissions/{submission_id}/approve"),
         )
         assert res_app_fail.status_code == 400
         assert (
@@ -205,7 +218,7 @@ async def test_form_submission_invalid_transitions() -> None:
         res_app = await client.post(
             f"/api/v1/execution/form-submissions/{submission_id}/approve",
             json=approve_payload,
-            headers=get_auth_headers(roles="investigator"),
+            headers=get_auth_headers(roles="investigator", action=f"/api/v1/execution/form-submissions/{submission_id}/approve"),
         )
         assert res_app.status_code == 200
 
@@ -252,7 +265,7 @@ async def test_form_submission_validation() -> None:
         res_bad_reason = await client.post(
             f"/api/v1/execution/form-submissions/{submission_id}/approve",
             json=bad_reason_payload,
-            headers=get_auth_headers(roles="investigator"),
+            headers=get_auth_headers(roles="investigator", action=f"/api/v1/execution/form-submissions/{submission_id}/approve"),
         )
         assert res_bad_reason.status_code == 400
         assert "Invalid signing reason" in res_bad_reason.json()["detail"]
@@ -265,7 +278,7 @@ async def test_form_submission_validation() -> None:
         res_empty_manifest = await client.post(
             f"/api/v1/execution/form-submissions/{submission_id}/approve",
             json=empty_manifest_payload,
-            headers=get_auth_headers(roles="investigator"),
+            headers=get_auth_headers(roles="investigator", action=f"/api/v1/execution/form-submissions/{submission_id}/approve"),
         )
         assert res_empty_manifest.status_code == 400
         assert "Signature manifest is required" in res_empty_manifest.json()["detail"]
@@ -326,7 +339,7 @@ async def test_form_submission_locks() -> None:
                 await client.post(
                     f"/api/v1/execution/form-submissions/{submission_id}/approve",
                     json=approve_payload,
-                    headers=get_auth_headers(roles="investigator"),
+                    headers=get_auth_headers(roles="investigator", action=f"/api/v1/execution/form-submissions/{submission_id}/approve"),
                 )
         finally:
             TrialLockManager.unlock_visit("VISIT-LOCKED")

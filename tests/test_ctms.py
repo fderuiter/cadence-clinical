@@ -32,11 +32,12 @@ async def setup_db():
 
 
 def get_auth_headers(
-    roles: str = "admin", change_reason: str = "Authorized change"
+    roles: str = "admin", change_reason: str = "Authorized change", action: str = None
 ) -> dict:
     """
     Helper to generate valid gateway V2 signed headers for testing.
     """
+    from jose import jwt
     timestamp = str(time.time())
     user_id = "test_user"
     sig = generate_signature(
@@ -51,6 +52,16 @@ def get_auth_headers(
     }
     if change_reason:
         headers["X-Change-Reason"] = change_reason
+    if action:
+        sig_payload = {
+            "sub": user_id,
+            "username": "test_user",
+            "action": action,
+            "roles": [roles],
+            "iat": time.time(),
+            "exp": time.time() + 300.0,
+        }
+        headers["X-Sig-Token"] = jwt.encode(sig_payload, "internal-gateway-secret-12345", algorithm="HS256")
     return headers
 
 
@@ -300,7 +311,8 @@ async def test_monitoring_visit_workflow_happy_path():
 
     # 3. Monitor supervisory sign-off (Monitor role)
     response_signoff = client.post(
-        f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off", headers=monitor_headers
+        f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off",
+        headers=get_auth_headers(roles="Monitor", change_reason="Monitor operations", action=f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off")
     )
     assert response_signoff.status_code == 200
     signed_data = response_signoff.json()
@@ -391,7 +403,8 @@ async def test_monitoring_visit_workflow_rbac_denials():
 
     # 4. CRA attempting to sign off -> 403 (Only Monitor / Admin)
     response_cra_signoff = client.post(
-        f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off", headers=cra_headers
+        f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off",
+        headers=get_auth_headers(roles="CRA", action=f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off")
     )
     assert response_cra_signoff.status_code == 403
 
@@ -435,7 +448,8 @@ async def test_monitoring_visit_invalid_state_and_findings():
 
     # Try signing off a scheduled visit -> 400
     response_invalid_signoff = client.post(
-        f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off", headers=monitor_headers
+        f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off",
+        headers=get_auth_headers(roles="Monitor", action=f"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off")
     )
     assert response_invalid_signoff.status_code == 400
     assert "Only completed" in response_invalid_signoff.json()["detail"]

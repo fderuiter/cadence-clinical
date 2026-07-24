@@ -85,13 +85,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         start_background_sealer,
         stop_background_sealer,
     )
+    from apps.execution.queries_escalation import (
+        start_background_query_escalation,
+        stop_background_query_escalation,
+    )
 
     await start_background_sealer(db_manager.get_session_maker())
+    await start_background_query_escalation(db_manager.get_session_maker())
 
     yield
 
     # Stop background ledger sealer
     await stop_background_sealer()
+    # Stop background query escalation
+    await stop_background_query_escalation()
     # Cleanup database connection
     await db_manager.close()
 

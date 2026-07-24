@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 533
-- **Passed:** 533 🟢
+- **Total Automated Test Cases Run:** 556
+- **Passed:** 556 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -497,6 +497,12 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_permission_failure_leaves_no_misleading_audit_entry` | `tests.test_quality_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_read_only_roles_forbidden` | `tests.test_quality_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_successful_mutation_creates_audit_log_and_is_atomic` | `tests.test_quality_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_digest_window_configurations` | `tests.test_queries_escalation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_escalation_idempotency` | `tests.test_queries_escalation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_escalation_missing_ids_fallback` | `tests.test_queries_escalation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_no_aging_queries` | `tests.test_queries_escalation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_startup_shutdown_and_resilience` | `tests.test_queries_escalation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_threshold_boundaries_and_escalation` | `tests.test_queries_escalation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_randomization_entities_audit_trail_and_soft_delete` | `tests.test_randomization_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_randomization_entities_hard_delete_prevented` | `tests.test_randomization_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_randomization_entities_trial_lock_conformity` | `tests.test_randomization_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
