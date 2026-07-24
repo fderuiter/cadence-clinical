@@ -1,12 +1,11 @@
-import time
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from apps.etmf.database import db_manager
-from apps.etmf.main import app, map_artifact_to_tmf
-from apps.etmf.models import Base, TMFDocument, ExpectedDocument
+from apps.etmf.main import app
+from apps.etmf.models import Base, TMFDocument
 from tests.test_etmf import get_auth_headers
 
 
@@ -35,7 +34,9 @@ async def test_signature_document_routing_and_classification():
     are correctly routed to their respective sections and classified with typed document types.
     """
     client = TestClient(app)
-    headers = get_headers(roles="admin", change_reason="Ingest signature lifecycle documents")
+    headers = get_headers(
+        roles="admin", change_reason="Ingest signature lifecycle documents"
+    )
 
     # 1. FDA Form 1572 -> Zone 5, Section 05.02 (Bypassing signature requirement with override)
     resp_1572 = client.post(
@@ -111,7 +112,11 @@ async def test_signature_document_routing_and_classification():
 
     # 5. Verify DB storage, typing, and default unsigned (PENDING) status
     async with db_manager.get_session_maker()() as session:
-        stmt = select(TMFDocument).where(TMFDocument.study_id == "study_sig_01").order_by(TMFDocument.artifact_code)
+        stmt = (
+            select(TMFDocument)
+            .where(TMFDocument.study_id == "study_sig_01")
+            .order_by(TMFDocument.artifact_code)
+        )
         docs = (await session.execute(stmt)).scalars().all()
         assert len(docs) == 3
 
@@ -179,7 +184,9 @@ async def test_completeness_signature_lifecycle_distinction():
     Ensure milestone completeness is blocked if mandatory signed documents are present but UNSIGNED.
     """
     client = TestClient(app)
-    admin_headers = get_headers(roles="admin", change_reason="Configure completeness expectations")
+    admin_headers = get_headers(
+        roles="admin", change_reason="Configure completeness expectations"
+    )
     inspector_headers = get_headers(roles="regulatory_inspector")
 
     study_id = "study_completeness_test"
