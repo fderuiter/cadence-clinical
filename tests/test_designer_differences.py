@@ -11,17 +11,30 @@ from apps.designer.main import app as designer_app
 
 
 def get_auth_headers():
+    import json
+
     timestamp = str(time.time())
     user_id = "123"
     roles = "admin"
+    change_reason = "system_operation"
     secret = "internal-gateway-secret-12345"
-    message = f"{user_id}:{roles}:{timestamp}"
-    signature = hmac.new(secret.encode(), message.encode(), hashlib.sha256).hexdigest()
+    payload = {
+        "change_reason": change_reason,
+        "roles": roles,
+        "timestamp": timestamp,
+        "user_id": user_id,
+    }
+    serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    signature = hmac.new(
+        secret.encode(), serialized.encode(), hashlib.sha256
+    ).hexdigest()
     return {
         "X-User-Id": user_id,
         "X-User-Roles": roles,
         "X-Gateway-Timestamp": timestamp,
         "X-Gateway-Signature": signature,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": change_reason,
     }
 
 

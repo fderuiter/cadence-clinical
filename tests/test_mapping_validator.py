@@ -8,20 +8,30 @@ client = TestClient(app)
 def get_auth_headers():
     import hashlib
     import hmac
+    import json
     import time
 
     user_id = "test-user"
     roles = "test-role"
+    change_reason = "system_operation"
     timestamp = str(time.time())
-    message = f"{user_id}:{roles}:{timestamp}"
+    payload = {
+        "change_reason": change_reason,
+        "roles": roles,
+        "timestamp": timestamp,
+        "user_id": user_id,
+    }
+    serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     signature = hmac.new(
-        b"internal-gateway-secret-12345", message.encode(), hashlib.sha256
+        b"internal-gateway-secret-12345", serialized.encode(), hashlib.sha256
     ).hexdigest()
     return {
         "X-User-Id": user_id,
         "X-User-Roles": roles,
         "X-Gateway-Timestamp": timestamp,
         "X-Gateway-Signature": signature,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": change_reason,
     }
 
 

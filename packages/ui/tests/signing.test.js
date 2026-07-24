@@ -83,21 +83,15 @@ describe("generateGatewaySignature and verifyGatewaySignature", () => {
   const roles = "admin";
   const timestamp = "123456";
 
-  it("generates correct Version 1 signature matching Python", async () => {
-    const expectedV1 =
-      "c5e5a9640f9c8aa044267bcc24cf0043938e5a95743755383f95fcec7f5458ad"; // pragma: allowlist secret
-    const sig = await generateGatewaySignature(
-      userId,
-      roles,
-      timestamp,
-      "1",
-      null,
-      secret
-    );
-    expect(sig).toBe(expectedV1);
+  it("rejects Version 1 signature generation", async () => {
+    await expect(
+      generateGatewaySignature(userId, roles, timestamp, "1", null, secret)
+    ).rejects.toThrow("Version 2 canonical JSON signature is required.");
+  });
 
+  it("rejects Version 1 signature verification", async () => {
     const isValid = await verifyGatewaySignature(
-      expectedV1,
+      "some-signature",
       userId,
       roles,
       timestamp,
@@ -105,7 +99,7 @@ describe("generateGatewaySignature and verifyGatewaySignature", () => {
       null,
       secret
     );
-    expect(isValid).toBe(true);
+    expect(isValid).toBe(false);
   });
 
   it("generates correct Version 2 signature matching Python", async () => {
@@ -155,23 +149,20 @@ describe("generateGatewaySignature and verifyGatewaySignature", () => {
     expect(sigWithNull).toBe(sigWithEmpty);
   });
 
-  it("ensures Version 1 and Version 2 signatures differ", async () => {
-    const sigV1 = await generateGatewaySignature(
+  it("rejects unsupported versions", async () => {
+    await expect(
+      generateGatewaySignature(userId, roles, timestamp, "3", null, secret)
+    ).rejects.toThrow("Version 2 canonical JSON signature is required.");
+
+    const isValid = await verifyGatewaySignature(
+      "some-signature",
       userId,
       roles,
       timestamp,
-      "1",
+      "3",
       null,
       secret
     );
-    const sigV2 = await generateGatewaySignature(
-      userId,
-      roles,
-      timestamp,
-      "2",
-      null,
-      secret
-    );
-    expect(sigV1).not.toBe(sigV2);
+    expect(isValid).toBe(false);
   });
 });

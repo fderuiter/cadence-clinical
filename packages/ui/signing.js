@@ -79,12 +79,12 @@ export async function verifyCanonicalSignature(payload, signature, secret) {
 
 /**
  * Generates an HMAC-SHA256 signature for API Gateway identity headers.
- * Supports legacy Version 1 (colon-separated format) and Version 2 (canonical JSON format).
+ * Supports Version 2 (canonical JSON format) exclusively.
  *
  * @param {string} userId - The unique user identifier.
  * @param {string} roles - Comma-separated roles assigned to the user.
  * @param {string} timestamp - The gateway-generated timestamp.
- * @param {string} [version="1"] - The signature format version ("1" or "2").
+ * @param {string} [version="2"] - The signature format version (must be "2" or "v2").
  * @param {string|null} [changeReason=null] - The audit change justification (required for Version 2 mutations).
  * @param {string|Uint8Array} secret - The shared API gateway secret key.
  * @returns {Promise<string>} A hex-encoded representation of the signature.
@@ -93,55 +93,35 @@ export async function generateGatewaySignature(
   userId,
   roles,
   timestamp,
-  version = "1",
+  version = "2",
   changeReason = null,
   secret
 ) {
-  if (version === "2" || version === "v2") {
-    const cr =
-      changeReason !== null && changeReason !== undefined ? changeReason : "";
-    const payload = {
-      change_reason: cr,
-      roles: roles,
-      timestamp: timestamp,
-      user_id: userId,
-    };
-    return generateCanonicalSignature(payload, secret);
-  } else {
-    const message = `${userId}:${roles}:${timestamp}`;
-    const secretKeyData =
-      typeof secret === "string" ? new TextEncoder().encode(secret) : secret; // pragma: allowlist secret
-    const data = new TextEncoder().encode(message);
-
-    const key = await globalThis.crypto.subtle.importKey(
-      "raw",
-      secretKeyData,
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign"]
+  if (version !== "2" && version !== "v2") {
+    throw new Error(
+      "Missing or obsolete signature format. Version 2 canonical JSON signature is required."
     );
-
-    const signatureBuffer = await globalThis.crypto.subtle.sign(
-      "HMAC",
-      key,
-      data
-    );
-    const hashArray = Array.from(new Uint8Array(signatureBuffer));
-    const hashHex = hashArray
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-    return hashHex;
   }
+  const cr =
+    changeReason !== null && changeReason !== undefined ? changeReason : "";
+  const payload = {
+    change_reason: cr,
+    roles: roles,
+    timestamp: timestamp,
+    user_id: userId,
+  };
+  return generateCanonicalSignature(payload, secret);
 }
 
 /**
  * Verifies an API Gateway identity signature against expected values.
+ * Supports Version 2 (canonical JSON format) exclusively.
  *
  * @param {string} signature - The signature to verify.
  * @param {string} userId - The unique user identifier.
  * @param {string} roles - Comma-separated roles assigned to the user.
  * @param {string} timestamp - The gateway-generated timestamp.
- * @param {string} [version="1"] - The signature format version ("1" or "2").
+ * @param {string} [version="2"] - The signature format version (must be "2" or "v2").
  * @param {string|null} [changeReason=null] - The audit change justification.
  * @param {string|Uint8Array} secret - The shared API gateway secret key.
  * @returns {Promise<boolean>} True if valid, false otherwise.
@@ -151,10 +131,13 @@ export async function verifyGatewaySignature(
   userId,
   roles,
   timestamp,
-  version = "1",
+  version = "2",
   changeReason = null,
   secret
 ) {
+  if (version !== "2" && version !== "v2") {
+    return false;
+  }
   const expectedSig = await generateGatewaySignature(
     userId,
     roles,

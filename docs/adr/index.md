@@ -35,3 +35,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-24: Code Formatting and Style Standardization](2026-07-24-code-formatting-and-style-standardization.md)
 - [2026-07-24: FHIR / eSource & eCOA Sync Gateway](2026-07-24-fhir-esource-ecoa-sync-gateway.md)
 - [2026-07-23: Declarative Ruleset and Automerge Integration](2026-07-23-declarative-ruleset-automerge.md)
+- [2026-07-24: Minimizing Merge Friction for Baseline and SDLC Verification Artifacts](2026-07-24-minimizing-merge-friction-for-baselines-and-reports.md)

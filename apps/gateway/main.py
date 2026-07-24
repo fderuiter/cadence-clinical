@@ -227,7 +227,7 @@ def generate_signature(
     user_id: str,
     roles: str,
     timestamp: str,
-    version: str = "1",
+    version: str = "2",
     change_reason: Optional[str] = None,
 ) -> str:
     """
@@ -236,37 +236,31 @@ def generate_signature(
     Uses a shared secret to cryptographically sign the user identity
     and timestamp, allowing downstream services to trust the injected headers.
 
-    Supports Version 1 (colon-separated format) and Version 2 (canonical JSON format).
+    Supports Version 2 (canonical JSON format) exclusively.
 
     Args:
         user_id (str): The unique user identifier.
         roles (str): Comma-separated roles assigned to the user.
         timestamp (str): The exact timestamp when the signature was created.
-        version (str): The signature format version ("1" or "2").
+        version (str): The signature format version (ignored, always "2").
         change_reason (Optional[str]): The justification reason for the modification (Version 2).
 
     Returns:
         str: A hexadecimal representation of the HMAC signature.
     """
-    if version in ("2", "v2"):
-        import json
+    import json
 
-        cr = change_reason if change_reason is not None else ""
-        payload = {
-            "change_reason": cr,
-            "roles": roles,
-            "timestamp": timestamp,
-            "user_id": user_id,
-        }
-        serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
-        return hmac.new(
-            GATEWAY_SECRET.encode(), serialized.encode(), hashlib.sha256
-        ).hexdigest()
-    else:
-        message = f"{user_id}:{roles}:{timestamp}"
-        return hmac.new(
-            GATEWAY_SECRET.encode(), message.encode(), hashlib.sha256
-        ).hexdigest()
+    cr = change_reason if change_reason is not None else ""
+    payload = {
+        "change_reason": cr,
+        "roles": roles,
+        "timestamp": timestamp,
+        "user_id": user_id,
+    }
+    serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hmac.new(
+        GATEWAY_SECRET.encode(), serialized.encode(), hashlib.sha256
+    ).hexdigest()
 
 
 @app.get("/openapi.json", include_in_schema=False)
