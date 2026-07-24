@@ -28,7 +28,7 @@ def receive_before_flush(session: Session, flush_context, instances):
     if not session.is_modified:
         return
 
-    # If the session contains eTMF or Interop objects, skip execution auditing
+    # If the session contains eTMF, Interop, or CTMS objects, skip execution auditing
     for obj in list(session.new) + list(session.dirty) + list(session.deleted):
         if hasattr(obj, "__tablename__") and obj.__tablename__ in (
             "tmf_documents",
@@ -36,6 +36,8 @@ def receive_before_flush(session: Session, flush_context, instances):
             "tmf_expected_documents",
             "epro_submissions",
             "interop_audit_logs",
+            "ctms_studies",
+            "ctms_audit_logs",
         ):
             return
 
