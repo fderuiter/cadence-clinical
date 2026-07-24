@@ -55,6 +55,16 @@ Traditional clinical trial builds require manual, error-prone translation of pro
     * `Site Investigator / CRC` ──► Data capture permissions in `apps/execution`
     * `Data Manager` ──► Query and form management across both domains.
 
+### G. Event-Driven eTMF Module (`apps/etmf`)
+* **Role:** Electronic Trial Master File (eTMF) Repository and Completeness Tracker.
+* **Datastore:** SQLite / PostgreSQL Relational Database.
+* **Core Responsibilities:**
+  * Ingests, taxonomy-classifies, and versions clinical trial artifacts mapped to DIA TMF Reference Model Zones 1-11.
+  * Implements Expected Document Lists (EDLs) through the `ExpectedDocument` data model to replace static, hardcoded milestone rules.
+  * Computes site-aware, data-driven milestone completeness checks by querying active EDLs and combining study-scope and site-scope required artifacts.
+  * Enforces role-based access control and trial lock restrictions via the Gateway and `GatewayAuthMiddleware` to block read-only inspector roles from mutating definitions or archives.
+  * Maintains a 21 CFR Part 11 compliant audit trail (`TMFAuditLog`) capturing user contexts, timestamps, and justifications for all eTMF views, downloads, EDL updates, and completeness checks.
+
 ---
 
 ## 3. Data Transformation Flow
