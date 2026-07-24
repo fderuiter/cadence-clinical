@@ -37,7 +37,12 @@ from apps.designer.rules import (
     detect_circular_dependencies,
     detect_unknown_fields,
 )
-from apps.designer.validator import StudyAlignmentReport, generate_alignment_report
+from apps.designer.validator import (
+    StudyAlignmentReport,
+    StudyTerminologyValidationReport,
+    generate_alignment_report,
+    validate_study_terminology,
+)
 from apps.designer.xml_mapping import validate_mapping_csv
 from packages.security.middleware import GatewayAuthMiddleware
 
@@ -198,6 +203,31 @@ async def validate_study_alignment(study_id: str) -> StudyAlignmentReport:
         StudyAlignmentReport: The structured validation report.
     """
     return await generate_alignment_report(study_id)
+
+
+@app.get(
+    "/api/v1/studies/{study_id}/terminology-validation",
+    response_model=StudyTerminologyValidationReport,
+)
+async def validate_study_terminology_endpoint(
+    study_id: str,
+) -> StudyTerminologyValidationReport:
+    """
+    Generate a terminology validation report for a specific clinical study.
+
+    Traverses study concept references and aggregates validation outcomes
+    such as identifying affected elements and references.
+
+    Args:
+        study_id (str): The unique identifier of the study to validate.
+
+    Returns:
+        StudyTerminologyValidationReport: The structured validation report.
+    """
+    try:
+        return validate_study_terminology(study_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
 
 @app.get(
