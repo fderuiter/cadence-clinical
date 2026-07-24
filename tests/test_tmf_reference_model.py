@@ -208,7 +208,9 @@ def test_resolve_artifact_success():
     assert res_name["artifact"].name == "Clinical Trial Protocol"
 
     # Lookup by both and ensuring they match
-    res_both = resolve_artifact("v3.2.0", code="01.01.01", name="Clinical Trial Protocol")
+    res_both = resolve_artifact(
+        "v3.2.0", code="01.01.01", name="Clinical Trial Protocol"
+    )
     assert res_both["artifact"].code == "01.01.01"
 
 
@@ -262,7 +264,9 @@ def test_resolve_artifact_failures():
     ambig_cat = build_catalog("v_ambiguous", raw_ambiguous)
     register_catalog(ambig_cat)
 
-    with pytest.raises(ValueError, match="Ambiguous artifact input for name 'Duplicate Name'"):
+    with pytest.raises(
+        ValueError, match="Ambiguous artifact input for name 'Duplicate Name'"
+    ):
         resolve_artifact("v_ambiguous", name="Duplicate Name")
 
 
@@ -273,7 +277,9 @@ def test_validate_hierarchy_success():
     from tmf_reference_model import validate_hierarchy
 
     # Valid: zone 1, section 01.01, artifact 01.01.01 in version v3.2.0
-    validate_hierarchy("v3.2.0", zone_code=1, section_code="01.01", artifact_code="01.01.01")
+    validate_hierarchy(
+        "v3.2.0", zone_code=1, section_code="01.01", artifact_code="01.01.01"
+    )
 
 
 def test_validate_hierarchy_failures():
@@ -291,27 +297,44 @@ def test_validate_hierarchy_failures():
 
     # Unknown version
     with pytest.raises(ValueError, match="Unknown catalog version 'v999'"):
-        validate_hierarchy("v999", zone_code=1, section_code="01.01", artifact_code="01.01.01")
+        validate_hierarchy(
+            "v999", zone_code=1, section_code="01.01", artifact_code="01.01.01"
+        )
 
     # Unknown zone code
     with pytest.raises(ValueError, match="Unknown zone code 999"):
-        validate_hierarchy("v3.2.0", zone_code=999, section_code="01.01", artifact_code="01.01.01")
+        validate_hierarchy(
+            "v3.2.0", zone_code=999, section_code="01.01", artifact_code="01.01.01"
+        )
 
     # Unknown section code
     with pytest.raises(ValueError, match="Unknown section code '99.99'"):
-        validate_hierarchy("v3.2.0", zone_code=1, section_code="99.99", artifact_code="01.01.01")
+        validate_hierarchy(
+            "v3.2.0", zone_code=1, section_code="99.99", artifact_code="01.01.01"
+        )
 
     # Unknown artifact code
     with pytest.raises(ValueError, match="Unknown artifact code '99.99.99'"):
-        validate_hierarchy("v3.2.0", zone_code=1, section_code="01.01", artifact_code="99.99.99")
+        validate_hierarchy(
+            "v3.2.0", zone_code=1, section_code="01.01", artifact_code="99.99.99"
+        )
 
     # Mismatched section in zone (e.g., section 02.01 belongs to zone 2, not zone 1)
-    with pytest.raises(ValueError, match="Mismatched hierarchy: section '02.01' belongs to zone 2"):
-        validate_hierarchy("v3.2.0", zone_code=1, section_code="02.01", artifact_code="02.01.01")
+    with pytest.raises(
+        ValueError, match="Mismatched hierarchy: section '02.01' belongs to zone 2"
+    ):
+        validate_hierarchy(
+            "v3.2.0", zone_code=1, section_code="02.01", artifact_code="02.01.01"
+        )
 
     # Mismatched artifact in section (e.g., artifact 02.01.01 belongs to section 02.01, not 01.01)
-    with pytest.raises(ValueError, match="Mismatched hierarchy: artifact '02.01.01' belongs to section '02.01'"):
-        validate_hierarchy("v3.2.0", zone_code=1, section_code="01.01", artifact_code="02.01.01")
+    with pytest.raises(
+        ValueError,
+        match="Mismatched hierarchy: artifact '02.01.01' belongs to section '02.01'",
+    ):
+        validate_hierarchy(
+            "v3.2.0", zone_code=1, section_code="01.01", artifact_code="02.01.01"
+        )
 
 
 def test_get_mandatory_artifacts_success():
@@ -352,7 +375,11 @@ def test_get_mandatory_artifacts_failures():
     - unknown milestone
     - mandatory artifact not in the requested version
     """
-    from tmf_reference_model import build_catalog, get_mandatory_artifacts, register_catalog
+    from tmf_reference_model import (
+        build_catalog,
+        get_mandatory_artifacts,
+        register_catalog,
+    )
 
     # Unknown version
     with pytest.raises(ValueError, match="Unknown catalog version 'v999'"):
@@ -364,10 +391,16 @@ def test_get_mandatory_artifacts_failures():
 
     # Mandatory artifact missing from version
     raw_minimal = {
-        1: ("Trial Management", {"01.01": ("Trial Design", [("01.01.02", "Other Document")])})
+        1: (
+            "Trial Management",
+            {"01.01": ("Trial Design", [("01.01.02", "Other Document")])},
+        )
     }
     min_cat = build_catalog("v_minimal_missing", raw_minimal)
     register_catalog(min_cat)
 
-    with pytest.raises(ValueError, match="Mandatory artifact code '01.01.01' for milestone 'INITIATION' not found"):
+    with pytest.raises(
+        ValueError,
+        match="Mandatory artifact code '01.01.01' for milestone 'INITIATION' not found",
+    ):
         get_mandatory_artifacts("INITIATION", "v_minimal_missing")

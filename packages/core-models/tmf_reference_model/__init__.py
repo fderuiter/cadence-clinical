@@ -283,13 +283,17 @@ def resolve_artifact(
         raise ValueError(f"Unknown catalog version '{version}'.")
 
     if code is None and name is None:
-        raise ValueError("Must provide either 'code' or 'name' (or both) to resolve an artifact.")
+        raise ValueError(
+            "Must provide either 'code' or 'name' (or both) to resolve an artifact."
+        )
 
     artifact_by_code = None
     if code is not None:
         artifact_by_code = catalog.get_artifact(code)
         if artifact_by_code is None:
-            raise ValueError(f"Unknown artifact with code '{code}' in version '{version}'.")
+            raise ValueError(
+                f"Unknown artifact with code '{code}' in version '{version}'."
+            )
 
     artifact_by_name = None
     if name is not None:
@@ -300,7 +304,9 @@ def resolve_artifact(
                 matches.append(art)
 
         if not matches:
-            raise ValueError(f"Unknown artifact with name '{name}' in version '{version}'.")
+            raise ValueError(
+                f"Unknown artifact with name '{name}' in version '{version}'."
+            )
         elif len(matches) > 1:
             raise ValueError(
                 f"Ambiguous artifact input for name '{name}' in version '{version}': multiple matches found."
@@ -359,11 +365,15 @@ def validate_hierarchy(
 
     section = catalog.get_section(section_code)
     if not section:
-        raise ValueError(f"Unknown section code '{section_code}' in version '{version}'.")
+        raise ValueError(
+            f"Unknown section code '{section_code}' in version '{version}'."
+        )
 
     artifact = catalog.get_artifact(artifact_code)
     if not artifact:
-        raise ValueError(f"Unknown artifact code '{artifact_code}' in version '{version}'.")
+        raise ValueError(
+            f"Unknown artifact code '{artifact_code}' in version '{version}'."
+        )
 
     # Check hierarchy
     if section.zone_code != zone_code:
