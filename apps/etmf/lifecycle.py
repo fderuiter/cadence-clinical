@@ -4,9 +4,11 @@ Defines allowed transitions, role permissions, and a helper to execute status ch
 with immutable audit trail logging in compliance with 21 CFR Part 11.
 """
 
-from typing import Any, Dict, Set
+from typing import Dict, Set
+
 from sqlalchemy.ext.asyncio import AsyncSession
-from apps.etmf.models import DocumentStatus, TMFDocument, DocumentQCTransition
+
+from apps.etmf.models import DocumentQCTransition, DocumentStatus, TMFDocument
 
 # Defined allowed forward and rejection transitions
 ALLOWED_TRANSITIONS: Dict[str, Set[str]] = {
@@ -78,7 +80,9 @@ async def validate_and_transition_document_status(
     }
 
     if to_status not in valid_statuses:
-        raise ValueError(f"Invalid status: '{to_status}'. Must be one of {sorted(list(valid_statuses))}.")
+        raise ValueError(
+            f"Invalid status: '{to_status}'. Must be one of {sorted(list(valid_statuses))}."
+        )
 
     # Validate state-machine transition
     current = document.status or DocumentStatus.DRAFT
@@ -96,7 +100,9 @@ async def validate_and_transition_document_status(
 
     # Validate Part 11 reason for change
     if not reason_for_change or len(reason_for_change.strip()) < 10:
-        raise ValueError("Reason for change is mandatory and must be at least 10 characters long.")
+        raise ValueError(
+            "Reason for change is mandatory and must be at least 10 characters long."
+        )
 
     # Execute transition
     from_status = current

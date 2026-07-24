@@ -1,12 +1,12 @@
 import time
+
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
-from sqlalchemy import select
 
 from apps.etmf.database import db_manager
 from apps.etmf.main import app
-from apps.etmf.models import Base, TMFDocument, DocumentQCTransition, TMFAuditLog
+from apps.etmf.models import Base
 from apps.gateway.main import generate_signature
 
 
@@ -79,7 +79,9 @@ async def test_invalid_status_transition_raises_error():
     """
     # @req:PRD-QC-002
     client = TestClient(app)
-    headers_admin = get_auth_headers(roles="admin", change_reason="Setup and test transitions")
+    headers_admin = get_auth_headers(
+        roles="admin", change_reason="Setup and test transitions"
+    )
 
     payload = {
         "study_id": "study_001",
@@ -88,7 +90,9 @@ async def test_invalid_status_transition_raises_error():
         "content": "Protocol Content",
         "mime_type": "application/pdf",
     }
-    ingest_resp = client.post("/api/v1/etmf/ingest", json=payload, headers=headers_admin)
+    ingest_resp = client.post(
+        "/api/v1/etmf/ingest", json=payload, headers=headers_admin
+    )
     doc_id = ingest_resp.json()["document_id"]
 
     # 1. Attempt to transition to an invalid status
@@ -135,11 +139,15 @@ async def test_role_based_access_controls_and_gates():
         "content": "Protocol Content",
         "mime_type": "application/pdf",
     }
-    ingest_resp = client.post("/api/v1/etmf/ingest", json=payload, headers=headers_admin)
+    ingest_resp = client.post(
+        "/api/v1/etmf/ingest", json=payload, headers=headers_admin
+    )
     doc_id = ingest_resp.json()["document_id"]
 
     # 1. Try to transition from DRAFT to TECHNICAL_QC using a non-permitted role (e.g., monitor or clinical reviewer)
-    headers_clinical = get_auth_headers(roles="sponsor_clinical", change_reason="Attempt transition")
+    headers_clinical = get_auth_headers(
+        roles="sponsor_clinical", change_reason="Attempt transition"
+    )
     payload_transition = {
         "to_status": "TECHNICAL_QC",
         "reason_for_change": "Attempting to transition status without proper role.",
@@ -153,7 +161,9 @@ async def test_role_based_access_controls_and_gates():
     assert "not authorized" in res_forbidden.json()["detail"]
 
     # 2. Transition successfully using permitted role (sponsor_dm)
-    headers_dm = get_auth_headers(roles="sponsor_dm", change_reason="Execute technical QC")
+    headers_dm = get_auth_headers(
+        roles="sponsor_dm", change_reason="Execute technical QC"
+    )
     res_permitted = client.post(
         f"/api/v1/etmf/documents/{doc_id}/transition",
         json=payload_transition,
@@ -180,7 +190,9 @@ async def test_part11_change_reason_enforcement():
         "content": "Protocol Content",
         "mime_type": "application/pdf",
     }
-    ingest_resp = client.post("/api/v1/etmf/ingest", json=payload, headers=headers_admin)
+    ingest_resp = client.post(
+        "/api/v1/etmf/ingest", json=payload, headers=headers_admin
+    )
     doc_id = ingest_resp.json()["document_id"]
 
     # Try transition with too short reason
@@ -214,7 +226,9 @@ async def test_append_only_transition_history():
         "content": "Protocol Content",
         "mime_type": "application/pdf",
     }
-    ingest_resp = client.post("/api/v1/etmf/ingest", json=payload, headers=headers_admin)
+    ingest_resp = client.post(
+        "/api/v1/etmf/ingest", json=payload, headers=headers_admin
+    )
     doc_id = ingest_resp.json()["document_id"]
 
     # Perform a sequence of valid transitions:
@@ -223,13 +237,20 @@ async def test_append_only_transition_history():
     # 3. CLINICAL_QC -> REJECTED (by sponsor_clinical)
     # 4. REJECTED -> DRAFT (by sponsor_dm)
 
-    headers_dm = get_auth_headers(roles="sponsor_dm", change_reason="Executing technical QC transition")
-    headers_clinical = get_auth_headers(roles="sponsor_clinical", change_reason="Executing clinical QC transition")
+    headers_dm = get_auth_headers(
+        roles="sponsor_dm", change_reason="Executing technical QC transition"
+    )
+    headers_clinical = get_auth_headers(
+        roles="sponsor_clinical", change_reason="Executing clinical QC transition"
+    )
 
     # Step 1
     res1 = client.post(
         f"/api/v1/etmf/documents/{doc_id}/transition",
-        json={"to_status": "TECHNICAL_QC", "reason_for_change": "Completed technical QC check"},
+        json={
+            "to_status": "TECHNICAL_QC",
+            "reason_for_change": "Completed technical QC check",
+        },
         headers=headers_dm,
     )
     assert res1.status_code == 200
@@ -237,7 +258,10 @@ async def test_append_only_transition_history():
     # Step 2
     res2 = client.post(
         f"/api/v1/etmf/documents/{doc_id}/transition",
-        json={"to_status": "CLINICAL_QC", "reason_for_change": "Completed clinical QC check"},
+        json={
+            "to_status": "CLINICAL_QC",
+            "reason_for_change": "Completed clinical QC check",
+        },
         headers=headers_clinical,
     )
     assert res2.status_code == 200
@@ -245,7 +269,10 @@ async def test_append_only_transition_history():
     # Step 3
     res3 = client.post(
         f"/api/v1/etmf/documents/{doc_id}/transition",
-        json={"to_status": "REJECTED", "reason_for_change": "Fails protocol alignment guidelines"},
+        json={
+            "to_status": "REJECTED",
+            "reason_for_change": "Fails protocol alignment guidelines",
+        },
         headers=headers_clinical,
     )
     assert res3.status_code == 200
@@ -253,7 +280,10 @@ async def test_append_only_transition_history():
     # Step 4
     res4 = client.post(
         f"/api/v1/etmf/documents/{doc_id}/transition",
-        json={"to_status": "DRAFT", "reason_for_change": "Reverted back to draft for correction"},
+        json={
+            "to_status": "DRAFT",
+            "reason_for_change": "Reverted back to draft for correction",
+        },
         headers=headers_dm,
     )
     assert res4.status_code == 200
@@ -299,7 +329,9 @@ async def test_qc_transitions_missing_doc():
     Verify querying or transitioning a non-existent document yields 404.
     """
     client = TestClient(app)
-    headers_admin = get_auth_headers(roles="admin", change_reason="Execute transition check")
+    headers_admin = get_auth_headers(
+        roles="admin", change_reason="Execute transition check"
+    )
 
     res_trans = client.post(
         "/api/v1/etmf/documents/nonexistent-id/transition",

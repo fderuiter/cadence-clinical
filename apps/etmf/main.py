@@ -9,8 +9,14 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.etmf.database import db_manager
-from apps.etmf.models import Base, ExpectedDocument, TMFAuditLog, TMFDocument, DocumentQCTransition
 from apps.etmf.lifecycle import validate_and_transition_document_status
+from apps.etmf.models import (
+    Base,
+    DocumentQCTransition,
+    ExpectedDocument,
+    TMFAuditLog,
+    TMFDocument,
+)
 from packages.security.middleware import GatewayAuthMiddleware
 
 DATABASE_URL = os.getenv("ETMF_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
@@ -219,9 +225,15 @@ class TransitionRequest(BaseModel):
     Payload to request a secure 21 CFR Part 11 compliant QC transition on a document.
     """
 
-    to_status: str = Field(..., description="Target status (e.g. TECHNICAL_QC, CLINICAL_QC, APPROVED, ARCHIVED, REJECTED)")
+    to_status: str = Field(
+        ...,
+        description="Target status (e.g. TECHNICAL_QC, CLINICAL_QC, APPROVED, ARCHIVED, REJECTED)",
+    )
     reason_for_change: str = Field(
-        ..., min_length=10, max_length=1000, description="Part 11 change justification reason"
+        ...,
+        min_length=10,
+        max_length=1000,
+        description="Part 11 change justification reason",
     )
 
 
@@ -976,7 +988,9 @@ async def test_exception_route(session: AsyncSession = Depends(get_db_session)):
     raise RuntimeError("Intentional test database rollback error")
 
 
-@app.post("/api/v1/etmf/documents/{document_id}/transition", response_model=Dict[str, Any])
+@app.post(
+    "/api/v1/etmf/documents/{document_id}/transition", response_model=Dict[str, Any]
+)
 async def transition_document_status_endpoint(
     request: Request,
     document_id: str,
@@ -1027,7 +1041,10 @@ async def transition_document_status_endpoint(
     }
 
 
-@app.get("/api/v1/etmf/documents/{document_id}/transitions", response_model=List[TransitionResponse])
+@app.get(
+    "/api/v1/etmf/documents/{document_id}/transitions",
+    response_model=List[TransitionResponse],
+)
 async def get_document_transition_history(
     request: Request,
     document_id: str,
@@ -1045,7 +1062,11 @@ async def get_document_transition_history(
     if not res_exist.scalars().first():
         raise HTTPException(status_code=404, detail="eTMF Document not found")
 
-    stmt = select(DocumentQCTransition).where(DocumentQCTransition.document_id == document_id).order_by(DocumentQCTransition.timestamp.asc())
+    stmt = (
+        select(DocumentQCTransition)
+        .where(DocumentQCTransition.document_id == document_id)
+        .order_by(DocumentQCTransition.timestamp.asc())
+    )
     result = await session.execute(stmt)
     transitions = result.scalars().all()
 
