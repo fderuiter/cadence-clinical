@@ -346,7 +346,9 @@ async def test_qc_lifecycle_end_to_end():
         "content": "Protocol text",
         "mime_type": "application/pdf",
     }
-    ingest_resp = client.post("/api/v1/etmf/ingest", json=payload, headers=admin_headers)
+    ingest_resp = client.post(
+        "/api/v1/etmf/ingest", json=payload, headers=admin_headers
+    )
     assert ingest_resp.status_code == 201
     doc_id = ingest_resp.json()["document_id"]
 
@@ -366,7 +368,9 @@ async def test_qc_lifecycle_end_to_end():
     assert resp_no_reason.status_code in (400, 403)
 
     # 3. Test role-based rejection: Wrong role
-    wrong_role_headers = get_auth_headers(roles="clinical_qc_reviewer", change_reason="Reviewing technical details")
+    wrong_role_headers = get_auth_headers(
+        roles="clinical_qc_reviewer", change_reason="Reviewing technical details"
+    )
     resp_wrong_role = client.post(
         f"/api/v1/etmf/documents/{doc_id}/transition",
         json={"target_status": "TECHNICAL_QC"},
@@ -375,7 +379,9 @@ async def test_qc_lifecycle_end_to_end():
     assert resp_wrong_role.status_code == 403
 
     # 4. Test blocked invalid transitions
-    invalid_trans_headers = get_auth_headers(roles="clinical_qc_reviewer", change_reason="Bypassing technical review")
+    invalid_trans_headers = get_auth_headers(
+        roles="clinical_qc_reviewer", change_reason="Bypassing technical review"
+    )
     resp_invalid_trans = client.post(
         f"/api/v1/etmf/documents/{doc_id}/transition",
         json={"target_status": "CLINICAL_QC"},
@@ -384,10 +390,15 @@ async def test_qc_lifecycle_end_to_end():
     assert resp_invalid_trans.status_code == 400
 
     # 5. Successful Transition: DRAFT -> TECHNICAL_QC
-    tech_reviewer_headers = get_auth_headers(roles="technical_qc_reviewer", change_reason="Technical review passed")
+    tech_reviewer_headers = get_auth_headers(
+        roles="technical_qc_reviewer", change_reason="Technical review passed"
+    )
     resp_tech = client.post(
         f"/api/v1/etmf/documents/{doc_id}/transition",
-        json={"target_status": "TECHNICAL_QC", "context": {"checked_items": ["signature", "metadata"]}},
+        json={
+            "target_status": "TECHNICAL_QC",
+            "context": {"checked_items": ["signature", "metadata"]},
+        },
         headers=tech_reviewer_headers,
     )
     assert resp_tech.status_code == 200
@@ -396,7 +407,11 @@ async def test_qc_lifecycle_end_to_end():
     # Verify transition writes to both DB tables
     async with db_manager.get_session_maker()() as session:
         # Check DocumentQCTransition
-        stmt = select(DocumentQCTransition).where(DocumentQCTransition.document_id == doc_id).order_by(DocumentQCTransition.timestamp.desc())
+        stmt = (
+            select(DocumentQCTransition)
+            .where(DocumentQCTransition.document_id == doc_id)
+            .order_by(DocumentQCTransition.timestamp.desc())
+        )
         transitions = (await session.execute(stmt)).scalars().all()
         assert len(transitions) == 1
         assert transitions[0].from_status == "DRAFT"
@@ -404,13 +419,19 @@ async def test_qc_lifecycle_end_to_end():
         assert transitions[0].reason_for_change == "Technical review passed"
 
         # Check TMFAuditLog
-        stmt_audit = select(TMFAuditLog).where(TMFAuditLog.document_id == doc_id).where(TMFAuditLog.action == "QC_TRANSITION")
+        stmt_audit = (
+            select(TMFAuditLog)
+            .where(TMFAuditLog.document_id == doc_id)
+            .where(TMFAuditLog.action == "QC_TRANSITION")
+        )
         audit_logs = (await session.execute(stmt_audit)).scalars().all()
         assert len(audit_logs) == 1
         assert "Transitioned document" in audit_logs[0].details
 
     # 6. Rejection path: TECHNICAL_QC -> REJECTED (by technical_qc_reviewer) -> DRAFT (by author)
-    tech_reject_headers = get_auth_headers(roles="technical_qc_reviewer", change_reason="Fails technical review")
+    tech_reject_headers = get_auth_headers(
+        roles="technical_qc_reviewer", change_reason="Fails technical review"
+    )
     resp_reject = client.post(
         f"/api/v1/etmf/documents/{doc_id}/transition",
         json={"target_status": "REJECTED"},
@@ -420,7 +441,9 @@ async def test_qc_lifecycle_end_to_end():
     assert resp_reject.json()["new_status"] == "REJECTED"
 
     # Transition back to DRAFT (requires author or data_manager role)
-    author_headers = get_auth_headers(roles="author", change_reason="Resubmitting after fix")
+    author_headers = get_auth_headers(
+        roles="author", change_reason="Resubmitting after fix"
+    )
     resp_to_draft = client.post(
         f"/api/v1/etmf/documents/{doc_id}/transition",
         json={"target_status": "DRAFT"},
@@ -437,7 +460,9 @@ async def test_qc_lifecycle_end_to_end():
         headers=tech_reviewer_headers,
     )
     # TECHNICAL_QC -> CLINICAL_QC
-    clinical_reviewer_headers = get_auth_headers(roles="clinical_qc_reviewer", change_reason="Clinical check passed")
+    clinical_reviewer_headers = get_auth_headers(
+        roles="clinical_qc_reviewer", change_reason="Clinical check passed"
+    )
     resp_clin = client.post(
         f"/api/v1/etmf/documents/{doc_id}/transition",
         json={"target_status": "CLINICAL_QC"},
@@ -446,7 +471,9 @@ async def test_qc_lifecycle_end_to_end():
     assert resp_clin.status_code == 200
 
     # CLINICAL_QC -> APPROVED
-    approver_headers = get_auth_headers(roles="approver", change_reason="Final approval granted")
+    approver_headers = get_auth_headers(
+        roles="approver", change_reason="Final approval granted"
+    )
     resp_app = client.post(
         f"/api/v1/etmf/documents/{doc_id}/transition",
         json={"target_status": "APPROVED"},
@@ -487,7 +514,11 @@ async def test_qc_lifecycle_end_to_end():
 
     # Verify VIEW_QC_HISTORY audit log entry was written
     async with db_manager.get_session_maker()() as session:
-        stmt_audit = select(TMFAuditLog).where(TMFAuditLog.document_id == doc_id).where(TMFAuditLog.action == "VIEW_QC_HISTORY")
+        stmt_audit = (
+            select(TMFAuditLog)
+            .where(TMFAuditLog.document_id == doc_id)
+            .where(TMFAuditLog.action == "VIEW_QC_HISTORY")
+        )
         audit_logs = (await session.execute(stmt_audit)).scalars().all()
         assert len(audit_logs) == 1
         assert "Viewed QC transition history" in audit_logs[0].details

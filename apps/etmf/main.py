@@ -12,7 +12,6 @@ from apps.etmf.database import db_manager
 from apps.etmf.models import (
     Base,
     DocumentQCTransition,
-    DocumentStatus,
     TMFAuditLog,
     TMFDocument,
     validate_qc_role,
@@ -145,7 +144,9 @@ class QCTransitionRequest(BaseModel):
     """
 
     target_status: str = Field(..., description="The target lifecycle status/stage")
-    context: Optional[Dict[str, Any]] = Field(None, description="Optional metadata or context for the transition")
+    context: Optional[Dict[str, Any]] = Field(
+        None, description="Optional metadata or context for the transition"
+    )
 
 
 class QCTransitionResponse(BaseModel):
@@ -155,7 +156,9 @@ class QCTransitionResponse(BaseModel):
 
     document_id: str = Field(..., description="ID of the document transitioned")
     new_status: str = Field(..., description="The new status of the document")
-    transition_metadata: Dict[str, Any] = Field(..., description="Transition metadata including timestamp, user, role")
+    transition_metadata: Dict[str, Any] = Field(
+        ..., description="Transition metadata including timestamp, user, role"
+    )
 
 
 class QCTransitionHistoryResponse(BaseModel):
@@ -608,7 +611,10 @@ async def check_completeness(
 
 
 @app.post("/events/qc-transition/{document_id}", response_model=QCTransitionResponse)
-@app.post("/api/v1/etmf/documents/{document_id}/transition", response_model=QCTransitionResponse)
+@app.post(
+    "/api/v1/etmf/documents/{document_id}/transition",
+    response_model=QCTransitionResponse,
+)
 async def transition_document(
     request: Request,
     document_id: str,
@@ -621,7 +627,9 @@ async def transition_document(
     # 1. Extract context variables from request state
     user_id = getattr(request.state, "user_id", "anonymous")
     user_roles = getattr(request.state, "roles", "anonymous")
-    change_reason = getattr(request.state, "change_reason", None) or request.headers.get("X-Change-Reason")
+    change_reason = getattr(
+        request.state, "change_reason", None
+    ) or request.headers.get("X-Change-Reason")
 
     # Normalize roles to a lowercase list
     roles_list = [r.strip().lower() for r in user_roles.split(",")]
@@ -695,11 +703,14 @@ async def transition_document(
             "timestamp": transition_record.timestamp.isoformat(),
             "reason_for_change": change_reason,
             "context": payload.context,
-        }
+        },
     )
 
 
-@app.get("/api/v1/etmf/documents/{document_id}/qc-history", response_model=List[QCTransitionHistoryResponse])
+@app.get(
+    "/api/v1/etmf/documents/{document_id}/qc-history",
+    response_model=List[QCTransitionHistoryResponse],
+)
 async def get_qc_history(
     request: Request,
     document_id: str,
