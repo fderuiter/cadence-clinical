@@ -24,6 +24,14 @@
       {
         "name": "Auditor",
         "description": "Auditor with read-only access to audit trails and eTMF."
+      },
+      {
+        "name": "Monitor",
+        "description": "Clinical Monitor responsible for site monitoring and data verification."
+      },
+      {
+        "name": "Grants Manager",
+        "description": "Grants Manager responsible for clinical trial budget and financial oversight."
       }
     ]
   },

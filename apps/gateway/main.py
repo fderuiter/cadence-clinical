@@ -118,6 +118,7 @@ SERVICES = {
     "execution": os.getenv("EXECUTION_URL", "http://localhost:8002"),
     "etmf": os.getenv("ETMF_URL", "http://localhost:8003"),
     "interop": os.getenv("INTEROP_URL", "http://localhost:8004"),
+    "ctms": os.getenv("CTMS_URL", "http://localhost:8005"),
 }
 
 jwks_cache: Optional[Dict[str, Any]] = None
@@ -354,12 +355,22 @@ async def get_openapi_json() -> Response:
         "components": {"schemas": {}},
     }
 
-    designer_spec, execution_spec, etmf_spec, interop_spec = await asyncio.gather(
+    designer_spec, execution_spec, etmf_spec, interop_spec, ctms_spec = await asyncio.gather(
         fetch_service_openapi(SERVICES["designer"]),
         fetch_service_openapi(SERVICES["execution"]),
         fetch_service_openapi(SERVICES["etmf"]),
         fetch_service_openapi(SERVICES["interop"]),
+        fetch_service_openapi(SERVICES["ctms"]),
     )
+
+    if ctms_spec:
+        ctms_spec = rewrite_references(ctms_spec, "Ctms_")
+        for path_str, path_item in ctms_spec.get("paths", {}).items():
+            merged["paths"][f"/ctms{path_str}"] = path_item
+        for schema_name, schema_val in (
+            ctms_spec.get("components", {}).get("schemas", {}).items()
+        ):
+            merged["components"]["schemas"][f"Ctms_{schema_name}"] = schema_val
 
     if designer_spec:
         designer_spec = rewrite_references(designer_spec, "Designer_")
@@ -472,6 +483,8 @@ async def proxy_requests(request: Request, path: str) -> Response:
         target_url = f"{SERVICES['etmf']}/{path[len('etmf/') :]}"
     elif path.startswith("interop/"):
         target_url = f"{SERVICES['interop']}/{path[len('interop/') :]}"
+    elif path.startswith("ctms/"):
+        target_url = f"{SERVICES['ctms']}/{path[len('ctms/') :]}"
     elif path.startswith("api/v1/studies"):
         target_url = f"{SERVICES['designer']}/{path}"
     elif path.startswith("api/v1/execution"):
@@ -482,6 +495,8 @@ async def proxy_requests(request: Request, path: str) -> Response:
         target_url = f"{SERVICES['etmf']}/{path}"
     elif path.startswith("api/v1/interop"):
         target_url = f"{SERVICES['interop']}/{path}"
+    elif path.startswith("api/v1/ctms"):
+        target_url = f"{SERVICES['ctms']}/{path}"
     else:
         target_url = f"{SERVICES['designer']}/{path}"
 

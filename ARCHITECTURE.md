@@ -54,6 +54,8 @@ Traditional clinical trial builds require manual, error-prone translation of pro
     * `Study Designer` ──► Design permissions in `apps/designer`
     * `Site Investigator / CRC` ──► Data capture permissions in `apps/execution`
     * `Data Manager` ──► Query and form management across both domains.
+    * `Monitor` ──► Monitoring, site verification, and CTMS operations in `apps/ctms`
+    * `Grants Manager` ──► Budget, financials, and CTMS administrative operations in `apps/ctms`
 
 ### G. Event-Driven eTMF Module (`apps/etmf`)
 * **Role:** Electronic Trial Master File (eTMF) Repository and Completeness Tracker.
@@ -64,6 +66,16 @@ Traditional clinical trial builds require manual, error-prone translation of pro
   * Computes site-aware, data-driven milestone completeness checks by querying active EDLs and combining study-scope and site-scope required artifacts.
   * Enforces role-based access control and trial lock restrictions via the Gateway and `GatewayAuthMiddleware` to block read-only inspector roles from mutating definitions or archives.
   * Maintains a 21 CFR Part 11 compliant audit trail (`TMFAuditLog`) capturing user contexts, timestamps, and justifications for all eTMF views, downloads, EDL updates, and completeness checks.
+
+### H. Clinical Trial Management System (`apps/ctms`)
+* **Role:** Administrative, Financial, Operational, and Monitoring Workspace.
+* **Datastore:** SQLite / PostgreSQL Relational Database.
+* **Core Responsibilities:**
+  * Trial, site, and operational metadata tracking (recruitment, milestone verification).
+  * Budget and investigator grant tracking across roles like Grants Manager.
+  * Integration with Keycloak OIDC authentication via the secure API gateway.
+  * Full 21 CFR Part 11 compliant auditing (`CTMSAuditLog`) recording all actions, view queries, and mutations with explicit change reasons.
+  * Role-Based Access Control (RBAC) ensuring write mutations are restricted to roles like `Monitor`, `Grants Manager`, `CRA`, or `Admin`, and read-only queries are restricted to authorized operational personnel.
 
 ---
 
