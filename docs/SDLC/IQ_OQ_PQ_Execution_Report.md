@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 533
-- **Passed:** 533 🟢
+- **Total Automated Test Cases Run:** 559
+- **Passed:** 559 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -589,6 +589,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_sha256_hashing_helper` | `tests.test_signature_manifestation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_context_propagation` | `tests.test_signature_manifestation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_manifestation_lifecycle` | `tests.test_signature_manifestation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_mock_soa_entity_lifecycle` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_mutability_guard_rejects_locked_versions` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_neo4j_driver_operations` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_protocol_amendment_concurrency_race` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_protocol_amendment_invalid_signature_rejected` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_protocol_amendment_invalid_study_404` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
