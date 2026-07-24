@@ -121,6 +121,7 @@ SERVICES = {
     "interop": os.getenv("INTEROP_URL", "http://localhost:8004"),
     "ctms": os.getenv("CTMS_URL", "http://localhost:8005"),
     "notifications": os.getenv("NOTIFICATIONS_URL", "http://localhost:8006"),
+    "quality": os.getenv("QUALITY_URL", "http://localhost:8005"),
 }
 
 jwks_cache: Optional[Dict[str, Any]] = None
@@ -364,6 +365,7 @@ async def get_openapi_json() -> Response:
         interop_spec,
         ctms_spec,
         notifications_spec,
+        quality_spec,
     ) = await asyncio.gather(
         fetch_service_openapi(SERVICES["designer"]),
         fetch_service_openapi(SERVICES["execution"]),
@@ -371,7 +373,17 @@ async def get_openapi_json() -> Response:
         fetch_service_openapi(SERVICES["interop"]),
         fetch_service_openapi(SERVICES["ctms"]),
         fetch_service_openapi(SERVICES["notifications"]),
+        fetch_service_openapi(SERVICES["quality"]),
     )
+
+    if quality_spec:
+        quality_spec = rewrite_references(quality_spec, "Quality_")
+        for path_str, path_item in quality_spec.get("paths", {}).items():
+            merged["paths"][f"/quality{path_str}"] = path_item
+        for schema_name, schema_val in (
+            quality_spec.get("components", {}).get("schemas", {}).items()
+        ):
+            merged["components"]["schemas"][f"Quality_{schema_name}"] = schema_val
 
     if notifications_spec:
         notifications_spec = rewrite_references(notifications_spec, "Notifications_")
@@ -757,6 +769,8 @@ async def proxy_requests(request: Request, path: str) -> Response:
         target_url = f"{SERVICES['ctms']}/{path[len('ctms/') :]}"
     elif path.startswith("notifications/"):
         target_url = f"{SERVICES['notifications']}/{path[len('notifications/') :]}"
+    elif path.startswith("quality/"):
+        target_url = f"{SERVICES['quality']}/{path[len('quality/') :]}"
     elif path.startswith("api/v1/studies"):
         target_url = f"{SERVICES['designer']}/{path}"
     elif path.startswith("api/v1/execution"):
@@ -771,6 +785,8 @@ async def proxy_requests(request: Request, path: str) -> Response:
         target_url = f"{SERVICES['ctms']}/{path}"
     elif path.startswith("api/v1/notifications"):
         target_url = f"{SERVICES['notifications']}/{path}"
+    elif path.startswith("api/v1/quality"):
+        target_url = f"{SERVICES['quality']}/{path}"
     else:
         target_url = f"{SERVICES['designer']}/{path}"
 

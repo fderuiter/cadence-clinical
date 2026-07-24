@@ -10,6 +10,7 @@ from apps.designer import (
     EVSTransportError,
     NCIEVSClient,
 )
+from apps.designer.evs_client import normalize_concept
 
 
 @pytest.mark.asyncio
@@ -281,3 +282,88 @@ async def test_client_configuration_env_vars():
         assert client.timeout.read == 2.5
         assert client.timeout.write == 3.5
         assert client.timeout.pool == 4.5
+
+
+@pytest.mark.asyncio
+async def test_get_concept_invalid_json():
+    """Test that a non-JSON response from EVS raises EVSTransportError."""
+    client = NCIEVSClient()
+    mock_response = MagicMock(spec=httpx.Response)
+    mock_response.status_code = 200
+    mock_response.json.side_effect = ValueError("Expecting value: line 1 column 1")
+
+    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+        mock_get.return_value = mock_response
+        with pytest.raises(EVSTransportError) as exc_info:
+            await client.get_concept("C123")
+        assert "Failed to parse EVS JSON response" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_search_concepts_invalid_json():
+    """Test that a non-JSON search response raises EVSTransportError."""
+    client = NCIEVSClient()
+    mock_response = MagicMock(spec=httpx.Response)
+    mock_response.status_code = 200
+    mock_response.json.side_effect = ValueError("Expecting value: line 1 column 1")
+
+    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+        mock_get.return_value = mock_response
+        with pytest.raises(EVSTransportError) as exc_info:
+            await client.search_concepts("Arm")
+        assert "Failed to parse EVS JSON response" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_get_concept_invalid_via_422_not_found():
+    """Test that a 422 response with 'not found' or 'invalid' in body raises EVSNotFoundError."""
+    client = NCIEVSClient()
+    mock_request = httpx.Request(
+        "GET", "https://api-evsrest.nci.nih.gov/api/v1/concept/ncit/C123"
+    )
+    mock_response = MagicMock(spec=httpx.Response)
+    mock_response.status_code = 422
+    mock_response.json.return_value = {
+        "detail": "The requested concept C123 is invalid."
+    }
+    mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+        "422 Unprocessable Entity", request=mock_request, response=mock_response
+    )
+
+    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+        mock_get.return_value = mock_response
+        with pytest.raises(EVSNotFoundError) as exc_info:
+            await client.get_concept("C123")
+        assert "Concept not found or invalid" in str(exc_info.value)
+
+
+def test_normalize_concept_edge_cases():
+    """Test normalize_concept with missing/empty fields to ensure proper defaults."""
+    # Empty concept data
+    res1 = normalize_concept({}, default_system="ncit")
+    assert res1 == {
+        "code": "",
+        "decode": "",
+        "system": "ncit",
+        "valid": True,
+    }
+
+    # Custom terminology system specified in concept data
+    res2 = normalize_concept(
+        {"code": "C999", "terminology": "cdisc"}, default_system="ncit"
+    )
+    assert res2 == {
+        "code": "C999",
+        "decode": "",
+        "system": "cdisc",
+        "valid": True,
+    }
+
+    # Active is False
+    res3 = normalize_concept({"active": False}, default_system="ncit")
+    assert res3 == {
+        "code": "",
+        "decode": "",
+        "system": "ncit",
+        "valid": False,
+    }

@@ -182,7 +182,9 @@ def get_safe_demographics(
     """Securely extract range-matching demographics from ClinicalSubject without exposing raw PII.
 
     This function safely decrypts ClinicalSubject.encrypted_demographics and extracts
-    only the normalized gender/sex and age required for reference range evaluation.
+    only the normalized gender/sex and age required for reference range evaluation, ensuring
+    strict adherence to HIPAA, GDPR, and GxP standards. Raw PII is never logged, exposed,
+    or stored unencrypted.
 
     Args:
         subject (Any): ClinicalSubject instance, a dict, or raw encrypted ciphertext string.

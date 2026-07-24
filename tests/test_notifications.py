@@ -467,6 +467,7 @@ async def test_webhook_delivery_channel_success():
         delivery_id = delivery.id
 
     from unittest.mock import MagicMock
+
     mock_response = AsyncMock()
     mock_response.status_code = 200
     mock_response.raise_for_status = MagicMock()

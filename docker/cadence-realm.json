@@ -36,6 +36,18 @@
       {
         "name": "Subject",
         "description": "Subject/Patient role restricted to diary/eCOA submissions."
+      },
+      {
+        "name": "quality_manager",
+        "description": "Quality Manager responsible for CAPA review and deviation investigation."
+      },
+      {
+        "name": "qa_lead",
+        "description": "Quality Assurance Lead with full oversight of deviations and CAPAs."
+      },
+      {
+        "name": "quality_oversight",
+        "description": "Quality Oversight role with capability to approve and close CAPAs."
       }
     ]
   },

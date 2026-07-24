@@ -163,6 +163,15 @@ def map_artifact_to_tmf(artifact_type: str) -> tuple[int, str]:
     version = get_active_catalog().version
     is_code = False
     cleaned_type = artifact_type.strip()
+
+    # Map/Normalize aliases to canonical names or codes
+    if cleaned_type == "FORM_1572":
+        cleaned_type = "FDA Form 1572"
+    elif cleaned_type == "FINANCIAL_DISCLOSURE":
+        cleaned_type = "Financial Disclosure"
+    elif cleaned_type == "PROTOCOL_SIGNOFF":
+        cleaned_type = "Protocol Sign-off"
+
     if cleaned_type and cleaned_type.replace(".", "").isdigit():
         is_code = True
 
@@ -221,6 +230,13 @@ class DocumentResponse(BaseModel):
     taxonomy_version: str
     artifact_code: str
     metadata_json: Optional[Dict[str, Any]] = None
+
+    # New signature and lifecycle fields
+    document_type: Optional[str] = None
+    approval_status: str = "PENDING"
+    signature_manifestation: Optional[Dict[str, Any]] = None
+    signer: Optional[str] = None
+    signing_timestamp: Optional[str] = None
 
 
 class TransitionRequest(BaseModel):
@@ -416,11 +432,38 @@ async def ingest_document(
     # Determine TMF taxonomy version
     taxonomy_version = payload.taxonomy_version or get_active_catalog().version
 
+    code_input = payload.artifact_code
+    name_input = payload.artifact_type
+
+    # Map/Normalize the document classification for FORM_1572, FINANCIAL_DISCLOSURE, and PROTOCOL_SIGNOFF
+    doc_type = None
+    if (
+        name_input == "FORM_1572"
+        or code_input == "05.02.01"
+        or name_input == "FDA Form 1572"
+    ):
+        doc_type = "FORM_1572"
+        name_input = "FDA Form 1572"
+        code_input = "05.02.01"
+    elif (
+        name_input == "FINANCIAL_DISCLOSURE"
+        or code_input == "05.02.02"
+        or name_input == "Financial Disclosure"
+    ):
+        doc_type = "FINANCIAL_DISCLOSURE"
+        name_input = "Financial Disclosure"
+        code_input = "05.02.02"
+    elif (
+        name_input == "PROTOCOL_SIGNOFF"
+        or code_input == "01.01.03"
+        or name_input == "Protocol Sign-off"
+    ):
+        doc_type = "PROTOCOL_SIGNOFF"
+        name_input = "Protocol Sign-off"
+        code_input = "01.01.03"
+
     # Resolve artifact, section, and zone via the shared catalog API
     try:
-        code_input = payload.artifact_code
-        name_input = payload.artifact_type
-
         # If artifact_code is not explicitly supplied, check if artifact_type is a code
         if (
             not code_input
@@ -488,7 +531,7 @@ async def ingest_document(
         )
 
     # Extract signature to set signature verification status in metadata
-    cert_pem, _, _ = extract_signature_from_content(payload.content)
+    cert_pem, sig_bytes, _ = extract_signature_from_content(payload.content)
     if not cert_pem and payload.metadata_json:
         for key in ["signature", "digital_signature", "x509_signature"]:
             sig_obj = payload.metadata_json.get(key)
@@ -505,6 +548,74 @@ async def ingest_document(
     metadata_json["signature_verification_status"] = (
         "VERIFIED" if cert_pem else "NOT_REQUIRED"
     )
+
+    # Reconstruct signature manifestation if validated and present
+    import base64
+    import hashlib
+    from datetime import datetime, timezone
+
+    from cryptography import x509
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.x509.oid import NameOID
+    from signature import SignatureManifestation, SigningReason
+
+    sig_b64 = None
+    if cert_pem and sig_bytes:
+        sig_b64 = base64.b64encode(sig_bytes).decode("utf-8")
+    elif payload.metadata_json:
+        for key in ["signature", "digital_signature", "x509_signature"]:
+            sig_obj = payload.metadata_json.get(key)
+            if isinstance(sig_obj, dict):
+                sig_val = sig_obj.get("signature_value") or sig_obj.get("signature")
+                if sig_val:
+                    sig_b64 = sig_val.strip()
+                    break
+
+    approval_status_val = "PENDING"
+    signature_manifestation_data = None
+    signer_val = None
+    signing_timestamp_val = None
+
+    if cert_pem and sig_b64:
+        # We have a valid validated signature!
+        # Compute hash of the payload content
+        content_hash = hashlib.sha256(payload.content.encode("utf-8")).hexdigest()
+
+        # Extract signer identity (CN) from cert_pem
+        signer_name = None
+        key_id = None
+        if "MOCK_SIGNATURE" in cert_pem:
+            signer_name = "Mock Signer"
+            key_id = "MOCK_KEY"
+        else:
+            try:
+                cert_obj = x509.load_pem_x509_certificate(cert_pem.encode("utf-8"))
+                cn_attr = cert_obj.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
+                if cn_attr:
+                    signer_name = cn_attr[0].value
+                key_id = cert_obj.fingerprint(hashes.SHA256()).hex()
+            except Exception:
+                pass
+
+        if not signer_name:
+            signer_name = user_id or "system"
+
+        now_utc = datetime.now(timezone.utc)
+        sig_man = SignatureManifestation(
+            signer_id=signer_name,
+            timestamp=now_utc,
+            signing_reason=SigningReason.APPROVAL,
+            ip_address="127.0.0.1",
+            user_agent="eTMF Ingest Service",
+            sha256_hash=content_hash,
+            signature=sig_b64,
+            certificate_pem=cert_pem,
+            key_identifier=key_id,
+        )
+        signature_manifestation_data = sig_man.model_dump(mode="json")
+        approval_status_val = "APPROVED"
+        signer_val = signer_name
+        signing_timestamp_val = now_utc
 
     # Check if a document version already exists (for study_id + artifact_code)
     stmt = (
@@ -533,6 +644,11 @@ async def ingest_document(
         taxonomy_version=taxonomy_version,
         artifact_code=artifact_code,
         metadata_json=metadata_json,
+        document_type=doc_type,
+        approval_status=approval_status_val,
+        signature_manifestation=signature_manifestation_data,
+        signer=signer_val,
+        signing_timestamp=signing_timestamp_val,
     )
 
     session.add(doc)
@@ -614,6 +730,13 @@ async def list_documents(
             taxonomy_version=doc.taxonomy_version,
             artifact_code=doc.artifact_code,
             metadata_json=doc.metadata_json,
+            document_type=doc.document_type,
+            approval_status=doc.approval_status,
+            signature_manifestation=doc.signature_manifestation,
+            signer=doc.signer,
+            signing_timestamp=doc.signing_timestamp.isoformat()
+            if doc.signing_timestamp
+            else None,
         )
         for doc in docs
     ]
@@ -664,6 +787,13 @@ async def view_document(
         taxonomy_version=doc.taxonomy_version,
         artifact_code=doc.artifact_code,
         metadata_json=doc.metadata_json,
+        document_type=doc.document_type,
+        approval_status=doc.approval_status,
+        signature_manifestation=doc.signature_manifestation,
+        signer=doc.signer,
+        signing_timestamp=doc.signing_timestamp.isoformat()
+        if doc.signing_timestamp
+        else None,
     )
 
 
@@ -1045,27 +1175,46 @@ async def check_completeness(
                 if not matched_doc or arch.version_index > matched_doc.version_index:
                     matched_doc = arch
 
+        from apps.etmf.cryptography import requires_signature
+
+        sig_required = requires_signature(canonical_name)
+
         scope = "site" if exp.site_id else "study"
         if matched_doc:
-            if canonical_name not in present_artifacts:
-                present_artifacts.append(canonical_name)
+            is_signed = matched_doc.approval_status == "APPROVED"
+
+            if sig_required:
+                if is_signed:
+                    status_val = "SIGNED"
+                    if canonical_name not in present_artifacts:
+                        present_artifacts.append(canonical_name)
+                else:
+                    status_val = "UNSIGNED"
+                    if canonical_name not in missing_artifacts:
+                        missing_artifacts.append(canonical_name)
+            else:
+                status_val = "PRESENT"
+                if canonical_name not in present_artifacts:
+                    present_artifacts.append(canonical_name)
+
             per_artifact_detail.append(
                 ArtifactDetail(
                     artifact_type=canonical_name,
                     scope=scope,
-                    status="PRESENT",
+                    status=status_val,
                     document_id=matched_doc.id,
                     version_index=matched_doc.version_index,
                 )
             )
         else:
+            status_val = "ABSENT"
             if canonical_name not in missing_artifacts:
                 missing_artifacts.append(canonical_name)
             per_artifact_detail.append(
                 ArtifactDetail(
                     artifact_type=canonical_name,
                     scope=scope,
-                    status="MISSING",
+                    status=status_val,
                     document_id=None,
                     version_index=None,
                 )

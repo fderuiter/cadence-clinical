@@ -10,7 +10,13 @@ from sqlalchemy import select
 
 from apps.econsent.database import EConsentDatabaseManager, db_manager
 from apps.econsent.main import ConsentDocumentCreate, app
-from apps.econsent.models import Base, ConsentAuditLog, ConsentDocument
+from apps.econsent.models import (
+    Base,
+    ConsentAuditLog,
+    ConsentClause,
+    ConsentDocument,
+    ConsentTemplate,
+)
 from apps.gateway.main import generate_signature
 
 
@@ -299,3 +305,384 @@ def test_econsent_get_not_found():
     )
     assert response.status_code == 404
     assert "not found" in response.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_clause_lifecycle_and_versioning_audit():
+    """
+    Test versioned ICF clause creation, update, listing, retrieval,
+    and verify that edits never mutate historical versions.
+    """
+    client = TestClient(app)
+
+    # 1. Create a clause (version 1)
+    clause_payload = {
+        "clause_id": "clause-risk-disclosure",
+        "study_id": "study-101",
+        "title": "Risk Disclosure V1",
+        "text": "These are the initial risks of the trial.",
+        "reason_for_change": "Initial clause drafting",
+        "created_by": "test_auth",
+    }
+    headers = get_auth_headers(
+        user_id="designer_user",
+        roles="Grants Manager",
+        change_reason="Drafting risk clause",
+    )
+
+    response = client.post(
+        "/api/v1/econsent/clauses", json=clause_payload, headers=headers
+    )
+    assert response.status_code == 201
+    created_clause = response.json()
+    assert created_clause["clause_id"] == "clause-risk-disclosure"
+    assert created_clause["version_index"] == 1
+    assert created_clause["title"] == "Risk Disclosure V1"
+    assert created_clause["reason_for_change"] == "Drafting risk clause"
+
+    # 2. Update the clause (creates version 2)
+    update_payload = {
+        "study_id": "study-101",
+        "title": "Risk Disclosure V2",
+        "text": "These are the expanded risks of the trial.",
+        "reason_for_change": "Updating risks with more detail",
+        "created_by": "test_auth",
+    }
+    headers_update = get_auth_headers(
+        user_id="designer_user_2",
+        roles="Grants Manager",
+        change_reason="Expanded risk details",
+    )
+
+    response = client.put(
+        "/api/v1/econsent/clauses/clause-risk-disclosure",
+        json=update_payload,
+        headers=headers_update,
+    )
+    assert response.status_code == 200
+    updated_clause = response.json()
+    assert updated_clause["clause_id"] == "clause-risk-disclosure"
+    assert updated_clause["version_index"] == 2
+    assert updated_clause["title"] == "Risk Disclosure V2"
+    assert updated_clause["reason_for_change"] == "Expanded risk details"
+
+    # 3. Verify immutability of historical versions in DB
+    async with db_manager.get_session_maker()() as session:
+        # Retrieve version 1 from DB
+        stmt1 = select(ConsentClause).where(
+            ConsentClause.clause_id == "clause-risk-disclosure",
+            ConsentClause.version_index == 1,
+        )
+        res1 = await session.execute(stmt1)
+        clause_v1 = res1.scalar_one()
+        assert clause_v1.title == "Risk Disclosure V1"
+        assert clause_v1.text == "These are the initial risks of the trial."
+
+        # Retrieve version 2 from DB
+        stmt2 = select(ConsentClause).where(
+            ConsentClause.clause_id == "clause-risk-disclosure",
+            ConsentClause.version_index == 2,
+        )
+        res2 = await session.execute(stmt2)
+        clause_v2 = res2.scalar_one()
+        assert clause_v2.title == "Risk Disclosure V2"
+        assert clause_v2.text == "These are the expanded risks of the trial."
+
+    # 4. List clauses (should default to latest version)
+    headers_list = get_auth_headers(
+        user_id="list_user", roles="Monitor", change_reason="Reviewing clause list"
+    )
+    response = client.get(
+        "/api/v1/econsent/clauses?study_id=study-101", headers=headers_list
+    )
+    assert response.status_code == 200
+    clauses = response.json()
+    assert len(clauses) == 1
+    assert clauses[0]["version_index"] == 2
+    assert clauses[0]["title"] == "Risk Disclosure V2"
+
+    # List clauses with all_versions=True
+    response = client.get(
+        "/api/v1/econsent/clauses?study_id=study-101&all_versions=true",
+        headers=headers_list,
+    )
+    assert response.status_code == 200
+    all_clauses = response.json()
+    assert len(all_clauses) == 2
+
+    # 5. Retrieve specific version
+    headers_view = get_auth_headers(
+        user_id="view_user", roles="Monitor", change_reason="View clause v1"
+    )
+    response = client.get(
+        "/api/v1/econsent/clauses/clause-risk-disclosure?version_index=1",
+        headers=headers_view,
+    )
+    assert response.status_code == 200
+    assert response.json()["version_index"] == 1
+    assert response.json()["title"] == "Risk Disclosure V1"
+
+    # 6. Verify Part 11 Audit Trail Logs for INGEST, UPDATE, VIEW, LIST
+    async with db_manager.get_session_maker()() as session:
+        audit_stmt = select(ConsentAuditLog).order_by(ConsentAuditLog.timestamp.asc())
+        audit_res = await session.execute(audit_stmt)
+        logs = audit_res.scalars().all()
+
+        # Check action types
+        actions = [log.action for log in logs]
+        assert "INGEST" in actions
+        assert "UPDATE" in actions
+        assert "LIST" in actions
+        assert "VIEW" in actions
+
+
+@pytest.mark.asyncio
+async def test_template_lifecycle_and_validation():
+    """
+    Test versioned ConsentTemplate creation, update, composition, and publish workflows,
+    including validation of referenced clauses and workflow steps.
+    """
+    client = TestClient(app)
+
+    # Pre-create a clause to reference
+    clause_payload = {
+        "clause_id": "clause-01",
+        "study_id": "study-202",
+        "title": "Required Clause",
+        "text": "Some required consent disclosure.",
+        "reason_for_change": "Seeding clause",
+        "created_by": "test_auth",
+    }
+    headers = get_auth_headers(
+        user_id="admin_user", roles="Grants Manager", change_reason="Seeding clause"
+    )
+    response = client.post(
+        "/api/v1/econsent/clauses", json=clause_payload, headers=headers
+    )
+    assert response.status_code == 201
+
+    # 1. Create a template (draft, version 1)
+    template_payload = {
+        "template_id": "template-icf",
+        "study_id": "study-202",
+        "template_name": "Informed Consent Form",
+        "protocol_version": "v1.0",
+        "requires_reconsent": True,
+        "clauses": ["clause-01"],
+        "workflow_steps": [
+            {"type": "comprehension_check", "question": "Understood?"},
+            {"type": "signature_placeholder", "role": "subject"},
+        ],
+        "reason_for_change": "Initial template creation",
+        "created_by": "admin_user",
+    }
+    headers_tpl = get_auth_headers(
+        user_id="designer_user",
+        roles="Grants Manager",
+        change_reason="Creating template draft",
+    )
+    response = client.post(
+        "/api/v1/econsent/templates", json=template_payload, headers=headers_tpl
+    )
+    assert response.status_code == 201
+    tpl = response.json()
+    assert tpl["template_id"] == "template-icf"
+    assert tpl["version_index"] == 1
+    assert tpl["is_published"] is False
+
+    # 2. Test Compose Template
+    headers_compose = get_auth_headers(
+        user_id="viewer_user", roles="Monitor", change_reason="Composing template"
+    )
+    response = client.get(
+        "/api/v1/econsent/templates/template-icf/compose", headers=headers_compose
+    )
+    assert response.status_code == 200
+    composed = response.json()
+    assert composed["template_id"] == "template-icf"
+    assert len(composed["clauses"]) == 1
+    assert composed["clauses"][0]["clause_id"] == "clause-01"
+    assert (
+        composed["clauses"][0]["text"] == "Some required consent disclosure."
+    )  # Fully resolved!
+
+    # 3. Test update preserves previous version
+    update_payload = {
+        "study_id": "study-202",
+        "template_name": "Informed Consent Form - Rev 1",
+        "protocol_version": "v1.1",
+        "requires_reconsent": True,
+        "clauses": ["clause-01"],
+        "workflow_steps": [
+            {"type": "comprehension_check", "question": "Understood?"},
+            {"type": "signature_placeholder", "role": "subject"},
+        ],
+        "reason_for_change": "Adding more details",
+        "created_by": "designer_user",
+    }
+    headers_update = get_auth_headers(
+        user_id="designer_user",
+        roles="Grants Manager",
+        change_reason="Template revision 1",
+    )
+    response = client.put(
+        "/api/v1/econsent/templates/template-icf",
+        json=update_payload,
+        headers=headers_update,
+    )
+    assert response.status_code == 200
+    assert response.json()["version_index"] == 2
+    assert response.json()["protocol_version"] == "v1.1"
+
+    # Verify both v1 and v2 are in DB separately
+    async with db_manager.get_session_maker()() as session:
+        stmt = (
+            select(ConsentTemplate)
+            .where(ConsentTemplate.template_id == "template-icf")
+            .order_by(ConsentTemplate.version_index.asc())
+        )
+        res = await session.execute(stmt)
+        versions = res.scalars().all()
+        assert len(versions) == 2
+        assert versions[0].protocol_version == "v1.0"
+        assert versions[1].protocol_version == "v1.1"
+
+    # 4. Publishing Validations: referenced clauses
+    invalid_tpl_payload = {
+        "template_id": "template-invalid",
+        "study_id": "study-202",
+        "template_name": "Invalid Form",
+        "protocol_version": "v1.0",
+        "requires_reconsent": False,
+        "clauses": ["clause-nonexistent"],  # Doesn't exist!
+        "workflow_steps": [
+            {"type": "comprehension_check"},
+            {"type": "signature_placeholder"},
+        ],
+        "reason_for_change": "Invalid clauses template",
+        "created_by": "designer_user",
+    }
+    response = client.post(
+        "/api/v1/econsent/templates", json=invalid_tpl_payload, headers=headers_tpl
+    )
+    assert response.status_code == 201
+
+    headers_pub = get_auth_headers(
+        user_id="publisher_user",
+        roles="Grants Manager",
+        change_reason="Publishing template",
+    )
+    response = client.post(
+        "/api/v1/econsent/templates/template-invalid/publish", headers=headers_pub
+    )
+    assert response.status_code == 400
+    assert (
+        "Referenced clause 'clause-nonexistent' does not exist"
+        in response.json()["detail"]
+    )
+
+    # 5. Publishing Validations: missing comprehension check
+    missing_comp_payload = {
+        "template_id": "template-missing-comp",
+        "study_id": "study-202",
+        "template_name": "Missing Comp Form",
+        "protocol_version": "v1.0",
+        "requires_reconsent": False,
+        "clauses": ["clause-01"],
+        "workflow_steps": [
+            {"type": "signature_placeholder"},  # Missing comprehension check
+        ],
+        "reason_for_change": "Missing comp template",
+        "created_by": "designer_user",
+    }
+    response = client.post(
+        "/api/v1/econsent/templates", json=missing_comp_payload, headers=headers_tpl
+    )
+    assert response.status_code == 201
+
+    response = client.post(
+        "/api/v1/econsent/templates/template-missing-comp/publish",
+        headers=headers_pub,
+    )
+    assert response.status_code == 400
+    assert "comprehension-check" in response.json()["detail"]
+
+    # 6. Publishing Validations: missing signature placeholder
+    missing_sig_payload = {
+        "template_id": "template-missing-sig",
+        "study_id": "study-202",
+        "template_name": "Missing Sig Form",
+        "protocol_version": "v1.0",
+        "requires_reconsent": False,
+        "clauses": ["clause-01"],
+        "workflow_steps": [
+            {"type": "comprehension_check"},  # Missing signature placeholder
+        ],
+        "reason_for_change": "Missing sig template",
+        "created_by": "designer_user",
+    }
+    response = client.post(
+        "/api/v1/econsent/templates", json=missing_sig_payload, headers=headers_tpl
+    )
+    assert response.status_code == 201
+
+    response = client.post(
+        "/api/v1/econsent/templates/template-missing-sig/publish",
+        headers=headers_pub,
+    )
+    assert response.status_code == 400
+    assert "signature placeholder" in response.json()["detail"]
+
+    # 7. Successful publish
+    response = client.post(
+        "/api/v1/econsent/templates/template-icf/publish", headers=headers_pub
+    )
+    assert response.status_code == 200
+    assert response.json()["is_published"] is True
+
+
+def test_authoring_mutations_rejected_for_auditors():
+    """
+    Test that write operations are rejected with HTTP 403 when the user has
+    auditor, inspector, or regulatory_inspector roles.
+    """
+    client = TestClient(app)
+
+    clause_payload = {
+        "clause_id": "clause-forbidden",
+        "study_id": "study-101",
+        "title": "Forbidden Clause",
+        "text": "Auditors should not be writing this.",
+        "reason_for_change": "Unauthorized write",
+        "created_by": "auditor_user",
+    }
+
+    # inspector role -> 403 Forbidden
+    headers_inspector = get_auth_headers(
+        user_id="inspector_user",
+        roles="inspector",
+        change_reason="Should be blocked",
+    )
+    response = client.post(
+        "/api/v1/econsent/clauses", json=clause_payload, headers=headers_inspector
+    )
+    assert response.status_code == 403
+    assert (
+        "Auditor personas are restricted to read-only access"
+        in response.json()["detail"]
+    )
+
+    # regulatory_inspector role -> 403 Forbidden
+    headers_regulatory = get_auth_headers(
+        user_id="reg_user",
+        roles="regulatory_inspector",
+        change_reason="Should be blocked",
+    )
+    response = client.post(
+        "/api/v1/econsent/clauses", json=clause_payload, headers=headers_regulatory
+    )
+    assert response.status_code == 403
+    assert (
+        "Auditor personas are restricted to read-only access"
+        in response.json()["detail"]
+    )

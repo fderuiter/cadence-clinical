@@ -101,9 +101,7 @@ class NotificationDelivery(Base):
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
-    notification_id: Mapped[str] = mapped_column(
-        String(36), nullable=False, index=True
-    )
+    notification_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     channel: Mapped[str] = mapped_column(String(50), nullable=False)
     status: Mapped[str] = mapped_column(String(50), default="PENDING", nullable=False)
     attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

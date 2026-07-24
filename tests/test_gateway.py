@@ -104,9 +104,11 @@ async def test_get_openapi_json(monkeypatch: pytest.MonkeyPatch) -> None:
         assert "/designer/test" in data["paths"]
         assert "/execution/test" in data["paths"]
         assert "/ctms/test" in data["paths"]
+        assert "/quality/test" in data["paths"]
         assert "Designer_TestModel" in data["components"]["schemas"]
         assert "Execution_TestModel" in data["components"]["schemas"]
         assert "Ctms_TestModel" in data["components"]["schemas"]
+        assert "Quality_TestModel" in data["components"]["schemas"]
 
 
 def test_get_openapi_json_error(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -197,6 +199,21 @@ def test_proxy_requests_paths(monkeypatch: pytest.MonkeyPatch) -> None:
         assert (
             str(mock_send.call_args.args[0].url)
             == "http://localhost:8005/api/v1/ctms/test"
+        )
+
+        # Test quality prefix
+        res = client.get("/quality/test", headers={"Authorization": f"Bearer {token}"})
+        assert res.status_code == 200
+        assert str(mock_send.call_args.args[0].url) == "http://localhost:8005/test"
+
+        # Test api/v1/quality
+        res = client.get(
+            "/api/v1/quality/test", headers={"Authorization": f"Bearer {token}"}
+        )
+        assert res.status_code == 200
+        assert (
+            str(mock_send.call_args.args[0].url)
+            == "http://localhost:8005/api/v1/quality/test"
         )
 
         # Test default route

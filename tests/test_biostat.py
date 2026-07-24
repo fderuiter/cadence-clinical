@@ -1,7 +1,13 @@
 import pytest
 from pydantic import ValidationError
 
-from apps.execution.biostat import extract_dm, extract_mh
+from apps.execution.biostat import (
+    extract_ae,
+    extract_dm,
+    extract_lb,
+    extract_mh,
+    extract_vs,
+)
 from apps.execution.biostat.mappings import (
     get_mappings_by_domain,
     get_mappings_for_domain,
@@ -450,3 +456,294 @@ def test_extract_mh_sequencing_and_supp():
     assert supp.QNAM == "MHSEV"
     assert supp.QLABEL == "Severity of History Event"
     assert supp.QVAL == "MILD"
+
+
+# --- Tests for AE, VS, and LB Extractors ---
+
+
+def test_extract_ae_sorting_ongoing_supp():
+    """Verify extract_ae correctly sorts events, maps ongoing status and severity, and preserves unmapped qualifiers in SUPPAE."""
+    subjects = [
+        {
+            "subject_id": "SUBJ-101",
+            "study_id": "STUDY-A",
+            "site_id": "SITE-1",
+        }
+    ]
+
+    observations = [
+        # Event 1: Later onset, ongoing
+        {
+            "subject_id": "SUBJ-101",
+            "domain": "AE",
+            "page_id": "ae_page_1",
+            "test_code": "AETERM",
+            "value_string": "Headache",
+        },
+        {
+            "subject_id": "SUBJ-101",
+            "domain": "AE",
+            "page_id": "ae_page_1",
+            "test_code": "AESTDTC",
+            "value_string": "2026-08-01",
+        },
+        {
+            "subject_id": "SUBJ-101",
+            "domain": "AE",
+            "page_id": "ae_page_1",
+            "test_code": "AESEV",
+            "value_string": "GRADE 1",  # Maps to MILD
+        },
+        {
+            "subject_id": "SUBJ-101",
+            "domain": "AE",
+            "page_id": "ae_page_1",
+            "test_code": "AEONGO",
+            "value_string": "YES",
+        },
+        # Event 2: Earlier onset, resolved, with unmapped qualifier
+        {
+            "subject_id": "SUBJ-101",
+            "domain": "AE",
+            "page_id": "ae_page_2",
+            "test_code": "AETERM",
+            "value_string": "Nausea",
+        },
+        {
+            "subject_id": "SUBJ-101",
+            "domain": "AE",
+            "page_id": "ae_page_2",
+            "test_code": "AESTDTC",
+            "value_string": "2026-07-15",
+        },
+        {
+            "subject_id": "SUBJ-101",
+            "domain": "AE",
+            "page_id": "ae_page_2",
+            "test_code": "AESEV",
+            "value_string": "MODERATE",
+        },
+        {
+            "subject_id": "SUBJ-101",
+            "domain": "AE",
+            "page_id": "ae_page_2",
+            "test_code": "AEENDTC",
+            "value_string": "2026-07-18",
+        },
+        {
+            "subject_id": "SUBJ-101",
+            "domain": "AE",
+            "page_id": "ae_page_2",
+            "test_code": "AETREAT",
+            "test_name": "Treatment for AE",
+            "value_string": "Paracetamol",
+        },
+    ]
+
+    ae_records, supp_records = extract_ae(subjects, observations)
+
+    assert len(ae_records) == 2
+
+    # Earlier onset (Nausea) must be sorted BEFORE Headache
+    assert ae_records[0]["AETERM"] == "Nausea"
+    assert ae_records[0]["AESEQ"] == 1
+    assert ae_records[0]["AESEV"] == "MODERATE"
+    assert ae_records[0]["AEENDTC"] == "2026-07-18"
+
+    assert ae_records[1]["AETERM"] == "Headache"
+    assert ae_records[1]["AESEQ"] == 2
+    assert ae_records[1]["AESEV"] == "MILD"
+    # Headache is ongoing, so end date is cleared
+    assert ae_records[1]["AEENDTC"] == ""
+
+    # Check SUPPAE records
+    # 1. AEENGRY for Headache (AESEQ=2)
+    # 2. AETREAT for Nausea (AESEQ=1)
+    assert len(supp_records) == 2
+
+    supp_ong = next(s for s in supp_records if s.QNAM == "AEENGRY")
+    assert supp_ong.STUDYID == "STUDY-A"
+    assert supp_ong.RDOMAIN == "AE"
+    assert supp_ong.USUBJID == "STUDY-A-SITE-1-SUBJ-101"
+    assert supp_ong.IDVAR == "AESEQ"
+    assert supp_ong.IDVARVAL == "2"
+    assert supp_ong.QVAL == "ONGOING"
+
+    supp_treat = next(s for s in supp_records if s.QNAM == "AETREAT")
+    assert supp_treat.STUDYID == "STUDY-A"
+    assert supp_treat.RDOMAIN == "AE"
+    assert supp_treat.USUBJID == "STUDY-A-SITE-1-SUBJ-101"
+    assert supp_treat.IDVAR == "AESEQ"
+    assert supp_treat.IDVARVAL == "1"
+    assert supp_treat.QLABEL == "Treatment for AE"
+    assert supp_treat.QVAL == "Paracetamol"
+
+
+def test_extract_vs_baseline_supp():
+    """Verify extract_vs correctly maps verbatim and normalized results, computes baseline flag VSBLFL, and exports SUPPVS."""
+    subjects = [
+        {
+            "subject_id": "SUBJ-202",
+            "study_id": "STUDY-B",
+            "site_id": "SITE-2",
+            "rfstdtc": "2026-08-10T12:00:00",
+        }
+    ]
+
+    observations = [
+        # Visit 1: Screening (On or prior to rfstdtc) -> Should be baseline
+        {
+            "subject_id": "SUBJ-202",
+            "domain": "VS",
+            "page_id": "vs_page_1",
+            "test_code": "SYSBP",
+            "test_name": "Systolic Blood Pressure",
+            "value": 120.0,
+            "unit": "mmHg",
+            "normalized_value": 120.0,
+            "normalized_unit": "mmHg",
+            "observation_date": "2026-08-05T09:00:00",
+        },
+        {
+            "subject_id": "SUBJ-202",
+            "domain": "VS",
+            "page_id": "vs_page_1",
+            "test_code": "VSPOS",
+            "value_string": "SITTING",
+            "observation_date": "2026-08-05T09:00:00",
+        },
+        # Visit 2: Pre-dose Day 1 (On or prior to rfstdtc, later than Screening) -> New Baseline
+        {
+            "subject_id": "SUBJ-202",
+            "domain": "VS",
+            "page_id": "vs_page_2",
+            "test_code": "SYSBP",
+            "test_name": "Systolic Blood Pressure",
+            "value": 125.0,
+            "unit": "mmHg",
+            "normalized_value": 125.0,
+            "normalized_unit": "mmHg",
+            "observation_date": "2026-08-10T11:00:00",
+        },
+        {
+            "subject_id": "SUBJ-202",
+            "domain": "VS",
+            "page_id": "vs_page_2",
+            "test_code": "VSPOS",
+            "value_string": "SITTING",
+            "observation_date": "2026-08-10T11:00:00",
+        },
+        # Visit 3: Post-dose Day 1 (After rfstdtc) -> Post-baseline, not baseline
+        {
+            "subject_id": "SUBJ-202",
+            "domain": "VS",
+            "page_id": "vs_page_3",
+            "test_code": "SYSBP",
+            "test_name": "Systolic Blood Pressure",
+            "value": 130.0,
+            "unit": "mmHg",
+            "normalized_value": 130.0,
+            "normalized_unit": "mmHg",
+            "observation_date": "2026-08-10T14:00:00",
+        },
+        {
+            "subject_id": "SUBJ-202",
+            "domain": "VS",
+            "page_id": "vs_page_3",
+            "test_code": "VSPOS",
+            "value_string": "SITTING",
+            "observation_date": "2026-08-10T14:00:00",
+        },
+    ]
+
+    vs_records, supp_records = extract_vs(subjects, observations)
+
+    assert len(vs_records) == 3
+
+    # Check sequencing and details
+    assert vs_records[0]["VSSEQ"] == 1
+    assert vs_records[0]["VSORRES"] == 120.0
+    assert vs_records[0]["VSSTRESN"] == 120.0
+    assert vs_records[0]["VSSTRESC"] == "120"
+    assert vs_records[0]["VSPOS"] == "SITTING"
+    assert vs_records[0]["VSBLFL"] == ""  # Superceded by pre-dose measurement
+
+    assert vs_records[1]["VSSEQ"] == 2
+    assert vs_records[1]["VSORRES"] == 125.0
+    assert vs_records[1]["VSSTRESN"] == 125.0
+    assert vs_records[1]["VSBLFL"] == "Y"  # Latest before/on treatment start
+
+    assert vs_records[2]["VSSEQ"] == 3
+    assert vs_records[2]["VSORRES"] == 130.0
+    assert vs_records[2]["VSSTRESN"] == 130.0
+    assert vs_records[2]["VSBLFL"] == ""  # Post-treatment exposure
+
+
+def test_extract_lb_verbatim_normalized_supp():
+    """Verify extract_lb correctly maps verbatim and normalized results, maps normal range indicators, and generates SUPPLB."""
+    subjects = [
+        {
+            "subject_id": "SUBJ-303",
+            "study_id": "STUDY-C",
+            "site_id": "SITE-3",
+        }
+    ]
+
+    observations = [
+        # Record 1: ALT Normal
+        {
+            "subject_id": "SUBJ-303",
+            "domain": "LB",
+            "page_id": "lb_page_1",
+            "test_code": "ALT",
+            "test_name": "Alanine Aminotransferase",
+            "value_string": "25",
+            "value": 25.0,
+            "unit": "U/L",
+            "normalized_value": 25.0,
+            "normalized_unit": "U/L",
+            "lab_indicator": "NORMAL",
+            "observation_date": "2026-08-11T08:00:00",
+            "lbloinc": "1742-6",
+        },
+        # Record 2: Hemoglobin (requires unit conversion verbatim vs normalized)
+        {
+            "subject_id": "SUBJ-303",
+            "domain": "LB",
+            "page_id": "lb_page_2",
+            "test_code": "HEMOG",
+            "test_name": "Hemoglobin",
+            "value_string": "14",
+            "value": 14.0,
+            "unit": "g/dL",
+            "normalized_value": 140.0,
+            "normalized_unit": "g/L",
+            "lab_indicator": "NORMAL",
+            "observation_date": "2026-08-11T08:05:00",
+        },
+    ]
+
+    lb_records, supp_records = extract_lb(subjects, observations)
+
+    assert len(lb_records) == 2
+
+    # ALT Test
+    alt_rec = next(r for r in lb_records if r["LBTESTCD"] == "ALT")
+    assert alt_rec["LBSEQ"] == 1
+    assert alt_rec["LBORRES"] == "25"
+    assert alt_rec["LBORRESU"] == "U/L"
+    assert alt_rec["LBSTRESN"] == 25.0
+    assert alt_rec["LBSTRESU"] == "U/L"
+    assert alt_rec["LBSTRESC"] == "25"
+    assert alt_rec["LBNRIND"] == "NORMAL"
+    assert alt_rec["LBLOINC"] == "1742-6"
+
+    # Hemoglobin Test (Verbatim vs Normalized)
+    hem_rec = next(r for r in lb_records if r["LBTESTCD"] == "HEMOG")
+    assert hem_rec["LBSEQ"] == 2
+    assert hem_rec["LBORRES"] == "14"
+    assert hem_rec["LBORRESU"] == "g/dL"
+    assert hem_rec["LBSTRESN"] == 140.0
+    assert hem_rec["LBSTRESU"] == "g/L"
+    assert hem_rec["LBSTRESC"] == "140"
+    assert hem_rec["LBNRIND"] == "NORMAL"

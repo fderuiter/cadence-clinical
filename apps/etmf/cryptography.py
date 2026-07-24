@@ -17,15 +17,26 @@ def requires_signature(
     Determines if a given eTMF artifact type requires a cryptographic signature
     to satisfy regulatory compliance (such as FDA 21 CFR Part 11).
     """
-    if metadata_json and (
-        metadata_json.get("requires_signature") is True
-        or metadata_json.get("require_signature") is True
-    ):
-        return True
+    if metadata_json is not None:
+        if "requires_signature" in metadata_json:
+            return metadata_json.get("requires_signature") is True
+        if "require_signature" in metadata_json:
+            return metadata_json.get("require_signature") is True
 
     # If the artifact type explicitly mentions "signed" or "signature", it is required
     norm = artifact_type.strip().lower()
     if "signed" in norm or "signature" in norm:
+        return True
+
+    # Check for mandatory in-scope regulatory document types
+    if norm in (
+        "fda form 1572",
+        "financial disclosure",
+        "protocol sign-off",
+        "form_1572",
+        "financial_disclosure",
+        "protocol_signoff",
+    ):
         return True
 
     return False

@@ -17,6 +17,7 @@ from apps.execution.database.models import (  # noqa: F401
     LabReferenceRange,
     MedDRAHierarchy,
     MedDRATerm,
+    PendingPredecessorCheck,
     RandomizationConfig,
     SDVSignOff,
     StratumState,

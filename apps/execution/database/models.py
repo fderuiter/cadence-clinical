@@ -808,3 +808,19 @@ class SubjectRandomization(AuditedModel):
     randomized_at: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), nullable=False
     )
+
+
+class PendingPredecessorCheck(AuditedModel):
+    """Tracks edit check executions deferred because of missing/incomplete predecessor visit data."""
+
+    __tablename__ = "pending_predecessor_checks"
+    __table_args__ = (Index("idx_pending_pred_subject_rule", "subject_id", "rule_id"),)
+
+    subject_id: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
+    study_id: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
+    current_visit_id: Mapped[str] = mapped_column(String(255), nullable=True)
+    current_visit_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    predecessor_visit_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    rule_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    observation_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    test_code: Mapped[str] = mapped_column(String(100), nullable=False)
