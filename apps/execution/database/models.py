@@ -140,6 +140,10 @@ class ClinicalObservation(AuditedModel):
         normalized_value (float): The normalized numeric value in standard reference units.
         normalized_unit (str): The standard normalized UCUM unit.
         is_outlier (bool): Flag indicating if this is a statistical outlier within the cohort.
+        is_sdv_verified (bool): Non-null boolean indicating if field-level SDV is verified.
+        sdv_verified_by (str): Nullable identifier of the verifier/CRA.
+        sdv_verified_at (datetime): Nullable timestamp of SDV verification.
+        page_id (str): Nullable eCRF page/form grouping key.
     """
 
     __tablename__ = "clinical_observations"
@@ -157,6 +161,10 @@ class ClinicalObservation(AuditedModel):
     normalized_value: Mapped[float] = mapped_column(Float, nullable=True)
     normalized_unit: Mapped[str] = mapped_column(String(50), nullable=True)
     is_outlier: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_sdv_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    sdv_verified_by: Mapped[str] = mapped_column(String(255), nullable=True)
+    sdv_verified_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    page_id: Mapped[str] = mapped_column(String(255), nullable=True)
 
 
 class ClinicalQuery(AuditedModel):
@@ -203,3 +211,63 @@ class ClinicalQuery(AuditedModel):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), onupdate=func.now()
     )
+
+
+class SDVSignOff(AuditedModel):
+    """Represents an aggregate sign-off record for SDV/TSDV verification.
+
+    Maintains page-, visit- or field-level verification signatures and drop states
+    for auditing and GxP traceability.
+
+    Attributes:
+        scope (str): The verification scope (FIELD, PAGE, or VISIT).
+        target_id (str): The identifier of the verified entity.
+        subject_id (str): The clinical subject identifier.
+        study_id (str): The clinical trial study identifier.
+        is_verified (bool): Non-null boolean indicating if aggregate verification is active.
+        verified_by (str): Nullable identifier of the verifier/CRA.
+        verified_at (datetime): Nullable timestamp of verification.
+        dropped_reason (str): Nullable reason text for dropping/rescinding verification.
+        dropped_at (datetime): Nullable timestamp when verification was dropped/rescinded.
+    """
+
+    __tablename__ = "sdv_sign_offs"
+
+    scope: Mapped[str] = mapped_column(String(50), nullable=False)  # FIELD, PAGE, or VISIT
+    target_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    subject_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    verified_by: Mapped[str] = mapped_column(String(255), nullable=True)
+    verified_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    dropped_reason: Mapped[str] = mapped_column(String(1000), nullable=True)
+    dropped_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+
+
+class TSDVConfig(AuditedModel):
+    """Represents the Targeted SDV (TSDV) sampling configuration for a study.
+
+    Maintains study-specific parameters governing subject-based or field-based
+    sampling models and domain-level SDV requirements.
+
+    Attributes:
+        study_id (str): Unique clinical trial study identifier.
+        sampling_model (str): SUBJECT_BASED, FIELD_BASED, or COMBINED.
+        initial_full_sdv_subject_count (int): Count of subjects requiring full SDV before sampling begins.
+        random_sample_percentage (float): Probability percentage of standard random subject sampling.
+        full_sdv_domains (list): JSON list of SDTM domain codes requiring 100% full SDV.
+        safety_endpoints (list): JSON list of safety endpoint variables/domains requiring 100% full SDV.
+        zero_sdv_domains (list): JSON list of SDTM domain codes needing zero (no) SDV.
+        trial_random_seed (int): Integer seed value for stable, deterministic pseudo-random sampling.
+    """
+
+    __tablename__ = "tsdv_configs"
+
+    study_id: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    sampling_model: Mapped[str] = mapped_column(String(50), nullable=False)  # SUBJECT_BASED, FIELD_BASED, or COMBINED
+    initial_full_sdv_subject_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    random_sample_percentage: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    full_sdv_domains: Mapped[list] = mapped_column(JSON, nullable=True)
+    safety_endpoints: Mapped[list] = mapped_column(JSON, nullable=True)
+    zero_sdv_domains: Mapped[list] = mapped_column(JSON, nullable=True)
+    trial_random_seed: Mapped[int] = mapped_column(Integer, nullable=True)

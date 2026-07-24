@@ -6,8 +6,8 @@
 ## 1. Traceability Summary
 
 - **Total Documented Requirements:** 40
-- **Total Mapped to Automated Tests:** 11
-- **Traceability Coverage:** 27.5%
+- **Total Mapped to Automated Tests:** 13
+- **Traceability Coverage:** 32.5%
 - **SRS Requirements Mapped:** 3 of 4 (75.0%)
 
 ⚠️ **WARNING:** SRS coverage is below 100%. GxP validation requires 100% of functional requirements defined in the SRS to map to automated test cases.
@@ -38,9 +38,9 @@
 | PRD-QRY-002 | PRD | **Query Escalation Rules** | *None* | ❌ **Unmapped** |
 | PRD-QRY-003 | PRD | **Cross-Form Edit Check Execution** | *None* | ❌ **Unmapped** |
 | PRD-QRY-004 | PRD | **Longitudinal Validation and Repeat-Visit Logic** | *None* | ❌ **Unmapped** |
-| PRD-QRY-005 | PRD | **Field-Level SDV Flags and Audit Retention** | *None* | ❌ **Unmapped** |
+| PRD-QRY-005 | PRD | **Field-Level SDV Flags and Audit Retention** | `test_clinical_observation_sdv_defaults` (tests/test_sdv_tsdv_persistence.py) 🟢<br>`test_sdv_sign_off_persistence_and_audit` (tests/test_sdv_tsdv_persistence.py) 🟢 | ✅ **Passed** |
 | PRD-QRY-006 | PRD | **Automatic Verification Drop upon Data Modification** | *None* | ❌ **Unmapped** |
-| PRD-QRY-007 | PRD | **Targeted SDV (tSDV) Sampling Algorithm** | *None* | ❌ **Unmapped** |
+| PRD-QRY-007 | PRD | **Targeted SDV (tSDV) Sampling Algorithm** | `test_clinical_observation_sdv_defaults` (tests/test_sdv_tsdv_persistence.py) 🟢<br>`test_tsdv_config_persistence` (tests/test_sdv_tsdv_persistence.py) 🟢 | ✅ **Passed** |
 | PRD-SUB-001 | PRD | **State Transition Matrix & Enforcements** | *None* | ❌ **Unmapped** |
 | PRD-SUB-002 | PRD | **Partial Visit Query Capability on Withdrawn Subjects** | *None* | ❌ **Unmapped** |
 | PRD-SUB-003 | PRD | **Stratified Block Randomization** | *None* | ❌ **Unmapped** |
@@ -76,9 +76,7 @@
 - **PRD-QRY-002** (PRD): Query Escalation Rules
 - **PRD-QRY-003** (PRD): Cross-Form Edit Check Execution
 - **PRD-QRY-004** (PRD): Longitudinal Validation and Repeat-Visit Logic
-- **PRD-QRY-005** (PRD): Field-Level SDV Flags and Audit Retention
 - **PRD-QRY-006** (PRD): Automatic Verification Drop upon Data Modification
-- **PRD-QRY-007** (PRD): Targeted SDV (tSDV) Sampling Algorithm
 - **PRD-SUB-001** (PRD): State Transition Matrix & Enforcements
 - **PRD-SUB-002** (PRD): Partial Visit Query Capability on Withdrawn Subjects
 - **PRD-SUB-003** (PRD): Stratified Block Randomization

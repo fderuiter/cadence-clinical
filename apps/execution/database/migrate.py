@@ -6,7 +6,7 @@ import sys
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from apps.execution.database.models import Base
+from apps.execution.database.models import Base, ClinicalObservation, SDVSignOff, TSDVConfig
 
 
 async def deploy_database_triggers(conn, dialect_name: str) -> None:
