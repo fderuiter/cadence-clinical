@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, Optional
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -132,4 +132,46 @@ class SubjectAssignment(Base):
     # Relationships
     instrument: Mapped["Instrument"] = relationship(
         "Instrument", back_populates="assignments"
+    )
+
+
+class SubjectNotification(Base):
+    """
+    Represents an auditable, subject-scoped reminder or notification record.
+    Tracks related assignment, due time, channel, delivery status, and read status.
+    """
+
+    __tablename__ = "subject_notifications"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    subject_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    assignment_id: Mapped[Optional[str]] = mapped_column(
+        String(36),
+        ForeignKey("subject_assignments.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    due_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    channel: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # "EMAIL", "SMS", "WEBHOOK", "IN_APP"
+    delivery_status: Mapped[str] = mapped_column(
+        String(50), default="PENDING", nullable=False
+    )  # "PENDING", "SENT", "FAILED"
+    is_read: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    read_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    # 21 CFR Part 11 Compliance Auditing Metadata
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    # Relationships
+    assignment: Mapped[Optional["SubjectAssignment"]] = relationship(
+        "SubjectAssignment"
     )

@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 567
-- **Passed:** 567 🟢
+- **Total Automated Test Cases Run:** 628
+- **Passed:** 628 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -183,6 +183,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_read_only_queries_do_not_generate_audit_logs` | `tests.test_audit` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_rollback_prevents_orphan_audit_logs` | `tests.test_audit` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_soft_delete_generates_audit_log` | `tests.test_audit` | PRD-SYS-002 | 🟢 PASSED | < 1s |
+| `test_subject_notification_skips_clinical_auditing` | `tests.test_audit` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_update_generates_audit_log` | `tests.test_audit` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_dataset_json_integration_structure` | `tests.test_biostat` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_declarative_mappings_coverage` | `tests.test_biostat` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -240,6 +241,12 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_monitoring_visit_workflow_rbac_denials` | `tests.test_ctms` | Trace-6, PRD-CTMS-002 | 🟢 PASSED | < 1s |
 | `test_recruitment_records_crud_and_audit` | `tests.test_ctms` | PRD-CTMS-004, Trace-6 | 🟢 PASSED | < 1s |
 | `test_site_milestones_crud_and_audit` | `tests.test_ctms` | Trace-6, PRD-CTMS-001 | 🟢 PASSED | < 1s |
+| `test_ctms_database_manager_uninitialized_and_close` | `tests.test_database_managers` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_econsent_database_manager_uninitialized_and_close` | `tests.test_database_managers` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_eisf_database_manager_uninitialized_and_close` | `tests.test_database_managers` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_etmf_database_manager_uninitialized_and_close` | `tests.test_database_managers` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_interop_database_manager_uninitialized_and_close` | `tests.test_database_managers` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_notifications_database_manager_uninitialized_and_close` | `tests.test_database_managers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_basic_detection_results` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_compliance_profiles` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_custom_literal_terms` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -421,11 +428,15 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_valid_form_detail_validation` | `tests.test_global_library` | PRD-MDR-001 | 🟢 PASSED | < 1s |
 | `test_valid_visit_detail_validation` | `tests.test_global_library` | PRD-MDR-001 | 🟢 PASSED | < 1s |
 | `test_bulk_offline_sync` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_compute_reminders_all_subjects_staff` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_compute_reminders_by_subject_and_end_date_branch` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_deliver_notification_task_exception` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_epro_submission_and_conflict_resolution` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_fhir_prefill_bundle_pipeline` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_foreign_key_and_cascade_lifecycle_integrity` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_instrument_and_assignment_endpoints_and_auditing` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_instrument_and_assignment_orm_persistence` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_notifications_and_reminders_lifecycle` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_pseudonymization_and_pii_stripping` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_subject_content_submission_and_compliance_apis` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_subject_role_authorization_and_identity_binding` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -732,6 +743,12 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_site_and_visit_locks` | `tests.test_trial_lock` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_subject_and_form_locks` | `tests.test_trial_lock` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_trial_lock_freeze` | `tests.test_trial_lock` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_convert_unit_errors` | `tests.test_ucum_coverage` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_convert_unit_identical` | `tests.test_ucum_coverage` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_convert_unit_multiplicative` | `tests.test_ucum_coverage` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_convert_unit_temperature` | `tests.test_ucum_coverage` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_get_normalized_representation` | `tests.test_ucum_coverage` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_normalize_unit_name` | `tests.test_ucum_coverage` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_check_architectural_changes_require_adr_missing_adr` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_check_architectural_changes_require_adr_no_changes` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_check_architectural_changes_require_adr_with_deleted_adr` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |

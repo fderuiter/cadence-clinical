@@ -124,6 +124,18 @@ async def test_fhir_prefill_bundle_pipeline():
                     "telecom": [{"system": "email", "value": "jane.doe@example.com"}],
                     "gender": "female",
                     "birthDate": "1992-08-15",
+                    "text": {"div": "Jane Doe is a patient with history of migraine."},
+                    "note": [
+                        "Patient notes with direct details.",
+                        {"text": "Nested patient note."},
+                    ],
+                }
+            },
+            {
+                "resource": {
+                    "resourceType": "Patient",
+                    "id": "EHR-OTHER",
+                    "gender": "other",
                 }
             },
             {
@@ -176,6 +188,74 @@ async def test_fhir_prefill_bundle_pipeline():
             },
             {
                 "resource": {
+                    "resourceType": "Observation",
+                    "id": "obs-pulse",
+                    "status": "final",
+                    "code": {
+                        "coding": [
+                            {
+                                "system": "http://loinc.org",
+                                "code": "8867-4",
+                                "display": "Heart rate",
+                            }
+                        ]
+                    },
+                    "valueQuantity": {"value": 72, "unit": "/min"},
+                }
+            },
+            {
+                "resource": {
+                    "resourceType": "Observation",
+                    "id": "obs-temp",
+                    "status": "final",
+                    "code": {
+                        "coding": [
+                            {
+                                "system": "http://loinc.org",
+                                "code": "8310-5",
+                                "display": "Temperature",
+                            }
+                        ]
+                    },
+                    "valueQuantity": {"value": 36.6, "unit": "Cel"},
+                }
+            },
+            {
+                "resource": {
+                    "resourceType": "Observation",
+                    "id": "obs-weight",
+                    "status": "final",
+                    "code": {
+                        "coding": [
+                            {
+                                "system": "http://loinc.org",
+                                "code": "29463-7",
+                                "display": "Weight",
+                            }
+                        ]
+                    },
+                    "valueQuantity": {"value": 65, "unit": "kg"},
+                }
+            },
+            {
+                "resource": {
+                    "resourceType": "Observation",
+                    "id": "obs-height",
+                    "status": "final",
+                    "code": {
+                        "coding": [
+                            {
+                                "system": "http://loinc.org",
+                                "code": "8302-2",
+                                "display": "Height",
+                            }
+                        ]
+                    },
+                    "valueQuantity": {"value": 170, "unit": "cm"},
+                }
+            },
+            {
+                "resource": {
                     "resourceType": "Condition",
                     "id": "cond-1",
                     "clinicalStatus": {
@@ -202,6 +282,22 @@ async def test_fhir_prefill_bundle_pipeline():
             },
             {
                 "resource": {
+                    "resourceType": "Condition",
+                    "id": "cond-2",
+                    "code": {
+                        "coding": [
+                            {
+                                "system": "http://snomed.info/sct",
+                                "code": "123456",
+                                "display": "Asthma",
+                            }
+                        ]
+                    },
+                    "recordedDate": "2026-07-21",
+                }
+            },
+            {
+                "resource": {
                     "resourceType": "MedicationStatement",
                     "id": "med-1",
                     "status": "active",
@@ -217,6 +313,22 @@ async def test_fhir_prefill_bundle_pipeline():
                     },
                     "subject": {"reference": "Patient/EHR-9988"},
                     "effectiveDateTime": "2026-07-21",
+                }
+            },
+            {
+                "resource": {
+                    "resourceType": "MedicationStatement",
+                    "id": "med-2",
+                    "medicationCodeableConcept": {
+                        "coding": [
+                            {
+                                "system": "http://hl7.org/fhir/sid/ndc",
+                                "code": "54321",
+                                "display": "Albuterol",
+                            }
+                        ]
+                    },
+                    "dateAsserted": "2026-07-21",
                 }
             },
         ],
@@ -250,7 +362,7 @@ async def test_fhir_prefill_bundle_pipeline():
 
     # Clinical records check
     clinical = data["clinical_records"]
-    assert len(clinical["vital_signs"]) == 1
+    assert len(clinical["vital_signs"]) == 5
     assert clinical["vital_signs"][0]["cdash_testcd"] == "SYSBP"
     assert clinical["vital_signs"][0]["value"] == 118
 
@@ -258,11 +370,11 @@ async def test_fhir_prefill_bundle_pipeline():
     assert clinical["labs"][0]["cdash_testcd"] == "GLUC"
     assert clinical["labs"][0]["value"] == 5.4
 
-    assert len(clinical["conditions"]) == 1
+    assert len(clinical["conditions"]) == 2
     assert clinical["conditions"][0]["display_name"] == "Migraine headache"
     assert clinical["conditions"][0]["onset_date"] == "2026-07-20"
 
-    assert len(clinical["medications"]) == 1
+    assert len(clinical["medications"]) == 2
     assert clinical["medications"][0]["display_name"] == "Aspirin"
     assert clinical["medications"][0]["start_date"] == "2026-07-21"
 
@@ -964,3 +1076,318 @@ async def test_subject_content_submission_and_compliance_apis():
         assert log_entry is not None
         assert log_entry.user_role == "Subject"
         assert log_entry.change_reason == "Alice login"
+
+
+@pytest.mark.asyncio
+async def test_notifications_and_reminders_lifecycle():
+    """
+    Test the complete lifecycle of Subject Reminders and Notification Inbox.
+    Verifies:
+    - Deterministic due reminder computation on demand from schedules.
+    - Security and identity-scoped access boundaries for fetching notifications.
+    - Audit-logged acknowledgement mutations with 21 CFR Part 11 compliance fields.
+    - Access restrictions on cross-subject operations (403).
+    """
+    client = TestClient(app)
+
+    staff_headers = get_auth_headers(
+        roles="admin,sponsor_dm", change_reason="Staff notification setup"
+    )
+    subject_david_headers = get_auth_headers(
+        roles="Subject", change_reason="David login", user_id="david_subject"
+    )
+    subject_eva_headers = get_auth_headers(
+        roles="Subject", change_reason="Eva login", user_id="eva_subject"
+    )
+
+    # 1. Author an Instrument as staff
+    inst_payload = {
+        "name": "Daily Diary",
+        "description": "Daily symptom tracker.",
+        "items": {"q1": "Any symptoms today?"},
+        "response_types": {"q1": {"type": "choice", "options": ["Yes", "No"]}},
+        "scoring_metadata": {},
+        "reason_for_change": "Initial authoring of standard oncology daily form",
+    }
+    resp = client.post(
+        "/api/v1/interop/instruments", json=inst_payload, headers=staff_headers
+    )
+    assert resp.status_code == 201
+    inst_id = resp.json()["id"]
+
+    # 2. Assign to David - make it due (due_at in the past)
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    assign_payload = {
+        "subject_id": "david_subject",
+        "instrument_id": inst_id,
+        "start_date": (now_utc - timedelta(days=2)).isoformat(),
+        "end_date": (now_utc + timedelta(days=1)).isoformat(),
+        "due_at": (now_utc - timedelta(hours=2)).isoformat(),  # Overdue / due
+        "recurrence_pattern": "DAILY",
+        "reason_for_change": "David assignment setup",
+    }
+    resp = client.post(
+        "/api/v1/interop/assignments", json=assign_payload, headers=staff_headers
+    )
+    assert resp.status_code == 201
+    assign_id = resp.json()["id"]
+
+    # 3. Compute reminders on demand
+    resp = client.post(
+        "/api/v1/interop/reminders/compute",
+        params={"subject_id": "david_subject"},
+        headers=staff_headers,
+    )
+    assert resp.status_code == 200
+    comp_data = resp.json()
+    assert comp_data["status"] == "success"
+    assert comp_data["created_count"] == 4  # EMAIL, SMS, WEBHOOK, IN_APP
+
+    # Re-running compute reminders should create 0 new notifications (idempotent/deduplicated)
+    resp = client.post(
+        "/api/v1/interop/reminders/compute",
+        params={"subject_id": "david_subject"},
+        headers=staff_headers,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["created_count"] == 0
+
+    # 4. Fetch notifications for David (authorized)
+    resp = client.get(
+        "/api/v1/interop/subjects/david_subject/notifications",
+        headers=subject_david_headers,
+    )
+    assert resp.status_code == 200
+    notifications = resp.json()
+    assert len(notifications) == 4
+
+    # Assert fields on notification response
+    notif = notifications[0]
+    assert notif["subject_id"] == "david_subject"
+    assert notif["assignment_id"] == assign_id
+    assert notif["is_read"] is False
+    assert notif["read_at"] is None
+    assert notif["version_index"] == 1
+    assert notif["created_by"] == "test_user"  # because staff computed it
+    assert notif["reason_for_change"] == "Automated due reminder generation"
+
+    # 5. Fetch notifications for David using Eva's credentials (denied - 403)
+    resp = client.get(
+        "/api/v1/interop/subjects/david_subject/notifications",
+        headers=subject_eva_headers,
+    )
+    assert resp.status_code == 403
+
+    # 6. Acknowledge/read a notification for David (authorized self)
+    notif_id = notif["id"]
+    ack_payload = {"reason_for_change": "Acknowledging the pain scale reminder"}
+    resp = client.post(
+        f"/api/v1/interop/notifications/{notif_id}/acknowledge",
+        json=ack_payload,
+        headers=subject_david_headers,
+    )
+    assert resp.status_code == 200
+    ack_data = resp.json()
+    assert ack_data["is_read"] is True
+    assert ack_data["read_at"] is not None
+    assert ack_data["version_index"] == 2
+    assert ack_data["reason_for_change"] == "Acknowledging the pain scale reminder"
+
+    # 7. Acknowledge a notification for David using Eva's credentials (denied - 403)
+    other_notif_id = notifications[1]["id"]
+    resp = client.post(
+        f"/api/v1/interop/notifications/{other_notif_id}/acknowledge",
+        json=ack_payload,
+        headers=subject_eva_headers,
+    )
+    assert resp.status_code == 403
+
+    # 8. Acknowledge non-existent notification (404)
+    resp = client.post(
+        "/api/v1/interop/notifications/non-existent-id/acknowledge",
+        json=ack_payload,
+        headers=subject_david_headers,
+    )
+    assert resp.status_code == 404
+
+    # 9. Verify InteropAuditLog records the acknowledgement mutation
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(InteropAuditLog).where(
+            InteropAuditLog.action == "ACKNOWLEDGE_NOTIFICATION",
+            InteropAuditLog.user_id == "david_subject",
+        )
+        res = await session.execute(stmt)
+        log_entry = res.scalars().first()
+        assert log_entry is not None
+        assert log_entry.user_role == "Subject"
+        assert log_entry.change_reason == "Acknowledging the pain scale reminder"
+        assert f"acknowledged notification '{notif_id}'" in log_entry.details
+
+
+@pytest.mark.asyncio
+async def test_compute_reminders_by_subject_and_end_date_branch():
+    """
+    Test compute reminders using subject role authorization,
+    and verifying fallback to assignment end_date when due_at is None.
+    Also tests the delivery background task error boundaries.
+    """
+    client = TestClient(app)
+
+    staff_headers = get_auth_headers(
+        roles="admin,sponsor_dm", change_reason="Staff setup"
+    )
+    subject_eva_headers = get_auth_headers(
+        roles="Subject", change_reason="Eva login", user_id="eva_subject"
+    )
+    subject_david_headers = get_auth_headers(
+        roles="Subject", change_reason="David login", user_id="david_subject"
+    )
+
+    # 1. Create Instrument
+    inst_payload = {
+        "name": "Quality Survey",
+        "description": "Eva symptom tracker.",
+        "items": {"q1": "Any headache?"},
+        "response_types": {"q1": {"type": "choice", "options": ["Yes", "No"]}},
+        "scoring_metadata": {},
+        "reason_for_change": "Initial survey",
+    }
+    resp = client.post(
+        "/api/v1/interop/instruments", json=inst_payload, headers=staff_headers
+    )
+    assert resp.status_code == 201
+    inst_id = resp.json()["id"]
+
+    # 2. Assign to Eva with no due_at, but end_date in the past (overdue/due)
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    assign_payload = {
+        "subject_id": "eva_subject",
+        "instrument_id": inst_id,
+        "start_date": (now_utc - timedelta(days=2)).isoformat(),
+        "end_date": (now_utc - timedelta(hours=1)).isoformat(),  # past end_date
+        "due_at": None,
+        "recurrence_pattern": "DAILY",
+        "reason_for_change": "Eva assignment setup",
+    }
+    resp = client.post(
+        "/api/v1/interop/assignments", json=assign_payload, headers=staff_headers
+    )
+    assert resp.status_code == 201
+    assign_id = resp.json()["id"]
+
+    # 3. Compute reminders as Eva self -> 200 Success
+    resp = client.post(
+        "/api/v1/interop/reminders/compute",
+        params={"subject_id": "eva_subject"},
+        headers=subject_eva_headers,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["created_count"] == 4
+
+    # Assert notifications are linked to assign_id
+    resp_notifs = client.get(
+        "/api/v1/interop/subjects/eva_subject/notifications",
+        headers=subject_eva_headers,
+    )
+    assert resp_notifs.status_code == 200
+    for n in resp_notifs.json():
+        assert n["assignment_id"] == assign_id
+
+    # 4. Compute reminders as David for Eva -> 403 Forbidden
+    resp = client.post(
+        "/api/v1/interop/reminders/compute",
+        params={"subject_id": "eva_subject"},
+        headers=subject_david_headers,
+    )
+    assert resp.status_code == 403
+
+    # 5. Direct invocation of deliver_notification_task with fake ID
+    from apps.interop.main import deliver_notification_task
+
+    await deliver_notification_task("fake-id", "EMAIL", "eva_subject")
+
+    # 6. Test subject with no assignments return empty list
+    resp = client.get(
+        "/api/v1/interop/subjects/eva_subject/instruments",
+        headers=subject_eva_headers,
+    )
+    # Since eva has one assignment, she should get 1 instrument
+    assert len(resp.json()) == 1
+
+    # But subject_david has 0 assignments (we didn't assign anything to him in this test)
+    resp = client.get(
+        "/api/v1/interop/subjects/david_subject/instruments",
+        headers=subject_david_headers,
+    )
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+
+@pytest.mark.asyncio
+async def test_deliver_notification_task_exception(monkeypatch):
+    """
+    Test the exception/error handler of the background notification delivery task.
+    """
+    import sqlalchemy
+
+    from apps.interop.main import deliver_notification_task
+
+    def mock_select(*args, **kwargs):
+        raise Exception("Simulated database failure during select")
+
+    monkeypatch.setattr(sqlalchemy, "select", mock_select)
+
+    # Calling deliver_notification_task should trigger both outer and nested exception handlers
+    await deliver_notification_task("some-id", "EMAIL", "eva_subject")
+
+
+@pytest.mark.asyncio
+async def test_compute_reminders_all_subjects_staff():
+    """
+    Test compute reminders for all subjects simultaneously (subject_id=None)
+    triggered by a staff member.
+    """
+    client = TestClient(app)
+    staff_headers = get_auth_headers(
+        roles="admin,sponsor_dm", change_reason="Compute all reminders"
+    )
+
+    # Author an Instrument and assign to a new subject with past due_at
+    # to ensure there is something to compute.
+    resp = client.post(
+        "/api/v1/interop/instruments",
+        json={
+            "name": "Global Survey",
+            "description": "Global tracker.",
+            "items": {"q1": "status"},
+            "response_types": {"q1": {"type": "integer"}},
+            "scoring_metadata": {},
+            "reason_for_change": "Initial global instrument",
+        },
+        headers=staff_headers,
+    )
+    assert resp.status_code == 201
+    inst_id = resp.json()["id"]
+
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    client.post(
+        "/api/v1/interop/assignments",
+        json={
+            "subject_id": "global_subject_1",
+            "instrument_id": inst_id,
+            "start_date": (now_utc - timedelta(days=2)).isoformat(),
+            "end_date": (now_utc + timedelta(days=1)).isoformat(),
+            "due_at": (now_utc - timedelta(hours=1)).isoformat(),
+            "recurrence_pattern": "DAILY",
+            "reason_for_change": "Global setup",
+        },
+        headers=staff_headers,
+    )
+
+    # Compute reminders with subject_id=None
+    resp = client.post(
+        "/api/v1/interop/reminders/compute",
+        headers=staff_headers,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["created_count"] >= 4

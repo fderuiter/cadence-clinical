@@ -39,6 +39,7 @@ def receive_before_flush(session: Session, flush_context, instances):
             "interop_audit_logs",
             "instruments",
             "subject_assignments",
+            "subject_notifications",
             "ctms_studies",
             "ctms_audit_logs",
             "ctms_monitoring_visits",
