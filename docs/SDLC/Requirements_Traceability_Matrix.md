@@ -6,8 +6,8 @@
 ## 1. Traceability Summary
 
 - **Total Documented Requirements:** 50
-- **Total Mapped to Automated Tests:** 24
-- **Traceability Coverage:** 48.0%
+- **Total Mapped to Automated Tests:** 25
+- **Traceability Coverage:** 50.0%
 - **SRS Requirements Mapped:** 5 of 6 (83.3%)
 
 ⚠️ **WARNING:** SRS coverage is below 100%. GxP validation requires 100% of functional requirements defined in the SRS to map to automated test cases.
@@ -42,8 +42,8 @@
 | PRD-QRY-002 | PRD | **Query Escalation Rules** | *None* | ❌ **Unmapped** |
 | PRD-QRY-003 | PRD | **Cross-Form Edit Check Execution** | *None* | ❌ **Unmapped** |
 | PRD-QRY-004 | PRD | **Longitudinal Validation and Repeat-Visit Logic** | *None* | ❌ **Unmapped** |
-| PRD-QRY-005 | PRD | **Field-Level SDV Flags and Audit Retention** | `test_clinical_observation_sdv_defaults` (tests/test_sdv_tsdv_persistence.py) 🟢<br>`test_sdv_sign_off_persistence_and_audit` (tests/test_sdv_tsdv_persistence.py) 🟢 | ✅ **Passed** |
-| PRD-QRY-006 | PRD | **Automatic Verification Drop upon Data Modification** | *None* | ❌ **Unmapped** |
+| PRD-QRY-005 | PRD | **Field-Level SDV Flags and Audit Retention** | `test_clinical_observation_sdv_defaults` (tests/test_sdv_tsdv_persistence.py) 🟢<br>`test_sdv_sign_off_persistence_and_audit` (tests/test_sdv_tsdv_persistence.py) 🟢<br>`test_sdv_signoff_endpoint_and_idempotency` (tests/test_sdv_tsdv_persistence.py) 🟢<br>`test_sdv_signoff_page_visit_scopes` (tests/test_sdv_tsdv_persistence.py) 🟢<br>`test_sdv_automatic_verification_drop` (tests/test_sdv_tsdv_persistence.py) 🟢 | ✅ **Passed** |
+| PRD-QRY-006 | PRD | **Automatic Verification Drop upon Data Modification** | `test_sdv_signoff_endpoint_and_idempotency` (tests/test_sdv_tsdv_persistence.py) 🟢<br>`test_sdv_signoff_page_visit_scopes` (tests/test_sdv_tsdv_persistence.py) 🟢<br>`test_sdv_automatic_verification_drop` (tests/test_sdv_tsdv_persistence.py) 🟢 | ✅ **Passed** |
 | PRD-QRY-007 | PRD | **Targeted SDV (tSDV) Sampling Algorithm** | `test_clinical_observation_sdv_defaults` (tests/test_sdv_tsdv_persistence.py) 🟢<br>`test_tsdv_config_persistence` (tests/test_sdv_tsdv_persistence.py) 🟢 | ✅ **Passed** |
 | PRD-SUB-001 | PRD | **State Transition Matrix & Enforcements** | `test_capa_creation_validations` (tests/test_quality_workflow.py) 🟢<br>`test_capa_lifecycle_transitions` (tests/test_quality_workflow.py) 🟢<br>`test_capa_updates_and_concurrency` (tests/test_quality_workflow.py) 🟢 | ✅ **Passed** |
 | PRD-SUB-002 | PRD | **Partial Visit Query Capability on Withdrawn Subjects** | *None* | ❌ **Unmapped** |
@@ -86,7 +86,6 @@
 - **PRD-QRY-002** (PRD): Query Escalation Rules
 - **PRD-QRY-003** (PRD): Cross-Form Edit Check Execution
 - **PRD-QRY-004** (PRD): Longitudinal Validation and Repeat-Visit Logic
-- **PRD-QRY-006** (PRD): Automatic Verification Drop upon Data Modification
 - **PRD-SUB-002** (PRD): Partial Visit Query Capability on Withdrawn Subjects
 - **PRD-SUB-003** (PRD): Stratified Block Randomization
 - **PRD-SUB-004** (PRD): Dynamic Minimization Algorithm
