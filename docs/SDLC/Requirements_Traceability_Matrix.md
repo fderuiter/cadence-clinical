@@ -26,7 +26,7 @@
 | PRD-EDC-008 | PRD | **Conflict Resolution and Sync Reconciliation** | *None* | ❌ **Unmapped** |
 | PRD-EDC-009 | PRD | **Visual Analog Scale (VAS) Slider Specifications** | *None* | ❌ **Unmapped** |
 | PRD-EDC-010 | PRD | **Interactive Body Map Coordinates and Schema Mapping** | *None* | ❌ **Unmapped** |
-| PRD-EDL-001 | PRD | **Data-Driven Expected Document Lists (EDLs) & Completeness Tracking** | `test_edl_definitions_and_crud` (tests/test_etmf.py) 🟢<br>`test_site_aware_completeness` (tests/test_etmf.py) 🟢 | ✅ **Passed** |
+| PRD-EDL-001 | PRD | **Data-Driven Expected Document Lists (EDLs) & Completeness Tracking** | `test_active_version_and_selection` (tests/test_tmf_reference_model.py) 🟢<br>`test_canonical_11_zones` (tests/test_tmf_reference_model.py) 🟢<br>`test_hierarchy_navigation_and_parent_association` (tests/test_tmf_reference_model.py) 🟢<br>`test_query_helpers` (tests/test_tmf_reference_model.py) 🟢<br>`test_immutability` (tests/test_tmf_reference_model.py) 🟢<br>`test_version_isolation` (tests/test_tmf_reference_model.py) 🟢<br>`test_no_database_or_network_needed` (tests/test_tmf_reference_model.py) 🟢<br>`test_edl_definitions_and_crud` (tests/test_etmf.py) 🟢<br>`test_site_aware_completeness` (tests/test_etmf.py) 🟢 | ✅ **Passed** |
 | PRD-MDR-001 | PRD | **Value-Level Metadata Constraint Propagation** | `test_terminology_cache_prevents_db_queries` (tests/test_transformers.py) 🟢<br>`test_usdm_validation_error_on_invalid_data` (tests/test_transformers.py) 🟢 | ✅ **Passed** |
 | PRD-MDR-002 | PRD | **Biomedical Concept Lock State during Active Studies** | *None* | ❌ **Unmapped** |
 | PRD-MDR-003 | PRD | **Dynamic Cohort Opening & Closing Rules** | `test_usdm_endpoint_returns_nested_schema_and_fast` (tests/test_transformers.py) 🟢 | ✅ **Passed** |

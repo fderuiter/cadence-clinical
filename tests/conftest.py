@@ -1,3 +1,5 @@
+# Automatically inject packages paths before any other local package is imported
+import packages
 import asyncio
 import uuid
 from typing import Any, Dict
