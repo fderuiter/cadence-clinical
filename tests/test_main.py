@@ -58,6 +58,7 @@ def test_designer_gateway_auth_invalid_signature():
             "X-User-Roles": "admin",
             "X-Gateway-Timestamp": str(time.time()),
             "X-Gateway-Signature": "invalid-sig",
+            "X-Signature-Version": "2",
         }
         response = client.get("/differences", headers=headers)
         assert response.status_code == 401

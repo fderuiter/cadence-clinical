@@ -84,43 +84,44 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
                 status_code=status_code, content={"detail": "Invalid gateway timestamp"}
             )
 
-        version = request.headers.get("X-Signature-Version", "1")
+        version = request.headers.get("X-Signature-Version")
+        if not version or version not in ("2", "v2"):
+            status_code = 403 if is_mutation else 401
+            return JSONResponse(
+                status_code=status_code,
+                content={
+                    "detail": "Missing or obsolete signature format. Version 2 canonical JSON signature is required."
+                },
+            )
 
-        if version in ("2", "v2"):
-            change_reason = request.headers.get("X-Change-Reason")
-            if not change_reason:
-                if request.method in ("GET", "HEAD", "OPTIONS"):
-                    change_reason = ""
-                else:
-                    status_code = 403 if is_mutation else 401
-                    return JSONResponse(
-                        status_code=status_code,
-                        content={"detail": "Missing change justification reason"},
-                    )
-
-            if change_reason and len(change_reason) > 255:
-                status_code = 400 if is_mutation else 401
+        change_reason = request.headers.get("X-Change-Reason")
+        if not change_reason:
+            if request.method in ("GET", "HEAD", "OPTIONS"):
+                change_reason = ""
+            else:
+                status_code = 403 if is_mutation else 401
                 return JSONResponse(
                     status_code=status_code,
-                    content={"detail": "Change reason exceeds 255 characters"},
+                    content={"detail": "Missing change justification reason"},
                 )
 
-            payload = {
-                "change_reason": change_reason,
-                "roles": roles,
-                "timestamp": timestamp,
-                "user_id": user_id,
-            }
-            serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
-            expected_signature = hmac.new(
-                self.gateway_secret, serialized.encode(), hashlib.sha256
-            ).hexdigest()
-        else:
-            change_reason = ""
-            message = f"{user_id}:{roles}:{timestamp}"
-            expected_signature = hmac.new(
-                self.gateway_secret, message.encode(), hashlib.sha256
-            ).hexdigest()
+        if change_reason and len(change_reason) > 255:
+            status_code = 400 if is_mutation else 401
+            return JSONResponse(
+                status_code=status_code,
+                content={"detail": "Change reason exceeds 255 characters"},
+            )
+
+        payload = {
+            "change_reason": change_reason,
+            "roles": roles,
+            "timestamp": timestamp,
+            "user_id": user_id,
+        }
+        serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+        expected_signature = hmac.new(
+            self.gateway_secret, serialized.encode(), hashlib.sha256
+        ).hexdigest()
 
         if not hmac.compare_digest(expected_signature, signature):
             status_code = 403 if is_mutation else 401
@@ -130,8 +131,7 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
 
         request.state.user_id = user_id
         request.state.roles = roles
-        if version in ("2", "v2"):
-            request.state.change_reason = change_reason
+        request.state.change_reason = change_reason
 
         # Extract IP address for context injection
         ip_address = request.headers.get(

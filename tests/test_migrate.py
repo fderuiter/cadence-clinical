@@ -82,3 +82,10 @@ async def test_run_migrations_real_sqlite():
     to ensure full coverage of SQLite trigger generation branches.
     """
     await run_migrations("sqlite+aiosqlite:///:memory:")
+
+
+def test_placeholders():
+    from apps.execution.database import provision_tenant, rollback
+
+    provision_tenant.main()
+    rollback.main()

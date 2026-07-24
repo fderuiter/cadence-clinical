@@ -166,7 +166,7 @@ async def test_create_clinical_query_authorization_failures() -> None:
         )
     assert resp.status_code == 403
     assert (
-        "do not contain a verified, gateway-signed change justification"
+        "Missing or obsolete signature format. Version 2 canonical JSON signature is required."
         in resp.json()["detail"]
     )
 
