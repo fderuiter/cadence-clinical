@@ -281,3 +281,106 @@ def evaluate_lab_value(
 
     # 5. Default/Normal range
     return "NORMAL", False, matched_normal_bounds
+
+
+async def recalculate_range_flags(session: Any, study_id: str, test_code: str) -> int:
+    """Query and update the reference range indicators for all observations in a study-test cohort.
+
+    Fetches all active clinical observations and lab reference ranges for the specified
+    test code within the given study. It then resolves each active observation against
+    its subject's decrypted demographics, matching a reference range and evaluating the
+    lab indicator, out-of-range flag, and normal bounds. It updates modified observations
+    and commits.
+
+    Args:
+        session: The database session.
+        study_id (str): The unique identifier of the study.
+        test_code (str): The test parameter code.
+
+    Returns:
+        int: The number of observations updated.
+    """
+    from datetime import datetime
+
+    from sqlalchemy import select
+
+    from apps.execution.database.models import (
+        ClinicalObservation,
+        ClinicalSubject,
+        LabReferenceRange,
+    )
+    from apps.execution.demographics import get_safe_demographics
+
+    # 1. Fetch active observations
+    stmt_obs = select(ClinicalObservation).where(
+        ClinicalObservation.study_id == study_id,
+        ClinicalObservation.test_code == test_code,
+        ClinicalObservation.is_deleted.is_(False),
+    )
+    res_obs = await session.execute(stmt_obs)
+    observations = res_obs.scalars().all()
+
+    if not observations:
+        return 0
+
+    # 2. Fetch active reference ranges
+    stmt_ranges = select(LabReferenceRange).where(
+        LabReferenceRange.study_id == study_id,
+        LabReferenceRange.test_code == test_code,
+        LabReferenceRange.is_deleted.is_(False),
+    )
+    res_ranges = await session.execute(stmt_ranges)
+    ranges = res_ranges.scalars().all()
+
+    # 3. Fetch active subjects
+    stmt_subjects = select(ClinicalSubject).where(
+        ClinicalSubject.study_id == study_id,
+        ClinicalSubject.is_deleted.is_(False),
+    )
+    res_subjects = await session.execute(stmt_subjects)
+    subjects = {subj.subject_id: subj for subj in res_subjects.scalars().all()}
+
+    updated_count = 0
+    for obs in observations:
+        obs_date = obs.observation_date or datetime.now()
+        subj = subjects.get(obs.subject_id)
+        if subj:
+            demo = get_safe_demographics(subj, obs_date)
+            gender = demo.get("gender")
+            age = demo.get("age")
+        else:
+            gender = "U"
+            age = None
+
+        matched_range = select_reference_range(
+            ranges=ranges,
+            study_id=study_id,
+            test_code=test_code,
+            normalized_unit=obs.normalized_unit,
+            lab_source=obs.lab_source or "CENTRAL",
+            sex=gender,
+            age=age,
+            site_id=obs.lab_site_id,
+        )
+
+        indicator, out_of_range, matched_bounds = evaluate_lab_value(
+            obs.normalized_value, matched_range
+        )
+
+        changed = (
+            obs.lab_indicator != indicator
+            or obs.lab_out_of_range != out_of_range
+            or obs.matched_normal_bounds != matched_bounds
+        )
+
+        if changed:
+            obs.lab_indicator = indicator
+            obs.lab_out_of_range = out_of_range
+            obs.matched_normal_bounds = matched_bounds
+            obs.version += 1
+            updated_count += 1
+
+    if updated_count > 0:
+        await session.commit()
+
+    return updated_count
