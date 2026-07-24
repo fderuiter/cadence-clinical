@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import Any, Optional
 
 from sqlalchemy import select
