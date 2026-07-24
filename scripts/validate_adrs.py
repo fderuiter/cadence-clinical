@@ -107,21 +107,9 @@ def get_changed_files() -> set[str]:
         except Exception:
             pass
 
-    # 2. Try git diff HEAD^ (standard on PR branch checks)
-    if not changed_files:
-        stdout, _ = run_git_command(["git", "diff", "--name-only", "HEAD^"])
-        if stdout:
-            changed_files.update(stdout.splitlines())
-
-    # 3. Try git diff against origin/main
-    if not changed_files:
-        stdout, _ = run_git_command(["git", "diff", "--name-only", "origin/main"])
-        if stdout:
-            changed_files.update(stdout.splitlines())
-
-    # 4. Try git diff against HEAD~1
-    if not changed_files:
-        stdout, _ = run_git_command(["git", "diff", "--name-only", "HEAD~1"])
+    # Union all git diff methods to ensure we capture the complete history of changes in multi-commit PRs
+    for diff_arg in (["git", "diff", "--name-only", "HEAD^"], ["git", "diff", "--name-only", "origin/main"], ["git", "diff", "--name-only", "HEAD~1"]):
+        stdout, _ = run_git_command(diff_arg)
         if stdout:
             changed_files.update(stdout.splitlines())
 

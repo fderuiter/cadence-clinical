@@ -318,7 +318,9 @@ def generate_rtm_md(
                     status_emoji = (
                         "🟢"
                         if test_status == "PASSED"
-                        else "🔴" if test_status in ("FAILED", "ERROR") else "⚪"
+                        else "🔴"
+                        if test_status in ("FAILED", "ERROR")
+                        else "⚪"
                     )
                     test_links.append(
                         f"`{m['test_name']}` ({m['file']}) {status_emoji}"
