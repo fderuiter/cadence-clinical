@@ -93,9 +93,9 @@ def test_terminology_cache_prevents_db_queries():
     assert response2.status_code == 200
 
     queries_after_second = db_query_counts["terminology_lookups"]
-    assert queries_after_second == queries_after_first, (
-        "Cache failed to prevent additional database queries"
-    )
+    assert (
+        queries_after_second == queries_after_first
+    ), "Cache failed to prevent additional database queries"
 
 
 def test_admin_cache_clear_forces_fresh_read():
@@ -115,9 +115,9 @@ def test_admin_cache_clear_forces_fresh_read():
     # Request again, should force new queries
     client.get("/api/v2/studies/study_1/usdm", headers=get_auth_headers())
     queries_after_clear = db_query_counts["terminology_lookups"]
-    assert queries_after_clear > queries_before_clear, (
-        "Fresh DB reads were not triggered after cache clear"
-    )
+    assert (
+        queries_after_clear > queries_before_clear
+    ), "Fresh DB reads were not triggered after cache clear"
 
 
 def test_usdm_validation_error_on_invalid_data():
