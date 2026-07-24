@@ -18,6 +18,14 @@
     "ui": "workspace:*"
   },
   "devDependencies": {
-    "vite": "^8.1.5"
+    "@vitejs/plugin-vue": "^6.0.8",
+    "@vue/test-utils": "^2.4.11",
+    "eslint-plugin-vue": "^10.10.0",
+    "jsdom": "^29.1.1",
+    "keycloak-js": "^26.2.4",
+    "pinia": "^4.0.2",
+    "vite": "^8.1.5",
+    "vue": "^3.5.40",
+    "vue-router": "^5.2.0"
   }
 }
