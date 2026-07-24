@@ -7,6 +7,11 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from tmf_reference_model import (
+    get_active_catalog,
+    resolve_artifact,
+    validate_hierarchy,
+)
 
 from apps.etmf.database import db_manager
 from apps.etmf.lifecycle import validate_and_transition_document_status
@@ -18,11 +23,6 @@ from apps.etmf.models import (
     TMFDocument,
 )
 from packages.security.middleware import GatewayAuthMiddleware
-from tmf_reference_model import (
-    resolve_artifact,
-    validate_hierarchy,
-    get_active_catalog,
-)
 
 DATABASE_URL = os.getenv("ETMF_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
@@ -198,9 +198,15 @@ class IngestionRequest(BaseModel):
     content: str = Field(..., description="Indexed, searchable content of the document")
     mime_type: str = Field(..., description="MIME type of the document")
     zone: Optional[int] = Field(None, description="Optional expected DIA TMF Zone")
-    section: Optional[str] = Field(None, description="Optional expected DIA TMF Section")
-    artifact_code: Optional[str] = Field(None, description="Optional canonical artifact code")
-    taxonomy_version: Optional[str] = Field(None, description="Optional taxonomy version")
+    section: Optional[str] = Field(
+        None, description="Optional expected DIA TMF Section"
+    )
+    artifact_code: Optional[str] = Field(
+        None, description="Optional canonical artifact code"
+    )
+    taxonomy_version: Optional[str] = Field(
+        None, description="Optional taxonomy version"
+    )
     metadata_json: Optional[Dict[str, Any]] = Field(
         None, description="Optional metadata fields"
     )
@@ -413,14 +419,16 @@ async def ingest_document(
         name_input = payload.artifact_type
 
         # If artifact_code is not explicitly supplied, check if artifact_type is a code
-        if not code_input and name_input and name_input.strip().replace(".", "").isdigit():
+        if (
+            not code_input
+            and name_input
+            and name_input.strip().replace(".", "").isdigit()
+        ):
             code_input = name_input.strip()
             name_input = None
 
         resolved = resolve_artifact(
-            version=taxonomy_version,
-            code=code_input,
-            name=name_input
+            version=taxonomy_version, code=code_input, name=name_input
         )
     except ValueError as e:
         raise HTTPException(
@@ -448,8 +456,10 @@ async def ingest_document(
             validate_hierarchy(
                 version=taxonomy_version,
                 zone_code=supplied_zone if supplied_zone is not None else zone,
-                section_code=supplied_section if supplied_section is not None else section,
-                artifact_code=artifact_code
+                section_code=supplied_section
+                if supplied_section is not None
+                else section,
+                artifact_code=artifact_code,
             )
         except ValueError as e:
             raise HTTPException(

@@ -126,7 +126,9 @@ async def test_automated_ingestion_and_version_indexing():
         result_audit = await session.execute(stmt_audit)
         audit_logs = result_audit.scalars().all()
         assert len(audit_logs) == 2
-        assert "Ingested artifact type 'Clinical Trial Protocol'" in audit_logs[0].details
+        assert (
+            "Ingested artifact type 'Clinical Trial Protocol'" in audit_logs[0].details
+        )
         assert audit_logs[0].user_id == "test_user"
 
 
@@ -758,7 +760,9 @@ async def test_canonical_catalog_ingestion_validations():
     - taxonomy-version persistence
     """
     client = TestClient(app)
-    headers = get_auth_headers(roles="admin", change_reason="Catalog validations testing")
+    headers = get_auth_headers(
+        roles="admin", change_reason="Catalog validations testing"
+    )
 
     # 1. Unknown artifact rejection
     payload_unknown = {
@@ -768,21 +772,25 @@ async def test_canonical_catalog_ingestion_validations():
         "content": "Secret content",
         "mime_type": "application/pdf",
     }
-    response_unknown = client.post("/api/v1/etmf/ingest", json=payload_unknown, headers=headers)
+    response_unknown = client.post(
+        "/api/v1/etmf/ingest", json=payload_unknown, headers=headers
+    )
     assert response_unknown.status_code == 422
     assert "validation error" in response_unknown.json()["detail"].lower()
 
     # 2. Invalid hierarchy rejection (mismatched zone/section/artifact)
     payload_mismatch = {
         "study_id": "study_001",
-        "artifact_type": "Clinical Trial Protocol", # belongs to zone 1, section "01.01"
+        "artifact_type": "Clinical Trial Protocol",  # belongs to zone 1, section "01.01"
         "filename": "protocol.pdf",
         "content": "Protocol content",
         "mime_type": "application/pdf",
-        "zone": 10, # mismatched zone
+        "zone": 10,  # mismatched zone
         "section": "01.01",
     }
-    response_mismatch = client.post("/api/v1/etmf/ingest", json=payload_mismatch, headers=headers)
+    response_mismatch = client.post(
+        "/api/v1/etmf/ingest", json=payload_mismatch, headers=headers
+    )
     assert response_mismatch.status_code == 422
     assert "mismatch" in response_mismatch.json()["detail"].lower()
 
@@ -797,7 +805,9 @@ async def test_canonical_catalog_ingestion_validations():
         "zone": 1,
         "section": "01.01",
     }
-    response_valid = client.post("/api/v1/etmf/ingest", json=payload_valid, headers=headers)
+    response_valid = client.post(
+        "/api/v1/etmf/ingest", json=payload_valid, headers=headers
+    )
     assert response_valid.status_code == 201
     data = response_valid.json()
     assert data["status"] == "success"
