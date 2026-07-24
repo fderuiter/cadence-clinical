@@ -9,9 +9,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from tmf_reference_model import (
     get_active_catalog,
+    get_mandatory_artifacts,
     resolve_artifact,
     validate_hierarchy,
-    get_mandatory_artifacts,
 )
 
 from apps.etmf.database import db_manager
@@ -1004,10 +1004,10 @@ async def check_completeness(
             is_match = False
             if exp_code and arch.artifact_code:
                 # Direct comparison by canonical artifact identity
-                is_match = (arch.artifact_code == exp_code)
+                is_match = arch.artifact_code == exp_code
             else:
                 # Fallback to case-insensitive name matching
-                is_match = (canonical_name.lower() in arch.artifact_type.lower())
+                is_match = canonical_name.lower() in arch.artifact_type.lower()
 
             if is_match:
                 if not matched_doc or arch.version_index > matched_doc.version_index:

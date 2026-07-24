@@ -867,7 +867,9 @@ async def test_completeness_from_catalog():
         "taxonomy_version": "v3.2.0",
         "artifact_code": "01.01.01",
     }
-    ingest_resp = client.post("/api/v1/etmf/ingest", json=payload_valid, headers=admin_headers)
+    ingest_resp = client.post(
+        "/api/v1/etmf/ingest", json=payload_valid, headers=admin_headers
+    )
     assert ingest_resp.status_code == 201
 
     # 4. Re-check INITIATION completeness -> should be complete now
