@@ -1,6 +1,23 @@
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from tmf_reference_model.models import Artifact, Section, TaxonomyCatalog, Zone
+
+# Stable public API imports and exports for eTMF and other taxonomy consumers.
+__all__ = [
+    "Artifact",
+    "Section",
+    "Zone",
+    "TaxonomyCatalog",
+    "get_catalog",
+    "get_active_catalog",
+    "register_catalog",
+    "set_active_version",
+    "get_registered_versions",
+    "resolve_artifact",
+    "validate_hierarchy",
+    "get_mandatory_artifacts",
+    "MILESTONE_MANDATORY_ARTIFACTS",
+]
 
 # Raw DIA TMF Reference Model structure for the seeded v3.2.0 version
 DIA_V3_2_0_RAW = {
@@ -221,3 +238,186 @@ def get_registered_versions() -> List[str]:
     List all currently registered catalog versions.
     """
     return _registry.get_registered_versions()
+
+
+# Centralized milestone-to-mandatory-artifact mappings keyed by canonical artifact code (identity).
+MILESTONE_MANDATORY_ARTIFACTS = {
+    "INITIATION": [
+        "01.01.01",  # Clinical Trial Protocol
+    ],
+    "CONDUCT": [
+        "01.01.01",  # Clinical Trial Protocol
+        "10.01.02",  # Define-XML Specifications
+        "10.02.01",  # Blank CRF
+    ],
+    "CLOSEOUT": [
+        "01.01.01",  # Clinical Trial Protocol
+        "10.01.02",  # Define-XML Specifications
+        "10.02.01",  # Blank CRF
+        "11.01.02",  # Data Lock Certificate
+    ],
+}
+
+
+def resolve_artifact(
+    version: str, code: Optional[str] = None, name: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Resolves an artifact by canonical code, display name, or both in the requested version.
+
+    Lookup Semantics:
+    - If 'code' is provided, performs an exact match lookup.
+    - If 'name' is provided, performs a case-insensitive, stripped match against the artifact display name.
+    - If both are provided, both are checked and must resolve to the same canonical artifact.
+
+    Raises ValueError for:
+    - Unknown catalog version
+    - No query arguments (neither code nor name is provided)
+    - Unknown artifact
+    - Ambiguous artifact input (multiple name matches)
+    - Mismatched code and name combination
+    """
+    try:
+        catalog = get_catalog(version)
+    except KeyError:
+        raise ValueError(f"Unknown catalog version '{version}'.")
+
+    if code is None and name is None:
+        raise ValueError("Must provide either 'code' or 'name' (or both) to resolve an artifact.")
+
+    artifact_by_code = None
+    if code is not None:
+        artifact_by_code = catalog.get_artifact(code)
+        if artifact_by_code is None:
+            raise ValueError(f"Unknown artifact with code '{code}' in version '{version}'.")
+
+    artifact_by_name = None
+    if name is not None:
+        normalized_name = name.strip().lower()
+        matches = []
+        for art in catalog.artifact_map.values():
+            if art.name.strip().lower() == normalized_name:
+                matches.append(art)
+
+        if not matches:
+            raise ValueError(f"Unknown artifact with name '{name}' in version '{version}'.")
+        elif len(matches) > 1:
+            raise ValueError(
+                f"Ambiguous artifact input for name '{name}' in version '{version}': multiple matches found."
+            )
+        else:
+            artifact_by_name = matches[0]
+
+    # Resolve final artifact and check for mismatches
+    if artifact_by_code and artifact_by_name:
+        if artifact_by_code.code != artifact_by_name.code:
+            raise ValueError(
+                f"Mismatched artifact combination: code '{code}' and name '{name}' resolve to different artifacts."
+            )
+        final_artifact = artifact_by_code
+    elif artifact_by_code:
+        final_artifact = artifact_by_code
+    else:
+        final_artifact = artifact_by_name
+
+    # Resolve parent section and zone
+    section = catalog.get_section(final_artifact.section_code)
+    zone = catalog.get_zone(final_artifact.zone_code)
+
+    if not section or not zone:
+        raise ValueError(
+            f"Mismatched zone/section combination inside catalog for artifact '{final_artifact.code}'."
+        )
+
+    return {
+        "artifact": final_artifact,
+        "section": section,
+        "zone": zone,
+        "version": version,
+    }
+
+
+def validate_hierarchy(
+    version: str, zone_code: int, section_code: str, artifact_code: str
+) -> None:
+    """
+    Validates a supplied zone/section/artifact combination against a requested version.
+
+    Raises ValueError with actionable details if:
+    - The catalog version is unknown.
+    - Any of the codes (zone, section, or artifact) do not exist in the version.
+    - There is a mismatch (e.g., artifact is not in section, section is not in zone).
+    """
+    try:
+        catalog = get_catalog(version)
+    except KeyError:
+        raise ValueError(f"Unknown catalog version '{version}'.")
+
+    zone = catalog.get_zone(zone_code)
+    if not zone:
+        raise ValueError(f"Unknown zone code {zone_code} in version '{version}'.")
+
+    section = catalog.get_section(section_code)
+    if not section:
+        raise ValueError(f"Unknown section code '{section_code}' in version '{version}'.")
+
+    artifact = catalog.get_artifact(artifact_code)
+    if not artifact:
+        raise ValueError(f"Unknown artifact code '{artifact_code}' in version '{version}'.")
+
+    # Check hierarchy
+    if section.zone_code != zone_code:
+        raise ValueError(
+            f"Mismatched hierarchy: section '{section_code}' belongs to zone {section.zone_code}, not zone {zone_code}."
+        )
+
+    if artifact.section_code != section_code:
+        raise ValueError(
+            f"Mismatched hierarchy: artifact '{artifact_code}' belongs to section '{artifact.section_code}', not section '{section_code}'."
+        )
+
+    if artifact.zone_code != zone_code:
+        raise ValueError(
+            f"Mismatched hierarchy: artifact '{artifact_code}' belongs to zone {artifact.zone_code}, not zone {zone_code}."
+        )
+
+
+def get_mandatory_artifacts(milestone: str, version: str) -> List[Artifact]:
+    """
+    Returns the mandatory artifact set for the supported milestones (INITIATION, CONDUCT, and CLOSEOUT)
+    in the requested catalog version.
+
+    Raises ValueError for:
+    - Unknown catalog version
+    - Unknown/unsupported milestone
+    - Mandatory artifact not found in the catalog version
+    """
+    try:
+        catalog = get_catalog(version)
+    except KeyError:
+        raise ValueError(f"Unknown catalog version '{version}'.")
+
+    # Support milestone case-insensitive lookup & common normalization aliases
+    milestone_normalized = milestone.strip().upper()
+    if milestone_normalized in ("INITIATION", "STUDY START"):
+        canonical_milestone = "INITIATION"
+    elif milestone_normalized in ("CONDUCT", "DATA COLLECTION"):
+        canonical_milestone = "CONDUCT"
+    elif milestone_normalized in ("CLOSEOUT", "STUDY CLOSED", "LOCK"):
+        canonical_milestone = "CLOSEOUT"
+    else:
+        raise ValueError(
+            f"Unknown milestone '{milestone}'. Supported milestones are: INITIATION, CONDUCT, CLOSEOUT."
+        )
+
+    codes = MILESTONE_MANDATORY_ARTIFACTS[canonical_milestone]
+    artifacts = []
+    for code in codes:
+        art = catalog.get_artifact(code)
+        if not art:
+            raise ValueError(
+                f"Mandatory artifact code '{code}' for milestone '{canonical_milestone}' not found in catalog version '{version}'."
+            )
+        artifacts.append(art)
+
+    return artifacts

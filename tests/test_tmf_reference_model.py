@@ -183,3 +183,191 @@ def test_no_database_dependencies():
     assert pure_catalog.version == "v_pure"
     assert len(pure_catalog.zones) == 1
     assert pure_catalog.get_artifact("01.01.01").name == "Protocol"
+
+
+def test_resolve_artifact_success():
+    """
+    Test successful scenarios for resolve_artifact function:
+    - lookup by exact canonical code
+    - lookup by case-insensitive name
+    - lookup by both
+    """
+    from tmf_reference_model import resolve_artifact
+
+    # Lookup by exact canonical code
+    res_code = resolve_artifact("v3.2.0", code="01.01.01")
+    assert res_code["artifact"].code == "01.01.01"
+    assert res_code["artifact"].name == "Clinical Trial Protocol"
+    assert res_code["section"].code == "01.01"
+    assert res_code["zone"].code == 1
+    assert res_code["version"] == "v3.2.0"
+
+    # Lookup by case-insensitive normalized display-name
+    res_name = resolve_artifact("v3.2.0", name="  clinical trial protocol  ")
+    assert res_name["artifact"].code == "01.01.01"
+    assert res_name["artifact"].name == "Clinical Trial Protocol"
+
+    # Lookup by both and ensuring they match
+    res_both = resolve_artifact("v3.2.0", code="01.01.01", name="Clinical Trial Protocol")
+    assert res_both["artifact"].code == "01.01.01"
+
+
+def test_resolve_artifact_failures():
+    """
+    Test failure scenarios for resolve_artifact function:
+    - unknown catalog version
+    - unknown artifact code
+    - unknown artifact name
+    - ambiguous artifact name (if multiple artifacts share the same name)
+    - mismatched code and name combination
+    - neither code nor name provided
+    """
+    from tmf_reference_model import build_catalog, register_catalog, resolve_artifact
+
+    # Unknown catalog version
+    with pytest.raises(ValueError, match="Unknown catalog version 'v999'"):
+        resolve_artifact("v999", code="01.01.01")
+
+    # Neither code nor name provided
+    with pytest.raises(ValueError, match="Must provide either 'code' or 'name'"):
+        resolve_artifact("v3.2.0")
+
+    # Unknown artifact code
+    with pytest.raises(ValueError, match="Unknown artifact with code '99.99.99'"):
+        resolve_artifact("v3.2.0", code="99.99.99")
+
+    # Unknown artifact name
+    with pytest.raises(ValueError, match="Unknown artifact with name 'Invalid Name'"):
+        resolve_artifact("v3.2.0", name="Invalid Name")
+
+    # Mismatched code and name combination
+    with pytest.raises(ValueError, match="Mismatched artifact combination"):
+        resolve_artifact("v3.2.0", code="01.01.01", name="Investigator's Brochure")
+
+    # Ambiguous artifact name
+    raw_ambiguous = {
+        1: (
+            "Zone A",
+            {
+                "01.01": (
+                    "Sec A",
+                    [
+                        ("01.01.01", "Duplicate Name"),
+                        ("01.01.02", "Duplicate Name"),
+                    ],
+                )
+            },
+        )
+    }
+    ambig_cat = build_catalog("v_ambiguous", raw_ambiguous)
+    register_catalog(ambig_cat)
+
+    with pytest.raises(ValueError, match="Ambiguous artifact input for name 'Duplicate Name'"):
+        resolve_artifact("v_ambiguous", name="Duplicate Name")
+
+
+def test_validate_hierarchy_success():
+    """
+    Test validate_hierarchy success path with valid combinations.
+    """
+    from tmf_reference_model import validate_hierarchy
+
+    # Valid: zone 1, section 01.01, artifact 01.01.01 in version v3.2.0
+    validate_hierarchy("v3.2.0", zone_code=1, section_code="01.01", artifact_code="01.01.01")
+
+
+def test_validate_hierarchy_failures():
+    """
+    Test validate_hierarchy failure scenarios:
+    - unknown version
+    - unknown zone
+    - unknown section
+    - unknown artifact
+    - mismatched section in zone
+    - mismatched artifact in section
+    - mismatched artifact in zone
+    """
+    from tmf_reference_model import validate_hierarchy
+
+    # Unknown version
+    with pytest.raises(ValueError, match="Unknown catalog version 'v999'"):
+        validate_hierarchy("v999", zone_code=1, section_code="01.01", artifact_code="01.01.01")
+
+    # Unknown zone code
+    with pytest.raises(ValueError, match="Unknown zone code 999"):
+        validate_hierarchy("v3.2.0", zone_code=999, section_code="01.01", artifact_code="01.01.01")
+
+    # Unknown section code
+    with pytest.raises(ValueError, match="Unknown section code '99.99'"):
+        validate_hierarchy("v3.2.0", zone_code=1, section_code="99.99", artifact_code="01.01.01")
+
+    # Unknown artifact code
+    with pytest.raises(ValueError, match="Unknown artifact code '99.99.99'"):
+        validate_hierarchy("v3.2.0", zone_code=1, section_code="01.01", artifact_code="99.99.99")
+
+    # Mismatched section in zone (e.g., section 02.01 belongs to zone 2, not zone 1)
+    with pytest.raises(ValueError, match="Mismatched hierarchy: section '02.01' belongs to zone 2"):
+        validate_hierarchy("v3.2.0", zone_code=1, section_code="02.01", artifact_code="02.01.01")
+
+    # Mismatched artifact in section (e.g., artifact 02.01.01 belongs to section 02.01, not 01.01)
+    with pytest.raises(ValueError, match="Mismatched hierarchy: artifact '02.01.01' belongs to section '02.01'"):
+        validate_hierarchy("v3.2.0", zone_code=1, section_code="01.01", artifact_code="02.01.01")
+
+
+def test_get_mandatory_artifacts_success():
+    """
+    Test get_mandatory_artifacts for milestones:
+    - INITIATION / STUDY START
+    - CONDUCT / DATA COLLECTION
+    - CLOSEOUT / LOCK
+    """
+    from tmf_reference_model import get_mandatory_artifacts
+
+    # INITIATION
+    init_arts = get_mandatory_artifacts("INITIATION", "v3.2.0")
+    assert len(init_arts) == 1
+    assert init_arts[0].code == "01.01.01"
+
+    init_alias = get_mandatory_artifacts("STUDY START", "v3.2.0")
+    assert len(init_alias) == 1
+    assert init_alias[0].code == "01.01.01"
+
+    # CONDUCT
+    conduct_arts = get_mandatory_artifacts("CONDUCT", "v3.2.0")
+    assert len(conduct_arts) == 3
+    codes = {art.code for art in conduct_arts}
+    assert codes == {"01.01.01", "10.01.02", "10.02.01"}
+
+    # CLOSEOUT
+    closeout_arts = get_mandatory_artifacts("CLOSEOUT", "v3.2.0")
+    assert len(closeout_arts) == 4
+    closeout_codes = {art.code for art in closeout_arts}
+    assert closeout_codes == {"01.01.01", "10.01.02", "10.02.01", "11.01.02"}
+
+
+def test_get_mandatory_artifacts_failures():
+    """
+    Test get_mandatory_artifacts failure scenarios:
+    - unknown version
+    - unknown milestone
+    - mandatory artifact not in the requested version
+    """
+    from tmf_reference_model import build_catalog, get_mandatory_artifacts, register_catalog
+
+    # Unknown version
+    with pytest.raises(ValueError, match="Unknown catalog version 'v999'"):
+        get_mandatory_artifacts("INITIATION", "v999")
+
+    # Unknown milestone
+    with pytest.raises(ValueError, match="Unknown milestone 'INVALID_MILESTONE'"):
+        get_mandatory_artifacts("INVALID_MILESTONE", "v3.2.0")
+
+    # Mandatory artifact missing from version
+    raw_minimal = {
+        1: ("Trial Management", {"01.01": ("Trial Design", [("01.01.02", "Other Document")])})
+    }
+    min_cat = build_catalog("v_minimal_missing", raw_minimal)
+    register_catalog(min_cat)
+
+    with pytest.raises(ValueError, match="Mandatory artifact code '01.01.01' for milestone 'INITIATION' not found"):
+        get_mandatory_artifacts("INITIATION", "v_minimal_missing")
