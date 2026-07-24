@@ -106,6 +106,99 @@ def receive_before_flush(session: Session, flush_context, instances):
                 f"Form {form_id} is currently locked in a read-only state."
             )
 
+    # GxP compliance: Centralized automatic verification drop
+    user_id = current_user_id.get()
+    reason = current_change_reason.get()
+    timestamp = current_timestamp.get()
+    ts_val = timestamp or datetime.utcnow()
+
+    for obj in list(session.dirty):
+        if (
+            not hasattr(obj, "__tablename__")
+            or obj.__tablename__ != "clinical_observations"
+        ):
+            continue
+
+        # Check if this observation was previously verified
+        is_previously_verified = False
+        history_verified = get_history(obj, "is_sdv_verified")
+        if history_verified.has_changes():
+            if history_verified.deleted and history_verified.deleted[0] is True:
+                is_previously_verified = True
+        else:
+            if obj.is_sdv_verified is True:
+                is_previously_verified = True
+
+        if not is_previously_verified:
+            continue
+
+        # Check if any clinical value field actually changed
+        value_changed = False
+        for attr in ["value", "value_string", "normalized_value"]:
+            history = get_history(obj, attr)
+            if history.has_changes() and history.deleted != history.added:
+                old_val = history.deleted[0] if history.deleted else getattr(obj, attr)
+                new_val = history.added[0] if history.added else getattr(obj, attr)
+                if old_val != new_val:
+                    value_changed = True
+                    break
+
+        if value_changed:
+            # Require a meaningful, non-default GxP change reason from the existing audit context.
+            if not reason or reason.strip() in (
+                "",
+                "system_operation",
+                "default_reason",
+            ):
+                raise ValueError(
+                    "GxP change reason is required to modify a verified observation."
+                )
+
+            # Preserve the original verifier ID before clearing
+            orig_verifier = obj.sdv_verified_by
+
+            # Clear field-level verification state
+            obj.is_sdv_verified = False
+            obj.sdv_verified_by = None
+            obj.sdv_verified_at = None
+
+            # Mark any matching field-level SDVSignOff as not verified and store drop reason/time
+            if obj.id:
+                with session.no_autoflush:
+                    from sqlalchemy import select
+
+                    from .models import SDVSignOff
+
+                    stmt = select(SDVSignOff).where(
+                        SDVSignOff.scope == "FIELD",
+                        SDVSignOff.target_id == str(obj.id),
+                        SDVSignOff.is_verified,
+                    )
+                    res = session.execute(stmt)
+                    sdv_signoffs = res.scalars().all()
+
+                    for sdv in sdv_signoffs:
+                        sdv.is_verified = False
+                        sdv.dropped_reason = reason
+                        sdv.dropped_at = ts_val
+
+            # Dispatch a mockable dashboard notification to the previous verifier/CRA
+            if orig_verifier:
+                recipients = [orig_verifier]
+                payload = {
+                    "message": f"Previously verified field modified on Subject {obj.subject_id} - Visit {obj.visit_id}",
+                    "study_id": obj.study_id,
+                    "subject_id": obj.subject_id,
+                    "visit_id": obj.visit_id,
+                    "observation_id": str(obj.id),
+                    "editor": user_id or "system",
+                    "change_reason": reason,
+                }
+                from apps.execution.trial_lock import NotificationRouter
+
+                router = NotificationRouter()
+                router.send_dashboard_notification(recipients, payload)
+
     audit_logs = []
     user_id = current_user_id.get()
     reason = current_change_reason.get()

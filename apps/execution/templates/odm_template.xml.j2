@@ -4,7 +4,18 @@
     <GlobalVariables>Cadence Generated Study</GlobalVariables>
     <MetaDataVersion OID="MDV.1" Name="Version 1.0">
       {% for item in items %}
+      {% if item.relevant or item.constraint %}
+      <ItemDef OID="{{ item.id }}" Name="{{ item.name }}" DataType="{{ item.type }}">
+        {% if item.relevant %}
+        <Alias Context="relevant" Name="{{ item.relevant }}"/>
+        {% endif %}
+        {% if item.constraint %}
+        <Alias Context="constraint" Name="{{ item.constraint }}"/>
+        {% endif %}
+      </ItemDef>
+      {% else %}
       <ItemDef OID="{{ item.id }}" Name="{{ item.name }}" DataType="{{ item.type }}"/>
+      {% endif %}
       {% endfor %}
     </MetaDataVersion>
   </Study>

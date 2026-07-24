@@ -1,6 +1,7 @@
 from typing import Any, Dict
 
 from apps.designer.db import terminology_cache
+from apps.designer.inverse_mapper import map_usdm_to_study
 
 
 def map_study_to_usdm(study_data: Dict[str, Any]) -> Dict[str, Any]:

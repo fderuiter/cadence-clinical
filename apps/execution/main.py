@@ -39,6 +39,7 @@ from apps.execution.database.models import (
     DictionaryImportJob,
     FormSubmission,
     ImportState,
+    SDVSignOff,
     TranslationJob,
 )
 from apps.execution.database.models import (
@@ -295,6 +296,8 @@ class ObservationCreate(BaseModel):
     value_string: Optional[str] = None
     unit: Optional[str] = None
     observation_date: Optional[datetime] = None
+    lab_source: Optional[str] = None
+    lab_site_id: Optional[str] = None
 
 
 class ObservationResponse(BaseModel):
@@ -314,6 +317,11 @@ class ObservationResponse(BaseModel):
     normalized_value: Optional[float] = None
     normalized_unit: Optional[str] = None
     is_outlier: bool
+    lab_source: Optional[str] = None
+    lab_site_id: Optional[str] = None
+    lab_indicator: Optional[str] = None
+    lab_out_of_range: Optional[bool] = None
+    matched_normal_bounds: Optional[str] = None
 
 
 @app.post("/api/v1/execution/subjects", response_model=SubjectResponse)
@@ -385,15 +393,15 @@ async def create_observation(
     norm_val, norm_unit = get_normalized_representation(payload.value, payload.unit)
 
     async with db_manager.get_session_maker()() as session:
-        # Determine study_id
+        # Query Subject to determine study_id and decrypt demographics
+        stmt_subj = select(ClinicalSubject).where(
+            ClinicalSubject.subject_id == payload.subject_id
+        )
+        res_subj = await session.execute(stmt_subj)
+        subj_db = res_subj.scalars().first()
+
         study_id = payload.study_id
         if not study_id:
-            # Query Subject
-            stmt_subj = select(ClinicalSubject).where(
-                ClinicalSubject.subject_id == payload.subject_id
-            )
-            res_subj = await session.execute(stmt_subj)
-            subj_db = res_subj.scalars().first()
             if not subj_db:
                 raise HTTPException(
                     status_code=400,
@@ -402,6 +410,43 @@ async def create_observation(
             study_id = subj_db.study_id
 
         obs_date = payload.observation_date or datetime.now()
+
+        # Decrypt demographics relative to observation date if subject is registered
+        gender = "U"
+        age = None
+        if subj_db:
+            demo = get_safe_demographics(subj_db, obs_date)
+            gender = demo.get("gender")
+            age = demo.get("age")
+
+        # Fetch active LabReferenceRange definitions for the study and test code
+        from apps.execution.database.models import LabReferenceRange
+
+        stmt_ranges = select(LabReferenceRange).where(
+            LabReferenceRange.study_id == study_id,
+            LabReferenceRange.test_code == payload.test_code,
+            LabReferenceRange.is_deleted.is_(False),
+        )
+        res_ranges = await session.execute(stmt_ranges)
+        ranges = res_ranges.scalars().all()
+
+        from apps.execution.lab_ranges import evaluate_lab_value, select_reference_range
+
+        matched_range = select_reference_range(
+            ranges=ranges,
+            study_id=study_id,
+            test_code=payload.test_code,
+            normalized_unit=norm_unit,
+            lab_source=payload.lab_source or "CENTRAL",
+            sex=gender,
+            age=age,
+            site_id=payload.lab_site_id,
+        )
+
+        indicator, out_of_range, matched_bounds = evaluate_lab_value(
+            norm_val, matched_range
+        )
+
         obs = ClinicalObservation(
             subject_id=payload.subject_id,
             study_id=study_id,
@@ -416,6 +461,11 @@ async def create_observation(
             normalized_value=norm_val,
             normalized_unit=norm_unit,
             is_outlier=False,
+            lab_source=payload.lab_source or "CENTRAL",
+            lab_site_id=payload.lab_site_id,
+            lab_indicator=indicator,
+            lab_out_of_range=out_of_range,
+            matched_normal_bounds=matched_bounds,
         )
         session.add(obs)
         await session.commit()
@@ -458,6 +508,11 @@ async def create_observation(
             normalized_value=obs_db.normalized_value,
             normalized_unit=obs_db.normalized_unit,
             is_outlier=obs_db.is_outlier,
+            lab_source=obs_db.lab_source,
+            lab_site_id=obs_db.lab_site_id,
+            lab_indicator=obs_db.lab_indicator,
+            lab_out_of_range=obs_db.lab_out_of_range,
+            matched_normal_bounds=obs_db.matched_normal_bounds,
         )
 
 
@@ -572,6 +627,49 @@ async def trigger_outlier_recalculation(
             study_id=payload.study_id,
             test_code=payload.test_code,
             outliers_found=count,
+        )
+
+
+# ==========================================
+# Lab Range Management API
+# ==========================================
+
+
+class LabRangeRecalculateRequest(BaseModel):
+    """Pydantic schema for triggering lab range recalculations."""
+
+    study_id: str
+    test_code: str
+
+
+class LabRangeRecalculateResponse(BaseModel):
+    """Pydantic schema returning recalculation status."""
+
+    status: str
+    study_id: str
+    test_code: str
+    updated_count: int
+
+
+@app.post(
+    "/api/v1/execution/lab-ranges/recalculate",
+    response_model=LabRangeRecalculateResponse,
+)
+async def trigger_lab_range_recalculation(
+    payload: LabRangeRecalculateRequest,
+) -> LabRangeRecalculateResponse:
+    """Trigger cohort-wide reference range evaluation and recalculation on-demand."""
+    from apps.execution.lab_ranges import recalculate_range_flags
+
+    async with db_manager.get_session_maker()() as session:
+        count = await recalculate_range_flags(
+            session, payload.study_id, payload.test_code
+        )
+        return LabRangeRecalculateResponse(
+            status="success",
+            study_id=payload.study_id,
+            test_code=payload.test_code,
+            updated_count=count,
         )
 
 
@@ -1385,6 +1483,170 @@ async def open_query(
             resolved_at=q_db.resolved_at,
             cancellation_reason=q_db.cancellation_reason,
             escalated_at=q_db.escalated_at,
+        )
+
+
+# ==========================================
+# SDV Sign-off API
+# ==========================================
+
+
+class SDVScopeEnum(str, Enum):
+    FIELD = "FIELD"
+    PAGE = "PAGE"
+    VISIT = "VISIT"
+
+
+class SDVSignOffRequest(BaseModel):
+    """Pydantic request schema for SDV sign-off."""
+
+    scope: SDVScopeEnum
+    target_id: str
+    subject_id: str
+    study_id: str
+    site_id: Optional[str] = None
+
+
+class SDVSignOffResponse(BaseModel):
+    """Pydantic response schema for SDV sign-off."""
+
+    id: str
+    scope: str
+    target_id: str
+    subject_id: str
+    study_id: str
+    site_id: Optional[str] = None
+    is_verified: bool
+    verified_by: Optional[str] = None
+    verified_at: Optional[datetime] = None
+    dropped_reason: Optional[str] = None
+    dropped_at: Optional[datetime] = None
+
+
+@app.post("/api/v1/execution/sdv/signoff", response_model=SDVSignOffResponse)
+async def sdv_signoff(
+    payload: SDVSignOffRequest,
+    roles: list[str] = Depends(require_roles(ROLE_CRA, "monitor")),
+) -> SDVSignOffResponse:
+    """CRA/monitor-gated SDV sign-off endpoint for Field, Page, or Visit scopes."""
+    async with db_manager.get_session_maker()() as session:
+        # 1. Validate Subject exists and is consistent with Study
+        stmt_subj = select(ClinicalSubject).where(
+            ClinicalSubject.subject_id == payload.subject_id,
+            ClinicalSubject.study_id == payload.study_id,
+        )
+        res_subj = await session.execute(stmt_subj)
+        subj_db = res_subj.scalars().first()
+        if not subj_db:
+            raise HTTPException(
+                status_code=404,
+                detail="Subject not found or inconsistent study reference.",
+            )
+
+        # 2. Scope-specific validation
+        obs_db = None
+        if payload.scope == SDVScopeEnum.FIELD:
+            stmt_obs = select(ClinicalObservation).where(
+                ClinicalObservation.id == payload.target_id,
+                ClinicalObservation.subject_id == payload.subject_id,
+                ClinicalObservation.study_id == payload.study_id,
+            )
+            res_obs = await session.execute(stmt_obs)
+            obs_db = res_obs.scalars().first()
+            if not obs_db:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Clinical observation not found or inconsistent target/subject/study reference.",
+                )
+        elif payload.scope == SDVScopeEnum.VISIT:
+            stmt_visit = select(ClinicalVisit).where(
+                ClinicalVisit.id == payload.target_id,
+                ClinicalVisit.subject_id == payload.subject_id,
+                ClinicalVisit.study_id == payload.study_id,
+            )
+            res_visit = await session.execute(stmt_visit)
+            visit_db = res_visit.scalars().first()
+            if not visit_db:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Clinical visit not found or inconsistent target/subject/study reference.",
+                )
+        elif payload.scope == SDVScopeEnum.PAGE:
+            stmt_page_obs = select(ClinicalObservation).where(
+                ClinicalObservation.page_id == payload.target_id,
+                ClinicalObservation.subject_id == payload.subject_id,
+                ClinicalObservation.study_id == payload.study_id,
+            )
+            res_page_obs = await session.execute(stmt_page_obs)
+            if not res_page_obs.scalars().first():
+                raise HTTPException(
+                    status_code=404,
+                    detail="Page ID not found or inconsistent target/subject/study reference.",
+                )
+
+        # 3. Apply sign-off behavior
+        verifier_id = current_user_id.get() or "system"
+        verified_at = datetime.utcnow()
+
+        # Update or create the matching SDVSignOff record
+        stmt_signoff = select(SDVSignOff).where(
+            SDVSignOff.scope == payload.scope.value,
+            SDVSignOff.target_id == payload.target_id,
+            SDVSignOff.subject_id == payload.subject_id,
+            SDVSignOff.study_id == payload.study_id,
+        )
+        res_signoff = await session.execute(stmt_signoff)
+        signoff_db = res_signoff.scalars().first()
+
+        site_id = payload.site_id or (
+            subj_db.site_id if hasattr(subj_db, "site_id") else None
+        )
+
+        if signoff_db:
+            signoff_db.is_verified = True
+            signoff_db.verified_by = verifier_id
+            signoff_db.verified_at = verified_at
+            signoff_db.dropped_reason = None
+            signoff_db.dropped_at = None
+        else:
+            signoff_db = SDVSignOff(
+                scope=payload.scope.value,
+                target_id=payload.target_id,
+                subject_id=payload.subject_id,
+                study_id=payload.study_id,
+                site_id=site_id,
+                is_verified=True,
+                verified_by=verifier_id,
+                verified_at=verified_at,
+            )
+            session.add(signoff_db)
+
+        # For FIELD scope, update the ClinicalObservation too
+        if payload.scope == SDVScopeEnum.FIELD and obs_db:
+            obs_db.is_sdv_verified = True
+            obs_db.sdv_verified_by = verifier_id
+            obs_db.sdv_verified_at = verified_at
+
+        # Save changes
+        await session.commit()
+
+        # Re-query
+        stmt_re = select(SDVSignOff).where(SDVSignOff.id == signoff_db.id)
+        res_re = await session.execute(stmt_re)
+        re_signoff = res_re.scalar_one()
+
+        return SDVSignOffResponse(
+            id=re_signoff.id,
+            scope=re_signoff.scope,
+            target_id=re_signoff.target_id,
+            subject_id=re_signoff.subject_id,
+            study_id=re_signoff.study_id,
+            site_id=re_signoff.site_id,
+            is_verified=re_signoff.is_verified,
+            verified_by=re_signoff.verified_by,
+            verified_at=re_signoff.verified_at,
+            dropped_reason=re_signoff.dropped_reason,
+            dropped_at=re_signoff.dropped_at,
         )
 
 
