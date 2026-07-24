@@ -34,6 +34,7 @@ def receive_before_flush(session: Session, flush_context, instances):
             "tmf_documents",
             "tmf_audit_logs",
             "tmf_expected_documents",
+            "tmf_document_qc_transitions",
             "epro_submissions",
             "interop_audit_logs",
             "ctms_studies",
