@@ -331,3 +331,185 @@ async def test_completeness_checking_transitions():
         headers=headers,
     )
     assert res_close_2.json()["is_complete"] is True
+
+
+@pytest.mark.asyncio
+async def test_edl_definitions_and_crud():
+    """
+    Verify EDL expectation creation, listing, updating, RBAC controls,
+    and TMFAuditLog audit trails.
+    """
+    # @req:PRD-EDL-001
+    # @req:Trace-4
+    client = TestClient(app)
+    admin_headers = get_auth_headers(roles="admin", change_reason="Configure EDL expectations")
+    inspector_headers = get_auth_headers(roles="regulatory_inspector", change_reason="Attempt update")
+
+    # 1. Create a site-specific expectation (should succeed for admin)
+    payload = {
+        "study_id": "study_xyz",
+        "site_id": "site_alpha",
+        "milestone": "INITIATION",
+        "artifact_type": "Site Signature Page",
+        "zone": 5,
+        "section": "5.1 Site Contacts",
+        "metadata_json": {"mandated_by": "IRB"},
+        "reason_for_change": "Adding site signature requirement for IRB compliance",
+    }
+    response = client.post("/api/v1/etmf/edl", json=payload, headers=admin_headers)
+    assert response.status_code == 201
+    data = response.json()
+    edl_id = data["id"]
+    assert data["artifact_type"] == "Site Signature Page"
+    assert data["site_id"] == "site_alpha"
+    assert data["version_index"] == 1
+
+    # 2. Update expectation (should succeed for admin)
+    payload_update = {
+        "study_id": "study_xyz",
+        "site_id": "site_alpha",
+        "milestone": "INITIATION",
+        "artifact_type": "Site Signature Page (Updated)",
+        "zone": 5,
+        "section": "5.1 Site Contacts",
+        "metadata_json": {"mandated_by": "IRB"},
+        "reason_for_change": "Updating artifact name to specify signature requirements",
+    }
+    response_update = client.put(f"/api/v1/etmf/edl/{edl_id}", json=payload_update, headers=admin_headers)
+    assert response_update.status_code == 200
+    data_update = response_update.json()
+    assert data_update["artifact_type"] == "Site Signature Page (Updated)"
+    assert data_update["version_index"] == 2
+
+    # 3. List expectations (should succeed and contain seeded + newly created ones)
+    list_resp = client.get("/api/v1/etmf/edl?study_id=study_xyz&site_id=site_alpha", headers=inspector_headers)
+    assert list_resp.status_code == 200
+    expectations = list_resp.json()
+    assert len(expectations) >= 1
+    assert any(e["id"] == edl_id for e in expectations)
+
+    # 4. Attempt EDL mutations with Inspector role (should fail with 403)
+    response_create_forbidden = client.post("/api/v1/etmf/edl", json=payload, headers=inspector_headers)
+    assert response_create_forbidden.status_code == 403
+
+    response_update_forbidden = client.put(f"/api/v1/etmf/edl/{edl_id}", json=payload_update, headers=inspector_headers)
+    assert response_update_forbidden.status_code == 403
+
+    # 5. Verify TMFAuditLog entries are correctly recorded
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(TMFAuditLog).order_by(TMFAuditLog.timestamp.desc())
+        result = await session.execute(stmt)
+        logs = result.scalars().all()
+
+        # Check for EDL_UPDATE logs
+        update_logs = [l for l in logs if l.action == "EDL_UPDATE"]
+        assert len(update_logs) >= 2
+        assert update_logs[0].user_id == "test_user"
+        assert "Updated expected document" in update_logs[0].details or "Created expected document" in update_logs[0].details
+
+        # Check for EDL_VIEW logs
+        view_logs = [l for l in logs if l.action == "EDL_VIEW"]
+        assert len(view_logs) >= 1
+        assert view_logs[0].user_role == "regulatory_inspector"
+
+
+@pytest.mark.asyncio
+async def test_site_aware_completeness():
+    """
+    Verify that study-scope and site-scope expectations are combined
+    when site_id is provided, and study-scope only when site_id is omitted.
+    """
+    # @req:PRD-EDL-001
+    # @req:Trace-4
+    client = TestClient(app)
+    admin_headers = get_auth_headers(roles="admin", change_reason="Seed custom EDL")
+    inspector_headers = get_auth_headers(roles="regulatory_inspector")
+
+    # 1. Initially check completeness for a new study 'study_site_test' (will dynamically seed default study-scope)
+    res_initial = client.get(
+        "/api/v1/etmf/completeness?study_id=study_site_test&milestone=INITIATION",
+        headers=inspector_headers,
+    )
+    assert res_initial.status_code == 200
+    data_initial = res_initial.json()
+    assert data_initial["is_complete"] is False
+    assert data_initial["scope"] == "study"
+    assert "Approved Protocol" in data_initial["missing_artifacts"]
+    assert len(data_initial["per_artifact_detail"]) == 1
+    assert data_initial["per_artifact_detail"][0]["scope"] == "study"
+
+    # 2. Add site-specific expectation
+    payload = {
+        "study_id": "study_site_test",
+        "site_id": "site_alpha",
+        "milestone": "INITIATION",
+        "artifact_type": "Site Signature Page",
+        "reason_for_change": "Mandating site signatures",
+    }
+    client.post("/api/v1/etmf/edl", json=payload, headers=admin_headers)
+
+    # 3. Check study-level completeness (should NOT include the site-specific expectation)
+    res_study = client.get(
+        "/api/v1/etmf/completeness?study_id=study_site_test&milestone=INITIATION",
+        headers=inspector_headers,
+    )
+    assert res_study.status_code == 200
+    data_study = res_study.json()
+    assert "Site Signature Page" not in data_study["missing_artifacts"]
+
+    # 4. Check site-level completeness for site_alpha (should include BOTH)
+    res_site = client.get(
+        "/api/v1/etmf/completeness?study_id=study_site_test&milestone=INITIATION&site_id=site_alpha",
+        headers=inspector_headers,
+    )
+    assert res_site.status_code == 200
+    data_site = res_site.json()
+    assert data_site["is_complete"] is False
+    assert "Approved Protocol" in data_site["missing_artifacts"]
+    assert "Site Signature Page" in data_site["missing_artifacts"]
+    assert len(data_site["per_artifact_detail"]) == 2
+
+    # 5. Ingest Approved Protocol
+    payload_prot = {
+        "study_id": "study_site_test",
+        "artifact_type": "Approved Protocol",
+        "filename": "protocol.pdf",
+        "content": "Protocol Content",
+        "mime_type": "application/pdf",
+    }
+    client.post("/api/v1/etmf/ingest", json=payload_prot, headers=admin_headers)
+
+    # 6. Study-level should now be complete, but site-level should still be incomplete
+    res_study_2 = client.get(
+        "/api/v1/etmf/completeness?study_id=study_site_test&milestone=INITIATION",
+        headers=inspector_headers,
+    )
+    assert res_study_2.json()["is_complete"] is True
+
+    res_site_2 = client.get(
+        "/api/v1/etmf/completeness?study_id=study_site_test&milestone=INITIATION&site_id=site_alpha",
+        headers=inspector_headers,
+    )
+    assert res_site_2.json()["is_complete"] is False
+    assert "Site Signature Page" in res_site_2.json()["missing_artifacts"]
+
+    # 7. Ingest Site Signature Page (requires mock signature because the name contains 'Signature')
+    payload_sig = {
+        "study_id": "study_site_test",
+        "artifact_type": "Site Signature Page",
+        "filename": "site_sig.pdf",
+        "content": (
+            "-----BEGIN CERTIFICATE-----\nMOCK_SIGNATURE\n-----END CERTIFICATE-----\n"
+            "-----BEGIN SIGNATURE-----\nMOCK\n-----END SIGNATURE-----\nSite signature page"
+        ),
+        "mime_type": "application/pdf",
+    }
+    ingest_sig_resp = client.post("/api/v1/etmf/ingest", json=payload_sig, headers=admin_headers)
+    assert ingest_sig_resp.status_code == 201
+
+    # 8. Site-level should now be complete!
+    res_site_3 = client.get(
+        "/api/v1/etmf/completeness?study_id=study_site_test&milestone=INITIATION&site_id=site_alpha",
+        headers=inspector_headers,
+    )
+    assert res_site_3.json()["is_complete"] is True

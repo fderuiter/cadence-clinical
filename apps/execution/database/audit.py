@@ -33,6 +33,7 @@ def receive_before_flush(session: Session, flush_context, instances):
         if hasattr(obj, "__tablename__") and obj.__tablename__ in (
             "tmf_documents",
             "tmf_audit_logs",
+            "tmf_expected_documents",
             "epro_submissions",
             "interop_audit_logs",
         ):

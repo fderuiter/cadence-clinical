@@ -10,6 +10,34 @@ class Base(DeclarativeBase):
     pass
 
 
+class ExpectedDocument(Base):
+    """
+    Represents an Expected Document List (EDL) rule that specifies required
+    artifact types for a given study/site and milestone.
+    """
+
+    __tablename__ = "tmf_expected_documents"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    site_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
+    milestone: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    artifact_type: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    zone: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    section: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    metadata_json: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
+
+    # Standard Part 11 Audit Fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
 class TMFDocument(Base):
     """
     Represents an archived document in the electronic Trial Master File (eTMF)
