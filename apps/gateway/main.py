@@ -355,7 +355,13 @@ async def get_openapi_json() -> Response:
         "components": {"schemas": {}},
     }
 
-    designer_spec, execution_spec, etmf_spec, interop_spec, ctms_spec = await asyncio.gather(
+    (
+        designer_spec,
+        execution_spec,
+        etmf_spec,
+        interop_spec,
+        ctms_spec,
+    ) = await asyncio.gather(
         fetch_service_openapi(SERVICES["designer"]),
         fetch_service_openapi(SERVICES["execution"]),
         fetch_service_openapi(SERVICES["etmf"]),

@@ -184,9 +184,7 @@ def test_proxy_requests_paths(monkeypatch: pytest.MonkeyPatch) -> None:
         )
 
         # Test ctms prefix
-        res = client.get(
-            "/ctms/test", headers={"Authorization": f"Bearer {token}"}
-        )
+        res = client.get("/ctms/test", headers={"Authorization": f"Bearer {token}"})
         assert res.status_code == 200
         assert str(mock_send.call_args.args[0].url) == "http://localhost:8005/test"
 
