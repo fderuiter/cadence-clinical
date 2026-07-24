@@ -21,6 +21,7 @@ def get_auth_headers(
 ):
     """Generate Gateway signature-compliant authentication headers."""
     import json
+
     from jose import jwt
 
     timestamp = str(time.time())
