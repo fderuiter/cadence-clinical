@@ -463,3 +463,195 @@ async def test_study_published_expired_timestamp_rejection():
         )
     assert response.status_code == 403
     assert response.json()["detail"] == "Gateway signature expired"
+
+
+@pytest.mark.asyncio
+async def test_rules_compilation_and_artifact_generation():
+    from apps.designer.rules import ExpressionNode, FieldReference
+    from apps.execution.translator import compile_condition_to_xpath
+
+    # 1. Test unit-level translation of expressions
+    node_const = ExpressionNode(type="constant", value=42)
+    assert compile_condition_to_xpath(node_const) == "42"
+
+    node_str = ExpressionNode(type="constant", value="test_val")
+    assert compile_condition_to_xpath(node_str) == "'test_val'"
+
+    node_bool = ExpressionNode(type="constant", value=True)
+    assert compile_condition_to_xpath(node_bool) == "true()"
+
+    node_field = ExpressionNode(
+        type="field_ref", field_ref=FieldReference(field_id="Sys BP")
+    )
+    assert compile_condition_to_xpath(node_field) == "/Sys_BP"
+
+    node_comp = ExpressionNode(
+        type="comparison",
+        operator="<",
+        operands=[node_field, node_const],
+    )
+    assert compile_condition_to_xpath(node_comp) == "(/Sys_BP < 42)"
+
+    node_is_empty = ExpressionNode(
+        type="function",
+        operator="is_empty",
+        operands=[node_field],
+    )
+    assert compile_condition_to_xpath(node_is_empty) == "empty(/Sys_BP)"
+
+    node_not_empty = ExpressionNode(
+        type="function",
+        operator="is_not_empty",
+        operands=[node_field],
+    )
+    assert compile_condition_to_xpath(node_not_empty) == "not(empty(/Sys_BP))"
+
+    # 2. Test publishing event with rules and verify compiled artifacts
+    study_payload = {
+        "study_id": "rules_study_999",
+        "payload": {
+            "name": "Rules Demonstration Trial",
+            "protocol": {
+                "items": [
+                    {
+                        "id": "sys_bp",
+                        "name": "Systolic Blood Pressure",
+                        "type": "int",
+                    },
+                    {
+                        "id": "heart_rate",
+                        "name": "Heart Rate",
+                        "type": "int",
+                        "rules": [
+                            {
+                                "id": "rule_hr_skip",
+                                "type": "skip_logic",
+                                "action": "show",
+                                "condition": {
+                                    "type": "comparison",
+                                    "operator": "==",
+                                    "operands": [
+                                        {
+                                            "type": "field_ref",
+                                            "field_ref": {"field_id": "sys_bp"},
+                                        },
+                                        {"type": "constant", "value": 120},
+                                    ],
+                                },
+                            },
+                            {
+                                "id": "rule_hr_constraint",
+                                "type": "constraint",
+                                "query_message": "Heart rate is too high!",
+                                "condition": {
+                                    "type": "comparison",
+                                    "operator": "<",
+                                    "operands": [
+                                        {
+                                            "type": "field_ref",
+                                            "field_ref": {"field_id": "heart_rate"},
+                                        },
+                                        {"type": "constant", "value": 200},
+                                    ],
+                                },
+                            },
+                        ],
+                    },
+                ]
+            },
+        },
+    }
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        response = await client.post(
+            "/events/study-published", json=study_payload, headers=get_auth_headers()
+        )
+    assert response.status_code == 200
+
+    import asyncio
+
+    job = None
+    for _ in range(50):
+        async with db_manager.get_session_maker()() as session:
+            result = await session.execute(
+                TranslationJob.__table__.select().where(
+                    TranslationJob.study_id == "rules_study_999"
+                )
+            )
+            job = result.mappings().first()
+            if job and job["status"] in ("COMPLETED", "FAILED"):
+                break
+        await asyncio.sleep(0.1)
+
+    assert job is not None
+    assert job["status"] == "COMPLETED"
+
+    # Check OpenRosa XML output and verify compiled rule attributes on xf:bind
+    openrosa_xml = job["openrosa_payload"]
+    assert 'xmlns:jr="http://openrosa.org/javarosa"' in openrosa_xml
+    assert "&lt;" in openrosa_xml
+
+    openrosa_root = ET.fromstring(openrosa_xml)
+    ns = {"xf": "http://www.w3.org/2002/xforms", "jr": "http://openrosa.org/javarosa"}
+    head = openrosa_root.find("{http://www.w3.org/1999/xhtml}head")
+    model = head.find("xf:model", ns)
+
+    # Verify sys_bp bind has NO rules or relevant/constraint attributes
+    sys_bp_bind = model.find("xf:bind[@nodeset='/sys_bp']", ns)
+    assert sys_bp_bind is not None
+    assert sys_bp_bind.get("type") == "int"
+    assert sys_bp_bind.get("relevant") is None
+    assert sys_bp_bind.get("constraint") is None
+    assert sys_bp_bind.get("jr:constraintMsg") is None
+
+    # Verify heart_rate bind has relevant, constraint, and jr:constraintMsg attributes
+    hr_bind = model.find("xf:bind[@nodeset='/heart_rate']", ns)
+    assert hr_bind is not None
+    assert hr_bind.get("type") == "int"
+    assert hr_bind.get("relevant") == "(/sys_bp = 120)"
+    assert hr_bind.get("constraint") == "(/heart_rate < 200)"
+    assert (
+        hr_bind.get("{http://openrosa.org/javarosa}constraintMsg")
+        == "Heart rate is too high!"
+    )
+
+    # Check ODM XML output and verify Alias extensions
+    odm_xml = job["odm_payload"]
+    assert "&lt;" in odm_xml
+    odm_root = ET.fromstring(odm_xml)
+    odm_ns = ""
+    if "}" in odm_root.tag:
+        odm_ns = odm_root.tag.split("}")[0] + "}"
+
+    study = odm_root.find(f"{odm_ns}Study")
+    mdv = study.find(f"{odm_ns}MetaDataVersion")
+    item_defs = mdv.findall(f"{odm_ns}ItemDef")
+
+    # Find sys_bp
+    sys_bp_def = [i for i in item_defs if i.get("OID") == "sys_bp"][0]
+    assert sys_bp_def.get("Name") == "Systolic Blood Pressure"
+    assert sys_bp_def.get("DataType") == "int"
+    # should have no children Alias elements
+    assert len(sys_bp_def.findall(f"{odm_ns}Alias")) == 0
+
+    # Find heart_rate
+    hr_def = [i for i in item_defs if i.get("OID") == "heart_rate"][0]
+    assert hr_def.get("Name") == "Heart Rate"
+    assert hr_def.get("DataType") == "int"
+
+    aliases = hr_def.findall(f"{odm_ns}Alias")
+    assert len(aliases) == 2
+
+    relevant_alias = [a for a in aliases if a.get("Context") == "relevant"][0]
+    assert relevant_alias.get("Name") == "(/sys_bp = 120)"
+
+    constraint_alias = [a for a in aliases if a.get("Context") == "constraint"][0]
+    assert constraint_alias.get("Name") == "(/heart_rate < 200)"
+
+    # Verify parity assertions are fully retained
+    odm_ids = [item.get("OID") for item in item_defs]
+    binds = model.findall("xf:bind", ns)
+    openrosa_ids = [bind.get("nodeset").replace("/", "") for bind in binds]
+    assert set(odm_ids) == set(openrosa_ids)

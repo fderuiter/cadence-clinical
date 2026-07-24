@@ -316,6 +316,30 @@ async def create_study_version(
             return record["id"] if record else None
 
 
+def serialize_library_props(props: Dict[str, Any]) -> Dict[str, Any]:
+    import json
+
+    new_props = dict(props)
+    if "payload" in new_props:
+        payload_val = new_props["payload"]
+        if isinstance(payload_val, (dict, list)):
+            new_props["payload_json"] = json.dumps(payload_val)
+            new_props.pop("payload", None)
+    return new_props
+
+
+def deserialize_library_props(props: Dict[str, Any]) -> Dict[str, Any]:
+    import json
+
+    new_props = dict(props)
+    if "payload_json" in new_props:
+        try:
+            new_props["payload"] = json.loads(new_props["payload_json"])
+        except Exception:
+            pass
+    return new_props
+
+
 @with_transaction_retry()
 async def create_library_object_version(
     driver, object_id: str, new_properties: Dict[str, Any]
@@ -324,6 +348,32 @@ async def create_library_object_version(
     Requirement: Simplistic library objects version successfully without generating complex action nodes.
     Uses PREVIOUS_VERSION relationship.
     """
+    serialized_properties = serialize_library_props(new_properties)
+
+    if driver is None:
+        import copy
+
+        from apps.designer.db import MOCK_LIBRARY_OBJECTS
+
+        existing_versions = MOCK_LIBRARY_OBJECTS.get(object_id, [])
+        if existing_versions:
+            latest = existing_versions[-1]
+            if latest.get("status") in ("LOCKED", "PUBLISHED", "ARCHIVED"):
+                raise ImmutabilityViolationError("IMMUTABILITY_VIOLATION")
+
+            new_ver_num = int(latest.get("version", 1)) + 1
+            new_ver_dict = copy.deepcopy(serialized_properties)
+            new_ver_dict["id"] = object_id
+            new_ver_dict["version"] = new_ver_num
+            existing_versions.append(new_ver_dict)
+            return deserialize_library_props(copy.deepcopy(new_ver_dict))
+        else:
+            new_ver_dict = copy.deepcopy(serialized_properties)
+            new_ver_dict["id"] = object_id
+            new_ver_dict["version"] = 1
+            MOCK_LIBRARY_OBJECTS[object_id] = [new_ver_dict]
+            return deserialize_library_props(copy.deepcopy(new_ver_dict))
+
     query = """
     MATCH (old:LibraryObject {id: $object_id})
     WHERE NOT (old)<-[:PREVIOUS_VERSION]-()
@@ -358,14 +408,170 @@ async def create_library_object_version(
                 """
                 await tx.run(lock_query, object_id=object_id)
 
-                result = await tx.run(query, object_id=object_id, props=new_properties)
+                result = await tx.run(
+                    query, object_id=object_id, props=serialized_properties
+                )
             else:
                 result = await tx.run(
-                    create_query, object_id=object_id, props=new_properties
+                    create_query, object_id=object_id, props=serialized_properties
                 )
 
             record = await result.single()
-            return record["new_props"]
+            props = record["new_props"]
+            return deserialize_library_props(props)
+
+
+async def get_latest_library_object(
+    driver, object_id: str, sponsor_id: str
+) -> Optional[Dict[str, Any]]:
+    """
+    Retrieves the latest version of a specific library object under a sponsor.
+    """
+    if driver is None:
+        import copy
+
+        from apps.designer.db import MOCK_LIBRARY_OBJECTS
+
+        versions = MOCK_LIBRARY_OBJECTS.get(object_id, [])
+        matching = [v for v in versions if v.get("sponsor_id") == sponsor_id]
+        if matching:
+            return deserialize_library_props(copy.deepcopy(matching[-1]))
+        return None
+
+    query = """
+    MATCH (n:LibraryObject {id: $object_id, sponsor_id: $sponsor_id})
+    WHERE NOT (n)<-[:PREVIOUS_VERSION]-()
+    RETURN properties(n) as props
+    """
+    async with driver.session() as session:
+        res = await session.run(query, object_id=object_id, sponsor_id=sponsor_id)
+        record = await res.single()
+        if record:
+            return deserialize_library_props(record["props"])
+        return None
+
+
+async def get_library_object_by_version(
+    driver, object_id: str, sponsor_id: str, version: int
+) -> Optional[Dict[str, Any]]:
+    """
+    Retrieves a specific version of a library object under a sponsor.
+    """
+    if driver is None:
+        import copy
+
+        from apps.designer.db import MOCK_LIBRARY_OBJECTS
+
+        versions = MOCK_LIBRARY_OBJECTS.get(object_id, [])
+        matching = [
+            v
+            for v in versions
+            if v.get("sponsor_id") == sponsor_id and int(v.get("version", 0)) == version
+        ]
+        if matching:
+            return deserialize_library_props(copy.deepcopy(matching[0]))
+        return None
+
+    query = """
+    MATCH (n:LibraryObject {id: $object_id, sponsor_id: $sponsor_id, version: $version})
+    RETURN properties(n) as props
+    """
+    async with driver.session() as session:
+        res = await session.run(
+            query, object_id=object_id, sponsor_id=sponsor_id, version=version
+        )
+        record = await res.single()
+        if record:
+            return deserialize_library_props(record["props"])
+        return None
+
+
+async def get_library_object_history(
+    driver, object_id: str, sponsor_id: str
+) -> List[Dict[str, Any]]:
+    """
+    Retrieves the full version history of a library object under a sponsor,
+    ordered from earliest version to latest version (by version ascending).
+    """
+    if driver is None:
+        import copy
+
+        from apps.designer.db import MOCK_LIBRARY_OBJECTS
+
+        versions = MOCK_LIBRARY_OBJECTS.get(object_id, [])
+        matching = [v for v in versions if v.get("sponsor_id") == sponsor_id]
+        sorted_history = sorted(matching, key=lambda x: int(x.get("version", 1)))
+        return [deserialize_library_props(copy.deepcopy(v)) for v in sorted_history]
+
+    query = """
+    MATCH (n:LibraryObject {id: $object_id, sponsor_id: $sponsor_id})
+    RETURN properties(n) as props
+    ORDER BY n.version ASC
+    """
+    async with driver.session() as session:
+        res = await session.run(query, object_id=object_id, sponsor_id=sponsor_id)
+        records = await res.all()
+        return [deserialize_library_props(r["props"]) for r in records]
+
+
+async def list_library_objects(
+    driver,
+    sponsor_id: str,
+    object_type: Optional[str] = None,
+    limit: int = 50,
+    starting_after: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """
+    Lists the latest version of each library object under a sponsor,
+    supporting optional filtering by object type and Stripe-style cursor-compatible ordering.
+    """
+    if driver is None:
+        import copy
+
+        from apps.designer.db import MOCK_LIBRARY_OBJECTS
+
+        collected = []
+        for obj_id, versions in MOCK_LIBRARY_OBJECTS.items():
+            matching = [v for v in versions if v.get("sponsor_id") == sponsor_id]
+            if matching:
+                latest = matching[-1]
+                if object_type is None or latest.get("object_type") == object_type:
+                    collected.append(latest)
+
+        # Deterministic sorting by ID ascending
+        sorted_collected = sorted(collected, key=lambda x: x.get("id", ""))
+
+        # Stripe-style pagination filtering (starting_after is an ID cursor)
+        if starting_after:
+            sorted_collected = [
+                v for v in sorted_collected if v.get("id", "") > starting_after
+            ]
+
+        # Limit
+        paginated = sorted_collected[:limit]
+        return [deserialize_library_props(copy.deepcopy(v)) for v in paginated]
+
+    conditions = ["n.sponsor_id = $sponsor_id", "NOT (n)<-[:PREVIOUS_VERSION]-()"]
+    params = {"sponsor_id": sponsor_id, "limit": limit}
+    if object_type:
+        conditions.append("n.object_type = $object_type")
+        params["object_type"] = object_type
+    if starting_after:
+        conditions.append("n.id > $starting_after")
+        params["starting_after"] = starting_after
+
+    where_clause = " AND ".join(conditions)
+    query = f"""
+    MATCH (n:LibraryObject)
+    WHERE {where_clause}
+    RETURN properties(n) as props
+    ORDER BY n.id ASC
+    LIMIT $limit
+    """
+    async with driver.session() as session:
+        res = await session.run(query, **params)
+        records = await res.all()
+        return [deserialize_library_props(r["props"]) for r in records]
 
 
 @with_transaction_retry()
