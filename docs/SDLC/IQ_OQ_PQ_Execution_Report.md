@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 512
-- **Passed:** 512 🟢
+- **Total Automated Test Cases Run:** 521
+- **Passed:** 521 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -36,7 +36,120 @@ The Installation Qualification verifies that the software execution environment,
 
 ### 2.3 Installed Dependency Package Ledger (Pip List)
 ```
-
+Package                 Version     Editable project location
+----------------------- ----------- -------------------------
+aiosmtplib              5.1.2
+aiosqlite               0.22.1
+annotated-doc           0.0.4
+annotated-types         0.7.0
+anyio                   4.14.2
+asyncpg                 0.31.0
+bandit                  1.9.4
+beautifulsoup4          4.15.0
+boolean-py              5.0
+brotli                  1.2.0
+cachecontrol            0.14.4
+cadence-clinical         0.1.0       /app
+certifi                 2026.7.22
+cffi                    2.1.0
+cfgv                    3.5.0
+charset-normalizer      3.4.9
+click                   8.4.2
+coverage                7.15.2
+cryptography            49.0.0
+cssselect2              0.9.0
+cyclonedx-python-lib    11.11.0
+defusedxml              0.7.1
+detect-secrets          1.5.0
+distlib                 0.4.3
+ecdsa                   0.19.2
+et-xmlfile              2.0.0
+fastapi                 0.139.2
+filelock                3.32.0
+fonttools               4.63.0
+greenlet                3.5.4
+h11                     0.16.0
+httpcore                1.0.9
+httptools               0.8.0
+httpx                   0.28.1
+identify                2.6.19
+idna                    3.18
+iniconfig               2.3.0
+jinja2                  3.1.6
+license-expression      30.4.4
+lxml                    6.1.1
+markdown-it-py          4.2.0
+markupsafe              3.0.3
+mdurl                   0.1.2
+msgpack                 1.2.1
+neo4j                   6.2.0
+nodeenv                 1.10.0
+numpy                   2.5.1
+openpyxl                3.1.5
+packageurl-python       0.17.6
+packaging               26.2
+pandas                  3.0.3
+pillow                  12.3.0
+pip                     26.1.2
+pip-api                 0.0.34
+pip-audit               2.10.1
+pip-requirements-parser 32.0.1
+platformdirs            4.11.0
+playwright              1.61.0
+pluggy                  1.6.0
+pre-commit              4.6.1
+py-serializable         2.1.0
+pyasn1                  0.6.4
+pycparser               3.0
+pydantic                2.13.4
+pydantic-core           2.46.4
+pydyf                   0.12.1
+pyee                    13.0.1
+pygments                2.20.0
+pyparsing               3.3.2
+pyphen                  0.17.2
+pytest                  9.1.1
+pytest-asyncio          1.4.0
+pytest-base-url         2.1.0
+pytest-cov              7.1.0
+pytest-playwright       0.8.0
+python-dateutil         2.9.0.post0
+python-discovery        1.5.0
+python-docx             1.2.0
+python-dotenv           1.2.2
+python-jose             3.5.0
+python-multipart        0.0.32
+python-slugify          8.0.4
+pytz                    2026.2
+pyyaml                  6.0.3
+requests                2.34.2
+rich                    15.0.0
+rsa                     4.9.1
+ruff                    0.15.22
+six                     1.17.0
+sortedcontainers        2.4.0
+soupsieve               2.9.1
+sqlalchemy              2.0.51
+starlette               1.3.1
+stevedore               5.9.0
+text-unidecode          1.3
+tinycss2                1.5.1
+tinyhtml5               2.1.0
+tomli                   2.4.1
+tomli-w                 1.2.0
+typing-extensions       4.16.0
+typing-inspection       0.4.2
+urllib3                 2.7.0
+usdm                    0.67.0
+uvicorn                 0.51.0
+uvloop                  0.22.1
+virtualenv              21.7.0
+watchfiles              1.2.0
+weasyprint              69.0
+webencodings            0.5.1
+websockets              16.1.1
+yattag                  1.16.1
+zopfli                  0.4.3
 ```
 
 ## 3. Operational Qualification (OQ)

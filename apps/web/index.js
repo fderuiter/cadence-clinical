@@ -4,6 +4,9 @@ import {
   createClinicalVisitMatrix,
   createCtmsMilestoneTable,
   createCtmsVisitTable,
+  createConditionRow,
+  createRuleEditorContainer,
+  generateGatewaySignature,
 } from "ui";
 
 /**
@@ -454,11 +457,13 @@ if (typeof document !== "undefined") {
     const tabMdr = document.getElementById("tab-btn-mdr");
     const tabEcrf = document.getElementById("tab-btn-ecrf");
     const tabCtms = document.getElementById("tab-btn-ctms");
+    const tabRules = document.getElementById("tab-btn-rules");
     const tabAudit = document.getElementById("tab-btn-audit");
 
     const secMdr = document.getElementById("section-mdr");
     const secEcrf = document.getElementById("section-ecrf");
     const secCtms = document.getElementById("section-ctms");
+    const secRules = document.getElementById("section-rules");
     const secAudit = document.getElementById("section-audit");
 
     const usdmTextarea = document.getElementById("usdm-json");
@@ -483,10 +488,10 @@ if (typeof document !== "undefined") {
 
     // --- 6. TAB NAVIGATION ---
     function switchTab(activeTab, activeSec) {
-      [tabMdr, tabEcrf, tabCtms, tabAudit].forEach((t) => {
+      [tabMdr, tabEcrf, tabCtms, tabRules, tabAudit].forEach((t) => {
         if (t) t.classList.remove("active");
       });
-      [secMdr, secEcrf, secCtms, secAudit].forEach((s) => {
+      [secMdr, secEcrf, secCtms, secRules, secAudit].forEach((s) => {
         if (s) s.classList.remove("active");
       });
 
@@ -502,6 +507,9 @@ if (typeof document !== "undefined") {
     }
     if (tabCtms && secCtms) {
       tabCtms.addEventListener("click", () => switchTab(tabCtms, secCtms));
+    }
+    if (tabRules && secRules) {
+      tabRules.addEventListener("click", () => switchTab(tabRules, secRules));
     }
     if (tabAudit && secAudit) {
       tabAudit.addEventListener("click", () => switchTab(tabAudit, secAudit));
@@ -1052,10 +1060,611 @@ if (typeof document !== "undefined") {
       });
     }
 
+    // --- 9.6 RULES DESIGNER SYSTEM ---
+    let activeRules = [];
+    let rulesWorkspaceOpen = false;
+    let editingRuleId = null;
+    let currentConditionRowsCount = 0;
+
+    const mockStudyForms = [
+      { id: "form_dm", name: "Demographics" },
+      { id: "form_vs", name: "Vital Signs" },
+      { id: "form_ae", name: "Adverse Events" },
+    ];
+
+    const mockStudyFields = [
+      { id: "brthdt", name: "Date of Birth (brthdt)", formId: "form_dm" },
+      { id: "sex", name: "Sex at Birth (sex)", formId: "form_dm" },
+      { id: "vssbp", name: "Systolic BP (vssbp)", formId: "form_vs" },
+      { id: "vsdpb", name: "Diastolic BP (vsdpb)", formId: "form_vs" },
+      { id: "pulse", name: "Pulse Rate (pulse)", formId: "form_vs" },
+      { id: "aeterm", name: "Adverse Event Term (aeterm)", formId: "form_ae" },
+    ];
+
+    const rulesListContainer = document.getElementById("rules-list-container");
+    const rulesEditorWorkspace = document.getElementById("rules-editor-workspace");
+    const rulesEditorContainer = document.getElementById("rules-editor-container");
+    const btnNewRule = document.getElementById("btn-new-rule");
+
+    function renderRulesList() {
+      if (!rulesListContainer) return;
+      if (activeRules.length === 0) {
+        rulesListContainer.innerHTML = `<div style="color: #64748b; font-style: italic; padding: 12px 0;">No active rules configured. Click "Create New Rule" to get started.</div>`;
+        return;
+      }
+
+      const listHTML = activeRules
+        .map(
+          (rule) => `
+        <div class="rule-card" style="border: 1px solid var(--border); border-radius: 6px; padding: 12px; margin-bottom: 8px; background-color: #f8fafc;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+            <strong style="color: var(--primary); font-size: 0.9rem;">${rule.id} (${rule.type})</strong>
+            <div style="display: flex; gap: 4px;">
+              <button class="btn btn-secondary btn-edit-rule" data-id="${rule.id}" style="padding: 2px 6px; font-size: 0.75rem; cursor: pointer;">Edit</button>
+              <button class="btn btn-error btn-delete-rule" data-id="${rule.id}" style="padding: 2px 6px; font-size: 0.75rem; background-color: var(--error); color: white; border: none; border-radius: 4px; cursor: pointer;">Delete</button>
+            </div>
+          </div>
+          <div style="font-size: 0.8rem; color: #475569;">
+            ${rule.type === "skip_logic" ? `<strong>Action:</strong> ${rule.action} field ${rule.target_field}` : ""}
+            ${rule.type === "constraint" ? `<strong>Target:</strong> ${rule.target_field} <br/> <strong>Msg:</strong> ${rule.query_message}` : ""}
+            ${rule.type === "cross_form_check" ? `<strong>Msg:</strong> ${rule.query_message}` : ""}
+          </div>
+          <div style="font-size: 0.75rem; color: #64748b; margin-top: 4px; word-break: break-all;">
+            <strong>XPath:</strong> ${rule.compiled_xpath || "(Not compiled)"}
+          </div>
+        </div>
+      `
+        )
+        .join("");
+
+      rulesListContainer.innerHTML = listHTML;
+
+      // Attach button event listeners
+      rulesListContainer.querySelectorAll(".btn-edit-rule").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const ruleId = btn.getAttribute("data-id");
+          const rule = activeRules.find((r) => r.id === ruleId);
+          if (rule) openRuleEditor(rule);
+        });
+      });
+
+      rulesListContainer.querySelectorAll(".btn-delete-rule").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const ruleId = btn.getAttribute("data-id");
+          promptDeleteRule(ruleId);
+        });
+      });
+    }
+
+    function openRuleEditor(rule = null) {
+      if (!rulesEditorContainer || !rulesEditorWorkspace) return;
+
+      editingRuleId = rule ? rule.id : null;
+      rulesEditorWorkspace.style.display = "block";
+      rulesEditorContainer.innerHTML = createRuleEditorContainer(mockStudyForms, mockStudyFields);
+
+      // DOM Elements inside editor
+      const selectRuleType = document.getElementById("rule-type");
+      const selectTargetField = document.getElementById("rule-target-field");
+      const selectAction = document.getElementById("rule-action");
+      const selectTargetForm = document.getElementById("rule-target-form");
+      const inputMessage = document.getElementById("rule-message");
+      const conditionsList = document.getElementById("conditions-list");
+      const btnAddCondition = document.getElementById("btn-add-condition");
+      const btnCancelRule = document.getElementById("btn-cancel-rule");
+      const btnSaveRule = document.getElementById("btn-save-rule");
+
+      currentConditionRowsCount = 0;
+
+      // Toggle container visibility based on Rule Type
+      function updateTypeVisibility() {
+        const type = selectRuleType.value;
+        const targetContainer = document.querySelector(".rule-target-container");
+        const actionContainer = document.querySelector(".rule-action-container");
+        const targetFormContainer = document.querySelector(".rule-target-form-container");
+        const messageContainer = document.querySelector(".rule-message-container");
+
+        if (type === "skip_logic") {
+          targetContainer.style.display = "block";
+          actionContainer.style.display = "block";
+          targetFormContainer.style.display = "block";
+          messageContainer.style.display = "none";
+        } else if (type === "constraint") {
+          targetContainer.style.display = "block";
+          actionContainer.style.display = "none";
+          targetFormContainer.style.display = "none";
+          messageContainer.style.display = "block";
+        } else if (type === "cross_form_check") {
+          targetContainer.style.display = "none";
+          actionContainer.style.display = "none";
+          targetFormContainer.style.display = "none";
+          messageContainer.style.display = "block";
+        }
+        triggerPreview();
+      }
+
+      selectRuleType.addEventListener("change", updateTypeVisibility);
+
+      function addConditionRowToDOM(selectedValues = {}) {
+        const index = currentConditionRowsCount++;
+        const rowHTML = createConditionRow(index, mockStudyForms, mockStudyFields, selectedValues);
+
+        // Wrap in a div element so we can easily remove/manage it
+        const div = document.createElement("div");
+        div.innerHTML = rowHTML;
+        conditionsList.appendChild(div.firstElementChild);
+
+        // Attach listeners to newly added elements
+        const row = document.getElementById(`condition-row-${index}`);
+        row.querySelector(".btn-remove-condition").addEventListener("click", () => {
+          row.remove();
+          triggerPreview();
+        });
+
+        row.querySelector(".cond-operator-select").addEventListener("change", (e) => {
+          const op = e.target.value;
+          const rightTypeContainer = row.querySelector(".cond-right-type-container");
+          const rightValContainer = row.querySelector(".cond-right-value-container");
+          const rightFieldContainer = row.querySelector(".cond-right-field-container");
+
+          if (op === "is_empty" || op === "is_not_empty") {
+            rightTypeContainer.style.display = "none";
+            rightValContainer.style.display = "none";
+            rightFieldContainer.style.display = "none";
+          } else {
+            rightTypeContainer.style.display = "block";
+            const rightType = row.querySelector(".cond-right-type-select").value;
+            if (rightType === "constant") {
+              rightValContainer.style.display = "block";
+              rightFieldContainer.style.display = "none";
+            } else {
+              rightValContainer.style.display = "none";
+              rightFieldContainer.style.display = "block";
+            }
+          }
+          triggerPreview();
+        });
+
+        row.querySelector(".cond-right-type-select").addEventListener("change", (e) => {
+          const type = e.target.value;
+          const rightValContainer = row.querySelector(".cond-right-value-container");
+          const rightFieldContainer = row.querySelector(".cond-right-field-container");
+
+          if (type === "constant") {
+            rightValContainer.style.display = "block";
+            rightFieldContainer.style.display = "none";
+          } else {
+            rightValContainer.style.display = "none";
+            rightFieldContainer.style.display = "block";
+          }
+          triggerPreview();
+        });
+
+        row.querySelectorAll("select, input").forEach((el) => {
+          el.addEventListener("change", triggerPreview);
+        });
+
+        triggerPreview();
+      }
+
+      btnAddCondition.addEventListener("click", () => {
+        addConditionRowToDOM();
+      });
+
+      // Populate if editing
+      if (rule) {
+        selectRuleType.value = rule.type;
+        selectTargetField.value = rule.target_field || "";
+        selectAction.value = rule.action || "show";
+        selectTargetForm.value = rule.target_form || "";
+        inputMessage.value = rule.query_message || "";
+
+        // Reconstruct condition tree nodes into rows
+        if (rule.condition) {
+          const node = rule.condition;
+          if (node.type === "logical" && node.operands) {
+            document.getElementById("rule-logical-operator").value = node.operator || "and";
+            node.operands.forEach((operand) => {
+              addConditionRowToDOM(deserializeNodeToRow(operand));
+            });
+          } else {
+            addConditionRowToDOM(deserializeNodeToRow(node));
+          }
+        }
+      } else {
+        // Default with 1 empty condition row
+        addConditionRowToDOM();
+      }
+
+      updateTypeVisibility();
+
+      selectTargetField.addEventListener("change", triggerPreview);
+      selectAction.addEventListener("change", triggerPreview);
+      selectTargetForm.addEventListener("change", triggerPreview);
+      inputMessage.addEventListener("input", triggerPreview);
+      document.getElementById("rule-logical-operator").addEventListener("change", triggerPreview);
+
+      btnCancelRule.addEventListener("click", () => {
+        rulesEditorWorkspace.style.display = "none";
+        editingRuleId = null;
+      });
+
+      btnSaveRule.addEventListener("click", () => {
+        promptSaveRule();
+      });
+    }
+
+    function deserializeNodeToRow(node) {
+      if (node.type === "comparison") {
+        const left = node.operands[0];
+        const right = node.operands[1];
+        return {
+          formId: left.field_ref ? left.field_ref.form_id : "",
+          fieldId: left.field_ref ? left.field_ref.field_id : "",
+          operator: node.operator,
+          rightType: right.type === "field_ref" ? "field_ref" : "constant",
+          rightValue: right.type === "constant" ? right.value : "",
+          rightFieldId: right.type === "field_ref" ? right.field_ref.field_id : "",
+        };
+      } else if (node.type === "function") {
+        const left = node.operands[0];
+        return {
+          formId: left.field_ref ? left.field_ref.form_id : "",
+          fieldId: left.field_ref ? left.field_ref.field_id : "",
+          operator: node.operator,
+        };
+      }
+      return {};
+    }
+
+    function serializeRowsToExpressionTree() {
+      const selectRuleType = document.getElementById("rule-type");
+      const groupOp = document.getElementById("rule-logical-operator").value;
+      const rows = document.querySelectorAll(".condition-row");
+
+      const operands = [];
+      rows.forEach((row) => {
+        const index = row.getAttribute("data-index");
+        const formId = document.getElementById(`cond-form-${index}`).value;
+        const fieldId = document.getElementById(`cond-field-${index}`).value;
+        const operator = document.getElementById(`cond-operator-${index}`).value;
+
+        if (!fieldId) return; // Skip incomplete
+
+        const leftRef = {
+          type: "field_ref",
+          field_ref: {
+            field_id: fieldId,
+            form_id: formId || null,
+          }
+        };
+
+        if (operator === "is_empty" || operator === "is_not_empty") {
+          operands.push({
+            type: "function",
+            operator: operator,
+            operands: [leftRef]
+          });
+        } else {
+          const rightType = document.getElementById(`cond-right-type-${index}`).value;
+          let rightNode = null;
+
+          if (rightType === "constant") {
+            const rawVal = document.getElementById(`cond-right-value-${index}`).value;
+            // Guess type or default to string
+            let val = rawVal;
+            if (rawVal === "true") val = true;
+            else if (rawVal === "false") val = false;
+            else if (!isNaN(parseFloat(rawVal))) val = parseFloat(rawVal);
+
+            rightNode = {
+              type: "constant",
+              value: val
+            };
+          } else {
+            const rightFieldId = document.getElementById(`cond-right-field-${index}`).value;
+            rightNode = {
+              type: "field_ref",
+              field_ref: {
+                field_id: rightFieldId || ""
+              }
+            };
+          }
+
+          operands.push({
+            type: "comparison",
+            operator: operator,
+            operands: [leftRef, rightNode]
+          });
+        }
+      });
+
+      if (operands.length === 0) {
+        return { type: "constant", value: true };
+      }
+
+      if (operands.length === 1) {
+        return operands[0];
+      }
+
+      return {
+        type: "logical",
+        operator: groupOp,
+        operands: operands
+      };
+    }
+
+    function triggerPreview() {
+      const type = document.getElementById("rule-type").value;
+      const targetField = document.getElementById("rule-target-field").value;
+      const action = document.getElementById("rule-action").value;
+      const targetForm = document.getElementById("rule-target-form").value;
+      const queryMessage = document.getElementById("rule-message").value;
+      const condition = serializeRowsToExpressionTree();
+
+      const payload = {
+        type,
+        condition,
+        target_field: targetField || null,
+        target_form: targetForm || null,
+        action: type === "skip_logic" ? action : null,
+        query_message: type !== "skip_logic" ? queryMessage : null,
+      };
+
+      // Inline local preview compilation
+      const previewRes = compileMockPreview(payload);
+
+      const xpathDiv = document.getElementById("rule-xpath-preview");
+      const validationDiv = document.getElementById("rule-validation-failures");
+      const cyclesDiv = document.getElementById("rule-circular-cycles");
+
+      if (xpathDiv) xpathDiv.innerText = previewRes.xpath || "(No conditions added)";
+      if (validationDiv) validationDiv.innerText = previewRes.failures.join(", ");
+      if (cyclesDiv) cyclesDiv.innerText = previewRes.circular_cycles.join(", ");
+    }
+
+    function compileMockPreview(payload) {
+      // Offline fallback compilation engine for instant local UI feedback
+      const failures = [];
+      const circular_cycles = [];
+      let xpath = "";
+
+      // 1. Compile XPath representation
+      function compileNode(node) {
+        if (!node) return "";
+        if (node.type === "constant") {
+          return typeof node.value === "string" ? `'${node.value}'` : String(node.value);
+        }
+        if (node.type === "field_ref") {
+          return `/clinical_data/${node.field_ref.form_id ? node.field_ref.form_id + "/" : ""}${node.field_ref.field_id}`;
+        }
+        if (node.type === "function") {
+          const fnName = node.operator === "is_empty" ? "empty" : "not(empty";
+          const closing = node.operator === "is_not_empty" ? ")" : "";
+          return `${fnName}(${compileNode(node.operands[0])})${closing}`;
+        }
+        if (node.type === "comparison") {
+          return `(${compileNode(node.operands[0])} ${node.operator === "==" ? "=" : node.operator} ${compileNode(node.operands[1])})`;
+        }
+        if (node.type === "logical") {
+          const ops = node.operands.map(compileNode).join(` ${node.operator.toUpperCase()} `);
+          return `(${ops})`;
+        }
+        return "";
+      }
+
+      xpath = compileNode(payload.condition);
+
+      // 2. Validate fields
+      function traverseRefs(node) {
+        if (!node) return [];
+        if (node.type === "field_ref") return [node.field_ref.field_id];
+        let refs = [];
+        if (node.operands) {
+          node.operands.forEach((op) => {
+            refs = refs.concat(traverseRefs(op));
+          });
+        }
+        return refs;
+      }
+
+      const referencedFields = traverseRefs(payload.condition);
+      referencedFields.forEach((fid) => {
+        if (fid && !mockStudyFields.some((f) => f.id === fid)) {
+          failures.push(`Unknown field reference: '${fid}'`);
+        }
+      });
+
+      // 3. Detect Circular loops
+      if (payload.type === "skip_logic" && payload.target_field) {
+        if (referencedFields.includes(payload.target_field)) {
+          circular_cycles.push(`Circular dependency: ${payload.target_field} -> ${payload.target_field}`);
+        }
+        // Check cross rules circular loop
+        activeRules.forEach((rule) => {
+          if (rule.type === "skip_logic" && rule.id !== editingRuleId) {
+            const rRefs = traverseRefs(rule.condition);
+            if (rule.target_field === payload.target_field) {
+              // Same target, potential overlap
+            }
+            if (rRefs.includes(payload.target_field) && referencedFields.includes(rule.target_field)) {
+              circular_cycles.push(`Circular cycle: ${payload.target_field} -> ${rule.target_field} -> ${payload.target_field}`);
+            }
+          }
+        });
+      }
+
+      return { xpath, failures, circular_cycles };
+    }
+
+    function promptSaveRule() {
+      const type = document.getElementById("rule-type").value;
+      const targetField = document.getElementById("rule-target-field").value;
+      const action = document.getElementById("rule-action").value;
+      const targetForm = document.getElementById("rule-target-form").value;
+      const queryMessage = document.getElementById("rule-message").value;
+      const condition = serializeRowsToExpressionTree();
+
+      // Check validation first
+      if (type === "skip_logic" && !targetField) {
+        alert("Please select a target field!");
+        return;
+      }
+      if (type === "constraint" && (!targetField || !queryMessage)) {
+        alert("Please provide a target field and auto-query message!");
+        return;
+      }
+      if (type === "cross_form_check" && !queryMessage) {
+        alert("Please provide an auto-query message!");
+        return;
+      }
+
+      // We trigger the global Reason modal
+      pendingValueChange = {
+        isRuleSave: true,
+        ruleData: {
+          id: editingRuleId || `rule_${Math.random().toString(36).substr(2, 9)}`,
+          study_id: currentUsdm.studyId,
+          type,
+          condition,
+          target_field: targetField || null,
+          target_form: targetForm || null,
+          action: type === "skip_logic" ? action : null,
+          query_message: type !== "skip_logic" ? queryMessage : null,
+          compiled_xpath: compileMockPreview({ type, condition, target_field: targetField }).xpath,
+        }
+      };
+      openReasonModal();
+    }
+
+    function promptDeleteRule(ruleId) {
+      pendingValueChange = {
+        isRuleDelete: true,
+        ruleId: ruleId
+      };
+      openReasonModal();
+    }
+
+    async function executeRuleSave(ruleData, changeReason) {
+      // 21 CFR Part 11 signed API header authorization
+      const userId = "usr_9921a88b2c410";
+      const roles = "STUDY_DESIGNER";
+      const timestamp = new Date().toISOString();
+      const secret = "internal-gateway-secret-12345";
+
+      const signature = await generateGatewaySignature(
+        userId,
+        roles,
+        timestamp,
+        "2",
+        changeReason,
+        secret
+      );
+
+      const headers = {
+        "X-User-Id": userId,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": signature,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": changeReason,
+      };
+
+      // Store in activeRules
+      const existingIdx = activeRules.findIndex((r) => r.id === ruleData.id);
+      if (existingIdx > -1) {
+        activeRules[existingIdx] = ruleData;
+      } else {
+        activeRules.push(ruleData);
+      }
+
+      renderRulesList();
+      if (rulesEditorWorkspace) rulesEditorWorkspace.style.display = "none";
+      editingRuleId = null;
+
+      await addLedgerBlock(
+        "RULE_SAVE",
+        { ruleId: ruleData.id, type: ruleData.type, xpath: ruleData.compiled_xpath, headers },
+        changeReason
+      );
+
+      alert(`Rule successfully compiled and signed save verified!`);
+    }
+
+    async function executeRuleDelete(ruleId, changeReason) {
+      const userId = "usr_9921a88b2c410";
+      const roles = "STUDY_DESIGNER";
+      const timestamp = new Date().toISOString();
+      const secret = "internal-gateway-secret-12345";
+
+      const signature = await generateGatewaySignature(
+        userId,
+        roles,
+        timestamp,
+        "2",
+        changeReason,
+        secret
+      );
+
+      const headers = {
+        "X-User-Id": userId,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": signature,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": changeReason,
+      };
+
+      activeRules = activeRules.filter((r) => r.id !== ruleId);
+      renderRulesList();
+      if (rulesEditorWorkspace) rulesEditorWorkspace.style.display = "none";
+
+      await addLedgerBlock(
+        "RULE_DELETE",
+        { ruleId, headers },
+        changeReason
+      );
+
+      alert("Rule successfully soft-deleted!");
+    }
+
+    // Connect Reason for Change save button with Rules logic
+    const oldBtnSaveChangeHandler = btnSaveChange.onclick;
+    btnSaveChange.addEventListener("click", () => {
+      if (pendingValueChange && pendingValueChange.isRuleSave) {
+        const selReason = reasonSelect.value;
+        const custText = reasonText.value.trim();
+        const finalReason =
+          selReason === "Other" && custText
+            ? custText
+            : `${selReason}${custText ? ": " + custText : ""}`;
+
+        executeRuleSave(pendingValueChange.ruleData, finalReason);
+        closeReasonModal();
+      } else if (pendingValueChange && pendingValueChange.isRuleDelete) {
+        const selReason = reasonSelect.value;
+        const custText = reasonText.value.trim();
+        const finalReason =
+          selReason === "Other" && custText
+            ? custText
+            : `${selReason}${custText ? ": " + custText : ""}`;
+
+        executeRuleDelete(pendingValueChange.ruleId, finalReason);
+        closeReasonModal();
+      }
+    });
+
+    if (btnNewRule) {
+      btnNewRule.addEventListener("click", () => {
+        openRuleEditor();
+      });
+    }
+
     // --- 10. INITIALIZATION BOOTSTRAP ---
     renderMdr();
     renderEcrf();
     renderWebCtms();
+    renderRulesList();
 
     // Create Genesis Block asynchronously
     addLedgerBlock(
