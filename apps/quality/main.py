@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from apps.quality.database import db_manager
+from packages.database import DatabaseSessionDependency
 from apps.quality.models import (
     Base,
     CAPARecord,
@@ -187,18 +188,7 @@ app.add_middleware(GatewayAuthMiddleware)
 
 
 # Dependable to obtain database session
-async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
-    """
-    Dependency to yield an asynchronous database session.
-    """
-    session_maker = db_manager.get_session_maker()
-    async with session_maker() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
+get_db_session = DatabaseSessionDependency(db_manager)
 
 
 async def write_audit_log(

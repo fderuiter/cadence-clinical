@@ -15,6 +15,7 @@ from tmf_reference_model import (
 )
 
 from apps.etmf.database import db_manager
+from packages.database import DatabaseSessionDependency
 from apps.etmf.lifecycle import validate_and_transition_document_status
 from apps.etmf.models import (
     Base,
@@ -139,18 +140,7 @@ app.add_middleware(GatewayAuthMiddleware)
 
 
 # Dependable to obtain database session
-async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
-    """
-    Dependency to yield an asynchronous database session.
-    """
-    session_maker = db_manager.get_session_maker()
-    async with session_maker() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
+get_db_session = DatabaseSessionDependency(db_manager)
 
 
 # Helper to map standard artifact types to DIA TMF Zones

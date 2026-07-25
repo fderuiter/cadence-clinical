@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.ctms.database import db_manager
+from packages.database import DatabaseSessionDependency
 from apps.ctms.models import (
     Base,
     BudgetLineItem,
@@ -62,18 +63,7 @@ app.add_middleware(GatewayAuthMiddleware)
 
 
 # Dependable to obtain database session
-async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
-    """
-    Dependency to yield an asynchronous database session.
-    """
-    session_maker = db_manager.get_session_maker()
-    async with session_maker() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
+get_db_session = DatabaseSessionDependency(db_manager)
 
 
 # Helper to check roles case-insensitively
