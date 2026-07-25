@@ -84,7 +84,14 @@ describe("generateGatewaySignature and verifyGatewaySignature", () => {
   const timestamp = "123456";
 
   it("generates correct Version 1 signature", async () => {
-    const sig = await generateGatewaySignature(userId, roles, timestamp, "1", null, secret);
+    const sig = await generateGatewaySignature(
+      userId,
+      roles,
+      timestamp,
+      "1",
+      null,
+      secret
+    );
     expect(sig).toBeDefined();
 
     const isValid = await verifyGatewaySignature(

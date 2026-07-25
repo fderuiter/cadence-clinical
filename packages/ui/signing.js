@@ -97,7 +97,12 @@ export async function generateGatewaySignature(
   changeReason = null,
   secret
 ) {
-  if (version !== "2" && version !== "v2" && version !== "1" && version !== "v1") {
+  if (
+    version !== "2" &&
+    version !== "v2" &&
+    version !== "1" &&
+    version !== "v1"
+  ) {
     throw new Error(
       "Missing or obsolete signature format. Version 1 or Version 2 signature is required."
     );
@@ -160,7 +165,12 @@ export async function verifyGatewaySignature(
   changeReason = null,
   secret
 ) {
-  if (version !== "2" && version !== "v2" && version !== "1" && version !== "v1") {
+  if (
+    version !== "2" &&
+    version !== "v2" &&
+    version !== "1" &&
+    version !== "v1"
+  ) {
     return false;
   }
   const expectedSig = await generateGatewaySignature(
