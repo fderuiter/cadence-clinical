@@ -1,4 +1,5 @@
 import time
+
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
@@ -52,7 +53,9 @@ async def test_redaction_authorization_gates():
     and auditor/inspector roles are strictly blocked.
     """
     client = TestClient(app)
-    admin_headers = get_auth_headers(roles="admin", change_reason="Ingesting initial protocol")
+    admin_headers = get_auth_headers(
+        roles="admin", change_reason="Ingesting initial protocol"
+    )
 
     # Ingest source document
     payload = {
@@ -67,7 +70,9 @@ async def test_redaction_authorization_gates():
     source_id = resp.json()["document_id"]
 
     # Attempt to redact using inspector role -> should fail with 403
-    inspector_headers = get_auth_headers(roles="regulatory_inspector", change_reason="Attempting redaction")
+    inspector_headers = get_auth_headers(
+        roles="regulatory_inspector", change_reason="Attempting redaction"
+    )
     redact_payload = {
         "redacted_content": "[REDACTED] protocol content.",
         "redacted_filename": "protocol_redacted.pdf",
@@ -85,7 +90,9 @@ async def test_redaction_authorization_gates():
     assert "Forbidden" in resp_inspector_redact.json()["detail"]
 
     # Redact using admin role -> should succeed
-    admin_redact_headers = get_auth_headers(roles="admin", change_reason="Redacting Alice Smith PII")
+    admin_redact_headers = get_auth_headers(
+        roles="admin", change_reason="Redacting Alice Smith PII"
+    )
     resp_admin_redact = client.post(
         f"/api/v1/etmf/documents/{source_id}/redact",
         json=redact_payload,
@@ -95,7 +102,10 @@ async def test_redaction_authorization_gates():
     redacted_data = resp_admin_redact.json()
     assert redacted_data["is_redacted"] is True
     assert redacted_data["redaction_source_id"] == source_id
-    assert redacted_data["redaction_manifest_json"]["signature"] == "mock-redaction-signature-xyz"
+    assert (
+        redacted_data["redaction_manifest_json"]["signature"]
+        == "mock-redaction-signature-xyz"
+    )
     assert redacted_data["version_index"] == 2
     assert redacted_data["filename"] == "protocol_redacted.pdf"
 
@@ -107,7 +117,9 @@ async def test_redaction_authorization_gates():
         headers=inspector_headers_view,
     )
     assert resp_inspector_view.status_code == 403
-    assert "Raw-original retrieval is restricted" in resp_inspector_view.json()["detail"]
+    assert (
+        "Raw-original retrieval is restricted" in resp_inspector_view.json()["detail"]
+    )
 
     # Admin view original -> should succeed
     admin_headers_view = get_auth_headers(roles="admin")
@@ -125,7 +137,10 @@ async def test_redaction_authorization_gates():
         headers=inspector_headers_view,
     )
     assert resp_inspector_download.status_code == 403
-    assert "Raw-original retrieval is restricted" in resp_inspector_download.json()["detail"]
+    assert (
+        "Raw-original retrieval is restricted"
+        in resp_inspector_download.json()["detail"]
+    )
 
     # Admin download original -> should succeed
     resp_admin_download = client.get(
@@ -159,7 +174,9 @@ async def test_redaction_audit_trail_and_provenance():
     and that version history and unredacted source content are preserved and queryable.
     """
     client = TestClient(app)
-    admin_headers = get_auth_headers(roles="admin,sponsor_dm", change_reason="Ingest protocol")
+    admin_headers = get_auth_headers(
+        roles="admin,sponsor_dm", change_reason="Ingest protocol"
+    )
 
     # 1. Ingest original unredacted document (Version 1)
     payload = {
@@ -174,7 +191,9 @@ async def test_redaction_audit_trail_and_provenance():
     source_id = resp.json()["document_id"]
 
     # 2. Ingest a redacted version as Version 2
-    redact_headers = get_auth_headers(roles="admin,sponsor_dm", change_reason="Redaction for GDPR compliance")
+    redact_headers = get_auth_headers(
+        roles="admin,sponsor_dm", change_reason="Redaction for GDPR compliance"
+    )
     redact_payload = {
         "redacted_content": "Secret patient data: [REDACTED] is unblinded.",
         "redacted_filename": "protocol_v2_redacted.pdf",
@@ -219,7 +238,9 @@ async def test_redaction_audit_trail_and_provenance():
         assert docs[1].content == "Secret patient data: [REDACTED] is unblinded."
         assert docs[1].is_redacted is True
         assert docs[1].redaction_source_id == source_id
-        assert docs[1].redaction_manifest_json["signature"] == "manifest-signature-abc-123"
+        assert (
+            docs[1].redaction_manifest_json["signature"] == "manifest-signature-abc-123"
+        )
         assert docs[1].metadata_json["change_reason"] == "Redaction for GDPR compliance"
 
         # Check TMFAuditLog for REDACT action

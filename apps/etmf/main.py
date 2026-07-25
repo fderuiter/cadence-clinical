@@ -238,9 +238,14 @@ class RedactRequest(BaseModel):
     """
     Payload for submitting redacted content as a new version.
     """
+
     redacted_content: str = Field(..., description="The redacted text content")
-    redacted_filename: Optional[str] = Field(None, description="Optional new filename for the redacted document")
-    manifest: Dict[str, Any] = Field(..., description="The signed redaction manifest and provenance data")
+    redacted_filename: Optional[str] = Field(
+        None, description="Optional new filename for the redacted document"
+    )
+    manifest: Dict[str, Any] = Field(
+        ..., description="The signed redaction manifest and provenance data"
+    )
 
 
 class TransitionRequest(BaseModel):
@@ -779,7 +784,9 @@ async def view_document(
 
     auditor_roles = {"auditor", "inspector", "regulatory_inspector"}
     if not doc.is_redacted:
-        stmt_redacted = select(TMFDocument).where(TMFDocument.redaction_source_id == doc.id)
+        stmt_redacted = select(TMFDocument).where(
+            TMFDocument.redaction_source_id == doc.id
+        )
         res_redacted = await session.execute(stmt_redacted)
         if res_redacted.scalars().first() is not None:
             if any(r in auditor_roles for r in roles_list):
@@ -856,7 +863,9 @@ async def download_document(
 
     auditor_roles = {"auditor", "inspector", "regulatory_inspector"}
     if not doc.is_redacted:
-        stmt_redacted = select(TMFDocument).where(TMFDocument.redaction_source_id == doc.id)
+        stmt_redacted = select(TMFDocument).where(
+            TMFDocument.redaction_source_id == doc.id
+        )
         res_redacted = await session.execute(stmt_redacted)
         if res_redacted.scalars().first() is not None:
             if any(r in auditor_roles for r in roles_list):
@@ -1376,7 +1385,8 @@ async def redact_document_endpoint(
         zone=source_doc.zone,
         section=source_doc.section,
         artifact_type=source_doc.artifact_type,
-        filename=payload.redacted_filename or f"{os.path.splitext(source_doc.filename)[0]}_redacted{os.path.splitext(source_doc.filename)[1]}",
+        filename=payload.redacted_filename
+        or f"{os.path.splitext(source_doc.filename)[0]}_redacted{os.path.splitext(source_doc.filename)[1]}",
         content=payload.redacted_content,
         mime_type=source_doc.mime_type,
         created_by=user_id,
