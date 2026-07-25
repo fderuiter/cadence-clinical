@@ -5,10 +5,10 @@
 
 ## 1. Traceability Summary
 
-- **Total Documented Requirements:** 50
+- **Total Documented Requirements:** 51
 - **Total Mapped to Automated Tests:** 25
-- **Traceability Coverage:** 50.0%
-- **SRS Requirements Mapped:** 5 of 6 (83.3%)
+- **Traceability Coverage:** 49.0%
+- **SRS Requirements Mapped:** 5 of 7 (71.4%)
 
 ⚠️ **WARNING:** SRS coverage is below 100%. GxP validation requires 100% of functional requirements defined in the SRS to map to automated test cases.
 
@@ -31,7 +31,7 @@
 | PRD-EDC-009 | PRD | **Visual Analog Scale (VAS) Slider Specifications** | *None* | ❌ **Unmapped** |
 | PRD-EDC-010 | PRD | **Interactive Body Map Coordinates and Schema Mapping** | *None* | ❌ **Unmapped** |
 | PRD-EDL-001 | PRD | **Data-Driven Expected Document Lists (EDLs) & Completeness Tracking** | `test_edl_definitions_and_crud` (tests/test_etmf.py) 🟢<br>`test_site_aware_completeness` (tests/test_etmf.py) 🟢 | ✅ **Passed** |
-| PRD-MDR-001 | PRD | **Value-Level Metadata Constraint Propagation** | `test_valid_form_detail_validation` (tests/test_global_library.py) 🟢<br>`test_valid_data_element_detail_validation` (tests/test_global_library.py) 🟢<br>`test_valid_arm_detail_validation` (tests/test_global_library.py) 🟢<br>`test_valid_visit_detail_validation` (tests/test_global_library.py) 🟢<br>`test_invalid_mismatched_type_payload_fails` (tests/test_global_library.py) 🟢<br>`test_invalid_data_element_default_unit_fails` (tests/test_global_library.py) 🟢<br>`test_mutation_creation_requires_non_empty_change_reason` (tests/test_global_library.py) 🟢<br>`test_mutation_update_requires_non_empty_reason_for_change` (tests/test_global_library.py) 🟢<br>`test_terminology_cache_prevents_db_queries` (tests/test_transformers.py) 🟢<br>`test_usdm_validation_error_on_invalid_data` (tests/test_transformers.py) 🟢 | ✅ **Passed** |
+| PRD-MDR-001 | PRD | **Value-Level Metadata Constraint Propagation** | `test_terminology_cache_prevents_db_queries` (tests/test_transformers.py) 🟢<br>`test_usdm_validation_error_on_invalid_data` (tests/test_transformers.py) 🟢<br>`test_valid_form_detail_validation` (tests/test_global_library.py) 🟢<br>`test_valid_data_element_detail_validation` (tests/test_global_library.py) 🟢<br>`test_valid_arm_detail_validation` (tests/test_global_library.py) 🟢<br>`test_valid_visit_detail_validation` (tests/test_global_library.py) 🟢<br>`test_invalid_mismatched_type_payload_fails` (tests/test_global_library.py) 🟢<br>`test_invalid_data_element_default_unit_fails` (tests/test_global_library.py) 🟢<br>`test_mutation_creation_requires_non_empty_change_reason` (tests/test_global_library.py) 🟢<br>`test_mutation_update_requires_non_empty_reason_for_change` (tests/test_global_library.py) 🟢 | ✅ **Passed** |
 | PRD-MDR-002 | PRD | **Biomedical Concept Lock State during Active Studies** | *None* | ❌ **Unmapped** |
 | PRD-MDR-003 | PRD | **Dynamic Cohort Opening & Closing Rules** | `test_usdm_endpoint_returns_nested_schema_and_fast` (tests/test_transformers.py) 🟢 | ✅ **Passed** |
 | PRD-MDR-004 | PRD | **Crossover Timeline Mapping & Arm Interventions** | `test_usdm_endpoint_returns_nested_schema_and_fast` (tests/test_transformers.py) 🟢 | ✅ **Passed** |
@@ -52,7 +52,7 @@
 | PRD-SUB-005 | PRD | **Triggering and Authorizing Emergency Unblinding** | *None* | ❌ **Unmapped** |
 | PRD-SUB-006 | PRD | **Immediate Unblinding State Mutation & System Actions** | *None* | ❌ **Unmapped** |
 | PRD-SUB-007 | PRD | **Re-Consent Gating on Visits** | *None* | ❌ **Unmapped** |
-| PRD-SYS-001 | PRD | **Standard Audit Logging (21 CFR Part 11 § 11.10(e))** | `test_create_and_list_deviations` (tests/test_quality_workflow.py) 🟢<br>`test_create_and_update_rca` (tests/test_quality_workflow.py) 🟢<br>`test_prevent_audit_log_mutation` (tests/test_ledger_and_triggers.py) 🟢<br>`test_insert_generates_audit_log` (tests/test_audit.py) 🟢<br>`test_update_generates_audit_log` (tests/test_audit.py) 🟢 | ✅ **Passed** |
+| PRD-SYS-001 | PRD | **Standard Audit Logging (21 CFR Part 11 § 11.10(e))** | `test_prevent_audit_log_mutation` (tests/test_ledger_and_triggers.py) 🟢<br>`test_create_and_list_deviations` (tests/test_quality_workflow.py) 🟢<br>`test_create_and_update_rca` (tests/test_quality_workflow.py) 🟢<br>`test_insert_generates_audit_log` (tests/test_audit.py) 🟢<br>`test_update_generates_audit_log` (tests/test_audit.py) 🟢 | ✅ **Passed** |
 | PRD-SYS-002 | PRD | **Soft-Delete Enforcement and Shadow Schema Preservation** | `test_prevent_hard_delete_on_audited_model` (tests/test_ledger_and_triggers.py) 🟢<br>`test_soft_delete_generates_audit_log` (tests/test_audit.py) 🟢 | ✅ **Passed** |
 | PRD-SYS-003 | PRD | **Cryptographic Ledger Hashing & Chain Validation** | `test_ledger_sealing_and_validation` (tests/test_ledger_and_triggers.py) 🟢 | ✅ **Passed** |
 | PRD-SYS-004 | PRD | **Universal Site Isolation Constraint** | *None* | ❌ **Unmapped** |
@@ -66,6 +66,7 @@
 | Trace-4 | SRS | **Data-Driven Expected Document Lists (EDLs)**<br>*The system implements a data-driven Expected Document List reference data model and site-aware completeness tracking APIs under `/api/v1/etmf/edl` and `/api/v1/etmf/completeness` using the `ExpectedDocument` model to replace hardcoded validation logic with a dynamic backbone.* | `test_edl_definitions_and_crud` (tests/test_etmf.py) 🟢<br>`test_site_aware_completeness` (tests/test_etmf.py) 🟢 | ✅ **Passed** |
 | Trace-5 | SRS | **TMF Taxonomy Validation & Integration Assurance**<br>*The eTMF microservice enforces strict catalog-driven classification during document ingestion, rejecting unknown/invalid artifacts or mismatched configurations with HTTP 422, while persisting the resolved taxonomy version and artifact code to ensure compliance.* | `test_canonical_catalog_ingestion_validations` (tests/test_etmf.py) 🟢 | ✅ **Passed** |
 | Trace-6 | SRS | **CTMS Monitoring and Site Operations Tracking**<br>*The CTMS microservice implements a structured site monitoring visit lifecycle, milestone tracking, and CRA workload allocation maps. All mutations are secured via OIDC auth, audited via append-only `CTMSAuditLog` entries with explicit change reasons under 21 CFR Part 11 requirements, and covered by automated tests to ensure compliance.* | `test_create_and_list_studies_rbac` (tests/test_ctms.py) 🟢<br>`test_get_audit_trail_rbac` (tests/test_ctms.py) 🟢<br>`test_monitoring_visit_workflow_happy_path` (tests/test_ctms.py) 🟢<br>`test_monitoring_visit_workflow_rbac_denials` (tests/test_ctms.py) 🟢<br>`test_monitoring_visit_invalid_state_and_findings` (tests/test_ctms.py) 🟢<br>`test_recruitment_records_crud_and_audit` (tests/test_ctms.py) 🟢<br>`test_site_milestones_crud_and_audit` (tests/test_ctms.py) 🟢<br>`test_cra_allocations_rbac_reassignment_workload` (tests/test_ctms.py) 🟢<br>`test_monitoring_visit_scheduling_respects_cra_allocation` (tests/test_ctms.py) 🟢 | ✅ **Passed** |
+| Trace-7 | SRS | **Quality & CAPA Traceability and Validation Assurance**<br>*Quality mutations require a secure `X-Change-Reason` header and valid gateway-signed token. Transitions are validated by the FastAPI router in `apps/quality/main.py`. Role permissions are gated via `authorize_quality_write` and `authorize_quality_oversight`. System consistency and audit trial immutability are verified in `tests/test_quality_workflow.py`.* | *None* | ❌ **Unmapped** |
 
 ## 3. Unmapped Requirements
 
@@ -94,3 +95,4 @@
 - **PRD-SUB-007** (PRD): Re-Consent Gating on Visits
 - **PRD-SYS-004** (PRD): Universal Site Isolation Constraint
 - **Trace-3** (SRS): Read-Only Trial Locks & Alert Routing
+- **Trace-7** (SRS): Quality & CAPA Traceability and Validation Assurance
