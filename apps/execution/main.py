@@ -21,8 +21,8 @@ from fastapi import (
     Response,
     UploadFile,
 )
-from pydantic import BaseModel
-from sqlalchemy import select
+from pydantic import BaseModel, Field, model_validator
+from sqlalchemy import select, text
 
 from apps.execution.cdisc_validator import validate_cdisc_xml_structure
 from apps.execution.coding import match_verbatim_term
@@ -42,6 +42,7 @@ from apps.execution.database.models import (
     ImportState,
     SDVSignOff,
     TranslationJob,
+    TSDVConfig,
 )
 from apps.execution.database.models import (
     DictionaryType as DBDictionaryType,
@@ -62,6 +63,7 @@ from apps.execution.edit_checks import (
 from apps.execution.outliers import recalculate_cohort_outliers
 from apps.execution.query_service import QueryService, StateTransitionError
 from apps.execution.translator import process_translation
+from apps.execution.tsdv import evaluate_tsdv_requirement
 from apps.execution.ucum import convert_unit, get_normalized_representation
 from packages.security import (
     ROLE_CRA,
@@ -1742,6 +1744,210 @@ async def open_query(
 # ==========================================
 # SDV Sign-off API
 # ==========================================
+
+
+class SamplingModelEnum(str, Enum):
+    SUBJECT_BASED = "SUBJECT_BASED"
+    FIELD_BASED = "FIELD_BASED"
+    COMBINED = "COMBINED"
+
+
+class TSDVConfigCreate(BaseModel):
+    study_id: str
+    sampling_model: SamplingModelEnum
+    initial_full_sdv_subject_count: int = Field(default=0, ge=0)
+    random_sample_percentage: float = Field(default=0.0, ge=0.0, le=100.0)
+    full_sdv_domains: Optional[list[str]] = None
+    safety_endpoints: Optional[list[str]] = None
+    zero_sdv_domains: Optional[list[str]] = None
+    trial_random_seed: Optional[int] = Field(default=None, ge=0)
+
+    @model_validator(mode="after")
+    def validate_seed(self) -> "TSDVConfigCreate":
+        if self.random_sample_percentage > 0.0 and self.trial_random_seed is None:
+            raise ValueError(
+                "trial_random_seed is required when random_sample_percentage is greater than 0"
+            )
+        return self
+
+
+class TSDVConfigResponse(BaseModel):
+    id: str
+    study_id: str
+    sampling_model: str
+    initial_full_sdv_subject_count: int
+    random_sample_percentage: float
+    full_sdv_domains: Optional[list[str]] = None
+    safety_endpoints: Optional[list[str]] = None
+    zero_sdv_domains: Optional[list[str]] = None
+    trial_random_seed: Optional[int] = None
+    version: int
+
+    class Config:
+        from_attributes = True
+
+
+@app.post(
+    "/api/v1/execution/tsdv/config",
+    response_model=TSDVConfigResponse,
+    status_code=201,
+)
+async def create_or_update_tsdv_config(
+    request: Request,
+    payload: TSDVConfigCreate,
+    roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER)),
+) -> TSDVConfig:
+    """Create or update Targeted SDV (TSDV) configuration for a study.
+
+    Restricts config writes to CRA/Data Manager roles with GxP change justifications.
+    """
+    verify_change_justification(request)
+
+    async with db_manager.get_session_maker()() as session:
+        async with session.begin():
+            await session.execute(
+                text("SELECT set_config('cadence.app_writing', 'true', true);")
+            )
+            stmt = select(TSDVConfig).where(TSDVConfig.study_id == payload.study_id)
+            res = await session.execute(stmt)
+            config = res.scalars().first()
+
+            if config:
+                config.sampling_model = payload.sampling_model.value
+                config.initial_full_sdv_subject_count = (
+                    payload.initial_full_sdv_subject_count
+                )
+                config.random_sample_percentage = payload.random_sample_percentage
+                config.full_sdv_domains = payload.full_sdv_domains
+                config.safety_endpoints = payload.safety_endpoints
+                config.zero_sdv_domains = payload.zero_sdv_domains
+                config.trial_random_seed = payload.trial_random_seed
+            else:
+                config = TSDVConfig(
+                    study_id=payload.study_id,
+                    sampling_model=payload.sampling_model.value,
+                    initial_full_sdv_subject_count=payload.initial_full_sdv_subject_count,
+                    random_sample_percentage=payload.random_sample_percentage,
+                    full_sdv_domains=payload.full_sdv_domains,
+                    safety_endpoints=payload.safety_endpoints,
+                    zero_sdv_domains=payload.zero_sdv_domains,
+                    trial_random_seed=payload.trial_random_seed,
+                )
+                session.add(config)
+
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(TSDVConfig).where(TSDVConfig.study_id == payload.study_id)
+        res = await session.execute(stmt)
+        config = res.scalars().one()
+        return config
+
+
+@app.get(
+    "/api/v1/execution/tsdv/config/{study_id}",
+    response_model=TSDVConfigResponse,
+)
+async def get_tsdv_config(
+    study_id: str,
+    roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER)),
+) -> TSDVConfig:
+    """Retrieve Targeted SDV (TSDV) configuration for a study."""
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(TSDVConfig).where(TSDVConfig.study_id == study_id)
+        res = await session.execute(stmt)
+        config = res.scalars().first()
+        if not config:
+            raise HTTPException(
+                status_code=404,
+                detail=f"TSDV configuration not found for study {study_id}",
+            )
+        return config
+
+
+class TSDVEvaluationResponse(BaseModel):
+    required: bool
+    subject_selected: bool
+    field_decision: Optional[bool] = None
+    sampling_model: str
+    config_id: str
+    enrollment_index: int
+    explanation: str
+
+
+@app.get(
+    "/api/v1/execution/tsdv/required",
+    response_model=TSDVEvaluationResponse,
+)
+async def evaluate_tsdv_rule(
+    study_id: str,
+    subject_id: str,
+    domain: Optional[str] = None,
+    enrollment_index: Optional[int] = None,
+    roles: list[str] = Depends(get_normalized_roles),
+) -> TSDVEvaluationResponse:
+    """Evaluate Targeted SDV (TSDV) requirement for a given context.
+
+    Calculates deterministic sampling decisions and returns component results with an audit explanation.
+    """
+    async with db_manager.get_session_maker()() as session:
+        # 1. Resolve Study TSDV Configuration
+        stmt_cfg = select(TSDVConfig).where(TSDVConfig.study_id == study_id)
+        res_cfg = await session.execute(stmt_cfg)
+        config = res_cfg.scalars().first()
+        if not config:
+            raise HTTPException(
+                status_code=404,
+                detail=f"TSDV configuration not found for study {study_id}",
+            )
+
+        # 2. Resolve Subject and Enrollment Index
+        stmt_subj = select(ClinicalSubject).where(
+            ClinicalSubject.study_id == study_id,
+            ClinicalSubject.is_deleted.is_(False),
+        )
+        res_subj = await session.execute(stmt_subj)
+        subjects = list(res_subj.scalars().all())
+
+        # Sort alphabetically by subject_id
+        subjects_sorted = sorted(subjects, key=lambda s: s.subject_id)
+
+        target_sub = None
+        resolved_index = None
+        for idx, sub in enumerate(subjects_sorted):
+            if sub.subject_id == subject_id or sub.id == subject_id:
+                target_sub = sub
+                resolved_index = idx
+                break
+
+        if target_sub is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Subject {subject_id} not found in study {study_id}",
+            )
+
+        if enrollment_index is None:
+            enrollment_index = resolved_index
+
+        subject_uuid = target_sub.id
+
+        # 3. Perform Deterministic Evaluation
+        required, subject_selected, field_decision, explanation = (
+            evaluate_tsdv_requirement(
+                config=config,
+                subject_uuid=subject_uuid,
+                enrollment_index=enrollment_index,
+                domain=domain,
+            )
+        )
+
+        return TSDVEvaluationResponse(
+            required=required,
+            subject_selected=subject_selected,
+            field_decision=field_decision,
+            sampling_model=config.sampling_model,
+            config_id=config.id,
+            enrollment_index=enrollment_index,
+            explanation=explanation,
+        )
 
 
 class SDVScopeEnum(str, Enum):
