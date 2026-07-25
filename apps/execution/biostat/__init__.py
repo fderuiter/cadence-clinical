@@ -10,6 +10,11 @@ from apps.execution.biostat.extractors import (
     extract_mh,
     extract_vs,
 )
+from apps.execution.biostat.serializer import serialize_to_dataset_json
+from apps.execution.biostat.validator import (
+    DatasetJSONValidationError,
+    validate_dataset_json,
+)
 
 __all__ = [
     "extract_ae",
@@ -20,4 +25,7 @@ __all__ = [
     "derive_adsl",
     "derive_adae",
     "derive_advs",
+    "serialize_to_dataset_json",
+    "validate_dataset_json",
+    "DatasetJSONValidationError",
 ]
