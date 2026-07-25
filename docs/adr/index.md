@@ -63,3 +63,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-04: CTMS Service Boundary, Reporting, and Operational Workspace](2026-08-04-ctms-service-boundary-and-reporting.md)
 - [2026-08-05: Quality & CAPA Management, Platform Placement, and Traceability](2026-08-05-quality-capa-management.md)
 - [2026-08-06: Arm-Aware Schedule of Activities (SoA) Matrix Component](2026-08-06-arm-aware-soa-matrix.md)
+- [2026-08-07: Route Terminology APIs through the Gateway](2026-08-07-gateway-terminology-routing.md)
