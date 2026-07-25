@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Subject Portal - Cadence Clinical</title>
     <link rel="stylesheet" href="/style.css" />
+    <link rel="manifest" href="/subject-portal/manifest.json" />
   </head>
   <body>
     <div id="app">
@@ -71,6 +72,22 @@
             <div id="tasks-list-container" class="tasks-list">
               <!-- Dynamically rendered tasks go here -->
               <div class="loading-state">Loading your assigned tasks...</div>
+            </div>
+
+            <!-- Offline Sync Status Panel -->
+            <div class="card sync-queue-panel" id="sync-queue-panel" style="margin-top: 24px;">
+              <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 12px;">
+                <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+                  <span>🔄</span> Offline Sync Queue
+                </h3>
+                <button type="button" id="btn-sync-now" class="btn btn-secondary" style="padding: 6px 12px; font-size: 13px;">Sync Now</button>
+              </div>
+              <div id="sync-queue-status-text" class="text-muted" style="font-size: 14px; margin-bottom: 12px;">
+                Checking sync status...
+              </div>
+              <div id="sync-queue-list" style="display: flex; flex-direction: column; gap: 8px;">
+                <!-- Dynamically populated synced & queued submissions go here -->
+              </div>
             </div>
           </section>
 

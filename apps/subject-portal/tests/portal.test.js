@@ -1,8 +1,10 @@
+import "fake-indexeddb/auto";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 // Set up JSDOM mock elements before importing index.js
-beforeEach(() => {
+beforeEach(async () => {
   window.__MOCK_TEST_ENV__ = true;
+  document.head.innerHTML = `<link rel="manifest" href="/subject-portal/manifest.json" />`;
   document.body.innerHTML = `
     <div id="app">
       <header class="portal-header">
@@ -31,6 +33,22 @@ beforeEach(() => {
           <!-- Tasks View -->
           <section id="view-tasks" class="portal-view">
             <div id="tasks-list-container"></div>
+
+            <!-- Offline Sync Status Panel -->
+            <div class="card sync-queue-panel" id="sync-queue-panel" style="margin-top: 24px;">
+              <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 12px;">
+                <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+                  <span>🔄</span> Offline Sync Queue
+                </h3>
+                <button type="button" id="btn-sync-now" class="btn btn-secondary" style="padding: 6px 12px; font-size: 13px;">Sync Now</button>
+              </div>
+              <div id="sync-queue-status-text" class="text-muted" style="font-size: 14px; margin-bottom: 12px;">
+                Checking sync status...
+              </div>
+              <div id="sync-queue-list" style="display: flex; flex-direction: column; gap: 8px;">
+                <!-- Dynamically populated synced & queued submissions go here -->
+              </div>
+            </div>
           </section>
 
           <!-- Questionnaire View -->
@@ -228,5 +246,220 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
     // Audit trail should contain ACKNOWLEDGE_NOTIFICATION entry
     const ledgerTimeline = document.getElementById("portal-ledger-timeline");
     expect(ledgerTimeline.innerHTML).toContain("ACKNOWLEDGE_NOTIFICATION");
+  });
+
+  describe("Offline Sync and Queue Capabilities", () => {
+    it("is installable as PWA with a manifest link", async () => {
+      const manifestLink = document.querySelector('link[rel="manifest"]');
+      expect(manifestLink).not.toBeNull();
+      expect(manifestLink.getAttribute("href")).toBe("/subject-portal/manifest.json");
+    });
+
+    it("queues submissions in IndexedDB when offline and persists them across reload", async () => {
+      const portal = await import("../index.js");
+      await portal.initializeApp();
+
+      // Clear any prior submissions to guarantee clean state
+      await portal.clearAllSubmissions();
+
+      // Go offline
+      portal.state.session.isOfflineMode = true;
+
+      // Start first questionnaire & fill out
+      portal.startQuestionnaire("assign_01");
+      document.getElementById("vssbp").value = "120";
+      document.getElementById("vsdpb").value = "80";
+      document.getElementById("vshr").value = "72";
+      document.getElementById("has_symptoms_option_1").checked = true;
+      expect(portal.validateActiveQuestionnaire()).toBe(true);
+
+      // Submit first entry (it queues because we are offline)
+      document.getElementById("sign-username").value = "subject_001";
+      document.getElementById("sign-password").value = "pin123";
+      await portal.verifyAndSubmitSignature();
+
+      // Start second questionnaire
+      portal.startQuestionnaire("assign_02");
+      document.getElementById("severity_option_1").checked = true;
+      document.getElementById("restricted_activity_option_1").checked = true;
+      document.getElementById("missed_doses_option_1").checked = true;
+      expect(portal.validateActiveQuestionnaire()).toBe(true);
+
+      // Submit second entry
+      document.getElementById("sign-username").value = "subject_001";
+      document.getElementById("sign-password").value = "pin123";
+      await portal.verifyAndSubmitSignature();
+
+      // Verify that IndexedDB and UI renders both with QUEUED status and correct sequence
+      const syncList = document.getElementById("sync-queue-list");
+      expect(syncList.innerHTML).toContain("QUEUED");
+      expect(syncList.innerHTML).toContain("Seq: #1");
+      expect(syncList.innerHTML).toContain("Seq: #2");
+
+      // Verify that data survives app reload by checking state and rendering again
+      await portal.renderSyncQueueList();
+      expect(syncList.innerHTML).toContain("QUEUED");
+      expect(syncList.innerHTML).toContain("Seq: #1");
+      expect(syncList.innerHTML).toContain("Seq: #2");
+    });
+
+    it("flushes queued items in correct sequence order upon going online", async () => {
+      const portal = await import("../index.js");
+      await portal.initializeApp();
+
+      // Clean state
+      await portal.clearAllSubmissions();
+
+      // Put offline, submit one questionnaire
+      portal.state.session.isOfflineMode = true;
+      portal.startQuestionnaire("assign_01");
+      document.getElementById("vssbp").value = "118";
+      document.getElementById("vsdpb").value = "78";
+      document.getElementById("vshr").value = "68";
+      document.getElementById("has_symptoms_option_1").checked = true;
+      expect(portal.validateActiveQuestionnaire()).toBe(true);
+
+      document.getElementById("sign-username").value = "subject_001";
+      document.getElementById("sign-password").value = "pin123";
+      await portal.verifyAndSubmitSignature();
+
+      // Submit a second questionnaire
+      portal.startQuestionnaire("assign_02");
+      document.getElementById("severity_option_1").checked = true;
+      document.getElementById("restricted_activity_option_1").checked = true;
+      document.getElementById("missed_doses_option_1").checked = true;
+      expect(portal.validateActiveQuestionnaire()).toBe(true);
+
+      document.getElementById("sign-username").value = "subject_001";
+      document.getElementById("sign-password").value = "pin123";
+      await portal.verifyAndSubmitSignature();
+
+      // Clear mock fetch calls
+      vi.clearAllMocks();
+
+      // Setup success response from bulk sync endpoint
+      globalThis.fetch = vi.fn().mockImplementation(() =>
+        Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            status: "success",
+            processed_count: 2,
+            created_count: 2,
+            updated_count: 0,
+            ignored_count: 0,
+            results: [
+              { status: "CREATED", id: "sub1", diary_id: "inst_daily_diary", answers: { vssbp: "118" } },
+              { status: "UPDATED_CLIENT_WINS", id: "sub2", diary_id: "inst_weekly_symptoms", answers: { severity: "None" } }
+            ]
+          }),
+        })
+      );
+
+      // Put online & trigger sync
+      portal.state.session.isOfflineMode = false;
+      await portal.syncOfflineQueue();
+
+      // Ensure fetch was called exactly once for bulk sync
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+
+      // Verify the bulk request payload structure and sequential sorting
+      const lastCallArg = globalThis.fetch.mock.calls[0];
+      const requestBody = JSON.parse(lastCallArg[1].body);
+      expect(requestBody.submissions).toHaveLength(2);
+      expect(requestBody.submissions[0].offline_sync_markers.sequence_number).toBe(1);
+      expect(requestBody.submissions[1].offline_sync_markers.sequence_number).toBe(2);
+
+      // Verify status updates to SYNCED in UI
+      const syncList = document.getElementById("sync-queue-list");
+      expect(syncList.innerHTML).toContain("SYNCED");
+      expect(syncList.innerHTML).not.toContain("QUEUED");
+    });
+
+    it("retains QUEUED status and retries when sync fails", async () => {
+      const portal = await import("../index.js");
+      await portal.initializeApp();
+
+      await portal.clearAllSubmissions();
+
+      // Offline, submit questionnaire
+      portal.state.session.isOfflineMode = true;
+      portal.startQuestionnaire("assign_01");
+      document.getElementById("vssbp").value = "120";
+      document.getElementById("vsdpb").value = "80";
+      document.getElementById("vshr").value = "72";
+      document.getElementById("has_symptoms_option_1").checked = true;
+      expect(portal.validateActiveQuestionnaire()).toBe(true);
+
+      document.getElementById("sign-username").value = "subject_001";
+      document.getElementById("sign-password").value = "pin123";
+      await portal.verifyAndSubmitSignature();
+
+      // Mock fetch failure
+      globalThis.fetch = vi.fn().mockImplementation(() =>
+        Promise.reject(new TypeError("Failed to fetch"))
+      );
+
+      // Attempt sync while online
+      portal.state.session.isOfflineMode = false;
+      await portal.syncOfflineQueue();
+
+      // Verify still in QUEUED state due to failure
+      const syncList = document.getElementById("sync-queue-list");
+      expect(syncList.innerHTML).toContain("QUEUED");
+    });
+
+    it("displays conflict resolution outcomes (MERGED, IGNORED_SERVER_WINS) cleanly without discarding", async () => {
+      const portal = await import("../index.js");
+      await portal.initializeApp();
+
+      await portal.clearAllSubmissions();
+
+      // Queue two offline items
+      portal.state.session.isOfflineMode = true;
+      portal.startQuestionnaire("assign_01");
+      document.getElementById("vssbp").value = "120";
+      document.getElementById("vsdpb").value = "80";
+      document.getElementById("vshr").value = "72";
+      document.getElementById("has_symptoms_option_1").checked = true;
+      document.getElementById("sign-username").value = "subject_001";
+      document.getElementById("sign-password").value = "pin123";
+      await portal.verifyAndSubmitSignature();
+
+      portal.startQuestionnaire("assign_02");
+      document.getElementById("severity_option_1").checked = true;
+      document.getElementById("restricted_activity_option_1").checked = true;
+      document.getElementById("missed_doses_option_1").checked = true;
+      document.getElementById("sign-username").value = "subject_001";
+      document.getElementById("sign-password").value = "pin123";
+      await portal.verifyAndSubmitSignature();
+
+      // Mock conflict resolution responses from server
+      globalThis.fetch = vi.fn().mockImplementation(() =>
+        Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            status: "success",
+            processed_count: 2,
+            created_count: 0,
+            updated_count: 1,
+            ignored_count: 1,
+            results: [
+              { status: "MERGED", id: "sub1", diary_id: "inst_daily_diary", answers: { vssbp: "120", vsdpb: "80", vshr: "72", has_symptoms: "Yes" } },
+              { status: "IGNORED_SERVER_WINS", id: "sub2", diary_id: "inst_weekly_symptoms", answers: { severity: "None" } }
+            ]
+          }),
+        })
+      );
+
+      portal.state.session.isOfflineMode = false;
+      await portal.syncOfflineQueue();
+
+      // Verify that MERGED and CONFLICT (Ignored) statuses and explanations are visible
+      const syncList = document.getElementById("sync-queue-list");
+      expect(syncList.innerHTML).toContain("MERGED");
+      expect(syncList.innerHTML).toContain("CONFLICT (Ignored)");
+      expect(syncList.innerHTML).toContain("Conflict resolved: Server data was preserved; local entry archived.");
+      expect(syncList.innerHTML).toContain("Conflict resolved: Local and server entries were combined.");
+    });
   });
 });
