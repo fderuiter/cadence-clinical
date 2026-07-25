@@ -99,7 +99,16 @@ export function createClinicalRadioGrid(
  * @returns {string} HTML string representing the visit matrix.
  */
 export function createClinicalVisitMatrix(matrixData) {
-  if (!matrixData || !matrixData.visits || !matrixData.forms) {
+  if (!matrixData) {
+    return `<div class="clinical-visit-matrix-error">Invalid visit matrix data.</div>`;
+  }
+
+  // Delegate to SoA matrix if new projection structure is detected
+  if (matrixData.rows || matrixData.encounters || matrixData.epochs) {
+    return createClinicalSoAMatrix(matrixData);
+  }
+
+  if (!matrixData.visits || !matrixData.forms) {
     return `<div class="clinical-visit-matrix-error">Invalid visit matrix data.</div>`;
   }
 
@@ -132,6 +141,213 @@ export function createClinicalVisitMatrix(matrixData) {
       <th scope="col">Form / Procedure</th>
       ${visitsHeaderHTML}
     </tr>
+  </thead>
+  <tbody>
+    ${rowsHTML}
+  </tbody>
+</table>
+  `.trim();
+}
+
+/**
+ * Renders an accessible, arm-aware Schedule of Activities (SoA) matrix.
+ * Consumes the SoA projection shape (epochs, encounters, rows, arms) and
+ * renders a table with grouped Arm -> Epoch -> Visit header rows.
+ *
+ * @param {Object} soaData - Structure containing { epochs?: Object[], encounters?: Object[], rows?: Object[], arms?: Object[] }
+ * @returns {string} HTML string representing the SoA matrix.
+ */
+export function createClinicalSoAMatrix(soaData) {
+  if (!soaData || !soaData.rows) {
+    return `<div class="clinical-visit-matrix-error">Invalid SoA matrix data.</div>`;
+  }
+
+  const { epochs = [], encounters = [], rows = [], arms = [] } = soaData;
+
+  // Map epoch_id to epoch object for easy lookup
+  const epochMap = {};
+  epochs.forEach((ep) => {
+    epochMap[ep.epoch_id] = ep;
+  });
+
+  // Map arm_id to arm object for easy lookup
+  const armMap = {};
+  arms.forEach((arm) => {
+    armMap[arm.arm_id] = arm;
+  });
+
+  // Construct flat column objects matching each encounter
+  const cols = encounters.map((enc) => {
+    const epoch = epochMap[enc.epoch_id] || { epoch_id: enc.epoch_id, epoch_name: enc.epoch_id };
+    const armId = enc.arm_id || epoch.arm_id;
+    const arm = armId ? (armMap[armId] || { arm_id: armId, arm_name: armId }) : null;
+
+    return {
+      arm,
+      epoch,
+      encounter: enc,
+    };
+  });
+
+  // If there are no columns, we can't render anything useful.
+  if (cols.length === 0) {
+    return `<div class="clinical-visit-matrix-error">No encounters defined for SoA matrix.</div>`;
+  }
+
+  // 1. Group consecutive columns for Arms (Row 1 of the multi-level header)
+  const armGroups = [];
+  let currentArmGroup = null;
+
+  cols.forEach((col) => {
+    const armId = col.arm ? col.arm.arm_id : "shared";
+    const armName = col.arm ? col.arm.arm_name : "Common / Shared";
+
+    if (!currentArmGroup || currentArmGroup.id !== armId) {
+      if (currentArmGroup) {
+        armGroups.push(currentArmGroup);
+      }
+      currentArmGroup = {
+        id: armId,
+        name: armName,
+        colspan: 0,
+      };
+    }
+    currentArmGroup.colspan++;
+  });
+  if (currentArmGroup) {
+    armGroups.push(currentArmGroup);
+  }
+
+  // 2. Group consecutive columns for Epochs (Row 2 of the multi-level header)
+  const epochGroups = [];
+  let currentEpochGroup = null;
+
+  cols.forEach((col) => {
+    // Unique key is (arm_id + epoch_id) to prevent grouping across different arms
+    const armId = col.arm ? col.arm.arm_id : "shared";
+    const epochId = col.epoch.epoch_id;
+    const epochName = col.epoch.epoch_name;
+    const groupKey = `${armId}_${epochId}`;
+
+    if (!currentEpochGroup || currentEpochGroup.key !== groupKey) {
+      if (currentEpochGroup) {
+        epochGroups.push(currentEpochGroup);
+      }
+      currentEpochGroup = {
+        key: groupKey,
+        name: epochName,
+        colspan: 0,
+      };
+    }
+    currentEpochGroup.colspan++;
+  });
+  if (currentEpochGroup) {
+    epochGroups.push(currentEpochGroup);
+  }
+
+  // Check if we should render the Arm row (only if at least one arm is specified, i.e., not all are shared)
+  const hasArms = cols.some((c) => c.arm !== null);
+  const totalHeaderRows = hasArms ? 3 : 2;
+
+  // Generate header HTML
+  let headerRowsHTML = "";
+
+  // Arm Row (only if arms are defined)
+  if (hasArms) {
+    const armCellsHTML = armGroups
+      .map(
+        (g) =>
+          `<th scope="col" colspan="${g.colspan}" class="grouped-header arm-header">${g.name}</th>`
+      )
+      .join("");
+    headerRowsHTML += `
+    <tr>
+      <th scope="col" rowspan="${totalHeaderRows}" class="corner-header">Form / Procedure</th>
+      ${armCellsHTML}
+    </tr>
+    `.trim();
+  }
+
+  // Epoch Row
+  const epochCellsHTML = epochGroups
+    .map(
+      (g) =>
+        `<th scope="col" colspan="${g.colspan}" class="grouped-header epoch-header">${g.name}</th>`
+    )
+    .join("");
+
+  if (hasArms) {
+    headerRowsHTML += `
+    <tr>
+      ${epochCellsHTML}
+    </tr>
+    `.trim();
+  } else {
+    headerRowsHTML = `
+    <tr>
+      <th scope="col" rowspan="${totalHeaderRows}" class="corner-header">Form / Procedure</th>
+      ${epochCellsHTML}
+    </tr>
+    `.trim();
+  }
+
+  // Encounter/Visit Row
+  const encounterCellsHTML = cols
+    .map((c) => `<th scope="col" class="encounter-header">${c.encounter.encounter_name}</th>`)
+    .join("");
+
+  headerRowsHTML += `
+    <tr>
+      ${encounterCellsHTML}
+    </tr>
+  `.trim();
+
+  // Generate body rows HTML
+  const rowsHTML = rows
+    .map((row) => {
+      const cellsHTML = cols
+        .map((col) => {
+          const encId = col.encounter.encounter_id;
+          const cell = row.cells.find((c) => c.encounter_id === encId) || { is_applicable: false };
+
+          let cellClass;
+          let cellText;
+
+          if (cell.is_applicable) {
+            cellClass = "status-applicable";
+            cellText = "✓";
+
+            if (cell.details) {
+              const detailsLower = cell.details.toLowerCase();
+              if (detailsLower.includes("conditional")) {
+                cellClass = "status-conditional";
+              } else if (detailsLower.includes("optional")) {
+                cellClass = "status-optional";
+              }
+              cellText += ` <span class="cell-details">${cell.details}</span>`;
+            }
+          } else {
+            cellClass = "status-n-a";
+            cellText = "-";
+          }
+
+          return `<td class="${cellClass}">${cellText}</td>`;
+        })
+        .join("");
+
+      return `
+    <tr>
+      <th scope="row">${row.activity_name}</th>
+      ${cellsHTML}
+    </tr>
+      `.trim();
+    })
+    .join("\n");
+
+  return `
+<table class="clinical-visit-matrix clinical-soa-matrix">
+  <thead>
+    ${headerRowsHTML}
   </thead>
   <tbody>
     ${rowsHTML}
