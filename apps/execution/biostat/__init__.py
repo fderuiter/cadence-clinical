@@ -2,6 +2,7 @@
 
 from apps.execution.biostat.adae import derive_adae
 from apps.execution.biostat.adsl import derive_adsl
+from apps.execution.biostat.advs import derive_advs
 from apps.execution.biostat.extractors import (
     extract_ae,
     extract_dm,
@@ -18,4 +19,5 @@ __all__ = [
     "extract_vs",
     "derive_adsl",
     "derive_adae",
+    "derive_advs",
 ]

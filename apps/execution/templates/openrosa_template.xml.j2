@@ -24,7 +24,22 @@
   <body>
     {% for item in items %}
     <xf:input ref="/{{ item.id }}"{% if item.appearance %} appearance="{{ item.appearance }}"{% endif %}>
+      {% if item.localizations %}
+      {% for lang_code, loc in item.localizations.items() %}
+      {% if loc.label %}
+      <xf:label xml:lang="{{ lang_code }}">{{ loc.label }}</xf:label>
+      {% endif %}
+      {% endfor %}
+      {% else %}
       <xf:label>{{ item.name }}</xf:label>
+      {% endif %}
+      {% if item.localizations %}
+      {% for lang_code, loc in item.localizations.items() %}
+      {% if loc.hint %}
+      <xf:hint xml:lang="{{ lang_code }}">{{ loc.hint }}</xf:hint>
+      {% endif %}
+      {% endfor %}
+      {% endif %}
     </xf:input>
     {% endfor %}
   </body>
