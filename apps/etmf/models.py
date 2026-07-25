@@ -105,6 +105,15 @@ class TMFDocument(Base):
         DateTime, nullable=True
     )
 
+    # Redaction-related fields
+    is_redacted: Mapped[bool] = mapped_column(default=False, nullable=False)
+    redaction_source_id: Mapped[Optional[str]] = mapped_column(
+        String(36), nullable=True, index=True
+    )
+    redaction_manifest_json: Mapped[Optional[Dict[str, Any]]] = mapped_column(
+        JSON, nullable=True
+    )
+
 
 class DocumentQCTransition(Base):
     """
