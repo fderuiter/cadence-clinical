@@ -166,7 +166,7 @@ async def test_create_clinical_query_authorization_failures() -> None:
         )
     assert resp.status_code == 403
     assert (
-        "Missing or obsolete signature format. Version 2 canonical JSON signature is required."
+        "Missing or obsolete signature format. Version 1 or Version 2 signature is required."
         in resp.json()["detail"]
     )
 
