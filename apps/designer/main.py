@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import httpx
 from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile, status
 from neo4j import AsyncGraphDatabase
+from protocol_render import SoAMatrixView
 from pydantic import BaseModel
 
 from apps.designer.db import (
@@ -21,15 +22,32 @@ from apps.designer.db import (
     update_mock_rule,
 )
 from apps.designer.delta import (
+    MOCK_SOA_DATA,
     ConcurrentLockingError,
     ImmutabilityViolationError,
     InvalidSignatureError,
+    _init_mock_soa,
     amend_protocol_version,
+    create_epoch,
+    create_procedure,
     create_rule_node,
+    create_study_arm,
     create_study_version,
+    create_timing_window,
+    create_visit,
     delete_rule_node,
     get_rules_from_graph,
+    get_soa_matrix_projection,
+    link_arm_applicability,
+    link_epoch_to_visit,
+    link_visit_or_procedure_to_timing,
+    link_visit_to_procedure,
+    update_epoch,
+    update_procedure,
     update_rule_node,
+    update_study_arm,
+    update_timing_window,
+    update_visit,
 )
 from apps.designer.mapper import map_study_to_usdm
 from apps.designer.rules import (
@@ -61,6 +79,56 @@ class DifferenceResult(BaseModel):
     field: str
     old_value: Any
     new_value: Any
+
+
+class CreateSoAEntityRequest(BaseModel):
+    id: str
+    properties: Dict[str, Any]
+
+
+class UpdateSoAEntityRequest(BaseModel):
+    properties: Dict[str, Any]
+
+
+class SoAEntityCreatedResponse(BaseModel):
+    status: str = "success"
+    id: str
+
+
+class SoAEntityDetail(BaseModel):
+    id: str
+    version_index: int
+    created_by: str
+    created_at: str
+
+    model_config = {"extra": "allow"}
+
+
+class LinkEpochVisitRequest(BaseModel):
+    epoch_id: str
+    visit_id: str
+
+
+class LinkVisitProcedureRequest(BaseModel):
+    visit_id: str
+    procedure_id: str
+
+
+class LinkTimingRequest(BaseModel):
+    source_id: str
+    timing_id: str
+    source_type: str = "visit"  # "visit" or "procedure"
+
+
+class LinkArmApplicabilityRequest(BaseModel):
+    arm_id: str
+    target_id: str
+    target_type: str = "visit"  # "visit", "procedure", or "epoch"
+
+
+class SoALinkResponse(BaseModel):
+    status: str = "success"
+    message: str = "Link established successfully"
 
 
 app = FastAPI(title="Cadence Clinical - Designer (MDR/SDR)", version="0.1.0")
@@ -823,3 +891,650 @@ async def amend_protocol(
         }
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+
+# =====================================================================
+# Schedule of Activities (SoA) Helpers & CRUD Endpoints
+# =====================================================================
+
+
+async def get_soa_entity(
+    driver,
+    study_version_id: str,
+    entity_id: str,
+    entity_type: str,  # "arms", "epochs", "visits", "procedures", "timing_windows"
+) -> Optional[Dict[str, Any]]:
+    if driver is None:
+        _init_mock_soa(study_version_id)
+        return MOCK_SOA_DATA[study_version_id][entity_type].get(entity_id)
+
+    # Map entity type to Neo4j relationship and label
+    mapping = {
+        "arms": ("HAS_ARM", "StudyArm"),
+        "epochs": ("HAS_EPOCH", "Epoch"),
+        "visits": ("HAS_VISIT", "Visit"),
+        "procedures": ("HAS_PROCEDURE", "Procedure"),
+        "timing_windows": ("HAS_TIMING_WINDOW", "TimingWindow"),
+    }
+    rel, label = mapping[entity_type]
+    query = f"""
+    MATCH (sv:StudyVersion {{id: $study_version_id}})-[:{rel}]->(e:{label} {{id: $entity_id}})
+    RETURN properties(e) as props
+    """
+    async with driver.session() as session:
+        res = await session.run(
+            query, study_version_id=study_version_id, entity_id=entity_id
+        )
+        record = await res.single()
+        if record:
+            return dict(record["props"])
+        return None
+
+
+async def list_soa_entities(
+    driver,
+    study_version_id: str,
+    entity_type: str,
+) -> List[Dict[str, Any]]:
+    if driver is None:
+        _init_mock_soa(study_version_id)
+        return list(MOCK_SOA_DATA[study_version_id][entity_type].values())
+
+    mapping = {
+        "arms": ("HAS_ARM", "StudyArm"),
+        "epochs": ("HAS_EPOCH", "Epoch"),
+        "visits": ("HAS_VISIT", "Visit"),
+        "procedures": ("HAS_PROCEDURE", "Procedure"),
+        "timing_windows": ("HAS_TIMING_WINDOW", "TimingWindow"),
+    }
+    rel, label = mapping[entity_type]
+    query = f"""
+    MATCH (sv:StudyVersion {{id: $study_version_id}})-[:{rel}]->(e:{label})
+    RETURN properties(e) as props
+    """
+    async with driver.session() as session:
+        res = await session.run(query, study_version_id=study_version_id)
+        records = await res.all()
+        return [dict(r["props"]) for r in records]
+
+
+# --- Arms Endpoints ---
+
+
+@app.post(
+    "/api/v1/studies/{study_id}/versions/{version_id}/arms",
+    response_model=SoAEntityCreatedResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_arm_endpoint(
+    study_id: str,
+    version_id: str,
+    payload: CreateSoAEntityRequest,
+    request: Request,
+) -> SoAEntityCreatedResponse:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    await create_study_arm(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        arm_id=payload.id,
+        properties=payload.properties,
+    )
+    return SoAEntityCreatedResponse(id=payload.id)
+
+
+@app.get(
+    "/api/v1/studies/{study_id}/versions/{version_id}/arms/{arm_id}",
+    response_model=SoAEntityDetail,
+)
+async def get_arm_endpoint(
+    study_id: str,
+    version_id: str,
+    arm_id: str,
+    request: Request,
+) -> SoAEntityDetail:
+    driver = await get_neo4j_driver(request)
+    entity = await get_soa_entity(driver, version_id, arm_id, "arms")
+    if not entity:
+        raise HTTPException(status_code=404, detail="Arm not found")
+    return SoAEntityDetail(**entity)
+
+
+@app.get(
+    "/api/v1/studies/{study_id}/versions/{version_id}/arms",
+    response_model=List[SoAEntityDetail],
+)
+async def list_arms_endpoint(
+    study_id: str,
+    version_id: str,
+    request: Request,
+) -> List[SoAEntityDetail]:
+    driver = await get_neo4j_driver(request)
+    entities = await list_soa_entities(driver, version_id, "arms")
+    return [SoAEntityDetail(**e) for e in entities]
+
+
+@app.put(
+    "/api/v1/studies/{study_id}/versions/{version_id}/arms/{arm_id}",
+    response_model=SoAEntityCreatedResponse,
+)
+async def update_arm_endpoint(
+    study_id: str,
+    version_id: str,
+    arm_id: str,
+    payload: UpdateSoAEntityRequest,
+    request: Request,
+) -> SoAEntityCreatedResponse:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    try:
+        await update_study_arm(
+            driver=driver,
+            study_version_id=version_id,
+            user_id=user_id,
+            change_reason=change_reason,
+            arm_id=arm_id,
+            properties=payload.properties,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return SoAEntityCreatedResponse(id=arm_id)
+
+
+# --- Epochs Endpoints ---
+
+
+@app.post(
+    "/api/v1/studies/{study_id}/versions/{version_id}/epochs",
+    response_model=SoAEntityCreatedResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_epoch_endpoint(
+    study_id: str,
+    version_id: str,
+    payload: CreateSoAEntityRequest,
+    request: Request,
+) -> SoAEntityCreatedResponse:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    await create_epoch(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        epoch_id=payload.id,
+        properties=payload.properties,
+    )
+    return SoAEntityCreatedResponse(id=payload.id)
+
+
+@app.get(
+    "/api/v1/studies/{study_id}/versions/{version_id}/epochs/{epoch_id}",
+    response_model=SoAEntityDetail,
+)
+async def get_epoch_endpoint(
+    study_id: str,
+    version_id: str,
+    epoch_id: str,
+    request: Request,
+) -> SoAEntityDetail:
+    driver = await get_neo4j_driver(request)
+    entity = await get_soa_entity(driver, version_id, epoch_id, "epochs")
+    if not entity:
+        raise HTTPException(status_code=404, detail="Epoch not found")
+    return SoAEntityDetail(**entity)
+
+
+@app.get(
+    "/api/v1/studies/{study_id}/versions/{version_id}/epochs",
+    response_model=List[SoAEntityDetail],
+)
+async def list_epochs_endpoint(
+    study_id: str,
+    version_id: str,
+    request: Request,
+) -> List[SoAEntityDetail]:
+    driver = await get_neo4j_driver(request)
+    entities = await list_soa_entities(driver, version_id, "epochs")
+    return [SoAEntityDetail(**e) for e in entities]
+
+
+@app.put(
+    "/api/v1/studies/{study_id}/versions/{version_id}/epochs/{epoch_id}",
+    response_model=SoAEntityCreatedResponse,
+)
+async def update_epoch_endpoint(
+    study_id: str,
+    version_id: str,
+    epoch_id: str,
+    payload: UpdateSoAEntityRequest,
+    request: Request,
+) -> SoAEntityCreatedResponse:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    try:
+        await update_epoch(
+            driver=driver,
+            study_version_id=version_id,
+            user_id=user_id,
+            change_reason=change_reason,
+            epoch_id=epoch_id,
+            properties=payload.properties,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return SoAEntityCreatedResponse(id=epoch_id)
+
+
+# --- Visits Endpoints ---
+
+
+@app.post(
+    "/api/v1/studies/{study_id}/versions/{version_id}/visits",
+    response_model=SoAEntityCreatedResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_visit_endpoint(
+    study_id: str,
+    version_id: str,
+    payload: CreateSoAEntityRequest,
+    request: Request,
+) -> SoAEntityCreatedResponse:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    await create_visit(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        visit_id=payload.id,
+        properties=payload.properties,
+    )
+    return SoAEntityCreatedResponse(id=payload.id)
+
+
+@app.get(
+    "/api/v1/studies/{study_id}/versions/{version_id}/visits/{visit_id}",
+    response_model=SoAEntityDetail,
+)
+async def get_visit_endpoint(
+    study_id: str,
+    version_id: str,
+    visit_id: str,
+    request: Request,
+) -> SoAEntityDetail:
+    driver = await get_neo4j_driver(request)
+    entity = await get_soa_entity(driver, version_id, visit_id, "visits")
+    if not entity:
+        raise HTTPException(status_code=404, detail="Visit not found")
+    return SoAEntityDetail(**entity)
+
+
+@app.get(
+    "/api/v1/studies/{study_id}/versions/{version_id}/visits",
+    response_model=List[SoAEntityDetail],
+)
+async def list_visits_endpoint(
+    study_id: str,
+    version_id: str,
+    request: Request,
+) -> List[SoAEntityDetail]:
+    driver = await get_neo4j_driver(request)
+    entities = await list_soa_entities(driver, version_id, "visits")
+    return [SoAEntityDetail(**e) for e in entities]
+
+
+@app.put(
+    "/api/v1/studies/{study_id}/versions/{version_id}/visits/{visit_id}",
+    response_model=SoAEntityCreatedResponse,
+)
+async def update_visit_endpoint(
+    study_id: str,
+    version_id: str,
+    visit_id: str,
+    payload: UpdateSoAEntityRequest,
+    request: Request,
+) -> SoAEntityCreatedResponse:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    try:
+        await update_visit(
+            driver=driver,
+            study_version_id=version_id,
+            user_id=user_id,
+            change_reason=change_reason,
+            visit_id=visit_id,
+            properties=payload.properties,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return SoAEntityCreatedResponse(id=visit_id)
+
+
+# --- Procedures Endpoints ---
+
+
+@app.post(
+    "/api/v1/studies/{study_id}/versions/{version_id}/procedures",
+    response_model=SoAEntityCreatedResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_procedure_endpoint(
+    study_id: str,
+    version_id: str,
+    payload: CreateSoAEntityRequest,
+    request: Request,
+) -> SoAEntityCreatedResponse:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    await create_procedure(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        procedure_id=payload.id,
+        properties=payload.properties,
+    )
+    return SoAEntityCreatedResponse(id=payload.id)
+
+
+@app.get(
+    "/api/v1/studies/{study_id}/versions/{version_id}/procedures/{procedure_id}",
+    response_model=SoAEntityDetail,
+)
+async def get_procedure_endpoint(
+    study_id: str,
+    version_id: str,
+    procedure_id: str,
+    request: Request,
+) -> SoAEntityDetail:
+    driver = await get_neo4j_driver(request)
+    entity = await get_soa_entity(driver, version_id, procedure_id, "procedures")
+    if not entity:
+        raise HTTPException(status_code=404, detail="Procedure not found")
+    return SoAEntityDetail(**entity)
+
+
+@app.get(
+    "/api/v1/studies/{study_id}/versions/{version_id}/procedures",
+    response_model=List[SoAEntityDetail],
+)
+async def list_procedures_endpoint(
+    study_id: str,
+    version_id: str,
+    request: Request,
+) -> List[SoAEntityDetail]:
+    driver = await get_neo4j_driver(request)
+    entities = await list_soa_entities(driver, version_id, "procedures")
+    return [SoAEntityDetail(**e) for e in entities]
+
+
+@app.put(
+    "/api/v1/studies/{study_id}/versions/{version_id}/procedures/{procedure_id}",
+    response_model=SoAEntityCreatedResponse,
+)
+async def update_procedure_endpoint(
+    study_id: str,
+    version_id: str,
+    procedure_id: str,
+    payload: UpdateSoAEntityRequest,
+    request: Request,
+) -> SoAEntityCreatedResponse:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    try:
+        await update_procedure(
+            driver=driver,
+            study_version_id=version_id,
+            user_id=user_id,
+            change_reason=change_reason,
+            procedure_id=procedure_id,
+            properties=payload.properties,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return SoAEntityCreatedResponse(id=procedure_id)
+
+
+# --- Timing Windows Endpoints ---
+
+
+@app.post(
+    "/api/v1/studies/{study_id}/versions/{version_id}/timing-windows",
+    response_model=SoAEntityCreatedResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_timing_window_endpoint(
+    study_id: str,
+    version_id: str,
+    payload: CreateSoAEntityRequest,
+    request: Request,
+) -> SoAEntityCreatedResponse:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    await create_timing_window(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        timing_id=payload.id,
+        properties=payload.properties,
+    )
+    return SoAEntityCreatedResponse(id=payload.id)
+
+
+@app.get(
+    "/api/v1/studies/{study_id}/versions/{version_id}/timing-windows/{timing_id}",
+    response_model=SoAEntityDetail,
+)
+async def get_timing_window_endpoint(
+    study_id: str,
+    version_id: str,
+    timing_id: str,
+    request: Request,
+) -> SoAEntityDetail:
+    driver = await get_neo4j_driver(request)
+    entity = await get_soa_entity(driver, version_id, timing_id, "timing_windows")
+    if not entity:
+        raise HTTPException(status_code=404, detail="Timing window not found")
+    return SoAEntityDetail(**entity)
+
+
+@app.get(
+    "/api/v1/studies/{study_id}/versions/{version_id}/timing-windows",
+    response_model=List[SoAEntityDetail],
+)
+async def list_timing_windows_endpoint(
+    study_id: str,
+    version_id: str,
+    request: Request,
+) -> List[SoAEntityDetail]:
+    driver = await get_neo4j_driver(request)
+    entities = await list_soa_entities(driver, version_id, "timing_windows")
+    return [SoAEntityDetail(**e) for e in entities]
+
+
+@app.put(
+    "/api/v1/studies/{study_id}/versions/{version_id}/timing-windows/{timing_id}",
+    response_model=SoAEntityCreatedResponse,
+)
+async def update_timing_window_endpoint(
+    study_id: str,
+    version_id: str,
+    timing_id: str,
+    payload: UpdateSoAEntityRequest,
+    request: Request,
+) -> SoAEntityCreatedResponse:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    try:
+        await update_timing_window(
+            driver=driver,
+            study_version_id=version_id,
+            user_id=user_id,
+            change_reason=change_reason,
+            timing_id=timing_id,
+            properties=payload.properties,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return SoAEntityCreatedResponse(id=timing_id)
+
+
+# --- Link/Association Endpoints ---
+
+
+@app.post(
+    "/api/v1/studies/{study_id}/versions/{version_id}/links/epoch-visit",
+    response_model=SoALinkResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def link_epoch_visit_endpoint(
+    study_id: str,
+    version_id: str,
+    payload: LinkEpochVisitRequest,
+    request: Request,
+) -> SoALinkResponse:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    success = await link_epoch_to_visit(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        epoch_id=payload.epoch_id,
+        visit_id=payload.visit_id,
+    )
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to link epoch and visit")
+    return SoALinkResponse()
+
+
+@app.post(
+    "/api/v1/studies/{study_id}/versions/{version_id}/links/visit-procedure",
+    response_model=SoALinkResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def link_visit_procedure_endpoint(
+    study_id: str,
+    version_id: str,
+    payload: LinkVisitProcedureRequest,
+    request: Request,
+) -> SoALinkResponse:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    success = await link_visit_to_procedure(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        visit_id=payload.visit_id,
+        procedure_id=payload.procedure_id,
+    )
+    if not success:
+        raise HTTPException(
+            status_code=400, detail="Failed to link visit and procedure"
+        )
+    return SoALinkResponse()
+
+
+@app.post(
+    "/api/v1/studies/{study_id}/versions/{version_id}/links/timing",
+    response_model=SoALinkResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def link_timing_endpoint(
+    study_id: str,
+    version_id: str,
+    payload: LinkTimingRequest,
+    request: Request,
+) -> SoALinkResponse:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    success = await link_visit_or_procedure_to_timing(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        source_id=payload.source_id,
+        timing_id=payload.timing_id,
+        source_type=payload.source_type,
+    )
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to link to timing window")
+    return SoALinkResponse()
+
+
+@app.post(
+    "/api/v1/studies/{study_id}/versions/{version_id}/links/arm-applicability",
+    response_model=SoALinkResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def link_arm_applicability_endpoint(
+    study_id: str,
+    version_id: str,
+    payload: LinkArmApplicabilityRequest,
+    request: Request,
+) -> SoALinkResponse:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    success = await link_arm_applicability(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        arm_id=payload.arm_id,
+        target_id=payload.target_id,
+        target_type=payload.target_type,
+    )
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to link arm applicability")
+    return SoALinkResponse()
+
+
+# --- SoA Matrix Projection Endpoint ---
+
+
+@app.get(
+    "/api/v1/studies/{study_id}/versions/{version_id}/soa-projection",
+    response_model=SoAMatrixView,
+    status_code=status.HTTP_200_OK,
+)
+async def get_soa_projection_endpoint(
+    study_id: str,
+    version_id: str,
+    request: Request,
+) -> SoAMatrixView:
+    driver = await get_neo4j_driver(request)
+    matrix = await get_soa_matrix_projection(driver, version_id)
+    return SoAMatrixView(**matrix)
