@@ -25,6 +25,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 
 from apps.execution.cdisc_validator import validate_cdisc_xml_structure
+from apps.execution.coding import match_verbatim_term
 from apps.execution.coding.importer import process_dictionary_import
 from apps.execution.coding.parsers import MedDRAParser, WHODrugParser
 from apps.execution.database.context import current_change_reason, current_user_id
@@ -802,7 +803,32 @@ class MedDRACodeMatch(BaseModel):
 
 
 class MedDRACodingResult(BaseModel):
+    status: str  # e.g., "AUTO-CODED", "SUGGESTIONS", "UNCODABLE"
     matches: List[MedDRACodeMatch]
+
+
+class WHODrugATCContext(BaseModel):
+    atc_code: str
+    description: str
+
+
+class WHODrugIngredientItem(BaseModel):
+    ingredient_code: str
+    ingredient_name: str
+
+
+class WHODrugCodeMatch(BaseModel):
+    drug_code: str
+    preferred_name: str
+    drug_name: Optional[str] = None
+    score: float
+    atc_context: List[WHODrugATCContext] = []
+    ingredients: List[WHODrugIngredientItem] = []
+
+
+class WHODrugCodingResult(BaseModel):
+    status: str  # e.g., "AUTO-CODED", "SUGGESTIONS", "UNCODABLE"
+    matches: List[WHODrugCodeMatch]
 
 
 class UCUMConvertRequest(BaseModel):
@@ -999,26 +1025,205 @@ async def get_meddra_code(
     term: str,
     version: Optional[str] = Query("26.0"),
     target_level: Optional[MedDRATargetLevelEnum] = Query(MedDRATargetLevelEnum.LLT),
+    roles: list[str] = Depends(get_normalized_roles),
 ) -> MedDRACodingResult:
-    """Performs coding or interactive auto-complete lookup on adverse events."""
-    return MedDRACodingResult(
-        matches=[
-            MedDRACodeMatch(
-                llt_code="10019211",
-                llt_name="Headache",
-                pt_code="10019211",
-                pt_name="Headache",
-                hlt_code="10019231",
-                hlt_name="Headaches NEC",
-                hlgt_code="10029214",
-                hlgt_name="Headache and facial pain",
-                soc_code="10029205",
-                soc_name="Nervous system disorders",
-                primary_soc_flag="Y",
-                score=1.0,
+    """Performs coding or interactive auto-complete lookup on adverse events using version-aware matcher."""
+    if not term or not term.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Term must be a non-empty string.",
+        )
+    if not version or not version.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Version must be a non-empty string.",
+        )
+
+    async with db_manager.get_session_maker()() as session:
+        try:
+            res = await match_verbatim_term(
+                session=session,
+                verbatim=term.strip(),
+                dictionary_type="MEDDRA",
+                version=version.strip(),
+                target_level=target_level.value if target_level else None,
             )
-        ]
-    )
+        except Exception as e:
+            raise HTTPException(
+                status_code=500, detail=f"Database or matcher error: {str(e)}"
+            )
+
+        matches = []
+        if res.get("match"):
+            parent_match = res["match"]
+            score = parent_match.get("score", 0.0)
+            if parent_match.get("hierarchies"):
+                for h in parent_match.get("hierarchies", []):
+                    matches.append(
+                        MedDRACodeMatch(
+                            llt_code=h.get("llt_code") or "",
+                            llt_name=h.get("llt_name") or "",
+                            pt_code=h.get("pt_code") or "",
+                            pt_name=h.get("pt_name") or "",
+                            hlt_code=h.get("hlt_code") or "",
+                            hlt_name=h.get("hlt_name") or "",
+                            hlgt_code=h.get("hlgt_code") or "",
+                            hlgt_name=h.get("hlgt_name") or "",
+                            soc_code=h.get("soc_code") or "",
+                            soc_name=h.get("soc_name") or "",
+                            primary_soc_flag=h.get("primary_soc_flag"),
+                            score=score,
+                        )
+                    )
+            else:
+                is_llt = parent_match.get("level") == "LLT"
+                matches.append(
+                    MedDRACodeMatch(
+                        llt_code=parent_match.get("code") if is_llt else "",
+                        llt_name=parent_match.get("term_name") if is_llt else "",
+                        pt_code=parent_match.get("code") if not is_llt else "",
+                        pt_name=parent_match.get("term_name") if not is_llt else "",
+                        hlt_code="",
+                        hlt_name="",
+                        hlgt_code="",
+                        hlgt_name="",
+                        soc_code="",
+                        soc_name="",
+                        primary_soc_flag=None,
+                        score=score,
+                    )
+                )
+        elif res.get("suggestions"):
+            for sug in res["suggestions"]:
+                score = sug.get("score", 0.0)
+                if sug.get("hierarchies"):
+                    for h in sug.get("hierarchies", []):
+                        matches.append(
+                            MedDRACodeMatch(
+                                llt_code=h.get("llt_code") or "",
+                                llt_name=h.get("llt_name") or "",
+                                pt_code=h.get("pt_code") or "",
+                                pt_name=h.get("pt_name") or "",
+                                hlt_code=h.get("hlt_code") or "",
+                                hlt_name=h.get("hlt_name") or "",
+                                hlgt_code=h.get("hlgt_code") or "",
+                                hlgt_name=h.get("hlgt_name") or "",
+                                soc_code=h.get("soc_code") or "",
+                                soc_name=h.get("soc_name") or "",
+                                primary_soc_flag=h.get("primary_soc_flag"),
+                                score=score,
+                            )
+                        )
+                else:
+                    is_llt = sug.get("level") == "LLT"
+                    matches.append(
+                        MedDRACodeMatch(
+                            llt_code=sug.get("code") if is_llt else "",
+                            llt_name=sug.get("term_name") if is_llt else "",
+                            pt_code=sug.get("code") if not is_llt else "",
+                            pt_name=sug.get("term_name") if not is_llt else "",
+                            hlt_code="",
+                            hlt_name="",
+                            hlgt_code="",
+                            hlgt_name="",
+                            soc_code="",
+                            soc_name="",
+                            primary_soc_flag=None,
+                            score=score,
+                        )
+                    )
+
+        return MedDRACodingResult(
+            status=res.get("status", "UNCODABLE"),
+            matches=matches,
+        )
+
+
+@app.get("/api/v1/dictionaries/whodrug/code", response_model=WHODrugCodingResult)
+async def get_whodrug_code(
+    term: str,
+    version: str,
+    roles: list[str] = Depends(get_normalized_roles),
+) -> WHODrugCodingResult:
+    """Performs coding or interactive lookup on WHODrug database using version-aware matcher."""
+    if not term or not term.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Term must be a non-empty string.",
+        )
+    if not version or not version.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Version must be a non-empty string.",
+        )
+
+    async with db_manager.get_session_maker()() as session:
+        try:
+            res = await match_verbatim_term(
+                session=session,
+                verbatim=term.strip(),
+                dictionary_type="WHODRUG",
+                version=version.strip(),
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=500, detail=f"Database or matcher error: {str(e)}"
+            )
+
+        matches = []
+        if res.get("match"):
+            m = res["match"]
+            matches.append(
+                WHODrugCodeMatch(
+                    drug_code=m.get("drug_code") or "",
+                    preferred_name=m.get("preferred_name") or "",
+                    drug_name=m.get("drug_name"),
+                    score=m.get("score", 0.0),
+                    atc_context=[
+                        WHODrugATCContext(
+                            atc_code=a.get("atc_code") or "",
+                            description=a.get("description") or "",
+                        )
+                        for a in m.get("atc_context", [])
+                    ],
+                    ingredients=[
+                        WHODrugIngredientItem(
+                            ingredient_code=i.get("ingredient_code") or "",
+                            ingredient_name=i.get("ingredient_name") or "",
+                        )
+                        for i in m.get("ingredients", [])
+                    ],
+                )
+            )
+        elif res.get("suggestions"):
+            for sug in res["suggestions"]:
+                matches.append(
+                    WHODrugCodeMatch(
+                        drug_code=sug.get("drug_code") or "",
+                        preferred_name=sug.get("preferred_name") or "",
+                        drug_name=sug.get("drug_name"),
+                        score=sug.get("score", 0.0),
+                        atc_context=[
+                            WHODrugATCContext(
+                                atc_code=a.get("atc_code") or "",
+                                description=a.get("description") or "",
+                            )
+                            for a in sug.get("atc_context", [])
+                        ],
+                        ingredients=[
+                            WHODrugIngredientItem(
+                                ingredient_code=i.get("ingredient_code") or "",
+                                ingredient_name=i.get("ingredient_name") or "",
+                            )
+                            for i in sug.get("ingredients", [])
+                        ],
+                    )
+                )
+
+        return WHODrugCodingResult(
+            status=res.get("status", "UNCODABLE"),
+            matches=matches,
+        )
 
 
 @app.post("/api/v1/dictionaries/ucum/convert", response_model=UCUMConvertResponse)
