@@ -636,6 +636,505 @@ async def trigger_outlier_recalculation(
 # ==========================================
 
 
+class LabReferenceRangeResponse(BaseModel):
+    """Pydantic schema for returning reference range details."""
+
+    id: str
+    study_id: str
+    test_code: str
+    test_name: str
+    source: str
+    site_id: Optional[str] = None
+    unit: str
+    normalized_unit: str
+    sex_applicability: str
+    age_low: Optional[float] = None
+    age_high: Optional[float] = None
+    low_bound: Optional[float] = None
+    high_bound: Optional[float] = None
+    critical_low: Optional[float] = None
+    critical_high: Optional[float] = None
+    version: int
+    is_deleted: bool
+
+
+class LabReferenceRangeCreate(BaseModel):
+    """Pydantic schema for creating a reference range."""
+
+    study_id: str
+    test_code: str
+    test_name: str
+    source: str
+    site_id: Optional[str] = None
+    unit: str
+    normalized_unit: str
+    sex_applicability: str
+    age_low: Optional[float] = None
+    age_high: Optional[float] = None
+    low_bound: Optional[float] = None
+    high_bound: Optional[float] = None
+    critical_low: Optional[float] = None
+    critical_high: Optional[float] = None
+
+
+class LabReferenceRangeUpdate(BaseModel):
+    """Pydantic schema for updating a reference range."""
+
+    study_id: Optional[str] = None
+    test_code: Optional[str] = None
+    test_name: Optional[str] = None
+    source: Optional[str] = None
+    site_id: Optional[str] = None
+    unit: Optional[str] = None
+    normalized_unit: Optional[str] = None
+    sex_applicability: Optional[str] = None
+    age_low: Optional[float] = None
+    age_high: Optional[float] = None
+    low_bound: Optional[float] = None
+    high_bound: Optional[float] = None
+    critical_low: Optional[float] = None
+    critical_high: Optional[float] = None
+
+
+def validate_lab_range_payload(data: dict) -> None:
+    """Enforces all domain/business constraints on a reference range data dictionary."""
+    required_strings = [
+        "study_id",
+        "test_code",
+        "test_name",
+        "source",
+        "unit",
+        "normalized_unit",
+        "sex_applicability",
+    ]
+    for field in required_strings:
+        val = data.get(field)
+        if val is None:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Field '{field}' is required and cannot be blank.",
+            )
+        if not isinstance(val, str) or not val.strip():
+            raise HTTPException(
+                status_code=400,
+                detail=f"Field '{field}' cannot be blank.",
+            )
+
+    if "site_id" in data and data["site_id"] is not None:
+        val = data["site_id"]
+        if isinstance(val, str) and not val.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="Field 'site_id' cannot be blank.",
+            )
+
+    source_upper = str(data["source"]).strip().upper()
+    if source_upper not in ("CENTRAL", "LOCAL"):
+        raise HTTPException(
+            status_code=400,
+            detail="Field 'source' must be either 'CENTRAL' or 'LOCAL'.",
+        )
+    data["source"] = source_upper
+
+    sex_upper = str(data["sex_applicability"]).strip().upper()
+    if sex_upper not in ("M", "F", "ALL", "U"):
+        raise HTTPException(
+            status_code=400,
+            detail="Field 'sex_applicability' must be one of 'M', 'F', 'ALL', or 'U'.",
+        )
+    data["sex_applicability"] = sex_upper
+
+    age_low = data.get("age_low")
+    age_high = data.get("age_high")
+    if age_low is not None:
+        try:
+            age_low_val = float(age_low)
+            data["age_low"] = age_low_val
+        except (ValueError, TypeError):
+            raise HTTPException(
+                status_code=400,
+                detail="Field 'age_low' must be a numeric value.",
+            )
+        if age_low_val < 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Field 'age_low' cannot be negative.",
+            )
+
+    if age_high is not None:
+        try:
+            age_high_val = float(age_high)
+            data["age_high"] = age_high_val
+        except (ValueError, TypeError):
+            raise HTTPException(
+                status_code=400,
+                detail="Field 'age_high' must be a numeric value.",
+            )
+        if age_high_val < 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Field 'age_high' cannot be negative.",
+            )
+
+    if age_low is not None and age_high is not None:
+        if float(age_low) > float(age_high):
+            raise HTTPException(
+                status_code=400,
+                detail="Field 'age_low' must be less than or equal to 'age_high'.",
+            )
+
+    low_bound = data.get("low_bound")
+    high_bound = data.get("high_bound")
+    if low_bound is not None:
+        try:
+            low_bound_val = float(low_bound)
+            data["low_bound"] = low_bound_val
+        except (ValueError, TypeError):
+            raise HTTPException(
+                status_code=400,
+                detail="Field 'low_bound' must be a numeric value.",
+            )
+    if high_bound is not None:
+        try:
+            high_bound_val = float(high_bound)
+            data["high_bound"] = high_bound_val
+        except (ValueError, TypeError):
+            raise HTTPException(
+                status_code=400,
+                detail="Field 'high_bound' must be a numeric value.",
+            )
+
+    if low_bound is not None and high_bound is not None:
+        if float(low_bound) > float(high_bound):
+            raise HTTPException(
+                status_code=400,
+                detail="Field 'low_bound' must be less than or equal to 'high_bound'.",
+            )
+
+    critical_low = data.get("critical_low")
+    critical_high = data.get("critical_high")
+    if critical_low is not None:
+        try:
+            critical_low_val = float(critical_low)
+            data["critical_low"] = critical_low_val
+        except (ValueError, TypeError):
+            raise HTTPException(
+                status_code=400,
+                detail="Field 'critical_low' must be a numeric value.",
+            )
+    if critical_high is not None:
+        try:
+            critical_high_val = float(critical_high)
+            data["critical_high"] = critical_high_val
+        except (ValueError, TypeError):
+            raise HTTPException(
+                status_code=400,
+                detail="Field 'critical_high' must be a numeric value.",
+            )
+
+    if critical_low is not None and critical_high is not None:
+        if float(critical_low) > float(critical_high):
+            raise HTTPException(
+                status_code=400,
+                detail="Field 'critical_low' must be less than or equal to 'critical_high'.",
+            )
+
+    if critical_low is not None and low_bound is not None:
+        if float(critical_low) > float(low_bound):
+            raise HTTPException(
+                status_code=400,
+                detail="Field 'critical_low' must be less than or equal to 'low_bound'.",
+            )
+
+    if critical_high is not None and high_bound is not None:
+        if float(critical_high) < float(high_bound):
+            raise HTTPException(
+                status_code=400,
+                detail="Field 'critical_high' must be greater than or equal to 'high_bound'.",
+            )
+
+
+@app.post(
+    "/api/v1/execution/lab-ranges",
+    response_model=LabReferenceRangeResponse,
+    status_code=201,
+)
+async def create_lab_range(
+    payload: LabReferenceRangeCreate,
+    roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER)),
+) -> LabReferenceRangeResponse:
+    """Create a new lab reference range, validating all range invariants."""
+    from apps.execution.database.models import LabReferenceRange
+
+    data = payload.model_dump()
+    validate_lab_range_payload(data)
+
+    async with db_manager.get_session_maker()() as session:
+        async with session.begin():
+            lab_range = LabReferenceRange(
+                study_id=data["study_id"],
+                test_code=data["test_code"],
+                test_name=data["test_name"],
+                source=data["source"],
+                site_id=data.get("site_id"),
+                unit=data["unit"],
+                normalized_unit=data["normalized_unit"],
+                sex_applicability=data["sex_applicability"],
+                age_low=data.get("age_low"),
+                age_high=data.get("age_high"),
+                low_bound=data.get("low_bound"),
+                high_bound=data.get("high_bound"),
+                critical_low=data.get("critical_low"),
+                critical_high=data.get("critical_high"),
+            )
+            session.add(lab_range)
+
+        # Retrieve the latest committed state
+        async with session.begin():
+            stmt = select(LabReferenceRange).where(LabReferenceRange.id == lab_range.id)
+            res = await session.execute(stmt)
+            saved_range = res.scalar_one()
+
+        return LabReferenceRangeResponse(
+            id=saved_range.id,
+            study_id=saved_range.study_id,
+            test_code=saved_range.test_code,
+            test_name=saved_range.test_name,
+            source=saved_range.source,
+            site_id=saved_range.site_id,
+            unit=saved_range.unit,
+            normalized_unit=saved_range.normalized_unit,
+            sex_applicability=saved_range.sex_applicability,
+            age_low=saved_range.age_low,
+            age_high=saved_range.age_high,
+            low_bound=saved_range.low_bound,
+            high_bound=saved_range.high_bound,
+            critical_low=saved_range.critical_low,
+            critical_high=saved_range.critical_high,
+            version=saved_range.version,
+            is_deleted=saved_range.is_deleted,
+        )
+
+
+@app.get(
+    "/api/v1/execution/lab-ranges",
+    response_model=List[LabReferenceRangeResponse],
+)
+async def list_lab_ranges(
+    study_id: Optional[str] = None,
+    test_code: Optional[str] = None,
+    source: Optional[str] = None,
+    include_deleted: bool = False,
+    roles: list[str] = Depends(get_normalized_roles),
+) -> List[LabReferenceRangeResponse]:
+    """List and filter reference ranges."""
+    from apps.execution.database.models import LabReferenceRange
+
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(LabReferenceRange)
+        if not include_deleted:
+            stmt = stmt.where(LabReferenceRange.is_deleted.is_(False))
+
+        if study_id:
+            stmt = stmt.where(LabReferenceRange.study_id == study_id)
+        if test_code:
+            stmt = stmt.where(LabReferenceRange.test_code == test_code)
+        if source:
+            stmt = stmt.where(LabReferenceRange.source == source)
+
+        res = await session.execute(stmt)
+        ranges = res.scalars().all()
+
+        return [
+            LabReferenceRangeResponse(
+                id=r.id,
+                study_id=r.study_id,
+                test_code=r.test_code,
+                test_name=r.test_name,
+                source=r.source,
+                site_id=r.site_id,
+                unit=r.unit,
+                normalized_unit=r.normalized_unit,
+                sex_applicability=r.sex_applicability,
+                age_low=r.age_low,
+                age_high=r.age_high,
+                low_bound=r.low_bound,
+                high_bound=r.high_bound,
+                critical_low=r.critical_low,
+                critical_high=r.critical_high,
+                version=r.version,
+                is_deleted=r.is_deleted,
+            )
+            for r in ranges
+        ]
+
+
+@app.get(
+    "/api/v1/execution/lab-ranges/{range_id}",
+    response_model=LabReferenceRangeResponse,
+)
+async def get_lab_range(
+    range_id: str,
+    roles: list[str] = Depends(get_normalized_roles),
+) -> LabReferenceRangeResponse:
+    """Retrieve a single lab reference range."""
+    from apps.execution.database.models import LabReferenceRange
+
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(LabReferenceRange).where(LabReferenceRange.id == range_id)
+        res = await session.execute(stmt)
+        r = res.scalars().first()
+        if not r:
+            raise HTTPException(status_code=404, detail="LabReferenceRange not found")
+
+        return LabReferenceRangeResponse(
+            id=r.id,
+            study_id=r.study_id,
+            test_code=r.test_code,
+            test_name=r.test_name,
+            source=r.source,
+            site_id=r.site_id,
+            unit=r.unit,
+            normalized_unit=r.normalized_unit,
+            sex_applicability=r.sex_applicability,
+            age_low=r.age_low,
+            age_high=r.age_high,
+            low_bound=r.low_bound,
+            high_bound=r.high_bound,
+            critical_low=r.critical_low,
+            critical_high=r.critical_high,
+            version=r.version,
+            is_deleted=r.is_deleted,
+        )
+
+
+@app.put(
+    "/api/v1/execution/lab-ranges/{range_id}",
+    response_model=LabReferenceRangeResponse,
+)
+async def update_lab_range(
+    range_id: str,
+    payload: LabReferenceRangeUpdate,
+    roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER)),
+) -> LabReferenceRangeResponse:
+    """Update an existing lab reference range, validating all range invariants on the merged state."""
+    from apps.execution.database.models import LabReferenceRange
+
+    async with db_manager.get_session_maker()() as session:
+        async with session.begin():
+            stmt = select(LabReferenceRange).where(LabReferenceRange.id == range_id)
+            res = await session.execute(stmt)
+            r = res.scalars().first()
+            if not r:
+                raise HTTPException(status_code=404, detail="LabReferenceRange not found")
+
+            merged_data = {
+                "study_id": payload.study_id if payload.study_id is not None else r.study_id,
+                "test_code": payload.test_code if payload.test_code is not None else r.test_code,
+                "test_name": payload.test_name if payload.test_name is not None else r.test_name,
+                "source": payload.source if payload.source is not None else r.source,
+                "site_id": payload.site_id if payload.site_id is not None else r.site_id,
+                "unit": payload.unit if payload.unit is not None else r.unit,
+                "normalized_unit": payload.normalized_unit if payload.normalized_unit is not None else r.normalized_unit,
+                "sex_applicability": payload.sex_applicability if payload.sex_applicability is not None else r.sex_applicability,
+                "age_low": payload.age_low if payload.age_low is not None else r.age_low,
+                "age_high": payload.age_high if payload.age_high is not None else r.age_high,
+                "low_bound": payload.low_bound if payload.low_bound is not None else r.low_bound,
+                "high_bound": payload.high_bound if payload.high_bound is not None else r.high_bound,
+                "critical_low": payload.critical_low if payload.critical_low is not None else r.critical_low,
+                "critical_high": payload.critical_high if payload.critical_high is not None else r.critical_high,
+            }
+
+            validate_lab_range_payload(merged_data)
+
+            r.study_id = merged_data["study_id"]
+            r.test_code = merged_data["test_code"]
+            r.test_name = merged_data["test_name"]
+            r.source = merged_data["source"]
+            r.site_id = merged_data["site_id"]
+            r.unit = merged_data["unit"]
+            r.normalized_unit = merged_data["normalized_unit"]
+            r.sex_applicability = merged_data["sex_applicability"]
+            r.age_low = merged_data["age_low"]
+            r.age_high = merged_data["age_high"]
+            r.low_bound = merged_data["low_bound"]
+            r.high_bound = merged_data["high_bound"]
+            r.critical_low = merged_data["critical_low"]
+            r.critical_high = merged_data["critical_high"]
+
+        async with session.begin():
+            stmt = select(LabReferenceRange).where(LabReferenceRange.id == range_id)
+            res = await session.execute(stmt)
+            updated_range = res.scalar_one()
+
+        return LabReferenceRangeResponse(
+            id=updated_range.id,
+            study_id=updated_range.study_id,
+            test_code=updated_range.test_code,
+            test_name=updated_range.test_name,
+            source=updated_range.source,
+            site_id=updated_range.site_id,
+            unit=updated_range.unit,
+            normalized_unit=updated_range.normalized_unit,
+            sex_applicability=updated_range.sex_applicability,
+            age_low=updated_range.age_low,
+            age_high=updated_range.age_high,
+            low_bound=updated_range.low_bound,
+            high_bound=updated_range.high_bound,
+            critical_low=updated_range.critical_low,
+            critical_high=updated_range.critical_high,
+            version=updated_range.version,
+            is_deleted=updated_range.is_deleted,
+        )
+
+
+@app.delete(
+    "/api/v1/execution/lab-ranges/{range_id}",
+    response_model=LabReferenceRangeResponse,
+)
+async def delete_lab_range(
+    range_id: str,
+    roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER)),
+) -> LabReferenceRangeResponse:
+    """Soft-delete a lab reference range by setting is_deleted = True."""
+    from apps.execution.database.models import LabReferenceRange
+
+    async with db_manager.get_session_maker()() as session:
+        async with session.begin():
+            stmt = select(LabReferenceRange).where(LabReferenceRange.id == range_id)
+            res = await session.execute(stmt)
+            r = res.scalars().first()
+            if not r:
+                raise HTTPException(status_code=404, detail="LabReferenceRange not found")
+
+            r.is_deleted = True
+
+        async with session.begin():
+            stmt = select(LabReferenceRange).where(LabReferenceRange.id == range_id)
+            res = await session.execute(stmt)
+            deleted_range = res.scalar_one()
+
+        return LabReferenceRangeResponse(
+            id=deleted_range.id,
+            study_id=deleted_range.study_id,
+            test_code=deleted_range.test_code,
+            test_name=deleted_range.test_name,
+            source=deleted_range.source,
+            site_id=deleted_range.site_id,
+            unit=deleted_range.unit,
+            normalized_unit=deleted_range.normalized_unit,
+            sex_applicability=deleted_range.sex_applicability,
+            age_low=deleted_range.age_low,
+            age_high=deleted_range.age_high,
+            low_bound=deleted_range.low_bound,
+            high_bound=deleted_range.high_bound,
+            critical_low=deleted_range.critical_low,
+            critical_high=deleted_range.critical_high,
+            version=deleted_range.version,
+            is_deleted=deleted_range.is_deleted,
+        )
+
+
 class LabRangeRecalculateRequest(BaseModel):
     """Pydantic schema for triggering lab range recalculations."""
 
