@@ -21,7 +21,7 @@ from fastapi import (
     Response,
     UploadFile,
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from apps.execution.cdisc_validator import validate_cdisc_xml_structure
@@ -41,6 +41,7 @@ from apps.execution.database.models import (
     ImportState,
     SDVSignOff,
     TranslationJob,
+    TSDVConfig,
 )
 from apps.execution.database.models import (
     DictionaryType as DBDictionaryType,
@@ -1483,6 +1484,263 @@ async def open_query(
             resolved_at=q_db.resolved_at,
             cancellation_reason=q_db.cancellation_reason,
             escalated_at=q_db.escalated_at,
+        )
+
+
+# =============================================================================
+# Targeted SDV (TSDV) API Schemas and Endpoints
+# =============================================================================
+
+
+class SamplingModelEnum(str, Enum):
+    SUBJECT_BASED = "SUBJECT_BASED"
+    FIELD_BASED = "FIELD_BASED"
+    COMBINED = "COMBINED"
+
+
+class TSDVConfigUpsert(BaseModel):
+    study_id: str = Field(
+        ..., min_length=1, description="Unique clinical trial study identifier"
+    )
+    sampling_model: SamplingModelEnum = Field(
+        ..., description="SUBJECT_BASED, FIELD_BASED, or COMBINED"
+    )
+    initial_full_sdv_subject_count: int = Field(
+        default=0,
+        ge=0,
+        description="Count of subjects requiring full SDV before sampling begins",
+    )
+    random_sample_percentage: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=100.0,
+        description="Probability percentage of standard random subject sampling",
+    )
+    full_sdv_domains: List[str] = Field(
+        default_factory=list,
+        description="JSON list of SDTM domain codes requiring 100% full SDV",
+    )
+    safety_endpoints: List[str] = Field(
+        default_factory=list,
+        description="JSON list of safety endpoint variables/domains requiring 100% full SDV",
+    )
+    zero_sdv_domains: List[str] = Field(
+        default_factory=list,
+        description="JSON list of SDTM domain codes needing zero (no) SDV",
+    )
+    trial_random_seed: int = Field(
+        ...,
+        description="Integer seed value for stable, deterministic pseudo-random sampling",
+    )
+
+
+class TSDVConfigResponse(BaseModel):
+    id: str
+    study_id: str
+    sampling_model: str
+    initial_full_sdv_subject_count: int
+    random_sample_percentage: float
+    full_sdv_domains: List[str]
+    safety_endpoints: List[str]
+    zero_sdv_domains: List[str]
+    trial_random_seed: int
+    version: int
+
+
+class TSDVEvaluationResponse(BaseModel):
+    required: bool
+    sampling_model: str
+    config_id: Optional[str]
+    is_subject_selected: bool
+    is_field_required: Optional[bool]
+    explanation: str
+    details: dict
+
+
+@app.post(
+    "/api/v1/execution/tsdv/config",
+    response_model=TSDVConfigResponse,
+)
+async def upsert_tsdv_config(
+    request: Request,
+    payload: TSDVConfigUpsert,
+    roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER)),
+) -> TSDVConfigResponse:
+    """Create or update a Targeted SDV (TSDV) configuration for a study."""
+    verify_change_justification(request)
+
+    async with db_manager.get_session_maker()() as session:
+        # Check if config already exists for this study
+        stmt = select(TSDVConfig).where(TSDVConfig.study_id == payload.study_id)
+        res = await session.execute(stmt)
+        cfg = res.scalars().first()
+
+        if cfg:
+            # Update existing
+            cfg.sampling_model = payload.sampling_model.value
+            cfg.initial_full_sdv_subject_count = payload.initial_full_sdv_subject_count
+            cfg.random_sample_percentage = payload.random_sample_percentage
+            cfg.full_sdv_domains = payload.full_sdv_domains
+            cfg.safety_endpoints = payload.safety_endpoints
+            cfg.zero_sdv_domains = payload.zero_sdv_domains
+            cfg.trial_random_seed = payload.trial_random_seed
+            cfg.version += 1
+        else:
+            # Create new
+            cfg = TSDVConfig(
+                study_id=payload.study_id,
+                sampling_model=payload.sampling_model.value,
+                initial_full_sdv_subject_count=payload.initial_full_sdv_subject_count,
+                random_sample_percentage=payload.random_sample_percentage,
+                full_sdv_domains=payload.full_sdv_domains,
+                safety_endpoints=payload.safety_endpoints,
+                zero_sdv_domains=payload.zero_sdv_domains,
+                trial_random_seed=payload.trial_random_seed,
+            )
+            session.add(cfg)
+
+        await session.commit()
+
+        # Re-fetch to get accurate state
+        stmt_ref = select(TSDVConfig).where(TSDVConfig.study_id == payload.study_id)
+        res_ref = await session.execute(stmt_ref)
+        cfg_db = res_ref.scalar_one()
+
+        return TSDVConfigResponse(
+            id=cfg_db.id,
+            study_id=cfg_db.study_id,
+            sampling_model=cfg_db.sampling_model,
+            initial_full_sdv_subject_count=cfg_db.initial_full_sdv_subject_count,
+            random_sample_percentage=cfg_db.random_sample_percentage,
+            full_sdv_domains=cfg_db.full_sdv_domains or [],
+            safety_endpoints=cfg_db.safety_endpoints or [],
+            zero_sdv_domains=cfg_db.zero_sdv_domains or [],
+            trial_random_seed=cfg_db.trial_random_seed,
+            version=cfg_db.version,
+        )
+
+
+@app.get(
+    "/api/v1/execution/tsdv/config/{study_id}",
+    response_model=TSDVConfigResponse,
+)
+async def get_tsdv_config(
+    study_id: str,
+    roles: list[str] = Depends(
+        require_roles(ROLE_CRA, ROLE_DATA_MANAGER, ROLE_SITE_INVESTIGATOR, "monitor")
+    ),
+) -> TSDVConfigResponse:
+    """Retrieve the TSDV configuration for a study."""
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(TSDVConfig).where(TSDVConfig.study_id == study_id)
+        res = await session.execute(stmt)
+        cfg = res.scalars().first()
+        if not cfg:
+            raise HTTPException(
+                status_code=404,
+                detail=f"TSDV configuration not found for study: {study_id}",
+            )
+
+        return TSDVConfigResponse(
+            id=cfg.id,
+            study_id=cfg.study_id,
+            sampling_model=cfg.sampling_model,
+            initial_full_sdv_subject_count=cfg.initial_full_sdv_subject_count,
+            random_sample_percentage=cfg.random_sample_percentage,
+            full_sdv_domains=cfg.full_sdv_domains or [],
+            safety_endpoints=cfg.safety_endpoints or [],
+            zero_sdv_domains=cfg.zero_sdv_domains or [],
+            trial_random_seed=cfg.trial_random_seed,
+            version=cfg.version,
+        )
+
+
+@app.get(
+    "/api/v1/execution/tsdv/required",
+    response_model=TSDVEvaluationResponse,
+)
+async def evaluate_tsdv(
+    study_id: str,
+    subject_id: str,
+    domain: Optional[str] = None,
+    page_id: Optional[str] = None,
+    enrollment_index: Optional[int] = None,
+    roles: list[str] = Depends(
+        require_roles(ROLE_CRA, ROLE_DATA_MANAGER, ROLE_SITE_INVESTIGATOR, "monitor")
+    ),
+) -> TSDVEvaluationResponse:
+    """Evaluate if SDV is required for a specific subject and/or domain."""
+    async with db_manager.get_session_maker()() as session:
+        # Resolve config
+        stmt_cfg = select(TSDVConfig).where(TSDVConfig.study_id == study_id)
+        res_cfg = await session.execute(stmt_cfg)
+        cfg = res_cfg.scalars().first()
+        if not cfg:
+            raise HTTPException(
+                status_code=404,
+                detail=f"TSDV configuration not found for study: {study_id}",
+            )
+
+        # Resolve subject
+        stmt_subj = select(ClinicalSubject).where(
+            ClinicalSubject.study_id == study_id,
+            (ClinicalSubject.subject_id == subject_id)
+            | (ClinicalSubject.id == subject_id),
+            ClinicalSubject.is_deleted.is_(False),
+        )
+        res_subj = await session.execute(stmt_subj)
+        subj = res_subj.scalars().first()
+        if not subj:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Subject {subject_id} not found in study {study_id}",
+            )
+
+        # Resolve enrollment index if not passed
+        resolved_index = enrollment_index
+        if resolved_index is None:
+            stmt_all = select(ClinicalSubject).where(
+                ClinicalSubject.study_id == study_id,
+                ClinicalSubject.is_deleted.is_(False),
+            )
+            res_all = await session.execute(stmt_all)
+            all_subjs = res_all.scalars().all()
+
+            # Sort deterministically
+            sorted_subjs = sorted(all_subjs, key=lambda s: (s.subject_id or "", s.id))
+
+            for idx, s in enumerate(sorted_subjs):
+                if s.id == subj.id:
+                    resolved_index = idx
+                    break
+
+        if resolved_index is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Unable to resolve enrollment index for subject: {subject_id}",
+            )
+
+        # Evaluate TSDV requirement
+        try:
+            from apps.execution.tsdv import evaluate_tsdv_requirement
+
+            result = evaluate_tsdv_requirement(
+                config=cfg,
+                subject_uuid=subj.id,  # Use stable database UUID
+                enrollment_index=resolved_index,
+                domain=domain,
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+        return TSDVEvaluationResponse(
+            required=result["required"],
+            sampling_model=result["sampling_model"],
+            config_id=result["config_id"],
+            is_subject_selected=result["is_subject_selected"],
+            is_field_required=result["is_field_required"],
+            explanation=result["explanation"],
+            details=result["details"],
         )
 
 
