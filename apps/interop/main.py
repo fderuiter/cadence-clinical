@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,6 +23,7 @@ from apps.interop.models import (
     Instrument,
     InteropAuditLog,
     SubjectAssignment,
+    SubjectNotification,
 )
 from packages.security.middleware import GatewayAuthMiddleware
 
@@ -477,6 +478,30 @@ class SubjectComplianceResponse(BaseModel):
     assignments: List[AssignmentComplianceDetail]
 
 
+class SubjectNotificationResponse(BaseModel):
+    id: str
+    subject_id: str
+    assignment_id: Optional[str]
+    due_at: datetime
+    channel: str
+    delivery_status: str
+    is_read: bool
+    read_at: Optional[datetime]
+    created_at: datetime
+    created_by: str
+    reason_for_change: str
+    version_index: int
+
+    class Config:
+        from_attributes = True
+
+
+class AcknowledgeNotificationRequest(BaseModel):
+    reason_for_change: str = Field(
+        ..., description="21 CFR Part 11 compliant reason for change"
+    )
+
+
 @app.post(
     "/api/v1/interop/instruments", response_model=InstrumentResponse, status_code=201
 )
@@ -667,6 +692,63 @@ async def get_subject_assigned_instruments(
     return list(inst_result.scalars().all())
 
 
+async def deliver_notification_task(
+    notification_id: str, channel: str, subject_id: str
+) -> None:
+    """
+    Asynchronous background task to simulate notification delivery.
+    Updates delivery_status to SENT or FAILED.
+    """
+    session_maker = db_manager.get_session_maker()
+    async with session_maker() as session:
+        try:
+            # Fetch notification
+            stmt = select(SubjectNotification).where(
+                SubjectNotification.id == notification_id
+            )
+            res = await session.execute(stmt)
+            notif = res.scalars().first()
+            if not notif:
+                return
+
+            message = "Reminder: eCOA assignment is due! Please complete your survey."
+            if channel == "EMAIL":
+                # Simulated email sending
+                print(
+                    f"[STUB EMAIL] Sending email to {subject_id}@example.com: {message}"
+                )
+            elif channel == "SMS":
+                # Simulated SMS sending
+                print(f"[STUB SMS] Sending SMS to +1234567890: {message}")
+            elif channel == "WEBHOOK":
+                # Simulated webhook delivery
+                print(
+                    f"[STUB WEBHOOK] Sending webhook to https://hooks.example.com/subject/{subject_id}"
+                )
+            elif channel == "IN_APP":
+                # Delivered in-app
+                print(f"[STUB IN_APP] Delivering in-app notification to {subject_id}")
+
+            notif.delivery_status = "SENT"
+            session.add(notif)
+            await session.commit()
+        except Exception as e:
+            print(f"Error delivering notification {notification_id}: {e}")
+            try:
+                async with session_maker() as fail_session:
+                    stmt = select(SubjectNotification).where(
+                        SubjectNotification.id == notification_id
+                    )
+                    res = await fail_session.execute(stmt)
+                    notif = res.scalars().first()
+                    if notif:
+                        notif.delivery_status = "FAILED"
+                        fail_session.add(notif)
+                        await fail_session.commit()
+            except Exception as fail_err:
+                print(f"Failed to record delivery failure: {fail_err}")
+
+
 @app.get(
     "/api/v1/interop/subjects/{subject_id}/compliance",
     response_model=SubjectComplianceResponse,
@@ -771,3 +853,212 @@ async def get_subject_compliance(
         overdue_count=overdue_cnt,
         assignments=details,
     )
+
+
+@app.post("/api/v1/interop/reminders/compute", status_code=200)
+async def compute_reminders(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    subject_id: Optional[str] = None,
+    session: AsyncSession = Depends(get_db_session),
+) -> Dict[str, Any]:
+    """
+    Compute due reminders from assignment schedules on demand.
+    Generates notifications for uncompleted assignments whose due window is reached.
+    """
+    if has_subject_role(request):
+        user_id = getattr(request.state, "user_id", "")
+        if subject_id is None:
+            subject_id = user_id
+        else:
+            verify_subject_identity(request, subject_id)
+
+    # Retrieve assignments
+    stmt = select(SubjectAssignment)
+    if subject_id:
+        stmt = stmt.where(SubjectAssignment.subject_id == subject_id)
+    res_assigns = await session.execute(stmt)
+    assignments = res_assigns.scalars().all()
+
+    # Retrieve submissions
+    stmt_subs = select(EPROSubmission)
+    if subject_id:
+        stmt_subs = stmt_subs.where(EPROSubmission.subject_id == subject_id)
+    res_subs = await session.execute(stmt_subs)
+    submissions = res_subs.scalars().all()
+
+    # Reconcile compliance
+    assignments_by_sub_inst = {}
+    for a in assignments:
+        key = (a.subject_id, a.instrument_id)
+        assignments_by_sub_inst.setdefault(key, []).append(a)
+    for key in assignments_by_sub_inst:
+        assignments_by_sub_inst[key].sort(key=lambda x: x.start_date)
+
+    subs_by_sub_inst = {}
+    for s in submissions:
+        key = (s.subject_id, s.diary_id)
+        subs_by_sub_inst.setdefault(key, []).append(s)
+    for key in subs_by_sub_inst:
+        subs_by_sub_inst[key].sort(key=lambda x: x.device_timestamp)
+
+    completed_assignment_ids = set()
+    for key, inst_assigns in assignments_by_sub_inst.items():
+        inst_subs = subs_by_sub_inst.get(key, [])
+        sub_idx = 0
+        for assign in inst_assigns:
+            if sub_idx < len(inst_subs):
+                completed_assignment_ids.add(assign.id)
+                sub_idx += 1
+
+    # Check due assignments
+    now = (
+        datetime.now(timezone.utc).replace(tzinfo=None)
+        if hasattr(timezone, "utc")
+        else datetime.utcnow()
+    )
+    created_count = 0
+
+    stmt_notifs = select(SubjectNotification)
+    if subject_id:
+        stmt_notifs = stmt_notifs.where(SubjectNotification.subject_id == subject_id)
+    res_notifs = await session.execute(stmt_notifs)
+    existing_notifs = res_notifs.scalars().all()
+    existing_keys = {
+        (n.assignment_id, n.channel) for n in existing_notifs if n.assignment_id
+    }
+
+    user_id = getattr(request.state, "user_id", "system")
+    user_roles = getattr(request.state, "roles", "system")
+    change_reason = getattr(
+        request.state, "change_reason", "Compute due reminders on demand"
+    )
+
+    channels = ["EMAIL", "SMS", "WEBHOOK", "IN_APP"]
+
+    for assign in assignments:
+        if assign.id in completed_assignment_ids:
+            continue
+
+        threshold = assign.due_at if assign.due_at else assign.end_date
+        if now >= threshold:
+            for channel in channels:
+                if (assign.id, channel) in existing_keys:
+                    continue
+
+                new_notif = SubjectNotification(
+                    subject_id=assign.subject_id,
+                    assignment_id=assign.id,
+                    due_at=threshold,
+                    channel=channel,
+                    delivery_status="PENDING",
+                    is_read=False,
+                    created_by=user_id,
+                    reason_for_change="Automated due reminder generation",
+                    version_index=1,
+                )
+                session.add(new_notif)
+                await session.flush()
+
+                background_tasks.add_task(
+                    deliver_notification_task,
+                    new_notif.id,
+                    channel,
+                    assign.subject_id,
+                )
+                created_count += 1
+
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="COMPUTE_REMINDERS",
+        details=f"Computed reminders for subject_id='{subject_id}'. Created {created_count} new notifications.",
+        change_reason=change_reason,
+    )
+
+    return {
+        "status": "success",
+        "created_count": created_count,
+        "detail": f"Generated {created_count} new reminders.",
+    }
+
+
+@app.get(
+    "/api/v1/interop/subjects/{subject_id}/notifications",
+    response_model=List[SubjectNotificationResponse],
+)
+async def get_subject_notifications(
+    request: Request,
+    subject_id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> List[SubjectNotificationResponse]:
+    """
+    Retrieve all notifications for a given subject.
+    Enforces subject-scoped identity boundary (Subject can only view their own notifications).
+    """
+    verify_subject_identity(request, subject_id)
+
+    stmt = select(SubjectNotification).where(
+        SubjectNotification.subject_id == subject_id
+    )
+    result = await session.execute(stmt)
+    notifications = result.scalars().all()
+    return list(notifications)
+
+
+@app.post(
+    "/api/v1/interop/notifications/{notification_id}/acknowledge",
+    response_model=SubjectNotificationResponse,
+)
+async def acknowledge_notification(
+    request: Request,
+    notification_id: str,
+    payload: AcknowledgeNotificationRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> SubjectNotificationResponse:
+    """
+    Acknowledge/read a notification.
+    Enforces subject-scoped authorization and records an audit log.
+    """
+    stmt = select(SubjectNotification).where(SubjectNotification.id == notification_id)
+    result = await session.execute(stmt)
+    notification = result.scalars().first()
+
+    if not notification:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Notification with ID '{notification_id}' not found.",
+        )
+
+    verify_subject_identity(request, notification.subject_id)
+
+    user_id = getattr(request.state, "user_id", "system")
+    user_roles = getattr(request.state, "roles", "system")
+    change_reason = payload.reason_for_change or getattr(
+        request.state, "change_reason", "system_operation"
+    )
+
+    now = (
+        datetime.now(timezone.utc).replace(tzinfo=None)
+        if hasattr(timezone, "utc")
+        else datetime.utcnow()
+    )
+    notification.is_read = True
+    notification.read_at = now
+    notification.version_index += 1
+    notification.reason_for_change = change_reason
+
+    session.add(notification)
+    await session.flush()
+
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="ACKNOWLEDGE_NOTIFICATION",
+        details=f"Subject '{notification.subject_id}' acknowledged notification '{notification.id}' (channel: '{notification.channel}').",
+        change_reason=change_reason,
+    )
+
+    return notification

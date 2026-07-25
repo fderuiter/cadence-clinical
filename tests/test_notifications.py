@@ -353,6 +353,22 @@ async def test_lifecycle_transitions_and_justifications():
     )
     assert res_resolve_double.status_code == 422
 
+    # 5. Non-existent notification checks
+    res_not_found = client.get(
+        "/api/v1/notifications/non-existent-id", headers=headers_ack
+    )
+    assert res_not_found.status_code == 404
+
+    res_ack_not_found = client.post(
+        "/api/v1/notifications/non-existent-id/acknowledge", headers=headers_ack
+    )
+    assert res_ack_not_found.status_code == 404
+
+    res_res_not_found = client.post(
+        "/api/v1/notifications/non-existent-id/resolve", headers=headers_ack
+    )
+    assert res_res_not_found.status_code == 404
+
 
 @pytest.mark.asyncio
 async def test_direct_transition_open_to_resolved():

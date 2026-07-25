@@ -289,3 +289,35 @@ async def test_audit_records_ip_and_custom_timestamp():
         assert log.change_reason == "GCP protocol validation"
         assert log.ip_address == "192.168.42.105"
         assert log.timestamp == custom_time
+
+
+class DummySubjectNotification(Base):
+    __tablename__ = "subject_notifications"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    subject_id: Mapped[str] = mapped_column(String(255), nullable=True)
+
+
+@pytest.mark.asyncio
+async def test_subject_notification_skips_clinical_auditing():
+    """
+    Verify that operations on subject_notifications table do not trigger
+    the global clinical execution database audit trail logging.
+    """
+    current_user_id.set("user_notifications")
+    current_change_reason.set("testing skip list")
+
+    @transactional(lambda: db_manager.get_session_maker()())
+    async def create_notification():
+        session = current_session.get()
+        notif = DummySubjectNotification(id="notif_123", subject_id="subject_abc")
+        session.add(notif)
+        await session.flush()
+        return notif
+
+    await create_notification()
+
+    # Query the execution audit log table - it should be completely empty
+    async with db_manager.get_session_maker()() as session:
+        result = await session.execute(select(AuditLog))
+        logs = result.scalars().all()
+        assert len(logs) == 0
