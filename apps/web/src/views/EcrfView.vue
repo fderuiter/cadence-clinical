@@ -599,8 +599,9 @@
         <div class="modal-header">Identity Re-Authentication Required</div>
         <div class="modal-body">
           <p>
-            To comply with <strong>FDA 21 CFR Part 11 / EU Annex 11</strong>, you
-            must re-verify your identity before performing this high-security action.
+            To comply with <strong>FDA 21 CFR Part 11 / EU Annex 11</strong>,
+            you must re-verify your identity before performing this
+            high-security action.
           </p>
           <div class="form-group" style="margin-bottom: 12px">
             <label for="reauth-username">Username</label>
@@ -623,7 +624,11 @@
               @keyup.enter="confirmReauth"
             />
           </div>
-          <div v-if="reauthError" class="validation-error-msg" style="margin-top: 8px; color: #ef4444;">
+          <div
+            v-if="reauthError"
+            class="validation-error-msg"
+            style="margin-top: 8px; color: #ef4444"
+          >
             {{ reauthError }}
           </div>
         </div>
@@ -823,7 +828,9 @@ function confirmReauth() {
 
     const fieldMeta = store.ecrfFields.find((f) => f.id === fieldId);
     const cdash = fieldMeta ? fieldMeta.cdash : "";
-    const [domain, testCode] = cdash ? cdash.split(".") : ["VS", fieldId.toUpperCase()];
+    const [domain, testCode] = cdash
+      ? cdash.split(".")
+      : ["VS", fieldId.toUpperCase()];
 
     store.addLedgerBlock(
       "QUERY_CLOSE",
@@ -834,7 +841,7 @@ function confirmReauth() {
         visitId: "Screening",
         domain,
         testCode,
-        query: queryObj
+        query: queryObj,
       },
       "Discrepancy resolved and closed permanently."
     );

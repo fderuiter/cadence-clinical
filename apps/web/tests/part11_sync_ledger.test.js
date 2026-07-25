@@ -16,7 +16,7 @@ describe("FDA 21 CFR Part 11 Sync Ledger Store", () => {
 
   it("persists locally added ledger blocks, form values, and queries into localStorage", async () => {
     const store = useClinicalStore();
-    
+
     // Mutate state
     store.formValues.vssbp = "220";
     store.formQueries["vssbp"] = {
@@ -36,7 +36,7 @@ describe("FDA 21 CFR Part 11 Sync Ledger Store", () => {
         visitId: "Screening",
         domain: "VS",
         testCode: "VSSBP",
-        query: store.formQueries["vssbp"]
+        query: store.formQueries["vssbp"],
       },
       "Raised discrepancy"
     );
@@ -58,12 +58,16 @@ describe("FDA 21 CFR Part 11 Sync Ledger Store", () => {
   it("initializes Pinia store from persistent state in localStorage", () => {
     // Write fake persistent state to localStorage
     window.localStorage.setItem("formValues", JSON.stringify({ pulse: "95" }));
-    window.localStorage.setItem("formQueries", JSON.stringify({
-      pulse: { status: "ANSWERED", message: "Pulse issue" }
-    }));
-    window.localStorage.setItem("ledgerBlocks", JSON.stringify([
-      { index: 0, action: "QUERY_RESPOND", synced: false }
-    ]));
+    window.localStorage.setItem(
+      "formQueries",
+      JSON.stringify({
+        pulse: { status: "ANSWERED", message: "Pulse issue" },
+      })
+    );
+    window.localStorage.setItem(
+      "ledgerBlocks",
+      JSON.stringify([{ index: 0, action: "QUERY_RESPOND", synced: false }])
+    );
 
     // Initialize new store instance
     const store = useClinicalStore();
@@ -77,16 +81,20 @@ describe("FDA 21 CFR Part 11 Sync Ledger Store", () => {
   it("background sync worker successfully transmits unsynced blocks to execution sync gateway", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ status: "success", processed_blocks: 1 })
+      json: async () => ({ status: "success", processed_blocks: 1 }),
     });
 
     const store = useClinicalStore();
-    
+
     // Add block
-    await store.addLedgerBlock("QUERY_CREATE", {
-      fieldId: "vssbp",
-      query: { status: "OPEN", message: "High BP" }
-    }, "Create query");
+    await store.addLedgerBlock(
+      "QUERY_CREATE",
+      {
+        fieldId: "vssbp",
+        query: { status: "OPEN", message: "High BP" },
+      },
+      "Create query"
+    );
 
     expect(store.ledgerBlocks[0].synced).toBe(false);
 
@@ -114,11 +122,15 @@ describe("FDA 21 CFR Part 11 Sync Ledger Store", () => {
     mockFetch.mockRejectedValueOnce(new Error("Network disconnect"));
 
     const store = useClinicalStore();
-    
-    await store.addLedgerBlock("QUERY_CREATE", {
-      fieldId: "pulse",
-      query: { status: "OPEN", message: "Pulse rate zero" }
-    }, "Raised query");
+
+    await store.addLedgerBlock(
+      "QUERY_CREATE",
+      {
+        fieldId: "pulse",
+        query: { status: "OPEN", message: "Pulse rate zero" },
+      },
+      "Raised query"
+    );
 
     expect(store.ledgerBlocks[0].synced).toBe(false);
 

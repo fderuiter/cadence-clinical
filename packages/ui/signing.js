@@ -194,7 +194,7 @@ export async function verifyGatewaySignature(
  */
 export async function generateJwtHS256(payload, secret) {
   const encoder = new TextEncoder();
-  
+
   function base64url(arr) {
     const binary = String.fromCharCode(...arr);
     const base64 = btoa(binary);
@@ -204,9 +204,9 @@ export async function generateJwtHS256(payload, secret) {
   const header = { alg: "HS256", typ: "JWT" };
   const headerStr = base64url(encoder.encode(JSON.stringify(header)));
   const payloadStr = base64url(encoder.encode(JSON.stringify(payload)));
-  
+
   const tokenInput = headerStr + "." + payloadStr;
-  const keyData = typeof secret === "string" ? encoder.encode(secret) : secret;
+  const keyData = typeof secret === "string" ? encoder.encode(secret) : secret; // pragma: allowlist secret
   const data = encoder.encode(tokenInput);
 
   const key = await globalThis.crypto.subtle.importKey(
@@ -225,4 +225,3 @@ export async function generateJwtHS256(payload, secret) {
   const signatureStr = base64url(new Uint8Array(signatureBuffer));
   return tokenInput + "." + signatureStr;
 }
-
