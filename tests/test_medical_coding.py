@@ -569,3 +569,186 @@ async def test_import_failure_rollback_and_failed_state() -> None:
             assert len(terms) == 0, (
                 f"Expected 0 terms imported due to transaction rollback, got {len(terms)}."
             )
+
+
+@pytest.mark.asyncio
+async def test_meddra_lookup_endpoint_happy_path() -> None:
+    """Verify that a regular user (non-terminology-manager) can perform MedDRA lookups successfully."""
+    import httpx
+
+    # Seed some MedDRA data first
+    async with db_manager.get_session_maker()() as session:
+        async with session.begin():
+            session.add(
+                MedDRATerm(
+                    dictionary_version="26.0",
+                    code="10019211",
+                    term_name="Headache",
+                    level="LLT",
+                )
+            )
+            session.add(
+                MedDRAHierarchy(
+                    dictionary_version="26.0",
+                    llt_code="10019211",
+                    pt_code="10019211",
+                    hlt_code="10019231",
+                    hlgt_code="10029214",
+                    soc_code="10029205",
+                    primary_soc_flag="Y",
+                )
+            )
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=exec_app), base_url="http://test"
+    ) as client:
+        # Use a non-terminology manager role (e.g. Data Manager)
+        headers = get_import_auth_headers(
+            "Data Manager", change_reason="Reading MedDRA terms"
+        )
+        resp = await client.get(
+            "/api/v1/dictionaries/meddra/code",
+            params={"term": "headache", "version": "26.0", "target_level": "LLT"},
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "AUTO-CODED"
+        assert len(data["matches"]) == 1
+        match = data["matches"][0]
+        assert match["llt_code"] == "10019211"
+        assert match["llt_name"] == "Headache"
+        assert match["soc_code"] == "10029205"
+        assert match["primary_soc_flag"] == "Y"
+        assert match["score"] == 1.0
+
+
+@pytest.mark.asyncio
+async def test_whodrug_lookup_endpoint_happy_path() -> None:
+    """Verify that a regular user can perform WHODrug lookups successfully."""
+    import httpx
+
+    from apps.execution.database.models import (
+        WHODrugATC,
+        WHODrugDrugATC,
+        WHODrugDrugIngredient,
+        WHODrugIngredient,
+    )
+
+    # Seed WHODrug data
+    async with db_manager.get_session_maker()() as session:
+        async with session.begin():
+            session.add(
+                WHODrugRecord(
+                    dictionary_version="2024-03",
+                    drug_code="00010101001",
+                    preferred_name="ASPIRIN",
+                    drug_name="ASPIRIN TABLET",
+                )
+            )
+            session.add(
+                WHODrugATC(
+                    dictionary_version="2024-03",
+                    atc_code="N02BA01",
+                    description="acetylsalicylic acid",
+                )
+            )
+            session.add(
+                WHODrugDrugATC(
+                    dictionary_version="2024-03",
+                    drug_code="00010101001",
+                    atc_code="N02BA01",
+                )
+            )
+            session.add(
+                WHODrugIngredient(
+                    dictionary_version="2024-03",
+                    ingredient_code="0000000001",
+                    ingredient_name="ACETYLSALICYLIC ACID",
+                )
+            )
+            session.add(
+                WHODrugDrugIngredient(
+                    dictionary_version="2024-03",
+                    drug_code="00010101001",
+                    ingredient_code="0000000001",
+                )
+            )
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=exec_app), base_url="http://test"
+    ) as client:
+        # Use a CRA role
+        headers = get_import_auth_headers("CRA", change_reason="Reading WHODrug terms")
+        resp = await client.get(
+            "/api/v1/dictionaries/whodrug/code",
+            params={"term": "aspirin", "version": "2024-03"},
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "AUTO-CODED"
+        assert len(data["matches"]) == 1
+        match = data["matches"][0]
+        assert match["drug_code"] == "00010101001"
+        assert match["preferred_name"] == "ASPIRIN"
+        assert match["drug_name"] == "ASPIRIN TABLET"
+        assert len(match["atc_context"]) == 1
+        assert match["atc_context"][0]["atc_code"] == "N02BA01"
+        assert len(match["ingredients"]) == 1
+        assert match["ingredients"][0]["ingredient_name"] == "ACETYLSALICYLIC ACID"
+
+
+@pytest.mark.asyncio
+async def test_lookup_endpoints_validation_errors() -> None:
+    """Verify that empty inputs or invalid dictionary versions produce correct client errors."""
+    import httpx
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=exec_app), base_url="http://test"
+    ) as client:
+        headers = get_import_auth_headers(
+            "Data Manager", change_reason="Validation checks"
+        )
+
+        # 1. Empty term on MedDRA
+        resp = await client.get(
+            "/api/v1/dictionaries/meddra/code",
+            params={"term": "", "version": "26.0"},
+            headers=headers,
+        )
+        assert resp.status_code == 400
+        assert "Term must be a non-empty string" in resp.json()["detail"]
+
+        # 2. Whitespace-only term on MedDRA
+        resp = await client.get(
+            "/api/v1/dictionaries/meddra/code",
+            params={"term": "   ", "version": "26.0"},
+            headers=headers,
+        )
+        assert resp.status_code == 400
+
+        # 3. Empty version on MedDRA
+        resp = await client.get(
+            "/api/v1/dictionaries/meddra/code",
+            params={"term": "Headache", "version": ""},
+            headers=headers,
+        )
+        assert resp.status_code == 400
+        assert "Version must be a non-empty string" in resp.json()["detail"]
+
+        # 4. Empty term on WHODrug
+        resp = await client.get(
+            "/api/v1/dictionaries/whodrug/code",
+            params={"term": "  ", "version": "2024-03"},
+            headers=headers,
+        )
+        assert resp.status_code == 400
+
+        # 5. Missing or empty version on WHODrug
+        resp = await client.get(
+            "/api/v1/dictionaries/whodrug/code",
+            params={"term": "ASPIRIN", "version": ""},
+            headers=headers,
+        )
+        assert resp.status_code == 400

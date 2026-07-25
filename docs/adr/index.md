@@ -58,3 +58,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-03: Subject Randomization Lifecycle and State Guards](2026-08-03-subject-randomization-lifecycle-and-state-guards.md)
 - [2026-08-04: Notification Delivery Channels and Retry Dispatcher](2026-08-04-notification-delivery-channels-and-retry-dispatcher.md)
 - [2026-08-04: CTMS Service Boundary, Reporting, and Operational Workspace](2026-08-04-ctms-service-boundary-and-reporting.md)
+- [2026-08-05: Quality & CAPA Management, Platform Placement, and Traceability](2026-08-05-quality-capa-management.md)
