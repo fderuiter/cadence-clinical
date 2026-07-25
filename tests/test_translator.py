@@ -655,3 +655,212 @@ async def test_rules_compilation_and_artifact_generation():
     binds = model.findall("xf:bind", ns)
     openrosa_ids = [bind.get("nodeset").replace("/", "") for bind in binds]
     assert set(odm_ids) == set(openrosa_ids)
+
+
+@pytest.mark.asyncio
+async def test_multi_language_localization_and_hint_system():
+    """Verify that multi-language StudyDefinitionDocuments with localized NarrativeContent
+    and NarrativeContentItems are parsed, mapped, and generated as correct ODM Descriptions
+    and OpenRosa hints."""
+    study_payload = {
+        "study_id": "test_localization_study_123",
+        "payload": {
+            "name": "Acme Localized Clinical Trial",
+            "protocol": {
+                "items": [
+                    {"id": "sys_bp", "name": "Systolic Blood Pressure", "type": "int"},
+                    {"id": "heart_rate", "name": "Heart Rate", "type": "int"},
+                ]
+            },
+            "documentedBy": [
+                {
+                    "id": "doc_en",
+                    "name": "English Document",
+                    "language": {"code": "en", "decode": "English"},
+                    "versions": [
+                        {
+                            "id": "ver_en",
+                            "version": "1.0",
+                            "contents": [
+                                {
+                                    "id": "nc_sys_bp_en",
+                                    "name": "sys_bp",
+                                    "sectionTitle": "Systolic Blood Pressure (mmHg)",
+                                    "contentItemId": "nci_sys_bp_desc_en",
+                                    "childIds": ["nci_sys_bp_hint_en"],
+                                },
+                                {
+                                    "id": "nc_heart_rate_en",
+                                    "name": "heart_rate",
+                                    "sectionTitle": "Heart Rate (bpm)",
+                                    "contentItemId": "nci_heart_rate_desc_en",
+                                    "childIds": ["nci_heart_rate_hint_en"],
+                                },
+                            ],
+                            "narrativeContentItems": [
+                                {
+                                    "id": "nci_sys_bp_desc_en",
+                                    "name": "sys_bp_desc",
+                                    "text": "The systolic blood pressure measured in mmHg.",
+                                },
+                                {
+                                    "id": "nci_sys_bp_hint_en",
+                                    "name": "sys_bp_hint",
+                                    "text": "Ensure patient is sitting down.",
+                                },
+                                {
+                                    "id": "nci_heart_rate_desc_en",
+                                    "name": "heart_rate_desc",
+                                    "text": "Heart rate in beats per minute.",
+                                },
+                                {
+                                    "id": "nci_heart_rate_hint_en",
+                                    "name": "heart_rate_hint",
+                                    "text": "Measure for a full minute.",
+                                },
+                            ],
+                        }
+                    ],
+                    "instanceType": "StudyDefinitionDocument",
+                },
+                {
+                    "id": "doc_es",
+                    "name": "Spanish Document",
+                    "language": {"code": "es", "decode": "Spanish"},
+                    "versions": [
+                        {
+                            "id": "ver_es",
+                            "version": "1.0",
+                            "contents": [
+                                {
+                                    "id": "nc_sys_bp_es",
+                                    "name": "sys_bp",
+                                    "sectionTitle": "Presión Arterial Sistólica (mmHg)",
+                                    "contentItemId": "nci_sys_bp_desc_es",
+                                    "childIds": ["nci_sys_bp_hint_es"],
+                                },
+                                {
+                                    "id": "nc_heart_rate_es",
+                                    "name": "heart_rate",
+                                    "sectionTitle": "Frecuencia Cardíaca (lpm)",
+                                    "contentItemId": "nci_heart_rate_desc_es",
+                                    "childIds": ["nci_heart_rate_hint_es"],
+                                },
+                            ],
+                            "narrativeContentItems": [
+                                {
+                                    "id": "nci_sys_bp_desc_es",
+                                    "name": "sys_bp_desc_es",
+                                    "text": "La presión arterial sistólica medida en mmHg.",
+                                },
+                                {
+                                    "id": "nci_sys_bp_hint_es",
+                                    "name": "sys_bp_hint_es",
+                                    "text": "Asegúrese de que el paciente esté sentado.",
+                                },
+                                {
+                                    "id": "nci_heart_rate_desc_es",
+                                    "name": "heart_rate_desc_es",
+                                    "text": "Frecuencia cardíaca en latidos por minuto.",
+                                },
+                                {
+                                    "id": "nci_heart_rate_hint_es",
+                                    "name": "heart_rate_hint_es",
+                                    "text": "Mida durante un minuto completo.",
+                                },
+                            ],
+                        }
+                    ],
+                    "instanceType": "StudyDefinitionDocument",
+                },
+            ],
+        },
+    }
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        response = await client.post(
+            "/events/study-published", json=study_payload, headers=get_auth_headers()
+        )
+    assert response.status_code == 200
+
+    import asyncio
+
+    job = None
+    for _ in range(50):
+        async with db_manager.get_session_maker()() as session:
+            result = await session.execute(
+                TranslationJob.__table__.select().where(
+                    TranslationJob.study_id == "test_localization_study_123"
+                )
+            )
+            job = result.mappings().first()
+            if job and job["status"] in ("COMPLETED", "FAILED"):
+                break
+        await asyncio.sleep(0.1)
+
+    assert job is not None
+    if job["status"] != "COMPLETED":
+        print("JOB ERROR:", job["error_message"])
+    assert job["status"] == "COMPLETED"
+
+    odm_xml = job["odm_payload"]
+    openrosa_xml = job["openrosa_payload"]
+
+    # 1. Verify CDISC ODM XML elements
+    odm_root = ET.fromstring(odm_xml)
+    odm_ns = ""
+    if "}" in odm_root.tag:
+        odm_ns = odm_root.tag.split("}")[0] + "}"
+
+    study = odm_root.find(f"{odm_ns}Study")
+    mdv = study.find(f"{odm_ns}MetaDataVersion")
+    item_defs = mdv.findall(f"{odm_ns}ItemDef")
+
+    # Find sys_bp in ODM
+    sys_bp_def = [i for i in item_defs if i.get("OID") == "sys_bp"][0]
+    description = sys_bp_def.find(f"{odm_ns}Description")
+    assert description is not None
+    translated_texts = description.findall(f"{odm_ns}TranslatedText")
+    assert len(translated_texts) == 2
+
+    en_text = [t for t in translated_texts if t.get("Language") == "en"][0]
+    assert en_text.text == "The systolic blood pressure measured in mmHg."
+
+    es_text = [t for t in translated_texts if t.get("Language") == "es"][0]
+    assert es_text.text == "La presión arterial sistólica medida en mmHg."
+
+    # 2. Verify OpenRosa XML elements
+    openrosa_root = ET.fromstring(openrosa_xml)
+    ns = {"xf": "http://www.w3.org/2002/xforms"}
+    body = openrosa_root.find("{http://www.w3.org/1999/xhtml}body")
+    inputs = body.findall("xf:input", ns)
+
+    # Find sys_bp input in OpenRosa
+    sys_bp_input = [inp for inp in inputs if inp.get("ref") == "/sys_bp"][0]
+    labels = sys_bp_input.findall("xf:label", ns)
+    assert len(labels) == 2
+    en_label = [
+        lbl
+        for lbl in labels
+        if lbl.get("{http://www.w3.org/XML/1998/namespace}lang") == "en"
+    ][0]
+    assert en_label.text == "Systolic Blood Pressure (mmHg)"
+    es_label = [
+        lbl
+        for lbl in labels
+        if lbl.get("{http://www.w3.org/XML/1998/namespace}lang") == "es"
+    ][0]
+    assert es_label.text == "Presión Arterial Sistólica (mmHg)"
+
+    hints = sys_bp_input.findall("xf:hint", ns)
+    assert len(hints) == 2
+    en_hint = [
+        h for h in hints if h.get("{http://www.w3.org/XML/1998/namespace}lang") == "en"
+    ][0]
+    assert en_hint.text == "Ensure patient is sitting down."
+    es_hint = [
+        h for h in hints if h.get("{http://www.w3.org/XML/1998/namespace}lang") == "es"
+    ][0]
+    assert es_hint.text == "Asegúrese de que el paciente esté sentado."

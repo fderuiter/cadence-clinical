@@ -77,6 +77,16 @@ Traditional clinical trial builds require manual, error-prone translation of pro
   * Full 21 CFR Part 11 compliant auditing (`CTMSAuditLog`) recording all actions, view queries, and mutations with explicit change reasons.
   * Role-Based Access Control (RBAC) ensuring write mutations are restricted to roles like `Monitor`, `Grants Manager`, `CRA`, or `Admin`, and read-only queries are restricted to authorized operational personnel.
 
+### I. Quality & CAPA Management Service (`apps/quality`)
+* **Role:** Isolated Quality Assurance & Compliance Workspace.
+* **Datastore:** SQLite / PostgreSQL Relational Database.
+* **Core Responsibilities:**
+  * Secure, relational protocol deviation tracking linked directly to systematic root causes and corrective/preventive action models.
+  * Integration with Keycloak OIDC authentication via standard headers proxying through the secure API gateway.
+  * Full 21 CFR Part 11 compliant mutable record auditing with mandatory `version_index` incrementing, standard creation/traceability metadata, and a non-empty change reason header (`X-Change-Reason`).
+  * Immutable, append-only, chronological quality logs (`QualityAuditLog`) of all viewed records, updates, and transitions.
+  * Restricts access to read-only roles (`auditor`, `inspector`, `regulatory_inspector`) from all mutating operations, gates general write access, and authorizes terminal CAPA approvals or closures only to Quality Oversight roles (`quality_manager`, `qa_lead`, `quality_oversight`, `admin`).
+
 ---
 
 ## 3. Data Transformation Flow

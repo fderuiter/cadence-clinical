@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Subject Portal - Cadence Clinical</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <!-- Portal Header -->
+      <header class="portal-header">
+        <div class="header-branding">
+          <h1>My <span>Cadence</span></h1>
+          <p class="role-badge">Participant Companion Portal</p>
+        </div>
+        <div class="compliance-badges">
+          <span class="badge badge-epro">ePRO Companion</span>
+          <span class="badge badge-gxp">21 CFR Part 11</span>
+          <span class="badge badge-gamp">GAMP 5</span>
+        </div>
+      </header>
+
+      <!-- Main Layout -->
+      <div class="portal-container">
+        <!-- Patient Navigation Tabs -->
+        <nav class="portal-navigation" aria-label="Participant navigation">
+          <ul class="nav-tabs">
+            <li class="nav-item active" id="tab-btn-tasks">
+              <button type="button">
+                <span class="icon">📋</span> My Tasks
+              </button>
+            </li>
+            <li class="nav-item" id="tab-btn-compliance">
+              <button type="button">
+                <span class="icon">📈</span> My Compliance
+              </button>
+            </li>
+            <li class="nav-item" id="tab-btn-inbox">
+              <button type="button">
+                <span class="icon">✉️</span> My Inbox
+                <span id="unread-count" class="badge-unread" style="display: none;">0</span>
+              </button>
+            </li>
+          </ul>
+
+          <!-- Active Participant Card -->
+          <div class="participant-info-card">
+            <div class="info-title">Participant Session</div>
+            <div class="info-row">
+              <span class="info-lbl">ID:</span>
+              <span id="session-subject-id" class="info-val">Loading...</span>
+            </div>
+            <div class="info-row">
+              <span class="info-lbl">Status:</span>
+              <span class="info-val text-success">Active</span>
+            </div>
+          </div>
+        </nav>
+
+        <!-- Main Viewport -->
+        <main class="portal-main">
+          <!-- View 1: My Tasks (Assigned Questionnaires) -->
+          <section id="view-tasks" class="portal-view active">
+            <div class="view-header">
+              <h2>My Daily Questionnaires</h2>
+              <p>Please complete your scheduled questionnaires on time to help us ensure high data quality.</p>
+            </div>
+
+            <!-- List of tasks -->
+            <div id="tasks-list-container" class="tasks-list">
+              <!-- Dynamically rendered tasks go here -->
+              <div class="loading-state">Loading your assigned tasks...</div>
+            </div>
+          </section>
+
+          <!-- View 2: Questionnaire Form Completion Screen (Nested/Shown when filling out) -->
+          <section id="view-questionnaire" class="portal-view">
+            <div class="view-header">
+              <button type="button" id="btn-back-to-tasks" class="btn-back">← Back to My Tasks</button>
+              <h2 id="questionnaire-title">Questionnaire</h2>
+              <p id="questionnaire-desc">Please answer all questions accurately.</p>
+            </div>
+
+            <div class="card questionnaire-card">
+              <div id="questionnaire-form-container">
+                <!-- Dynamically compiled CDASH-inputs go here -->
+              </div>
+              <div class="form-actions">
+                <button type="button" id="btn-cancel-questionnaire" class="btn btn-secondary">Cancel</button>
+                <button type="button" id="btn-submit-questionnaire" class="btn btn-primary">Sign and Submit</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- View 3: My Compliance -->
+          <section id="view-compliance" class="portal-view">
+            <div class="view-header">
+              <h2>My Compliance Overview</h2>
+              <p>Track your scheduled survey progress and overall trial participation history.</p>
+            </div>
+
+            <div class="grid-layout">
+              <!-- Compliance Score Card -->
+              <div class="card compliance-score-card">
+                <div class="score-radial">
+                  <div class="score-value" id="compliance-rate-pct">0%</div>
+                  <div class="score-lbl">Compliance Rate</div>
+                </div>
+                <div class="score-breakdown">
+                  <div class="breakdown-item">
+                    <span class="lbl">Completed:</span>
+                    <strong class="val text-success" id="compliance-completed-count">0</strong>
+                  </div>
+                  <div class="breakdown-item">
+                    <span class="lbl">Pending:</span>
+                    <strong class="val text-warning" id="compliance-pending-count">0</strong>
+                  </div>
+                  <div class="breakdown-item">
+                    <span class="lbl">Overdue:</span>
+                    <strong class="val text-danger" id="compliance-overdue-count">0</strong>
+                  </div>
+                </div>
+              </div>
+
+              <!-- History Card -->
+              <div class="card history-card">
+                <h3>My Survey History</h3>
+                <div class="table-responsive">
+                  <table class="compliance-history-table">
+                    <thead>
+                      <tr>
+                        <th>Questionnaire</th>
+                        <th>Scheduled Date</th>
+                        <th>Submitted Date</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody id="compliance-history-tbody">
+                      <tr>
+                        <td colspan="4" class="no-data">No history found.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- View 4: My Inbox (Notifications) -->
+          <section id="view-inbox" class="portal-view">
+            <div class="view-header">
+              <h2>My Notification Inbox</h2>
+              <p>Receive reminders, alerts, and system notifications regarding your trial schedule.</p>
+            </div>
+
+            <div id="inbox-container" class="inbox-list">
+              <!-- Notifications dynamically populated here -->
+              <div class="loading-state">Loading notifications...</div>
+            </div>
+          </section>
+        </main>
+      </div>
+
+      <!-- Electronic Signature and Reason Modal -->
+      <div class="modal-overlay" id="portal-sign-modal" style="display: none;">
+        <div class="modal">
+          <div class="modal-header">Electronic Signature Required</div>
+          <div class="modal-body">
+            <p>
+              To comply with <strong>FDA 21 CFR Part 11 / EU Annex 11</strong>, you must provide your electronic signature credentials and declare your change reason or completion affirmation.
+            </p>
+            <div class="form-group mb-12">
+              <label for="sign-reason">Reason for Action / Declaration</label>
+              <select id="sign-reason">
+                <option value="Initial Questionnaire Completion">Initial Questionnaire Completion</option>
+                <option value="Correction of previous entry">Correction of previous entry</option>
+                <option value="Requested update by study coordinator">Requested update by study coordinator</option>
+                <option value="Acknowledge important reminder">Acknowledge important reminder</option>
+                <option value="Other">Other (specify below)</option>
+              </select>
+            </div>
+            <div class="form-group mb-12">
+              <label for="sign-reason-custom">Custom Reason Detail (Optional)</label>
+              <textarea id="sign-reason-custom" placeholder="Provide extra detail if 'Other' selected..."></textarea>
+            </div>
+            <div class="form-group mb-12">
+              <label for="sign-username">User ID / Username</label>
+              <input type="text" id="sign-username" placeholder="Enter your participant identifier..." required />
+            </div>
+            <div class="form-group">
+              <label for="sign-password">Security PIN / Password</label>
+              <input type="password" id="sign-password" placeholder="••••••••" required />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" id="btn-modal-cancel" class="btn btn-secondary">Cancel</button>
+            <button type="button" id="btn-modal-sign" class="btn btn-primary">Sign and Confirm</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Activity log at the bottom for patient transparency & 21 CFR compliance review -->
+      <footer class="portal-footer">
+        <div class="footer-title">My Digital Activity Audit Log (21 CFR Part 11 Compliant)</div>
+        <div class="ledger-timeline" id="portal-ledger-timeline">
+          <!-- Ledger records shown here -->
+        </div>
+      </footer>
+    </div>
+
+    <!-- Script Entry Point -->
+    <script type="module" src="/index.js"></script>
+  </body>
+</html>

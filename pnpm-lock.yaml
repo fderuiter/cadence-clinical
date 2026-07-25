@@ -24,6 +24,25 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(jsdom@29.1.1)(vite@8.1.5(yaml@2.9.0))
 
+  apps/subject-portal:
+    dependencies:
+      ui:
+        specifier: workspace:*
+        version: link:../../packages/ui
+    devDependencies:
+      jsdom:
+        specifier: ^29.1.1
+        version: 29.1.1
+      keycloak-js:
+        specifier: ^26.2.4
+        version: 26.2.4
+      vite:
+        specifier: ^8.1.5
+        version: 8.1.5(yaml@2.9.0)
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(jsdom@29.1.1)(vite@8.1.5(yaml@2.9.0))
+
   apps/web:
     dependencies:
       ui:
