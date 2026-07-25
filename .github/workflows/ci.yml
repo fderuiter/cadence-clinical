@@ -58,7 +58,7 @@ jobs:
       - name: Install Playwright Browsers
         run: |
           for i in {1..3}; do
-            uv run playwright install --with-deps chromium chromium-headless-shell && break || {
+            uv run playwright install chromium --with-deps && break || {
               echo "Playwright install failed on attempt $i, retrying in 10s..."
               sleep 10
             }
