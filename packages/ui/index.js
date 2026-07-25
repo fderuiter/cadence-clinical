@@ -556,4 +556,5 @@ export {
   verifyCanonicalSignature,
   generateGatewaySignature,
   verifyGatewaySignature,
+  generateJwtHS256,
 } from "./signing.js";

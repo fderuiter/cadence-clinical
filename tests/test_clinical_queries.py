@@ -80,6 +80,27 @@ def get_v1_auth_headers(
     }
 
 
+def get_v2_auth_headers_with_token(
+    user_id: str = "test_user",
+    roles: str = "admin",
+    change_reason: str = "test operation",
+    action: str = ""
+) -> dict[str, str]:
+    """Generate Gateway signature version 2 authentication headers with single-use X-Sig-Token."""
+    from jose import jwt
+    headers = get_v2_auth_headers(user_id, roles, change_reason)
+    if action:
+        sig_payload = {
+            "sub": user_id,
+            "action": action,
+            "exp": time.time() + 300.0,
+        }
+        headers["X-Sig-Token"] = jwt.encode(
+            sig_payload, GATEWAY_SECRET, algorithm="HS256"
+        )
+    return headers
+
+
 @pytest_asyncio.fixture(autouse=True)
 async def setup_test_db() -> AsyncGenerator[None, None]:
     """Setup in-memory SQLite database before each test and clear down after."""
@@ -249,8 +270,14 @@ async def test_query_state_transition_and_role_boundaries() -> None:
         assert resp_dm_ans.status_code == 403
 
         # 3. Reject Investigator closing query directly
+        inv_close_headers = get_v2_auth_headers_with_token(
+            user_id="inv_user",
+            roles="Investigator",
+            change_reason="Investigator responds to query",
+            action=f"/api/v1/execution/queries/{query_id}/close"
+        )
         resp_inv_close = await client.post(
-            f"/api/v1/execution/queries/{query_id}/close", headers=inv_headers
+            f"/api/v1/execution/queries/{query_id}/close", headers=inv_close_headers
         )
         assert resp_inv_close.status_code == 403
 
@@ -265,8 +292,14 @@ async def test_query_state_transition_and_role_boundaries() -> None:
         assert "Invalid transition" in resp_patch_invalid.json()["detail"]
 
         # 5. Reject Data Manager attempting invalid direct transition (OPEN -> CLOSED)
+        dm_close_headers_invalid = get_v2_auth_headers_with_token(
+            user_id="dm_user",
+            roles="Data Manager",
+            change_reason="Closing query",
+            action=f"/api/v1/execution/queries/{query_id}/close"
+        )
         resp_dm_close_invalid = await client.post(
-            f"/api/v1/execution/queries/{query_id}/close", headers=dm_headers
+            f"/api/v1/execution/queries/{query_id}/close", headers=dm_close_headers_invalid
         )
         assert resp_dm_close_invalid.status_code == 400
         assert "Invalid transition" in resp_dm_close_invalid.json()["detail"]
@@ -285,8 +318,11 @@ async def test_query_state_transition_and_role_boundaries() -> None:
         )
 
         # 7. Data Manager closes answered query (ANSWERED -> CLOSED)
-        dm_close_headers = get_v2_auth_headers(
-            user_id="dm_user", roles="Data Manager", change_reason="Closing query"
+        dm_close_headers = get_v2_auth_headers_with_token(
+            user_id="dm_user",
+            roles="Data Manager",
+            change_reason="Closing query",
+            action=f"/api/v1/execution/queries/{query_id}/close"
         )
         resp_close = await client.post(
             f"/api/v1/execution/queries/{query_id}/close",
@@ -640,15 +676,189 @@ async def test_query_role_gates_robustness() -> None:
         assert resp_inv_respond.status_code == 200
 
         # 6. Investigator trying to close query should fail (403)
+        inv_close_headers = get_v2_auth_headers_with_token(
+            roles="Investigator",
+            change_reason="Investigator responds",
+            action=f"/api/v1/execution/queries/{q_id}/close"
+        )
         resp_inv_close = await client.post(
             f"/api/v1/execution/queries/{q_id}/close",
-            headers=inv_headers,
+            headers=inv_close_headers,
         )
         assert resp_inv_close.status_code == 403
 
         # 7. CRA closing query should succeed
+        cra_close_headers = get_v2_auth_headers_with_token(
+            roles="CRA",
+            change_reason="CRA raises query",
+            action=f"/api/v1/execution/queries/{q_id}/close"
+        )
         resp_cra_close = await client.post(
             f"/api/v1/execution/queries/{q_id}/close",
-            headers=cra_headers,
+            headers=cra_close_headers,
         )
         assert resp_cra_close.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_clinical_queries_sync_endpoint() -> None:
+    """Test the /api/v1/execution/queries/sync endpoint with background sync blocks."""
+    # Setup test coordinates and blocks
+    sync_blocks = [
+        {
+            "index": 1,
+            "timestamp": "2026-07-24T12:00:00Z",
+            "action": "QUERY_CREATE",
+            "details": {
+                "fieldId": "vssbp",
+                "studyId": "STUDY-SYNC",
+                "subjectId": "SUBJ-SYNC",
+                "visitId": "Screening",
+                "domain": "VS",
+                "testCode": "VSSBP",
+                "query": {
+                    "status": "OPEN",
+                    "message": "Unusually high systolic BP",
+                }
+            },
+            "reason": "Offline query creation",
+            "prevHash": "genesis",
+            "hash": "block1hash"
+        },
+        {
+            "index": 2,
+            "timestamp": "2026-07-24T12:05:00Z",
+            "action": "QUERY_RESPOND",
+            "details": {
+                "fieldId": "vssbp",
+                "studyId": "STUDY-SYNC",
+                "subjectId": "SUBJ-SYNC",
+                "visitId": "Screening",
+                "domain": "VS",
+                "testCode": "VSSBP",
+                "query": {
+                    "status": "ANSWERED",
+                    "response": "Calibrated thermometer, reading correct"
+                }
+            },
+            "reason": "Offline investigator response",
+            "prevHash": "block1hash",
+            "hash": "block2hash"
+        },
+        {
+            "index": 3,
+            "timestamp": "2026-07-24T12:10:00Z",
+            "action": "QUERY_CLOSE",
+            "details": {
+                "fieldId": "vssbp",
+                "studyId": "STUDY-SYNC",
+                "subjectId": "SUBJ-SYNC",
+                "visitId": "Screening",
+                "domain": "VS",
+                "testCode": "VSSBP",
+                "query": {
+                    "status": "CLOSED"
+                }
+            },
+            "reason": "Offline closure",
+            "prevHash": "block2hash",
+            "hash": "block3hash"
+        }
+    ]
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # 1. Reject without X-Sig-Token (REAUTHENTICATION_REQUIRED)
+        headers_no_token = get_v2_auth_headers(
+            roles="CRA",
+            change_reason="Attempt sync without token"
+        )
+        resp_no_token = await client.post(
+            "/api/v1/execution/queries/sync",
+            json={"blocks": sync_blocks},
+            headers=headers_no_token
+        )
+        assert resp_no_token.status_code == 401
+        assert "REAUTHENTICATION_REQUIRED" in resp_no_token.json()["detail"]
+
+        # 2. Sync QUERY_CREATE block as CRA (should succeed)
+        headers_create = get_v2_auth_headers_with_token(
+            roles="CRA",
+            change_reason="Sync offline create",
+            action="/api/v1/execution/queries/sync"
+        )
+        resp_create = await client.post(
+            "/api/v1/execution/queries/sync",
+            json={"blocks": [sync_blocks[0]]},
+            headers=headers_create
+        )
+        assert resp_create.status_code == 200
+        assert resp_create.json()["processed_blocks"] == 1
+
+        # Check query is now in database in OPEN status
+        async with db_manager.get_session_maker()() as session:
+            stmt = select(ClinicalQuery).where(
+                ClinicalQuery.study_id == "STUDY-SYNC",
+                ClinicalQuery.subject_id == "SUBJ-SYNC",
+                ClinicalQuery.test_code == "VSSBP"
+            )
+            res = await session.execute(stmt)
+            q = res.scalars().first()
+            assert q is not None
+            assert q.status == "OPEN"
+            assert q.explanation == "Unusually high systolic BP"
+
+        # 3. Reject Investigator syncing create block (403 role violation)
+        headers_inv_create = get_v2_auth_headers_with_token(
+            roles="Investigator",
+            change_reason="Sync offline create as investigator",
+            action="/api/v1/execution/queries/sync"
+        )
+        resp_inv_create = await client.post(
+            "/api/v1/execution/queries/sync",
+            json={"blocks": [sync_blocks[0]]},
+            headers=headers_inv_create
+        )
+        assert resp_inv_create.status_code == 403
+
+        # 4. Sync QUERY_RESPOND block as Investigator (should succeed)
+        headers_respond = get_v2_auth_headers_with_token(
+            roles="Investigator",
+            change_reason="Sync offline respond",
+            action="/api/v1/execution/queries/sync"
+        )
+        resp_respond = await client.post(
+            "/api/v1/execution/queries/sync",
+            json={"blocks": [sync_blocks[1]]},
+            headers=headers_respond
+        )
+        assert resp_respond.status_code == 200
+        assert resp_respond.json()["processed_blocks"] == 1
+
+        # Check query is now ANSWERED
+        async with db_manager.get_session_maker()() as session:
+            res = await session.execute(stmt)
+            q = res.scalars().first()
+            assert q.status == "ANSWERED"
+            assert q.response == "Calibrated thermometer, reading correct"
+
+        # 5. Sync QUERY_CLOSE block as CRA (should succeed)
+        headers_close = get_v2_auth_headers_with_token(
+            roles="CRA",
+            change_reason="Sync offline close",
+            action="/api/v1/execution/queries/sync"
+        )
+        resp_close = await client.post(
+            "/api/v1/execution/queries/sync",
+            json={"blocks": [sync_blocks[2]]},
+            headers=headers_close
+        )
+        assert resp_close.status_code == 200
+        assert resp_close.json()["processed_blocks"] == 1
+
+        # Check query is CLOSED
+        async with db_manager.get_session_maker()() as session:
+            res = await session.execute(stmt)
+            q = res.scalars().first()
+            assert q.status == "CLOSED"

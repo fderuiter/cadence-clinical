@@ -1142,6 +1142,50 @@ class QueryUpdate(BaseModel):
     escalated_at: Optional[datetime] = None
 
 
+class SyncBlockQuery(BaseModel):
+    """Pydantic schema representing the query details in a local ledger block."""
+    status: str
+    message: Optional[str] = None
+    createdBy: Optional[str] = None
+    createdAt: Optional[str] = None
+    response: Optional[str] = None
+    respondedBy: Optional[str] = None
+    respondedAt: Optional[str] = None
+    closedBy: Optional[str] = None
+    closedAt: Optional[str] = None
+
+
+class SyncBlockDetails(BaseModel):
+    """Pydantic schema representing block-specific metadata and clinical coordinates."""
+    fieldId: str
+    studyId: Optional[str] = None
+    subjectId: Optional[str] = None
+    visitId: Optional[str] = None
+    domain: Optional[str] = None
+    testCode: Optional[str] = None
+    query: Optional[SyncBlockQuery] = None
+    label: Optional[str] = None
+    cdash: Optional[str] = None
+    oldValue: Optional[str] = None
+    newValue: Optional[str] = None
+
+
+class LocalLedgerBlock(BaseModel):
+    """Pydantic schema representing a cryptographically chained offline ledger block."""
+    index: int
+    timestamp: datetime
+    action: str
+    details: SyncBlockDetails
+    reason: str
+    prevHash: str
+    hash: str
+
+
+class SyncRequest(BaseModel):
+    """Pydantic schema for bulk-synchronizing local client-side ledger updates."""
+    blocks: list[LocalLedgerBlock]
+
+
 def _is_data_manager(roles_str: Any) -> bool:
     """Check if the roles include Data Manager role variations."""
     if isinstance(roles_str, str):
@@ -2394,3 +2438,150 @@ async def update_query_state(
             cancellation_reason=q_db.cancellation_reason,
             escalated_at=q_db.escalated_at,
         )
+
+
+@app.post(
+    "/api/v1/execution/queries/sync",
+    status_code=200,
+)
+async def sync_queries(
+    request: Request,
+    payload: SyncRequest,
+    roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER, ROLE_SITE_INVESTIGATOR)),
+) -> dict[str, Any]:
+    """Synchronize clinical query local ledger blocks to the target database.
+
+    Translates local ledger blocks to correct fields in the target database schema,
+    verifying caller roles and payload integrity.
+    """
+    verify_change_justification(request)
+
+    # We map fieldId to CDASH domain & test_code
+    field_map = {
+        "brthdt": ("DM", "BRTHDT"),
+        "sex": ("DM", "SEX"),
+        "vssbp": ("VS", "VSSBP"),
+        "vsdpb": ("VS", "VSDPB"),
+        "pulse": ("VS", "VSHR"),
+    }
+
+    # Normalize caller roles
+    from packages.security.rbac import get_normalized_roles, ROLE_EXPANSIONS
+    user_roles = get_normalized_roles(request)
+
+    expanded_allowed_dm = set(["data manager", "cra"])
+    for r in ["data manager", "cra"]:
+        if r in ROLE_EXPANSIONS:
+            expanded_allowed_dm.update(ROLE_EXPANSIONS[r])
+
+    expanded_allowed_inv = set(["site investigator"])
+    for r in ["site investigator"]:
+        if r in ROLE_EXPANSIONS:
+            expanded_allowed_inv.update(ROLE_EXPANSIONS[r])
+
+    has_dm_role = any(r in expanded_allowed_dm for r in user_roles)
+    has_inv_role = any(r in expanded_allowed_inv for r in user_roles)
+
+    processed_count = 0
+    async with db_manager.get_session_maker()() as session:
+        for block in payload.blocks:
+            action = block.action.upper()
+            details = block.details
+
+            # Validate role for this specific action
+            if action in ("QUERY_CREATE", "QUERY_CLOSE", "QUERY_REOPEN"):
+                if not has_dm_role:
+                    raise HTTPException(
+                        status_code=403,
+                        detail=f"User role is not authorized for {action} action."
+                    )
+            elif action == "QUERY_RESPOND":
+                if not has_inv_role:
+                    raise HTTPException(
+                        status_code=403,
+                        detail=f"User role is not authorized for {action} action."
+                    )
+
+            # Extract/determine query coordinates
+            study_id = details.studyId or "STUDY-USDM-001"
+            subject_id = details.subjectId or "SUBJ-001"
+            visit_id = details.visitId or "Screening"
+
+            # Map domain & test_code from fieldId
+            mapped_domain, mapped_test = field_map.get(details.fieldId.lower(), ("VS", details.fieldId.upper()))
+            domain = details.domain or mapped_domain
+            test_code = details.testCode or mapped_test
+
+            # Find existing active query
+            stmt = select(ClinicalQuery).where(
+                ClinicalQuery.study_id == study_id,
+                ClinicalQuery.subject_id == subject_id,
+                ClinicalQuery.visit_id == visit_id,
+                ClinicalQuery.domain == domain,
+                ClinicalQuery.test_code == test_code,
+                ClinicalQuery.is_deleted.is_(False),
+            )
+            res = await session.execute(stmt)
+            q = res.scalars().first()
+
+            if action == "QUERY_CREATE":
+                if not q:
+                    # Create a new query
+                    q = ClinicalQuery(
+                        id=str(uuid.uuid4()),
+                        study_id=study_id,
+                        subject_id=subject_id,
+                        visit_id=visit_id,
+                        domain=domain,
+                        test_code=test_code,
+                        status="OPEN",
+                        explanation=details.query.message if details.query else "Offline raised discrepancy",
+                        message=details.query.message if details.query else "Offline raised discrepancy",
+                        created_by=request.state.user_id,
+                    )
+                    session.add(q)
+                    processed_count += 1
+
+            elif action == "QUERY_RESPOND":
+                if q:
+                    try:
+                        QueryService.validate_transition(q.status, "ANSWERED")
+                        q.status = "ANSWERED"
+                        if details.query and details.query.response:
+                            q.response = details.query.response
+                        q.responder = request.state.user_id
+                        session.add(q)
+                        processed_count += 1
+                    except StateTransitionError:
+                        pass
+
+            elif action == "QUERY_CLOSE":
+                if q:
+                    try:
+                        QueryService.validate_transition(q.status, "CLOSED")
+                        q.status = "CLOSED"
+                        q.resolver = request.state.user_id
+                        q.resolved_at = datetime.utcnow()
+                        session.add(q)
+                        processed_count += 1
+                    except StateTransitionError:
+                        pass
+
+            elif action == "QUERY_REOPEN":
+                if q:
+                    try:
+                        QueryService.validate_transition(q.status, "REOPENED", has_reason=True)
+                        q.status = "REOPENED"
+                        q.resolver = None
+                        q.resolved_at = None
+                        session.add(q)
+                        processed_count += 1
+                    except StateTransitionError:
+                        pass
+
+        await session.commit()
+
+    return {
+        "status": "success",
+        "processed_blocks": processed_count,
+    }

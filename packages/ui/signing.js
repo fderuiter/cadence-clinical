@@ -148,3 +148,46 @@ export async function verifyGatewaySignature(
   );
   return expectedSig === signature;
 }
+
+/**
+ * Generates a standard HS256-signed JWT token.
+ * Used for FDA 21 CFR Part 11 single-use signature re-authentication tokens (X-Sig-Token).
+ *
+ * @param {Object} payload - The JWT payload to sign.
+ * @param {string|Uint8Array} secret - The HMAC shared secret key.
+ * @returns {Promise<string>} The fully constructed and signed JWT token.
+ */
+export async function generateJwtHS256(payload, secret) {
+  const encoder = new TextEncoder();
+  
+  function base64url(arr) {
+    const binary = String.fromCharCode(...arr);
+    const base64 = btoa(binary);
+    return base64.replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+  }
+
+  const header = { alg: "HS256", typ: "JWT" };
+  const headerStr = base64url(encoder.encode(JSON.stringify(header)));
+  const payloadStr = base64url(encoder.encode(JSON.stringify(payload)));
+  
+  const tokenInput = headerStr + "." + payloadStr;
+  const keyData = typeof secret === "string" ? encoder.encode(secret) : secret;
+  const data = encoder.encode(tokenInput);
+
+  const key = await globalThis.crypto.subtle.importKey(
+    "raw",
+    keyData,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+
+  const signatureBuffer = await globalThis.crypto.subtle.sign(
+    "HMAC",
+    key,
+    data
+  );
+  const signatureStr = base64url(new Uint8Array(signatureBuffer));
+  return tokenInput + "." + signatureStr;
+}
+

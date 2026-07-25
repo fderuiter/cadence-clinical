@@ -587,6 +587,60 @@
         </div>
       </div>
     </div>
+
+    <!-- Re-authentication Modal Dialog -->
+    <div
+      v-if="showReauthModal"
+      id="reauth-modal"
+      class="modal-overlay"
+      style="display: flex"
+    >
+      <div class="modal">
+        <div class="modal-header">Identity Re-Authentication Required</div>
+        <div class="modal-body">
+          <p>
+            To comply with <strong>FDA 21 CFR Part 11 / EU Annex 11</strong>, you
+            must re-verify your identity before performing this high-security action.
+          </p>
+          <div class="form-group" style="margin-bottom: 12px">
+            <label for="reauth-username">Username</label>
+            <input
+              type="text"
+              id="reauth-username"
+              v-model="reauthUsername"
+              readonly
+              style="background-color: #f1f5f9"
+            />
+          </div>
+          <div class="form-group">
+            <label for="reauth-password">Password</label>
+            <input
+              type="password"
+              id="reauth-password"
+              v-model="reauthPassword"
+              placeholder="Enter your password to confirm identity..."
+              required
+              @keyup.enter="confirmReauth"
+            />
+          </div>
+          <div v-if="reauthError" class="validation-error-msg" style="margin-top: 8px; color: #ef4444;">
+            {{ reauthError }}
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="btn-cancel-reauth" class="btn" @click="cancelReauth">
+            Cancel
+          </button>
+          <button
+            id="btn-confirm-reauth"
+            class="btn btn-primary"
+            @click="confirmReauth"
+          >
+            Verify & Confirm
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -607,6 +661,13 @@ const showReasonModal = ref(false);
 const selectedReason = ref("Initial Entry");
 const customReasonExplanation = ref("");
 const pendingValueChange = ref(null);
+
+// Re-authentication Modal States
+const showReauthModal = ref(false);
+const reauthUsername = ref(store.user.username);
+const reauthPassword = ref("");
+const reauthError = ref("");
+const pendingCloseQueryFieldId = ref(null);
 
 function getQueryStatus(fieldId) {
   const query = store.formQueries[fieldId];
@@ -736,16 +797,55 @@ function respondQuery(fieldId) {
 }
 
 function closeQuery(fieldId) {
-  const queryObj = store.formQueries[fieldId];
-  queryObj.status = "CLOSED";
-  queryObj.closedBy = "Data Monitor (Offline Client)";
-  queryObj.closedAt = new Date().toISOString().slice(0, 10);
+  pendingCloseQueryFieldId.value = fieldId;
+  showReauthModal.value = true;
+}
 
-  store.addLedgerBlock(
-    "QUERY_CLOSE",
-    { fieldId, query: queryObj },
-    "Discrepancy resolved and closed permanently."
-  );
+function cancelReauth() {
+  showReauthModal.value = false;
+  reauthPassword.value = "";
+  reauthError.value = "";
+  pendingCloseQueryFieldId.value = null;
+}
+
+function confirmReauth() {
+  if (!reauthPassword.value) {
+    reauthError.value = "Password is required.";
+    return;
+  }
+
+  const fieldId = pendingCloseQueryFieldId.value;
+  if (fieldId) {
+    const queryObj = store.formQueries[fieldId];
+    queryObj.status = "CLOSED";
+    queryObj.closedBy = `${store.user.username} (Offline Client)`;
+    queryObj.closedAt = new Date().toISOString().slice(0, 10);
+
+    const fieldMeta = store.ecrfFields.find((f) => f.id === fieldId);
+    const cdash = fieldMeta ? fieldMeta.cdash : "";
+    const [domain, testCode] = cdash ? cdash.split(".") : ["VS", fieldId.toUpperCase()];
+
+    store.addLedgerBlock(
+      "QUERY_CLOSE",
+      {
+        fieldId,
+        studyId: store.currentUsdm.studyId || "STUDY-USDM-001",
+        subjectId: "SUBJ-001",
+        visitId: "Screening",
+        domain,
+        testCode,
+        query: queryObj
+      },
+      "Discrepancy resolved and closed permanently."
+    );
+    pendingCloseQueryFieldId.value = null;
+  }
+
+  showReauthModal.value = false;
+  reauthPassword.value = "";
+  reauthError.value = "";
+
+  alert("Identity verified. Query closed and logged to cryptographic ledger.");
 }
 
 function reopenQuery(fieldId) {
