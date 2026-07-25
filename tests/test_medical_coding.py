@@ -7,7 +7,6 @@ from typing import AsyncGenerator
 
 import pytest
 import pytest_asyncio
-from fastapi.testclient import TestClient
 from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 
@@ -327,7 +326,10 @@ def get_import_auth_headers(
 async def test_meddra_import_happy_path() -> None:
     """Verify that an authorized user can successfully import a valid MedDRA zip distribution."""
     import httpx
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=exec_app), base_url="http://test") as client:
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=exec_app), base_url="http://test"
+    ) as client:
         # 1. Create a valid MedDRA zip archive in memory
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
@@ -385,7 +387,10 @@ async def test_meddra_import_happy_path() -> None:
 async def test_whodrug_import_happy_path() -> None:
     """Verify that an authorized user can successfully import a valid WHODrug zip distribution."""
     import httpx
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=exec_app), base_url="http://test") as client:
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=exec_app), base_url="http://test"
+    ) as client:
         # 1. Create a valid WHODrug zip archive in memory
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
@@ -443,7 +448,10 @@ async def test_whodrug_import_happy_path() -> None:
 async def test_import_unauthorized_roles_forbidden() -> None:
     """Verify that unauthorized roles (like Data Manager or CRA) cannot import dictionaries."""
     import httpx
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=exec_app), base_url="http://test") as client:
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=exec_app), base_url="http://test"
+    ) as client:
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
             zip_file.writestr("llt.asc", "10019211$Headache$10019211$$$$$Y$\n")
@@ -464,7 +472,10 @@ async def test_import_unauthorized_roles_forbidden() -> None:
 async def test_import_invalid_layout_rejected() -> None:
     """Verify that archives with invalid file layout are rejected synchronously."""
     import httpx
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=exec_app), base_url="http://test") as client:
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=exec_app), base_url="http://test"
+    ) as client:
         # Empty zip
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False):
@@ -485,7 +496,10 @@ async def test_import_invalid_layout_rejected() -> None:
 async def test_import_unsupported_dictionary_rejected() -> None:
     """Verify that unsupported dictionary types are rejected synchronously."""
     import httpx
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=exec_app), base_url="http://test") as client:
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=exec_app), base_url="http://test"
+    ) as client:
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
             zip_file.writestr("test.txt", "some content")
@@ -505,7 +519,10 @@ async def test_import_unsupported_dictionary_rejected() -> None:
 async def test_import_failure_rollback_and_failed_state() -> None:
     """Verify that parsing/persistence failure rolls back any records and marks job as FAILED."""
     import httpx
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=exec_app), base_url="http://test") as client:
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=exec_app), base_url="http://test"
+    ) as client:
         # Create zip containing invalid data (non-8-digit llt_code)
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
@@ -552,4 +569,3 @@ async def test_import_failure_rollback_and_failed_state() -> None:
             assert len(terms) == 0, (
                 f"Expected 0 terms imported due to transaction rollback, got {len(terms)}."
             )
-

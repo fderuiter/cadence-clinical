@@ -3,7 +3,13 @@ import vuePlugin from "eslint-plugin-vue";
 
 export default [
   {
-    ignores: ["**/dist/**", "**/node_modules/**"],
+    ignores: [
+      "**/dist/**",
+      "**/node_modules/**",
+      "**/.venv/**",
+      "**/venv/**",
+      "**/.pytest_cache/**"
+    ],
   },
   js.configs.recommended,
   ...vuePlugin.configs["flat/recommended"],

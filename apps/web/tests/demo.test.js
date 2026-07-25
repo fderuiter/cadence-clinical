@@ -102,7 +102,7 @@ describe("renderFormFromJSON integration", () => {
   });
 });
 
-import { createConditionRow, createRuleEditorContainer } from "ui";
+import { createConditionRow } from "ui";
 
 describe("Visual Rules Editor Integration Tests", () => {
   const mockForms = [
