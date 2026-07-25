@@ -1,6 +1,13 @@
 import {
   generateGatewaySignature,
 } from "ui";
+import {
+  queueSubmission,
+  getQueuedSubmissions,
+  getAllSubmissions,
+  updateSubmissionStatus,
+  clearAllSubmissions,
+} from "./sync-queue.js";
 
 // Mock Data fallbacks for high-fidelity offline/sandbox usage
 const MOCK_ASSIGNMENTS = [
@@ -452,21 +459,25 @@ async function verifyAndSubmitSignature() {
 
   closeSignatureModal();
 
-  // Save changes locally and attempt API submission
   const active = state.activeQuestionnaire;
   if (!active) return;
 
-  const payload = {
-    subject_id: state.session.userId,
-    diary_id: active.instrument.id,
-    device_timestamp: new Date().toISOString(),
-    answers: active.answers,
-    offline_sync_markers: {
-      sequence_number: state.ledgerBlocks.length + 1,
-      client_id: "subject_portal_pwa",
-      conflict_strategy: "CLIENT_WINS"
-    }
-  };
+  // Queue submission locally inside IndexedDB
+  let queuedItem;
+  try {
+    queuedItem = await queueSubmission({
+      subject_id: state.session.userId,
+      diary_id: active.instrument.id,
+      assignment_id: active.assignment.id,
+      answers: active.answers,
+      change_reason: finalReason,
+      username: username
+    });
+  } catch (err) {
+    console.error("Failed to write to offline queue IndexedDB:", err);
+    alert("Could not queue submission locally. Please try again.");
+    return;
+  }
 
   // Perform GxP audit logging locally
   await logAuditRecord(
@@ -475,6 +486,7 @@ async function verifyAndSubmitSignature() {
       diary_id: active.instrument.id,
       answers: active.answers,
       assignment_id: active.assignment.id,
+      sequence_number: queuedItem.sequence_number,
     },
     `Verified Electronic Signature: "${username}" with statement "${finalReason}"`
   );
@@ -483,18 +495,7 @@ async function verifyAndSubmitSignature() {
   const foundAssign = state.assignments.find(a => a.id === active.assignment.id);
   if (foundAssign) {
     foundAssign.status = "COMPLETED";
-    foundAssign.submitted_at = payload.device_timestamp;
-  }
-
-  // Attempt standard gateway API call
-  try {
-    await dispatchApi("epro/submit", {
-      method: "POST",
-      body: JSON.stringify(payload),
-      change_reason: finalReason,
-    });
-  } catch {
-    console.info("Falling back to local cache storage for electronic submissions.");
+    foundAssign.submitted_at = queuedItem.device_timestamp;
   }
 
   state.activeQuestionnaire = null;
@@ -504,6 +505,9 @@ async function verifyAndSubmitSignature() {
   renderTasks();
   renderCompliance();
   showView("view-tasks");
+
+  // Attempt sync immediately
+  await syncOfflineQueue();
 }
 
 // 3. My Compliance
@@ -652,6 +656,146 @@ async function acknowledgeNotification(notificationId) {
   renderInbox();
 }
 
+function checkOnline() {
+  if (typeof window !== "undefined" && window.__MOCK_TEST_ENV__) {
+    return !state.session.isOfflineMode;
+  }
+  return typeof navigator !== "undefined" && navigator.onLine;
+}
+
+async function renderSyncQueueList() {
+  const listEl = document.getElementById("sync-queue-list");
+  if (!listEl) return;
+
+  const all = await getAllSubmissions();
+  if (all.length === 0) {
+    listEl.innerHTML = `<div class="loading-state" style="padding: 8px 0; text-align: center; color: var(--text-muted);">No submission history in queue.</div>`;
+    return;
+  }
+
+  listEl.innerHTML = all
+    .map((item) => {
+      const instName = MOCK_INSTRUMENTS[item.diary_id]?.name || item.diary_id;
+      const submittedTime = new Date(item.device_timestamp).toLocaleString();
+
+      let badgeClass = "pending";
+      let statusLabel = item.status;
+      let statusDesc = "";
+
+      if (item.status === "QUEUED") {
+        badgeClass = "pending";
+        statusLabel = "QUEUED";
+        statusDesc = "Waiting for network connection...";
+      } else if (item.status === "CREATED" || item.status === "UPDATED_CLIENT_WINS") {
+        badgeClass = "completed";
+        statusLabel = "SYNCED";
+        statusDesc = "Successfully synchronized with clinical database.";
+      } else if (item.status === "MERGED") {
+        badgeClass = "completed";
+        statusLabel = "MERGED";
+        statusDesc = "Conflict resolved: Local and server entries were combined.";
+      } else if (item.status === "IGNORED_SERVER_WINS") {
+        badgeClass = "overdue";
+        statusLabel = "CONFLICT (Ignored)";
+        statusDesc = "Conflict resolved: Server data was preserved; local entry archived.";
+      }
+
+      let answersDetails = `<strong>Local Answers:</strong> <code style="background: rgba(0,0,0,0.2); padding: 2px 4px; border-radius: 4px;">${JSON.stringify(item.answers)}</code>`;
+      if (item.resolved_answers && item.status === "MERGED") {
+        answersDetails += `<br/><strong>Merged Result:</strong> <code style="background: rgba(0,0,0,0.2); padding: 2px 4px; border-radius: 4px;">${JSON.stringify(item.resolved_answers)}</code>`;
+      }
+
+      return `
+        <div class="task-item" style="flex-direction: column; align-items: stretch; gap: 8px; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; background: rgba(255,255,255,0.02);">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; flex-direction: column;">
+              <span style="font-weight: 700; font-size: 14px;">${instName}</span>
+              <span style="font-size: 11px; color: var(--text-muted);">Seq: #${item.sequence_number} | Device Time: ${submittedTime}</span>
+            </div>
+            <span class="status-pill ${badgeClass}">${statusLabel}</span>
+          </div>
+          <div style="font-size: 12px; color: var(--text-muted); border-top: 1px dashed var(--border-color); padding-top: 6px; margin-top: 4px;">
+            <p style="margin: 0 0 4px 0;">${statusDesc}</p>
+            ${answersDetails}
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+async function syncOfflineQueue() {
+  const statusTextEl = document.getElementById("sync-queue-status-text");
+  const queued = await getQueuedSubmissions();
+  const online = checkOnline();
+
+  if (!online) {
+    if (statusTextEl) {
+      statusTextEl.textContent = `Offline Mode. ${queued.length} submission(s) queued locally.`;
+    }
+    await renderSyncQueueList();
+    return;
+  }
+
+  if (queued.length === 0) {
+    if (statusTextEl) {
+      statusTextEl.textContent = "Online. All submissions synchronized.";
+    }
+    await renderSyncQueueList();
+    return;
+  }
+
+  if (statusTextEl) {
+    statusTextEl.textContent = `Online. Syncing ${queued.length} submission(s)...`;
+  }
+
+  const payload = {
+    submissions: queued.map((item) => ({
+      subject_id: item.subject_id,
+      diary_id: item.diary_id,
+      device_timestamp: item.device_timestamp,
+      answers: item.answers,
+      offline_sync_markers: {
+        sequence_number: item.sequence_number,
+        client_id: item.client_id,
+        conflict_strategy: "CLIENT_WINS"
+      }
+    }))
+  };
+
+  try {
+    const response = await dispatchApi("epro/sync", {
+      method: "POST",
+      body: JSON.stringify(payload),
+      change_reason: "Reconcile offline submissions"
+    });
+
+    if (response && response.results) {
+      for (let i = 0; i < queued.length; i++) {
+        const item = queued[i];
+        const res = response.results[i];
+        if (res) {
+          await updateSubmissionStatus(item.sequence_number, res.status, {
+            resolved_answers: res.answers,
+            resolved_at: new Date().toISOString()
+          });
+        }
+      }
+    }
+
+    if (statusTextEl) {
+      statusTextEl.textContent = "Online. Sync complete.";
+    }
+  } catch (err) {
+    console.error("Sync failed:", err);
+    if (statusTextEl) {
+      statusTextEl.textContent = `Sync failed. ${queued.length} submission(s) still queued.`;
+    }
+  }
+
+  await renderSyncQueueList();
+}
+
 // Bootstrap Initialization
 async function initializeApp() {
   // Graceful OIDC Keycloak setup
@@ -739,6 +883,39 @@ async function initializeApp() {
   renderCompliance();
   renderInbox();
 
+  // Graceful Service Worker Registration
+  if (typeof navigator !== "undefined" && "serviceWorker" in navigator && !window.__MOCK_TEST_ENV__) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker
+        .register("/subject-portal/sw.js")
+        .then((reg) => {
+          console.log("Service Worker registered with scope:", reg.scope);
+        })
+        .catch((err) => {
+          console.error("Service Worker registration failed:", err);
+        });
+    });
+  }
+
+  // Initial sync & sync queue rendering
+  await syncOfflineQueue();
+
+  // Attach online/offline listener
+  if (typeof window !== "undefined") {
+    window.addEventListener("online", () => {
+      console.log("[App] Network online detected. Triggering sync...");
+      syncOfflineQueue();
+    });
+  }
+
+  // Attach "Sync Now" button listener
+  const btnSyncNow = document.getElementById("btn-sync-now");
+  if (btnSyncNow) {
+    btnSyncNow.addEventListener("click", () => {
+      syncOfflineQueue();
+    });
+  }
+
   // Attach Global Navigation listeners
   const btnTasks = document.getElementById("tab-btn-tasks");
   const btnCompliance = document.getElementById("tab-btn-compliance");
@@ -790,4 +967,8 @@ export {
   verifyAndSubmitSignature,
   acknowledgeNotification,
   initializeApp,
+  checkOnline,
+  renderSyncQueueList,
+  syncOfflineQueue,
+  clearAllSubmissions,
 };

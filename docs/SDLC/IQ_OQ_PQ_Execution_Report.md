@@ -490,6 +490,12 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_site_and_source_precedence` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_tie_breaking_with_none_bounds` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_unit_matching` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_create_lab_reference_range_success` | `tests.test_lab_ranges_crud` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_create_lab_reference_range_unauthorized` | `tests.test_lab_ranges_crud` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_create_lab_reference_range_validation_errors` | `tests.test_lab_ranges_crud` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_get_and_update_lab_reference_range` | `tests.test_lab_ranges_crud` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_list_and_filter_lab_reference_ranges` | `tests.test_lab_ranges_crud` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_soft_delete_lab_reference_range` | `tests.test_lab_ranges_crud` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_range_evaluation_and_recalculation_gxp` | `tests.test_lab_ranges_recalculate` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_range_recalculation_no_match` | `tests.test_lab_ranges_recalculate` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_clinical_observation_extended_fields` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
@@ -688,7 +694,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_map_to_sdtm_orchestrator` | `tests.test_sdtm_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_map_vs` | `tests.test_sdtm_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_to_dtc` | `tests.test_sdtm_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_clinical_observation_sdv_defaults` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005, PRD-QRY-007 | 🟢 PASSED | < 1s |
+| `test_clinical_observation_sdv_defaults` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-007, PRD-QRY-005 | 🟢 PASSED | < 1s |
 | `test_sdv_automatic_verification_drop` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005, PRD-QRY-006 | 🟢 PASSED | < 1s |
 | `test_sdv_sign_off_persistence_and_audit` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005 | 🟢 PASSED | < 1s |
 | `test_sdv_signoff_endpoint_and_idempotency` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005, PRD-QRY-006 | 🟢 PASSED | < 1s |
@@ -784,8 +790,16 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_get_terminology_from_db_transport_error_but_in_mock` | `tests.test_terminology_integration` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_offline_fallback_resolves_supported_seed_concepts` | `tests.test_terminology_integration` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_terminology_cache_unreachable_database_exception_fallback` | `tests.test_terminology_integration` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_search_terminology_endpoint_degraded` | `tests.test_terminology_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_search_terminology_endpoint_invalid_input` | `tests.test_terminology_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_search_terminology_endpoint_success` | `tests.test_terminology_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validate_concept_codes_degraded` | `tests.test_terminology_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validate_concept_codes_success` | `tests.test_terminology_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_validate_single_code_endpoint` | `tests.test_terminology_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_validate_single_code_endpoint_degraded` | `tests.test_terminology_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_validate_single_code_endpoint_invalid_data` | `tests.test_terminology_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_validate_study_ct_endpoint` | `tests.test_terminology_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_validate_study_ct_endpoint_not_found` | `tests.test_terminology_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validate_study_terminology` | `tests.test_terminology_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validate_study_terminology_endpoint_not_found` | `tests.test_terminology_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validate_study_terminology_endpoint_success` | `tests.test_terminology_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -825,6 +839,14 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_site_and_visit_locks` | `tests.test_trial_lock` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_subject_and_form_locks` | `tests.test_trial_lock` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_trial_lock_freeze` | `tests.test_trial_lock` | PRD-SYS-003, Trace-3 | 🟢 PASSED | < 1s |
+| `test_api_tsdv_config_authorization_and_upsert` | `tests.test_tsdv_logic` | PRD-QRY-007 | 🟢 PASSED | < 1s |
+| `test_api_tsdv_config_validation` | `tests.test_tsdv_logic` | PRD-QRY-007 | 🟢 PASSED | < 1s |
+| `test_api_tsdv_evaluation_endpoint` | `tests.test_tsdv_logic` | PRD-QRY-007 | 🟢 PASSED | < 1s |
+| `test_tsdv_evaluation_models` | `tests.test_tsdv_logic` | PRD-QRY-007 | 🟢 PASSED | < 1s |
+| `test_tsdv_field_required_precedence` | `tests.test_tsdv_logic` | PRD-QRY-007 | 🟢 PASSED | < 1s |
+| `test_tsdv_subject_selection_boundaries` | `tests.test_tsdv_logic` | PRD-QRY-007 | 🟢 PASSED | < 1s |
+| `test_tsdv_subject_selection_deterministic` | `tests.test_tsdv_logic` | PRD-QRY-007 | 🟢 PASSED | < 1s |
+| `test_tsdv_subject_selection_first_n` | `tests.test_tsdv_logic` | PRD-QRY-007 | 🟢 PASSED | < 1s |
 | `test_convert_unit_errors` | `tests.test_ucum_coverage` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_convert_unit_identical` | `tests.test_ucum_coverage` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_convert_unit_multiplicative` | `tests.test_ucum_coverage` | *Regression/Helper* | 🟢 PASSED | < 1s |

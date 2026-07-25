@@ -143,7 +143,7 @@ All errors returned by the Cadence Clinical API are modeled on **RFC 7807 (Probl
     },
     {
       "field": "terminology",
-      "reason": "The terminology must be one of: 'SNOMED-CT', 'LOINC', 'MedDRA', 'WHODrug'.",
+      "reason": "The terminology must be one of: 'SNOMED-CT', 'LOINC', 'MedDRA', 'WHODrug', 'NCI', 'CDISC-CT'.",
       "value": "CUSTOM"
     }
   ]
@@ -967,7 +967,7 @@ paths:
           required: false
           schema:
             type: string
-            enum: [SNOMED-CT, LOINC, MedDRA, WHODrug]
+            enum: [SNOMED-CT, LOINC, MedDRA, WHODrug, NCI, CDISC-CT]
         - name: domain
           in: query
           required: false

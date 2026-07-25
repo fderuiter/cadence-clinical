@@ -278,6 +278,73 @@ main {
   background-color: #f1f5f9;
 }
 
+/* Grouped headers & SoA Matrix specific styles */
+.clinical-soa-matrix th.grouped-header {
+  text-align: center;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid var(--border);
+}
+
+.clinical-soa-matrix th.arm-header {
+  background-color: var(--primary-light);
+  color: white;
+  font-weight: 800;
+}
+
+.clinical-soa-matrix th.epoch-header {
+  background-color: #e2e8f0; /* Slate 200 */
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.clinical-soa-matrix th.encounter-header {
+  background-color: var(--neutral-light);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--neutral-dark);
+  text-align: center;
+}
+
+.clinical-soa-matrix th.corner-header {
+  font-weight: 700;
+  background-color: var(--neutral-light);
+  border-right: 2px solid var(--border);
+  vertical-align: middle;
+}
+
+/* Status cell states for SoA Matrix */
+.clinical-soa-matrix td {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.status-applicable {
+  color: var(--success);
+  background-color: var(--success-bg);
+  font-weight: bold;
+}
+
+.status-conditional {
+  color: var(--warning);
+  background-color: var(--warning-bg);
+  font-weight: bold;
+}
+
+.status-optional {
+  color: #0369a1; /* Light Blue 700 */
+  background-color: #f0f9ff; /* Light Blue 50 */
+}
+
+.cell-details {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: normal;
+  color: #64748b;
+  margin-top: 4px;
+}
+
 /* Forms and Inputs */
 .clinical-form-grid {
   margin-top: 16px;

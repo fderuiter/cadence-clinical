@@ -47,4 +47,3 @@ To meet GxP and FDA 21 CFR Part 11 requirements, we must implement an offline-ca
   * Comprehensive Jest/Vitest unit tests covering frontend background queue and storage state.
   * Integration tests simulating role-based access control, network failures, single-use token expiration, and happy-path background synchronization.
   * Successfully merged with `main` and resolved all Version 1 / Version 2 signature compatibility intersections.
-

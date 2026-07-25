@@ -49,6 +49,7 @@ from apps.designer.delta import (
     update_timing_window,
     update_visit,
 )
+from apps.designer.evs_client import NCIEVSClient
 from apps.designer.mapper import map_study_to_usdm
 from apps.designer.rules import (
     CreateRuleRequest,
@@ -57,13 +58,39 @@ from apps.designer.rules import (
     detect_unknown_fields,
 )
 from apps.designer.validator import (
+    CodeValidationState,
+    ConceptValidationReport,
     StudyAlignmentReport,
     StudyTerminologyValidationReport,
     generate_alignment_report,
+    validate_concept_codes,
     validate_study_terminology,
 )
 from apps.designer.xml_mapping import validate_mapping_csv
 from packages.security.middleware import GatewayAuthMiddleware
+
+
+class TerminologyConcept(BaseModel):
+    """
+    Normalized terminology concept details.
+    """
+
+    code: str
+    decode: str
+    system: str
+    valid: bool
+
+
+class TerminologySearchResponse(BaseModel):
+    """
+    Response model for search and autocomplete queries.
+    """
+
+    query: str
+    state: CodeValidationState
+    results: List[TerminologyConcept]
+    total_results: int
+    error_message: Optional[str] = None
 
 
 class DifferenceResult(BaseModel):
@@ -313,6 +340,120 @@ async def validate_study_terminology_endpoint(
 
 
 @app.get(
+    "/api/v1/studies/{study_id}/ct-validation",
+    response_model=StudyTerminologyValidationReport,
+)
+async def validate_study_ct_endpoint(
+    study_id: str,
+) -> StudyTerminologyValidationReport:
+    """
+    Generate a controlled terminology (CT) validation report for a specific clinical study.
+
+    Traverses study concept references and aggregates validation outcomes
+    such as identifying affected elements and references.
+
+    Args:
+        study_id (str): The unique identifier of the study to validate.
+
+    Returns:
+        StudyTerminologyValidationReport: The structured validation report.
+    """
+    try:
+        return validate_study_terminology(study_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.get(
+    "/api/v1/terminology/validate/{code}",
+    response_model=ConceptValidationReport,
+)
+async def validate_single_code(
+    code: str,
+) -> ConceptValidationReport:
+    """
+    Validates a single terminology concept code.
+
+    Args:
+        code (str): The concept code to validate.
+
+    Returns:
+        ConceptValidationReport: Validation status and metadata.
+    """
+    if not code or not code.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Concept code cannot be empty or whitespace.",
+        )
+
+    reports = validate_concept_codes([code])
+    if not reports:
+        return ConceptValidationReport(
+            concept_code=code,
+            state=CodeValidationState.INVALID,
+            error_message="Validation did not return any reports.",
+        )
+    return reports[0]
+
+
+@app.get(
+    "/api/v1/terminology/search",
+    response_model=TerminologySearchResponse,
+)
+async def search_terminology(
+    term: str = Query(...),
+    from_record: Optional[int] = Query(None),
+    page_size: Optional[int] = Query(None),
+) -> TerminologySearchResponse:
+    """
+    Search or autocomplete terminology concepts by text query.
+
+    Args:
+        term (str): Search term.
+        from_record (int, optional): Record offset.
+        page_size (int, optional): Page size.
+
+    Returns:
+        TerminologySearchResponse: Search results and status.
+    """
+    if not term or not term.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Search term cannot be empty or whitespace.",
+        )
+
+    try:
+        client = NCIEVSClient()
+        search_results = await client.search_concepts(
+            term=term, from_record=from_record, page_size=page_size
+        )
+        concepts = [
+            TerminologyConcept(
+                code=c.get("code") or "",
+                decode=c.get("decode") or "",
+                system=c.get("system") or "",
+                valid=c.get("valid", True),
+            )
+            for c in search_results
+        ]
+        return TerminologySearchResponse(
+            query=term,
+            state=CodeValidationState.VALID,
+            results=concepts,
+            total_results=len(concepts),
+        )
+    except Exception as e:
+        # Return source unavailability as a structured degraded response rather than an unhandled 5xx response
+        return TerminologySearchResponse(
+            query=term,
+            state=CodeValidationState.DEGRADED,
+            results=[],
+            total_results=0,
+            error_message=f"Upstream EVS search service is unavailable: {str(e)}",
+        )
+
+
+@app.get(
     "/api/v1/studies/{study_id}/differences", response_model=List[DifferenceResult]
 )
 async def study_differences(
@@ -448,6 +589,8 @@ class TerminologyEnum(str, Enum):
     LOINC = "LOINC"
     MedDRA = "MedDRA"
     WHODrug = "WHODrug"
+    NCI = "NCI"
+    CDISC_CT = "CDISC-CT"
 
 
 class CDASHMapping(BaseModel):
