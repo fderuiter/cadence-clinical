@@ -97,10 +97,40 @@ export async function generateGatewaySignature(
   changeReason = null,
   secret
 ) {
-  if (version !== "2" && version !== "v2") {
+  if (
+    version !== "2" &&
+    version !== "v2" &&
+    version !== "1" &&
+    version !== "v1"
+  ) {
     throw new Error(
-      "Missing or obsolete signature format. Version 2 canonical JSON signature is required."
+      "Missing or obsolete signature format. Version 1 or Version 2 signature is required."
     );
+  }
+  if (version === "1" || version === "v1") {
+    const serialized = `${userId}:${roles}:${timestamp}`;
+    const secretKeyData =
+      typeof secret === "string" ? new TextEncoder().encode(secret) : secret; // pragma: allowlist secret
+    const data = new TextEncoder().encode(serialized);
+
+    const key = await globalThis.crypto.subtle.importKey(
+      "raw",
+      secretKeyData,
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+
+    const signatureBuffer = await globalThis.crypto.subtle.sign(
+      "HMAC",
+      key,
+      data
+    );
+    const hashArray = Array.from(new Uint8Array(signatureBuffer));
+    const hashHex = hashArray
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+    return hashHex;
   }
   const cr =
     changeReason !== null && changeReason !== undefined ? changeReason : "";
@@ -115,13 +145,13 @@ export async function generateGatewaySignature(
 
 /**
  * Verifies an API Gateway identity signature against expected values.
- * Supports Version 2 (canonical JSON format) exclusively.
+ * Supports Version 1 (legacy colon concatenated format) and Version 2 (canonical JSON format).
  *
  * @param {string} signature - The signature to verify.
  * @param {string} userId - The unique user identifier.
  * @param {string} roles - Comma-separated roles assigned to the user.
  * @param {string} timestamp - The gateway-generated timestamp.
- * @param {string} [version="2"] - The signature format version (must be "2" or "v2").
+ * @param {string} [version="2"] - The signature format version (must be "2" or "v2", or "1" or "v1").
  * @param {string|null} [changeReason=null] - The audit change justification.
  * @param {string|Uint8Array} secret - The shared API gateway secret key.
  * @returns {Promise<boolean>} True if valid, false otherwise.
@@ -135,7 +165,12 @@ export async function verifyGatewaySignature(
   changeReason = null,
   secret
 ) {
-  if (version !== "2" && version !== "v2") {
+  if (
+    version !== "2" &&
+    version !== "v2" &&
+    version !== "1" &&
+    version !== "v1"
+  ) {
     return false;
   }
   const expectedSig = await generateGatewaySignature(

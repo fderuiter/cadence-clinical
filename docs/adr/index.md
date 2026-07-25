@@ -38,6 +38,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-24: Minimizing Merge Friction for Baseline and SDLC Verification Artifacts](2026-07-24-minimizing-merge-friction-for-baselines-and-reports.md)
 - [2026-07-24: Continuous FMEA GXP-Aligned Exemption Ledger](2026-07-24-continuous-fmea-gxp-aligned-exemption-ledger.md)
 - [2026-07-24: Clinical Query Workflow and Role Authorization](2026-07-24-clinical-query-workflow-authorization.md)
+- [2026-07-24: Rolling Versioning and Transition Support for Canonical JSON Signatures](2026-07-24-rolling-upgrade-and-canonical-json-signatures.md)
 - [2026-07-24: Database-Native Pessimistic Locking & Retry](2026-07-24-database-native-pessimistic-locking-retry.md)
 - [2026-07-25: Data-Driven Expected Document Lists (EDLs) & Completeness Tracking](2026-07-25-data-driven-edl-model-and-completeness.md)
 - [2026-07-25: eTMF Quality Control Review Lifecycle & Validated State Machine](2026-07-25-etmf-qc-review-workflow.md)

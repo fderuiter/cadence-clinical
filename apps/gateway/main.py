@@ -240,19 +240,25 @@ def generate_signature(
     Uses a shared secret to cryptographically sign the user identity
     and timestamp, allowing downstream services to trust the injected headers.
 
-    Supports Version 2 (canonical JSON format) exclusively.
+    Supports Version 1 (legacy colon-concatenated format) and Version 2 (canonical JSON format).
 
     Args:
         user_id (str): The unique user identifier.
         roles (str): Comma-separated roles assigned to the user.
         timestamp (str): The exact timestamp when the signature was created.
-        version (str): The signature format version (ignored, always "2").
+        version (str): The signature format version ("1" or "v1" for legacy, "2" or "v2" for canonical JSON).
         change_reason (Optional[str]): The justification reason for the modification (Version 2).
 
     Returns:
         str: A hexadecimal representation of the HMAC signature.
     """
     import json
+
+    if version in ("1", "v1"):
+        payload_v1 = f"{user_id}:{roles}:{timestamp}"
+        return hmac.new(
+            GATEWAY_SECRET.encode(), payload_v1.encode("utf-8"), hashlib.sha256
+        ).hexdigest()
 
     cr = change_reason if change_reason is not None else ""
     payload = {
@@ -263,7 +269,7 @@ def generate_signature(
     }
     serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return hmac.new(
-        GATEWAY_SECRET.encode(), serialized.encode(), hashlib.sha256
+        GATEWAY_SECRET.encode(), serialized.encode("utf-8"), hashlib.sha256
     ).hexdigest()
 
 
