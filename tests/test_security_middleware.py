@@ -126,16 +126,16 @@ def test_middleware_missing_signature_version_rejected() -> None:
     assert "Missing or obsolete signature format" in response.json()["detail"]
 
 
-def test_middleware_explicit_legacy_version_rejected() -> None:
+def test_middleware_explicit_legacy_version_accepted() -> None:
     """
-    Test that explicitly specifying legacy Version 1 signature header is immediately rejected.
+    Test that explicitly specifying legacy Version 1 signature header is accepted when valid.
     """
     client = TestClient(test_app)
     timestamp = str(time.time())
     user_id = "legacy_user_v1"
     roles = "user"
 
-    sig = generate_signature(user_id, roles, timestamp)
+    sig = generate_signature(user_id, roles, timestamp, version="1")
 
     headers = {
         "X-User-Id": user_id,
@@ -145,8 +145,28 @@ def test_middleware_explicit_legacy_version_rejected() -> None:
         "X-Signature-Version": "1",
     }
     response = client.get("/secure-endpoint", headers=headers)
+    assert response.status_code == 200
+
+
+def test_middleware_explicit_legacy_version_invalid_rejected() -> None:
+    """
+    Test that explicitly specifying legacy Version 1 signature header with an invalid signature is rejected.
+    """
+    client = TestClient(test_app)
+    timestamp = str(time.time())
+    user_id = "legacy_user_v1"
+    roles = "user"
+
+    headers = {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": "invalid_sig",
+        "X-Signature-Version": "1",
+    }
+    response = client.get("/secure-endpoint", headers=headers)
     assert response.status_code == 401
-    assert "Missing or obsolete signature format" in response.json()["detail"]
+    assert "Invalid gateway signature" in response.json()["detail"]
 
 
 def test_middleware_unsupported_version_rejected() -> None:

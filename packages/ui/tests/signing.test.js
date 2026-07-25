@@ -83,15 +83,32 @@ describe("generateGatewaySignature and verifyGatewaySignature", () => {
   const roles = "admin";
   const timestamp = "123456";
 
-  it("rejects Version 1 signature generation", async () => {
-    await expect(
-      generateGatewaySignature(userId, roles, timestamp, "1", null, secret)
-    ).rejects.toThrow("Version 2 canonical JSON signature is required.");
+  it("generates correct Version 1 signature", async () => {
+    const sig = await generateGatewaySignature(
+      userId,
+      roles,
+      timestamp,
+      "1",
+      null,
+      secret
+    );
+    expect(sig).toBeDefined();
+
+    const isValid = await verifyGatewaySignature(
+      sig,
+      userId,
+      roles,
+      timestamp,
+      "1",
+      null,
+      secret
+    );
+    expect(isValid).toBe(true);
   });
 
-  it("rejects Version 1 signature verification", async () => {
+  it("returns false for invalid Version 1 signature", async () => {
     const isValid = await verifyGatewaySignature(
-      "some-signature",
+      "invalid-signature",
       userId,
       roles,
       timestamp,
@@ -152,7 +169,7 @@ describe("generateGatewaySignature and verifyGatewaySignature", () => {
   it("rejects unsupported versions", async () => {
     await expect(
       generateGatewaySignature(userId, roles, timestamp, "3", null, secret)
-    ).rejects.toThrow("Version 2 canonical JSON signature is required.");
+    ).rejects.toThrow("Version 1 or Version 2 signature is required.");
 
     const isValid = await verifyGatewaySignature(
       "some-signature",
