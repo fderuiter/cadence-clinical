@@ -121,7 +121,10 @@ def scan_tests(tests_dir):
                         if stripped and not stripped.startswith("#"):
                             indent = len(line) - len(stripped)
                             if indent <= current_indent:
-                                if stripped.startswith(")") or (stripped.endswith(":") and ("->" in stripped or ")" in stripped)):
+                                if stripped.startswith(")") or (
+                                    stripped.endswith(":")
+                                    and ("->" in stripped or ")" in stripped)
+                                ):
                                     continue
                                 # Function ended
                                 test_cases_all[(classname, current_test)] = {
