@@ -1,8 +1,7 @@
 import hashlib
+import hmac
 import json
 import time
-from datetime import datetime
-import hmac
 
 import httpx
 import pytest
@@ -13,14 +12,13 @@ from apps.execution.database.migrate import deploy_database_triggers
 from apps.execution.database.models import (
     Base,
     ClinicalSubject,
-    TSDVConfig,
 )
 from apps.execution.main import app
 from apps.execution.trial_lock import TrialLockManager
 from apps.execution.tsdv import (
-    is_subject_selected_for_sdv,
-    is_field_required,
     evaluate_tsdv_requirement,
+    is_field_required,
+    is_subject_selected_for_sdv,
 )
 
 GATEWAY_SECRET = "internal-gateway-secret-12345"  # pragma: allowlist secret
@@ -122,18 +120,14 @@ def test_is_subject_selected_for_sdv():
         initial_full_sdv_subject_count=0, random_sample_percentage=0.0
     )
     for i in range(100):
-        assert (
-            is_subject_selected_for_sdv(config_zero, f"SUBJ-{i}", i) is False
-        )
+        assert is_subject_selected_for_sdv(config_zero, f"SUBJ-{i}", i) is False
 
     # 3. Boundary percentage 100.0 must always select subsequent subjects
     config_hundred = DummyConfig(
         initial_full_sdv_subject_count=0, random_sample_percentage=100.0
     )
     for i in range(100):
-        assert (
-            is_subject_selected_for_sdv(config_hundred, f"SUBJ-{i}", i) is True
-        )
+        assert is_subject_selected_for_sdv(config_hundred, f"SUBJ-{i}", i) is True
 
     # 4. Deterministic sampling reproducibility
     config_rand = DummyConfig(
@@ -161,8 +155,7 @@ def test_is_subject_selected_for_sdv():
         trial_random_seed=99999,
     )
     results_seed1 = [
-        is_subject_selected_for_sdv(config_rand, f"SUBJ-{i}", 10)
-        for i in range(50)
+        is_subject_selected_for_sdv(config_rand, f"SUBJ-{i}", 10) for i in range(50)
     ]
     results_seed2 = [
         is_subject_selected_for_sdv(config_rand_diff_seed, f"SUBJ-{i}", 10)
@@ -426,7 +419,7 @@ async def test_tsdv_config_api_upsert_and_retrieval():
 
         # 4. Unknown study retrieves 404
         resp_404 = await client.get(
-            "/api/v1/execution/tsdv/config/UNKNOWN-STUDY",
+            "/api/v1/execution/tsdv/config/unknown-study",
             headers=headers_ok,
         )
         assert resp_404.status_code == 404
@@ -452,9 +445,15 @@ async def test_tsdv_evaluation_endpoint():
             )
             # Create three subjects for STUDY-C
             # Alphabetically sorted: SUBJ-101, SUBJ-102, SUBJ-103
-            s1 = ClinicalSubject(subject_id="SUBJ-103", study_id="STUDY-C", site_id="SITE-1")
-            s2 = ClinicalSubject(subject_id="SUBJ-101", study_id="STUDY-C", site_id="SITE-1")
-            s3 = ClinicalSubject(subject_id="SUBJ-102", study_id="STUDY-C", site_id="SITE-1")
+            s1 = ClinicalSubject(
+                subject_id="SUBJ-103", study_id="STUDY-C", site_id="SITE-1"
+            )
+            s2 = ClinicalSubject(
+                subject_id="SUBJ-101", study_id="STUDY-C", site_id="SITE-1"
+            )
+            s3 = ClinicalSubject(
+                subject_id="SUBJ-102", study_id="STUDY-C", site_id="SITE-1"
+            )
             session.add_all([s1, s2, s3])
 
     async with httpx.AsyncClient(
