@@ -312,8 +312,9 @@ async def test_sqlite_pragma_exception_handling():
     """
     Ensure that any exception raised during the sqlite PRAGMA setting is caught and handled.
     """
-    from apps.quality.database import QualityDatabaseManager
     from unittest.mock import MagicMock
+
+    from apps.quality.database import QualityDatabaseManager
 
     local_db_mgr = QualityDatabaseManager()
     local_db_mgr.init_db("sqlite+aiosqlite:///:memory:")
@@ -321,7 +322,10 @@ async def test_sqlite_pragma_exception_handling():
     # Find the set_sqlite_pragma listener in local_db_mgr.engine.sync_engine.pool.dispatch.connect
     pragma_listener = None
     for listener in local_db_mgr.engine.sync_engine.pool.dispatch.connect:
-        if "set_sqlite_pragma" in str(listener) or getattr(listener, "__name__", None) == "set_sqlite_pragma":
+        if (
+            "set_sqlite_pragma" in str(listener)
+            or getattr(listener, "__name__", None) == "set_sqlite_pragma"
+        ):
             pragma_listener = listener
             break
 
@@ -356,7 +360,7 @@ def test_missing_change_reasons_unauthorized():
         "title": "Missing reason test",
         "description": "desc",
         "severity": "MINOR",
-        "type": "OTHER"
+        "type": "OTHER",
     }
     res = client.post("/api/v1/quality/deviations", json=payload, headers=headers)
     assert res.status_code == 403
@@ -364,7 +368,9 @@ def test_missing_change_reasons_unauthorized():
 
     # Let's create a valid deviation to use its ID for other checks
     valid_headers = get_auth_headers(roles="admin", change_reason="Let us set up base")
-    dev_res = client.post("/api/v1/quality/deviations", json=payload, headers=valid_headers)
+    dev_res = client.post(
+        "/api/v1/quality/deviations", json=payload, headers=valid_headers
+    )
     assert dev_res.status_code == 201
     dev_id = dev_res.json()["id"]
 
@@ -372,9 +378,11 @@ def test_missing_change_reasons_unauthorized():
     rca_payload = {
         "methodology": "5 Whys",
         "investigation_details": "details",
-        "root_cause_summary": "summary"
+        "root_cause_summary": "summary",
     }
-    res = client.post(f"/api/v1/quality/deviations/{dev_id}/rca", json=rca_payload, headers=headers)
+    res = client.post(
+        f"/api/v1/quality/deviations/{dev_id}/rca", json=rca_payload, headers=headers
+    )
     assert res.status_code == 403
     assert "Missing change justification reason" in res.json()["detail"]
 
@@ -382,30 +390,34 @@ def test_missing_change_reasons_unauthorized():
     capa_payload = {
         "deviation_id": dev_id,
         "capa_type": "CORRECTIVE",
-        "action_plan": "plan"
+        "action_plan": "plan",
     }
     res = client.post("/api/v1/quality/capas", json=capa_payload, headers=headers)
     assert res.status_code == 403
     assert "Missing change justification reason" in res.json()["detail"]
 
     # Let's create a valid CAPA
-    capa_res = client.post("/api/v1/quality/capas", json=capa_payload, headers=valid_headers)
+    capa_res = client.post(
+        "/api/v1/quality/capas", json=capa_payload, headers=valid_headers
+    )
     assert capa_res.status_code == 201
     capa_id = capa_res.json()["id"]
 
     # 4. CAPA transition
-    trans_payload = {
-        "to_status": "UNDER_REVIEW"
-    }
-    res = client.post(f"/api/v1/quality/capas/{capa_id}/transition", json=trans_payload, headers=headers)
+    trans_payload = {"to_status": "UNDER_REVIEW"}
+    res = client.post(
+        f"/api/v1/quality/capas/{capa_id}/transition",
+        json=trans_payload,
+        headers=headers,
+    )
     assert res.status_code == 403
     assert "Missing change justification reason" in res.json()["detail"]
 
     # 5. CAPA update
-    update_payload = {
-        "action_plan": "new plan"
-    }
-    res = client.put(f"/api/v1/quality/capas/{capa_id}", json=update_payload, headers=headers)
+    update_payload = {"action_plan": "new plan"}
+    res = client.put(
+        f"/api/v1/quality/capas/{capa_id}", json=update_payload, headers=headers
+    )
     assert res.status_code == 403
     assert "Missing change justification reason" in res.json()["detail"]
 
@@ -426,9 +438,13 @@ def test_deviation_not_found_404():
     rca_payload = {
         "methodology": "5 Whys",
         "investigation_details": "details",
-        "root_cause_summary": "summary"
+        "root_cause_summary": "summary",
     }
-    res = client.post(f"/api/v1/quality/deviations/nonexistent_id/rca", json=rca_payload, headers=headers)
+    res = client.post(
+        "/api/v1/quality/deviations/nonexistent_id/rca",
+        json=rca_payload,
+        headers=headers,
+    )
     assert res.status_code == 404
     assert "Parent deviation not found" in res.json()["detail"]
 
@@ -438,7 +454,9 @@ def test_list_deviations_filters():
     Verify listing filter logic when site_id and status are supplied.
     """
     client = TestClient(app)
-    headers = get_auth_headers(roles="admin", change_reason="Creating filterable deviations")
+    headers = get_auth_headers(
+        roles="admin", change_reason="Creating filterable deviations"
+    )
 
     # Setup deviations
     dev_payload = {
@@ -447,12 +465,15 @@ def test_list_deviations_filters():
         "title": "Filtered Dev",
         "description": "desc",
         "severity": "MINOR",
-        "type": "OTHER"
+        "type": "OTHER",
     }
     client.post("/api/v1/quality/deviations", json=dev_payload, headers=headers)
 
     # Filter with site_id and status
-    res = client.get("/api/v1/quality/deviations?study_id=study_filter&site_id=site_99&status=REPORTED", headers=headers)
+    res = client.get(
+        "/api/v1/quality/deviations?study_id=study_filter&site_id=site_99&status=REPORTED",
+        headers=headers,
+    )
     assert res.status_code == 200
     data = res.json()
     assert len(data) == 1
@@ -474,42 +495,69 @@ def test_capa_creation_validations_and_closed_deviation():
         "title": "Base deviation",
         "description": "desc",
         "severity": "MAJOR",
-        "type": "INFORMED_CONSENT"
+        "type": "INFORMED_CONSENT",
     }
-    dev_res = client.post("/api/v1/quality/deviations", json=dev_payload, headers=headers)
+    dev_res = client.post(
+        "/api/v1/quality/deviations", json=dev_payload, headers=headers
+    )
     dev_id = dev_res.json()["id"]
 
     capa_payload = {
         "deviation_id": dev_id,
         "capa_type": "CORRECTIVE",
-        "action_plan": "Action"
+        "action_plan": "Action",
     }
     capa_res = client.post("/api/v1/quality/capas", json=capa_payload, headers=headers)
     capa_id = capa_res.json()["id"]
 
     # Transition CAPA to CLOSED via quality oversight role
     qo_headers = get_auth_headers(roles="quality_manager", change_reason="Closing CAPA")
-    client.post(f"/api/v1/quality/capas/{capa_id}/transition", json={"to_status": "UNDER_REVIEW", "version_index": 1}, headers=qo_headers)
-    client.post(f"/api/v1/quality/capas/{capa_id}/transition", json={"to_status": "IMPLEMENTATION", "version_index": 2}, headers=qo_headers)
-    client.post(f"/api/v1/quality/capas/{capa_id}/transition", json={"to_status": "EFFECTIVENESS_CHECK", "version_index": 3}, headers=qo_headers)
-    client.post(f"/api/v1/quality/capas/{capa_id}/transition", json={"to_status": "CLOSED", "version_index": 4}, headers=qo_headers)
+    client.post(
+        f"/api/v1/quality/capas/{capa_id}/transition",
+        json={"to_status": "UNDER_REVIEW", "version_index": 1},
+        headers=qo_headers,
+    )
+    client.post(
+        f"/api/v1/quality/capas/{capa_id}/transition",
+        json={"to_status": "IMPLEMENTATION", "version_index": 2},
+        headers=qo_headers,
+    )
+    client.post(
+        f"/api/v1/quality/capas/{capa_id}/transition",
+        json={"to_status": "EFFECTIVENESS_CHECK", "version_index": 3},
+        headers=qo_headers,
+    )
+    client.post(
+        f"/api/v1/quality/capas/{capa_id}/transition",
+        json={"to_status": "CLOSED", "version_index": 4},
+        headers=qo_headers,
+    )
 
     # Now the parent deviation is CLOSED. Let's try creating a new CAPA on this CLOSED deviation
-    res_closed = client.post("/api/v1/quality/capas", json=capa_payload, headers=headers)
+    res_closed = client.post(
+        "/api/v1/quality/capas", json=capa_payload, headers=headers
+    )
     assert res_closed.status_code == 422
-    assert "Cannot create CAPA for a settled or closed deviation" in res_closed.json()["detail"]
+    assert (
+        "Cannot create CAPA for a settled or closed deviation"
+        in res_closed.json()["detail"]
+    )
 
     # 2. RCA Mismatch check: Create a second deviation
-    dev2_res = client.post("/api/v1/quality/deviations", json=dev_payload, headers=headers)
+    dev2_res = client.post(
+        "/api/v1/quality/deviations", json=dev_payload, headers=headers
+    )
     dev2_id = dev2_res.json()["id"]
 
     # Create RCA for deviation 1
     rca_payload = {
         "methodology": "5 Whys",
         "investigation_details": "details",
-        "root_cause_summary": "summary"
+        "root_cause_summary": "summary",
     }
-    rca_res = client.post(f"/api/v1/quality/deviations/{dev_id}/rca", json=rca_payload, headers=headers)
+    rca_res = client.post(
+        f"/api/v1/quality/deviations/{dev_id}/rca", json=rca_payload, headers=headers
+    )
     rca_id = rca_res.json()["id"]
 
     # Try creating CAPA for deviation 2 but linking it to RCA of deviation 1
@@ -517,9 +565,11 @@ def test_capa_creation_validations_and_closed_deviation():
         "deviation_id": dev2_id,
         "rca_id": rca_id,
         "capa_type": "CORRECTIVE",
-        "action_plan": "Mismatched"
+        "action_plan": "Mismatched",
     }
-    res_mismatched = client.post("/api/v1/quality/capas", json=mismatched_capa_payload, headers=headers)
+    res_mismatched = client.post(
+        "/api/v1/quality/capas", json=mismatched_capa_payload, headers=headers
+    )
     assert res_mismatched.status_code == 422
     assert "is not linked to deviation ID" in res_mismatched.json()["detail"]
 
@@ -529,10 +579,16 @@ def test_capa_transition_edge_cases_and_optimistic_locking():
     Test CAPA transitions when CAPA doesn't exist, and when version_index mismatch causes a 409 conflict.
     """
     client = TestClient(app)
-    headers = get_auth_headers(roles="admin", change_reason="CAPA transition edge cases")
+    headers = get_auth_headers(
+        roles="admin", change_reason="CAPA transition edge cases"
+    )
 
     # 1. CAPA not found (404)
-    res = client.post("/api/v1/quality/capas/nonexistent_capa/transition", json={"to_status": "UNDER_REVIEW"}, headers=headers)
+    res = client.post(
+        "/api/v1/quality/capas/nonexistent_capa/transition",
+        json={"to_status": "UNDER_REVIEW"},
+        headers=headers,
+    )
     assert res.status_code == 404
     assert "CAPA record with ID" in res.json()["detail"]
 
@@ -542,21 +598,27 @@ def test_capa_transition_edge_cases_and_optimistic_locking():
         "title": "Concurrency Deviation",
         "description": "desc",
         "severity": "MINOR",
-        "type": "OTHER"
+        "type": "OTHER",
     }
-    dev_res = client.post("/api/v1/quality/deviations", json=dev_payload, headers=headers)
+    dev_res = client.post(
+        "/api/v1/quality/deviations", json=dev_payload, headers=headers
+    )
     dev_id = dev_res.json()["id"]
 
     capa_payload = {
         "deviation_id": dev_id,
         "capa_type": "CORRECTIVE",
-        "action_plan": "Initial Plan"
+        "action_plan": "Initial Plan",
     }
     capa_res = client.post("/api/v1/quality/capas", json=capa_payload, headers=headers)
     capa_id = capa_res.json()["id"]
 
     # Post transition with invalid version_index to trigger conflict (409)
-    res_conflict = client.post(f"/api/v1/quality/capas/{capa_id}/transition", json={"to_status": "UNDER_REVIEW", "version_index": 99}, headers=headers)
+    res_conflict = client.post(
+        f"/api/v1/quality/capas/{capa_id}/transition",
+        json={"to_status": "UNDER_REVIEW", "version_index": 99},
+        headers=headers,
+    )
     assert res_conflict.status_code == 409
     assert "Version conflict" in res_conflict.json()["detail"]
 
@@ -569,10 +631,10 @@ def test_capa_update_edge_cases_and_optional_fields():
     headers = get_auth_headers(roles="admin", change_reason="CAPA update edge cases")
 
     # 1. CAPA not found (404)
-    update_payload = {
-        "action_plan": "Updated Action Plan"
-    }
-    res = client.put("/api/v1/quality/capas/nonexistent_capa", json=update_payload, headers=headers)
+    update_payload = {"action_plan": "Updated Action Plan"}
+    res = client.put(
+        "/api/v1/quality/capas/nonexistent_capa", json=update_payload, headers=headers
+    )
     assert res.status_code == 404
     assert "CAPA record with ID" in res.json()["detail"]
 
@@ -582,15 +644,17 @@ def test_capa_update_edge_cases_and_optional_fields():
         "title": "Optional Fields Deviation",
         "description": "desc",
         "severity": "MINOR",
-        "type": "OTHER"
+        "type": "OTHER",
     }
-    dev_res = client.post("/api/v1/quality/deviations", json=dev_payload, headers=headers)
+    dev_res = client.post(
+        "/api/v1/quality/deviations", json=dev_payload, headers=headers
+    )
     dev_id = dev_res.json()["id"]
 
     capa_payload = {
         "deviation_id": dev_id,
         "capa_type": "PREVENTIVE",
-        "action_plan": "Initial Plan"
+        "action_plan": "Initial Plan",
     }
     capa_res = client.post("/api/v1/quality/capas", json=capa_payload, headers=headers)
     capa_id = capa_res.json()["id"]
@@ -600,9 +664,11 @@ def test_capa_update_edge_cases_and_optional_fields():
     update_fields = {
         "preventive_measures": "Weekly training SOP",
         "target_completion_date": date_str,
-        "version_index": 1
+        "version_index": 1,
     }
-    res_update = client.put(f"/api/v1/quality/capas/{capa_id}", json=update_fields, headers=headers)
+    res_update = client.put(
+        f"/api/v1/quality/capas/{capa_id}", json=update_fields, headers=headers
+    )
     assert res_update.status_code == 200
     data = res_update.json()
     assert data["preventive_measures"] == "Weekly training SOP"
@@ -619,7 +685,10 @@ def test_endpoint_change_reason_check_via_mock(monkeypatch):
 
     # 1. Mock get_user_context to return empty change reason
     import apps.quality.main
-    monkeypatch.setattr(apps.quality.main, "get_user_context", lambda req: ("mock_user", "admin", ""))
+
+    monkeypatch.setattr(
+        apps.quality.main, "get_user_context", lambda req: ("mock_user", "admin", "")
+    )
 
     # Generate headers that will pass the middleware auth check (e.g., with some dummy change reason)
     headers = get_auth_headers(roles="admin", change_reason="Dummy Reason")
@@ -630,7 +699,7 @@ def test_endpoint_change_reason_check_via_mock(monkeypatch):
         "title": "Mocked test",
         "description": "desc",
         "severity": "MINOR",
-        "type": "OTHER"
+        "type": "OTHER",
     }
     res = client.post("/api/v1/quality/deviations", json=payload, headers=headers)
     assert res.status_code == 403
@@ -641,29 +710,37 @@ def test_endpoint_change_reason_check_via_mock(monkeypatch):
 
     # Let's create a valid deviation and CAPA
     valid_headers = get_auth_headers(roles="admin", change_reason="Setting up base")
-    dev_res = client.post("/api/v1/quality/deviations", json=payload, headers=valid_headers)
+    dev_res = client.post(
+        "/api/v1/quality/deviations", json=payload, headers=valid_headers
+    )
     assert dev_res.status_code == 201
     dev_id = dev_res.json()["id"]
 
     capa_payload = {
         "deviation_id": dev_id,
         "capa_type": "CORRECTIVE",
-        "action_plan": "plan"
+        "action_plan": "plan",
     }
-    capa_res = client.post("/api/v1/quality/capas", json=capa_payload, headers=valid_headers)
+    capa_res = client.post(
+        "/api/v1/quality/capas", json=capa_payload, headers=valid_headers
+    )
     assert capa_res.status_code == 201
     capa_id = capa_res.json()["id"]
 
     # Now re-apply the mock of get_user_context
-    monkeypatch.setattr(apps.quality.main, "get_user_context", lambda req: ("mock_user", "admin", ""))
+    monkeypatch.setattr(
+        apps.quality.main, "get_user_context", lambda req: ("mock_user", "admin", "")
+    )
 
     # 3. RCA creation/update
     rca_payload = {
         "methodology": "5 Whys",
         "investigation_details": "details",
-        "root_cause_summary": "summary"
+        "root_cause_summary": "summary",
     }
-    res = client.post(f"/api/v1/quality/deviations/{dev_id}/rca", json=rca_payload, headers=headers)
+    res = client.post(
+        f"/api/v1/quality/deviations/{dev_id}/rca", json=rca_payload, headers=headers
+    )
     assert res.status_code == 403
     assert "Missing change justification reason" in res.json()["detail"]
 
@@ -673,17 +750,19 @@ def test_endpoint_change_reason_check_via_mock(monkeypatch):
     assert "Missing change justification reason" in res.json()["detail"]
 
     # 5. CAPA transition
-    trans_payload = {
-        "to_status": "UNDER_REVIEW"
-    }
-    res = client.post(f"/api/v1/quality/capas/{capa_id}/transition", json=trans_payload, headers=headers)
+    trans_payload = {"to_status": "UNDER_REVIEW"}
+    res = client.post(
+        f"/api/v1/quality/capas/{capa_id}/transition",
+        json=trans_payload,
+        headers=headers,
+    )
     assert res.status_code == 403
     assert "Missing change justification reason" in res.json()["detail"]
 
     # 6. CAPA update
-    update_payload = {
-        "action_plan": "new plan"
-    }
-    res = client.put(f"/api/v1/quality/capas/{capa_id}", json=update_payload, headers=headers)
+    update_payload = {"action_plan": "new plan"}
+    res = client.put(
+        f"/api/v1/quality/capas/{capa_id}", json=update_payload, headers=headers
+    )
     assert res.status_code == 403
     assert "Missing change justification reason" in res.json()["detail"]

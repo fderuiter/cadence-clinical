@@ -217,7 +217,9 @@ async def test_startup_shutdown_and_resilience():
     """Test that the background task starts and stops cleanly, and is resilient to database errors."""
     session_maker = MagicMock()
     # Mock database session to raise an exception during query execution to test error resilience
-    session_maker.return_value.__aenter__.side_effect = Exception("Database transient error")
+    session_maker.return_value.__aenter__.side_effect = Exception(
+        "Database transient error"
+    )
 
     # Start loop with very short interval
     os.environ["QUERY_ESCALATION_INTERVAL_SECONDS"] = "0.1"
@@ -258,6 +260,7 @@ async def test_escalation_missing_ids_fallback(mock_send_email):
         await db.commit()
 
     import apps.execution.queries_escalation as qe
+
     qe._last_digest_sent_at = None
 
     await execute_query_escalation_cycle(session_maker)
@@ -274,6 +277,7 @@ async def test_no_aging_queries():
     """Test cycle when there are absolutely no queries in the db."""
     session_maker = db_manager.get_session_maker()
     import apps.execution.queries_escalation as qe
+
     qe._last_digest_sent_at = None
 
     await execute_query_escalation_cycle(session_maker)

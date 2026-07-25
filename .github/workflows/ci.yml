@@ -134,7 +134,6 @@ jobs:
           AUDIT_OUTCOME: ${{ steps.run_audit.outcome }}
           STATIC_OUTCOME: ${{ steps.run_static.outcome }}
           SECRETS_OUTCOME: ${{ steps.run_secrets.outcome }}
-          JOB_STATUS: ${{ job.status }}
         run: python3 scripts/post_pr_comment.py
   classify:
     name: Classify Change

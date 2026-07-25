@@ -468,7 +468,9 @@ async def generate_alignment_report(study_id: str) -> StudyAlignmentReport:
                                 epoch_id = inst.epochId
                                 epoch_internal_id = epoch_indices.get(epoch_id, 0)
                                 scheduled_event_id = inst.encounterId
-                                scheduled_event_internal_id = encounter_indices.get(scheduled_event_id, 0)
+                                scheduled_event_internal_id = encounter_indices.get(
+                                    scheduled_event_id, 0
+                                )
 
                                 activity_ids = inst.activityIds or []
                                 for act_id in activity_ids:
@@ -483,13 +485,15 @@ async def generate_alignment_report(study_id: str) -> StudyAlignmentReport:
                                     if not items:
                                         is_act_mapped = False
                                         for flat_k, flat_v in flat_odm.items():
-                                            if str(flat_v) == str(act_id) or str(act_id) in str(flat_k):
+                                            if str(flat_v) == str(act_id) or str(
+                                                act_id
+                                            ) in str(flat_k):
                                                 is_act_mapped = True
                                                 break
                                         item_status = ItemMappingStatus(
                                             item_id=act_id,
                                             internal_id=0,
-                                            is_mapped=is_act_mapped
+                                            is_mapped=is_act_mapped,
                                         )
                                         if is_act_mapped:
                                             mapped_items.append(item_status)
@@ -501,13 +505,15 @@ async def generate_alignment_report(study_id: str) -> StudyAlignmentReport:
                                             all_usdm_item_ids.add(item_id)
                                             is_item_mapped = False
                                             for flat_k, flat_v in flat_odm.items():
-                                                if str(flat_v) == str(item_id) or str(item_id) in str(flat_k):
+                                                if str(flat_v) == str(item_id) or str(
+                                                    item_id
+                                                ) in str(flat_k):
                                                     is_item_mapped = True
                                                     break
                                             item_status = ItemMappingStatus(
                                                 item_id=item_id,
                                                 internal_id=item["internal_id"],
-                                                is_mapped=is_item_mapped
+                                                is_mapped=is_item_mapped,
                                             )
                                             if is_item_mapped:
                                                 mapped_items.append(item_status)
@@ -530,7 +536,7 @@ async def generate_alignment_report(study_id: str) -> StudyAlignmentReport:
                                         activity_def_internal_id=0,
                                         status=status,
                                         unmapped_items=unmapped_items,
-                                        mapped_items=mapped_items
+                                        mapped_items=mapped_items,
                                     )
 
                                     if status == "complete":
@@ -540,8 +546,14 @@ async def generate_alignment_report(study_id: str) -> StudyAlignmentReport:
                                     else:
                                         unmapped_activities.append(report_item)
 
-                    processed_activity_ids = {rep.activity_def_id for rep in complete_activities + incomplete_activities + unmapped_activities if rep.epoch_id is not None}
-                    for act in (design.activities or []):
+                    processed_activity_ids = {
+                        rep.activity_def_id
+                        for rep in complete_activities
+                        + incomplete_activities
+                        + unmapped_activities
+                        if rep.epoch_id is not None
+                    }
+                    for act in design.activities or []:
                         if act.id not in processed_activity_ids:
                             items = extract_activity_items(act)
                             mapped_items = []
@@ -550,13 +562,15 @@ async def generate_alignment_report(study_id: str) -> StudyAlignmentReport:
                             if not items:
                                 is_act_mapped = False
                                 for flat_k, flat_v in flat_odm.items():
-                                    if str(flat_v) == str(act.id) or str(act.id) in str(flat_k):
+                                    if str(flat_v) == str(act.id) or str(act.id) in str(
+                                        flat_k
+                                    ):
                                         is_act_mapped = True
                                         break
                                 item_status = ItemMappingStatus(
                                     item_id=act.id,
                                     internal_id=0,
-                                    is_mapped=is_act_mapped
+                                    is_mapped=is_act_mapped,
                                 )
                                 if is_act_mapped:
                                     mapped_items.append(item_status)
@@ -568,13 +582,15 @@ async def generate_alignment_report(study_id: str) -> StudyAlignmentReport:
                                     all_usdm_item_ids.add(item_id)
                                     is_item_mapped = False
                                     for flat_k, flat_v in flat_odm.items():
-                                        if str(flat_v) == str(item_id) or str(item_id) in str(flat_k):
+                                        if str(flat_v) == str(item_id) or str(
+                                            item_id
+                                        ) in str(flat_k):
                                             is_item_mapped = True
                                             break
                                     item_status = ItemMappingStatus(
                                         item_id=item_id,
                                         internal_id=item["internal_id"],
-                                        is_mapped=is_item_mapped
+                                        is_mapped=is_item_mapped,
                                     )
                                     if is_item_mapped:
                                         mapped_items.append(item_status)
@@ -597,7 +613,7 @@ async def generate_alignment_report(study_id: str) -> StudyAlignmentReport:
                                 activity_def_internal_id=0,
                                 status=status,
                                 unmapped_items=unmapped_items,
-                                mapped_items=mapped_items
+                                mapped_items=mapped_items,
                             )
                             if status == "complete":
                                 complete_activities.append(report_item)
@@ -610,7 +626,12 @@ async def generate_alignment_report(study_id: str) -> StudyAlignmentReport:
     seen_odm_ids = set()
     for flat_k, flat_v in flat_odm.items():
         is_id_key = False
-        if flat_k.endswith("OID") or flat_k.endswith("@OID") or flat_k.endswith(".id") or flat_k.endswith("@id"):
+        if (
+            flat_k.endswith("OID")
+            or flat_k.endswith("@OID")
+            or flat_k.endswith(".id")
+            or flat_k.endswith("@id")
+        ):
             is_id_key = True
         elif "ItemDef" in flat_k and (flat_k.endswith("OID") or flat_k.endswith("id")):
             is_id_key = True
@@ -619,13 +640,20 @@ async def generate_alignment_report(study_id: str) -> StudyAlignmentReport:
             odm_item_id = str(flat_v)
             if odm_item_id not in seen_odm_ids:
                 seen_odm_ids.add(odm_item_id)
-                if odm_item_id not in all_usdm_item_ids and odm_item_id not in all_usdm_activity_ids:
-                    name_key = flat_k.replace("OID", "Name").replace("@OID", "@Name").replace("id", "name").replace("@id", "@name")
+                if (
+                    odm_item_id not in all_usdm_item_ids
+                    and odm_item_id not in all_usdm_activity_ids
+                ):
+                    name_key = (
+                        flat_k.replace("OID", "Name")
+                        .replace("@OID", "@Name")
+                        .replace("id", "name")
+                        .replace("@id", "@name")
+                    )
                     odm_item_name = flat_odm.get(name_key) or odm_item_id
-                    unmapped_odm_items.append({
-                        "item_id": odm_item_id,
-                        "name": str(odm_item_name)
-                    })
+                    unmapped_odm_items.append(
+                        {"item_id": odm_item_id, "name": str(odm_item_name)}
+                    )
 
     return StudyAlignmentReport(
         study_id=str(study.id),

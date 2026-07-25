@@ -85,10 +85,10 @@ async def test_generate_alignment_report_with_mappings(base_study) -> None:  # n
                         "items": [
                             {"id": "sys_bp", "name": "Systolic Blood Pressure"},
                             {"id": "dia_bp", "name": "Diastolic Blood Pressure"},
-                            {"id": "heart_rate", "name": "Heart Rate"}
-                        ]
+                            {"id": "heart_rate", "name": "Heart Rate"},
+                        ],
                     }
-                ]
+                ],
             }
         ]
     }
@@ -125,7 +125,9 @@ async def test_generate_alignment_report_with_mappings(base_study) -> None:  # n
 
     # "act-blood" has its item unmapped ("hemoglobin")
     assert len(report.unmapped_activities) >= 1
-    blood_act = [act for act in report.unmapped_activities if act.activity_def_id == "act-blood"][0]
+    blood_act = [
+        act for act in report.unmapped_activities if act.activity_def_id == "act-blood"
+    ][0]
     assert len(blood_act.unmapped_items) == 1
     assert blood_act.unmapped_items[0].item_id == "hemoglobin"
 
@@ -133,4 +135,3 @@ async def test_generate_alignment_report_with_mappings(base_study) -> None:  # n
     assert len(report.unmapped_odm_items) >= 1
     unmapped_ids = [item["item_id"] for item in report.unmapped_odm_items]
     assert "heart_rate" in unmapped_ids
-

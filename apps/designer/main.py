@@ -116,6 +116,7 @@ async def shutdown() -> None:
     driver = getattr(app.state, "driver", None)
     if driver is not None:
         await driver.close()
+        app.state.driver = None
 
 
 @app.get("/health")

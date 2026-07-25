@@ -107,10 +107,14 @@ def get_changed_files() -> set[str]:
         except Exception:
             pass
 
+    # Find the merge base with origin/main to only check changes introduced on this branch
+    merge_base, _ = run_git_command(["git", "merge-base", "origin/main", "HEAD"])
+    comparison_target = merge_base if merge_base else "origin/main"
+
     # Union all git diff methods to ensure we capture the complete history of changes in multi-commit PRs
     for diff_arg in (
         ["git", "diff", "--name-only", "HEAD^"],
-        ["git", "diff", "--name-only", "origin/main"],
+        ["git", "diff", "--name-only", comparison_target],
         ["git", "diff", "--name-only", "HEAD~1"],
     ):
         stdout, _ = run_git_command(diff_arg)

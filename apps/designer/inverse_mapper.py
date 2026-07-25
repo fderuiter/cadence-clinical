@@ -1,6 +1,8 @@
-from typing import Any, Dict, List, Optional
-from apps.designer.db import terminology_cache, MOCK_TERMINOLOGY
+from typing import Any, Dict, Optional
+
+from apps.designer.db import MOCK_TERMINOLOGY
 from apps.designer.rules import ExpressionNode, detect_circular_dependencies
+
 
 def resolve_concept_id(concept_dict: Optional[Dict[str, Any]]) -> Optional[str]:
     """Resolves a terminology concept ID (key) given a concept dict with a 'code'.
@@ -59,7 +61,15 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
     preservation_metadata: Dict[str, Any] = {"unmapped_fields": {}}
 
     # Standard fields for study
-    known_study_keys = {"id", "name", "version", "description", "arms", "rules", "preservation_metadata"}
+    known_study_keys = {
+        "id",
+        "name",
+        "version",
+        "description",
+        "arms",
+        "rules",
+        "preservation_metadata",
+    }
     extra_study_keys = set(usdm_data.keys()) - known_study_keys
     if extra_study_keys:
         preservation_metadata["unmapped_fields"]["study"] = {
@@ -79,11 +89,7 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
         if not arm_name:
             raise ValueError("Every arm in USDM arms list must have a 'name'")
 
-        arm_projection = {
-            "arm_id": arm_id,
-            "name": arm_name,
-            "visits": []
-        }
+        arm_projection = {"arm_id": arm_id, "name": arm_name, "visits": []}
 
         # Resolve arm type concept lookup
         arm_type = arm.get("arm_type")
@@ -97,9 +103,9 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
                 known_concept_keys = {"code", "decode", "system"}
                 extra_concept_keys = set(arm_type.keys()) - known_concept_keys
                 if extra_concept_keys:
-                    preservation_metadata["unmapped_fields"][f"arm_{arm_id}_arm_type"] = {
-                        k: arm_type[k] for k in extra_concept_keys
-                    }
+                    preservation_metadata["unmapped_fields"][
+                        f"arm_{arm_id}_arm_type"
+                    ] = {k: arm_type[k] for k in extra_concept_keys}
 
         # Collect extra arm keys to prevent silent data drop
         known_arm_keys = {"id", "name", "arm_type", "visits"}
@@ -123,7 +129,7 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
             visit_projection = {
                 "visit_id": visit_id,
                 "name": visit_name,
-                "activities": []
+                "activities": [],
             }
 
             # Resolve visit type concept lookup
@@ -138,9 +144,9 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
                     known_concept_keys = {"code", "decode", "system"}
                     extra_v_concept_keys = set(visit_type.keys()) - known_concept_keys
                     if extra_v_concept_keys:
-                        preservation_metadata["unmapped_fields"][f"visit_{visit_id}_visit_type"] = {
-                            k: visit_type[k] for k in extra_v_concept_keys
-                        }
+                        preservation_metadata["unmapped_fields"][
+                            f"visit_{visit_id}_visit_type"
+                        ] = {k: visit_type[k] for k in extra_v_concept_keys}
 
             # Collect extra visit keys
             known_visit_keys = {"id", "name", "visit_type", "activities"}
@@ -157,14 +163,15 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
                 act_id = act.get("id")
                 act_name = act.get("name")
                 if not act_id:
-                    raise ValueError(f"Every activity in visit '{visit_id}' must have an 'id'")
+                    raise ValueError(
+                        f"Every activity in visit '{visit_id}' must have an 'id'"
+                    )
                 if not act_name:
-                    raise ValueError(f"Every activity in visit '{visit_id}' must have a 'name'")
+                    raise ValueError(
+                        f"Every activity in visit '{visit_id}' must have a 'name'"
+                    )
 
-                act_projection = {
-                    "activity_id": act_id,
-                    "name": act_name
-                }
+                act_projection = {"activity_id": act_id, "name": act_name}
                 visit_projection["activities"].append(act_projection)
 
                 # Collect extra activity keys
@@ -209,13 +216,20 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
             "target_group": r.get("target_group"),
             "query_message": r.get("query_message"),
             "version_index": r.get("version_index", 1),
-            "is_deleted": False
+            "is_deleted": False,
         }
 
         # Check for extra/unmapped keys inside rule
         known_rule_keys = {
-            "id", "type", "condition", "action", "target_field",
-            "target_form", "target_group", "query_message", "version_index"
+            "id",
+            "type",
+            "condition",
+            "action",
+            "target_field",
+            "target_form",
+            "target_group",
+            "query_message",
+            "version_index",
         }
         extra_rule_keys = set(r.keys()) - known_rule_keys
         if extra_rule_keys:
@@ -240,7 +254,7 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
                 "target_group": r.get("target_group"),
                 "query_message": r.get("query_message"),
                 "version_index": r.get("version_index", 1),
-                "is_deleted": False
+                "is_deleted": False,
             }
 
     # Validate condition structures and reject any stochastic/complex operators or syntax errors
@@ -253,13 +267,17 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
         try:
             ExpressionNode(**cond)
         except Exception as e:
-            raise ValueError(f"Unsupported or malformed rule expression structure in rule '{r_id}': {str(e)}")
+            raise ValueError(
+                f"Unsupported or malformed rule expression structure in rule '{r_id}': {str(e)}"
+            )
 
     # Detect explicitly unsupported circular skip-logic paths
     reconstructed_rules_list = list(rules_dict.values())
     cycles = detect_circular_dependencies(reconstructed_rules_list)
     if cycles:
-        raise ValueError(f"Circular skip-logic dependency detected: {', '.join(cycles)}")
+        raise ValueError(
+            f"Circular skip-logic dependency detected: {', '.join(cycles)}"
+        )
 
     # 4. Construct final study projection dictionary
     study_projection = {
@@ -267,7 +285,7 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
         "title": title,
         "current_version": current_version,
         "arms": arms_projection,
-        "rules": reconstructed_rules_list
+        "rules": reconstructed_rules_list,
     }
     if desc is not None:
         study_projection["desc"] = desc

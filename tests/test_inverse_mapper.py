@@ -1,13 +1,22 @@
 import pytest
+
 from apps.designer.inverse_mapper import map_usdm_to_study, resolve_concept_id
 from apps.designer.mapper import map_study_to_usdm
 
 
 def test_resolve_concept_id():
     # C123 is present in MOCK_TERMINOLOGY
-    assert resolve_concept_id({"code": "C123", "decode": "Treatment Arm", "system": "NCI"}) == "C123"
+    assert (
+        resolve_concept_id({"code": "C123", "decode": "Treatment Arm", "system": "NCI"})
+        == "C123"
+    )
     # C999 is not present in MOCK_TERMINOLOGY, should return the code itself
-    assert resolve_concept_id({"code": "C999", "decode": "Custom Concept", "system": "NCI"}) == "C999"
+    assert (
+        resolve_concept_id(
+            {"code": "C999", "decode": "Custom Concept", "system": "NCI"}
+        )
+        == "C999"
+    )
     # None cases
     assert resolve_concept_id(None) is None
     assert resolve_concept_id({}) is None
@@ -46,22 +55,16 @@ def test_inverse_mapping_valid_round_trip():
                     "type": "comparison",
                     "operator": "==",
                     "operands": [
-                        {
-                            "type": "field_ref",
-                            "field_ref": {"field_id": "act_1"}
-                        },
-                        {
-                            "type": "constant",
-                            "value": True
-                        }
-                    ]
+                        {"type": "field_ref", "field_ref": {"field_id": "act_1"}},
+                        {"type": "constant", "value": True},
+                    ],
                 },
                 "action": "hide",
                 "target_field": "act_2",
                 "version_index": 1,
-                "is_deleted": False
+                "is_deleted": False,
             }
-        ]
+        ],
     }
 
     # 1. Map to USDM
@@ -126,7 +129,7 @@ def test_unmapped_fields_preservation():
                     "code": "C123",
                     "decode": "Treatment Arm",
                     "system": "NCI",
-                    "custom_schema": "V1"  # extra
+                    "custom_schema": "V1",  # extra
                 },
                 "visits": [
                     {
@@ -137,32 +140,29 @@ def test_unmapped_fields_preservation():
                             "code": "C789",
                             "decode": "Screening Visit",
                             "system": "NCI",
-                            "unmapped_val": "hello"  # extra
+                            "unmapped_val": "hello",  # extra
                         },
                         "activities": [
                             {
                                 "id": "act_1",
                                 "name": "Blood Draw",
-                                "custom_field": "some_extra_val"  # extra
+                                "custom_field": "some_extra_val",  # extra
                             }
-                        ]
+                        ],
                     }
-                ]
+                ],
             }
         ],
         "rules": [
             {
                 "id": "rule_1",
                 "type": "skip_logic",
-                "condition": {
-                    "type": "constant",
-                    "value": True
-                },
+                "condition": {"type": "constant", "value": True},
                 "action": "hide",
                 "target_field": "act_2",
-                "custom_rule_level": "high"  # extra
+                "custom_rule_level": "high",  # extra
             }
-        ]
+        ],
     }
 
     reconstructed = map_usdm_to_study(usdm_payload)
@@ -190,48 +190,52 @@ def test_missing_required_fields_raises_value_error():
         map_usdm_to_study({"id": "study_1"})
 
     # Arm missing ID
-    with pytest.raises(ValueError, match="Every arm in USDM arms list must have an 'id'"):
-        map_usdm_to_study({
-            "id": "study_1",
-            "name": "Study A",
-            "arms": [{"name": "Arm without ID"}]
-        })
+    with pytest.raises(
+        ValueError, match="Every arm in USDM arms list must have an 'id'"
+    ):
+        map_usdm_to_study(
+            {"id": "study_1", "name": "Study A", "arms": [{"name": "Arm without ID"}]}
+        )
 
     # Arm missing Name
-    with pytest.raises(ValueError, match="Every arm in USDM arms list must have a 'name'"):
-        map_usdm_to_study({
-            "id": "study_1",
-            "name": "Study A",
-            "arms": [{"id": "arm_1"}]
-        })
+    with pytest.raises(
+        ValueError, match="Every arm in USDM arms list must have a 'name'"
+    ):
+        map_usdm_to_study(
+            {"id": "study_1", "name": "Study A", "arms": [{"id": "arm_1"}]}
+        )
 
     # Visit missing ID
-    with pytest.raises(ValueError, match="Every visit in arm 'arm_1' must have an 'id'"):
-        map_usdm_to_study({
-            "id": "study_1",
-            "name": "Study A",
-            "arms": [
-                {
-                    "id": "arm_1",
-                    "name": "Arm A",
-                    "visits": [{"name": "Visit without ID"}]
-                }
-            ]
-        })
+    with pytest.raises(
+        ValueError, match="Every visit in arm 'arm_1' must have an 'id'"
+    ):
+        map_usdm_to_study(
+            {
+                "id": "study_1",
+                "name": "Study A",
+                "arms": [
+                    {
+                        "id": "arm_1",
+                        "name": "Arm A",
+                        "visits": [{"name": "Visit without ID"}],
+                    }
+                ],
+            }
+        )
 
     # Visit missing Name
-    with pytest.raises(ValueError, match="Every visit in arm 'arm_1' must have a 'name'"):
-        map_usdm_to_study({
-            "id": "study_1",
-            "name": "Study A",
-            "arms": [
-                {
-                    "id": "arm_1",
-                    "name": "Arm A",
-                    "visits": [{"id": "visit_1"}]
-                }
-            ]
-        })
+    with pytest.raises(
+        ValueError, match="Every visit in arm 'arm_1' must have a 'name'"
+    ):
+        map_usdm_to_study(
+            {
+                "id": "study_1",
+                "name": "Study A",
+                "arms": [
+                    {"id": "arm_1", "name": "Arm A", "visits": [{"id": "visit_1"}]}
+                ],
+            }
+        )
 
 
 def test_unsupported_rule_expression_raises_value_error():
@@ -247,12 +251,14 @@ def test_unsupported_rule_expression_raises_value_error():
                     "type": "constant"  # missing value
                 },
                 "target_field": "act_1",
-                "action": "hide"
+                "action": "hide",
             }
-        ]
+        ],
     }
 
-    with pytest.raises(ValueError, match="Unsupported or malformed rule expression structure"):
+    with pytest.raises(
+        ValueError, match="Unsupported or malformed rule expression structure"
+    ):
         map_usdm_to_study(payload)
 
 
@@ -269,18 +275,12 @@ def test_circular_skip_logic_rules_raises_value_error():
                     "type": "comparison",
                     "operator": "==",
                     "operands": [
-                        {
-                            "type": "field_ref",
-                            "field_ref": {"field_id": "act_2"}
-                        },
-                        {
-                            "type": "constant",
-                            "value": 1
-                        }
-                    ]
+                        {"type": "field_ref", "field_ref": {"field_id": "act_2"}},
+                        {"type": "constant", "value": 1},
+                    ],
                 },
                 "target_field": "act_1",
-                "action": "hide"
+                "action": "hide",
             },
             {
                 "id": "rule_2",
@@ -289,20 +289,14 @@ def test_circular_skip_logic_rules_raises_value_error():
                     "type": "comparison",
                     "operator": "==",
                     "operands": [
-                        {
-                            "type": "field_ref",
-                            "field_ref": {"field_id": "act_1"}
-                        },
-                        {
-                            "type": "constant",
-                            "value": 2
-                        }
-                    ]
+                        {"type": "field_ref", "field_ref": {"field_id": "act_1"}},
+                        {"type": "constant", "value": 2},
+                    ],
                 },
                 "target_field": "act_2",
-                "action": "hide"
-            }
-        ]
+                "action": "hide",
+            },
+        ],
     }
 
     with pytest.raises(ValueError, match="Circular skip-logic dependency detected"):
