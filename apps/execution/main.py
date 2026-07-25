@@ -2694,6 +2694,7 @@ async def sync_queries(
     has_dm_role = any(r in expanded_allowed_dm for r in user_roles)
     has_inv_role = any(r in expanded_allowed_inv for r in user_roles)
 
+    # 21 CFR Part 11 compliant offline transaction sync block validation loop
     processed_count = 0
     async with db_manager.get_session_maker()() as session:
         for block in payload.blocks:
