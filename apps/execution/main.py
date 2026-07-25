@@ -21,7 +21,7 @@ from fastapi import (
     Response,
     UploadFile,
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from sqlalchemy import select
 
 from apps.execution.cdisc_validator import validate_cdisc_xml_structure
@@ -322,6 +322,97 @@ class ObservationResponse(BaseModel):
     lab_indicator: Optional[str] = None
     lab_out_of_range: Optional[bool] = None
     matched_normal_bounds: Optional[str] = None
+
+
+class LabReferenceRangeCreate(BaseModel):
+    study_id: str
+    test_code: str
+    test_name: str
+    source: str
+    site_id: Optional[str] = None
+    unit: str
+    normalized_unit: str
+    sex_applicability: Optional[str] = None
+    age_low: Optional[float] = None
+    age_high: Optional[float] = None
+    low_bound: Optional[float] = None
+    high_bound: Optional[float] = None
+    critical_low: Optional[float] = None
+    critical_high: Optional[float] = None
+
+    @model_validator(mode="after")
+    def validate_invariants(self) -> "LabReferenceRangeCreate":
+        # Nonblank identifiers
+        for field, name in [
+            ("study_id", "Study ID"),
+            ("test_code", "Test code"),
+            ("test_name", "Test name"),
+            ("unit", "Unit"),
+            ("normalized_unit", "Normalized unit"),
+        ]:
+            val = getattr(self, field, None)
+            if not val or not val.strip():
+                raise ValueError(f"{name} must be a nonblank string")
+
+        # Valid source values
+        if self.source not in ("CENTRAL", "LOCAL"):
+            raise ValueError("Source must be either CENTRAL or LOCAL")
+
+        # Valid sex values
+        if self.sex_applicability is not None:
+            sex_val = self.sex_applicability.strip().upper() if self.sex_applicability else ""
+            if sex_val not in ("M", "F", "ALL", "U", ""):
+                raise ValueError("Sex applicability must be one of M, F, ALL, U, or None")
+
+        # Valid age intervals
+        if self.age_low is not None:
+            if self.age_low < 0:
+                raise ValueError("Age low must be non-negative")
+        if self.age_high is not None:
+            if self.age_high < 0:
+                raise ValueError("Age high must be non-negative")
+        if self.age_low is not None and self.age_high is not None:
+            if self.age_low > self.age_high:
+                raise ValueError("Age low cannot be greater than Age high")
+
+        # Low-to-high normal bounds
+        if self.low_bound is not None and self.high_bound is not None:
+            if self.low_bound > self.high_bound:
+                raise ValueError("Low bound cannot be greater than High bound")
+
+        # Critical bounds consistent with normal bounds when supplied
+        if self.critical_low is not None and self.low_bound is not None:
+            if self.critical_low > self.low_bound:
+                raise ValueError("Critical low cannot be greater than Low bound")
+        if self.critical_high is not None and self.high_bound is not None:
+            if self.critical_high < self.high_bound:
+                raise ValueError("Critical high cannot be less than High bound")
+
+        return self
+
+
+class LabReferenceRangeUpdate(LabReferenceRangeCreate):
+    pass
+
+
+class LabReferenceRangeResponse(BaseModel):
+    id: str
+    study_id: str
+    test_code: str
+    test_name: str
+    source: str
+    site_id: Optional[str] = None
+    unit: str
+    normalized_unit: str
+    sex_applicability: Optional[str] = None
+    age_low: Optional[float] = None
+    age_high: Optional[float] = None
+    low_bound: Optional[float] = None
+    high_bound: Optional[float] = None
+    critical_low: Optional[float] = None
+    critical_high: Optional[float] = None
+    version: int
+    is_deleted: bool
 
 
 @app.post("/api/v1/execution/subjects", response_model=SubjectResponse)
@@ -670,6 +761,272 @@ async def trigger_lab_range_recalculation(
             study_id=payload.study_id,
             test_code=payload.test_code,
             updated_count=count,
+        )
+
+
+@app.post(
+    "/api/v1/execution/lab-ranges",
+    response_model=LabReferenceRangeResponse,
+    status_code=201,
+)
+async def create_lab_range(
+    payload: LabReferenceRangeCreate,
+    roles: list[str] = Depends(verify_not_auditor),
+) -> LabReferenceRangeResponse:
+    """Create a new LabReferenceRange in the database."""
+    from apps.execution.database.models import LabReferenceRange
+
+    async with db_manager.get_session_maker()() as session:
+        lab_range = LabReferenceRange(
+            study_id=payload.study_id,
+            test_code=payload.test_code,
+            test_name=payload.test_name,
+            source=payload.source,
+            site_id=payload.site_id,
+            unit=payload.unit,
+            normalized_unit=payload.normalized_unit,
+            sex_applicability=payload.sex_applicability,
+            age_low=payload.age_low,
+            age_high=payload.age_high,
+            low_bound=payload.low_bound,
+            high_bound=payload.high_bound,
+            critical_low=payload.critical_low,
+            critical_high=payload.critical_high,
+        )
+        session.add(lab_range)
+        await session.commit()
+
+        # Refresh and query back
+        stmt = select(LabReferenceRange).where(LabReferenceRange.id == lab_range.id)
+        res = await session.execute(stmt)
+        range_db = res.scalar_one()
+
+        return LabReferenceRangeResponse(
+            id=range_db.id,
+            study_id=range_db.study_id,
+            test_code=range_db.test_code,
+            test_name=range_db.test_name,
+            source=range_db.source,
+            site_id=range_db.site_id,
+            unit=range_db.unit,
+            normalized_unit=range_db.normalized_unit,
+            sex_applicability=range_db.sex_applicability,
+            age_low=range_db.age_low,
+            age_high=range_db.age_high,
+            low_bound=range_db.low_bound,
+            high_bound=range_db.high_bound,
+            critical_low=range_db.critical_low,
+            critical_high=range_db.critical_high,
+            version=range_db.version,
+            is_deleted=range_db.is_deleted,
+        )
+
+
+@app.get(
+    "/api/v1/execution/lab-ranges",
+    response_model=List[LabReferenceRangeResponse],
+)
+async def list_lab_ranges(
+    study_id: Optional[str] = None,
+    test_code: Optional[str] = None,
+    source: Optional[str] = None,
+    include_deleted: bool = False,
+) -> List[LabReferenceRangeResponse]:
+    """List lab reference ranges with optional filtering by study, test code, and lab source."""
+    from apps.execution.database.models import LabReferenceRange
+
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(LabReferenceRange)
+        if not include_deleted:
+            stmt = stmt.where(LabReferenceRange.is_deleted.is_(False))
+        if study_id:
+            stmt = stmt.where(LabReferenceRange.study_id == study_id)
+        if test_code:
+            stmt = stmt.where(LabReferenceRange.test_code == test_code)
+        if source:
+            stmt = stmt.where(LabReferenceRange.source == source)
+
+        res = await session.execute(stmt)
+        ranges = res.scalars().all()
+
+        return [
+            LabReferenceRangeResponse(
+                id=r.id,
+                study_id=r.study_id,
+                test_code=r.test_code,
+                test_name=r.test_name,
+                source=r.source,
+                site_id=r.site_id,
+                unit=r.unit,
+                normalized_unit=r.normalized_unit,
+                sex_applicability=r.sex_applicability,
+                age_low=r.age_low,
+                age_high=r.age_high,
+                low_bound=r.low_bound,
+                high_bound=r.high_bound,
+                critical_low=r.critical_low,
+                critical_high=r.critical_high,
+                version=r.version,
+                is_deleted=r.is_deleted,
+            )
+            for r in ranges
+        ]
+
+
+@app.get(
+    "/api/v1/execution/lab-ranges/{range_id}",
+    response_model=LabReferenceRangeResponse,
+)
+async def get_lab_range(range_id: str) -> LabReferenceRangeResponse:
+    """Retrieve a single lab reference range by ID."""
+    from apps.execution.database.models import LabReferenceRange
+
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(LabReferenceRange).where(
+            LabReferenceRange.id == range_id,
+            LabReferenceRange.is_deleted.is_(False),
+        )
+        res = await session.execute(stmt)
+        r = res.scalars().first()
+        if not r:
+            raise HTTPException(status_code=404, detail="Lab reference range not found")
+
+        return LabReferenceRangeResponse(
+            id=r.id,
+            study_id=r.study_id,
+            test_code=r.test_code,
+            test_name=r.test_name,
+            source=r.source,
+            site_id=r.site_id,
+            unit=r.unit,
+            normalized_unit=r.normalized_unit,
+            sex_applicability=r.sex_applicability,
+            age_low=r.age_low,
+            age_high=r.age_high,
+            low_bound=r.low_bound,
+            high_bound=r.high_bound,
+            critical_low=r.critical_low,
+            critical_high=r.critical_high,
+            version=r.version,
+            is_deleted=r.is_deleted,
+        )
+
+
+@app.put(
+    "/api/v1/execution/lab-ranges/{range_id}",
+    response_model=LabReferenceRangeResponse,
+)
+async def update_lab_range(
+    range_id: str,
+    payload: LabReferenceRangeUpdate,
+    roles: list[str] = Depends(verify_not_auditor),
+) -> LabReferenceRangeResponse:
+    """Update an existing lab reference range."""
+    from apps.execution.database.models import LabReferenceRange
+
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(LabReferenceRange).where(
+            LabReferenceRange.id == range_id,
+            LabReferenceRange.is_deleted.is_(False),
+        )
+        res = await session.execute(stmt)
+        r = res.scalars().first()
+        if not r:
+            raise HTTPException(status_code=404, detail="Lab reference range not found")
+
+        # Update fields
+        r.study_id = payload.study_id
+        r.test_code = payload.test_code
+        r.test_name = payload.test_name
+        r.source = payload.source
+        r.site_id = payload.site_id
+        r.unit = payload.unit
+        r.normalized_unit = payload.normalized_unit
+        r.sex_applicability = payload.sex_applicability
+        r.age_low = payload.age_low
+        r.age_high = payload.age_high
+        r.low_bound = payload.low_bound
+        r.high_bound = payload.high_bound
+        r.critical_low = payload.critical_low
+        r.critical_high = payload.critical_high
+
+        await session.commit()
+
+        # Refresh
+        stmt_ref = select(LabReferenceRange).where(LabReferenceRange.id == range_id)
+        res_ref = await session.execute(stmt_ref)
+        range_db = res_ref.scalar_one()
+
+        return LabReferenceRangeResponse(
+            id=range_db.id,
+            study_id=range_db.study_id,
+            test_code=range_db.test_code,
+            test_name=range_db.test_name,
+            source=range_db.source,
+            site_id=range_db.site_id,
+            unit=range_db.unit,
+            normalized_unit=range_db.normalized_unit,
+            sex_applicability=range_db.sex_applicability,
+            age_low=range_db.age_low,
+            age_high=range_db.age_high,
+            low_bound=range_db.low_bound,
+            high_bound=range_db.high_bound,
+            critical_low=range_db.critical_low,
+            critical_high=range_db.critical_high,
+            version=range_db.version,
+            is_deleted=range_db.is_deleted,
+        )
+
+
+@app.delete(
+    "/api/v1/execution/lab-ranges/{range_id}",
+    response_model=LabReferenceRangeResponse,
+)
+async def delete_lab_range(
+    range_id: str,
+    roles: list[str] = Depends(verify_not_auditor),
+) -> LabReferenceRangeResponse:
+    """Soft-delete an existing lab reference range."""
+    from apps.execution.database.models import LabReferenceRange
+
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(LabReferenceRange).where(
+            LabReferenceRange.id == range_id,
+            LabReferenceRange.is_deleted.is_(False),
+        )
+        res = await session.execute(stmt)
+        r = res.scalars().first()
+        if not r:
+            raise HTTPException(status_code=404, detail="Lab reference range not found")
+
+        # Soft delete
+        r.is_deleted = True
+
+        await session.commit()
+
+        # Refresh
+        stmt_ref = select(LabReferenceRange).where(LabReferenceRange.id == range_id)
+        res_ref = await session.execute(stmt_ref)
+        range_db = res_ref.scalar_one()
+
+        return LabReferenceRangeResponse(
+            id=range_db.id,
+            study_id=range_db.study_id,
+            test_code=range_db.test_code,
+            test_name=range_db.test_name,
+            source=range_db.source,
+            site_id=range_db.site_id,
+            unit=range_db.unit,
+            normalized_unit=range_db.normalized_unit,
+            sex_applicability=range_db.sex_applicability,
+            age_low=range_db.age_low,
+            age_high=range_db.age_high,
+            low_bound=range_db.low_bound,
+            high_bound=range_db.high_bound,
+            critical_low=range_db.critical_low,
+            critical_high=range_db.critical_high,
+            version=range_db.version,
+            is_deleted=range_db.is_deleted,
         )
 
 
