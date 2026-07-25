@@ -102,16 +102,16 @@ describe("createClinicalSoAMatrix", () => {
     const soaData = {
       arms: [
         { arm_id: "ARM-A", arm_name: "Arm A" },
-        { arm_id: "ARM-B", arm_name: "Arm B" }
+        { arm_id: "ARM-B", arm_name: "Arm B" },
       ],
       epochs: [
         { epoch_id: "EP-1", epoch_name: "Epoch 1", arm_id: "ARM-A" },
-        { epoch_id: "EP-2", epoch_name: "Epoch 2", arm_id: "ARM-B" }
+        { epoch_id: "EP-2", epoch_name: "Epoch 2", arm_id: "ARM-B" },
       ],
       encounters: [
         { encounter_id: "E1", encounter_name: "Encounter 1", epoch_id: "EP-1" },
         { encounter_id: "E2", encounter_name: "Encounter 2", epoch_id: "EP-1" },
-        { encounter_id: "E3", encounter_name: "Encounter 3", epoch_id: "EP-2" }
+        { encounter_id: "E3", encounter_name: "Encounter 3", epoch_id: "EP-2" },
       ],
       rows: [
         {
@@ -119,9 +119,17 @@ describe("createClinicalSoAMatrix", () => {
           activity_name: "Procedure 1",
           cells: [
             { encounter_id: "E1", is_applicable: true, details: "Mandatory" },
-            { encounter_id: "E2", is_applicable: true, details: "Conditional timing" },
-            { encounter_id: "E3", is_applicable: true, details: "Optional check" }
-          ]
+            {
+              encounter_id: "E2",
+              is_applicable: true,
+              details: "Conditional timing",
+            },
+            {
+              encounter_id: "E3",
+              is_applicable: true,
+              details: "Optional check",
+            },
+          ],
         },
         {
           activity_id: "ACT2",
@@ -129,10 +137,10 @@ describe("createClinicalSoAMatrix", () => {
           cells: [
             { encounter_id: "E1", is_applicable: false },
             { encounter_id: "E2", is_applicable: false },
-            { encounter_id: "E3", is_applicable: false }
-          ]
-        }
-      ]
+            { encounter_id: "E3", is_applicable: false },
+          ],
+        },
+      ],
     };
 
     const html = createClinicalSoAMatrix(soaData);
@@ -141,47 +149,67 @@ describe("createClinicalSoAMatrix", () => {
     expect(html).toContain('class="clinical-visit-matrix clinical-soa-matrix"');
 
     // Verify multi-level headers and colspans
-    expect(html).toContain('<th scope="col" colspan="2" class="grouped-header arm-header">Arm A</th>');
-    expect(html).toContain('<th scope="col" colspan="1" class="grouped-header arm-header">Arm B</th>');
+    expect(html).toContain(
+      '<th scope="col" colspan="2" class="grouped-header arm-header">Arm A</th>'
+    );
+    expect(html).toContain(
+      '<th scope="col" colspan="1" class="grouped-header arm-header">Arm B</th>'
+    );
 
-    expect(html).toContain('<th scope="col" colspan="2" class="grouped-header epoch-header">Epoch 1</th>');
-    expect(html).toContain('<th scope="col" colspan="1" class="grouped-header epoch-header">Epoch 2</th>');
+    expect(html).toContain(
+      '<th scope="col" colspan="2" class="grouped-header epoch-header">Epoch 1</th>'
+    );
+    expect(html).toContain(
+      '<th scope="col" colspan="1" class="grouped-header epoch-header">Epoch 2</th>'
+    );
 
-    expect(html).toContain('<th scope="col" class="encounter-header">Encounter 1</th>');
-    expect(html).toContain('<th scope="col" class="encounter-header">Encounter 2</th>');
-    expect(html).toContain('<th scope="col" class="encounter-header">Encounter 3</th>');
+    expect(html).toContain(
+      '<th scope="col" class="encounter-header">Encounter 1</th>'
+    );
+    expect(html).toContain(
+      '<th scope="col" class="encounter-header">Encounter 2</th>'
+    );
+    expect(html).toContain(
+      '<th scope="col" class="encounter-header">Encounter 3</th>'
+    );
 
     // Verify cell mapping and status classes
-    expect(html).toContain('<td class="status-applicable">✓ <span class="cell-details">Mandatory</span></td>');
-    expect(html).toContain('<td class="status-conditional">✓ <span class="cell-details">Conditional timing</span></td>');
-    expect(html).toContain('<td class="status-optional">✓ <span class="cell-details">Optional check</span></td>');
+    expect(html).toContain(
+      '<td class="status-applicable">✓ <span class="cell-details">Mandatory</span></td>'
+    );
+    expect(html).toContain(
+      '<td class="status-conditional">✓ <span class="cell-details">Conditional timing</span></td>'
+    );
+    expect(html).toContain(
+      '<td class="status-optional">✓ <span class="cell-details">Optional check</span></td>'
+    );
     expect(html).toContain('<td class="status-n-a">-</td>');
   });
 
   it("handles missing arm or shared encounters gracefully without arm header row", () => {
     const soaData = {
-      epochs: [
-        { epoch_id: "EP-1", epoch_name: "Epoch 1" }
-      ],
+      epochs: [{ epoch_id: "EP-1", epoch_name: "Epoch 1" }],
       encounters: [
-        { encounter_id: "E1", encounter_name: "Encounter 1", epoch_id: "EP-1" }
+        { encounter_id: "E1", encounter_name: "Encounter 1", epoch_id: "EP-1" },
       ],
       rows: [
         {
           activity_id: "ACT1",
           activity_name: "Procedure 1",
-          cells: [
-            { encounter_id: "E1", is_applicable: true }
-          ]
-        }
-      ]
+          cells: [{ encounter_id: "E1", is_applicable: true }],
+        },
+      ],
     };
 
     const html = createClinicalSoAMatrix(soaData);
     // Arm row should not be generated since hasArms is false
     expect(html).not.toContain('class="grouped-header arm-header"');
-    expect(html).toContain('<th scope="col" colspan="1" class="grouped-header epoch-header">Epoch 1</th>');
-    expect(html).toContain('<th scope="col" class="encounter-header">Encounter 1</th>');
+    expect(html).toContain(
+      '<th scope="col" colspan="1" class="grouped-header epoch-header">Epoch 1</th>'
+    );
+    expect(html).toContain(
+      '<th scope="col" class="encounter-header">Encounter 1</th>'
+    );
   });
 });
 

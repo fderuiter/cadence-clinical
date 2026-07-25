@@ -178,9 +178,14 @@ export function createClinicalSoAMatrix(soaData) {
 
   // Construct flat column objects matching each encounter
   const cols = encounters.map((enc) => {
-    const epoch = epochMap[enc.epoch_id] || { epoch_id: enc.epoch_id, epoch_name: enc.epoch_id };
+    const epoch = epochMap[enc.epoch_id] || {
+      epoch_id: enc.epoch_id,
+      epoch_name: enc.epoch_id,
+    };
     const armId = enc.arm_id || epoch.arm_id;
-    const arm = armId ? (armMap[armId] || { arm_id: armId, arm_name: armId }) : null;
+    const arm = armId
+      ? armMap[armId] || { arm_id: armId, arm_name: armId }
+      : null;
 
     return {
       arm,
@@ -293,7 +298,10 @@ export function createClinicalSoAMatrix(soaData) {
 
   // Encounter/Visit Row
   const encounterCellsHTML = cols
-    .map((c) => `<th scope="col" class="encounter-header">${c.encounter.encounter_name}</th>`)
+    .map(
+      (c) =>
+        `<th scope="col" class="encounter-header">${c.encounter.encounter_name}</th>`
+    )
     .join("");
 
   headerRowsHTML += `
@@ -308,7 +316,9 @@ export function createClinicalSoAMatrix(soaData) {
       const cellsHTML = cols
         .map((col) => {
           const encId = col.encounter.encounter_id;
-          const cell = row.cells.find((c) => c.encounter_id === encId) || { is_applicable: false };
+          const cell = row.cells.find((c) => c.encounter_id === encId) || {
+            is_applicable: false,
+          };
 
           let cellClass;
           let cellText;
