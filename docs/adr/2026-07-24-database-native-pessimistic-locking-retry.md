@@ -8,7 +8,7 @@
 ---
 
 ## 1. Context & Problem Statement
-In clinical study management, multiple clinical designers or external automated integration scripts may attempt to save study metadata configurations, amend protocols, or publish library objects simultaneously. 
+In clinical study management, multiple clinical designers or external automated integration scripts may attempt to save study metadata configurations, amend protocols, or publish library objects simultaneously.
 Without strict write serialization, concurrent update transactions on the same root clinical study or library objects can bypass standard transaction boundaries. This concurrency hazard causes parallel version history branches, duplicate action entries, corrupted/non-linear audit trails, and version indices colliding or duplicating. To maintain absolute regulatory compliance (e.g., 21 CFR Part 11 and EU Annex 11), study configuration histories must remain a perfectly straight, linear timeline of events, and library object templates must increment versions deterministically.
 
 ## 2. Decision Drivers & Constraints
