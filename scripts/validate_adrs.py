@@ -111,12 +111,22 @@ def get_changed_files() -> set[str]:
     merge_base, _ = run_git_command(["git", "merge-base", "origin/main", "HEAD"])
     comparison_target = merge_base if merge_base else "origin/main"
 
-    # Union all git diff methods to ensure we capture the complete history of changes in multi-commit PRs
-    for diff_arg in (
-        ["git", "diff", "--name-only", "HEAD^"],
-        ["git", "diff", "--name-only", comparison_target],
-        ["git", "diff", "--name-only", "HEAD~1"],
-    ):
+    # Check if HEAD is a merge commit (more than one parent)
+    is_merge_commit = False
+    stdout_parent2, stderr_parent2 = run_git_command(
+        ["git", "rev-parse", "--verify", "HEAD^2"]
+    )
+    if not stderr_parent2 and stdout_parent2:
+        is_merge_commit = True
+
+    # Union git diff methods. If it's a merge commit, do NOT diff against HEAD^ or HEAD~1
+    # as that would include all changes merged in from the other branch.
+    diff_targets = [["git", "diff", "--name-only", comparison_target]]
+    if not is_merge_commit:
+        diff_targets.append(["git", "diff", "--name-only", "HEAD^"])
+        diff_targets.append(["git", "diff", "--name-only", "HEAD~1"])
+
+    for diff_arg in diff_targets:
         stdout, _ = run_git_command(diff_arg)
         if stdout:
             changed_files.update(stdout.splitlines())

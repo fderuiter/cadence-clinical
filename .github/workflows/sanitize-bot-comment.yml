@@ -8,7 +8,7 @@ jobs:
   sanitize-comment:
     # 1. Ensure this comment is on a Pull Request (not an issue)
     # 2. Ensure the comment body contains "[CI/CD Fix Attempt "
-    if: ${{ github.event.issue.pull_request && contains(github.event.comment.body, '[CI/CD Fix Attempt ') }}
+    if: github.event.issue.pull_request && contains(github.event.comment.body, '[CI/CD Fix Attempt ')
     runs-on: ubuntu-latest
     permissions:
       issues: write # Required to edit comments on PRs
