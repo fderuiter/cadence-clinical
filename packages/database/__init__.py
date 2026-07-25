@@ -1,12 +1,14 @@
-import uuid
-from typing import Any, Optional, AsyncGenerator
+from typing import Any, AsyncGenerator, Optional
+
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
 
 class RelationalDatabaseManager:
     """
     Parameterized relational database manager capable of managing connection pools based on distinct microservice configurations.
     """
+
     def __init__(self, service_name: str) -> None:
         self.service_name = service_name
         self.engine: Any = None
@@ -38,7 +40,9 @@ class RelationalDatabaseManager:
 
     def get_session_maker(self) -> async_sessionmaker[AsyncSession]:
         if not self.session_maker:
-            raise Exception(f"{self.service_name} database session manager is not initialized.")
+            raise Exception(
+                f"{self.service_name} database session manager is not initialized."
+            )
         return self.session_maker
 
 
@@ -47,6 +51,7 @@ class DatabaseSessionDependency:
     Standardized FastAPI route dependency helper that manages database session lifespans,
     automatically committing on success or rolling back on failure.
     """
+
     def __init__(self, db_manager: RelationalDatabaseManager) -> None:
         self.db_manager = db_manager
 

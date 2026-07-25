@@ -9,7 +9,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.ctms.database import db_manager
-from packages.database import DatabaseSessionDependency
 from apps.ctms.models import (
     Base,
     BudgetLineItem,
@@ -27,6 +26,7 @@ from apps.ctms.models import (
     write_audit_log,
 )
 from apps.ctms.rendering import render_confirmation_letter, render_follow_up_letter
+from packages.database import DatabaseSessionDependency
 from packages.security.middleware import GatewayAuthMiddleware
 
 DATABASE_URL = os.getenv("CTMS_DATABASE_URL", "sqlite+aiosqlite:///:memory:")

@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from apps.quality.database import db_manager
-from packages.database import DatabaseSessionDependency
 from apps.quality.models import (
     Base,
     CAPARecord,
@@ -22,6 +21,7 @@ from apps.quality.models import (
     QualityAuditLog,
     RootCauseAnalysis,
 )
+from packages.database import DatabaseSessionDependency
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.rbac import get_normalized_roles
 

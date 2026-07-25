@@ -15,7 +15,6 @@ from tmf_reference_model import (
 )
 
 from apps.etmf.database import db_manager
-from packages.database import DatabaseSessionDependency
 from apps.etmf.lifecycle import validate_and_transition_document_status
 from apps.etmf.models import (
     Base,
@@ -24,6 +23,7 @@ from apps.etmf.models import (
     TMFAuditLog,
     TMFDocument,
 )
+from packages.database import DatabaseSessionDependency
 from packages.security import verify_is_auditor, verify_not_auditor
 from packages.security.middleware import GatewayAuthMiddleware
 
