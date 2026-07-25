@@ -606,9 +606,9 @@
           <div class="form-group" style="margin-bottom: 12px">
             <label for="reauth-username">Username</label>
             <input
-              type="text"
               id="reauth-username"
               v-model="reauthUsername"
+              type="text"
               readonly
               style="background-color: #f1f5f9"
             />
@@ -616,9 +616,9 @@
           <div class="form-group">
             <label for="reauth-password">Password</label>
             <input
-              type="password"
               id="reauth-password"
               v-model="reauthPassword"
+              type="password"
               placeholder="Enter your password to confirm identity..."
               required
               @keyup.enter="confirmReauth"
