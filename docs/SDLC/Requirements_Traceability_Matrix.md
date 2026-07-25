@@ -5,10 +5,10 @@
 
 ## 1. Traceability Summary
 
-- **Total Documented Requirements:** 50
+- **Total Documented Requirements:** 51
 - **Total Mapped to Automated Tests:** 25
-- **Traceability Coverage:** 50.0%
-- **SRS Requirements Mapped:** 5 of 6 (83.3%)
+- **Traceability Coverage:** 49.0%
+- **SRS Requirements Mapped:** 5 of 7 (71.4%)
 
 ⚠️ **WARNING:** SRS coverage is below 100%. GxP validation requires 100% of functional requirements defined in the SRS to map to automated test cases.
 
@@ -66,6 +66,7 @@
 | Trace-4 | SRS | **Data-Driven Expected Document Lists (EDLs)**<br>*The system implements a data-driven Expected Document List reference data model and site-aware completeness tracking APIs under `/api/v1/etmf/edl` and `/api/v1/etmf/completeness` using the `ExpectedDocument` model to replace hardcoded validation logic with a dynamic backbone.* | `test_edl_definitions_and_crud` (tests/test_etmf.py) 🟢<br>`test_site_aware_completeness` (tests/test_etmf.py) 🟢 | ✅ **Passed** |
 | Trace-5 | SRS | **TMF Taxonomy Validation & Integration Assurance**<br>*The eTMF microservice enforces strict catalog-driven classification during document ingestion, rejecting unknown/invalid artifacts or mismatched configurations with HTTP 422, while persisting the resolved taxonomy version and artifact code to ensure compliance.* | `test_canonical_catalog_ingestion_validations` (tests/test_etmf.py) 🟢 | ✅ **Passed** |
 | Trace-6 | SRS | **CTMS Monitoring and Site Operations Tracking**<br>*The CTMS microservice implements a structured site monitoring visit lifecycle, milestone tracking, and CRA workload allocation maps. All mutations are secured via OIDC auth, audited via append-only `CTMSAuditLog` entries with explicit change reasons under 21 CFR Part 11 requirements, and covered by automated tests to ensure compliance.* | `test_create_and_list_studies_rbac` (tests/test_ctms.py) 🟢<br>`test_get_audit_trail_rbac` (tests/test_ctms.py) 🟢<br>`test_monitoring_visit_workflow_happy_path` (tests/test_ctms.py) 🟢<br>`test_monitoring_visit_workflow_rbac_denials` (tests/test_ctms.py) 🟢<br>`test_monitoring_visit_invalid_state_and_findings` (tests/test_ctms.py) 🟢<br>`test_recruitment_records_crud_and_audit` (tests/test_ctms.py) 🟢<br>`test_site_milestones_crud_and_audit` (tests/test_ctms.py) 🟢<br>`test_cra_allocations_rbac_reassignment_workload` (tests/test_ctms.py) 🟢<br>`test_monitoring_visit_scheduling_respects_cra_allocation` (tests/test_ctms.py) 🟢 | ✅ **Passed** |
+| Trace-7 | SRS | **Quality & CAPA Traceability and Validation Assurance**<br>*Quality mutations require a secure `X-Change-Reason` header and valid gateway-signed token. Transitions are validated by the FastAPI router in `apps/quality/main.py`. Role permissions are gated via `authorize_quality_write` and `authorize_quality_oversight`. System consistency and audit trial immutability are verified in `tests/test_quality_workflow.py`.* | *None* | ❌ **Unmapped** |
 
 ## 3. Unmapped Requirements
 
@@ -94,3 +95,4 @@
 - **PRD-SUB-007** (PRD): Re-Consent Gating on Visits
 - **PRD-SYS-004** (PRD): Universal Site Isolation Constraint
 - **Trace-3** (SRS): Read-Only Trial Locks & Alert Routing
+- **Trace-7** (SRS): Quality & CAPA Traceability and Validation Assurance
