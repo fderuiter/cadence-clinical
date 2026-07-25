@@ -110,7 +110,7 @@ export async function generateGatewaySignature(
   if (version === "1" || version === "v1") {
     const serialized = `${userId}:${roles}:${timestamp}`;
     const secretKeyData =
-      typeof secret === "string" ? new TextEncoder().encode(secret) : secret;
+      typeof secret === "string" ? new TextEncoder().encode(secret) : secret; // pragma: allowlist secret
     const data = new TextEncoder().encode(serialized);
 
     const key = await globalThis.crypto.subtle.importKey(
