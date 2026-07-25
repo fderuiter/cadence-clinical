@@ -1550,7 +1550,7 @@ if (typeof document !== "undefined") {
       const userId = "usr_9921a88b2c410";
       const roles = "STUDY_DESIGNER";
       const timestamp = new Date().toISOString();
-      const secret = "internal-gateway-secret-12345";
+      const secret = "internal-gateway-secret-12345"; // pragma: allowlist secret
 
       const signature = await generateGatewaySignature(
         userId,
@@ -1595,7 +1595,7 @@ if (typeof document !== "undefined") {
       const userId = "usr_9921a88b2c410";
       const roles = "STUDY_DESIGNER";
       const timestamp = new Date().toISOString();
-      const secret = "internal-gateway-secret-12345";
+      const secret = "internal-gateway-secret-12345"; // pragma: allowlist secret
 
       const signature = await generateGatewaySignature(
         userId,

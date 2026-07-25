@@ -462,7 +462,7 @@ def test_signature_verification_success(monkeypatch: pytest.MonkeyPatch) -> None
             headers={"Authorization": f"Bearer {token}"},
             json={
                 "username": "user1",
-                "password": "correct_password",
+                "password": "correct_password",  # pragma: allowlist secret
                 "totp": "123456",
                 "action": "/api/v1/execution/form-submissions/123/approve",
             },
@@ -496,7 +496,7 @@ def test_signature_verification_invalid_credentials(
             headers={"Authorization": f"Bearer {token}"},
             json={
                 "username": "user1",
-                "password": "wrong_password",
+                "password": "wrong_password",  # pragma: allowlist secret
                 "action": "/api/v1/execution/form-submissions/123/approve",
             },
         )
@@ -508,7 +508,7 @@ def test_signature_verification_invalid_credentials(
             headers={"Authorization": f"Bearer {token}"},
             json={
                 "username": "user1",
-                "password": "correct_password",
+                "password": "correct_password",  # pragma: allowlist secret
                 "totp": "invalid_totp",
                 "action": "/api/v1/execution/form-submissions/123/approve",
             },
@@ -540,7 +540,7 @@ def test_signature_verification_role_insufficient(
             headers={"Authorization": f"Bearer {token}"},
             json={
                 "username": "user1",
-                "password": "correct_password",
+                "password": "correct_password",  # pragma: allowlist secret
                 "action": "/api/v1/execution/form-submissions/123/approve",
             },
         )
@@ -589,7 +589,7 @@ def test_signature_gated_mutation_enforcement(monkeypatch: pytest.MonkeyPatch) -
             headers={"Authorization": f"Bearer {token}"},
             json={
                 "username": "user1",
-                "password": "correct_password",
+                "password": "correct_password",  # pragma: allowlist secret
                 "action": "/api/v1/execution/form-submissions/123/approve",
             },
         )
@@ -688,7 +688,7 @@ def test_signature_gated_mutation_mismatched_action(
             headers={"Authorization": f"Bearer {token}"},
             json={
                 "username": "user1",
-                "password": "correct_password",
+                "password": "correct_password",  # pragma: allowlist secret
                 "action": "/api/v1/execution/form-submissions/123/approve",
             },
         )

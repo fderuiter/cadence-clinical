@@ -44,7 +44,7 @@ def rsa_keypair():
 
 def test_pseudonymize_value_deterministic():
     """Test that pseudonyms are deterministic and secure."""
-    secret = "my-secure-salt-12345"
+    secret = "my-secure-salt-12345"  # pragma: allowlist secret
     val = "john.doe@example.com"
 
     p1 = pseudonymize_value(val, secret)

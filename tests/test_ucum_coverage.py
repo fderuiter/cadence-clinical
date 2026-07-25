@@ -1,8 +1,9 @@
 import pytest
+
 from apps.execution.ucum import (
-    normalize_unit_name,
     convert_unit,
     get_normalized_representation,
+    normalize_unit_name,
 )
 
 

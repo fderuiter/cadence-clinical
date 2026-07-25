@@ -23,7 +23,7 @@ The core issues addressed by this decision are:
 ## 3. Options Considered
 ### Option 1: Ad-hoc Role Gate checks in Endpoint Handlers
 * **Overview:** Validate user roles directly inside each endpoint function using local conditions.
-* **Pros:** 
+* **Pros:**
   * ✅ Quick to implement initially.
 * **Cons:**
   * ❌ Easy to miss security gates on new/cloned endpoints.

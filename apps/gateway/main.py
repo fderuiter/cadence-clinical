@@ -578,7 +578,10 @@ async def signature_verification(request: Request, body: SignatureVerificationRe
             )
     else:
         # Fallback to Mock Verification ONLY for Tests
-        if body.password == "wrong_password" or "invalid" in body.password:
+        if (
+            body.password == "wrong_password"  # pragma: allowlist secret
+            or "invalid" in body.password
+        ):
             raise HTTPException(status_code=401, detail="Invalid credentials")
         if body.totp and ("invalid" in body.totp or "wrong" in body.totp):
             raise HTTPException(status_code=401, detail="Invalid credentials")
