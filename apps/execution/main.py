@@ -360,9 +360,13 @@ class LabReferenceRangeCreate(BaseModel):
 
         # Valid sex values
         if self.sex_applicability is not None:
-            sex_val = self.sex_applicability.strip().upper() if self.sex_applicability else ""
+            sex_val = (
+                self.sex_applicability.strip().upper() if self.sex_applicability else ""
+            )
             if sex_val not in ("M", "F", "ALL", "U", ""):
-                raise ValueError("Sex applicability must be one of M, F, ALL, U, or None")
+                raise ValueError(
+                    "Sex applicability must be one of M, F, ALL, U, or None"
+                )
 
         # Valid age intervals
         if self.age_low is not None:

@@ -1,18 +1,16 @@
 import hashlib
 import hmac
+import json
 import os
 import time
-import json
+
 import httpx
 import pytest
 import pytest_asyncio
-from sqlalchemy import select, text
 
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import (
-    AuditLog,
     Base,
-    LabReferenceRange,
 )
 from apps.execution.main import app
 
@@ -258,55 +256,73 @@ async def test_lab_reference_range_invariants_validation() -> None:
 
         # Case 1: Invalid source
         p = dict(valid_template, source="INVALID_SOURCE")
-        res = await client.post("/api/v1/execution/lab-ranges", json=p, headers=get_auth_headers())
+        res = await client.post(
+            "/api/v1/execution/lab-ranges", json=p, headers=get_auth_headers()
+        )
         assert res.status_code == 422
         assert "Source must be either CENTRAL or LOCAL" in res.text
 
         # Case 2: Invalid sex
         p = dict(valid_template, sex_applicability="X")
-        res = await client.post("/api/v1/execution/lab-ranges", json=p, headers=get_auth_headers())
+        res = await client.post(
+            "/api/v1/execution/lab-ranges", json=p, headers=get_auth_headers()
+        )
         assert res.status_code == 422
         assert "Sex applicability must be one of M, F, ALL, U, or None" in res.text
 
         # Case 3: Blank identifier
         p = dict(valid_template, study_id="   ")
-        res = await client.post("/api/v1/execution/lab-ranges", json=p, headers=get_auth_headers())
+        res = await client.post(
+            "/api/v1/execution/lab-ranges", json=p, headers=get_auth_headers()
+        )
         assert res.status_code == 422
         assert "Study ID must be a nonblank string" in res.text
 
         # Case 4: Blank unit
         p = dict(valid_template, unit="")
-        res = await client.post("/api/v1/execution/lab-ranges", json=p, headers=get_auth_headers())
+        res = await client.post(
+            "/api/v1/execution/lab-ranges", json=p, headers=get_auth_headers()
+        )
         assert res.status_code == 422
         assert "Unit must be a nonblank string" in res.text
 
         # Case 5: Negative age_low
         p = dict(valid_template, age_low=-1.0)
-        res = await client.post("/api/v1/execution/lab-ranges", json=p, headers=get_auth_headers())
+        res = await client.post(
+            "/api/v1/execution/lab-ranges", json=p, headers=get_auth_headers()
+        )
         assert res.status_code == 422
         assert "Age low must be non-negative" in res.text
 
         # Case 6: age_low > age_high
         p = dict(valid_template, age_low=50.0, age_high=10.0)
-        res = await client.post("/api/v1/execution/lab-ranges", json=p, headers=get_auth_headers())
+        res = await client.post(
+            "/api/v1/execution/lab-ranges", json=p, headers=get_auth_headers()
+        )
         assert res.status_code == 422
         assert "Age low cannot be greater than Age high" in res.text
 
         # Case 7: low_bound > high_bound
         p = dict(valid_template, low_bound=100.0, high_bound=50.0)
-        res = await client.post("/api/v1/execution/lab-ranges", json=p, headers=get_auth_headers())
+        res = await client.post(
+            "/api/v1/execution/lab-ranges", json=p, headers=get_auth_headers()
+        )
         assert res.status_code == 422
         assert "Low bound cannot be greater than High bound" in res.text
 
         # Case 8: critical_low > low_bound
         p = dict(valid_template, low_bound=10.0, critical_low=15.0)
-        res = await client.post("/api/v1/execution/lab-ranges", json=p, headers=get_auth_headers())
+        res = await client.post(
+            "/api/v1/execution/lab-ranges", json=p, headers=get_auth_headers()
+        )
         assert res.status_code == 422
         assert "Critical low cannot be greater than Low bound" in res.text
 
         # Case 9: critical_high < high_bound
         p = dict(valid_template, high_bound=40.0, critical_high=35.0)
-        res = await client.post("/api/v1/execution/lab-ranges", json=p, headers=get_auth_headers())
+        res = await client.post(
+            "/api/v1/execution/lab-ranges", json=p, headers=get_auth_headers()
+        )
         assert res.status_code == 422
         assert "Critical high cannot be less than High bound" in res.text
 
