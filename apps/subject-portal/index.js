@@ -1,6 +1,5 @@
 import {
   generateGatewaySignature,
-  canonicalSerialize,
 } from "ui";
 
 // Mock Data fallbacks for high-fidelity offline/sandbox usage
@@ -366,14 +365,9 @@ function validateActiveQuestionnaire() {
   const errors = [];
 
   Object.entries(instrument.items).forEach(([id, field]) => {
-    let val = "";
-    if (field.type === "choice_single") {
-      const checked = document.querySelector(`input[name="${id}"]:checked`);
-      val = checked ? checked.value : "";
-    } else {
-      const el = document.getElementById(id);
-      val = el ? el.value.trim() : "";
-    }
+    const val = field.type === "choice_single"
+      ? (document.querySelector(`input[name="${id}"]:checked`)?.value || "")
+      : (document.getElementById(id)?.value.trim() || "");
 
     // Clean previous error markers
     const container = document.getElementById(`field-container-${id}`);
@@ -499,7 +493,7 @@ async function verifyAndSubmitSignature() {
       body: JSON.stringify(payload),
       change_reason: finalReason,
     });
-  } catch (err) {
+  } catch {
     console.info("Falling back to local cache storage for electronic submissions.");
   }
 
@@ -650,7 +644,7 @@ async function acknowledgeNotification(notificationId) {
       body: JSON.stringify({ reason_for_change: actionReason }),
       change_reason: actionReason,
     });
-  } catch (err) {
+  } catch {
     console.info("Acknowledged notification offline.");
   }
 
@@ -661,7 +655,6 @@ async function acknowledgeNotification(notificationId) {
 // Bootstrap Initialization
 async function initializeApp() {
   // Graceful OIDC Keycloak setup
-  let keycloakLoaded = false;
   if (typeof window !== "undefined" && !window.__MOCK_TEST_ENV__) {
     try {
       const KeycloakClass = window.Keycloak || (await import("keycloak-js")).default;
@@ -681,7 +674,6 @@ async function initializeApp() {
           state.session.userId = keycloak.subject || "subject_001";
           state.session.token = keycloak.token;
           state.session.isOfflineMode = false;
-          keycloakLoaded = true;
           console.log("OIDC Session Verified for subject:", state.session.userId);
         }
       }
@@ -720,7 +712,7 @@ async function initializeApp() {
           status: a.version_index > 1 ? "COMPLETED" : "PENDING",
         }));
       }
-    } catch (err) {
+    } catch {
       // Keep mock structures
     }
 
@@ -737,7 +729,7 @@ async function initializeApp() {
           is_read: n.is_read,
         }));
       }
-    } catch (err) {
+    } catch {
       // Keep mock structures
     }
   }
