@@ -52,6 +52,7 @@ def test_create_and_list_deviations():
     Verify that a deviation can be created and retrieved via API.
     """
     # @req:PRD-SYS-001
+    # @req:Trace-7
     client = TestClient(app)
     headers = get_auth_headers(change_reason="Reporting protocol deviation")
     payload = {

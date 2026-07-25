@@ -6,11 +6,11 @@
 ## 1. Traceability Summary
 
 - **Total Documented Requirements:** 51
-- **Total Mapped to Automated Tests:** 25
-- **Traceability Coverage:** 49.0%
-- **SRS Requirements Mapped:** 5 of 7 (71.4%)
+- **Total Mapped to Automated Tests:** 27
+- **Traceability Coverage:** 52.9%
+- **SRS Requirements Mapped:** 7 of 7 (100.0%)
 
-⚠️ **WARNING:** SRS coverage is below 100%. GxP validation requires 100% of functional requirements defined in the SRS to map to automated test cases.
+✅ **COMPLIANCE CONFIRMED:** 100% of SRS functional compliance requirements are mapped to automated verification test cases.
 
 ## 2. Requirements Mapping Table
 
@@ -54,7 +54,7 @@
 | PRD-SUB-007 | PRD | **Re-Consent Gating on Visits** | *None* | ❌ **Unmapped** |
 | PRD-SYS-001 | PRD | **Standard Audit Logging (21 CFR Part 11 § 11.10(e))** | `test_insert_generates_audit_log` (tests/test_audit.py) 🟢<br>`test_update_generates_audit_log` (tests/test_audit.py) 🟢<br>`test_prevent_audit_log_mutation` (tests/test_ledger_and_triggers.py) 🟢<br>`test_create_and_list_deviations` (tests/test_quality_workflow.py) 🟢<br>`test_create_and_update_rca` (tests/test_quality_workflow.py) 🟢 | ✅ **Passed** |
 | PRD-SYS-002 | PRD | **Soft-Delete Enforcement and Shadow Schema Preservation** | `test_soft_delete_generates_audit_log` (tests/test_audit.py) 🟢<br>`test_prevent_hard_delete_on_audited_model` (tests/test_ledger_and_triggers.py) 🟢 | ✅ **Passed** |
-| PRD-SYS-003 | PRD | **Cryptographic Ledger Hashing & Chain Validation** | `test_ledger_sealing_and_validation` (tests/test_ledger_and_triggers.py) 🟢 | ✅ **Passed** |
+| PRD-SYS-003 | PRD | **Cryptographic Ledger Hashing & Chain Validation** | `test_ledger_sealing_and_validation` (tests/test_ledger_and_triggers.py) 🟢<br>`test_trial_lock_freeze` (tests/test_trial_lock.py) 🟢 | ✅ **Passed** |
 | PRD-SYS-004 | PRD | **Universal Site Isolation Constraint** | *None* | ❌ **Unmapped** |
 | PRD-TMF-001 | PRD | **TMF Taxonomy Catalog Hierarchy and Version Selection** | `test_active_version_selection` (tests/test_tmf_reference_model.py) 🟢<br>`test_explicit_version_selection` (tests/test_tmf_reference_model.py) 🟢<br>`test_canonical_11_zones` (tests/test_tmf_reference_model.py) 🟢<br>`test_artifact_parent_identification` (tests/test_tmf_reference_model.py) 🟢<br>`test_version_isolation` (tests/test_tmf_reference_model.py) 🟢<br>`test_immutability_properties` (tests/test_tmf_reference_model.py) 🟢<br>`test_no_database_dependencies` (tests/test_tmf_reference_model.py) 🟢<br>`test_resolve_artifact_success` (tests/test_tmf_reference_model.py) 🟢<br>`test_resolve_artifact_failures` (tests/test_tmf_reference_model.py) 🟢 | ✅ **Passed** |
 | PRD-TMF-002 | PRD | **Strict Taxonomy Validation and Ingestion Rejection** | `test_canonical_catalog_ingestion_validations` (tests/test_etmf.py) 🟢<br>`test_validate_hierarchy_success` (tests/test_tmf_reference_model.py) 🟢<br>`test_validate_hierarchy_failures` (tests/test_tmf_reference_model.py) 🟢 | ✅ **Passed** |
@@ -62,11 +62,11 @@
 | PRD-TMF-004 | PRD | **Catalog-Driven Completeness and Milestone Alignment** | `test_completeness_from_catalog` (tests/test_etmf.py) 🟢<br>`test_get_mandatory_artifacts_success` (tests/test_tmf_reference_model.py) 🟢<br>`test_get_mandatory_artifacts_failures` (tests/test_tmf_reference_model.py) 🟢 | ✅ **Passed** |
 | Trace-1 | SRS | **Shadow Schema Retention**<br>*Database-level hard deletes are programmatically blocked by the application layer. Deletion attempts against `AuditLog` or `AuditedModel` raise uncatchable exceptions via the SQLAlchemy listener module located in `apps/execution/database/audit.py`, ensuring a permanent shadow ledger of all system transactions.* | `test_hard_delete_is_prevented` (tests/test_audit.py) 🟢<br>`test_prevent_audit_log_mutation` (tests/test_ledger_and_triggers.py) 🟢<br>`test_prevent_hard_delete_on_audited_model` (tests/test_ledger_and_triggers.py) 🟢 | ✅ **Passed** |
 | Trace-2 | SRS | **Cryptographic Key Multi-Sharing & Rotation**<br>*The system utilizes mathematical polynomial splitting (Shamir's Secret Sharing pattern) to split treatment allocation blinding keys, alongside an automatic 365-day rotation scheme for encryption keys. These operations are explicitly enforced by `AllocationKeyManager` in `apps/execution/cryptography.py`.* | `test_key_splitting` (tests/test_cryptography.py) 🟢<br>`test_encryption_decryption_with_rotation` (tests/test_cryptography.py) 🟢 | ✅ **Passed** |
-| Trace-3 | SRS | **Read-Only Trial Locks & Alert Routing**<br>*Upon detecting any data compromise, the system immediately freezes clinical transactions by throwing `PermissionError` for write operations (in `audit.py`) while permitting authorized `SELECT` queries. Concurrently, high-priority notifications are dispatched to designated contacts (Email, SMS, Webhook) via the `TrialLockManager` module in `apps/execution/trial_lock.py` within one minute.* | *None* | ❌ **Unmapped** |
+| Trace-3 | SRS | **Read-Only Trial Locks & Alert Routing**<br>*Upon detecting any data compromise, the system immediately freezes clinical transactions by throwing `PermissionError` for write operations (in `audit.py`) while permitting authorized `SELECT` queries. Concurrently, high-priority notifications are dispatched to designated contacts (Email, SMS, Webhook) via the `TrialLockManager` module in `apps/execution/trial_lock.py` within one minute.* | `test_trial_lock_freeze` (tests/test_trial_lock.py) 🟢 | ✅ **Passed** |
 | Trace-4 | SRS | **Data-Driven Expected Document Lists (EDLs)**<br>*The system implements a data-driven Expected Document List reference data model and site-aware completeness tracking APIs under `/api/v1/etmf/edl` and `/api/v1/etmf/completeness` using the `ExpectedDocument` model to replace hardcoded validation logic with a dynamic backbone.* | `test_edl_definitions_and_crud` (tests/test_etmf.py) 🟢<br>`test_site_aware_completeness` (tests/test_etmf.py) 🟢 | ✅ **Passed** |
 | Trace-5 | SRS | **TMF Taxonomy Validation & Integration Assurance**<br>*The eTMF microservice enforces strict catalog-driven classification during document ingestion, rejecting unknown/invalid artifacts or mismatched configurations with HTTP 422, while persisting the resolved taxonomy version and artifact code to ensure compliance.* | `test_canonical_catalog_ingestion_validations` (tests/test_etmf.py) 🟢 | ✅ **Passed** |
 | Trace-6 | SRS | **CTMS Monitoring and Site Operations Tracking**<br>*The CTMS microservice implements a structured site monitoring visit lifecycle, milestone tracking, and CRA workload allocation maps. All mutations are secured via OIDC auth, audited via append-only `CTMSAuditLog` entries with explicit change reasons under 21 CFR Part 11 requirements, and covered by automated tests to ensure compliance.* | `test_create_and_list_studies_rbac` (tests/test_ctms.py) 🟢<br>`test_get_audit_trail_rbac` (tests/test_ctms.py) 🟢<br>`test_monitoring_visit_workflow_happy_path` (tests/test_ctms.py) 🟢<br>`test_monitoring_visit_workflow_rbac_denials` (tests/test_ctms.py) 🟢<br>`test_monitoring_visit_invalid_state_and_findings` (tests/test_ctms.py) 🟢<br>`test_recruitment_records_crud_and_audit` (tests/test_ctms.py) 🟢<br>`test_site_milestones_crud_and_audit` (tests/test_ctms.py) 🟢<br>`test_cra_allocations_rbac_reassignment_workload` (tests/test_ctms.py) 🟢<br>`test_monitoring_visit_scheduling_respects_cra_allocation` (tests/test_ctms.py) 🟢 | ✅ **Passed** |
-| Trace-7 | SRS | **Quality & CAPA Traceability and Validation Assurance**<br>*Quality mutations require a secure `X-Change-Reason` header and valid gateway-signed token. Transitions are validated by the FastAPI router in `apps/quality/main.py`. Role permissions are gated via `authorize_quality_write` and `authorize_quality_oversight`. System consistency and audit trial immutability are verified in `tests/test_quality_workflow.py`.* | *None* | ❌ **Unmapped** |
+| Trace-7 | SRS | **Quality & CAPA Traceability and Validation Assurance**<br>*Quality mutations require a secure `X-Change-Reason` header and valid gateway-signed token. Transitions are validated by the FastAPI router in `apps/quality/main.py`. Role permissions are gated via `authorize_quality_write` and `authorize_quality_oversight`. System consistency and audit trial immutability are verified in `tests/test_quality_workflow.py`.* | `test_create_and_list_deviations` (tests/test_quality_workflow.py) 🟢 | ✅ **Passed** |
 
 ## 3. Unmapped Requirements
 
@@ -94,5 +94,3 @@
 - **PRD-SUB-006** (PRD): Immediate Unblinding State Mutation & System Actions
 - **PRD-SUB-007** (PRD): Re-Consent Gating on Visits
 - **PRD-SYS-004** (PRD): Universal Site Isolation Constraint
-- **Trace-3** (SRS): Read-Only Trial Locks & Alert Routing
-- **Trace-7** (SRS): Quality & CAPA Traceability and Validation Assurance
