@@ -335,7 +335,12 @@ export function createCtmsVisitTable(visits) {
  * @param {Object} [selectedValues={}] - Selected values for pre-populating fields.
  * @returns {string} The HTML string representing the condition row.
  */
-export function createConditionRow(index, forms = [], fields = [], selectedValues = {}) {
+export function createConditionRow(
+  index,
+  forms = [],
+  fields = [],
+  selectedValues = {}
+) {
   const {
     formId = "",
     fieldId = "",
@@ -378,7 +383,10 @@ export function createConditionRow(index, forms = [], fields = [], selectedValue
   ];
 
   const operatorOptions = operators
-    .map((op) => `<option value="${op.value}"${op.value === operator ? " selected" : ""}>${op.label}</option>`)
+    .map(
+      (op) =>
+        `<option value="${op.value}"${op.value === operator ? " selected" : ""}>${op.label}</option>`
+    )
     .join("");
 
   return `

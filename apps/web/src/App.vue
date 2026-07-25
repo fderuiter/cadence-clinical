@@ -17,24 +17,15 @@
       <!-- Sidebar -->
       <aside>
         <div>
-          <div class="nav-title">
-            Showcase Modules
-          </div>
+          <div class="nav-title">Showcase Modules</div>
           <ul class="nav-menu">
             <li
               id="tab-btn-mdr"
               class="nav-item"
               :class="{ active: $route.name === 'mdr' }"
             >
-              <router-link
-                v-slot="{ navigate }"
-                to="/mdr"
-                custom
-              >
-                <button
-                  type="button"
-                  @click="navigate"
-                >
+              <router-link v-slot="{ navigate }" to="/mdr" custom>
+                <button type="button" @click="navigate">
                   <span>📋</span> MDR Protocol Designer
                 </button>
               </router-link>
@@ -44,15 +35,8 @@
               class="nav-item"
               :class="{ active: $route.name === 'ecrf' }"
             >
-              <router-link
-                v-slot="{ navigate }"
-                to="/ecrf"
-                custom
-              >
-                <button
-                  type="button"
-                  @click="navigate"
-                >
+              <router-link v-slot="{ navigate }" to="/ecrf" custom>
+                <button type="button" @click="navigate">
                   <span>🩺</span> eCRF Form Engine
                 </button>
               </router-link>
@@ -62,15 +46,8 @@
               class="nav-item"
               :class="{ active: $route.name === 'ctms' }"
             >
-              <router-link
-                v-slot="{ navigate }"
-                to="/ctms"
-                custom
-              >
-                <button
-                  type="button"
-                  @click="navigate"
-                >
+              <router-link v-slot="{ navigate }" to="/ctms" custom>
+                <button type="button" @click="navigate">
                   <span>📊</span> CTMS Dashboard
                 </button>
               </router-link>
@@ -80,15 +57,8 @@
               class="nav-item"
               :class="{ active: $route.name === 'audit' }"
             >
-              <router-link
-                v-slot="{ navigate }"
-                to="/audit"
-                custom
-              >
-                <button
-                  type="button"
-                  @click="navigate"
-                >
+              <router-link v-slot="{ navigate }" to="/audit" custom>
+                <button type="button" @click="navigate">
                   <span>🔒</span> Cryptographic Ledger
                 </button>
               </router-link>

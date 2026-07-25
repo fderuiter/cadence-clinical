@@ -1,8 +1,5 @@
 <template>
-  <div
-    id="section-audit"
-    class="dashboard-section active"
-  >
+  <div id="section-audit" class="dashboard-section active">
     <div class="section-header">
       <h2>Cryptographic Audit Log Inspector</h2>
       <p>
@@ -18,20 +15,19 @@
         <button
           id="btn-clear-ledger"
           class="badge"
-          style="cursor: pointer; background-color: var(--error); color: white; border: none;"
+          style="
+            cursor: pointer;
+            background-color: var(--error);
+            color: white;
+            border: none;
+          "
           @click="purgeLedger"
         >
           Purge Audit Trail
         </button>
       </div>
-      <div
-        id="ledger-timeline-container"
-        class="ledger-container"
-      >
-        <div
-          v-if="store.ledgerBlocks.length === 0"
-          class="empty-ledger"
-        >
+      <div id="ledger-timeline-container" class="ledger-container">
+        <div v-if="store.ledgerBlocks.length === 0" class="empty-ledger">
           No ledger entries recorded yet. Make some changes on the tabs above!
         </div>
         <template v-else>
@@ -49,18 +45,18 @@
               {{ block.action }}
             </div>
             <div class="ledger-block-details">
-              <template
-                v-for="(val, key) in block.details"
-                :key="key"
-              >
+              <template v-for="(val, key) in block.details" :key="key">
                 <span class="ledger-lbl">{{ key }}:</span>
-                <span class="ledger-val">{{ typeof val === "object" ? JSON.stringify(val) : val }}</span>
+                <span class="ledger-val">{{
+                  typeof val === "object" ? JSON.stringify(val) : val
+                }}</span>
               </template>
               <span class="ledger-lbl">reason:</span>
               <span
                 class="ledger-val"
-                style="color: var(--accent); font-weight: 600;"
-              >{{ block.reason }}</span>
+                style="color: var(--accent); font-weight: 600"
+                >{{ block.reason }}</span
+              >
             </div>
             <div class="ledger-block-crypto">
               <div class="crypto-row">

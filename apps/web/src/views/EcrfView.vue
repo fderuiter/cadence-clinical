@@ -1,8 +1,5 @@
 <template>
-  <div
-    id="section-ecrf"
-    class="dashboard-section active"
-  >
+  <div id="section-ecrf" class="dashboard-section active">
     <div class="section-header">
       <h2>eCRF Runtime Renderer</h2>
       <p>
@@ -14,19 +11,18 @@
     <div class="grid-2">
       <!-- Dynamic eCRF Form -->
       <div class="card">
-        <div class="card-title">
-          Subject eCRF Data Entry Form
-        </div>
+        <div class="card-title">Subject eCRF Data Entry Form</div>
         <form
           id="form-VS_DEMO"
           class="clinical-form clinical-form-grid"
-          style="display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px;"
+          style="
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 16px;
+          "
           @submit.prevent
         >
-          <template
-            v-for="field in store.ecrfFields"
-            :key="field.id"
-          >
+          <template v-for="field in store.ecrfFields" :key="field.id">
             <!-- Text input field -->
             <div
               v-if="field.type !== 'radio'"
@@ -42,8 +38,10 @@
                   type="text"
                   :name="field.id"
                   :value="store.formValues[field.id]"
-                  @change="handleFieldChange(field, $event.target.value, $event.target)"
-                >
+                  @change="
+                    handleFieldChange(field, $event.target.value, $event.target)
+                  "
+                />
 
                 <!-- Query Flag -->
                 <button
@@ -53,13 +51,15 @@
                   type="button"
                   @click="toggleQueryPanel(field.id)"
                 >
-                  {{ getQueryStatus(field.id) === 'NONE' ? '💬' : '⚠️' }}
+                  {{ getQueryStatus(field.id) === "NONE" ? "💬" : "⚠️" }}
                 </button>
               </div>
 
               <!-- Validation Error -->
               <div
-                v-if="getValidationError(field) && store.formValues[field.id] !== ''"
+                v-if="
+                  getValidationError(field) && store.formValues[field.id] !== ''
+                "
                 class="validation-error-msg"
               >
                 {{ getValidationError(field) }}
@@ -73,7 +73,9 @@
                 role="region"
               >
                 <div class="query-panel-header">
-                  <span class="query-panel-title">Query Manager - {{ field.id }}</span>
+                  <span class="query-panel-title"
+                    >Query Manager - {{ field.id }}</span
+                  >
                   <button
                     type="button"
                     class="btn-close-panel"
@@ -92,7 +94,9 @@
                       Raise a query for this field:
                     </p>
                     <div class="form-group">
-                      <label :for="`query-message-${field.id}`">Discrepancy Message</label>
+                      <label :for="`query-message-${field.id}`"
+                        >Discrepancy Message</label
+                      >
                       <textarea
                         :id="`query-message-${field.id}`"
                         v-model="queryInputs[field.id]"
@@ -111,7 +115,10 @@
 
                   <!-- Open/Reopened Query State -->
                   <div
-                    v-else-if="getQueryStatus(field.id) === 'OPEN' || getQueryStatus(field.id) === 'REOPENED'"
+                    v-else-if="
+                      getQueryStatus(field.id) === 'OPEN' ||
+                      getQueryStatus(field.id) === 'REOPENED'
+                    "
                     class="query-details"
                   >
                     <div
@@ -121,17 +128,19 @@
                       Status: {{ getQueryStatus(field.id) }}
                     </div>
                     <p class="query-current-msg">
-                      <strong>Discrepancy:</strong> {{ store.formQueries[field.id].message }}
+                      <strong>Discrepancy:</strong>
+                      {{ store.formQueries[field.id].message }}
                     </p>
                     <p class="query-meta">
-                      Raised by: {{ store.formQueries[field.id].createdBy || 'System' }} on {{ store.formQueries[field.id].createdAt }}
+                      Raised by:
+                      {{ store.formQueries[field.id].createdBy || "System" }} on
+                      {{ store.formQueries[field.id].createdAt }}
                     </p>
-                    <div
-                      class="query-respond-section"
-                      style="margin-top: 12px;"
-                    >
+                    <div class="query-respond-section" style="margin-top: 12px">
                       <div class="form-group">
-                        <label :for="`query-response-${field.id}`">Your Response</label>
+                        <label :for="`query-response-${field.id}`"
+                          >Your Response</label
+                        >
                         <textarea
                           :id="`query-response-${field.id}`"
                           v-model="queryResponses[field.id]"
@@ -158,17 +167,21 @@
                       Status: ANSWERED
                     </div>
                     <p class="query-current-msg">
-                      <strong>Discrepancy:</strong> {{ store.formQueries[field.id].message }}
+                      <strong>Discrepancy:</strong>
+                      {{ store.formQueries[field.id].message }}
                     </p>
                     <p class="query-response-msg">
-                      <strong>Response:</strong> {{ store.formQueries[field.id].response }}
+                      <strong>Response:</strong>
+                      {{ store.formQueries[field.id].response }}
                     </p>
                     <p class="query-meta">
-                      Responded by: {{ store.formQueries[field.id].respondedBy }} on {{ store.formQueries[field.id].respondedAt }}
+                      Responded by:
+                      {{ store.formQueries[field.id].respondedBy }} on
+                      {{ store.formQueries[field.id].respondedAt }}
                     </p>
                     <div
                       class="query-actions-section"
-                      style="margin-top: 12px; display: flex; gap: 8px;"
+                      style="margin-top: 12px; display: flex; gap: 8px"
                     >
                       <button
                         type="button"
@@ -196,13 +209,16 @@
                       Status: CLOSED
                     </div>
                     <p class="query-current-msg">
-                      <strong>Discrepancy:</strong> {{ store.formQueries[field.id].message }}
+                      <strong>Discrepancy:</strong>
+                      {{ store.formQueries[field.id].message }}
                     </p>
                     <p class="query-response-msg">
-                      <strong>Response:</strong> {{ store.formQueries[field.id].response }}
+                      <strong>Response:</strong>
+                      {{ store.formQueries[field.id].response }}
                     </p>
                     <p class="query-meta">
-                      Closed by: {{ store.formQueries[field.id].closedBy }} on {{ store.formQueries[field.id].closedAt }}
+                      Closed by: {{ store.formQueries[field.id].closedBy }} on
+                      {{ store.formQueries[field.id].closedAt }}
                     </p>
                     <p class="query-history-info">
                       This query is permanently resolved and closed.
@@ -233,9 +249,13 @@
                       :name="field.id"
                       :value="opt.value"
                       :checked="store.formValues[field.id] === opt.value"
-                      @change="handleFieldChange(field, opt.value, $event.target)"
-                    >
-                    <label :for="`${field.id}_option_${idx}`">{{ opt.label }}</label>
+                      @change="
+                        handleFieldChange(field, opt.value, $event.target)
+                      "
+                    />
+                    <label :for="`${field.id}_option_${idx}`">{{
+                      opt.label
+                    }}</label>
                   </div>
                 </div>
 
@@ -247,7 +267,7 @@
                   type="button"
                   @click="toggleQueryPanel(field.id)"
                 >
-                  {{ getQueryStatus(field.id) === 'NONE' ? '💬' : '⚠️' }}
+                  {{ getQueryStatus(field.id) === "NONE" ? "💬" : "⚠️" }}
                 </button>
               </div>
 
@@ -259,7 +279,9 @@
                 role="region"
               >
                 <div class="query-panel-header">
-                  <span class="query-panel-title">Query Manager - {{ field.id }}</span>
+                  <span class="query-panel-title"
+                    >Query Manager - {{ field.id }}</span
+                  >
                   <button
                     type="button"
                     class="btn-close-panel"
@@ -278,7 +300,9 @@
                       Raise a query for this field:
                     </p>
                     <div class="form-group">
-                      <label :for="`query-message-${field.id}`">Discrepancy Message</label>
+                      <label :for="`query-message-${field.id}`"
+                        >Discrepancy Message</label
+                      >
                       <textarea
                         :id="`query-message-${field.id}`"
                         v-model="queryInputs[field.id]"
@@ -297,7 +321,10 @@
 
                   <!-- Open/Reopened Query State -->
                   <div
-                    v-else-if="getQueryStatus(field.id) === 'OPEN' || getQueryStatus(field.id) === 'REOPENED'"
+                    v-else-if="
+                      getQueryStatus(field.id) === 'OPEN' ||
+                      getQueryStatus(field.id) === 'REOPENED'
+                    "
                     class="query-details"
                   >
                     <div
@@ -307,17 +334,19 @@
                       Status: {{ getQueryStatus(field.id) }}
                     </div>
                     <p class="query-current-msg">
-                      <strong>Discrepancy:</strong> {{ store.formQueries[field.id].message }}
+                      <strong>Discrepancy:</strong>
+                      {{ store.formQueries[field.id].message }}
                     </p>
                     <p class="query-meta">
-                      Raised by: {{ store.formQueries[field.id].createdBy || 'System' }} on {{ store.formQueries[field.id].createdAt }}
+                      Raised by:
+                      {{ store.formQueries[field.id].createdBy || "System" }} on
+                      {{ store.formQueries[field.id].createdAt }}
                     </p>
-                    <div
-                      class="query-respond-section"
-                      style="margin-top: 12px;"
-                    >
+                    <div class="query-respond-section" style="margin-top: 12px">
                       <div class="form-group">
-                        <label :for="`query-response-${field.id}`">Your Response</label>
+                        <label :for="`query-response-${field.id}`"
+                          >Your Response</label
+                        >
                         <textarea
                           :id="`query-response-${field.id}`"
                           v-model="queryResponses[field.id]"
@@ -344,17 +373,21 @@
                       Status: ANSWERED
                     </div>
                     <p class="query-current-msg">
-                      <strong>Discrepancy:</strong> {{ store.formQueries[field.id].message }}
+                      <strong>Discrepancy:</strong>
+                      {{ store.formQueries[field.id].message }}
                     </p>
                     <p class="query-response-msg">
-                      <strong>Response:</strong> {{ store.formQueries[field.id].response }}
+                      <strong>Response:</strong>
+                      {{ store.formQueries[field.id].response }}
                     </p>
                     <p class="query-meta">
-                      Responded by: {{ store.formQueries[field.id].respondedBy }} on {{ store.formQueries[field.id].respondedAt }}
+                      Responded by:
+                      {{ store.formQueries[field.id].respondedBy }} on
+                      {{ store.formQueries[field.id].respondedAt }}
                     </p>
                     <div
                       class="query-actions-section"
-                      style="margin-top: 12px; display: flex; gap: 8px;"
+                      style="margin-top: 12px; display: flex; gap: 8px"
                     >
                       <button
                         type="button"
@@ -382,13 +415,16 @@
                       Status: CLOSED
                     </div>
                     <p class="query-current-msg">
-                      <strong>Discrepancy:</strong> {{ store.formQueries[field.id].message }}
+                      <strong>Discrepancy:</strong>
+                      {{ store.formQueries[field.id].message }}
                     </p>
                     <p class="query-response-msg">
-                      <strong>Response:</strong> {{ store.formQueries[field.id].response }}
+                      <strong>Response:</strong>
+                      {{ store.formQueries[field.id].response }}
                     </p>
                     <p class="query-meta">
-                      Closed by: {{ store.formQueries[field.id].closedBy }} on {{ store.formQueries[field.id].closedAt }}
+                      Closed by: {{ store.formQueries[field.id].closedBy }} on
+                      {{ store.formQueries[field.id].closedAt }}
                     </p>
                     <p class="query-history-info">
                       This query is permanently resolved and closed.
@@ -401,11 +437,7 @@
         </form>
 
         <div class="form-actions">
-          <button
-            id="btn-clear-ecrf"
-            class="btn"
-            @click="clearForm"
-          >
+          <button id="btn-clear-ecrf" class="btn" @click="clearForm">
             Clear Form
           </button>
           <button
@@ -424,30 +456,73 @@
         style="display: flex; flex-direction: column; gap: 16px"
       >
         <div>
-          <div class="card-title">
-            CDASH Metadata Specification
-          </div>
+          <div class="card-title">CDASH Metadata Specification</div>
           <p style="font-size: 0.85rem; color: #475569; margin-bottom: 8px">
-            The fields on the left are dynamically rendered using
-            structural CDASH metadata tags (e.g. <code>DM.BRTHDT</code>,
+            The fields on the left are dynamically rendered using structural
+            CDASH metadata tags (e.g. <code>DM.BRTHDT</code>,
             <code>VS.VSSBP</code>).
           </p>
         </div>
 
-        <div style="border: 1px solid var(--border); border-radius: 8px; padding: 12px; background-color: #f8fafc;">
-          <h3 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 8px; color: var(--primary);">
+        <div
+          style="
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            background-color: #f8fafc;
+          "
+        >
+          <h3
+            style="
+              font-size: 0.9rem;
+              font-weight: 700;
+              margin-bottom: 8px;
+              color: var(--primary);
+            "
+          >
             Real-time Field Validation Rules:
           </h3>
-          <ul style="font-size: 0.8rem; padding-left: 20px; color: #475569; display: flex; flex-direction: column; gap: 6px;">
+          <ul
+            style="
+              font-size: 0.8rem;
+              padding-left: 20px;
+              color: #475569;
+              display: flex;
+              flex-direction: column;
+              gap: 6px;
+            "
+          >
             <li><strong>Birth Date:</strong> Must match YYYY-MM-DD pattern.</li>
-            <li><strong>Systolic BP:</strong> Numeric value between 50 and 250 mmHg.</li>
-            <li><strong>Diastolic BP:</strong> Numeric value between 30 and 150 mmHg.</li>
-            <li><strong>Pulse Rate:</strong> Numeric value between 30 and 200 bpm.</li>
+            <li>
+              <strong>Systolic BP:</strong> Numeric value between 50 and 250
+              mmHg.
+            </li>
+            <li>
+              <strong>Diastolic BP:</strong> Numeric value between 30 and 150
+              mmHg.
+            </li>
+            <li>
+              <strong>Pulse Rate:</strong> Numeric value between 30 and 200 bpm.
+            </li>
           </ul>
         </div>
 
-        <div style="border: 1px solid var(--border); border-radius: 8px; padding: 12px; background-color: #f8fafc;">
-          <h3 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 8px; color: var(--primary);">
+        <div
+          style="
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            background-color: #f8fafc;
+          "
+        >
+          <h3
+            style="
+              font-size: 0.9rem;
+              font-weight: 700;
+              margin-bottom: 8px;
+              color: var(--primary);
+            "
+          >
             Query Management Actions:
           </h3>
           <p style="font-size: 0.8rem; color: #475569; line-height: 1.4">
@@ -464,45 +539,33 @@
       v-if="showReasonModal"
       id="reason-modal"
       class="modal-overlay"
-      style="display: flex;"
+      style="display: flex"
     >
       <div class="modal">
-        <div class="modal-header">
-          Reason for Change Required
-        </div>
+        <div class="modal-header">Reason for Change Required</div>
         <div class="modal-body">
           <p>
             To comply with <strong>21 CFR Part 11 / EU Annex 11</strong>, you
             must document a reason for changing this clinical data field.
           </p>
-          <div
-            class="form-group"
-            style="margin-bottom: 12px"
-          >
+          <div class="form-group" style="margin-bottom: 12px">
             <label for="change-reason-select">Select Standard Reason</label>
-            <select
-              id="change-reason-select"
-              v-model="selectedReason"
-            >
-              <option value="Initial Entry">
-                Initial Data Entry
-              </option>
+            <select id="change-reason-select" v-model="selectedReason">
+              <option value="Initial Entry">Initial Data Entry</option>
               <option value="Typographical Error">
                 Correction of typographical error
               </option>
-              <option value="Re-measurement">
-                Re-measurement of vitals
-              </option>
+              <option value="Re-measurement">Re-measurement of vitals</option>
               <option value="Transcription Error">
                 Correction of transcription error
               </option>
-              <option value="Other">
-                Other (specify below)
-              </option>
+              <option value="Other">Other (specify below)</option>
             </select>
           </div>
           <div class="form-group">
-            <label for="change-reason-text">Custom Explanation (Optional)</label>
+            <label for="change-reason-text"
+              >Custom Explanation (Optional)</label
+            >
             <textarea
               id="change-reason-text"
               v-model="customReasonExplanation"
@@ -511,11 +574,7 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button
-            id="btn-cancel-change"
-            class="btn"
-            @click="cancelChange"
-          >
+          <button id="btn-cancel-change" class="btn" @click="cancelChange">
             Cancel Change
           </button>
           <button
@@ -574,7 +633,7 @@ function handleFieldChange(field, newValue, targetEl) {
       field,
       oldValue,
       newValue,
-      targetEl
+      targetEl,
     };
     selectedReason.value = "Initial Entry";
     customReasonExplanation.value = "";
@@ -589,7 +648,8 @@ function cancelChange() {
     if (pendingValueChange.value.targetEl.type === "radio") {
       // Vue handles radio binding automatically, but let's force re-sync if needed
     } else {
-      pendingValueChange.value.targetEl.value = pendingValueChange.value.oldValue;
+      pendingValueChange.value.targetEl.value =
+        pendingValueChange.value.oldValue;
     }
   }
   showReasonModal.value = false;
@@ -602,9 +662,7 @@ function saveChange() {
   const sel = selectedReason.value;
   const cust = customReasonExplanation.value.trim();
   const finalReason =
-    sel === "Other" && cust
-      ? cust
-      : `${sel}${cust ? ": " + cust : ""}`;
+    sel === "Other" && cust ? cust : `${sel}${cust ? ": " + cust : ""}`;
 
   commitChange(
     pendingValueChange.value.field,
@@ -693,7 +751,8 @@ function closeQuery(fieldId) {
 function reopenQuery(fieldId) {
   const queryObj = store.formQueries[fieldId];
   queryObj.status = "REOPENED";
-  queryObj.message = queryObj.message + " [Reopened due to insufficient response]";
+  queryObj.message =
+    queryObj.message + " [Reopened due to insufficient response]";
 
   store.addLedgerBlock(
     "QUERY_REOPEN",
@@ -727,7 +786,10 @@ function submitEcrf() {
   });
 
   if (!allValid) {
-    alert("Cannot submit eCRF! The form contains validation errors:\n\n" + errMsgs.join("\n"));
+    alert(
+      "Cannot submit eCRF! The form contains validation errors:\n\n" +
+        errMsgs.join("\n")
+    );
     return;
   }
 
@@ -741,6 +803,8 @@ function submitEcrf() {
     "eCRF successfully verified, finalized, and electronically submitted."
   );
 
-  alert("eCRF Session successfully submitted to secure cryptographic database!");
+  alert(
+    "eCRF Session successfully submitted to secure cryptographic database!"
+  );
 }
 </script>

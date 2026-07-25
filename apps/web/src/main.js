@@ -23,7 +23,8 @@ const keycloak = new Keycloak(keycloakConfig);
 keycloak
   .init({
     onLoad: "check-sso",
-    silentCheckSsoRedirectUri: window.location.origin + "/silent-check-sso.html",
+    silentCheckSsoRedirectUri:
+      window.location.origin + "/silent-check-sso.html",
     pkceMethod: "S256",
   })
   .then((authenticated) => {
@@ -31,7 +32,10 @@ keycloak
     app.mount("#app");
   })
   .catch((err) => {
-    console.warn("Keycloak initialization failed or timed out (offline/demo fallback):", err);
+    console.warn(
+      "Keycloak initialization failed or timed out (offline/demo fallback):",
+      err
+    );
     // Proceed mounting the application even if Keycloak server is not running,
     // ensuring the standalone web demo remains fully functional for sandbox testing.
     app.mount("#app");

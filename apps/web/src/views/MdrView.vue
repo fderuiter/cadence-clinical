@@ -1,13 +1,10 @@
 <template>
-  <div
-    id="section-mdr"
-    class="dashboard-section active"
-  >
+  <div id="section-mdr" class="dashboard-section active">
     <div class="section-header">
       <h2>MDR / Protocol Visualizer</h2>
       <p>
-        Unify upstream clinical study definitions (USDM metadata) directly
-        into a visual Schedule of Activities matrix.
+        Unify upstream clinical study definitions (USDM metadata) directly into
+        a visual Schedule of Activities matrix.
       </p>
     </div>
 
@@ -19,7 +16,12 @@
           <button
             id="btn-reset-usdm"
             class="badge"
-            style="cursor: pointer; background-color: var(--accent); color: white; border: none;"
+            style="
+              cursor: pointer;
+              background-color: var(--accent);
+              color: white;
+              border: none;
+            "
             @click="resetUsdm"
           >
             Reset Mock JSON
@@ -32,11 +34,10 @@
           spellcheck="false"
         />
         <p style="font-size: 0.8rem; color: #64748b; margin-top: 8px">
-          Edit this mock USDM JSON definition and click "Update
-          Visualizer" below to dynamically re-render the Schedule of
-          Activities Matrix.
+          Edit this mock USDM JSON definition and click "Update Visualizer"
+          below to dynamically re-render the Schedule of Activities Matrix.
         </p>
-        <div style="margin-top: 12px; display: flex; justify-content: flex-end;">
+        <div style="margin-top: 12px; display: flex; justify-content: flex-end">
           <button
             id="btn-update-soa"
             class="btn btn-primary"
@@ -49,13 +50,8 @@
 
       <!-- Schedule of Activities table -->
       <div class="card">
-        <div class="card-title">
-          Schedule of Activities (SoA) Matrix
-        </div>
-        <div
-          id="soa-matrix-container"
-          v-html="matrixHtml"
-        />
+        <div class="card-title">Schedule of Activities (SoA) Matrix</div>
+        <div id="soa-matrix-container" v-html="matrixHtml" />
       </div>
     </div>
   </div>
@@ -70,9 +66,13 @@ const store = useClinicalStore();
 
 const usdmText = ref(JSON.stringify(store.currentUsdm, null, 2));
 
-watch(() => store.currentUsdm, (newVal) => {
-  usdmText.value = JSON.stringify(newVal, null, 2);
-}, { deep: true });
+watch(
+  () => store.currentUsdm,
+  (newVal) => {
+    usdmText.value = JSON.stringify(newVal, null, 2);
+  },
+  { deep: true }
+);
 
 const matrixHtml = computed(() => {
   try {
@@ -94,15 +94,23 @@ function resetUsdm() {
       {
         id: "OBJ-001",
         type: "Primary",
-        description: "Evaluate the reduction of mean sitting Systolic Blood Pressure (SBP) from baseline.",
+        description:
+          "Evaluate the reduction of mean sitting Systolic Blood Pressure (SBP) from baseline.",
       },
       {
         id: "OBJ-002",
         type: "Secondary",
-        description: "Evaluate safety and tolerability of daily oral administration of Cadence-001.",
+        description:
+          "Evaluate safety and tolerability of daily oral administration of Cadence-001.",
       },
     ],
-    visits: ["Screening", "Baseline (Day 1)", "Week 2", "Week 4", "End of Study"],
+    visits: [
+      "Screening",
+      "Baseline (Day 1)",
+      "Week 2",
+      "Week 4",
+      "End of Study",
+    ],
     forms: [
       {
         name: "Demographics",

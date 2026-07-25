@@ -315,18 +315,66 @@ if (typeof document !== "undefined") {
     // --- 1.5 CTMS MOCK DATA ---
     const defaultCtmsData = {
       milestones: [
-        { id: "M1", type: "SITE_SELECTION", plannedDate: "2026-08-01", actualDate: "2026-08-01", status: "ACHIEVED" },
-        { id: "M2", type: "INITIATION_VISIT", plannedDate: "2026-08-10", actualDate: "2026-08-12", status: "ACHIEVED" },
-        { id: "M3", type: "SITE_ACTIVATION", plannedDate: "2026-08-15", actualDate: "", status: "PLANNED" },
-        { id: "M4", type: "FIRST_SUBJECT_ENROLLED", plannedDate: "2026-09-01", actualDate: "", status: "PLANNED" },
+        {
+          id: "M1",
+          type: "SITE_SELECTION",
+          plannedDate: "2026-08-01",
+          actualDate: "2026-08-01",
+          status: "ACHIEVED",
+        },
+        {
+          id: "M2",
+          type: "INITIATION_VISIT",
+          plannedDate: "2026-08-10",
+          actualDate: "2026-08-12",
+          status: "ACHIEVED",
+        },
+        {
+          id: "M3",
+          type: "SITE_ACTIVATION",
+          plannedDate: "2026-08-15",
+          actualDate: "",
+          status: "PLANNED",
+        },
+        {
+          id: "M4",
+          type: "FIRST_SUBJECT_ENROLLED",
+          plannedDate: "2026-09-01",
+          actualDate: "",
+          status: "PLANNED",
+        },
       ],
       visits: [
-        { id: "V1", type: "SIV", scheduledDate: "2026-08-10", actualDate: "2026-08-12", status: "SIGNED_OFF", cra: "cra_fderuiter" },
-        { id: "V2", type: "IMV", scheduledDate: "2026-08-25", actualDate: "", status: "SCHEDULED", cra: "cra_fderuiter" },
+        {
+          id: "V1",
+          type: "SIV",
+          scheduledDate: "2026-08-10",
+          actualDate: "2026-08-12",
+          status: "SIGNED_OFF",
+          cra: "cra_fderuiter",
+        },
+        {
+          id: "V2",
+          type: "IMV",
+          scheduledDate: "2026-08-25",
+          actualDate: "",
+          status: "SCHEDULED",
+          cra: "cra_fderuiter",
+        },
       ],
       allocations: [
-        { cra: "cra_fderuiter", activeAllocations: 3, sites: ["Site-01", "Site-02", "Site-09"], studies: ["STUDY-01", "STUDY-02"] },
-        { cra: "cra_alice", activeAllocations: 1, sites: ["Site-03"], studies: ["STUDY-01"] },
+        {
+          cra: "cra_fderuiter",
+          activeAllocations: 3,
+          sites: ["Site-01", "Site-02", "Site-09"],
+          studies: ["STUDY-01", "STUDY-02"],
+        },
+        {
+          cra: "cra_alice",
+          activeAllocations: 1,
+          sites: ["Site-03"],
+          studies: ["STUDY-01"],
+        },
       ],
       recruitment: [
         { siteId: "Site-01", screened: 15, enrolled: 8, target: 20 },
@@ -961,18 +1009,26 @@ if (typeof document !== "undefined") {
       renderCtms(currentCtmsData);
     }
 
-    const btnAchieveMilestone = document.getElementById("btn-achieve-milestone");
+    const btnAchieveMilestone = document.getElementById(
+      "btn-achieve-milestone"
+    );
     if (btnAchieveMilestone) {
       btnAchieveMilestone.addEventListener("click", () => {
         // Find first PLANNED milestone and achieve it
-        const nextM = currentCtmsData.milestones.find((m) => m.status === "PLANNED");
+        const nextM = currentCtmsData.milestones.find(
+          (m) => m.status === "PLANNED"
+        );
         if (nextM) {
           nextM.status = "ACHIEVED";
           nextM.actualDate = new Date().toISOString().slice(0, 10);
           renderWebCtms();
           addLedgerBlock(
             "CTMS_MILESTONE_ACHIEVED",
-            { milestoneType: nextM.type, status: nextM.status, actualDate: nextM.actualDate },
+            {
+              milestoneType: nextM.type,
+              status: nextM.status,
+              actualDate: nextM.actualDate,
+            },
             `Site operational milestone '${nextM.type}' achieved and verified.`
           );
         } else {
@@ -987,16 +1043,22 @@ if (typeof document !== "undefined") {
         const newVisit = {
           id: "V" + (currentCtmsData.visits.length + 1),
           type: "IMV",
-          scheduledDate: new Date(Date.now() + 5 * 24 * 3600 * 1000).toISOString().slice(0, 10),
+          scheduledDate: new Date(Date.now() + 5 * 24 * 3600 * 1000)
+            .toISOString()
+            .slice(0, 10),
           actualDate: "",
           status: "SCHEDULED",
-          cra: "cra_fderuiter"
+          cra: "cra_fderuiter",
         };
         currentCtmsData.visits.push(newVisit);
         renderWebCtms();
         addLedgerBlock(
           "CTMS_VISIT_SCHEDULED",
-          { visitId: newVisit.id, type: newVisit.type, scheduledDate: newVisit.scheduledDate },
+          {
+            visitId: newVisit.id,
+            type: newVisit.type,
+            scheduledDate: newVisit.scheduledDate,
+          },
           `New Monitoring Visit scheduled for ${newVisit.scheduledDate}. Confirmation letter issued.`
         );
       });
@@ -1005,14 +1067,20 @@ if (typeof document !== "undefined") {
     const btnCompleteVisit = document.getElementById("btn-complete-visit");
     if (btnCompleteVisit) {
       btnCompleteVisit.addEventListener("click", () => {
-        const scheduledVisit = currentCtmsData.visits.find((v) => v.status === "SCHEDULED");
+        const scheduledVisit = currentCtmsData.visits.find(
+          (v) => v.status === "SCHEDULED"
+        );
         if (scheduledVisit) {
           scheduledVisit.status = "SIGNED_OFF";
           scheduledVisit.actualDate = new Date().toISOString().slice(0, 10);
           renderWebCtms();
           addLedgerBlock(
             "CTMS_VISIT_COMPLETED",
-            { visitId: scheduledVisit.id, type: scheduledVisit.type, actualDate: scheduledVisit.actualDate },
+            {
+              visitId: scheduledVisit.id,
+              type: scheduledVisit.type,
+              actualDate: scheduledVisit.actualDate,
+            },
             `Monitoring Visit '${scheduledVisit.id}' completed and signed off. Follow-up letter issued.`
           );
         } else {
@@ -1024,7 +1092,9 @@ if (typeof document !== "undefined") {
     const btnReallocateCra = document.getElementById("btn-reallocate-cra");
     if (btnReallocateCra) {
       btnReallocateCra.addEventListener("click", () => {
-        const craAlice = currentCtmsData.allocations.find((a) => a.cra === "cra_alice");
+        const craAlice = currentCtmsData.allocations.find(
+          (a) => a.cra === "cra_alice"
+        );
         if (craAlice) {
           if (craAlice.activeAllocations === 1) {
             craAlice.activeAllocations = 2;
@@ -1036,24 +1106,36 @@ if (typeof document !== "undefined") {
           renderWebCtms();
           addLedgerBlock(
             "CTMS_CRA_REALLOCATION",
-            { cra: craAlice.cra, activeAllocations: craAlice.activeAllocations, sites: craAlice.sites },
+            {
+              cra: craAlice.cra,
+              activeAllocations: craAlice.activeAllocations,
+              sites: craAlice.sites,
+            },
             `CRA allocations updated to balance workload.`
           );
         }
       });
     }
 
-    const btnUpdateRecruitment = document.getElementById("btn-update-recruitment");
+    const btnUpdateRecruitment = document.getElementById(
+      "btn-update-recruitment"
+    );
     if (btnUpdateRecruitment) {
       btnUpdateRecruitment.addEventListener("click", () => {
-        const site1 = currentCtmsData.recruitment.find((r) => r.siteId === "Site-01");
+        const site1 = currentCtmsData.recruitment.find(
+          (r) => r.siteId === "Site-01"
+        );
         if (site1) {
           site1.screened += 2;
           site1.enrolled += 1;
           renderWebCtms();
           addLedgerBlock(
             "CTMS_RECRUITMENT_UPDATE",
-            { siteId: site1.siteId, screened: site1.screened, enrolled: site1.enrolled },
+            {
+              siteId: site1.siteId,
+              screened: site1.screened,
+              enrolled: site1.enrolled,
+            },
             `Logged enrollment of new subject at Site-01.`
           );
         }
@@ -1062,7 +1144,6 @@ if (typeof document !== "undefined") {
 
     // --- 9.6 RULES DESIGNER SYSTEM ---
     let activeRules = [];
-    let rulesWorkspaceOpen = false;
     let editingRuleId = null;
     let currentConditionRowsCount = 0;
 
@@ -1082,8 +1163,12 @@ if (typeof document !== "undefined") {
     ];
 
     const rulesListContainer = document.getElementById("rules-list-container");
-    const rulesEditorWorkspace = document.getElementById("rules-editor-workspace");
-    const rulesEditorContainer = document.getElementById("rules-editor-container");
+    const rulesEditorWorkspace = document.getElementById(
+      "rules-editor-workspace"
+    );
+    const rulesEditorContainer = document.getElementById(
+      "rules-editor-container"
+    );
     const btnNewRule = document.getElementById("btn-new-rule");
 
     function renderRulesList() {
@@ -1141,7 +1226,10 @@ if (typeof document !== "undefined") {
 
       editingRuleId = rule ? rule.id : null;
       rulesEditorWorkspace.style.display = "block";
-      rulesEditorContainer.innerHTML = createRuleEditorContainer(mockStudyForms, mockStudyFields);
+      rulesEditorContainer.innerHTML = createRuleEditorContainer(
+        mockStudyForms,
+        mockStudyFields
+      );
 
       // DOM Elements inside editor
       const selectRuleType = document.getElementById("rule-type");
@@ -1159,10 +1247,18 @@ if (typeof document !== "undefined") {
       // Toggle container visibility based on Rule Type
       function updateTypeVisibility() {
         const type = selectRuleType.value;
-        const targetContainer = document.querySelector(".rule-target-container");
-        const actionContainer = document.querySelector(".rule-action-container");
-        const targetFormContainer = document.querySelector(".rule-target-form-container");
-        const messageContainer = document.querySelector(".rule-message-container");
+        const targetContainer = document.querySelector(
+          ".rule-target-container"
+        );
+        const actionContainer = document.querySelector(
+          ".rule-action-container"
+        );
+        const targetFormContainer = document.querySelector(
+          ".rule-target-form-container"
+        );
+        const messageContainer = document.querySelector(
+          ".rule-message-container"
+        );
 
         if (type === "skip_logic") {
           targetContainer.style.display = "block";
@@ -1187,7 +1283,12 @@ if (typeof document !== "undefined") {
 
       function addConditionRowToDOM(selectedValues = {}) {
         const index = currentConditionRowsCount++;
-        const rowHTML = createConditionRow(index, mockStudyForms, mockStudyFields, selectedValues);
+        const rowHTML = createConditionRow(
+          index,
+          mockStudyForms,
+          mockStudyFields,
+          selectedValues
+        );
 
         // Wrap in a div element so we can easily remove/manage it
         const div = document.createElement("div");
@@ -1196,49 +1297,67 @@ if (typeof document !== "undefined") {
 
         // Attach listeners to newly added elements
         const row = document.getElementById(`condition-row-${index}`);
-        row.querySelector(".btn-remove-condition").addEventListener("click", () => {
-          row.remove();
-          triggerPreview();
-        });
+        row
+          .querySelector(".btn-remove-condition")
+          .addEventListener("click", () => {
+            row.remove();
+            triggerPreview();
+          });
 
-        row.querySelector(".cond-operator-select").addEventListener("change", (e) => {
-          const op = e.target.value;
-          const rightTypeContainer = row.querySelector(".cond-right-type-container");
-          const rightValContainer = row.querySelector(".cond-right-value-container");
-          const rightFieldContainer = row.querySelector(".cond-right-field-container");
+        row
+          .querySelector(".cond-operator-select")
+          .addEventListener("change", (e) => {
+            const op = e.target.value;
+            const rightTypeContainer = row.querySelector(
+              ".cond-right-type-container"
+            );
+            const rightValContainer = row.querySelector(
+              ".cond-right-value-container"
+            );
+            const rightFieldContainer = row.querySelector(
+              ".cond-right-field-container"
+            );
 
-          if (op === "is_empty" || op === "is_not_empty") {
-            rightTypeContainer.style.display = "none";
-            rightValContainer.style.display = "none";
-            rightFieldContainer.style.display = "none";
-          } else {
-            rightTypeContainer.style.display = "block";
-            const rightType = row.querySelector(".cond-right-type-select").value;
-            if (rightType === "constant") {
+            if (op === "is_empty" || op === "is_not_empty") {
+              rightTypeContainer.style.display = "none";
+              rightValContainer.style.display = "none";
+              rightFieldContainer.style.display = "none";
+            } else {
+              rightTypeContainer.style.display = "block";
+              const rightType = row.querySelector(
+                ".cond-right-type-select"
+              ).value;
+              if (rightType === "constant") {
+                rightValContainer.style.display = "block";
+                rightFieldContainer.style.display = "none";
+              } else {
+                rightValContainer.style.display = "none";
+                rightFieldContainer.style.display = "block";
+              }
+            }
+            triggerPreview();
+          });
+
+        row
+          .querySelector(".cond-right-type-select")
+          .addEventListener("change", (e) => {
+            const type = e.target.value;
+            const rightValContainer = row.querySelector(
+              ".cond-right-value-container"
+            );
+            const rightFieldContainer = row.querySelector(
+              ".cond-right-field-container"
+            );
+
+            if (type === "constant") {
               rightValContainer.style.display = "block";
               rightFieldContainer.style.display = "none";
             } else {
               rightValContainer.style.display = "none";
               rightFieldContainer.style.display = "block";
             }
-          }
-          triggerPreview();
-        });
-
-        row.querySelector(".cond-right-type-select").addEventListener("change", (e) => {
-          const type = e.target.value;
-          const rightValContainer = row.querySelector(".cond-right-value-container");
-          const rightFieldContainer = row.querySelector(".cond-right-field-container");
-
-          if (type === "constant") {
-            rightValContainer.style.display = "block";
-            rightFieldContainer.style.display = "none";
-          } else {
-            rightValContainer.style.display = "none";
-            rightFieldContainer.style.display = "block";
-          }
-          triggerPreview();
-        });
+            triggerPreview();
+          });
 
         row.querySelectorAll("select, input").forEach((el) => {
           el.addEventListener("change", triggerPreview);
@@ -1263,7 +1382,8 @@ if (typeof document !== "undefined") {
         if (rule.condition) {
           const node = rule.condition;
           if (node.type === "logical" && node.operands) {
-            document.getElementById("rule-logical-operator").value = node.operator || "and";
+            document.getElementById("rule-logical-operator").value =
+              node.operator || "and";
             node.operands.forEach((operand) => {
               addConditionRowToDOM(deserializeNodeToRow(operand));
             });
@@ -1282,7 +1402,9 @@ if (typeof document !== "undefined") {
       selectAction.addEventListener("change", triggerPreview);
       selectTargetForm.addEventListener("change", triggerPreview);
       inputMessage.addEventListener("input", triggerPreview);
-      document.getElementById("rule-logical-operator").addEventListener("change", triggerPreview);
+      document
+        .getElementById("rule-logical-operator")
+        .addEventListener("change", triggerPreview);
 
       btnCancelRule.addEventListener("click", () => {
         rulesEditorWorkspace.style.display = "none";
@@ -1304,7 +1426,8 @@ if (typeof document !== "undefined") {
           operator: node.operator,
           rightType: right.type === "field_ref" ? "field_ref" : "constant",
           rightValue: right.type === "constant" ? right.value : "",
-          rightFieldId: right.type === "field_ref" ? right.field_ref.field_id : "",
+          rightFieldId:
+            right.type === "field_ref" ? right.field_ref.field_id : "",
         };
       } else if (node.type === "function") {
         const left = node.operands[0];
@@ -1318,7 +1441,6 @@ if (typeof document !== "undefined") {
     }
 
     function serializeRowsToExpressionTree() {
-      const selectRuleType = document.getElementById("rule-type");
       const groupOp = document.getElementById("rule-logical-operator").value;
       const rows = document.querySelectorAll(".condition-row");
 
@@ -1327,7 +1449,9 @@ if (typeof document !== "undefined") {
         const index = row.getAttribute("data-index");
         const formId = document.getElementById(`cond-form-${index}`).value;
         const fieldId = document.getElementById(`cond-field-${index}`).value;
-        const operator = document.getElementById(`cond-operator-${index}`).value;
+        const operator = document.getElementById(
+          `cond-operator-${index}`
+        ).value;
 
         if (!fieldId) return; // Skip incomplete
 
@@ -1336,21 +1460,25 @@ if (typeof document !== "undefined") {
           field_ref: {
             field_id: fieldId,
             form_id: formId || null,
-          }
+          },
         };
 
         if (operator === "is_empty" || operator === "is_not_empty") {
           operands.push({
             type: "function",
             operator: operator,
-            operands: [leftRef]
+            operands: [leftRef],
           });
         } else {
-          const rightType = document.getElementById(`cond-right-type-${index}`).value;
-          let rightNode = null;
+          const rightType = document.getElementById(
+            `cond-right-type-${index}`
+          ).value;
+          let rightNode;
 
           if (rightType === "constant") {
-            const rawVal = document.getElementById(`cond-right-value-${index}`).value;
+            const rawVal = document.getElementById(
+              `cond-right-value-${index}`
+            ).value;
             // Guess type or default to string
             let val = rawVal;
             if (rawVal === "true") val = true;
@@ -1359,22 +1487,24 @@ if (typeof document !== "undefined") {
 
             rightNode = {
               type: "constant",
-              value: val
+              value: val,
             };
           } else {
-            const rightFieldId = document.getElementById(`cond-right-field-${index}`).value;
+            const rightFieldId = document.getElementById(
+              `cond-right-field-${index}`
+            ).value;
             rightNode = {
               type: "field_ref",
               field_ref: {
-                field_id: rightFieldId || ""
-              }
+                field_id: rightFieldId || "",
+              },
             };
           }
 
           operands.push({
             type: "comparison",
             operator: operator,
-            operands: [leftRef, rightNode]
+            operands: [leftRef, rightNode],
           });
         }
       });
@@ -1390,7 +1520,7 @@ if (typeof document !== "undefined") {
       return {
         type: "logical",
         operator: groupOp,
-        operands: operands
+        operands: operands,
       };
     }
 
@@ -1418,22 +1548,27 @@ if (typeof document !== "undefined") {
       const validationDiv = document.getElementById("rule-validation-failures");
       const cyclesDiv = document.getElementById("rule-circular-cycles");
 
-      if (xpathDiv) xpathDiv.innerText = previewRes.xpath || "(No conditions added)";
-      if (validationDiv) validationDiv.innerText = previewRes.failures.join(", ");
-      if (cyclesDiv) cyclesDiv.innerText = previewRes.circular_cycles.join(", ");
+      if (xpathDiv)
+        xpathDiv.innerText = previewRes.xpath || "(No conditions added)";
+      if (validationDiv)
+        validationDiv.innerText = previewRes.failures.join(", ");
+      if (cyclesDiv)
+        cyclesDiv.innerText = previewRes.circular_cycles.join(", ");
     }
 
     function compileMockPreview(payload) {
       // Offline fallback compilation engine for instant local UI feedback
       const failures = [];
       const circular_cycles = [];
-      let xpath = "";
+      let xpath;
 
       // 1. Compile XPath representation
       function compileNode(node) {
         if (!node) return "";
         if (node.type === "constant") {
-          return typeof node.value === "string" ? `'${node.value}'` : String(node.value);
+          return typeof node.value === "string"
+            ? `'${node.value}'`
+            : String(node.value);
         }
         if (node.type === "field_ref") {
           return `/clinical_data/${node.field_ref.form_id ? node.field_ref.form_id + "/" : ""}${node.field_ref.field_id}`;
@@ -1447,7 +1582,9 @@ if (typeof document !== "undefined") {
           return `(${compileNode(node.operands[0])} ${node.operator === "==" ? "=" : node.operator} ${compileNode(node.operands[1])})`;
         }
         if (node.type === "logical") {
-          const ops = node.operands.map(compileNode).join(` ${node.operator.toUpperCase()} `);
+          const ops = node.operands
+            .map(compileNode)
+            .join(` ${node.operator.toUpperCase()} `);
           return `(${ops})`;
         }
         return "";
@@ -1478,7 +1615,9 @@ if (typeof document !== "undefined") {
       // 3. Detect Circular loops
       if (payload.type === "skip_logic" && payload.target_field) {
         if (referencedFields.includes(payload.target_field)) {
-          circular_cycles.push(`Circular dependency: ${payload.target_field} -> ${payload.target_field}`);
+          circular_cycles.push(
+            `Circular dependency: ${payload.target_field} -> ${payload.target_field}`
+          );
         }
         // Check cross rules circular loop
         activeRules.forEach((rule) => {
@@ -1487,8 +1626,13 @@ if (typeof document !== "undefined") {
             if (rule.target_field === payload.target_field) {
               // Same target, potential overlap
             }
-            if (rRefs.includes(payload.target_field) && referencedFields.includes(rule.target_field)) {
-              circular_cycles.push(`Circular cycle: ${payload.target_field} -> ${rule.target_field} -> ${payload.target_field}`);
+            if (
+              rRefs.includes(payload.target_field) &&
+              referencedFields.includes(rule.target_field)
+            ) {
+              circular_cycles.push(
+                `Circular cycle: ${payload.target_field} -> ${rule.target_field} -> ${payload.target_field}`
+              );
             }
           }
         });
@@ -1523,7 +1667,8 @@ if (typeof document !== "undefined") {
       pendingValueChange = {
         isRuleSave: true,
         ruleData: {
-          id: editingRuleId || `rule_${Math.random().toString(36).substr(2, 9)}`,
+          id:
+            editingRuleId || `rule_${Math.random().toString(36).substr(2, 9)}`,
           study_id: currentUsdm.studyId,
           type,
           condition,
@@ -1531,8 +1676,12 @@ if (typeof document !== "undefined") {
           target_form: targetForm || null,
           action: type === "skip_logic" ? action : null,
           query_message: type !== "skip_logic" ? queryMessage : null,
-          compiled_xpath: compileMockPreview({ type, condition, target_field: targetField }).xpath,
-        }
+          compiled_xpath: compileMockPreview({
+            type,
+            condition,
+            target_field: targetField,
+          }).xpath,
+        },
       };
       openReasonModal();
     }
@@ -1540,7 +1689,7 @@ if (typeof document !== "undefined") {
     function promptDeleteRule(ruleId) {
       pendingValueChange = {
         isRuleDelete: true,
-        ruleId: ruleId
+        ruleId: ruleId,
       };
       openReasonModal();
     }
@@ -1584,7 +1733,12 @@ if (typeof document !== "undefined") {
 
       await addLedgerBlock(
         "RULE_SAVE",
-        { ruleId: ruleData.id, type: ruleData.type, xpath: ruleData.compiled_xpath, headers },
+        {
+          ruleId: ruleData.id,
+          type: ruleData.type,
+          xpath: ruleData.compiled_xpath,
+          headers,
+        },
         changeReason
       );
 
@@ -1619,17 +1773,12 @@ if (typeof document !== "undefined") {
       renderRulesList();
       if (rulesEditorWorkspace) rulesEditorWorkspace.style.display = "none";
 
-      await addLedgerBlock(
-        "RULE_DELETE",
-        { ruleId, headers },
-        changeReason
-      );
+      await addLedgerBlock("RULE_DELETE", { ruleId, headers }, changeReason);
 
       alert("Rule successfully soft-deleted!");
     }
 
     // Connect Reason for Change save button with Rules logic
-    const oldBtnSaveChangeHandler = btnSaveChange.onclick;
     btnSaveChange.addEventListener("click", () => {
       if (pendingValueChange && pendingValueChange.isRuleSave) {
         const selReason = reasonSelect.value;

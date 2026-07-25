@@ -10,15 +10,23 @@ export const useClinicalStore = defineStore("clinical", {
         {
           id: "OBJ-001",
           type: "Primary",
-          description: "Evaluate the reduction of mean sitting Systolic Blood Pressure (SBP) from baseline.",
+          description:
+            "Evaluate the reduction of mean sitting Systolic Blood Pressure (SBP) from baseline.",
         },
         {
           id: "OBJ-002",
           type: "Secondary",
-          description: "Evaluate safety and tolerability of daily oral administration of Cadence-001.",
+          description:
+            "Evaluate safety and tolerability of daily oral administration of Cadence-001.",
         },
       ],
-      visits: ["Screening", "Baseline (Day 1)", "Week 2", "Week 4", "End of Study"],
+      visits: [
+        "Screening",
+        "Baseline (Day 1)",
+        "Week 2",
+        "Week 4",
+        "End of Study",
+      ],
       forms: [
         {
           name: "Demographics",
@@ -40,18 +48,66 @@ export const useClinicalStore = defineStore("clinical", {
     },
     currentCtmsData: {
       milestones: [
-        { id: "M1", type: "SITE_SELECTION", plannedDate: "2026-08-01", actualDate: "2026-08-01", status: "ACHIEVED" },
-        { id: "M2", type: "INITIATION_VISIT", plannedDate: "2026-08-10", actualDate: "2026-08-12", status: "ACHIEVED" },
-        { id: "M3", type: "SITE_ACTIVATION", plannedDate: "2026-08-15", actualDate: "", status: "PLANNED" },
-        { id: "M4", type: "FIRST_SUBJECT_ENROLLED", plannedDate: "2026-09-01", actualDate: "", status: "PLANNED" },
+        {
+          id: "M1",
+          type: "SITE_SELECTION",
+          plannedDate: "2026-08-01",
+          actualDate: "2026-08-01",
+          status: "ACHIEVED",
+        },
+        {
+          id: "M2",
+          type: "INITIATION_VISIT",
+          plannedDate: "2026-08-10",
+          actualDate: "2026-08-12",
+          status: "ACHIEVED",
+        },
+        {
+          id: "M3",
+          type: "SITE_ACTIVATION",
+          plannedDate: "2026-08-15",
+          actualDate: "",
+          status: "PLANNED",
+        },
+        {
+          id: "M4",
+          type: "FIRST_SUBJECT_ENROLLED",
+          plannedDate: "2026-09-01",
+          actualDate: "",
+          status: "PLANNED",
+        },
       ],
       visits: [
-        { id: "V1", type: "SIV", scheduledDate: "2026-08-10", actualDate: "2026-08-12", status: "SIGNED_OFF", cra: "cra_fderuiter" },
-        { id: "V2", type: "IMV", scheduledDate: "2026-08-25", actualDate: "", status: "SCHEDULED", cra: "cra_fderuiter" },
+        {
+          id: "V1",
+          type: "SIV",
+          scheduledDate: "2026-08-10",
+          actualDate: "2026-08-12",
+          status: "SIGNED_OFF",
+          cra: "cra_fderuiter",
+        },
+        {
+          id: "V2",
+          type: "IMV",
+          scheduledDate: "2026-08-25",
+          actualDate: "",
+          status: "SCHEDULED",
+          cra: "cra_fderuiter",
+        },
       ],
       allocations: [
-        { cra: "cra_fderuiter", activeAllocations: 3, sites: ["Site-01", "Site-02", "Site-09"], studies: ["STUDY-01", "STUDY-02"] },
-        { cra: "cra_alice", activeAllocations: 1, sites: ["Site-03"], studies: ["STUDY-01"] },
+        {
+          cra: "cra_fderuiter",
+          activeAllocations: 3,
+          sites: ["Site-01", "Site-02", "Site-09"],
+          studies: ["STUDY-01", "STUDY-02"],
+        },
+        {
+          cra: "cra_alice",
+          activeAllocations: 1,
+          sites: ["Site-03"],
+          studies: ["STUDY-01"],
+        },
       ],
       recruitment: [
         { siteId: "Site-01", screened: 15, enrolled: 8, target: 20 },
@@ -142,7 +198,7 @@ export const useClinicalStore = defineStore("clinical", {
       username: "fderuiter",
       roles: ["Monitor", "Sponsor Admin"],
       authenticated: true,
-    }
+    },
   }),
   actions: {
     async addLedgerBlock(action, details, reason = "System Action") {
@@ -171,6 +227,6 @@ export const useClinicalStore = defineStore("clinical", {
     },
     clearLedger() {
       this.ledgerBlocks = [];
-    }
-  }
+    },
+  },
 });

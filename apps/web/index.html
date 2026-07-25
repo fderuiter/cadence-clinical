@@ -33,19 +33,13 @@
                 </button>
               </li>
               <li class="nav-item" id="tab-btn-ecrf">
-                <button type="button">
-                  <span>🩺</span> eCRF Form Engine
-                </button>
+                <button type="button"><span>🩺</span> eCRF Form Engine</button>
               </li>
               <li class="nav-item" id="tab-btn-ctms">
-                <button type="button">
-                  <span>📊</span> CTMS Dashboard
-                </button>
+                <button type="button"><span>📊</span> CTMS Dashboard</button>
               </li>
               <li class="nav-item" id="tab-btn-rules">
-                <button type="button">
-                  <span>⚙️</span> Rules Designer
-                </button>
+                <button type="button"><span>⚙️</span> Rules Designer</button>
               </li>
               <li class="nav-item" id="tab-btn-audit">
                 <button type="button">
@@ -56,7 +50,8 @@
           </div>
           <div class="engine-info-box">
             <strong>Offline Engine:</strong> All operations run securely inside
-            your browser's VM using in-memory mock handlers and cryptographic APIs.
+            your browser's VM using in-memory mock handlers and cryptographic
+            APIs.
           </div>
         </aside>
 
@@ -67,8 +62,8 @@
             <div class="section-header">
               <h2>MDR / Protocol Visualizer</h2>
               <p>
-                Unify upstream clinical study definitions (USDM metadata) directly
-                into a visual Schedule of Activities matrix.
+                Unify upstream clinical study definitions (USDM metadata)
+                directly into a visual Schedule of Activities matrix.
               </p>
             </div>
 
@@ -100,7 +95,9 @@
 
               <!-- Schedule of Activities table -->
               <div class="card">
-                <div class="card-title">Schedule of Activities (SoA) Matrix</div>
+                <div class="card-title">
+                  Schedule of Activities (SoA) Matrix
+                </div>
                 <div id="soa-matrix-container">
                   <!-- Rendered matrix dynamically injected here -->
                 </div>
@@ -139,27 +136,41 @@
                   <div class="card-title">CDASH Metadata Specification</div>
                   <p class="subtext">
                     The fields on the left are dynamically rendered using
-                    structural CDASH metadata tags (e.g., <code>DM.BRTHDT</code>,
-                    <code>VS.VSSBP</code>).
+                    structural CDASH metadata tags (e.g.,
+                    <code>DM.BRTHDT</code>, <code>VS.VSSBP</code>).
                   </p>
                 </div>
 
                 <div class="info-panel">
-                  <h3 class="panel-heading">Real-time Field Validation Rules:</h3>
+                  <h3 class="panel-heading">
+                    Real-time Field Validation Rules:
+                  </h3>
                   <ul class="validation-list">
-                    <li><strong>Birth Date:</strong> Must match YYYY-MM-DD pattern.</li>
-                    <li><strong>Systolic BP:</strong> Numeric value between 50 and 250 mmHg.</li>
-                    <li><strong>Diastolic BP:</strong> Numeric value between 30 and 150 mmHg.</li>
-                    <li><strong>Pulse Rate:</strong> Numeric value between 30 and 200 bpm.</li>
+                    <li>
+                      <strong>Birth Date:</strong> Must match YYYY-MM-DD
+                      pattern.
+                    </li>
+                    <li>
+                      <strong>Systolic BP:</strong> Numeric value between 50 and
+                      250 mmHg.
+                    </li>
+                    <li>
+                      <strong>Diastolic BP:</strong> Numeric value between 30
+                      and 150 mmHg.
+                    </li>
+                    <li>
+                      <strong>Pulse Rate:</strong> Numeric value between 30 and
+                      200 bpm.
+                    </li>
                   </ul>
                 </div>
 
                 <div class="info-panel">
                   <h3 class="panel-heading">Query Management Actions:</h3>
                   <p class="panel-text">
-                    Click the 💬 / ⚠️ flags next to input fields to raise, answer,
-                    close, or reopen discrepancy notes. All query transitions are
-                    audit-logged in real-time.
+                    Click the 💬 / ⚠️ flags next to input fields to raise,
+                    answer, close, or reopen discrepancy notes. All query
+                    transitions are audit-logged in real-time.
                   </p>
                 </div>
               </div>
@@ -171,8 +182,8 @@
             <div class="section-header">
               <h2>Clinical Trial Management System (CTMS)</h2>
               <p>
-                Monitor operational site status, track site lifecycle milestones,
-                recruitment metrics, and coordinate CRA workloads.
+                Monitor operational site status, track site lifecycle
+                milestones, recruitment metrics, and coordinate CRA workloads.
               </p>
             </div>
 
@@ -210,7 +221,9 @@
             <div class="grid-2 mt-24">
               <!-- CRA Allocations & Workload Card -->
               <div class="card">
-                <div class="card-title">CRA Allocation & Workload Summaries</div>
+                <div class="card-title">
+                  CRA Allocation & Workload Summaries
+                </div>
                 <div id="ctms-workload-container">
                   <!-- Rendered CRA workload table dynamically injected here -->
                 </div>
@@ -241,8 +254,8 @@
             <div class="section-header">
               <h2>Interactive Rules Designer</h2>
               <p>
-                Declarative visual rule builder supporting skip logic, constraint
-                checks, and cross-form edit validations.
+                Declarative visual rule builder supporting skip logic,
+                constraint checks, and cross-form edit validations.
               </p>
             </div>
 
@@ -262,7 +275,9 @@
 
               <!-- Rules Editor Workspace -->
               <div class="card hidden-workspace" id="rules-editor-workspace">
-                <div class="card-title" id="rules-editor-title">Compose Clinical Rule</div>
+                <div class="card-title" id="rules-editor-title">
+                  Compose Clinical Rule
+                </div>
                 <div id="rules-editor-container">
                   <!-- Rule Editor UI dynamically injected here -->
                 </div>
@@ -275,9 +290,9 @@
             <div class="section-header">
               <h2>Cryptographic Audit Log Inspector</h2>
               <p>
-                Visual blockchain-style ledger feed showing live SHA-256 signature
-                stamping as forms are loaded, fields are modified, or queries are
-                transitioned.
+                Visual blockchain-style ledger feed showing live SHA-256
+                signature stamping as forms are loaded, fields are modified, or
+                queries are transitioned.
               </p>
             </div>
 
@@ -309,14 +324,20 @@
               <label for="change-reason-select">Select Standard Reason</label>
               <select id="change-reason-select">
                 <option value="Initial Entry">Initial Data Entry</option>
-                <option value="Typographical Error">Correction of typographical error</option>
+                <option value="Typographical Error">
+                  Correction of typographical error
+                </option>
                 <option value="Re-measurement">Re-measurement of vitals</option>
-                <option value="Transcription Error">Correction of transcription error</option>
+                <option value="Transcription Error">
+                  Correction of transcription error
+                </option>
                 <option value="Other">Other (specify below)</option>
               </select>
             </div>
             <div class="form-group">
-              <label for="change-reason-text">Custom Explanation (Optional)</label>
+              <label for="change-reason-text"
+                >Custom Explanation (Optional)</label
+              >
               <textarea
                 id="change-reason-text"
                 placeholder="Explain the clinical reason for this modification..."
