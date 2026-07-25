@@ -21,6 +21,7 @@ from apps.quality.models import (
     QualityAuditLog,
     RootCauseAnalysis,
 )
+from packages.database import DatabaseSessionDependency
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.rbac import get_normalized_roles
 
@@ -187,18 +188,7 @@ app.add_middleware(GatewayAuthMiddleware)
 
 
 # Dependable to obtain database session
-async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
-    """
-    Dependency to yield an asynchronous database session.
-    """
-    session_maker = db_manager.get_session_maker()
-    async with session_maker() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
+get_db_session = DatabaseSessionDependency(db_manager)
 
 
 async def write_audit_log(
