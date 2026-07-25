@@ -1026,23 +1026,49 @@ async def update_lab_range(
             res = await session.execute(stmt)
             r = res.scalars().first()
             if not r:
-                raise HTTPException(status_code=404, detail="LabReferenceRange not found")
+                raise HTTPException(
+                    status_code=404, detail="LabReferenceRange not found"
+                )
 
             merged_data = {
-                "study_id": payload.study_id if payload.study_id is not None else r.study_id,
-                "test_code": payload.test_code if payload.test_code is not None else r.test_code,
-                "test_name": payload.test_name if payload.test_name is not None else r.test_name,
+                "study_id": payload.study_id
+                if payload.study_id is not None
+                else r.study_id,
+                "test_code": payload.test_code
+                if payload.test_code is not None
+                else r.test_code,
+                "test_name": payload.test_name
+                if payload.test_name is not None
+                else r.test_name,
                 "source": payload.source if payload.source is not None else r.source,
-                "site_id": payload.site_id if payload.site_id is not None else r.site_id,
+                "site_id": payload.site_id
+                if payload.site_id is not None
+                else r.site_id,
                 "unit": payload.unit if payload.unit is not None else r.unit,
-                "normalized_unit": payload.normalized_unit if payload.normalized_unit is not None else r.normalized_unit,
-                "sex_applicability": payload.sex_applicability if payload.sex_applicability is not None else r.sex_applicability,
-                "age_low": payload.age_low if payload.age_low is not None else r.age_low,
-                "age_high": payload.age_high if payload.age_high is not None else r.age_high,
-                "low_bound": payload.low_bound if payload.low_bound is not None else r.low_bound,
-                "high_bound": payload.high_bound if payload.high_bound is not None else r.high_bound,
-                "critical_low": payload.critical_low if payload.critical_low is not None else r.critical_low,
-                "critical_high": payload.critical_high if payload.critical_high is not None else r.critical_high,
+                "normalized_unit": payload.normalized_unit
+                if payload.normalized_unit is not None
+                else r.normalized_unit,
+                "sex_applicability": payload.sex_applicability
+                if payload.sex_applicability is not None
+                else r.sex_applicability,
+                "age_low": payload.age_low
+                if payload.age_low is not None
+                else r.age_low,
+                "age_high": payload.age_high
+                if payload.age_high is not None
+                else r.age_high,
+                "low_bound": payload.low_bound
+                if payload.low_bound is not None
+                else r.low_bound,
+                "high_bound": payload.high_bound
+                if payload.high_bound is not None
+                else r.high_bound,
+                "critical_low": payload.critical_low
+                if payload.critical_low is not None
+                else r.critical_low,
+                "critical_high": payload.critical_high
+                if payload.critical_high is not None
+                else r.critical_high,
             }
 
             validate_lab_range_payload(merged_data)
@@ -1105,7 +1131,9 @@ async def delete_lab_range(
             res = await session.execute(stmt)
             r = res.scalars().first()
             if not r:
-                raise HTTPException(status_code=404, detail="LabReferenceRange not found")
+                raise HTTPException(
+                    status_code=404, detail="LabReferenceRange not found"
+                )
 
             r.is_deleted = True
 
