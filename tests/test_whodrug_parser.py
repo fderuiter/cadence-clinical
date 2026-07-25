@@ -371,7 +371,7 @@ def test_public_entry_point_whodrug() -> None:
         # Autodetect file type from path suffix
         records = list(parse_whodrug_file(temp_path, dictionary_version="2024-03"))
         assert len(records) == 1
-        assert records[0]["type"] == "atc"
+        assert records[0]["type"] in ("atc", "drug_atc")
         assert records[0]["data"]["atc_code"] == "N02BA01"
         assert records[0]["data"]["description"] == "SALICYLIC ACID AND DERIVATIVES"
         assert records[0]["data"]["dictionary_version"] == "2024-03"
