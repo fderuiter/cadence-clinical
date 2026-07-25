@@ -84,10 +84,11 @@ def get_v2_auth_headers_with_token(
     user_id: str = "test_user",
     roles: str = "admin",
     change_reason: str = "test operation",
-    action: str = ""
+    action: str = "",
 ) -> dict[str, str]:
     """Generate Gateway signature version 2 authentication headers with single-use X-Sig-Token."""
     from jose import jwt
+
     headers = get_v2_auth_headers(user_id, roles, change_reason)
     if action:
         sig_payload = {
@@ -274,7 +275,7 @@ async def test_query_state_transition_and_role_boundaries() -> None:
             user_id="inv_user",
             roles="Investigator",
             change_reason="Investigator responds to query",
-            action=f"/api/v1/execution/queries/{query_id}/close"
+            action=f"/api/v1/execution/queries/{query_id}/close",
         )
         resp_inv_close = await client.post(
             f"/api/v1/execution/queries/{query_id}/close", headers=inv_close_headers
@@ -296,10 +297,11 @@ async def test_query_state_transition_and_role_boundaries() -> None:
             user_id="dm_user",
             roles="Data Manager",
             change_reason="Closing query",
-            action=f"/api/v1/execution/queries/{query_id}/close"
+            action=f"/api/v1/execution/queries/{query_id}/close",
         )
         resp_dm_close_invalid = await client.post(
-            f"/api/v1/execution/queries/{query_id}/close", headers=dm_close_headers_invalid
+            f"/api/v1/execution/queries/{query_id}/close",
+            headers=dm_close_headers_invalid,
         )
         assert resp_dm_close_invalid.status_code == 400
         assert "Invalid transition" in resp_dm_close_invalid.json()["detail"]
@@ -322,7 +324,7 @@ async def test_query_state_transition_and_role_boundaries() -> None:
             user_id="dm_user",
             roles="Data Manager",
             change_reason="Closing query",
-            action=f"/api/v1/execution/queries/{query_id}/close"
+            action=f"/api/v1/execution/queries/{query_id}/close",
         )
         resp_close = await client.post(
             f"/api/v1/execution/queries/{query_id}/close",
@@ -679,7 +681,7 @@ async def test_query_role_gates_robustness() -> None:
         inv_close_headers = get_v2_auth_headers_with_token(
             roles="Investigator",
             change_reason="Investigator responds",
-            action=f"/api/v1/execution/queries/{q_id}/close"
+            action=f"/api/v1/execution/queries/{q_id}/close",
         )
         resp_inv_close = await client.post(
             f"/api/v1/execution/queries/{q_id}/close",
@@ -691,7 +693,7 @@ async def test_query_role_gates_robustness() -> None:
         cra_close_headers = get_v2_auth_headers_with_token(
             roles="CRA",
             change_reason="CRA raises query",
-            action=f"/api/v1/execution/queries/{q_id}/close"
+            action=f"/api/v1/execution/queries/{q_id}/close",
         )
         resp_cra_close = await client.post(
             f"/api/v1/execution/queries/{q_id}/close",
@@ -719,11 +721,11 @@ async def test_clinical_queries_sync_endpoint() -> None:
                 "query": {
                     "status": "OPEN",
                     "message": "Unusually high systolic BP",
-                }
+                },
             },
             "reason": "Offline query creation",
             "prevHash": "genesis",
-            "hash": "block1hash"
+            "hash": "block1hash",
         },
         {
             "index": 2,
@@ -738,12 +740,12 @@ async def test_clinical_queries_sync_endpoint() -> None:
                 "testCode": "VSSBP",
                 "query": {
                     "status": "ANSWERED",
-                    "response": "Calibrated thermometer, reading correct"
-                }
+                    "response": "Calibrated thermometer, reading correct",
+                },
             },
             "reason": "Offline investigator response",
             "prevHash": "block1hash",
-            "hash": "block2hash"
+            "hash": "block2hash",
         },
         {
             "index": 3,
@@ -756,14 +758,12 @@ async def test_clinical_queries_sync_endpoint() -> None:
                 "visitId": "Screening",
                 "domain": "VS",
                 "testCode": "VSSBP",
-                "query": {
-                    "status": "CLOSED"
-                }
+                "query": {"status": "CLOSED"},
             },
             "reason": "Offline closure",
             "prevHash": "block2hash",
-            "hash": "block3hash"
-        }
+            "hash": "block3hash",
+        },
     ]
 
     async with httpx.AsyncClient(
@@ -771,13 +771,12 @@ async def test_clinical_queries_sync_endpoint() -> None:
     ) as client:
         # 1. Reject without X-Sig-Token (REAUTHENTICATION_REQUIRED)
         headers_no_token = get_v2_auth_headers(
-            roles="CRA",
-            change_reason="Attempt sync without token"
+            roles="CRA", change_reason="Attempt sync without token"
         )
         resp_no_token = await client.post(
             "/api/v1/execution/queries/sync",
             json={"blocks": sync_blocks},
-            headers=headers_no_token
+            headers=headers_no_token,
         )
         assert resp_no_token.status_code == 401
         assert "REAUTHENTICATION_REQUIRED" in resp_no_token.json()["detail"]
@@ -786,12 +785,12 @@ async def test_clinical_queries_sync_endpoint() -> None:
         headers_create = get_v2_auth_headers_with_token(
             roles="CRA",
             change_reason="Sync offline create",
-            action="/api/v1/execution/queries/sync"
+            action="/api/v1/execution/queries/sync",
         )
         resp_create = await client.post(
             "/api/v1/execution/queries/sync",
             json={"blocks": [sync_blocks[0]]},
-            headers=headers_create
+            headers=headers_create,
         )
         assert resp_create.status_code == 200
         assert resp_create.json()["processed_blocks"] == 1
@@ -801,7 +800,7 @@ async def test_clinical_queries_sync_endpoint() -> None:
             stmt = select(ClinicalQuery).where(
                 ClinicalQuery.study_id == "STUDY-SYNC",
                 ClinicalQuery.subject_id == "SUBJ-SYNC",
-                ClinicalQuery.test_code == "VSSBP"
+                ClinicalQuery.test_code == "VSSBP",
             )
             res = await session.execute(stmt)
             q = res.scalars().first()
@@ -813,12 +812,12 @@ async def test_clinical_queries_sync_endpoint() -> None:
         headers_inv_create = get_v2_auth_headers_with_token(
             roles="Investigator",
             change_reason="Sync offline create as investigator",
-            action="/api/v1/execution/queries/sync"
+            action="/api/v1/execution/queries/sync",
         )
         resp_inv_create = await client.post(
             "/api/v1/execution/queries/sync",
             json={"blocks": [sync_blocks[0]]},
-            headers=headers_inv_create
+            headers=headers_inv_create,
         )
         assert resp_inv_create.status_code == 403
 
@@ -826,12 +825,12 @@ async def test_clinical_queries_sync_endpoint() -> None:
         headers_respond = get_v2_auth_headers_with_token(
             roles="Investigator",
             change_reason="Sync offline respond",
-            action="/api/v1/execution/queries/sync"
+            action="/api/v1/execution/queries/sync",
         )
         resp_respond = await client.post(
             "/api/v1/execution/queries/sync",
             json={"blocks": [sync_blocks[1]]},
-            headers=headers_respond
+            headers=headers_respond,
         )
         assert resp_respond.status_code == 200
         assert resp_respond.json()["processed_blocks"] == 1
@@ -847,12 +846,12 @@ async def test_clinical_queries_sync_endpoint() -> None:
         headers_close = get_v2_auth_headers_with_token(
             roles="CRA",
             change_reason="Sync offline close",
-            action="/api/v1/execution/queries/sync"
+            action="/api/v1/execution/queries/sync",
         )
         resp_close = await client.post(
             "/api/v1/execution/queries/sync",
             json={"blocks": [sync_blocks[2]]},
-            headers=headers_close
+            headers=headers_close,
         )
         assert resp_close.status_code == 200
         assert resp_close.json()["processed_blocks"] == 1

@@ -157,7 +157,14 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
         # Check if request is signature-gated
         is_signature_gated = False
         path_lower = request.url.path.lower()
-        for pattern in ["approve", "sign-off", "unblind", "randomize", "queries/sync", "close"]:
+        for pattern in [
+            "approve",
+            "sign-off",
+            "unblind",
+            "randomize",
+            "queries/sync",
+            "close",
+        ]:
             if pattern in path_lower:
                 is_signature_gated = True
                 break

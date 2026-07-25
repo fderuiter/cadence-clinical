@@ -42,6 +42,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-24: Database-Native Pessimistic Locking & Retry](2026-07-24-database-native-pessimistic-locking-retry.md)
 - [2026-07-25: Data-Driven Expected Document Lists (EDLs) & Completeness Tracking](2026-07-25-data-driven-edl-model-and-completeness.md)
 - [2026-07-25: eTMF Quality Control Review Lifecycle & Validated State Machine](2026-07-25-etmf-qc-review-workflow.md)
+- [2026-07-25: FDA 21 CFR Part 11 Offline Sync Ledger & Digital Signatures](2026-07-25-part11-offline-sync-ledger.md)
 - [2026-07-26: CTMS Foundation, Database, Auditing, and RBAC Infrastructure](2026-07-26-ctms-foundation-infrastructure.md)
 - [2026-07-27: Quality & CAPA Foundation and Domain Models](2026-07-27-quality-capa-scaffold.md)
 - [2026-07-28: SDV/TSDV Persistence Foundation and Migration Support](2026-07-28-sdv-tsdv-persistence-foundation.md)

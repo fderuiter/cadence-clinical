@@ -1349,6 +1349,7 @@ class QueryUpdate(BaseModel):
 
 class SyncBlockQuery(BaseModel):
     """Pydantic schema representing the query details in a local ledger block."""
+
     status: str
     message: Optional[str] = None
     createdBy: Optional[str] = None
@@ -1362,6 +1363,7 @@ class SyncBlockQuery(BaseModel):
 
 class SyncBlockDetails(BaseModel):
     """Pydantic schema representing block-specific metadata and clinical coordinates."""
+
     fieldId: str
     studyId: Optional[str] = None
     subjectId: Optional[str] = None
@@ -1377,6 +1379,7 @@ class SyncBlockDetails(BaseModel):
 
 class LocalLedgerBlock(BaseModel):
     """Pydantic schema representing a cryptographically chained offline ledger block."""
+
     index: int
     timestamp: datetime
     action: str
@@ -1388,6 +1391,7 @@ class LocalLedgerBlock(BaseModel):
 
 class SyncRequest(BaseModel):
     """Pydantic schema for bulk-synchronizing local client-side ledger updates."""
+
     blocks: list[LocalLedgerBlock]
 
 
@@ -2652,7 +2656,9 @@ async def update_query_state(
 async def sync_queries(
     request: Request,
     payload: SyncRequest,
-    roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER, ROLE_SITE_INVESTIGATOR)),
+    roles: list[str] = Depends(
+        require_roles(ROLE_CRA, ROLE_DATA_MANAGER, ROLE_SITE_INVESTIGATOR)
+    ),
 ) -> dict[str, Any]:
     """Synchronize clinical query local ledger blocks to the target database.
 
@@ -2671,7 +2677,8 @@ async def sync_queries(
     }
 
     # Normalize caller roles
-    from packages.security.rbac import get_normalized_roles, ROLE_EXPANSIONS
+    from packages.security.rbac import ROLE_EXPANSIONS, get_normalized_roles
+
     user_roles = get_normalized_roles(request)
 
     expanded_allowed_dm = set(["data manager", "cra"])
@@ -2698,13 +2705,13 @@ async def sync_queries(
                 if not has_dm_role:
                     raise HTTPException(
                         status_code=403,
-                        detail=f"User role is not authorized for {action} action."
+                        detail=f"User role is not authorized for {action} action.",
                     )
             elif action == "QUERY_RESPOND":
                 if not has_inv_role:
                     raise HTTPException(
                         status_code=403,
-                        detail=f"User role is not authorized for {action} action."
+                        detail=f"User role is not authorized for {action} action.",
                     )
 
             # Extract/determine query coordinates
@@ -2713,7 +2720,9 @@ async def sync_queries(
             visit_id = details.visitId or "Screening"
 
             # Map domain & test_code from fieldId
-            mapped_domain, mapped_test = field_map.get(details.fieldId.lower(), ("VS", details.fieldId.upper()))
+            mapped_domain, mapped_test = field_map.get(
+                details.fieldId.lower(), ("VS", details.fieldId.upper())
+            )
             domain = details.domain or mapped_domain
             test_code = details.testCode or mapped_test
 
@@ -2740,8 +2749,12 @@ async def sync_queries(
                         domain=domain,
                         test_code=test_code,
                         status="OPEN",
-                        explanation=details.query.message if details.query else "Offline raised discrepancy",
-                        message=details.query.message if details.query else "Offline raised discrepancy",
+                        explanation=details.query.message
+                        if details.query
+                        else "Offline raised discrepancy",
+                        message=details.query.message
+                        if details.query
+                        else "Offline raised discrepancy",
                         created_by=request.state.user_id,
                     )
                     session.add(q)
@@ -2775,7 +2788,9 @@ async def sync_queries(
             elif action == "QUERY_REOPEN":
                 if q:
                     try:
-                        QueryService.validate_transition(q.status, "REOPENED", has_reason=True)
+                        QueryService.validate_transition(
+                            q.status, "REOPENED", has_reason=True
+                        )
                         q.status = "REOPENED"
                         q.resolver = None
                         q.resolved_at = None
