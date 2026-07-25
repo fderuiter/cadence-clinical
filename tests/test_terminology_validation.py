@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import HTTPException
@@ -290,3 +290,239 @@ async def test_validate_study_terminology_endpoint_not_found():
             await validate_study_terminology_endpoint("non_existent")
         assert exc_info.value.status_code == 404
         assert "Study with ID" in exc_info.value.detail
+
+
+@pytest.mark.asyncio
+async def test_validate_study_ct_endpoint():
+    """
+    Test the study-level ct-validation endpoint (/api/v1/studies/{study_id}/ct-validation)
+    which should function identically to terminology-validation.
+    """
+    import httpx
+
+    from apps.designer.main import app
+    from tests.test_soa_endpoints import get_auth_headers
+
+    mock_study = {
+        "study_id": "study_1",
+        "title": "Oncology Phase II",
+        "arms": [
+            {
+                "arm_id": "arm_1",
+                "name": "Arm A",
+                "type_concept_id": "C123",
+                "visits": [],
+            }
+        ],
+    }
+
+    with (
+        patch("apps.designer.validator.get_study_projection", return_value=mock_study),
+        patch("apps.designer.db.terminology_cache.get") as mock_get,
+    ):
+        mock_get.return_value = {
+            "code": "C123",
+            "decode": "Test",
+            "system": "NCI",
+            "valid": True,
+        }
+
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            headers = get_auth_headers()
+            response = await client.get(
+                "/api/v1/studies/study_1/ct-validation", headers=headers
+            )
+            assert response.status_code == 200
+            data = response.json()
+            assert data["study_id"] == "study_1"
+            assert data["is_valid"] is True
+            assert data["concepts"][0]["concept_code"] == "C123"
+
+
+@pytest.mark.asyncio
+async def test_validate_study_ct_endpoint_not_found():
+    """
+    Test that the ct-validation endpoint returns 404 if the study does not exist.
+    """
+    import httpx
+
+    from apps.designer.main import app
+    from tests.test_soa_endpoints import get_auth_headers
+
+    with patch("apps.designer.validator.get_study_projection", return_value=None):
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            headers = get_auth_headers()
+            response = await client.get(
+                "/api/v1/studies/non_existent/ct-validation", headers=headers
+            )
+            assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_validate_single_code_endpoint():
+    """
+    Test validation of a single code via /api/v1/terminology/validate/{code}.
+    """
+    import httpx
+
+    from apps.designer.main import app
+    from tests.test_soa_endpoints import get_auth_headers
+
+    with patch("apps.designer.db.terminology_cache.get") as mock_get:
+        mock_get.return_value = {
+            "code": "C123",
+            "decode": "Treatment Arm",
+            "system": "NCI",
+            "valid": True,
+        }
+
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            headers = get_auth_headers()
+            response = await client.get(
+                "/api/v1/terminology/validate/C123", headers=headers
+            )
+            assert response.status_code == 200
+            data = response.json()
+            assert data["concept_code"] == "C123"
+            assert data["state"] == "VALID"
+            assert data["decode"] == "Treatment Arm"
+
+
+@pytest.mark.asyncio
+async def test_validate_single_code_endpoint_invalid_data():
+    """
+    Test validation with empty or whitespace-only inputs, which must yield a 422 error.
+    """
+    import httpx
+
+    from apps.designer.main import app
+    from tests.test_soa_endpoints import get_auth_headers
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        headers = get_auth_headers()
+        # Test whitespace-only path parameter
+        response = await client.get("/api/v1/terminology/validate/%20", headers=headers)
+        assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_validate_single_code_endpoint_degraded():
+    """
+    Test single-code validation when the upstream service experiences a degradation.
+    """
+    import httpx
+
+    from apps.designer.main import app
+    from tests.test_soa_endpoints import get_auth_headers
+
+    with patch(
+        "apps.designer.db.terminology_cache.get",
+        side_effect=Exception("Database timeout"),
+    ):
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            headers = get_auth_headers()
+            response = await client.get(
+                "/api/v1/terminology/validate/C123", headers=headers
+            )
+            assert response.status_code == 200
+            data = response.json()
+            assert data["concept_code"] == "C123"
+            assert data["state"] == "DEGRADED"
+            assert "Database timeout" in data["error_message"]
+
+
+@pytest.mark.asyncio
+async def test_search_terminology_endpoint_success():
+    """
+    Test terminology search endpoint under normal conditions.
+    """
+    import httpx
+
+    from apps.designer.main import app
+    from tests.test_soa_endpoints import get_auth_headers
+
+    mock_concepts = [
+        {"code": "C123", "decode": "Treatment Arm", "system": "NCI", "valid": True}
+    ]
+
+    with patch(
+        "apps.designer.evs_client.NCIEVSClient.search_concepts",
+        new_callable=AsyncMock,
+    ) as mock_search:
+        mock_search.return_value = mock_concepts
+
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            headers = get_auth_headers()
+            response = await client.get(
+                "/api/v1/terminology/search?term=treatment", headers=headers
+            )
+            assert response.status_code == 200
+            data = response.json()
+            assert data["query"] == "treatment"
+            assert data["state"] == "VALID"
+            assert len(data["results"]) == 1
+            assert data["results"][0]["code"] == "C123"
+            assert data["results"][0]["decode"] == "Treatment Arm"
+
+
+@pytest.mark.asyncio
+async def test_search_terminology_endpoint_invalid_input():
+    """
+    Test that terminology search with blank/whitespace query yields a 422 error.
+    """
+    import httpx
+
+    from apps.designer.main import app
+    from tests.test_soa_endpoints import get_auth_headers
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        headers = get_auth_headers()
+        # Query parameter term is empty/whitespace
+        response = await client.get(
+            "/api/v1/terminology/search?term=%20", headers=headers
+        )
+        assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_search_terminology_endpoint_degraded():
+    """
+    Test that terminology search gracefully handles upstream EVS client exceptions
+    by returning a structured degraded response with an empty results list instead of 500.
+    """
+    import httpx
+
+    from apps.designer.main import app
+    from tests.test_soa_endpoints import get_auth_headers
+
+    with patch(
+        "apps.designer.evs_client.NCIEVSClient.search_concepts",
+        side_effect=Exception("EVS service is unavailable"),
+    ):
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            headers = get_auth_headers()
+            response = await client.get(
+                "/api/v1/terminology/search?term=treatment", headers=headers
+            )
+            assert response.status_code == 200
+            data = response.json()
+            assert data["query"] == "treatment"
+            assert data["state"] == "DEGRADED"
+            assert data["results"] == []
+            assert "EVS service is unavailable" in data["error_message"]
