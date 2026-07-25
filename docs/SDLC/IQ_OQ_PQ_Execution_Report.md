@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 710
-- **Passed:** 710 🟢
+- **Total Automated Test Cases Run:** 735
+- **Passed:** 735 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -360,6 +360,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_eisf_document_lifecycle_same_site` | `tests.test_eisf_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_documents_endpoint_blocks_unauthenticated` | `tests.test_eisf_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_health_unauthenticated` | `tests.test_eisf_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_eisf_ingest_document_event_alias` | `tests.test_eisf_ingest` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_eisf_ingest_document_success` | `tests.test_eisf_ingest` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_eisf_ingest_missing_change_reason_fails` | `tests.test_eisf_ingest` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_database_url_override_and_init` | `tests.test_eisf_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_append_only_versions_and_deduplication` | `tests.test_eisf_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_document_creation_and_site_scoped` | `tests.test_eisf_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
