@@ -780,6 +780,10 @@ async def proxy_requests(request: Request, path: str) -> Response:
         target_url = f"{SERVICES['notifications']}/{path[len('notifications/') :]}"
     elif path.startswith("quality/"):
         target_url = f"{SERVICES['quality']}/{path[len('quality/') :]}"
+    elif path.startswith("api/v1/terminology"):
+        target_url = f"{SERVICES['designer']}/{path}"
+    elif path.startswith("terminology/"):
+        target_url = f"{SERVICES['designer']}/{path[len('terminology/') :]}"
     elif path.startswith("api/v1/studies"):
         target_url = f"{SERVICES['designer']}/{path}"
     elif path.startswith("api/v1/execution"):

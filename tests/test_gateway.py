@@ -583,6 +583,70 @@ def test_signature_gated_mutation_enforcement(monkeypatch: pytest.MonkeyPatch) -
         assert response.status_code == 401
         assert response.json()["detail"] == "REAUTHENTICATION_REQUIRED"
 
+
+def test_proxy_requests_terminology_paths(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Test routing proxies for terminology-related paths.
+
+    Ensures that /api/v1/terminology and /terminology prefix paths are correctly routed
+    to SERVICES['designer'] with correct signed headers.
+    """
+    monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
+    token = jwt.encode(
+        {"sub": "user1", "realm_access": {"roles": ["sponsor_designer"]}},
+        "test_secret",
+        algorithm="HS256",
+    )
+
+    mock_send = AsyncMock()
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.content = b'{"status": "ok"}'
+    mock_resp.headers = {"content-type": "application/json"}
+    mock_send.return_value = mock_resp
+    monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
+
+    with TestClient(app) as client:
+        # Test api/v1/terminology prefix
+        res = client.get(
+            "/api/v1/terminology/search?term=treatment",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res.status_code == 200
+        assert (
+            str(mock_send.call_args.args[0].url)
+            == "http://localhost:8001/api/v1/terminology/search?term=treatment"
+        )
+
+        # Verify signed headers are present
+        sent_request = mock_send.call_args.args[0]
+        sent_headers = sent_request.headers
+        assert sent_headers.get("X-User-Id") == "user1"
+        assert sent_headers.get("X-User-Roles") == "sponsor_designer"
+        assert sent_headers.get("X-Gateway-Signature") is not None
+        assert sent_headers.get("X-Signature-Version") == "2"
+
+        # Test terminology/ prefix (which strips prefix and routes to designer)
+        res_stripped = client.get(
+            "/terminology/validate/C123", headers={"Authorization": f"Bearer {token}"}
+        )
+        assert res_stripped.status_code == 200
+        assert (
+            str(mock_send.call_args.args[0].url)
+            == "http://localhost:8001/validate/C123"
+        )
+
+        # Test existing study-scoped validation path routes to designer as well
+        res_study = client.get(
+            "/api/v1/studies/study_123/ct-validation",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res_study.status_code == 200
+        assert (
+            str(mock_send.call_args.args[0].url)
+            == "http://localhost:8001/api/v1/studies/study_123/ct-validation"
+        )
+
         # 2. Re-authenticate to get sig_token
         reauth_resp = client.post(
             "/api/v1/auth/signature-verification",
