@@ -394,6 +394,11 @@ export const useClinicalStore = defineStore("clinical", {
       formQueries: savedFormQueries || {},
       ledgerBlocks: savedLedgerBlocks || [],
       syncInterval: null,
+
+      // --- SoA State ---
+      activeStudyVersionId: "v_draft_01",
+      soaLoading: false,
+      soaError: null,
     };
   },
   getters: {
@@ -412,14 +417,6 @@ export const useClinicalStore = defineStore("clinical", {
         authenticated: true,
       };
     },
-      },
-      syncInterval: null,
-
-      // --- SoA State ---
-      activeStudyVersionId: "v_draft_01",
-      soaLoading: false,
-      soaError: null,
-    };
   },
   actions: {
     async evaluateRules() {

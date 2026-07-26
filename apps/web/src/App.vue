@@ -10,10 +10,7 @@
         class="header-user-profile"
         style="display: flex; align-items: center; gap: 16px"
       >
-        <div
-          class="header-badges"
-          style="display: flex; gap: 8px"
-        >
+        <div class="header-badges" style="display: flex; gap: 8px">
           <span class="badge gxp">21 CFR Part 11</span>
           <span class="badge">GAMP 5</span>
           <span class="badge">IEC 62304</span>
@@ -31,10 +28,7 @@
             border: 1px solid rgba(255, 255, 255, 0.15);
           "
         >
-          <div
-            class="user-info"
-            style="color: white; text-align: right"
-          >
+          <div class="user-info" style="color: white; text-align: right">
             <div style="font-weight: 700; color: var(--accent-light)">
               {{ authStore.identity?.username }}
             </div>
@@ -90,24 +84,15 @@
       <!-- Sidebar -->
       <aside>
         <div>
-          <div class="nav-title">
-            Showcase Modules
-          </div>
+          <div class="nav-title">Showcase Modules</div>
           <ul class="nav-menu">
             <li
               id="tab-btn-mdr"
               class="nav-item"
               :class="{ active: $route.name === 'mdr' }"
             >
-              <router-link
-                v-slot="{ navigate }"
-                to="/mdr"
-                custom
-              >
-                <button
-                  type="button"
-                  @click="navigate"
-                >
+              <router-link v-slot="{ navigate }" to="/mdr" custom>
+                <button type="button" @click="navigate">
                   <span>📋</span> MDR Protocol Designer
                 </button>
               </router-link>
@@ -117,15 +102,8 @@
               class="nav-item"
               :class="{ active: $route.name === 'ecrf' }"
             >
-              <router-link
-                v-slot="{ navigate }"
-                to="/ecrf"
-                custom
-              >
-                <button
-                  type="button"
-                  @click="navigate"
-                >
+              <router-link v-slot="{ navigate }" to="/ecrf" custom>
+                <button type="button" @click="navigate">
                   <span>🩺</span> eCRF Form Engine
                 </button>
               </router-link>
@@ -135,15 +113,8 @@
               class="nav-item"
               :class="{ active: $route.name === 'ctms' }"
             >
-              <router-link
-                v-slot="{ navigate }"
-                to="/ctms"
-                custom
-              >
-                <button
-                  type="button"
-                  @click="navigate"
-                >
+              <router-link v-slot="{ navigate }" to="/ctms" custom>
+                <button type="button" @click="navigate">
                   <span>📊</span> CTMS Dashboard
                 </button>
               </router-link>
@@ -153,15 +124,8 @@
               class="nav-item"
               :class="{ active: $route.name === 'audit' }"
             >
-              <router-link
-                v-slot="{ navigate }"
-                to="/audit"
-                custom
-              >
-                <button
-                  type="button"
-                  @click="navigate"
-                >
+              <router-link v-slot="{ navigate }" to="/audit" custom>
+                <button type="button" @click="navigate">
                   <span>🔒</span> Cryptographic Ledger
                 </button>
               </router-link>
