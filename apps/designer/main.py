@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
 from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile, status
+from fastapi.responses import JSONResponse
 from neo4j import AsyncGraphDatabase
 from protocol_render import SoAMatrixView
 from pydantic import BaseModel, TypeAdapter
@@ -18,6 +19,7 @@ from apps.designer.db import (
     get_mock_rule_by_id,
     get_mock_rules,
     get_study_projection,
+    is_concept_referenced_by_active_recruiting_study,
     terminology_cache,
     update_mock_rule,
 )
@@ -175,6 +177,18 @@ class SoALinkResponse(BaseModel):
     message: str = "Link established successfully"
 
 
+class ConceptLockedError(Exception):
+    """Exception raised when attempting to modify a concept referenced by an active-recruiting study."""
+
+    def __init__(self, concept_id: str, message: str = None):
+        self.concept_id = concept_id
+        self.message = (
+            message
+            or f"Concept '{concept_id}' is referenced by an Active-Recruiting study and is locked against direct modifications. Please use the protocol amendment workflow."
+        )
+        super().__init__(self.message)
+
+
 app = FastAPI(title="Cadence Clinical - Designer (MDR/SDR)", version="0.1.0")
 
 app.add_middleware(GatewayAuthMiddleware)
@@ -203,6 +217,19 @@ async def invalid_signature_handler(request: Request, exc: InvalidSignatureError
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
         detail="INVALID_OR_MISSING_SIGNATURE",
+    )
+
+
+@app.exception_handler(ConceptLockedError)
+async def concept_locked_handler(request: Request, exc: ConceptLockedError):
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={
+            "detail": "CONCEPT_LOCKED_ACTIVE_STUDY",
+            "message": exc.message,
+            "concept_id": exc.concept_id,
+            "workflow_suggestion": "To modify this concept, please initiate a protocol amendment workflow via POST /api/designer/protocols/{study_id}/amend.",
+        },
     )
 
 
@@ -727,6 +754,11 @@ class UpdateConceptRequest(BaseModel):
     reason_for_change: str
 
 
+class RenameConceptRequest(BaseModel):
+    display_name: str
+    reason_for_change: str
+
+
 @app.get("/api/v1/mdr/concepts", response_model=ConceptListResponse)
 async def get_concepts(
     terminology: Optional[TerminologyEnum] = None,
@@ -781,8 +813,14 @@ async def create_concept(payload: CreateConceptRequest) -> ConceptDetail:
 
 
 @app.put("/api/v1/mdr/concepts/{id}", response_model=ConceptDetail)
-async def update_concept(id: str, payload: UpdateConceptRequest) -> ConceptDetail:
+async def update_concept(
+    id: str, payload: UpdateConceptRequest, request: Request
+) -> ConceptDetail:
     """Updates an existing concept, creating a new audit history and incrementing version index."""
+    driver = await get_neo4j_driver(request)
+    if await is_concept_referenced_by_active_recruiting_study(id, driver):
+        raise ConceptLockedError(id)
+
     return ConceptDetail(
         id=id,
         concept_code="364075005",
@@ -799,6 +837,41 @@ async def update_concept(id: str, payload: UpdateConceptRequest) -> ConceptDetai
         updated_by="usr_9921a88b2c410",
         reason_for_change=payload.reason_for_change,
     )
+
+
+@app.post("/api/v1/mdr/concepts/{id}/rename", response_model=ConceptDetail)
+async def rename_concept(
+    id: str, payload: RenameConceptRequest, request: Request
+) -> ConceptDetail:
+    """Renames an existing Biomedical Concept if it is not referenced by an Active-Recruiting study."""
+    driver = await get_neo4j_driver(request)
+    if await is_concept_referenced_by_active_recruiting_study(id, driver):
+        raise ConceptLockedError(id)
+
+    return ConceptDetail(
+        id=id,
+        concept_code="364075005",
+        terminology="SNOMED-CT",
+        display_name=payload.display_name,
+        definition="The frequency of the heart rate at complete rest.",
+        version="1.1.0",
+        status="APPROVED",
+        created_at=datetime.now(),
+        created_by="usr_9921a88b2c410",
+        updated_at=datetime.now(),
+        updated_by="usr_9921a88b2c410",
+        reason_for_change=payload.reason_for_change,
+    )
+
+
+@app.delete("/api/v1/mdr/concepts/{id}", status_code=status.HTTP_200_OK)
+async def delete_concept(id: str, request: Request) -> Dict[str, str]:
+    """Deletes an existing Biomedical Concept if it is not referenced by an Active-Recruiting study."""
+    driver = await get_neo4j_driver(request)
+    if await is_concept_referenced_by_active_recruiting_study(id, driver):
+        raise ConceptLockedError(id)
+
+    return {"status": "success", "message": f"Concept {id} deleted successfully"}
 
 
 # ==========================================
