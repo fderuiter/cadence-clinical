@@ -665,11 +665,11 @@ async def test_validate_single_code_endpoint_not_found():
         ) as client:
             headers = get_auth_headers()
             response = await client.get(
-                "/api/v1/terminology/validate/C123_NOT_FOUND", headers=headers
+                "/api/v1/terminology/validate/C999", headers=headers
             )
             assert response.status_code == 200
             data = response.json()
-            assert data["concept_code"] == "C123_NOT_FOUND"
+            assert data["concept_code"] == "C999"
             assert data["state"] == "INVALID"
             assert "not found in terminology database" in data["error_message"]
 
