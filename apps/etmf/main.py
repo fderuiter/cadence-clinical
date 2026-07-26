@@ -24,12 +24,12 @@ from apps.etmf.models import (
     TMFDocument,
 )
 from packages.database import DatabaseSessionDependency
+from packages.deid.detector import DeidDetector
+from packages.deid.manifest import build_redaction_manifest, sign_manifest_symmetric
+from packages.deid.models import ComplianceProfile
+from packages.deid.transforms import apply_deid_transforms
 from packages.security import verify_is_auditor, verify_not_auditor
 from packages.security.middleware import GatewayAuthMiddleware
-from packages.deid.models import ComplianceProfile
-from packages.deid.detector import DeidDetector
-from packages.deid.transforms import apply_deid_transforms
-from packages.deid.manifest import build_redaction_manifest, sign_manifest_symmetric
 
 DATABASE_URL = os.getenv("ETMF_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
@@ -256,21 +256,20 @@ class AutomatedRedactRequest(BaseModel):
     """
     Payload for requesting automated redaction on an eTMF document.
     """
+
     profile: ComplianceProfile = Field(
         ComplianceProfile.HIPAA,
-        description="The compliance profile governing active detection categories (e.g., HIPAA, GDPR, EU_CTR)"
+        description="The compliance profile governing active detection categories (e.g., HIPAA, GDPR, EU_CTR)",
     )
     custom_terms: Optional[List[str]] = Field(
-        None,
-        description="Optional list of custom/literal terms to scan and redact"
+        None, description="Optional list of custom/literal terms to scan and redact"
     )
     strategies: Optional[Dict[str, str]] = Field(
         None,
-        description="Optional custom mapping of category to specific strategy (e.g., mask, pseudonymize, date_shift, age_cap)"
+        description="Optional custom mapping of category to specific strategy (e.g., mask, pseudonymize, date_shift, age_cap)",
     )
     redacted_filename: Optional[str] = Field(
-        None,
-        description="Optional new filename for the redacted successor document"
+        None, description="Optional new filename for the redacted successor document"
     )
 
 
@@ -279,12 +278,23 @@ class AutomatedRedactResponse(BaseModel):
     Response detailing the automated redaction operation outcomes.
     Crucially, it never exposes raw matched PII/PHI identifiers.
     """
-    status: str = Field("success", description="Outcome status of the automated redaction")
-    document_id: str = Field(..., description="ID of the newly created redacted document version")
-    version_index: int = Field(..., description="Version index of the new redacted document")
+
+    status: str = Field(
+        "success", description="Outcome status of the automated redaction"
+    )
+    document_id: str = Field(
+        ..., description="ID of the newly created redacted document version"
+    )
+    version_index: int = Field(
+        ..., description="Version index of the new redacted document"
+    )
     filename: str = Field(..., description="Filename of the new redacted document")
-    categories_counts: Dict[str, int] = Field(..., description="Count of redacted items per category")
-    manifest: Dict[str, Any] = Field(..., description="The signed manifest and provenance data")
+    categories_counts: Dict[str, int] = Field(
+        ..., description="Count of redacted items per category"
+    )
+    manifest: Dict[str, Any] = Field(
+        ..., description="The signed manifest and provenance data"
+    )
 
 
 class TransitionRequest(BaseModel):
@@ -1560,7 +1570,7 @@ async def auto_redact_document_endpoint(
         results = detector.detect(
             source_doc.content,
             profile=payload.profile,
-            custom_terms=payload.custom_terms
+            custom_terms=payload.custom_terms,
         )
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Detection failed: {str(e)}")
@@ -1571,10 +1581,12 @@ async def auto_redact_document_endpoint(
             source_doc.content,
             results,
             strategies=payload.strategies,
-            default_strategy="mask"
+            default_strategy="mask",
         )
     except Exception as e:
-        raise HTTPException(status_code=422, detail=f"Redaction transforms failed: {str(e)}")
+        raise HTTPException(
+            status_code=422, detail=f"Redaction transforms failed: {str(e)}"
+        )
 
     # 5. Determine new version index
     stmt_v = (
@@ -1593,13 +1605,15 @@ async def auto_redact_document_endpoint(
             operator_identity=user_id,
             reason=change_reason,
             source_version="v" + str(source_doc.version_index),
-            target_version="v" + str(new_version_index)
+            target_version="v" + str(new_version_index),
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
     # Sign with HMAC symmetric key
-    secret_key = os.getenv("REDACTION_SIGNING_SECRET", "internal-gateway-secret-12345").encode("utf-8")
+    secret_key = os.getenv(
+        "REDACTION_SIGNING_SECRET", "internal-gateway-secret-12345"
+    ).encode("utf-8")
     signed_manifest = sign_manifest_symmetric(manifest, secret_key)
     manifest_data = signed_manifest.model_dump()
 
@@ -1609,7 +1623,10 @@ async def auto_redact_document_endpoint(
     metadata_json["is_redacted"] = True
 
     # Build filename
-    redacted_filename = payload.redacted_filename or f"{os.path.splitext(source_doc.filename)[0]}_redacted{os.path.splitext(source_doc.filename)[1]}"
+    redacted_filename = (
+        payload.redacted_filename
+        or f"{os.path.splitext(source_doc.filename)[0]}_redacted{os.path.splitext(source_doc.filename)[1]}"
+    )
 
     redacted_doc = TMFDocument(
         study_id=source_doc.study_id,

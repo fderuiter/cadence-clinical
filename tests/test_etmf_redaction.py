@@ -336,13 +336,19 @@ async def test_automated_redaction_basic():
     redacted_text = resp_dl.text
     assert "Bob Jones" not in redacted_text
     assert "bob@gmail.com" not in redacted_text
-    assert "[CUSTOM]" in redacted_text or "[CUSTOM_REDACTED]" in redacted_text or redacted_text != payload["content"]
+    assert (
+        "[CUSTOM]" in redacted_text
+        or "[CUSTOM_REDACTED]" in redacted_text
+        or redacted_text != payload["content"]
+    )
     assert "[EMAIL]" in redacted_text
     assert "[DATES]" in redacted_text
 
     # Verify audit trail contains REDACT entry with no raw matches
     async with db_manager.get_session_maker()() as session:
-        stmt = select(TMFAuditLog).where(TMFAuditLog.document_id == redacted_id, TMFAuditLog.action == "REDACT")
+        stmt = select(TMFAuditLog).where(
+            TMFAuditLog.document_id == redacted_id, TMFAuditLog.action == "REDACT"
+        )
         result = await session.execute(stmt)
         audit_log = result.scalars().first()
         assert audit_log is not None
@@ -481,6 +487,7 @@ async def test_automated_redaction_trial_locked():
 
     # Lock trial
     from apps.execution.trial_lock import TrialLockManager
+
     TrialLockManager.lock_trial()
     try:
         resp_locked = client.post(
