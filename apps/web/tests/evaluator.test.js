@@ -1,10 +1,9 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { setActivePinia, createPinia } from "pinia";
 import {
   evaluateAST,
   compilerCache,
   getCompiledExpression,
-  debounce,
   validateField,
 } from "../index.js";
 import { useClinicalStore } from "../src/stores/clinical.js";
@@ -98,7 +97,9 @@ describe("Client-side AST Evaluator & Cascading Nullification", () => {
       expect(res).toBeCloseTo(22.857, 2);
 
       // Null safety check: weight is 70, height is null
-      expect(evaluateAST(bmiExpression, { weight: 70, height: null })).toBeNull();
+      expect(
+        evaluateAST(bmiExpression, { weight: 70, height: null })
+      ).toBeNull();
       // Zero division safety: weight is 70, height is 0
       expect(evaluateAST(bmiExpression, { weight: 70, height: 0 })).toBeNull();
     });
@@ -157,7 +158,7 @@ describe("Client-side AST Evaluator & Cascading Nullification", () => {
       }
 
       // First node should be evicted due to LRU 200 capacity limit
-      const fn3 = getCompiledExpression(node);
+      getCompiledExpression(node);
       expect(compilerCache.cache.size).toBeLessThanOrEqual(200);
     });
   });
@@ -178,7 +179,8 @@ describe("Client-side AST Evaluator & Cascading Nullification", () => {
 
       // It must log the EXACT mandated audit reason in the ledger blocks
       const purgeBlock = store.ledgerBlocks.find(
-        (b) => b.action === "FIELD_PURGE" && b.details.fieldId === "pulse_details"
+        (b) =>
+          b.action === "FIELD_PURGE" && b.details.fieldId === "pulse_details"
       );
       expect(purgeBlock).toBeDefined();
       expect(purgeBlock.reason).toBe(
@@ -192,7 +194,6 @@ describe("Client-side AST Evaluator & Cascading Nullification", () => {
       // Configure a visibility chain:
       // A (pulse) > 100 enables B (pulse_details)
       // B (pulse_details) == "ALERT" enables C (bmi_status)
-      const fieldB = store.ecrfFields.find((f) => f.id === "pulse_details");
       const fieldC = store.ecrfFields.find((f) => f.id === "bmi_status");
 
       fieldC.relevant = {
@@ -227,7 +228,9 @@ describe("Client-side AST Evaluator & Cascading Nullification", () => {
       expect(store.formValues.bmi_status).toBe("");
 
       // Check purge audit logs are recorded for both cascading levels
-      const purges = store.ledgerBlocks.filter((b) => b.action === "FIELD_PURGE");
+      const purges = store.ledgerBlocks.filter(
+        (b) => b.action === "FIELD_PURGE"
+      );
       expect(purges.length).toBeGreaterThanOrEqual(2);
       purges.forEach((p) => {
         expect(p.reason).toBe(

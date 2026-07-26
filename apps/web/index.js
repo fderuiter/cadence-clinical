@@ -117,7 +117,12 @@ export function renderFormFromJSON(jsonPayload) {
  * @param {string|number} val - The input value to validate.
  * @returns {Object} An object `{ valid: boolean, message?: string }`.
  */
-import { evaluateAST, compilerCache, getCompiledExpression, debounce } from "./src/evaluator.js";
+import {
+  evaluateAST,
+  compilerCache,
+  getCompiledExpression,
+  debounce,
+} from "./src/evaluator.js";
 
 export { evaluateAST, compilerCache, getCompiledExpression, debounce };
 
@@ -167,11 +172,15 @@ export function validateField(fieldMeta, val, context = {}) {
 
   // Constraint validation (must evaluate to true/truthy, otherwise invalid)
   if (fieldMeta.constraint) {
-    const isOk = evaluateAST(fieldMeta.constraint.condition || fieldMeta.constraint, context);
+    const isOk = evaluateAST(
+      fieldMeta.constraint.condition || fieldMeta.constraint,
+      context
+    );
     if (isOk === false) {
       return {
         valid: false,
-        message: fieldMeta.constraint.query_message || "Constraint validation failed.",
+        message:
+          fieldMeta.constraint.query_message || "Constraint validation failed.",
       };
     }
   }

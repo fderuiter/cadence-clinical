@@ -107,7 +107,9 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
 
   // 3. OPERATOR / LOGICAL / COMPARISON
   if (type === "OPERATOR" || type === "logical" || type === "comparison") {
-    const operator = (typeof valAttr === "string" ? valAttr : node.operator || "").toLowerCase();
+    const operator = (
+      typeof valAttr === "string" ? valAttr : node.operator || ""
+    ).toLowerCase();
 
     // Logical operators
     if (operator === "not") {
@@ -150,7 +152,12 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
 
     // Null safety for arithmetic
     if (["+", "-", "*", "/"].includes(operator)) {
-      if (leftVal === null || leftVal === undefined || rightVal === null || rightVal === undefined) {
+      if (
+        leftVal === null ||
+        leftVal === undefined ||
+        rightVal === null ||
+        rightVal === undefined
+      ) {
         return null;
       }
       const lNum = parseFloat(leftVal);
@@ -181,7 +188,12 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
       }
 
       // Ordered comparison with nulls always returns false
-      if (leftVal === null || leftVal === undefined || rightVal === null || rightVal === undefined) {
+      if (
+        leftVal === null ||
+        leftVal === undefined ||
+        rightVal === null ||
+        rightVal === undefined
+      ) {
         return false;
       }
 
@@ -204,16 +216,26 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
 
   // 4. FUNCTION
   if (type === "FUNCTION" || type === "function") {
-    const funcName = (typeof valAttr === "string" ? valAttr : node.operator || "").toLowerCase();
+    const funcName = (
+      typeof valAttr === "string" ? valAttr : node.operator || ""
+    ).toLowerCase();
 
     if (funcName === "is_empty" || funcName === "empty") {
       const childVal = evaluateAST(rawChildren[0], context, currentIndices);
-      return childVal === null || childVal === undefined || String(childVal).trim() === "";
+      return (
+        childVal === null ||
+        childVal === undefined ||
+        String(childVal).trim() === ""
+      );
     }
 
     if (funcName === "is_not_empty") {
       const childVal = evaluateAST(rawChildren[0], context, currentIndices);
-      return childVal !== null && childVal !== undefined && String(childVal).trim() !== "";
+      return (
+        childVal !== null &&
+        childVal !== undefined &&
+        String(childVal).trim() !== ""
+      );
     }
 
     if (funcName === "indexed-repeat") {
@@ -222,8 +244,14 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
       const repeatGroupNode = rawChildren[1];
       const indexNode = rawChildren[2];
 
-      const targetPath = targetFieldNode.value || (targetFieldNode.field_ref && targetFieldNode.field_ref.field_id) || "";
-      const repeatGroup = repeatGroupNode.value || (repeatGroupNode.field_ref && repeatGroupNode.field_ref.field_id) || "";
+      const targetPath =
+        targetFieldNode.value ||
+        (targetFieldNode.field_ref && targetFieldNode.field_ref.field_id) ||
+        "";
+      const repeatGroup =
+        repeatGroupNode.value ||
+        (repeatGroupNode.field_ref && repeatGroupNode.field_ref.field_id) ||
+        "";
       const indexVal = evaluateAST(indexNode, context, currentIndices);
 
       const targetIndex = parseInt(indexVal, 10);
@@ -254,7 +282,8 @@ export function getCompiledExpression(node) {
   let compiled = compilerCache.get(cacheKey);
 
   if (!compiled) {
-    compiled = (context, currentIndices) => evaluateAST(node, context, currentIndices);
+    compiled = (context, currentIndices) =>
+      evaluateAST(node, context, currentIndices);
     compilerCache.put(cacheKey, compiled);
   }
 

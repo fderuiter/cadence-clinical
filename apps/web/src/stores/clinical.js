@@ -316,10 +316,10 @@ export const useClinicalStore = defineStore("clinical", {
             type: "comparison",
             operator: ">",
             operands: [
-              { type: "field_ref", field_ref: { "field_id": "pulse" } },
-              { type: "constant", value: 100 }
-            ]
-          }
+              { type: "field_ref", field_ref: { field_id: "pulse" } },
+              { type: "constant", value: 100 },
+            ],
+          },
         },
         {
           id: "weight",
@@ -332,7 +332,7 @@ export const useClinicalStore = defineStore("clinical", {
             required: true,
             min: 10,
             max: 300,
-          }
+          },
         },
         {
           id: "height",
@@ -351,12 +351,12 @@ export const useClinicalStore = defineStore("clinical", {
               type: "comparison",
               operator: ">",
               operands: [
-                { type: "field_ref", field_ref: { "field_id": "height" } },
-                { type: "constant", value: 0 }
-              ]
+                { type: "field_ref", field_ref: { field_id: "height" } },
+                { type: "constant", value: 0 },
+              ],
             },
-            query_message: "Height must be strictly greater than zero."
-          }
+            query_message: "Height must be strictly greater than zero.",
+          },
         },
         {
           id: "bmi_status",
@@ -369,11 +369,11 @@ export const useClinicalStore = defineStore("clinical", {
             type: "comparison",
             operator: ">",
             operands: [
-              { type: "field_ref", field_ref: { "field_id": "height" } },
-              { type: "constant", value: 0 }
-            ]
-          }
-        }
+              { type: "field_ref", field_ref: { field_id: "height" } },
+              { type: "constant", value: 0 },
+            ],
+          },
+        },
       ],
       formValues: savedFormValues || {
         brthdt: "1980-05-12",
@@ -406,9 +406,14 @@ export const useClinicalStore = defineStore("clinical", {
         changed = false;
         passes++;
         for (const field of this.ecrfFields) {
-          const isRelevant = field.relevant ? evaluateAST(field.relevant, this.formValues) !== false : true;
+          const isRelevant = field.relevant
+            ? evaluateAST(field.relevant, this.formValues) !== false
+            : true;
           const wasVisible = this.fieldVisibility[field.id] !== false;
-          if (isRelevant !== wasVisible || this.fieldVisibility[field.id] === undefined) {
+          if (
+            isRelevant !== wasVisible ||
+            this.fieldVisibility[field.id] === undefined
+          ) {
             this.fieldVisibility[field.id] = isRelevant;
             changed = true;
           }
@@ -422,7 +427,7 @@ export const useClinicalStore = defineStore("clinical", {
                   fieldId: field.id,
                   label: field.label,
                   oldValue: val,
-                  newValue: ""
+                  newValue: "",
                 },
                 "System-initiated purge of inactive child variable due to parent value mutation"
               );

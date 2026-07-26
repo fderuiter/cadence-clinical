@@ -46,9 +46,15 @@ def evaluate_ast(
         current_indices = {}
 
     # Extract attributes supporting both dict and object structures
-    node_type = get_node_attribute(node, "node_type") or get_node_attribute(node, "type") or ""
+    node_type = (
+        get_node_attribute(node, "node_type") or get_node_attribute(node, "type") or ""
+    )
     value = get_node_attribute(node, "value")
-    operands = get_node_attribute(node, "children") or get_node_attribute(node, "operands") or []
+    operands = (
+        get_node_attribute(node, "children")
+        or get_node_attribute(node, "operands")
+        or []
+    )
     field_ref = get_node_attribute(node, "field_ref")
 
     # 1. LITERAL / CONSTANT

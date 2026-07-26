@@ -112,7 +112,7 @@ def test_indexed_repeat():
     context = {
         "repeating_vs[1]/vssbp": 110,
         "repeating_vs[2]/vssbp": 130,
-      }
+    }
 
     assert evaluate_ast(node, context) == 130
 
