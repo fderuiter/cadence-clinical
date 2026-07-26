@@ -2,12 +2,15 @@ import { defineStore } from "pinia";
 import { sha256 } from "../../index.js";
 import { generateGatewaySignature, generateJwtHS256 } from "ui";
 import { useAuthStore } from "./auth.js";
+import { soaClient } from "../api/soaClient.js";
+import { evaluateAST, debounce } from "../evaluator.js";
 
 export const useClinicalStore = defineStore("clinical", {
   state: () => {
     let savedFormValues = null;
     let savedFormQueries = null;
     let savedLedgerBlocks = null;
+    let savedUsdm = null;
     if (typeof window !== "undefined" && window.localStorage) {
       try {
         savedFormValues = JSON.parse(window.localStorage.getItem("formValues"));
@@ -17,13 +20,14 @@ export const useClinicalStore = defineStore("clinical", {
         savedLedgerBlocks = JSON.parse(
           window.localStorage.getItem("ledgerBlocks")
         );
+        savedUsdm = JSON.parse(window.localStorage.getItem("currentUsdm"));
       } catch (e) {
         console.error("Failed to parse saved state from localStorage", e);
       }
     }
 
     return {
-      currentUsdm: {
+      currentUsdm: savedUsdm || {
         studyId: "STUDY-USDM-001",
         studyTitle: "Phase II Trial of Cadence-001 in Essential Hypertension",
         objectives: [
@@ -305,6 +309,75 @@ export const useClinicalStore = defineStore("clinical", {
             message: "Pulse Rate must be between 30 and 200 bpm",
           },
         },
+        {
+          id: "pulse_details",
+          label: "Pulse Details (Tachycardia comment)",
+          type: "text",
+          gridSpan: 12,
+          cdash: "VS.VSHR_DETAILS",
+          value: "",
+          relevant: {
+            type: "comparison",
+            operator: ">",
+            operands: [
+              { type: "field_ref", field_ref: { field_id: "pulse" } },
+              { type: "constant", value: 100 },
+            ],
+          },
+        },
+        {
+          id: "weight",
+          label: "Weight (kg)",
+          type: "text",
+          gridSpan: 6,
+          cdash: "VS.WT",
+          value: "70",
+          validation: {
+            required: true,
+            min: 10,
+            max: 300,
+          },
+        },
+        {
+          id: "height",
+          label: "Height (m)",
+          type: "text",
+          gridSpan: 6,
+          cdash: "VS.HT",
+          value: "1.75",
+          validation: {
+            required: true,
+            min: 0.5,
+            max: 3.0,
+          },
+          constraint: {
+            condition: {
+              type: "comparison",
+              operator: ">",
+              operands: [
+                { type: "field_ref", field_ref: { field_id: "height" } },
+                { type: "constant", value: 0 },
+              ],
+            },
+            query_message: "Height must be strictly greater than zero.",
+          },
+        },
+        {
+          id: "bmi_status",
+          label: "BMI Status Information",
+          type: "text",
+          gridSpan: 12,
+          cdash: "VS.BMI_STATUS",
+          value: "Normal",
+          relevant: {
+            type: "comparison",
+            operator: ">",
+            operands: [
+              { type: "field_ref", field_ref: { field_id: "height" } },
+              { type: "constant", value: 0 },
+            ],
+          },
+        },
       ],
       formValues: savedFormValues || {
         brthdt: "1980-05-12",
@@ -312,7 +385,12 @@ export const useClinicalStore = defineStore("clinical", {
         vssbp: "120",
         vsdpb: "80",
         pulse: "72",
+        pulse_details: "",
+        weight: "70",
+        height: "1.75",
+        bmi_status: "Normal",
       },
+      fieldVisibility: {},
       formQueries: savedFormQueries || {},
       ledgerBlocks: savedLedgerBlocks || [],
       syncInterval: null,
@@ -334,8 +412,62 @@ export const useClinicalStore = defineStore("clinical", {
         authenticated: true,
       };
     },
+      },
+      syncInterval: null,
+
+      // --- SoA State ---
+      activeStudyVersionId: "v_draft_01",
+      soaLoading: false,
+      soaError: null,
+    };
   },
   actions: {
+    async evaluateRules() {
+      let changed = true;
+      let passes = 0;
+      while (changed && passes < 10) {
+        changed = false;
+        passes++;
+        for (const field of this.ecrfFields) {
+          const isRelevant = field.relevant
+            ? evaluateAST(field.relevant, this.formValues) !== false
+            : true;
+          const wasVisible = this.fieldVisibility[field.id] !== false;
+          if (
+            isRelevant !== wasVisible ||
+            this.fieldVisibility[field.id] === undefined
+          ) {
+            this.fieldVisibility[field.id] = isRelevant;
+            changed = true;
+          }
+          if (!isRelevant) {
+            const val = this.formValues[field.id];
+            if (val !== undefined && val !== "" && val !== null) {
+              this.formValues[field.id] = "";
+              await this.addLedgerBlock(
+                "FIELD_PURGE",
+                {
+                  fieldId: field.id,
+                  label: field.label,
+                  oldValue: val,
+                  newValue: "",
+                },
+                "System-initiated purge of inactive child variable due to parent value mutation"
+              );
+              changed = true;
+            }
+          }
+        }
+      }
+    },
+    triggerValueChange() {
+      if (!this.debouncedEvaluateRules) {
+        this.debouncedEvaluateRules = debounce(async () => {
+          await this.evaluateRules();
+        }, 50);
+      }
+      this.debouncedEvaluateRules();
+    },
     async addLedgerBlock(action, details, reason = "System Action") {
       const timestamp = new Date().toISOString();
       const index = this.ledgerBlocks.length;
@@ -373,6 +505,10 @@ export const useClinicalStore = defineStore("clinical", {
         window.localStorage.setItem(
           "ledgerBlocks",
           JSON.stringify(this.ledgerBlocks)
+        );
+        window.localStorage.setItem(
+          "currentUsdm",
+          JSON.stringify(this.currentUsdm)
         );
       }
 
@@ -484,6 +620,121 @@ export const useClinicalStore = defineStore("clinical", {
         console.log("Background sync: Successfully synchronized query blocks.");
       } catch (err) {
         console.warn("Background sync failed (retrying automatically):", err);
+      }
+    },
+
+    // --- SoA Pinia Actions ---
+    async fetchSoAProjection() {
+      this.soaLoading = true;
+      this.soaError = null;
+      try {
+        const data = await soaClient.getSoAProjection(
+          this.currentUsdm.studyId,
+          this.activeStudyVersionId,
+          { userId: "fderuiter", roles: "STUDY_DESIGNER" }
+        );
+        // Map fetched Neo4j projection structure back to our local currentUsdm state
+        this.currentUsdm.epochs = data.epochs || [];
+        this.currentUsdm.encounters = data.encounters || [];
+        this.currentUsdm.rows = data.rows || [];
+        this.soaLoading = false;
+      } catch (err) {
+        this.soaError = err.message;
+        this.soaLoading = false;
+        console.warn(
+          "Backend SoA endpoint failed, relying on local state:",
+          err
+        );
+      }
+    },
+
+    async pushSoAMutation(type, id, properties, changeReason) {
+      this.soaLoading = true;
+      this.soaError = null;
+      const opts = {
+        userId: "fderuiter",
+        roles: "STUDY_DESIGNER",
+        changeReason,
+      };
+      try {
+        if (type === "arms") {
+          await soaClient.saveArm(
+            this.currentUsdm.studyId,
+            this.activeStudyVersionId,
+            id,
+            properties,
+            opts
+          );
+        } else if (type === "epochs") {
+          await soaClient.saveEpoch(
+            this.currentUsdm.studyId,
+            this.activeStudyVersionId,
+            id,
+            properties,
+            opts
+          );
+        } else if (type === "visits") {
+          await soaClient.saveVisit(
+            this.currentUsdm.studyId,
+            this.activeStudyVersionId,
+            id,
+            properties,
+            opts
+          );
+        } else if (type === "procedures") {
+          await soaClient.saveProcedure(
+            this.currentUsdm.studyId,
+            this.activeStudyVersionId,
+            id,
+            properties,
+            opts
+          );
+        }
+        await this.addLedgerBlock(
+          `SOA_MUTATION_${type.toUpperCase()}`,
+          { id, properties },
+          changeReason
+        );
+        await this.fetchSoAProjection();
+      } catch (err) {
+        this.soaError = err.message;
+        this.soaLoading = false;
+        // Log mutation locally even on network failure for compliance
+        await this.addLedgerBlock(
+          `SOA_MUTATION_OFFLINE_${type.toUpperCase()}`,
+          { id, properties, error: err.message },
+          changeReason
+        );
+        throw err;
+      }
+    },
+
+    async pushSoALink(linkType, payload, changeReason) {
+      this.soaLoading = true;
+      this.soaError = null;
+      try {
+        await soaClient.createLink(
+          this.currentUsdm.studyId,
+          this.activeStudyVersionId,
+          linkType,
+          payload,
+          { userId: "fderuiter", roles: "STUDY_DESIGNER", changeReason }
+        );
+        await this.addLedgerBlock(
+          `SOA_LINK_${linkType.toUpperCase()}`,
+          payload,
+          changeReason
+        );
+        await this.fetchSoAProjection();
+      } catch (err) {
+        this.soaError = err.message;
+        this.soaLoading = false;
+        await this.addLedgerBlock(
+          `SOA_LINK_OFFLINE_${linkType.toUpperCase()}`,
+          { payload, error: err.message },
+          changeReason
+        );
+        throw err;
       }
     },
   },

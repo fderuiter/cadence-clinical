@@ -24,6 +24,19 @@ from fastapi import (
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import select, text
 
+from apps.execution.biostat import (
+    DatasetJSONValidationError,
+    derive_adae,
+    derive_adsl,
+    derive_advs,
+    extract_ae,
+    extract_dm,
+    extract_lb,
+    extract_mh,
+    extract_vs,
+    serialize_to_dataset_json,
+    validate_dataset_json,
+)
 from apps.execution.cdisc_validator import validate_cdisc_xml_structure
 from apps.execution.coding import match_verbatim_term
 from apps.execution.coding.importer import process_dictionary_import
@@ -33,6 +46,7 @@ from apps.execution.database.core import db_manager
 from apps.execution.database.middleware import ContextResetMiddleware
 from apps.execution.database.models import (
     AuditLog,
+    BiostatExport,
     ClinicalObservation,
     ClinicalQuery,
     ClinicalSubject,
@@ -3699,3 +3713,299 @@ async def unlock_trial_endpoint(
     verify_change_justification(request)
     TrialLockManager.unlock_trial()
     return {"status": "success", "message": "Trial is unlocked/unfrozen."}
+
+
+# ==========================================
+# Authenticated SDTM/ADaM Dataset-JSON API
+# ==========================================
+
+
+async def run_sdtm_extraction(session, study_id: str, domain: str) -> List[dict]:
+    """Helper to retrieve and transform raw observations to SDTM records."""
+    stmt_subj = select(ClinicalSubject).where(
+        ClinicalSubject.study_id == study_id,
+        ClinicalSubject.is_deleted.is_(False),
+    )
+    res_subj = await session.execute(stmt_subj)
+    subjects = res_subj.scalars().all()
+
+    stmt_obs = select(ClinicalObservation).where(
+        ClinicalObservation.study_id == study_id,
+        ClinicalObservation.is_deleted.is_(False),
+    )
+    res_obs = await session.execute(stmt_obs)
+    observations = res_obs.scalars().all()
+
+    dom_upper = domain.strip().upper()
+    records = []
+    if dom_upper == "DM":
+        records = extract_dm(subjects, observations)
+    elif dom_upper == "AE":
+        records, _ = extract_ae(subjects, observations)
+    elif dom_upper == "VS":
+        records, _ = extract_vs(subjects, observations)
+    elif dom_upper == "LB":
+        records, _ = extract_lb(subjects, observations)
+    elif dom_upper == "MH":
+        records, _ = extract_mh(subjects, observations)
+    else:
+        raise ValueError(f"Unsupported SDTM domain: {domain}")
+
+    for r in records:
+        if "DOMAIN" not in r:
+            r["DOMAIN"] = dom_upper
+    return records
+
+
+async def run_adam_derivation(session, study_id: str, dataset: str) -> List[dict]:
+    """Helper to retrieve and derive ADaM analysis records."""
+    stmt_subj = select(ClinicalSubject).where(
+        ClinicalSubject.study_id == study_id,
+        ClinicalSubject.is_deleted.is_(False),
+    )
+    res_subj = await session.execute(stmt_subj)
+    subjects = res_subj.scalars().all()
+
+    stmt_obs = select(ClinicalObservation).where(
+        ClinicalObservation.study_id == study_id,
+        ClinicalObservation.is_deleted.is_(False),
+    )
+    res_obs = await session.execute(stmt_obs)
+    observations = res_obs.scalars().all()
+
+    ds_upper = dataset.strip().upper()
+    if ds_upper == "ADSL":
+        return derive_adsl(subjects, observations)
+    elif ds_upper == "ADAE":
+        adsl_recs = derive_adsl(subjects, observations)
+        ae_recs, _ = extract_ae(subjects, observations)
+        records = derive_adae(adsl_recs, ae_recs)
+        for r in records:
+            if "AEDECOD" not in r or r["AEDECOD"] is None:
+                r["AEDECOD"] = r.get("AETERM", "")
+        return records
+    elif ds_upper == "ADVS":
+        adsl_recs = derive_adsl(subjects, observations)
+        vs_recs, _ = extract_vs(subjects, observations)
+        return derive_advs(adsl_recs, vs_recs)
+    else:
+        raise ValueError(f"Unsupported ADaM dataset: {dataset}")
+
+
+@app.get("/api/v1/execution/biostat/sdtm/{domain}")
+async def export_sdtm_domain(
+    domain: str,
+    study_id: str = Query(..., description="The unique study identifier"),
+    roles: list[str] = Depends(
+        require_roles(
+            ROLE_CRA, ROLE_DATA_MANAGER, "sponsor_statistician", "statistician"
+        )
+    ),
+) -> dict:
+    """Exports SDTM domain data (DM, AE, VS, LB, MH) in CDISC Dataset-JSON format.
+
+    - **Protected Endpoint**: Requires authenticated session under GatewayAuthMiddleware.
+    - **Authorized Roles**: CRA, Data Manager, Sponsor Statistician.
+    - **Validations**: Automatically validates schema, keys, and values before returning payload.
+    - **Media Type Contract**: `application/json` conforming to CDISC Dataset-JSON 1.0.0.
+    """
+    dom_upper = domain.strip().upper()
+    valid_domains = {"DM", "AE", "VS", "LB", "MH"}
+    if dom_upper not in valid_domains:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported SDTM domain: '{domain}'. Must be one of {sorted(list(valid_domains))}",
+        )
+
+    async with db_manager.get_session_maker()() as session:
+        try:
+            records = await run_sdtm_extraction(session, study_id, dom_upper)
+            dataset_json = serialize_to_dataset_json(
+                data={dom_upper: records}, study_id=study_id
+            )
+            validate_dataset_json(dataset_json)
+
+            export_log = BiostatExport(
+                study_id=study_id,
+                export_type="SDTM",
+                dataset_name=dom_upper,
+                status="SUCCESS",
+            )
+            session.add(export_log)
+            await session.commit()
+
+            return dataset_json.model_dump()
+        except DatasetJSONValidationError as e:
+            export_log = BiostatExport(
+                study_id=study_id,
+                export_type="SDTM",
+                dataset_name=dom_upper,
+                status="FAILED",
+                error_message=str(e),
+            )
+            session.add(export_log)
+            await session.commit()
+            raise HTTPException(
+                status_code=422, detail=f"Dataset-JSON validation failed: {str(e)}"
+            )
+        except Exception as e:
+            export_log = BiostatExport(
+                study_id=study_id,
+                export_type="SDTM",
+                dataset_name=dom_upper,
+                status="FAILED",
+                error_message=str(e),
+            )
+            session.add(export_log)
+            await session.commit()
+            raise HTTPException(
+                status_code=500, detail=f"Export execution failed: {str(e)}"
+            )
+
+
+@app.get("/api/v1/execution/biostat/adam/{dataset}")
+async def export_adam_dataset(
+    dataset: str,
+    study_id: str = Query(..., description="The unique study identifier"),
+    roles: list[str] = Depends(
+        require_roles(
+            ROLE_CRA, ROLE_DATA_MANAGER, "sponsor_statistician", "statistician"
+        )
+    ),
+) -> dict:
+    """Exports ADaM dataset data (ADSL, ADAE, ADVS) in CDISC Dataset-JSON format.
+
+    - **Protected Endpoint**: Requires authenticated session under GatewayAuthMiddleware.
+    - **Authorized Roles**: CRA, Data Manager, Sponsor Statistician.
+    - **Validations**: Automatically validates schema, keys, demographics, and referential consistency.
+    - **Media Type Contract**: `application/json` conforming to CDISC Dataset-JSON 1.0.0.
+    """
+    ds_upper = dataset.strip().upper()
+    valid_datasets = {"ADSL", "ADAE", "ADVS"}
+    if ds_upper not in valid_datasets:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported ADaM dataset: '{dataset}'. Must be one of {sorted(list(valid_datasets))}",
+        )
+
+    async with db_manager.get_session_maker()() as session:
+        try:
+            records = await run_adam_derivation(session, study_id, ds_upper)
+            dataset_json = serialize_to_dataset_json(
+                data={ds_upper: records}, study_id=study_id
+            )
+            validate_dataset_json(dataset_json)
+
+            export_log = BiostatExport(
+                study_id=study_id,
+                export_type="ADaM",
+                dataset_name=ds_upper,
+                status="SUCCESS",
+            )
+            session.add(export_log)
+            await session.commit()
+
+            return dataset_json.model_dump()
+        except DatasetJSONValidationError as e:
+            export_log = BiostatExport(
+                study_id=study_id,
+                export_type="ADaM",
+                dataset_name=ds_upper,
+                status="FAILED",
+                error_message=str(e),
+            )
+            session.add(export_log)
+            await session.commit()
+            raise HTTPException(
+                status_code=422, detail=f"Dataset-JSON validation failed: {str(e)}"
+            )
+        except Exception as e:
+            export_log = BiostatExport(
+                study_id=study_id,
+                export_type="ADaM",
+                dataset_name=ds_upper,
+                status="FAILED",
+                error_message=str(e),
+            )
+            session.add(export_log)
+            await session.commit()
+            raise HTTPException(
+                status_code=500, detail=f"Export execution failed: {str(e)}"
+            )
+
+
+@app.get("/api/v1/execution/biostat/bundle")
+async def export_biostat_bundle(
+    study_id: str = Query(..., description="The unique study identifier"),
+    roles: list[str] = Depends(
+        require_roles(
+            ROLE_CRA, ROLE_DATA_MANAGER, "sponsor_statistician", "statistician"
+        )
+    ),
+) -> dict:
+    """Exports all SDTM domains and ADaM datasets bundled in a single CDISC Dataset-JSON document.
+
+    - **Protected Endpoint**: Requires authenticated session under GatewayAuthMiddleware.
+    - **Authorized Roles**: CRA, Data Manager, Sponsor Statistician.
+    - **Validations**: Validates complete structural, domain-level, and cross-dataset referential consistency.
+    - **Media Type Contract**: `application/json` conforming to CDISC Dataset-JSON 1.0.0.
+    """
+    async with db_manager.get_session_maker()() as session:
+        try:
+            bundle_data = {}
+            for dom in ["DM", "AE", "VS", "LB", "MH"]:
+                records = await run_sdtm_extraction(session, study_id, dom)
+                if records:
+                    bundle_data[dom] = records
+            for ds in ["ADSL", "ADAE", "ADVS"]:
+                records = await run_adam_derivation(session, study_id, ds)
+                if records:
+                    bundle_data[ds] = records
+
+            if not bundle_data:
+                raise HTTPException(
+                    status_code=404,
+                    detail="No biostat records found for the given study.",
+                )
+
+            dataset_json = serialize_to_dataset_json(
+                data=bundle_data, study_id=study_id
+            )
+            validate_dataset_json(dataset_json)
+
+            export_log = BiostatExport(
+                study_id=study_id,
+                export_type="BUNDLE",
+                dataset_name=None,
+                status="SUCCESS",
+            )
+            session.add(export_log)
+            await session.commit()
+
+            return dataset_json.model_dump()
+        except DatasetJSONValidationError as e:
+            export_log = BiostatExport(
+                study_id=study_id,
+                export_type="BUNDLE",
+                dataset_name=None,
+                status="FAILED",
+                error_message=str(e),
+            )
+            session.add(export_log)
+            await session.commit()
+            raise HTTPException(
+                status_code=422, detail=f"Dataset-JSON validation failed: {str(e)}"
+            )
+        except Exception as e:
+            export_log = BiostatExport(
+                study_id=study_id,
+                export_type="BUNDLE",
+                dataset_name=None,
+                status="FAILED",
+                error_message=str(e),
+            )
+            session.add(export_log)
+            await session.commit()
+            raise HTTPException(
+                status_code=500, detail=f"Export execution failed: {str(e)}"
+            )
