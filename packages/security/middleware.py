@@ -1,7 +1,6 @@
 import datetime
 import hashlib
 import hmac
-import json
 import os
 import time
 from typing import Awaitable, Callable
@@ -14,9 +13,12 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from packages.security.context import (
     current_change_reason,
     current_ip_address,
+    current_site_id,
     current_timestamp,
+    current_unblinded_access,
     current_user_id,
 )
+from packages.security.signing import verify_gateway_v2_signature
 
 
 class DownstreamReplayCache:
@@ -81,6 +83,9 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
         roles = request.headers.get("X-User-Roles")
         timestamp = request.headers.get("X-Gateway-Timestamp")
         signature = request.headers.get("X-Gateway-Signature")
+        site_id = request.headers.get("X-Site-Id")
+        sponsor_id = request.headers.get("X-Sponsor-Id")
+        unblinded_header = request.headers.get("X-Unblinded-Access")
 
         if not all([user_id, roles, timestamp, signature]):
             status_code = 403 if is_mutation else 401
@@ -113,6 +118,14 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
                 },
             )
 
+        if version in ("2", "v2"):
+            if site_id is None or sponsor_id is None or unblinded_header is None:
+                status_code = 403 if is_mutation else 401
+                return JSONResponse(
+                    status_code=status_code,
+                    content={"detail": "Missing gateway authentication headers"},
+                )
+
         change_reason = request.headers.get("X-Change-Reason")
         if not change_reason:
             if request.method in ("GET", "HEAD", "OPTIONS"):
@@ -132,28 +145,40 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
             )
 
         if version in ("2", "v2"):
-            payload = {
-                "change_reason": change_reason,
-                "roles": roles,
-                "timestamp": timestamp,
-                "user_id": user_id,
-            }
-            serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
-            expected_signature = hmac.new(
-                self.gateway_secret, serialized.encode(), hashlib.sha256
-            ).hexdigest()
+            unblinded_val = (
+                unblinded_header.lower() in ("true", "1", "yes")
+                if unblinded_header
+                else False
+            )
+            is_valid_sig = verify_gateway_v2_signature(
+                user_id=user_id,
+                roles=roles,
+                timestamp=timestamp,
+                change_reason=change_reason,
+                site_id=site_id or "",
+                sponsor_id=sponsor_id or "",
+                unblinded_access=unblinded_val,
+                signature=signature,
+                secret=self.gateway_secret,
+            )
+            if not is_valid_sig:
+                status_code = 403 if is_mutation else 401
+                return JSONResponse(
+                    status_code=status_code,
+                    content={"detail": "Invalid gateway signature"},
+                )
         else:
             # Version 1/v1 (legacy colon concatenated format)
             serialized = f"{user_id}:{roles}:{timestamp}"
             expected_signature = hmac.new(
                 self.gateway_secret, serialized.encode(), hashlib.sha256
             ).hexdigest()
-
-        if not hmac.compare_digest(expected_signature, signature):
-            status_code = 403 if is_mutation else 401
-            return JSONResponse(
-                status_code=status_code, content={"detail": "Invalid gateway signature"}
-            )
+            if not hmac.compare_digest(expected_signature, signature):
+                status_code = 403 if is_mutation else 401
+                return JSONResponse(
+                    status_code=status_code,
+                    content={"detail": "Invalid gateway signature"},
+                )
 
         # Check if request is signature-gated
         is_signature_gated = False
@@ -251,6 +276,15 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
         request.state.user_id = user_id
         request.state.roles = roles
         request.state.change_reason = change_reason
+        request.state.site_id = site_id or ""
+        request.state.sponsor_id = sponsor_id or ""
+
+        unblinded_val = (
+            unblinded_header.lower() in ("true", "1", "yes")
+            if unblinded_header
+            else False
+        )
+        request.state.unblinded_access = unblinded_val
 
         # Extract IP address for context injection
         ip_address = request.headers.get(
@@ -266,6 +300,8 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
         ts_token = current_timestamp.set(
             datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
         )
+        site_token = current_site_id.set(site_id or "")
+        unblinded_token = current_unblinded_access.set(unblinded_val)
 
         try:
             return await call_next(request)
@@ -275,3 +311,5 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
             current_change_reason.reset(reason_token)
             current_ip_address.reset(ip_token)
             current_timestamp.reset(ts_token)
+            current_site_id.reset(site_token)
+            current_unblinded_access.reset(unblinded_token)

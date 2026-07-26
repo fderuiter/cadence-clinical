@@ -14,6 +14,10 @@ current_change_reason = contextvars.ContextVar(
 )
 current_ip_address = contextvars.ContextVar("current_ip_address", default="127.0.0.1")
 current_timestamp = contextvars.ContextVar("current_timestamp", default=None)
+current_site_id = contextvars.ContextVar("current_site_id", default="")
+current_unblinded_access = contextvars.ContextVar(
+    "current_unblinded_access", default=False
+)
 
 # Context variable for propagating the current Part 11 signature manifestation context
 current_signature_context = contextvars.ContextVar(
@@ -28,6 +32,8 @@ def audit_context(
     ip_address: str | None = None,
     timestamp: datetime | None = None,
     signature_context: Any | None = None,
+    site_id: str | None = None,
+    unblinded_access: bool | None = None,
 ) -> Generator[None, None, None]:
     """Context manager to bind user identity, change reason, IP address, timestamp, and signature context.
 
@@ -41,6 +47,8 @@ def audit_context(
         ip_address (str | None): The network IP address of the client.
         timestamp (datetime | None): The timestamp of the operation.
         signature_context (Any | None): Optional electronic signature manifestation context.
+        site_id (str | None): Optional site ID context.
+        unblinded_access (bool | None): Optional unblinded access flag.
 
     Yields:
         None
@@ -53,12 +61,16 @@ def audit_context(
         if timestamp is not None
         else datetime.now(timezone.utc).replace(tzinfo=None)
     )
+    s = site_id if site_id is not None else ""
+    ub = unblinded_access if unblinded_access is not None else False
 
     user_token = current_user_id.set(u)
     reason_token = current_change_reason.set(r)
     ip_token = current_ip_address.set(ip)
     ts_token = current_timestamp.set(ts)
     sig_token = current_signature_context.set(signature_context)
+    site_token = current_site_id.set(s)
+    unblinded_token = current_unblinded_access.set(ub)
     try:
         yield
     finally:
@@ -67,6 +79,8 @@ def audit_context(
         current_ip_address.reset(ip_token)
         current_timestamp.reset(ts_token)
         current_signature_context.reset(sig_token)
+        current_site_id.reset(site_token)
+        current_unblinded_access.reset(unblinded_token)
 
 
 def audit_context_decorator(
@@ -74,6 +88,8 @@ def audit_context_decorator(
     change_reason_getter: Callable[..., str | None] | None = None,
     ip_address_getter: Callable[..., str | None] | None = None,
     signature_context_getter: Callable[..., Any | None] | None = None,
+    site_id_getter: Callable[..., str | None] | None = None,
+    unblinded_access_getter: Callable[..., bool | None] | None = None,
 ):
     """Decorator to automatically apply audit context to a function execution.
 
@@ -82,6 +98,8 @@ def audit_context_decorator(
         change_reason_getter (Callable): A function that extracts the change reason from the decorated function's arguments.
         ip_address_getter (Callable): A function that extracts the IP address from the decorated function's arguments.
         signature_context_getter (Callable): A function that extracts the signature context from the decorated function's arguments.
+        site_id_getter (Callable): A function that extracts the site ID.
+        unblinded_access_getter (Callable): A function that extracts unblinded access.
     """
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -99,11 +117,19 @@ def audit_context_decorator(
                 if signature_context_getter
                 else None
             )
+            site_id = site_id_getter(*args, **kwargs) if site_id_getter else None
+            unblinded_access = (
+                unblinded_access_getter(*args, **kwargs)
+                if unblinded_access_getter
+                else None
+            )
             with audit_context(
                 user_id=user_id,
                 change_reason=change_reason,
                 ip_address=ip_address,
                 signature_context=signature_context,
+                site_id=site_id,
+                unblinded_access=unblinded_access,
             ):
                 return await func(*args, **kwargs)  # type: ignore
 
@@ -121,11 +147,19 @@ def audit_context_decorator(
                 if signature_context_getter
                 else None
             )
+            site_id = site_id_getter(*args, **kwargs) if site_id_getter else None
+            unblinded_access = (
+                unblinded_access_getter(*args, **kwargs)
+                if unblinded_access_getter
+                else None
+            )
             with audit_context(
                 user_id=user_id,
                 change_reason=change_reason,
                 ip_address=ip_address,
                 signature_context=signature_context,
+                site_id=site_id,
+                unblinded_access=unblinded_access,
             ):
                 return func(*args, **kwargs)
 

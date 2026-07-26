@@ -10,7 +10,9 @@ from packages.security.context import (
     audit_context_decorator,
     current_change_reason,
     current_ip_address,
+    current_site_id,
     current_timestamp,
+    current_unblinded_access,
     current_user_id,
 )
 from packages.security.middleware import GatewayAuthMiddleware
@@ -198,7 +200,14 @@ def test_middleware_v2_success() -> None:
     change_reason = "Updating medical data for patient X"
 
     sig = generate_signature(
-        user_id, roles, timestamp, version="2", change_reason=change_reason
+        user_id,
+        roles,
+        timestamp,
+        version="2",
+        change_reason=change_reason,
+        site_id="",
+        sponsor_id="",
+        unblinded_access=False,
     )
 
     headers = {
@@ -208,6 +217,9 @@ def test_middleware_v2_success() -> None:
         "X-Gateway-Signature": sig,
         "X-Signature-Version": "2",
         "X-Change-Reason": change_reason,
+        "X-Site-Id": "",
+        "X-Sponsor-Id": "",
+        "X-Unblinded-Access": "false",
     }
     response = client.get("/secure-endpoint", headers=headers)
     assert response.status_code == 200
@@ -222,7 +234,16 @@ def test_middleware_v2_missing_reason() -> None:
     user_id = "v2_user"
     roles = "admin"
 
-    sig = generate_signature(user_id, roles, timestamp, version="2", change_reason="")
+    sig = generate_signature(
+        user_id,
+        roles,
+        timestamp,
+        version="2",
+        change_reason="",
+        site_id="",
+        sponsor_id="",
+        unblinded_access=False,
+    )
 
     # Missing X-Change-Reason header entirely
     headers = {
@@ -231,6 +252,9 @@ def test_middleware_v2_missing_reason() -> None:
         "X-Gateway-Timestamp": timestamp,
         "X-Gateway-Signature": sig,
         "X-Signature-Version": "2",
+        "X-Site-Id": "",
+        "X-Sponsor-Id": "",
+        "X-Unblinded-Access": "false",
     }
     response = client.post("/secure-endpoint", headers=headers)
     assert response.status_code == 403
@@ -250,6 +274,9 @@ def test_middleware_v2_invalid_signature() -> None:
         "X-Gateway-Signature": "wrong-hmac",
         "X-Signature-Version": "2",
         "X-Change-Reason": "Valid reason",
+        "X-Site-Id": "",
+        "X-Sponsor-Id": "",
+        "X-Unblinded-Access": "false",
     }
     response = client.get("/secure-endpoint", headers=headers)
     assert response.status_code == 401
@@ -269,7 +296,14 @@ def test_middleware_v2_mismatched_reason() -> None:
 
     # Sign with original reason
     sig = generate_signature(
-        user_id, roles, timestamp, version="2", change_reason=signed_reason
+        user_id,
+        roles,
+        timestamp,
+        version="2",
+        change_reason=signed_reason,
+        site_id="",
+        sponsor_id="",
+        unblinded_access=False,
     )
 
     # Request with modified reason
@@ -280,6 +314,9 @@ def test_middleware_v2_mismatched_reason() -> None:
         "X-Gateway-Signature": sig,
         "X-Signature-Version": "2",
         "X-Change-Reason": tampered_reason,
+        "X-Site-Id": "",
+        "X-Sponsor-Id": "",
+        "X-Unblinded-Access": "false",
     }
     response = client.get("/secure-endpoint", headers=headers)
     assert response.status_code == 401
@@ -295,7 +332,16 @@ def test_middleware_v2_safe_method_no_reason_success() -> None:
     user_id = "v2_user"
     roles = "admin"
 
-    sig = generate_signature(user_id, roles, timestamp, version="2", change_reason="")
+    sig = generate_signature(
+        user_id,
+        roles,
+        timestamp,
+        version="2",
+        change_reason="",
+        site_id="",
+        sponsor_id="",
+        unblinded_access=False,
+    )
 
     # Missing X-Change-Reason entirely, but using GET
     headers = {
@@ -304,6 +350,9 @@ def test_middleware_v2_safe_method_no_reason_success() -> None:
         "X-Gateway-Timestamp": timestamp,
         "X-Gateway-Signature": sig,
         "X-Signature-Version": "2",
+        "X-Site-Id": "",
+        "X-Sponsor-Id": "",
+        "X-Unblinded-Access": "false",
     }
     response = client.get("/secure-endpoint", headers=headers)
     assert response.status_code == 200
@@ -328,6 +377,9 @@ def test_mutation_unsigned_and_non_compliant_rejections() -> None:
         "X-Gateway-Signature": "invalid-sig",
         "X-Signature-Version": "2",
         "X-Change-Reason": "Valid reason",
+        "X-Site-Id": "",
+        "X-Sponsor-Id": "",
+        "X-Unblinded-Access": "false",
     }
     response = client.post("/secure-endpoint", headers=headers)
     assert response.status_code == 403
@@ -341,6 +393,9 @@ def test_mutation_unsigned_and_non_compliant_rejections() -> None:
         "X-Gateway-Signature": "sig",
         "X-Signature-Version": "2",
         "X-Change-Reason": "Valid reason",
+        "X-Site-Id": "",
+        "X-Sponsor-Id": "",
+        "X-Unblinded-Access": "false",
     }
     response = client.post("/secure-endpoint", headers=headers)
     assert response.status_code == 403
@@ -354,6 +409,9 @@ def test_mutation_unsigned_and_non_compliant_rejections() -> None:
         "X-Gateway-Signature": "sig",
         "X-Signature-Version": "2",
         "X-Change-Reason": "Valid reason",
+        "X-Site-Id": "",
+        "X-Sponsor-Id": "",
+        "X-Unblinded-Access": "false",
     }
     response = client.post("/secure-endpoint", headers=headers)
     assert response.status_code == 400
@@ -367,6 +425,9 @@ def test_mutation_unsigned_and_non_compliant_rejections() -> None:
         "X-Gateway-Signature": "sig",
         "X-Signature-Version": "2",
         "X-Change-Reason": "A" * 256,
+        "X-Site-Id": "",
+        "X-Sponsor-Id": "",
+        "X-Unblinded-Access": "false",
     }
     response = client.post("/secure-endpoint", headers=headers)
     assert response.status_code == 400
@@ -480,7 +541,14 @@ def test_downstream_signature_gated_endpoint_requires_sig_token() -> None:
     change_reason = "PI Sign-off"
 
     sig = generate_signature(
-        user_id, roles, timestamp, version="2", change_reason=change_reason
+        user_id,
+        roles,
+        timestamp,
+        version="2",
+        change_reason=change_reason,
+        site_id="",
+        sponsor_id="",
+        unblinded_access=False,
     )
 
     headers = {
@@ -490,6 +558,9 @@ def test_downstream_signature_gated_endpoint_requires_sig_token() -> None:
         "X-Gateway-Signature": sig,
         "X-Signature-Version": "2",
         "X-Change-Reason": change_reason,
+        "X-Site-Id": "",
+        "X-Sponsor-Id": "",
+        "X-Unblinded-Access": "false",
     }
 
     # Request without X-Sig-Token should fail with REAUTHENTICATION_REQUIRED
@@ -511,7 +582,14 @@ def test_downstream_signature_gated_endpoint_valid_sig_token() -> None:
     change_reason = "PI Sign-off"
 
     sig = generate_signature(
-        user_id, roles, timestamp, version="2", change_reason=change_reason
+        user_id,
+        roles,
+        timestamp,
+        version="2",
+        change_reason=change_reason,
+        site_id="",
+        sponsor_id="",
+        unblinded_access=False,
     )
 
     # Generate valid sig_token
@@ -533,6 +611,9 @@ def test_downstream_signature_gated_endpoint_valid_sig_token() -> None:
         "X-Signature-Version": "2",
         "X-Change-Reason": change_reason,
         "X-Sig-Token": sig_token,
+        "X-Site-Id": "",
+        "X-Sponsor-Id": "",
+        "X-Unblinded-Access": "false",
     }
 
     response = client.post(
@@ -553,7 +634,14 @@ def test_downstream_signature_gated_endpoint_expired_token() -> None:
     change_reason = "PI Sign-off"
 
     sig = generate_signature(
-        user_id, roles, timestamp, version="2", change_reason=change_reason
+        user_id,
+        roles,
+        timestamp,
+        version="2",
+        change_reason=change_reason,
+        site_id="",
+        sponsor_id="",
+        unblinded_access=False,
     )
 
     # Expired token
@@ -575,6 +663,9 @@ def test_downstream_signature_gated_endpoint_expired_token() -> None:
         "X-Signature-Version": "2",
         "X-Change-Reason": change_reason,
         "X-Sig-Token": sig_token,
+        "X-Site-Id": "",
+        "X-Sponsor-Id": "",
+        "X-Unblinded-Access": "false",
     }
 
     response = client.post(
@@ -595,7 +686,14 @@ def test_downstream_signature_gated_endpoint_mismatched_action() -> None:
     change_reason = "PI Sign-off"
 
     sig = generate_signature(
-        user_id, roles, timestamp, version="2", change_reason=change_reason
+        user_id,
+        roles,
+        timestamp,
+        version="2",
+        change_reason=change_reason,
+        site_id="",
+        sponsor_id="",
+        unblinded_access=False,
     )
 
     # Token bound to different action
@@ -617,6 +715,9 @@ def test_downstream_signature_gated_endpoint_mismatched_action() -> None:
         "X-Signature-Version": "2",
         "X-Change-Reason": change_reason,
         "X-Sig-Token": sig_token,
+        "X-Site-Id": "",
+        "X-Sponsor-Id": "",
+        "X-Unblinded-Access": "false",
     }
 
     response = client.post(
@@ -637,7 +738,14 @@ def test_downstream_signature_gated_endpoint_replay_blocked() -> None:
     change_reason = "PI Sign-off"
 
     sig = generate_signature(
-        user_id, roles, timestamp, version="2", change_reason=change_reason
+        user_id,
+        roles,
+        timestamp,
+        version="2",
+        change_reason=change_reason,
+        site_id="",
+        sponsor_id="",
+        unblinded_access=False,
     )
 
     # Generate token
@@ -659,6 +767,9 @@ def test_downstream_signature_gated_endpoint_replay_blocked() -> None:
         "X-Signature-Version": "2",
         "X-Change-Reason": change_reason,
         "X-Sig-Token": sig_token,
+        "X-Site-Id": "",
+        "X-Sponsor-Id": "",
+        "X-Unblinded-Access": "false",
     }
 
     # First request should pass
@@ -673,3 +784,68 @@ def test_downstream_signature_gated_endpoint_replay_blocked() -> None:
     )
     assert response2.status_code == 401
     assert response2.json()["detail"] == "REAUTHENTICATION_REQUIRED"
+
+
+def test_identity_scope_propagation_and_verification() -> None:
+    """
+    Verify that signed site, sponsor, and unblinded values propagate from headers,
+    are verified by the HMAC signature, populate request.state, and context-bind correctly.
+    """
+    client = TestClient(test_app)
+    timestamp = str(time.time())
+    user_id = "scoped_user_99"
+    roles = "sponsor_designer"
+    change_reason = "Adding test verification"
+    site_id = "SITE-XYZ"
+    sponsor_id = "SPONSOR-123"
+    unblinded_access = True
+
+    # Generate a signature incorporating the full scope
+    sig = generate_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        version="2",
+        change_reason=change_reason,
+        site_id=site_id,
+        sponsor_id=sponsor_id,
+        unblinded_access=unblinded_access,
+    )
+
+    headers = {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": sig,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": change_reason,
+        "X-Site-Id": site_id,
+        "X-Sponsor-Id": sponsor_id,
+        "X-Unblinded-Access": "True",
+    }
+
+    # Custom endpoint to inspect state and context
+    from fastapi import Request
+
+    @test_app.get("/inspect-scope")
+    async def inspect_scope(request: Request):
+        # 1. Inspect request.state
+        assert request.state.site_id == site_id
+        assert request.state.sponsor_id == sponsor_id
+        assert request.state.unblinded_access is True
+
+        # 2. Inspect ContextVars
+        assert current_site_id.get() == site_id
+        assert current_unblinded_access.get() is True
+
+        # 3. Inspect populated Principal from rbac.py
+        from packages.security.rbac import get_principal
+
+        principal = get_principal(request)
+        assert principal.assigned_sites == [site_id]
+        assert principal.unblinded_access is True
+
+        return {"status": "ok"}
+
+    response = client.get("/inspect-scope", headers=headers)
+    assert response.status_code == 200

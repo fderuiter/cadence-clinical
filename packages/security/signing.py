@@ -117,3 +117,55 @@ def capture_certificate_identifiers(cert_pem: str) -> Dict[str, str]:
         "sha256_fingerprint": sha256_fingerprint,
         "subject_key_identifier": ski or sha256_fingerprint,
     }
+
+
+def generate_gateway_v2_signature(
+    user_id: str,
+    roles: str,
+    timestamp: str,
+    change_reason: str,
+    site_id: str,
+    sponsor_id: str,
+    unblinded_access: bool,
+    secret: bytes,
+) -> str:
+    """Generates a Version 2 signature for the identity-scope headers."""
+    payload = {
+        "change_reason": change_reason,
+        "roles": roles,
+        "timestamp": timestamp,
+        "user_id": user_id,
+        "site_id": site_id,
+        "sponsor_id": sponsor_id,
+        "unblinded_access": unblinded_access,
+    }
+    serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    # Ensure secret is in bytes
+    if isinstance(secret, str):
+        secret = secret.encode("utf-8")
+    return hmac.new(secret, serialized.encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+def verify_gateway_v2_signature(
+    user_id: str,
+    roles: str,
+    timestamp: str,
+    change_reason: str,
+    site_id: str,
+    sponsor_id: str,
+    unblinded_access: bool,
+    signature: str,
+    secret: bytes,
+) -> bool:
+    """Verifies that the provided Version 2 signature matches the identity-scope payload."""
+    expected = generate_gateway_v2_signature(
+        user_id,
+        roles,
+        timestamp,
+        change_reason,
+        site_id,
+        sponsor_id,
+        unblinded_access,
+        secret,
+    )
+    return hmac.compare_digest(expected, signature)

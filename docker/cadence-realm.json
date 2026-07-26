@@ -48,6 +48,46 @@
       {
         "name": "quality_oversight",
         "description": "Quality Oversight role with capability to approve and close CAPAs."
+      },
+      {
+        "name": "sysadmin",
+        "description": "System Administrator with full infrastructure control."
+      },
+      {
+        "name": "sponsor_designer",
+        "description": "Sponsor Study Designer role with designer capabilities."
+      },
+      {
+        "name": "sponsor_dm",
+        "description": "Sponsor Data Manager role."
+      },
+      {
+        "name": "sponsor_mm",
+        "description": "Sponsor Medical Monitor role."
+      },
+      {
+        "name": "sponsor_statistician",
+        "description": "Sponsor Statistician role with analysis capabilities."
+      },
+      {
+        "name": "investigator",
+        "description": "Principal/Site Investigator role."
+      },
+      {
+        "name": "crc",
+        "description": "Clinical Research Coordinator site role."
+      },
+      {
+        "name": "cra",
+        "description": "Clinical Research Associate monitor role."
+      },
+      {
+        "name": "subject",
+        "description": "Subject / Patient role."
+      },
+      {
+        "name": "auditor",
+        "description": "Auditor read-only audit persona."
       }
     ]
   },
@@ -61,6 +101,91 @@
       ],
       "webOrigins": [
         "*"
+      ],
+      "protocolMappers": [
+        {
+          "name": "site_id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "site_id",
+            "claim.name": "custom_attributes.site_id",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "sponsor_id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "sponsor_id",
+            "claim.name": "custom_attributes.sponsor_id",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "unblinded_access",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "unblinded_access",
+            "claim.name": "custom_attributes.unblinded_access",
+            "jsonType.label": "boolean",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "sponsor_user",
+      "enabled": true,
+      "email": "sponsor@cadence.com",
+      "emailVerified": true,
+      "firstName": "Sponsor",
+      "lastName": "User",
+      "attributes": {
+        "sponsor_id": [
+          "SPONSOR-A"
+        ],
+        "unblinded_access": [
+          "true"
+        ]
+      },
+      "realmRoles": [
+        "sponsor_designer",
+        "sponsor_dm"
+      ]
+    },
+    {
+      "username": "investigator_user",
+      "enabled": true,
+      "email": "investigator@site.com",
+      "emailVerified": true,
+      "firstName": "Site",
+      "lastName": "Investigator",
+      "attributes": {
+        "site_id": [
+          "SITE-001"
+        ],
+        "unblinded_access": [
+          "false"
+        ]
+      },
+      "realmRoles": [
+        "investigator"
       ]
     }
   ]
