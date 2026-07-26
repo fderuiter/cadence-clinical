@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 790
-- **Passed:** 790 🟢
+- **Total Automated Test Cases Run:** 805
+- **Passed:** 805 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -708,6 +708,17 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_verify_is_auditor_denies_non_auditors` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_not_auditor_allows_others` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_not_auditor_denies_auditors` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_generate_canonical_stratum_key_empty_factors` | `tests.test_rtsm_algorithms` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_generate_canonical_stratum_key_missing_or_blank_factor` | `tests.test_rtsm_algorithms` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_generate_canonical_stratum_key_stability` | `tests.test_rtsm_algorithms` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_invalid_configurations_and_errors` | `tests.test_rtsm_algorithms` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_minimization_strategy_first_subject` | `tests.test_rtsm_algorithms` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_minimization_strategy_imbalance_evaluation_and_weighted_probability` | `tests.test_rtsm_algorithms` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_minimization_strategy_uneven_ratios` | `tests.test_rtsm_algorithms` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_permuted_block_strategy_uneven_ratios_and_block_size_multiples` | `tests.test_rtsm_algorithms` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_permuted_block_strategy_valid_allocations` | `tests.test_rtsm_algorithms` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_rtsm_reproducibility_boundaries` | `tests.test_rtsm_algorithms` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_stratified_block_strategy_requires_stratification_factors` | `tests.test_rtsm_algorithms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_hard_delete_prevented_for_supply_entities` | `tests.test_rtsm_supply` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_site_inventory_unique_constraint` | `tests.test_rtsm_supply` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_supply_entities_audit_trail_and_soft_delete` | `tests.test_rtsm_supply` | *Regression/Helper* | 🟢 PASSED | < 1s |
