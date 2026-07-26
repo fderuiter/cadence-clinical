@@ -140,6 +140,35 @@ services:
       postgres:
         condition: service_healthy
 
+  interop:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: cadence-interop
+    command: ["uvicorn", "apps.interop.main:app", "--host", "0.0.0.0", "--port", "8004", "--reload"]
+    volumes:
+      - ..:/app
+    environment:
+      - INTEROP_DATABASE_URL=sqlite+aiosqlite:////app/interop.db
+    ports:
+      - "8004:8004"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  subject-portal:
+    image: node:20-alpine
+    container_name: cadence-subject-portal
+    working_dir: /app
+    command: ["sh", "-c", "npm install -g pnpm && pnpm install && pnpm --filter subject-portal dev --host 0.0.0.0 --port 5174"]
+    volumes:
+      - ..:/app
+    ports:
+      - "5174:5174"
+    depends_on:
+      gateway:
+        condition: service_started
+
   gateway:
     build:
       context: ..
@@ -154,6 +183,7 @@ services:
       - ETMF_URL=http://etmf:8003
       - CTMS_URL=http://ctms:8005
       - QUALITY_URL=http://quality:8005
+      - INTEROP_URL=http://interop:8004
     ports:
       - "8000:8000"
     depends_on:
@@ -166,6 +196,8 @@ services:
       ctms:
         condition: service_started
       quality:
+        condition: service_started
+      interop:
         condition: service_started
       keycloak:
         condition: service_healthy

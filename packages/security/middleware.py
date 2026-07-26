@@ -23,13 +23,14 @@ class DownstreamReplayCache:
     def __init__(self) -> None:
         self.used_tokens: dict[str, float] = {}
 
-    def is_replayed(self, token: str, exp: float) -> bool:
+    def is_replayed(self, token: str, exp: float, jti: str | None = None) -> bool:
         now = time.time()
         # Prune expired tokens
         self.used_tokens = {t: e for t, e in self.used_tokens.items() if e > now}
-        if token in self.used_tokens:
+        key = jti if jti else token
+        if key in self.used_tokens:
             return True
-        self.used_tokens[token] = exp
+        self.used_tokens[key] = exp
         return False
 
 
@@ -225,8 +226,9 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
                     )
 
                 # Check replay attack
+                jti = sig_payload.get("jti")
                 if downstream_replay_cache.is_replayed(
-                    sig_token, sig_payload.get("exp", 0)
+                    sig_token, sig_payload.get("exp", 0), jti
                 ):
                     return JSONResponse(
                         status_code=401,

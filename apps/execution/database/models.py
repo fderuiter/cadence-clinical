@@ -925,3 +925,21 @@ class ResupplyEvent(AuditedModel):
     triggered_at: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), nullable=False
     )
+class BiostatExport(AuditedModel):
+    """Tracks Dataset-JSON biostat export records."""
+
+    __tablename__ = "biostat_exports"
+    __table_args__ = (Index("idx_biostat_exports_coords", "study_id", "export_type"),)
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    export_type: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # "SDTM", "ADaM", "BUNDLE"
+    dataset_name: Mapped[str] = mapped_column(
+        String(50), nullable=True
+    )  # e.g., "DM", "ADSL", or NULL
+    status: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # "SUCCESS", "FAILED"
+    error_message: Mapped[str] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())

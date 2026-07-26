@@ -584,6 +584,133 @@ def test_signature_gated_mutation_enforcement(monkeypatch: pytest.MonkeyPatch) -
         assert response.json()["detail"] == "REAUTHENTICATION_REQUIRED"
 
 
+def test_signature_verification_with_batch_id(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Test successful re-authentication with an optional batch_id.
+    """
+    monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
+    token = jwt.encode(
+        {
+            "sub": "user1",
+            "preferred_username": "user1",
+            "realm_access": {"roles": ["investigator"]},
+        },
+        "test_secret",
+        algorithm="HS256",
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/auth/signature-verification",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "username": "user1",
+                "password": "correct_password",  # pragma: allowlist secret
+                "totp": "123456",
+                "action": "/api/v1/execution/form-submissions/123/approve",
+                "batch_id": "batch_abc_123",
+            },
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "sig_token" in data
+
+        # Verify batch_id claim inside signature token
+        from apps.gateway.main import GATEWAY_SECRET
+
+        sig_payload = jwt.decode(
+            data["sig_token"], GATEWAY_SECRET, algorithms=["HS256"]
+        )
+        assert sig_payload.get("batch_id") == "batch_abc_123"
+        assert "jti" in sig_payload
+
+
+def test_signature_token_altered_signature_rejected(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Test that an altered or tampered signature token is rejected.
+    """
+    monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
+    token = jwt.encode(
+        {
+            "sub": "user1",
+            "preferred_username": "user1",
+            "realm_access": {"roles": ["investigator"]},
+        },
+        "test_secret",
+        algorithm="HS256",
+    )
+
+    # 1. Re-authenticate to get a valid token
+    with TestClient(app) as client:
+        reauth_resp = client.post(
+            "/api/v1/auth/signature-verification",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "username": "user1",
+                "password": "correct_password",  # pragma: allowlist secret
+                "action": "/api/v1/execution/form-submissions/123/approve",
+            },
+        )
+        assert reauth_resp.status_code == 200
+        valid_token = reauth_resp.json()["sig_token"]
+
+        # 2. Tamper with signature by changing characters at the end of the token string
+        tampered_token = valid_token[:-4] + "AAAA"
+
+        # 3. Call signature-gated endpoint with tampered token -> 401
+        response = client.post(
+            "/api/v1/execution/form-submissions/123/approve",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "X-Sig-Token": tampered_token,
+                "X-Change-Reason": "Valid reason",
+            },
+        )
+        assert response.status_code == 401
+        assert response.json()["detail"] == "REAUTHENTICATION_REQUIRED"
+
+
+def test_signature_token_credentials_not_logged_or_returned(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """
+    Test that user credentials/passwords are neither logged nor returned.
+    """
+    monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
+    token = jwt.encode(
+        {
+            "sub": "user1",
+            "preferred_username": "user1",
+            "realm_access": {"roles": ["investigator"]},
+        },
+        "test_secret",
+        algorithm="HS256",
+    )
+
+    sensitive_password = "very_secret_user_password_123!"  # pragma: allowlist secret
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/auth/signature-verification",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "username": "user1",
+                "password": sensitive_password,  # pragma: allowlist secret
+                "action": "/api/v1/execution/form-submissions/123/approve",
+            },
+        )
+        assert response.status_code == 200
+
+        # Ensure password is not in response content
+        assert sensitive_password not in response.text
+
+        # Ensure password is not in any logs captured during this execution
+        for record in caplog.records:
+            assert sensitive_password not in record.message
+
+
 def test_proxy_requests_terminology_paths(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     Test routing proxies for terminology-related paths.
@@ -646,6 +773,35 @@ def test_proxy_requests_terminology_paths(monkeypatch: pytest.MonkeyPatch) -> No
             str(mock_send.call_args.args[0].url)
             == "http://localhost:8001/api/v1/studies/study_123/ct-validation"
         )
+
+        # Verify signed headers are present on ct-validation path as well
+        sent_request_ct = mock_send.call_args.args[0]
+        sent_headers_ct = sent_request_ct.headers
+        assert sent_headers_ct.get("X-User-Id") == "user1"
+        assert sent_headers_ct.get("X-User-Roles") == "sponsor_designer"
+        assert sent_headers_ct.get("X-Gateway-Signature") is not None
+        assert sent_headers_ct.get("X-Signature-Version") == "2"
+        assert sent_headers_ct.get("X-Gateway-Timestamp") is not None
+
+        # Test study-scoped terminology-validation path routes to designer as well
+        res_study_term = client.get(
+            "/api/v1/studies/study_123/terminology-validation",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res_study_term.status_code == 200
+        assert (
+            str(mock_send.call_args.args[0].url)
+            == "http://localhost:8001/api/v1/studies/study_123/terminology-validation"
+        )
+
+        # Verify signed headers are present on terminology-validation path as well
+        sent_request_term = mock_send.call_args.args[0]
+        sent_headers_term = sent_request_term.headers
+        assert sent_headers_term.get("X-User-Id") == "user1"
+        assert sent_headers_term.get("X-User-Roles") == "sponsor_designer"
+        assert sent_headers_term.get("X-Gateway-Signature") is not None
+        assert sent_headers_term.get("X-Signature-Version") == "2"
+        assert sent_headers_term.get("X-Gateway-Timestamp") is not None
 
         # 2. Re-authenticate to get sig_token
         reauth_resp = client.post(

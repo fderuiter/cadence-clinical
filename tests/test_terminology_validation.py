@@ -526,3 +526,182 @@ async def test_search_terminology_endpoint_degraded():
             assert data["state"] == "DEGRADED"
             assert data["results"] == []
             assert "EVS service is unavailable" in data["error_message"]
+
+
+@pytest.mark.asyncio
+async def test_validate_study_terminology_endpoint_client_success():
+    """
+    Test the study-level terminology-validation endpoint (/api/v1/studies/{study_id}/terminology-validation)
+    using httpx.AsyncClient with valid signed gateway headers.
+    """
+    import httpx
+
+    from apps.designer.main import app
+    from tests.test_soa_endpoints import get_auth_headers
+
+    mock_study = {
+        "study_id": "study_1",
+        "title": "Oncology Phase II",
+        "arms": [
+            {
+                "arm_id": "arm_1",
+                "name": "Arm A",
+                "type_concept_id": "C123",
+                "visits": [],
+            }
+        ],
+    }
+
+    with (
+        patch("apps.designer.validator.get_study_projection", return_value=mock_study),
+        patch("apps.designer.db.terminology_cache.get") as mock_get,
+    ):
+        mock_get.return_value = {
+            "code": "C123",
+            "decode": "Test Concept",
+            "system": "NCI",
+            "valid": True,
+        }
+
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            headers = get_auth_headers()
+            response = await client.get(
+                "/api/v1/studies/study_1/terminology-validation", headers=headers
+            )
+            assert response.status_code == 200
+            data = response.json()
+            assert data["study_id"] == "study_1"
+            assert data["is_valid"] is True
+            assert len(data["concepts"]) == 1
+            assert data["concepts"][0]["concept_code"] == "C123"
+
+
+@pytest.mark.asyncio
+async def test_validate_study_terminology_endpoint_client_not_found():
+    """
+    Test that the study-level terminology-validation endpoint (/api/v1/studies/{study_id}/terminology-validation)
+    returns a 404 when the study is not found.
+    """
+    import httpx
+
+    from apps.designer.main import app
+    from tests.test_soa_endpoints import get_auth_headers
+
+    with patch("apps.designer.validator.get_study_projection", return_value=None):
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            headers = get_auth_headers()
+            response = await client.get(
+                "/api/v1/studies/non_existent/terminology-validation", headers=headers
+            )
+            assert response.status_code == 404
+            assert "Study with ID" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_validate_study_terminology_endpoint_client_degraded():
+    """
+    Test the study-level terminology-validation endpoint when cache lookup throws an exception,
+    verifying it returns a structured 200 OK (non-5xx) degraded response.
+    """
+    import httpx
+
+    from apps.designer.main import app
+    from tests.test_soa_endpoints import get_auth_headers
+
+    mock_study = {
+        "study_id": "study_1",
+        "title": "Oncology Phase II",
+        "arms": [
+            {
+                "arm_id": "arm_1",
+                "name": "Arm A",
+                "type_concept_id": "C123",
+                "visits": [],
+            }
+        ],
+    }
+
+    with (
+        patch("apps.designer.validator.get_study_projection", return_value=mock_study),
+        patch(
+            "apps.designer.db.terminology_cache.get",
+            side_effect=Exception("Database timeout"),
+        ),
+    ):
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            headers = get_auth_headers()
+            response = await client.get(
+                "/api/v1/studies/study_1/terminology-validation", headers=headers
+            )
+            assert response.status_code == 200
+            data = response.json()
+            assert data["study_id"] == "study_1"
+            assert data["is_valid"] is False
+            assert data["degraded_count"] == 1
+            assert data["concepts"][0]["state"] == "DEGRADED"
+            assert "Database timeout" in data["concepts"][0]["error_message"]
+
+
+@pytest.mark.asyncio
+async def test_validate_single_code_endpoint_not_found():
+    """
+    Test that the single-code validation endpoint returns INVALID and details
+    when the concept is not found in the terminology database.
+    """
+    import httpx
+
+    from apps.designer.main import app
+    from tests.test_soa_endpoints import get_auth_headers
+
+    with patch("apps.designer.db.terminology_cache.get", return_value=None):
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            headers = get_auth_headers()
+            response = await client.get(
+                "/api/v1/terminology/validate/C999", headers=headers
+            )
+            assert response.status_code == 200
+            data = response.json()
+            assert data["concept_code"] == "C999"
+            assert data["state"] == "INVALID"
+            assert "not found in terminology database" in data["error_message"]
+
+
+@pytest.mark.asyncio
+async def test_validate_single_code_endpoint_marked_invalid():
+    """
+    Test that the single-code validation endpoint returns INVALID and details
+    when the concept is marked as invalid in the database.
+    """
+    import httpx
+
+    from apps.designer.main import app
+    from tests.test_soa_endpoints import get_auth_headers
+
+    with patch("apps.designer.db.terminology_cache.get") as mock_get:
+        mock_get.return_value = {
+            "code": "C123",
+            "decode": "Test Concept",
+            "system": "NCI",
+            "valid": False,
+        }
+
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            headers = get_auth_headers()
+            response = await client.get(
+                "/api/v1/terminology/validate/C123", headers=headers
+            )
+            assert response.status_code == 200
+            data = response.json()
+            assert data["concept_code"] == "C123"
+            assert data["state"] == "INVALID"
+            assert "marked as invalid" in data["error_message"]
