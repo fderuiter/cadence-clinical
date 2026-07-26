@@ -61,4 +61,6 @@ The following entities are registered under `apps/execution/database/models.py`:
 ## 6. Implementation & Verification
 
 * **Affected Repositories / Services:** `apps/execution/`
-* **Verification Plan:** Unit tests added in `tests/test_medical_coding.py` covering model creation, dictionary import job status flows, verification of constraint triggers, and clinical coding assignments.
+* **Verification Plan:**
+  * Unit tests added in `tests/test_medical_coding.py` covering model creation, dictionary import job status flows, verification of constraint triggers, and clinical coding assignments.
+  * Comprehensive integration tests added in `tests/test_medical_coding_lifecycle.py` verifying automatic coding during observation capture, mid-confidence suggestion preservation, and manual coder actions (ACCEPT/OVERRIDE) with roles and Part 11 checks.
