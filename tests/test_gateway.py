@@ -774,6 +774,35 @@ def test_proxy_requests_terminology_paths(monkeypatch: pytest.MonkeyPatch) -> No
             == "http://localhost:8001/api/v1/studies/study_123/ct-validation"
         )
 
+        # Verify signed headers are present on ct-validation path as well
+        sent_request_ct = mock_send.call_args.args[0]
+        sent_headers_ct = sent_request_ct.headers
+        assert sent_headers_ct.get("X-User-Id") == "user1"
+        assert sent_headers_ct.get("X-User-Roles") == "sponsor_designer"
+        assert sent_headers_ct.get("X-Gateway-Signature") is not None
+        assert sent_headers_ct.get("X-Signature-Version") == "2"
+        assert sent_headers_ct.get("X-Gateway-Timestamp") is not None
+
+        # Test study-scoped terminology-validation path routes to designer as well
+        res_study_term = client.get(
+            "/api/v1/studies/study_123/terminology-validation",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res_study_term.status_code == 200
+        assert (
+            str(mock_send.call_args.args[0].url)
+            == "http://localhost:8001/api/v1/studies/study_123/terminology-validation"
+        )
+
+        # Verify signed headers are present on terminology-validation path as well
+        sent_request_term = mock_send.call_args.args[0]
+        sent_headers_term = sent_request_term.headers
+        assert sent_headers_term.get("X-User-Id") == "user1"
+        assert sent_headers_term.get("X-User-Roles") == "sponsor_designer"
+        assert sent_headers_term.get("X-Gateway-Signature") is not None
+        assert sent_headers_term.get("X-Signature-Version") == "2"
+        assert sent_headers_term.get("X-Gateway-Timestamp") is not None
+
         # 2. Re-authenticate to get sig_token
         reauth_resp = client.post(
             "/api/v1/auth/signature-verification",
