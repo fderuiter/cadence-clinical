@@ -35,7 +35,7 @@ The `X-Sig-Token` is a JSON Web Token (JWT) signed with the **HS256** algorithm.
   "batch_id": "batch_2026_08_a",
   "iat": 1785931200.0,
   "exp": 1785931260.0,
-  "jti": "d0943912a7d14b439c18f50419bc7e39"
+  "jti": "mock-jti-uuid-value-123456"
 }
 ```
 

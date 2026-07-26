@@ -605,7 +605,7 @@ def test_signature_verification_with_batch_id(monkeypatch: pytest.MonkeyPatch) -
             headers={"Authorization": f"Bearer {token}"},
             json={
                 "username": "user1",
-                "password": "correct_password",
+                "password": "correct_password",  # pragma: allowlist secret
                 "totp": "123456",
                 "action": "/api/v1/execution/form-submissions/123/approve",
                 "batch_id": "batch_abc_123",
@@ -649,7 +649,7 @@ def test_signature_token_altered_signature_rejected(
             headers={"Authorization": f"Bearer {token}"},
             json={
                 "username": "user1",
-                "password": "correct_password",
+                "password": "correct_password",  # pragma: allowlist secret
                 "action": "/api/v1/execution/form-submissions/123/approve",
             },
         )
@@ -689,7 +689,7 @@ def test_signature_token_credentials_not_logged_or_returned(
         algorithm="HS256",
     )
 
-    sensitive_password = "very_secret_user_password_123!"
+    sensitive_password = "very_secret_user_password_123!"  # pragma: allowlist secret
 
     with TestClient(app) as client:
         response = client.post(
@@ -697,7 +697,7 @@ def test_signature_token_credentials_not_logged_or_returned(
             headers={"Authorization": f"Bearer {token}"},
             json={
                 "username": "user1",
-                "password": sensitive_password,
+                "password": sensitive_password,  # pragma: allowlist secret
                 "action": "/api/v1/execution/form-submissions/123/approve",
             },
         )
