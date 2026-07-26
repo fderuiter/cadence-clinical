@@ -228,6 +228,25 @@ class DocumentResponse(BaseModel):
     signer: Optional[str] = None
     signing_timestamp: Optional[str] = None
 
+    # Redaction-related fields
+    is_redacted: bool = False
+    redaction_source_id: Optional[str] = None
+    redaction_manifest_json: Optional[Dict[str, Any]] = None
+
+
+class RedactRequest(BaseModel):
+    """
+    Payload for submitting redacted content as a new version.
+    """
+
+    redacted_content: str = Field(..., description="The redacted text content")
+    redacted_filename: Optional[str] = Field(
+        None, description="Optional new filename for the redacted document"
+    )
+    manifest: Dict[str, Any] = Field(
+        ..., description="The signed redaction manifest and provenance data"
+    )
+
 
 class TransitionRequest(BaseModel):
     """
@@ -727,6 +746,9 @@ async def list_documents(
             signing_timestamp=doc.signing_timestamp.isoformat()
             if doc.signing_timestamp
             else None,
+            is_redacted=doc.is_redacted,
+            redaction_source_id=doc.redaction_source_id,
+            redaction_manifest_json=doc.redaction_manifest_json,
         )
         for doc in docs
     ]
@@ -751,6 +773,27 @@ async def view_document(
 
     if not doc:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
+
+    # Enforce raw-original authorization controls
+    if isinstance(user_roles, str):
+        roles_list = [r.strip().lower() for r in user_roles.split(",") if r.strip()]
+    elif isinstance(user_roles, list):
+        roles_list = [str(r).strip().lower() for r in user_roles if str(r).strip()]
+    else:
+        roles_list = []
+
+    auditor_roles = {"auditor", "inspector", "regulatory_inspector"}
+    if not doc.is_redacted:
+        stmt_redacted = select(TMFDocument).where(
+            TMFDocument.redaction_source_id == doc.id
+        )
+        res_redacted = await session.execute(stmt_redacted)
+        if res_redacted.scalars().first() is not None:
+            if any(r in auditor_roles for r in roles_list):
+                raise HTTPException(
+                    status_code=403,
+                    detail="Forbidden: Raw-original retrieval is restricted to privileged roles.",
+                )
 
     # Log action to immutable audit trail
     await write_audit_log(
@@ -784,6 +827,9 @@ async def view_document(
         signing_timestamp=doc.signing_timestamp.isoformat()
         if doc.signing_timestamp
         else None,
+        is_redacted=doc.is_redacted,
+        redaction_source_id=doc.redaction_source_id,
+        redaction_manifest_json=doc.redaction_manifest_json,
     )
 
 
@@ -806,6 +852,27 @@ async def download_document(
 
     if not doc:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
+
+    # Enforce raw-original authorization controls
+    if isinstance(user_roles, str):
+        roles_list = [r.strip().lower() for r in user_roles.split(",") if r.strip()]
+    elif isinstance(user_roles, list):
+        roles_list = [str(r).strip().lower() for r in user_roles if str(r).strip()]
+    else:
+        roles_list = []
+
+    auditor_roles = {"auditor", "inspector", "regulatory_inspector"}
+    if not doc.is_redacted:
+        stmt_redacted = select(TMFDocument).where(
+            TMFDocument.redaction_source_id == doc.id
+        )
+        res_redacted = await session.execute(stmt_redacted)
+        if res_redacted.scalars().first() is not None:
+            if any(r in auditor_roles for r in roles_list):
+                raise HTTPException(
+                    status_code=403,
+                    detail="Forbidden: Raw-original retrieval is restricted to privileged roles.",
+                )
 
     # Log action to immutable audit trail
     await write_audit_log(
@@ -1232,6 +1299,157 @@ async def check_completeness(
         present_artifacts=present_artifacts,
         missing_artifacts=missing_artifacts,
         per_artifact_detail=per_artifact_detail,
+    )
+
+
+@app.post(
+    "/api/v1/etmf/documents/{document_id}/redact",
+    response_model=DocumentResponse,
+    status_code=201,
+)
+async def redact_document_endpoint(
+    request: Request,
+    document_id: str,
+    payload: RedactRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> DocumentResponse:
+    """
+    Perform controlled redaction on an existing unredacted eTMF document, producing a new
+    redacted document version linked to the source.
+    All redactions are logged to the immutable audit trail and block auditor/inspector personas.
+    """
+    user_id = getattr(request.state, "user_id", "system")
+    user_roles = getattr(request.state, "roles", "system")
+
+    # Only write-privileged roles can redact documents (No Inspectors/Auditors)
+    if isinstance(user_roles, str):
+        roles_list = [r.strip().lower() for r in user_roles.split(",")]
+    else:
+        roles_list = [str(r).strip().lower() for r in user_roles]
+
+    if (
+        "inspector" in roles_list
+        or "regulatory_inspector" in roles_list
+        or "auditor" in roles_list
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Inspectors are restricted to read-only access.",
+        )
+
+    # Restrict affected trial to read-only state if trial is locked
+    from apps.execution.trial_lock import TrialLockManager
+
+    if TrialLockManager.is_locked():
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Trial is currently locked in a read-only state due to a security violation.",
+        )
+
+    # 1. Fetch the source document
+    stmt = select(TMFDocument).where(TMFDocument.id == document_id)
+    result = await session.execute(stmt)
+    source_doc = result.scalars().first()
+    if not source_doc:
+        raise HTTPException(status_code=404, detail="eTMF Document not found")
+
+    # 2. Extract X-Change-Reason
+    change_reason = request.headers.get("X-Change-Reason", "").strip()
+    if not change_reason:
+        # Check if stored in request state
+        change_reason = getattr(request.state, "change_reason", "").strip()
+    if not change_reason:
+        raise HTTPException(
+            status_code=400,
+            detail="Missing change justification reason under X-Change-Reason",
+        )
+
+    # 3. Determine new version index (highest version_index for this study + artifact_code)
+    stmt_v = (
+        select(TMFDocument.version_index)
+        .where(TMFDocument.study_id == source_doc.study_id)
+        .where(TMFDocument.artifact_code == source_doc.artifact_code)
+    )
+    res_v = await session.execute(stmt_v)
+    versions = res_v.scalars().all()
+    new_version_index = max(versions) + 1 if versions else source_doc.version_index + 1
+
+    # 4. Copy and prepare metadata
+    metadata_json = dict(source_doc.metadata_json) if source_doc.metadata_json else {}
+    metadata_json["change_reason"] = change_reason
+    metadata_json["is_redacted"] = True
+
+    # Build redacted document version
+    redacted_doc = TMFDocument(
+        study_id=source_doc.study_id,
+        zone=source_doc.zone,
+        section=source_doc.section,
+        artifact_type=source_doc.artifact_type,
+        filename=payload.redacted_filename
+        or f"{os.path.splitext(source_doc.filename)[0]}_redacted{os.path.splitext(source_doc.filename)[1]}",
+        content=payload.redacted_content,
+        mime_type=source_doc.mime_type,
+        created_by=user_id,
+        version_index=new_version_index,
+        taxonomy_version=source_doc.taxonomy_version,
+        artifact_code=source_doc.artifact_code,
+        metadata_json=metadata_json,
+        document_type=source_doc.document_type,
+        approval_status=source_doc.approval_status,
+        signature_manifestation=source_doc.signature_manifestation,
+        signer=source_doc.signer,
+        signing_timestamp=source_doc.signing_timestamp,
+        is_redacted=True,
+        redaction_source_id=source_doc.id,
+        redaction_manifest_json=payload.manifest,
+    )
+
+    session.add(redacted_doc)
+    await session.flush()
+
+    # 5. Log action to immutable audit trail (REDACT action)
+    # A REDACT audit entry records actor, role, operation type, document/version references, and manifest signature.
+    manifest_signature = payload.manifest.get("signature", "unsigned")
+    details_str = (
+        f"REDACT action executed. Actor: {user_id}, Role: {user_roles}. "
+        f"Source Document Reference ID: {source_doc.id} (Version {source_doc.version_index}). "
+        f"Redacted Document Reference ID: {redacted_doc.id} (Version {redacted_doc.version_index}). "
+        f"Manifest Signature: {manifest_signature}."
+    )
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="REDACT",
+        document_id=redacted_doc.id,
+        details=details_str,
+    )
+
+    return DocumentResponse(
+        id=redacted_doc.id,
+        study_id=redacted_doc.study_id,
+        zone=redacted_doc.zone,
+        section=redacted_doc.section,
+        artifact_type=redacted_doc.artifact_type,
+        filename=redacted_doc.filename,
+        mime_type=redacted_doc.mime_type,
+        created_at=redacted_doc.created_at.isoformat(),
+        created_by=redacted_doc.created_by,
+        version_index=redacted_doc.version_index,
+        status=redacted_doc.status,
+        taxonomy_version=redacted_doc.taxonomy_version,
+        artifact_code=redacted_doc.artifact_code,
+        metadata_json=redacted_doc.metadata_json,
+        document_type=redacted_doc.document_type,
+        approval_status=redacted_doc.approval_status,
+        signature_manifestation=redacted_doc.signature_manifestation,
+        signer=redacted_doc.signer,
+        signing_timestamp=redacted_doc.signing_timestamp.isoformat()
+        if redacted_doc.signing_timestamp
+        else None,
+        is_redacted=redacted_doc.is_redacted,
+        redaction_source_id=redacted_doc.redaction_source_id,
+        redaction_manifest_json=redacted_doc.redaction_manifest_json,
     )
 
 

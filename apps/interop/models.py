@@ -175,3 +175,54 @@ class SubjectNotification(Base):
     assignment: Mapped[Optional["SubjectAssignment"]] = relationship(
         "SubjectAssignment"
     )
+
+
+class EPROSubmissionDefeated(Base):
+    """
+    Represents a preserved/durable copy of a defeated, shadow, or overwritten ePRO submission payload
+    resulting from conflict resolution, online merge, or structural sync conflicts.
+    """
+
+    __tablename__ = "epro_defeated_submissions"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    subject_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    diary_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    device_timestamp: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    answers: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
+    offline_sync_markers: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(100),
+        default="Defeated by online-merge conflict resolution",
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+
+
+class ClinicalQuery(Base):
+    """
+    Represents a clinical query state record for GxP data discrepancy tracking in the interop/sync gateway.
+    """
+
+    __tablename__ = "clinical_queries"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    subject_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    visit_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    domain: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    test_code: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(50), default="OPEN", nullable=False)
+    explanation: Mapped[str] = mapped_column(String(1000), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), onupdate=func.now(), nullable=False
+    )

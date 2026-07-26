@@ -11,6 +11,8 @@ Based on the executed automated verification suite, the platform meets all prede
 ### Validation Result Summary
 - **Total Automated Test Cases Run:** 733
 - **Passed:** 733 🟢
+- **Total Automated Test Cases Run:** 740
+- **Passed:** 740 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -360,6 +362,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_eisf_document_lifecycle_same_site` | `tests.test_eisf_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_documents_endpoint_blocks_unauthenticated` | `tests.test_eisf_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_health_unauthenticated` | `tests.test_eisf_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_eisf_ingest_document_event_alias` | `tests.test_eisf_ingest` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_eisf_ingest_document_success` | `tests.test_eisf_ingest` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_eisf_ingest_missing_change_reason_fails` | `tests.test_eisf_ingest` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_database_url_override_and_init` | `tests.test_eisf_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_append_only_versions_and_deduplication` | `tests.test_eisf_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_document_creation_and_site_scoped` | `tests.test_eisf_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -402,6 +407,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_qc_history_api_not_found` | `tests.test_etmf_qc` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_qc_transitions_missing_doc` | `tests.test_etmf_qc` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_role_based_access_controls_and_gates` | `tests.test_etmf_qc` | PRD-QC-003 | 🟢 PASSED | < 1s |
+| `test_redaction_audit_trail_and_provenance` | `tests.test_etmf_redaction` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_redaction_authorization_gates` | `tests.test_etmf_redaction` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_completeness_signature_lifecycle_distinction` | `tests.test_etmf_signatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_document_routing_and_classification` | `tests.test_etmf_signatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_lifecycle_with_mock_signature` | `tests.test_etmf_signatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -461,6 +468,14 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_mock_flow_library_version_chain_and_immutability` | `tests.test_global_library_neo4j` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_mock_list_filtering_and_pagination` | `tests.test_global_library_neo4j` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_neo4j_library_object_version_chain_queries` | `tests.test_global_library_neo4j` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_form_lock_and_unlock_lifecycle` | `tests.test_granular_locks_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_lock_status_retrieval` | `tests.test_granular_locks_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_locked_write_prevention` | `tests.test_granular_locks_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_roles_authorization_restrictions` | `tests.test_granular_locks_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_site_lock_and_unlock_lifecycle` | `tests.test_granular_locks_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_subject_lock_and_unlock_lifecycle` | `tests.test_granular_locks_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_trial_lock_and_unlock_lifecycle` | `tests.test_granular_locks_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_visit_lock_and_unlock_lifecycle` | `tests.test_granular_locks_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_bulk_offline_sync` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_compute_reminders_all_subjects_staff` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_compute_reminders_by_subject_and_end_date_branch` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -474,6 +489,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_pseudonymization_and_pii_stripping` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_subject_content_submission_and_compliance_apis` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_subject_role_authorization_and_identity_binding` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_defeated_record_persistence_on_conflicts` | `tests.test_interop_defeated` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_structural_conflict_on_missing_target` | `tests.test_interop_defeated` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_circular_skip_logic_rules_raises_value_error` | `tests.test_inverse_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_inverse_mapping_valid_round_trip` | `tests.test_inverse_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_missing_required_fields_raises_value_error` | `tests.test_inverse_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -587,6 +604,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_notifications_health_check` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_webhook_delivery_channel_failure_and_retry_backoff` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_webhook_delivery_channel_success` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_delegation_of_authority_flow` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_health_endpoint` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_org_audit_log_append_only` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_organization_and_site_relationship` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_personnel_and_sitestaff_alias` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_fields_change_reason_validation` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_fields_instantiation` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_fields_reusability` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |

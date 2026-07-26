@@ -64,3 +64,5 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-05: Quality & CAPA Management, Platform Placement, and Traceability](2026-08-05-quality-capa-management.md)
 - [2026-08-06: Arm-Aware Schedule of Activities (SoA) Matrix Component](2026-08-06-arm-aware-soa-matrix.md)
 - [2026-08-07: Route Terminology APIs through the Gateway](2026-08-07-gateway-terminology-routing.md)
+- [2026-08-07: ePRO Sync Durable Reconciliation, Defeated Record Retention, and Structural Queries](2026-08-07-epro-sync-durable-reconciliation.md)
+- [2026-08-07: Organization Directory Service and Persistence Models Scaffold](2026-08-07-organization-directory-service-foundation.md)
