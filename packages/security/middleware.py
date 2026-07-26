@@ -118,13 +118,21 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
                 },
             )
 
+        # Check if any scope headers are supplied (V2 with scope)
+        has_scope_headers = (
+            (site_id is not None)
+            or (sponsor_id is not None)
+            or (unblinded_header is not None)
+        )
+
         if version in ("2", "v2"):
-            if site_id is None or sponsor_id is None or unblinded_header is None:
-                status_code = 403 if is_mutation else 401
-                return JSONResponse(
-                    status_code=status_code,
-                    content={"detail": "Missing gateway authentication headers"},
-                )
+            if has_scope_headers:
+                if site_id is None or sponsor_id is None or unblinded_header is None:
+                    status_code = 403 if is_mutation else 401
+                    return JSONResponse(
+                        status_code=status_code,
+                        content={"detail": "Missing gateway authentication headers"},
+                    )
 
         change_reason = request.headers.get("X-Change-Reason")
         if not change_reason:
@@ -145,22 +153,39 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
             )
 
         if version in ("2", "v2"):
-            unblinded_val = (
-                unblinded_header.lower() in ("true", "1", "yes")
-                if unblinded_header
-                else False
-            )
-            is_valid_sig = verify_gateway_v2_signature(
-                user_id=user_id,
-                roles=roles,
-                timestamp=timestamp,
-                change_reason=change_reason,
-                site_id=site_id or "",
-                sponsor_id=sponsor_id or "",
-                unblinded_access=unblinded_val,
-                signature=signature,
-                secret=self.gateway_secret,
-            )
+            if has_scope_headers:
+                unblinded_val = (
+                    unblinded_header.lower() in ("true", "1", "yes")
+                    if unblinded_header
+                    else False
+                )
+                is_valid_sig = verify_gateway_v2_signature(
+                    user_id=user_id,
+                    roles=roles,
+                    timestamp=timestamp,
+                    change_reason=change_reason,
+                    site_id=site_id or "",
+                    sponsor_id=sponsor_id or "",
+                    unblinded_access=unblinded_val,
+                    signature=signature,
+                    secret=self.gateway_secret,
+                )
+            else:
+                # Fall back to 4-key payload
+                import json
+
+                payload = {
+                    "change_reason": change_reason,
+                    "roles": roles,
+                    "timestamp": timestamp,
+                    "user_id": user_id,
+                }
+                serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+                expected_signature = hmac.new(
+                    self.gateway_secret, serialized.encode(), hashlib.sha256
+                ).hexdigest()
+                is_valid_sig = hmac.compare_digest(expected_signature, signature)
+
             if not is_valid_sig:
                 status_code = 403 if is_mutation else 401
                 return JSONResponse(
@@ -276,15 +301,20 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
         request.state.user_id = user_id
         request.state.roles = roles
         request.state.change_reason = change_reason
-        request.state.site_id = site_id or ""
-        request.state.sponsor_id = sponsor_id or ""
-
-        unblinded_val = (
-            unblinded_header.lower() in ("true", "1", "yes")
-            if unblinded_header
-            else False
-        )
-        request.state.unblinded_access = unblinded_val
+        if has_scope_headers:
+            request.state.site_id = site_id or ""
+            request.state.sponsor_id = sponsor_id or ""
+            unblinded_val = (
+                unblinded_header.lower() in ("true", "1", "yes")
+                if unblinded_header
+                else False
+            )
+            request.state.unblinded_access = unblinded_val
+        else:
+            request.state.site_id = ""
+            request.state.sponsor_id = ""
+            request.state.unblinded_access = False
+            unblinded_val = False
 
         # Extract IP address for context injection
         ip_address = request.headers.get(
@@ -300,7 +330,7 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
         ts_token = current_timestamp.set(
             datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
         )
-        site_token = current_site_id.set(site_id or "")
+        site_token = current_site_id.set(request.state.site_id)
         unblinded_token = current_unblinded_access.set(unblinded_val)
 
         try:
