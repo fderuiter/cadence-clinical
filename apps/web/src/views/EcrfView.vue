@@ -26,6 +26,7 @@
             <!-- Text input field -->
             <div
               v-if="field.type !== 'radio'"
+              v-show="store.fieldVisibility[field.id] !== false"
               :id="`field-container-${field.id}`"
               class="clinical-input"
               :class="{ 'has-error': getValidationError(field) }"
@@ -231,6 +232,7 @@
             <!-- Radio input field -->
             <fieldset
               v-else
+              v-show="store.fieldVisibility[field.id] !== false"
               :id="`field-container-${field.id}`"
               class="clinical-radio-grid"
               :style="`grid-column: span ${field.gridSpan || 12};`"
@@ -650,11 +652,24 @@
 </template>
 
 <script setup>
-import { ref, reactive } from "vue";
+import { ref, reactive, watch, onMounted } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import { validateField } from "../../index";
 
 const store = useClinicalStore();
+
+// Deep watch formValues to evaluate rules debounced
+watch(
+  () => store.formValues,
+  () => {
+    store.triggerValueChange();
+  },
+  { deep: true }
+);
+
+onMounted(() => {
+  store.evaluateRules();
+});
 
 // UI States
 const activeQueryPanels = reactive({});
@@ -681,7 +696,7 @@ function getQueryStatus(fieldId) {
 
 function getValidationError(field) {
   const value = store.formValues[field.id];
-  const res = validateField(field, value);
+  const res = validateField(field, value, store.formValues);
   return res.valid ? null : res.message;
 }
 

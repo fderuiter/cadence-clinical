@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import { sha256 } from "../../index.js";
 import { generateGatewaySignature, generateJwtHS256 } from "ui";
+import { evaluateAST, debounce } from "../evaluator.js";
 
 export const useClinicalStore = defineStore("clinical", {
   state: () => {
@@ -304,6 +305,75 @@ export const useClinicalStore = defineStore("clinical", {
             message: "Pulse Rate must be between 30 and 200 bpm",
           },
         },
+        {
+          id: "pulse_details",
+          label: "Pulse Details (Tachycardia comment)",
+          type: "text",
+          gridSpan: 12,
+          cdash: "VS.VSHR_DETAILS",
+          value: "",
+          relevant: {
+            type: "comparison",
+            operator: ">",
+            operands: [
+              { type: "field_ref", field_ref: { field_id: "pulse" } },
+              { type: "constant", value: 100 },
+            ],
+          },
+        },
+        {
+          id: "weight",
+          label: "Weight (kg)",
+          type: "text",
+          gridSpan: 6,
+          cdash: "VS.WT",
+          value: "70",
+          validation: {
+            required: true,
+            min: 10,
+            max: 300,
+          },
+        },
+        {
+          id: "height",
+          label: "Height (m)",
+          type: "text",
+          gridSpan: 6,
+          cdash: "VS.HT",
+          value: "1.75",
+          validation: {
+            required: true,
+            min: 0.5,
+            max: 3.0,
+          },
+          constraint: {
+            condition: {
+              type: "comparison",
+              operator: ">",
+              operands: [
+                { type: "field_ref", field_ref: { field_id: "height" } },
+                { type: "constant", value: 0 },
+              ],
+            },
+            query_message: "Height must be strictly greater than zero.",
+          },
+        },
+        {
+          id: "bmi_status",
+          label: "BMI Status Information",
+          type: "text",
+          gridSpan: 12,
+          cdash: "VS.BMI_STATUS",
+          value: "Normal",
+          relevant: {
+            type: "comparison",
+            operator: ">",
+            operands: [
+              { type: "field_ref", field_ref: { field_id: "height" } },
+              { type: "constant", value: 0 },
+            ],
+          },
+        },
       ],
       formValues: savedFormValues || {
         brthdt: "1980-05-12",
@@ -311,7 +381,12 @@ export const useClinicalStore = defineStore("clinical", {
         vssbp: "120",
         vsdpb: "80",
         pulse: "72",
+        pulse_details: "",
+        weight: "70",
+        height: "1.75",
+        bmi_status: "Normal",
       },
+      fieldVisibility: {},
       formQueries: savedFormQueries || {},
       ledgerBlocks: savedLedgerBlocks || [],
       // Keycloak mock user info
@@ -324,6 +399,52 @@ export const useClinicalStore = defineStore("clinical", {
     };
   },
   actions: {
+    async evaluateRules() {
+      let changed = true;
+      let passes = 0;
+      while (changed && passes < 10) {
+        changed = false;
+        passes++;
+        for (const field of this.ecrfFields) {
+          const isRelevant = field.relevant
+            ? evaluateAST(field.relevant, this.formValues) !== false
+            : true;
+          const wasVisible = this.fieldVisibility[field.id] !== false;
+          if (
+            isRelevant !== wasVisible ||
+            this.fieldVisibility[field.id] === undefined
+          ) {
+            this.fieldVisibility[field.id] = isRelevant;
+            changed = true;
+          }
+          if (!isRelevant) {
+            const val = this.formValues[field.id];
+            if (val !== undefined && val !== "" && val !== null) {
+              this.formValues[field.id] = "";
+              await this.addLedgerBlock(
+                "FIELD_PURGE",
+                {
+                  fieldId: field.id,
+                  label: field.label,
+                  oldValue: val,
+                  newValue: "",
+                },
+                "System-initiated purge of inactive child variable due to parent value mutation"
+              );
+              changed = true;
+            }
+          }
+        }
+      }
+    },
+    triggerValueChange() {
+      if (!this.debouncedEvaluateRules) {
+        this.debouncedEvaluateRules = debounce(async () => {
+          await this.evaluateRules();
+        }, 50);
+      }
+      this.debouncedEvaluateRules();
+    },
     async addLedgerBlock(action, details, reason = "System Action") {
       const timestamp = new Date().toISOString();
       const index = this.ledgerBlocks.length;
