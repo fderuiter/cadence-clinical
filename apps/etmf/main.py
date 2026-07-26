@@ -912,9 +912,15 @@ async def get_audit_trail(
     user_id: Optional[str] = Query(None, description="Filter logs by user ID"),
     action: Optional[str] = Query(None, description="Filter logs by action"),
     document_id: Optional[str] = Query(None, description="Filter logs by document ID"),
-    start_time: Optional[datetime] = Query(None, description="Filter logs starting from this timestamp (inclusive)"),
-    end_time: Optional[datetime] = Query(None, description="Filter logs up to this timestamp (inclusive)"),
-    limit: int = Query(50, ge=1, le=250, description="Limit the number of audit log records returned"),
+    start_time: Optional[datetime] = Query(
+        None, description="Filter logs starting from this timestamp (inclusive)"
+    ),
+    end_time: Optional[datetime] = Query(
+        None, description="Filter logs up to this timestamp (inclusive)"
+    ),
+    limit: int = Query(
+        50, ge=1, le=250, description="Limit the number of audit log records returned"
+    ),
     offset: int = Query(0, ge=0, description="Offset for pagination"),
     roles: list[str] = Depends(verify_is_auditor),
     session: AsyncSession = Depends(get_db_session),
@@ -951,6 +957,7 @@ async def get_audit_trail(
 
     # 2. Query total count
     from sqlalchemy import func
+
     count_stmt = select(func.count()).select_from(TMFAuditLog)
     if filters:
         count_stmt = count_stmt.where(*filters)
