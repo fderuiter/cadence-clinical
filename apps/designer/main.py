@@ -8,7 +8,7 @@ import httpx
 from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile, status
 from neo4j import AsyncGraphDatabase
 from protocol_render import SoAMatrixView
-from pydantic import BaseModel, TypeAdapter
+from pydantic import BaseModel, Field, TypeAdapter
 
 from apps.designer.db import (
     assert_mock_study_mutable,
@@ -43,6 +43,7 @@ from apps.designer.delta import (
     get_library_object_history,
     get_rules_from_graph,
     get_soa_matrix_projection,
+    instantiate_library_object_in_study,
     link_arm_applicability,
     link_epoch_to_visit,
     link_visit_or_procedure_to_timing,
@@ -2099,3 +2100,92 @@ async def get_versions_diff_endpoint(
         modified_nodes=modified,
         deleted_nodes=deleted,
     )
+
+
+# ==========================================
+# Library Object Instantiation API Models
+# ==========================================
+
+
+class InstantiateLibraryObjectRequest(BaseModel):
+    library_object_id: str = Field(
+        ..., description="Stable, unique global library ID to instantiate."
+    )
+    version: Optional[int] = Field(
+        None,
+        description="The specific version of the library object to instantiate. Defaults to latest if not specified.",
+    )
+
+
+class InstantiatedFromDetail(BaseModel):
+    library_object_id: str
+    version: int
+    sponsor_id: str
+
+
+class LibraryInstanceResponse(BaseModel):
+    id: str
+    study_id: str
+    object_type: str
+    payload: Dict[str, Any]
+    created_at: str
+    created_by: str
+    instantiated_from: InstantiatedFromDetail
+
+
+@app.post(
+    "/api/v1/studies/{study_id}/library-instances",
+    response_model=LibraryInstanceResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def instantiate_library_object_endpoint(
+    study_id: str,
+    payload: InstantiateLibraryObjectRequest,
+    request: Request,
+) -> LibraryInstanceResponse:
+    """
+    Instantiates a specific version (or latest) of a Global Library object into a study-scoped instance.
+    Enforces that the library object and study both belong to/are accessible by the authenticated sponsor.
+    """
+    driver = await get_neo4j_driver(request)
+
+    # 1. Retrieve sponsor scope & user id
+    sponsor_id = getattr(request.state, "sponsor_id", None) or request.headers.get(
+        "X-Sponsor-Id"
+    )
+    if not sponsor_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Missing authenticated sponsor scope",
+        )
+
+    user_id = getattr(request.state, "user_id", "system")
+
+    # 2. Call the delta manager to run checks and instantiation
+    try:
+        instance = await instantiate_library_object_in_study(
+            driver=driver,
+            study_id=study_id,
+            library_object_id=payload.library_object_id,
+            version=payload.version,
+            sponsor_id=sponsor_id,
+            user_id=user_id,
+        )
+        return LibraryInstanceResponse(**instance)
+    except PermissionError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e),
+        )
+    except ValueError as e:
+        # Check if "not found" is for study or library object
+        err_msg = str(e)
+        if "Study" in err_msg or "Library object" in err_msg or "not found" in err_msg:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=err_msg,
+            )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=err_msg,
+        )
