@@ -51,6 +51,8 @@ class CodingState(str, enum.Enum):
     UNCODED = "UNCODED"
     SUGGESTED = "SUGGESTED"
     CODED = "CODED"
+    AUTO_CODED = "AUTO_CODED"
+    QUERY_PENDING = "QUERY_PENDING"
     RECODING_REQUIRED = "RECODING_REQUIRED"
 
 
@@ -611,7 +613,7 @@ class ClinicalCodingAssignment(AuditedModel):
         Index("idx_coding_assign_verbatim", "verbatim_text"),
         Index("idx_coding_assign_obs", "observation_id"),
         CheckConstraint(
-            "(status != 'CODED') OR (coded_code IS NOT NULL AND coded_term IS NOT NULL)",
+            "(status NOT IN ('CODED', 'AUTO_CODED')) OR (coded_code IS NOT NULL AND coded_term IS NOT NULL)",
             name="chk_coding_assignment_coded_fields",
         ),
     )
@@ -639,6 +641,12 @@ class ClinicalCodingAssignment(AuditedModel):
     )
     assigned_by: Mapped[str] = mapped_column(String(255), nullable=True)
     assigned_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+
+    # Expanded fields to persist coding/matching results comprehensively
+    score: Mapped[float] = mapped_column(Float, nullable=True)
+    hierarchy: Mapped[dict] = mapped_column(JSON, nullable=True)
+    suggestions: Mapped[dict] = mapped_column(JSON, nullable=True)
+    domain: Mapped[str] = mapped_column(String(50), nullable=True)
 
 
 class ClinicalCodingLedger(AuditedModel):
