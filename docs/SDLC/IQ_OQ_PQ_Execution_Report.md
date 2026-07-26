@@ -9,10 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 733
-- **Passed:** 733 🟢
-- **Total Automated Test Cases Run:** 740
-- **Passed:** 740 🟢
+- **Total Automated Test Cases Run:** 755
+- **Passed:** 755 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -128,7 +126,7 @@ rapidfuzz               3.14.5
 requests                2.34.2
 rich                    15.0.0
 rsa                     4.9.1
-ruff                    0.15.22
+ruff                    0.16.0
 six                     1.17.0
 sortedcontainers        2.4.0
 soupsieve               2.9.1
@@ -342,6 +340,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_valid_skip_logic_schema` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_xpath_compile_logical_and_functions` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_xpath_compile_simple` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_version_diff_success` | `tests.test_designer_version_diff` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_version_diff_unrelated_or_nonexistent` | `tests.test_designer_version_diff` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_authoring_mutations_rejected_for_auditors` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_clause_lifecycle_and_versioning_audit` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_database_url_override_and_init` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
