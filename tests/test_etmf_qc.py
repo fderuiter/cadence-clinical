@@ -427,7 +427,7 @@ async def test_qc_history_api_and_audit():
         headers=headers_auditor,
     )
     assert audit_resp.status_code == 200
-    logs = audit_resp.json()
+    logs = audit_resp.json()["items"]
 
     qc_hist_view_logs = [
         log

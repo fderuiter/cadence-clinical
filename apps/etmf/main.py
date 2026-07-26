@@ -1,5 +1,6 @@
 import os
 from contextlib import asynccontextmanager
+from datetime import datetime
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
@@ -292,6 +293,20 @@ class AuditLogResponse(BaseModel):
     action: str
     document_id: Optional[str]
     details: str
+
+
+class PaginatedAuditLogResponse(BaseModel):
+    """
+    Paginated representation of eTMF audit trail logs.
+    """
+
+    items: List[AuditLogResponse]
+    total_count: int
+    limit: int
+    offset: int
+    next_page: Optional[str] = None
+    next_cursor: Optional[str] = None
+    has_more: bool
 
 
 class ExpectedDocumentCreate(BaseModel):
@@ -891,39 +906,93 @@ async def download_document(
     )
 
 
-@app.get("/api/v1/etmf/audit-logs", response_model=List[AuditLogResponse])
+@app.get("/api/v1/etmf/audit-logs", response_model=PaginatedAuditLogResponse)
 async def get_audit_trail(
     request: Request,
+    user_id: Optional[str] = Query(None, description="Filter logs by user ID"),
+    action: Optional[str] = Query(None, description="Filter logs by action"),
     document_id: Optional[str] = Query(None, description="Filter logs by document ID"),
+    start_time: Optional[datetime] = Query(None, description="Filter logs starting from this timestamp (inclusive)"),
+    end_time: Optional[datetime] = Query(None, description="Filter logs up to this timestamp (inclusive)"),
+    limit: int = Query(50, ge=1, le=250, description="Limit the number of audit log records returned"),
+    offset: int = Query(0, ge=0, description="Offset for pagination"),
     roles: list[str] = Depends(verify_is_auditor),
     session: AsyncSession = Depends(get_db_session),
-) -> List[AuditLogResponse]:
+) -> PaginatedAuditLogResponse:
     """
     Retrieve audit trail of all eTMF interactions.
     Restricted to authorized roles like regulatory inspectors.
     """
-    user_id = getattr(request.state, "user_id", "anonymous")
+    request_user_id = getattr(request.state, "user_id", "anonymous")
     user_roles = getattr(request.state, "roles", "anonymous")
 
     # Log access to the audit trail itself first
     await write_audit_log(
         session=session,
-        user_id=user_id,
+        user_id=request_user_id,
         user_role=user_roles,
         action="AUDIT_VIEW",
         document_id=document_id,
         details="Accessed eTMF immutable audit trail logs.",
     )
 
-    stmt = select(TMFAuditLog)
+    # 1. Build base filter criteria
+    filters = []
+    if user_id:
+        filters.append(TMFAuditLog.user_id == user_id)
+    if action:
+        filters.append(TMFAuditLog.action == action)
     if document_id:
-        stmt = stmt.where(TMFAuditLog.document_id == document_id)
-    stmt = stmt.order_by(TMFAuditLog.timestamp.desc())
+        filters.append(TMFAuditLog.document_id == document_id)
+    if start_time:
+        filters.append(TMFAuditLog.timestamp >= start_time)
+    if end_time:
+        filters.append(TMFAuditLog.timestamp <= end_time)
+
+    # 2. Query total count
+    from sqlalchemy import func
+    count_stmt = select(func.count()).select_from(TMFAuditLog)
+    if filters:
+        count_stmt = count_stmt.where(*filters)
+
+    total_res = await session.execute(count_stmt)
+    total_count = total_res.scalar_one()
+
+    # 3. Query items with pagination and descending timestamp order
+    stmt = select(TMFAuditLog)
+    if filters:
+        stmt = stmt.where(*filters)
+    # Order descending by timestamp, and secondary ID for determinism
+    stmt = stmt.order_by(TMFAuditLog.timestamp.desc(), TMFAuditLog.id.desc())
+    stmt = stmt.offset(offset).limit(limit)
 
     result = await session.execute(stmt)
     logs = result.scalars().all()
 
-    return [
+    # 4. Construct metadata
+    has_more = (offset + limit) < total_count
+    next_page = None
+    next_cursor = None
+    if has_more:
+        next_cursor = str(offset + limit)
+        # Construct next_page URL with existing filters
+        base_path = "/api/v1/etmf/audit-logs"
+        params = []
+        if user_id:
+            params.append(f"user_id={user_id}")
+        if action:
+            params.append(f"action={action}")
+        if document_id:
+            params.append(f"document_id={document_id}")
+        if start_time:
+            params.append(f"start_time={start_time.isoformat()}")
+        if end_time:
+            params.append(f"end_time={end_time.isoformat()}")
+        params.append(f"limit={limit}")
+        params.append(f"offset={offset + limit}")
+        next_page = f"{base_path}?" + "&".join(params)
+
+    items = [
         AuditLogResponse(
             id=log.id,
             timestamp=log.timestamp.isoformat(),
@@ -935,6 +1004,16 @@ async def get_audit_trail(
         )
         for log in logs
     ]
+
+    return PaginatedAuditLogResponse(
+        items=items,
+        total_count=total_count,
+        limit=limit,
+        offset=offset,
+        next_page=next_page,
+        next_cursor=next_cursor,
+        has_more=has_more,
+    )
 
 
 @app.get("/api/v1/etmf/edl", response_model=List[ExpectedDocumentResponse])

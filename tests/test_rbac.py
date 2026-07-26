@@ -315,7 +315,7 @@ async def test_etmf_audit_logs_gated_to_auditors() -> None:
     # 2. Allow access to "auditor"
     resp = client.get("/api/v1/etmf/audit-logs", headers=get_auth_headers("auditor"))
     assert resp.status_code == 200
-    logs = resp.json()
+    logs = resp.json()["items"]
     assert len(logs) >= 1
     # Check that AUDIT_VIEW self-audit event is recorded
     assert logs[0]["action"] == "AUDIT_VIEW"
