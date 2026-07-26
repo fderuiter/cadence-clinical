@@ -3,6 +3,7 @@
 This document tracks all Architectural Decision Records for the Cadence Clinical platform in chronological order.
 
 ## Standard ADR Template
+
 - [ADR Template](TEMPLATE.md)
 
 ## Decisions Log
@@ -71,3 +72,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-08: Centralized RBAC Toolkit, Permissions, Principals, and Field Masking](2026-08-08-centralized-rbac-toolkit.md)
 - [2026-08-08: Expose Authenticated SDTM/ADaM Dataset-JSON Export Endpoints](2026-08-08-expose-authenticated-sdtm-adam-dataset-json-export-endpoints.md)
 - [2026-08-08: eCOA Portal and Interop Deployment Architecture](2026-08-08-ecoa-portal-and-interop-deployment.md)
+- [2026-08-09: eISF Browse, RBAC, Downloads, and Completeness](2026-08-09-eisf-maintenance-and-formatting.md)
