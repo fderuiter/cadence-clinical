@@ -168,7 +168,7 @@ describe("Terminology API Client Unit Tests", () => {
       expect(result).toEqual(mockResult);
       expect(mockFetch).toHaveBeenCalledTimes(1);
 
-      const [url, options] = mockFetch.mock.calls[0];
+      const [url] = mockFetch.mock.calls[0];
       const parsedUrl = new URL(url);
       expect(parsedUrl.origin + parsedUrl.pathname).toBe(
         "http://localhost:8000/api/v1/terminology/search"
