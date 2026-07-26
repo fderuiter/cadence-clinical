@@ -63,6 +63,7 @@ from apps.execution.edit_checks import (
 from apps.execution.outliers import recalculate_cohort_outliers
 from apps.execution.query_service import QueryService, StateTransitionError
 from apps.execution.translator import process_translation
+from apps.execution.trial_lock import TrialLockManager
 from apps.execution.tsdv import evaluate_tsdv_requirement
 from apps.execution.ucum import convert_unit, get_normalized_representation
 from packages.security import (
@@ -3539,3 +3540,162 @@ async def sync_queries(
         "status": "success",
         "processed_blocks": processed_count,
     }
+
+
+class LockStatusResponse(BaseModel):
+    """Pydantic model representing the active locking/freezing state of the system."""
+
+    locked_sites: list[str]
+    locked_visits: list[str]
+    locked_forms: list[str]
+    locked_subjects: list[str]
+    trial_locked: bool
+
+
+@app.get(
+    "/api/v1/execution/locks",
+    response_model=LockStatusResponse,
+)
+async def get_lock_status(
+    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER, ROLE_CRA)),
+) -> LockStatusResponse:
+    """Retrieve the current lock/freeze status of sites, visits, forms, subjects, and study-wide trial."""
+    return LockStatusResponse(
+        locked_sites=list(TrialLockManager._locked_sites),
+        locked_visits=list(TrialLockManager._locked_visits),
+        locked_forms=list(TrialLockManager._locked_forms),
+        locked_subjects=list(TrialLockManager._locked_subjects),
+        trial_locked=TrialLockManager.is_locked(),
+    )
+
+
+@app.post("/api/v1/execution/locks/site/{site_id}/lock", status_code=200)
+@app.post("/api/v1/execution/locks/site/{site_id}/freeze", status_code=200)
+async def lock_site_endpoint(
+    site_id: str,
+    request: Request,
+    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER)),
+) -> dict[str, str]:
+    """Locks or freezes a specific site."""
+    verify_change_justification(request)
+    TrialLockManager.lock_site(site_id)
+    return {"status": "success", "message": f"Site {site_id} is locked/frozen."}
+
+
+@app.post("/api/v1/execution/locks/site/{site_id}/unlock", status_code=200)
+@app.post("/api/v1/execution/locks/site/{site_id}/unfreeze", status_code=200)
+async def unlock_site_endpoint(
+    site_id: str,
+    request: Request,
+    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER)),
+) -> dict[str, str]:
+    """Unlocks or unfreezes a specific site."""
+    verify_change_justification(request)
+    TrialLockManager.unlock_site(site_id)
+    return {"status": "success", "message": f"Site {site_id} is unlocked/unfrozen."}
+
+
+@app.post("/api/v1/execution/locks/visit/{visit_id}/lock", status_code=200)
+@app.post("/api/v1/execution/locks/visit/{visit_id}/freeze", status_code=200)
+async def lock_visit_endpoint(
+    visit_id: str,
+    request: Request,
+    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER)),
+) -> dict[str, str]:
+    """Locks or freezes a specific visit."""
+    verify_change_justification(request)
+    TrialLockManager.lock_visit(visit_id)
+    return {"status": "success", "message": f"Visit {visit_id} is locked/frozen."}
+
+
+@app.post("/api/v1/execution/locks/visit/{visit_id}/unlock", status_code=200)
+@app.post("/api/v1/execution/locks/visit/{visit_id}/unfreeze", status_code=200)
+async def unlock_visit_endpoint(
+    visit_id: str,
+    request: Request,
+    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER)),
+) -> dict[str, str]:
+    """Unlocks or unfreezes a specific visit."""
+    verify_change_justification(request)
+    TrialLockManager.unlock_visit(visit_id)
+    return {"status": "success", "message": f"Visit {visit_id} is unlocked/unfrozen."}
+
+
+@app.post("/api/v1/execution/locks/form/{form_id}/lock", status_code=200)
+@app.post("/api/v1/execution/locks/form/{form_id}/freeze", status_code=200)
+async def lock_form_endpoint(
+    form_id: str,
+    request: Request,
+    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER)),
+) -> dict[str, str]:
+    """Locks or freezes a specific form."""
+    verify_change_justification(request)
+    TrialLockManager.lock_form(form_id)
+    return {"status": "success", "message": f"Form {form_id} is locked/frozen."}
+
+
+@app.post("/api/v1/execution/locks/form/{form_id}/unlock", status_code=200)
+@app.post("/api/v1/execution/locks/form/{form_id}/unfreeze", status_code=200)
+async def unlock_form_endpoint(
+    form_id: str,
+    request: Request,
+    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER)),
+) -> dict[str, str]:
+    """Unlocks or unfreezes a specific form."""
+    verify_change_justification(request)
+    TrialLockManager.unlock_form(form_id)
+    return {"status": "success", "message": f"Form {form_id} is unlocked/unfrozen."}
+
+
+@app.post("/api/v1/execution/locks/subject/{subject_id}/lock", status_code=200)
+@app.post("/api/v1/execution/locks/subject/{subject_id}/freeze", status_code=200)
+async def lock_subject_endpoint(
+    subject_id: str,
+    request: Request,
+    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER)),
+) -> dict[str, str]:
+    """Locks or freezes a specific subject."""
+    verify_change_justification(request)
+    TrialLockManager.lock_subject(subject_id)
+    return {"status": "success", "message": f"Subject {subject_id} is locked/frozen."}
+
+
+@app.post("/api/v1/execution/locks/subject/{subject_id}/unlock", status_code=200)
+@app.post("/api/v1/execution/locks/subject/{subject_id}/unfreeze", status_code=200)
+async def unlock_subject_endpoint(
+    subject_id: str,
+    request: Request,
+    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER)),
+) -> dict[str, str]:
+    """Unlocks or unfreezes a specific subject."""
+    verify_change_justification(request)
+    TrialLockManager.unlock_subject(subject_id)
+    return {
+        "status": "success",
+        "message": f"Subject {subject_id} is unlocked/unfrozen.",
+    }
+
+
+@app.post("/api/v1/execution/locks/trial/lock", status_code=200)
+@app.post("/api/v1/execution/locks/trial/freeze", status_code=200)
+async def lock_trial_endpoint(
+    request: Request,
+    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER)),
+) -> dict[str, str]:
+    """Locks or freezes the trial/study."""
+    verify_change_justification(request)
+    reason = request.headers.get("X-Change-Reason", "Sponsor Lock")
+    TrialLockManager.lock_trial(reason=reason)
+    return {"status": "success", "message": "Trial is locked/frozen."}
+
+
+@app.post("/api/v1/execution/locks/trial/unlock", status_code=200)
+@app.post("/api/v1/execution/locks/trial/unfreeze", status_code=200)
+async def unlock_trial_endpoint(
+    request: Request,
+    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER)),
+) -> dict[str, str]:
+    """Unlocks or unfreezes the trial/study."""
+    verify_change_justification(request)
+    TrialLockManager.unlock_trial()
+    return {"status": "success", "message": "Trial is unlocked/unfrozen."}
