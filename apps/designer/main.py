@@ -8,7 +8,7 @@ import httpx
 from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile, status
 from neo4j import AsyncGraphDatabase
 from protocol_render import SoAMatrixView
-from pydantic import BaseModel
+from pydantic import BaseModel, TypeAdapter
 
 from apps.designer.db import (
     assert_mock_study_mutable,
@@ -28,7 +28,9 @@ from apps.designer.delta import (
     InvalidSignatureError,
     _init_mock_soa,
     amend_protocol_version,
+    compute_graph_diff,
     create_epoch,
+    create_library_object_version,
     create_procedure,
     create_rule_node,
     create_study_arm,
@@ -36,12 +38,16 @@ from apps.designer.delta import (
     create_timing_window,
     create_visit,
     delete_rule_node,
+    get_latest_library_object,
+    get_library_object_by_version,
+    get_library_object_history,
     get_rules_from_graph,
     get_soa_matrix_projection,
     link_arm_applicability,
     link_epoch_to_visit,
     link_visit_or_procedure_to_timing,
     link_visit_to_procedure,
+    list_library_objects,
     update_epoch,
     update_procedure,
     update_rule_node,
@@ -50,6 +56,12 @@ from apps.designer.delta import (
     update_visit,
 )
 from apps.designer.evs_client import NCIEVSClient
+from apps.designer.library import (
+    CreateLibraryObjectRequest,
+    LibraryObjectDetail,
+    ObjectType,
+    UpdateLibraryObjectRequest,
+)
 from apps.designer.mapper import map_study_to_usdm
 from apps.designer.rules import (
     CreateRuleRequest,
@@ -100,12 +112,17 @@ class DifferenceResult(BaseModel):
     Attributes:
         field: The name of the field that changed.
         old_value: The previous value of the field.
-        new_value: The updated value of the field.
     """
 
     field: str
     old_value: Any
     new_value: Any
+
+
+class VersionDiffResponse(BaseModel):
+    added_nodes: List[DifferenceResult]
+    modified_nodes: List[DifferenceResult]
+    deleted_nodes: List[DifferenceResult]
 
 
 class CreateSoAEntityRequest(BaseModel):
@@ -628,6 +645,70 @@ class ConceptListResponse(BaseModel):
     next_cursor: Optional[str] = None
 
 
+class LibraryObjectListResponse(BaseModel):
+    """
+    Paginated response envelope for Global Library Objects.
+    Matches Stripe-style list response.
+    """
+
+    object: str = "list"
+    data: List[LibraryObjectDetail]
+    has_more: bool
+    next_cursor: Optional[str] = None
+
+
+def map_db_to_library_detail(record: Dict[str, Any]) -> LibraryObjectDetail:
+    """
+    Maps a raw database record / dict to the appropriate typed LibraryObjectDetail model.
+    Handles semantic version conversion and datetime parsing.
+    """
+    # 1. Convert version index to a string semantic version if integer
+    v = record.get("version")
+    if isinstance(v, int):
+        version_str = f"{v}.0.0"
+    elif v:
+        version_str = str(v)
+    else:
+        version_str = "1.0.0"
+
+    # 2. Parse ISO datetimes
+    def parse_dt(val: Any) -> Optional[datetime]:
+        if not val:
+            return None
+        if isinstance(val, datetime):
+            return val
+        try:
+            if hasattr(val, "isoformat"):
+                return datetime.fromisoformat(val.isoformat())
+            # Replace trailing Z with UTC timezone offset
+            return datetime.fromisoformat(str(val).replace("Z", "+00:00"))
+        except Exception:
+            return datetime.now()
+
+    created_at = parse_dt(record.get("created_at")) or datetime.now()
+    updated_at = parse_dt(record.get("updated_at"))
+
+    # Map change_reason / reason_for_change
+    reason = record.get("reason_for_change") or record.get("change_reason")
+
+    model_data = {
+        "id": record.get("id"),
+        "version": version_str,
+        "status": record.get("status") or "DRAFT",
+        "sponsor_id": record.get("sponsor_id"),
+        "tenant_id": record.get("tenant_id") or "tenant_default",
+        "created_at": created_at,
+        "created_by": record.get("created_by") or "system",
+        "updated_at": updated_at,
+        "updated_by": record.get("updated_by"),
+        "reason_for_change": reason,
+        "object_type": record.get("object_type"),
+        "payload": record.get("payload"),
+    }
+
+    return TypeAdapter(LibraryObjectDetail).validate_python(model_data)
+
+
 class CreateConceptRequest(BaseModel):
     concept_code: str
     terminology: str
@@ -718,6 +799,286 @@ async def update_concept(id: str, payload: UpdateConceptRequest) -> ConceptDetai
         updated_by="usr_9921a88b2c410",
         reason_for_change=payload.reason_for_change,
     )
+
+
+# ==========================================
+# Global Library (MDR) API Endpoints
+# ==========================================
+
+
+@app.post(
+    "/api/v1/mdr/library",
+    response_model=LibraryObjectDetail,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_library_object_endpoint(
+    payload: CreateLibraryObjectRequest,
+    request: Request,
+) -> LibraryObjectDetail:
+    """
+    Creates a new Global Library object under the authenticated sponsor's scope.
+    """
+    driver = await get_neo4j_driver(request)
+
+    # 1. Extract identity, roles, and sponsor scope
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = (
+        getattr(request.state, "change_reason", None) or payload.change_reason
+    )
+    if not change_reason or not change_reason.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing change justification reason",
+        )
+
+    sponsor_id = getattr(request.state, "sponsor_id", None) or request.headers.get(
+        "X-Sponsor-Id"
+    )
+    if not sponsor_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Missing authenticated sponsor scope",
+        )
+
+    tenant_id = getattr(request.state, "tenant_id", None) or request.headers.get(
+        "X-Tenant-Id", "tenant_default"
+    )
+
+    # 2. Prevent duplicate ID within same sponsor scope
+    latest = await get_latest_library_object(driver, payload.id, sponsor_id)
+    if latest:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Library object with ID {payload.id} already exists for sponsor {sponsor_id}.",
+        )
+
+    # 3. Save to database
+    properties = {
+        "object_type": payload.object_type.value
+        if hasattr(payload.object_type, "value")
+        else payload.object_type,
+        "sponsor_id": sponsor_id,
+        "tenant_id": tenant_id,
+        "status": payload.status.value
+        if hasattr(payload.status, "value")
+        else payload.status,
+        "created_at": datetime.now().isoformat(),
+        "created_by": user_id,
+        "change_reason": change_reason,
+        "payload": payload.payload.model_dump(),
+    }
+
+    try:
+        record = await create_library_object_version(driver, payload.id, properties)
+        return map_db_to_library_detail(record)
+    except ImmutabilityViolationError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="IMMUTABILITY_VIOLATION",
+        )
+    except ConcurrentLockingError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="CONCURRENT_LOCKING_CONFLICT",
+        )
+
+
+@app.get(
+    "/api/v1/mdr/library",
+    response_model=LibraryObjectListResponse,
+)
+async def list_library_objects_endpoint(
+    request: Request,
+    object_type: Optional[ObjectType] = None,
+    limit: int = Query(50, le=250),
+    starting_after: Optional[str] = None,
+) -> LibraryObjectListResponse:
+    """
+    Lists latest global library objects under the authenticated sponsor.
+    Supports Stripe-style cursor-based pagination.
+    """
+    driver = await get_neo4j_driver(request)
+
+    sponsor_id = getattr(request.state, "sponsor_id", None) or request.headers.get(
+        "X-Sponsor-Id"
+    )
+    if not sponsor_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Missing authenticated sponsor scope",
+        )
+
+    # Fetch limit + 1 to detect has_more
+    records = await list_library_objects(
+        driver,
+        sponsor_id=sponsor_id,
+        object_type=object_type.value if object_type else None,
+        limit=limit + 1,
+        starting_after=starting_after,
+    )
+
+    has_more = len(records) > limit
+    if has_more:
+        records = records[:limit]
+        next_cursor = records[-1]["id"]
+    else:
+        next_cursor = None
+
+    data = [map_db_to_library_detail(r) for r in records]
+    return LibraryObjectListResponse(
+        object="list",
+        data=data,
+        has_more=has_more,
+        next_cursor=next_cursor,
+    )
+
+
+@app.get(
+    "/api/v1/mdr/library/{id}",
+    response_model=LibraryObjectDetail,
+)
+async def get_library_object_endpoint(
+    id: str,
+    request: Request,
+    version: Optional[int] = Query(None),
+) -> LibraryObjectDetail:
+    """
+    Retrieves the latest version or a specific version of a global library object.
+    """
+    driver = await get_neo4j_driver(request)
+
+    sponsor_id = getattr(request.state, "sponsor_id", None) or request.headers.get(
+        "X-Sponsor-Id"
+    )
+    if not sponsor_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Missing authenticated sponsor scope",
+        )
+
+    if version is not None:
+        record = await get_library_object_by_version(driver, id, sponsor_id, version)
+    else:
+        record = await get_latest_library_object(driver, id, sponsor_id)
+
+    if not record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Library object {id} not found.",
+        )
+
+    return map_db_to_library_detail(record)
+
+
+@app.put(
+    "/api/v1/mdr/library/{id}",
+    response_model=LibraryObjectDetail,
+)
+async def update_library_object_endpoint(
+    id: str,
+    payload: UpdateLibraryObjectRequest,
+    request: Request,
+) -> LibraryObjectDetail:
+    """
+    Updates a global library object by creating a new version.
+    """
+    driver = await get_neo4j_driver(request)
+
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = (
+        getattr(request.state, "change_reason", None) or payload.reason_for_change
+    )
+    if not change_reason or not change_reason.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing change justification reason",
+        )
+
+    sponsor_id = getattr(request.state, "sponsor_id", None) or request.headers.get(
+        "X-Sponsor-Id"
+    )
+    if not sponsor_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Missing authenticated sponsor scope",
+        )
+
+    # 1. Verify object exists and is owned by the sponsor
+    latest = await get_latest_library_object(driver, id, sponsor_id)
+    if not latest:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Library object {id} not found under sponsor {sponsor_id}.",
+        )
+
+    # 2. Check immutability
+    if latest.get("status") in ("LOCKED", "PUBLISHED", "ARCHIVED"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="IMMUTABILITY_VIOLATION",
+        )
+
+    # 3. Save new version
+    properties = {
+        "object_type": payload.object_type.value
+        if hasattr(payload.object_type, "value")
+        else payload.object_type,
+        "sponsor_id": sponsor_id,
+        "tenant_id": latest.get("tenant_id", "tenant_default"),
+        "status": "DRAFT",
+        "created_at": latest.get("created_at") or datetime.now().isoformat(),
+        "created_by": latest.get("created_by") or user_id,
+        "updated_at": datetime.now().isoformat(),
+        "updated_by": user_id,
+        "reason_for_change": change_reason,
+        "payload": payload.payload.model_dump(),
+    }
+
+    try:
+        record = await create_library_object_version(driver, id, properties)
+        return map_db_to_library_detail(record)
+    except ImmutabilityViolationError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="IMMUTABILITY_VIOLATION",
+        )
+    except ConcurrentLockingError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="CONCURRENT_LOCKING_CONFLICT",
+        )
+
+
+@app.get(
+    "/api/v1/mdr/library/{id}/history",
+    response_model=List[LibraryObjectDetail],
+)
+async def get_library_object_history_endpoint(
+    id: str,
+    request: Request,
+) -> List[LibraryObjectDetail]:
+    """
+    Retrieves the complete version history of a global library object.
+    """
+    driver = await get_neo4j_driver(request)
+
+    sponsor_id = getattr(request.state, "sponsor_id", None) or request.headers.get(
+        "X-Sponsor-Id"
+    )
+    if not sponsor_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Missing authenticated sponsor scope",
+        )
+
+    records = await get_library_object_history(driver, id, sponsor_id)
+    if not records:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Library object {id} not found.",
+        )
+
+    return [map_db_to_library_detail(r) for r in records]
 
 
 # ==========================================
@@ -1681,3 +2042,60 @@ async def get_soa_projection_endpoint(
     driver = await get_neo4j_driver(request)
     matrix = await get_soa_matrix_projection(driver, version_id)
     return SoAMatrixView(**matrix)
+
+
+@app.get(
+    "/api/v1/studies/{study_id}/versions/diff",
+    response_model=VersionDiffResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def get_versions_diff_endpoint(
+    study_id: str,
+    version_id1: str = Query(..., description="The old version ID"),
+    version_id2: str = Query(..., description="The new version ID"),
+    request: Request = None,
+) -> VersionDiffResponse:
+    """
+    Exposes graph-native, form-level version-diff API.
+    Identifies additions, modifications, and deletions of forms.
+    Returns HTTP 400 Bad Request if either version is nonexistent or unrelated.
+    """
+    driver = await get_neo4j_driver(request)
+    try:
+        diff_dict = await compute_graph_diff(driver, study_id, version_id1, version_id2)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+    added = [
+        DifferenceResult(
+            field=node["key"],
+            old_value=None,
+            new_value=node["xform_definition_xml"],
+        )
+        for node in diff_dict["added_nodes"]
+    ]
+    modified = [
+        DifferenceResult(
+            field=node["key"],
+            old_value=node["old_value"],
+            new_value=node["new_value"],
+        )
+        for node in diff_dict["modified_nodes"]
+    ]
+    deleted = [
+        DifferenceResult(
+            field=node["key"],
+            old_value=node["xform_definition_xml"],
+            new_value=None,
+        )
+        for node in diff_dict["deleted_nodes"]
+    ]
+
+    return VersionDiffResponse(
+        added_nodes=added,
+        modified_nodes=modified,
+        deleted_nodes=deleted,
+    )

@@ -1,6 +1,10 @@
-from fastapi import HTTPException, Request
+from typing import Any, Callable, Dict, List, Optional, Set
 
-# Minimal, allow-list-based role constants
+import pydantic
+from fastapi import Depends, HTTPException, Request, status
+from pydantic import BaseModel, Field
+
+# Legacy, allow-list-based role constants
 ROLE_CRA = "CRA"
 ROLE_DATA_MANAGER = "Data Manager"
 ROLE_SITE_INVESTIGATOR = "Site Investigator"
@@ -8,6 +12,338 @@ ROLE_AUDITOR = "Auditor"
 ROLE_SPONSOR_ADMIN = "Sponsor Admin"
 
 AUDITOR_ROLES = {"auditor", "inspector", "regulatory_inspector"}
+
+
+# Canonical lower-case roles from docs/SDLC/05_Security_Compliance_Audit_Spec.md §2.1
+ROLE_SYSADMIN = "sysadmin"
+ROLE_SPONSOR_DESIGNER = "sponsor_designer"
+ROLE_SPONSOR_DM = "sponsor_dm"
+ROLE_SPONSOR_MM = "sponsor_mm"
+ROLE_SPONSOR_STATISTICIAN = "sponsor_statistician"
+ROLE_INVESTIGATOR = "investigator"
+ROLE_CRC = "crc"
+ROLE_CRA_CANONICAL = "cra"
+ROLE_SUBJECT = "subject"
+ROLE_AUDITOR_CANONICAL = "auditor"
+
+
+ROLE_ALIASES = {
+    "sysadmin": ROLE_SYSADMIN,
+    "system administrator": ROLE_SYSADMIN,
+    "system_admin": ROLE_SYSADMIN,
+    "system-admin": ROLE_SYSADMIN,
+    "sponsor study designer": ROLE_SPONSOR_DESIGNER,
+    "sponsor_designer": ROLE_SPONSOR_DESIGNER,
+    "sponsor-designer": ROLE_SPONSOR_DESIGNER,
+    "designer": ROLE_SPONSOR_DESIGNER,
+    "sponsor data manager": ROLE_SPONSOR_DM,
+    "sponsor_dm": ROLE_SPONSOR_DM,
+    "sponsor-dm": ROLE_SPONSOR_DM,
+    "sponsor dm": ROLE_SPONSOR_DM,
+    "data manager": ROLE_SPONSOR_DM,
+    "data_manager": ROLE_SPONSOR_DM,
+    "data-manager": ROLE_SPONSOR_DM,
+    "dm": ROLE_SPONSOR_DM,
+    "admin": ROLE_SPONSOR_DM,
+    "sponsor admin": ROLE_SPONSOR_DM,
+    "sponsor_admin": ROLE_SPONSOR_DM,
+    "sponsor medical monitor": ROLE_SPONSOR_MM,
+    "sponsor_mm": ROLE_SPONSOR_MM,
+    "sponsor-mm": ROLE_SPONSOR_MM,
+    "sponsor mm": ROLE_SPONSOR_MM,
+    "medical monitor": ROLE_SPONSOR_MM,
+    "medical_monitor": ROLE_SPONSOR_MM,
+    "mm": ROLE_SPONSOR_MM,
+    "sponsor statistician": ROLE_SPONSOR_STATISTICIAN,
+    "sponsor_statistician": ROLE_SPONSOR_STATISTICIAN,
+    "sponsor-statistician": ROLE_SPONSOR_STATISTICIAN,
+    "statistician": ROLE_SPONSOR_STATISTICIAN,
+    "investigator": ROLE_INVESTIGATOR,
+    "site investigator": ROLE_INVESTIGATOR,
+    "site_investigator": ROLE_INVESTIGATOR,
+    "site-investigator": ROLE_INVESTIGATOR,
+    "principal investigator": ROLE_INVESTIGATOR,
+    "pi": ROLE_INVESTIGATOR,
+    "principal_investigator": ROLE_INVESTIGATOR,
+    "principalinvestigator": ROLE_INVESTIGATOR,
+    "investigator_user": ROLE_INVESTIGATOR,
+    "crc": ROLE_CRC,
+    "clinical research coordinator": ROLE_CRC,
+    "coordinator": ROLE_CRC,
+    "cra": ROLE_CRA_CANONICAL,
+    "clinical research associate": ROLE_CRA_CANONICAL,
+    "monitor": ROLE_CRA_CANONICAL,
+    "cra/monitor": ROLE_CRA_CANONICAL,
+    "cra_monitor": ROLE_CRA_CANONICAL,
+    "cra-monitor": ROLE_CRA_CANONICAL,
+    "subject": ROLE_SUBJECT,
+    "patient": ROLE_SUBJECT,
+    "epro": ROLE_SUBJECT,
+    "auditor": ROLE_AUDITOR_CANONICAL,
+    "inspector": ROLE_AUDITOR_CANONICAL,
+    "regulatory_inspector": ROLE_AUDITOR_CANONICAL,
+}
+
+
+# Declarative action vocabulary and role-to-permission matrix matching §2.2
+# Key format: ROLE -> RESOURCE -> SET OF ACTIONS
+# Actions: "create", "read", "update", "delete"
+ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
+    ROLE_SYSADMIN: {
+        "study_design": {"read"},
+        "system_audit_logs": {"read"},
+        "export_masked": {"read"},
+    },
+    ROLE_SPONSOR_DESIGNER: {
+        "study_design": {"create", "read", "update", "delete"},
+        "system_audit_logs": {"read"},
+    },
+    ROLE_SPONSOR_DM: {
+        "study_design": {"read"},
+        "subject_enrollment": {"read"},
+        "ecrf_data_entry": {"read"},
+        "query_lifecycle": {"create", "read", "update", "delete"},
+        "system_audit_logs": {"read"},
+        "export_masked": {"create", "read", "update"},
+    },
+    ROLE_SPONSOR_MM: {
+        "study_design": {"read"},
+        "subject_enrollment": {"read"},
+        "ecrf_data_entry": {"read"},
+        "query_lifecycle": {"create", "read", "update"},
+        "system_audit_logs": {"read"},
+        "export_masked": {"read"},
+    },
+    ROLE_SPONSOR_STATISTICIAN: {
+        "study_design": {"read"},
+        "system_audit_logs": {"read"},
+        "export_masked": {"create", "read", "update"},
+    },
+    ROLE_INVESTIGATOR: {
+        "study_design": {"read"},
+        "subject_enrollment": {"create", "read", "update"},
+        "ecrf_data_entry": {"create", "read", "update"},
+        "query_lifecycle": {
+            "read",
+            "update",
+        },  # 'Ans' (Answer query) maps to update/read
+        "sdv": {"read"},
+        "system_audit_logs": {"read"},
+    },
+    ROLE_CRC: {
+        "study_design": {"read"},
+        "subject_enrollment": {"create", "read", "update"},
+        "ecrf_data_entry": {
+            "create",
+            "read",
+            "update",
+        },  # 'C/R/U (Draft)' maps to create/read/update
+        "query_lifecycle": {"read", "update"},  # 'Ans' maps to update/read
+        "system_audit_logs": {"read"},
+    },
+    ROLE_CRA_CANONICAL: {
+        "study_design": {"read"},
+        "subject_enrollment": {"read"},
+        "ecrf_data_entry": {"read"},
+        "query_lifecycle": {"create", "read", "update", "delete"},
+        "sdv": {"create", "read", "update", "delete"},
+        "system_audit_logs": {"read"},
+        "export_masked": {"read"},
+    },
+    ROLE_SUBJECT: {
+        "ecrf_data_entry": {"create", "update"},  # 'Diary' maps to create/update
+    },
+    ROLE_AUDITOR_CANONICAL: {
+        "system_audit_logs": {"read"},
+    },
+}
+
+
+# Field-level blinding/masking rules from §2.3
+# These are applied to sensitive fields for blinded users.
+MASKING_RULES: Dict[str, Callable[[Any], Any]] = {
+    "initials": lambda val: "**" if val else val,
+    "ssn": lambda val: "***-**-****" if val else val,
+    "dob": lambda val: "MASKED" if val else val,
+    "treatment_arm_id": lambda val: "BLINDED" if val else val,
+    "treatment_arm": lambda val: "BLINDED" if val else val,
+    "administered_drug_code": lambda val: "Obfuscated Kit" if val else val,
+    "drug_code": lambda val: "Obfuscated Kit" if val else val,
+    "changed_reason_for_blinded_field": lambda val: "Obfuscated" if val else val,
+}
+
+
+class Principal(BaseModel):
+    user_id: str
+    roles: List[str]  # Normalized canonical roles
+    assigned_sites: List[str] = Field(default_factory=list)
+    unblinded_access: bool = False
+    change_reason: Optional[str] = None
+
+
+def normalize_role(role: str) -> str:
+    """Normalizes a role string to its canonical form using ROLE_ALIASES."""
+    norm = role.strip().lower()
+    return ROLE_ALIASES.get(norm, norm)
+
+
+def has_permission(principal: Principal, permission: str) -> bool:
+    """
+    Checks if the principal has the specified permission.
+    Permission string format: "resource:action" (e.g., "study_design:read")
+    """
+    if ":" not in permission:
+        return False
+    resource, action = permission.split(":", 1)
+    resource = resource.strip().lower()
+    action = action.strip().lower()
+
+    for role in principal.roles:
+        perms = ROLE_PERMISSIONS.get(role, {})
+        if resource in perms and action in perms[resource]:
+            return True
+    return False
+
+
+def can_access_site(principal: Principal, site_id: str) -> bool:
+    """
+    Checks if the principal has access to a specific site.
+    Site-scoped users are restricted to their assigned_sites.
+    Sponsor/SysAdmin users with empty assigned_sites are allowed global access.
+    """
+    site_scoped_roles = {ROLE_INVESTIGATOR, ROLE_CRC}
+    user_site_roles = [r for r in principal.roles if r in site_scoped_roles]
+
+    if user_site_roles:
+        return site_id in principal.assigned_sites
+
+    if principal.assigned_sites:
+        return site_id in principal.assigned_sites
+
+    return True
+
+
+def get_principal(request: Request) -> Principal:
+    """
+    FastAPI dependency to extract identity and authorization attributes
+    from request context and headers, returning a normalized Principal.
+    """
+    # 1. User ID
+    user_id = getattr(request.state, "user_id", None) or request.headers.get(
+        "X-User-Id", ""
+    )
+
+    # 2. Roles (raw)
+    roles_val = getattr(request.state, "roles", None)
+    if roles_val is None:
+        roles_val = request.headers.get("X-User-Roles", "")
+
+    if isinstance(roles_val, str):
+        raw_roles = [r.strip().lower() for r in roles_val.split(",") if r.strip()]
+    elif isinstance(roles_val, list):
+        raw_roles = [str(r).strip().lower() for r in roles_val if str(r).strip()]
+    else:
+        raw_roles = []
+
+    normalized_roles = [normalize_role(r) for r in raw_roles]
+
+    # 3. Assigned Sites
+    site_id_val = getattr(request.state, "site_id", None)
+    if site_id_val is None:
+        site_id_val = (
+            request.headers.get("X-Site-Id")
+            or request.headers.get("x-site-id")
+            or request.headers.get("X-User-Site")
+            or ""
+        )
+
+    assigned_sites = []
+    if site_id_val:
+        # Handle potential comma-separated sites
+        assigned_sites = [s.strip() for s in site_id_val.split(",") if s.strip()]
+
+    # 4. Unblinded status
+    unblinded_header = request.headers.get(
+        "X-Unblinded-Access", ""
+    ) or request.headers.get("x-unblinded-access", "")
+    unblinded_access = False
+    if unblinded_header.lower() in ("true", "1", "yes"):
+        unblinded_access = True
+    elif hasattr(request.state, "unblinded_access"):
+        unblinded_access = bool(request.state.unblinded_access)
+
+    # 5. Change reason
+    change_reason = getattr(
+        request.state, "change_reason", None
+    ) or request.headers.get("X-Change-Reason")
+
+    return Principal(
+        user_id=user_id,
+        roles=normalized_roles,
+        assigned_sites=assigned_sites,
+        unblinded_access=unblinded_access,
+        change_reason=change_reason,
+    )
+
+
+def require_permission(permission: str) -> Callable[[Principal], Principal]:
+    """
+    FastAPI dependency factory to assert that the caller has a required permission.
+    """
+
+    def dependency(principal: Principal = Depends(get_principal)) -> Principal:
+        if not has_permission(principal, permission):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Forbidden: Insufficient permissions for {permission}.",
+            )
+        return principal
+
+    return dependency
+
+
+def mask_payload(payload: Any, principal: Principal) -> Any:
+    """
+    Recursively masks sensitive fields in dictionaries, lists, or Pydantic models
+    based on the principal's unblinded status.
+    If principal.unblinded_access is True, no masking is performed.
+    """
+    if principal.unblinded_access:
+        return payload
+
+    return _recursive_mask(payload)
+
+
+def _recursive_mask(data: Any) -> Any:
+    if data is None:
+        return None
+
+    if isinstance(data, pydantic.BaseModel):
+        dumped = data.model_dump()
+        masked = _recursive_mask(dumped)
+        # Reconstruct the model safely
+        return data.__class__.model_validate(masked)
+
+    if isinstance(data, dict):
+        new_dict = {}
+        for k, v in data.items():
+            k_lower = k.lower()
+            if k_lower in MASKING_RULES:
+                new_dict[k] = MASKING_RULES[k_lower](v)
+            else:
+                new_dict[k] = _recursive_mask(v)
+        return new_dict
+
+    if isinstance(data, list):
+        return [_recursive_mask(item) for item in data]
+
+    if isinstance(data, tuple):
+        return tuple(_recursive_mask(item) for item in data)
+
+    if isinstance(data, set):
+        return {_recursive_mask(item) for item in data}
+
+    return data
 
 
 def get_normalized_roles(request: Request) -> list[str]:

@@ -1342,6 +1342,7 @@ def _init_mock_soa(study_version_id: str):
             "epochs": {},
             "visits": {},
             "procedures": {},
+            "forms": {},
             "timing_windows": {},
             "actions": [],
             "links": [],
@@ -2639,3 +2640,342 @@ async def get_soa_matrix_projection(driver, study_version_id: str) -> Dict[str, 
             seen_procs.add(p_id)
 
     return {"epochs": epochs_list, "encounters": encounters_list, "rows": rows_list}
+
+
+@with_transaction_retry()
+async def create_form(
+    driver,
+    study_version_id: str,
+    user_id: str,
+    change_reason: str,
+    form_id: str,
+    properties: Dict[str, Any],
+) -> str:
+    if driver is None:
+        assert_mock_study_version_mutable(study_version_id)
+        _init_mock_soa(study_version_id)
+        store = MOCK_SOA_DATA[study_version_id]["forms"]
+        if form_id in store:
+            raise ConcurrentLockingError("Form already exists")
+        node = {
+            "id": form_id,
+            "version_index": 1,
+            "created_by": user_id,
+            "created_at": dt.datetime.now().isoformat(),
+            **properties,
+        }
+        store[form_id] = node
+        action = {
+            "id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "change_reason": change_reason,
+            "timestamp": dt.datetime.now().isoformat(),
+            "before": None,
+            "after": node,
+        }
+        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
+        return form_id
+
+    async with driver.session() as session:
+        tx = await session.begin_transaction()
+        async with tx:
+            await assert_study_version_mutable(tx, study_version_id)
+            await tx.run(
+                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
+                study_version_id=study_version_id,
+            )
+            check = await tx.run(
+                "MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_FORM]->(f:Form {id: $form_id}) RETURN f.id",
+                study_version_id=study_version_id,
+                form_id=form_id,
+            )
+            if await check.single():
+                raise ConcurrentLockingError("Form already exists")
+
+            action_id = str(uuid.uuid4())
+            query = """
+            MATCH (sv:StudyVersion {id: $study_version_id})
+            CREATE (f:Form {
+                id: $form_id,
+                version_index: 1,
+                created_at: datetime(),
+                created_by: $created_by
+            })
+            SET f += $properties
+            CREATE (sv)-[:HAS_FORM]->(f)
+            CREATE (a:Action {
+                id: $action_id,
+                user_id: $created_by,
+                change_reason: $change_reason,
+                timestamp: datetime()
+            })
+            CREATE (a)-[:AFTER]->(f)
+            RETURN f.id as id
+            """
+            res = await tx.run(
+                query,
+                study_version_id=study_version_id,
+                form_id=form_id,
+                created_by=user_id,
+                change_reason=change_reason,
+                action_id=action_id,
+                properties=properties,
+            )
+            record = await res.single()
+            return record["id"]
+
+
+@with_transaction_retry()
+async def link_visit_to_form(
+    driver,
+    study_version_id: str,
+    user_id: str,
+    change_reason: str,
+    visit_id: str,
+    form_id: str,
+) -> bool:
+    if driver is None:
+        assert_mock_study_version_mutable(study_version_id)
+        _init_mock_soa(study_version_id)
+        links = MOCK_SOA_DATA[study_version_id]["links"]
+        link = {"type": "visit_form", "from_id": visit_id, "to_id": form_id}
+        if link not in links:
+            links.append(link)
+        action = {
+            "id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "change_reason": change_reason,
+            "timestamp": dt.datetime.now().isoformat(),
+            "link": link,
+        }
+        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
+        return True
+
+    async with driver.session() as session:
+        tx = await session.begin_transaction()
+        async with tx:
+            await assert_study_version_mutable(tx, study_version_id)
+            await tx.run(
+                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
+                study_version_id=study_version_id,
+            )
+            query = """
+            MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_VISIT]->(v:Visit {id: $visit_id})
+            MATCH (sv)-[:HAS_FORM]->(f:Form {id: $form_id})
+            MERGE (v)-[r:HAS_FORM]->(f)
+            CREATE (a:Action {
+                id: $action_id,
+                user_id: $user_id,
+                change_reason: $change_reason,
+                timestamp: datetime()
+            })
+            CREATE (a)-[:AFTER]->(v)
+            RETURN true as success
+            """
+            res = await tx.run(
+                query,
+                study_version_id=study_version_id,
+                visit_id=visit_id,
+                form_id=form_id,
+                user_id=user_id,
+                change_reason=change_reason,
+                action_id=str(uuid.uuid4()),
+            )
+            record = await res.single()
+            return record["success"] if record else False
+
+
+async def compute_graph_diff(
+    driver, study_id: str, version_id1: str, version_id2: str
+) -> dict:
+    """
+    Traverses study tree levels: StudyVersion -> Epoch -> Visit -> Form.
+    Identifies additions, modifications, and deletions.
+    Keys forms by form_key and compares xform_definition_xml.
+    """
+    # 1. Validate version existence & relationship
+    if driver is None:
+        from apps.designer.db import MOCK_STUDY_VERSIONS
+
+        if study_id not in MOCK_STUDY_VERSIONS:
+            raise ValueError(f"Study {study_id} not found")
+        versions = MOCK_STUDY_VERSIONS[study_id]
+        v1_exists = any(v["id"] == version_id1 for v in versions)
+        v2_exists = any(v["id"] == version_id2 for v in versions)
+        if not v1_exists:
+            raise ValueError(
+                f"Version {version_id1} not found or unrelated to study {study_id}"
+            )
+        if not v2_exists:
+            raise ValueError(
+                f"Version {version_id2} not found or unrelated to study {study_id}"
+            )
+    else:
+        async with driver.session() as session:
+            # Check if version_id1 exists and belongs to study_id
+            res1 = await session.run(
+                "MATCH (s:Study {id: $study_id})-[:HAS_VERSION]->(sv:StudyVersion {id: $version_id1}) RETURN sv.id as id",
+                study_id=study_id,
+                version_id1=version_id1,
+            )
+            if not (await res1.single()):
+                raise ValueError(
+                    f"Version {version_id1} not found or unrelated to study {study_id}"
+                )
+
+            # Check if version_id2 exists and belongs to study_id
+            res2 = await session.run(
+                "MATCH (s:Study {id: $study_id})-[:HAS_VERSION]->(sv:StudyVersion {id: $version_id2}) RETURN sv.id as id",
+                study_id=study_id,
+                version_id2=version_id2,
+            )
+            if not (await res2.single()):
+                raise ValueError(
+                    f"Version {version_id2} not found or unrelated to study {study_id}"
+                )
+
+    # 2. Retrieve forms for both subgraphs
+    old_forms = {}
+    new_forms = {}
+
+    if driver is None:
+        # In-memory mock traversal
+        _init_mock_soa(version_id1)
+        _init_mock_soa(version_id2)
+
+        data1 = MOCK_SOA_DATA[version_id1]
+        data2 = MOCK_SOA_DATA[version_id2]
+
+        # Let's support both hierarchical traversal and a flat dict fallback for simple mock setups
+        forms1 = data1.get("forms", {})
+        forms2 = data2.get("forms", {})
+
+        links1 = data1.get("links", [])
+        links2 = data2.get("links", [])
+
+        has_visit_form1 = any(L.get("type") == "visit_form" for L in links1)
+        has_visit_form2 = any(L.get("type") == "visit_form" for L in links2)
+
+        if has_visit_form1:
+            epochs1_ids = set(data1.get("epochs", {}).keys())
+            epoch_visit1 = [
+                L
+                for L in links1
+                if L.get("type") == "epoch_visit" and L.get("from_id") in epochs1_ids
+            ]
+            active_visits1_ids = {L.get("to_id") for L in epoch_visit1}
+            visit_form1 = [
+                L
+                for L in links1
+                if L.get("type") == "visit_form"
+                and L.get("from_id") in active_visits1_ids
+            ]
+            active_forms1_ids = {L.get("to_id") for L in visit_form1}
+
+            for fid in active_forms1_ids:
+                if fid in forms1:
+                    fobj = forms1[fid]
+                    form_key = fobj.get("form_key")
+                    if form_key:
+                        old_forms[form_key] = fobj
+        else:
+            for fid, fobj in forms1.items():
+                form_key = fobj.get("form_key")
+                if form_key:
+                    old_forms[form_key] = fobj
+
+        if has_visit_form2:
+            epochs2_ids = set(data2.get("epochs", {}).keys())
+            epoch_visit2 = [
+                L
+                for L in links2
+                if L.get("type") == "epoch_visit" and L.get("from_id") in epochs2_ids
+            ]
+            active_visits2_ids = {L.get("to_id") for L in epoch_visit2}
+            visit_form2 = [
+                L
+                for L in links2
+                if L.get("type") == "visit_form"
+                and L.get("from_id") in active_visits2_ids
+            ]
+            active_forms2_ids = {L.get("to_id") for L in visit_form2}
+
+            for fid in active_forms2_ids:
+                if fid in forms2:
+                    fobj = forms2[fid]
+                    form_key = fobj.get("form_key")
+                    if form_key:
+                        new_forms[form_key] = fobj
+        else:
+            for fid, fobj in forms2.items():
+                form_key = fobj.get("form_key")
+                if form_key:
+                    new_forms[form_key] = fobj
+
+    else:
+        # Neo4j query: Traverse StudyVersion -> Epoch -> Visit -> Form
+        async with driver.session() as session:
+            query = """
+            MATCH (sv:StudyVersion {id: $id})-[:HAS_EPOCH]->(e:Epoch)-[:HAS_VISIT]->(v:Visit)-[:HAS_FORM]->(f:Form)
+            RETURN f.id as id, f.form_key as form_key, f.xform_definition_xml as xform_definition_xml
+            """
+            res1 = await session.run(query, id=version_id1)
+            records1 = await res1.all()
+            for r in records1:
+                fk = r.get("form_key")
+                if fk:
+                    old_forms[fk] = {
+                        "id": r.get("id"),
+                        "form_key": fk,
+                        "xform_definition_xml": r.get("xform_definition_xml"),
+                    }
+
+            res2 = await session.run(query, id=version_id2)
+            records2 = await res2.all()
+            for r in records2:
+                fk = r.get("form_key")
+                if fk:
+                    new_forms[fk] = {
+                        "id": r.get("id"),
+                        "form_key": fk,
+                        "xform_definition_xml": r.get("xform_definition_xml"),
+                    }
+
+    # 3. Compute graph differences based on key and xml comparison
+    diff_results = {"added_nodes": [], "modified_nodes": [], "deleted_nodes": []}
+
+    # Check for additions and modifications
+    for form_key, node in new_forms.items():
+        if form_key not in old_forms:
+            diff_results["added_nodes"].append(
+                {
+                    "type": "Form",
+                    "key": form_key,
+                    "xform_definition_xml": node.get("xform_definition_xml"),
+                }
+            )
+        else:
+            old_xml = old_forms[form_key].get("xform_definition_xml")
+            new_xml = node.get("xform_definition_xml")
+            if new_xml != old_xml:
+                diff_results["modified_nodes"].append(
+                    {
+                        "type": "Form",
+                        "key": form_key,
+                        "old_value": old_xml,
+                        "new_value": new_xml,
+                    }
+                )
+
+    # Check for deletions
+    for form_key, node in old_forms.items():
+        if form_key not in new_forms:
+            diff_results["deleted_nodes"].append(
+                {
+                    "type": "Form",
+                    "key": form_key,
+                    "xform_definition_xml": node.get("xform_definition_xml"),
+                }
+            )
+
+    return diff_results

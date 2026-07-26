@@ -2,7 +2,9 @@ import time
 
 import pytest
 import pytest_asyncio
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
+from pydantic import BaseModel
 
 from apps.etmf.database import db_manager as etmf_db_manager
 from apps.etmf.main import app as etmf_app
@@ -412,3 +414,229 @@ async def test_execution_observation_creation_auditor_forbidden() -> None:
         headers=get_auth_headers("admin"),
     )
     assert resp.status_code == 200
+
+
+# ==========================================
+# Centralized RBAC Specs & Extensions Tests
+# ==========================================
+
+
+def test_role_aliases_normalization() -> None:
+    """Verify that role aliases map to canonical forms correctly."""
+    from packages.security.rbac import (
+        ROLE_CRA_CANONICAL,
+        ROLE_INVESTIGATOR,
+        ROLE_SPONSOR_DM,
+        ROLE_SYSADMIN,
+        normalize_role,
+    )
+
+    assert normalize_role("system administrator") == ROLE_SYSADMIN
+    assert normalize_role("system_admin") == ROLE_SYSADMIN
+    assert normalize_role("Admin") == ROLE_SPONSOR_DM
+    assert normalize_role("Sponsor DM") == ROLE_SPONSOR_DM
+    assert normalize_role("pi") == ROLE_INVESTIGATOR
+    assert normalize_role("principal investigator") == ROLE_INVESTIGATOR
+    assert normalize_role("cra_monitor") == ROLE_CRA_CANONICAL
+    assert normalize_role("unknown_role") == "unknown_role"
+
+
+def test_has_permission() -> None:
+    """Verify has_permission checks the declarative matrix matching §2.2."""
+    from packages.security.rbac import (
+        ROLE_CRC,
+        ROLE_SPONSOR_DESIGNER,
+        ROLE_SPONSOR_DM,
+        Principal,
+        has_permission,
+    )
+
+    designer = Principal(user_id="d1", roles=[ROLE_SPONSOR_DESIGNER])
+    dm = Principal(user_id="dm1", roles=[ROLE_SPONSOR_DM])
+    crc = Principal(user_id="crc1", roles=[ROLE_CRC])
+
+    # Designer has read/write on study_design
+    assert has_permission(designer, "study_design:create") is True
+    assert has_permission(designer, "study_design:read") is True
+    assert has_permission(designer, "study_design:update") is True
+    assert has_permission(designer, "study_design:delete") is True
+    # Designer does not have subject_enrollment or ecrf_data_entry
+    assert has_permission(designer, "subject_enrollment:read") is False
+
+    # DM has query lifecycle C/R/U/D
+    assert has_permission(dm, "query_lifecycle:create") is True
+    assert has_permission(dm, "query_lifecycle:delete") is True
+    assert has_permission(dm, "export_masked:create") is True
+    assert has_permission(dm, "sdv:create") is False
+
+    # CRC has ecrf read/write but not query deletion
+    assert has_permission(crc, "ecrf_data_entry:create") is True
+    assert has_permission(crc, "ecrf_data_entry:update") is True
+    assert has_permission(crc, "query_lifecycle:delete") is False
+
+
+def test_can_access_site() -> None:
+    """Verify can_access_site denies investigator/crc when site is outside their scope."""
+    from packages.security.rbac import (
+        ROLE_CRC,
+        ROLE_INVESTIGATOR,
+        ROLE_SPONSOR_DM,
+        Principal,
+        can_access_site,
+    )
+
+    inv = Principal(user_id="pi1", roles=[ROLE_INVESTIGATOR], assigned_sites=["site_A"])
+    crc = Principal(
+        user_id="crc1", roles=[ROLE_CRC], assigned_sites=["site_A", "site_B"]
+    )
+    dm = Principal(user_id="dm1", roles=[ROLE_SPONSOR_DM])  # global access by default
+
+    assert can_access_site(inv, "site_A") is True
+    assert can_access_site(inv, "site_B") is False
+
+    assert can_access_site(crc, "site_A") is True
+    assert can_access_site(crc, "site_B") is True
+    assert can_access_site(crc, "site_C") is False
+
+    assert can_access_site(dm, "site_A") is True
+    assert can_access_site(dm, "site_any") is True
+
+    # If global user explicitly restricts themselves, enforce it
+    restricted_dm = Principal(
+        user_id="dm2", roles=[ROLE_SPONSOR_DM], assigned_sites=["site_X"]
+    )
+    assert can_access_site(restricted_dm, "site_X") is True
+    assert can_access_site(restricted_dm, "site_Y") is False
+
+
+def test_get_principal_from_request() -> None:
+    """Verify get_principal correctly parses and normalizes fastapi request state/headers."""
+    from packages.security.rbac import ROLE_CRC, get_principal
+
+    class MockRequest:
+        def __init__(self, headers, state_dict=None):
+            self.headers = headers
+
+            class State:
+                pass
+
+            self.state = State()
+            if state_dict:
+                for k, v in state_dict.items():
+                    setattr(self.state, k, v)
+
+    headers = {
+        "X-User-Id": "u123",
+        "X-User-Roles": "Clinical Research Coordinator",
+        "X-Site-Id": "site_999",
+        "X-Unblinded-Access": "True",
+        "X-Change-Reason": "Testing principal",
+    }
+
+    principal = get_principal(MockRequest(headers))
+    assert principal.user_id == "u123"
+    assert principal.roles == [ROLE_CRC]
+    assert principal.assigned_sites == ["site_999"]
+    assert principal.unblinded_access is True
+    assert principal.change_reason == "Testing principal"
+
+
+def test_require_permission_dependency() -> None:
+    """Verify require_permission dependency asserts permissions successfully or raises 403."""
+    from packages.security.rbac import (
+        ROLE_SPONSOR_DESIGNER,
+        Principal,
+        require_permission,
+    )
+
+    designer = Principal(user_id="d1", roles=[ROLE_SPONSOR_DESIGNER])
+
+    # Allowed
+    dep = require_permission("study_design:create")
+    res = dep(designer)
+    assert res == designer
+
+    # Denied
+    dep_denied = require_permission("export_unmasked:create")
+    with pytest.raises(HTTPException) as exc_info:
+        dep_denied(designer)
+    assert exc_info.value.status_code == 403
+
+
+def test_mask_payload_recursive() -> None:
+    """Verify mask_payload recursively obfuscates sensitive data fields based on unblinded status."""
+    from packages.security.rbac import (
+        ROLE_CRC,
+        ROLE_SPONSOR_STATISTICIAN,
+        Principal,
+        mask_payload,
+    )
+
+    class DemoModel(BaseModel):
+        initials: str
+        ssn: str
+        dob: str
+        treatment_arm_id: str
+        country: str
+        age: int
+
+    payload_dict = {
+        "initials": "JD",
+        "ssn": "123-45-6789",
+        "dob": "1990-01-01",
+        "treatment_arm_id": "ARM_A_ACTIVE",
+        "country": "US",
+        "age": 36,
+        "nested": {"dob": "1991-02-02", "country": "CA"},
+        "list_items": [
+            {"initials": "AB", "treatment_arm_id": "ARM_B_PLACEBO"},
+            {"country": "UK"},
+        ],
+    }
+
+    payload_model = DemoModel(
+        initials="JD",
+        ssn="123-45-6789",
+        dob="1990-01-01",
+        treatment_arm_id="ARM_A_ACTIVE",
+        country="US",
+        age=36,
+    )
+
+    # 1. Blinded user -> fields are masked recursively
+    blinded_principal = Principal(
+        user_id="b1", roles=[ROLE_CRC], unblinded_access=False
+    )
+
+    masked_dict = mask_payload(payload_dict, blinded_principal)
+    assert masked_dict["initials"] == "**"
+    assert masked_dict["ssn"] == "***-**-****"
+    assert masked_dict["dob"] == "MASKED"
+    assert masked_dict["treatment_arm_id"] == "BLINDED"
+    assert masked_dict["country"] == "US"
+    assert masked_dict["age"] == 36
+    assert masked_dict["nested"]["dob"] == "MASKED"
+    assert masked_dict["nested"]["country"] == "CA"
+    assert masked_dict["list_items"][0]["initials"] == "**"
+    assert masked_dict["list_items"][0]["treatment_arm_id"] == "BLINDED"
+    assert masked_dict["list_items"][1]["country"] == "UK"
+
+    masked_model = mask_payload(payload_model, blinded_principal)
+    assert masked_model.initials == "**"
+    assert masked_model.ssn == "***-**-****"
+    assert masked_model.dob == "MASKED"
+    assert masked_model.treatment_arm_id == "BLINDED"
+    assert masked_model.country == "US"
+    assert masked_model.age == 36
+
+    # 2. Unblinded user -> fields are unchanged
+    unblinded_principal = Principal(
+        user_id="u1", roles=[ROLE_SPONSOR_STATISTICIAN], unblinded_access=True
+    )
+
+    unmasked_dict = mask_payload(payload_dict, unblinded_principal)
+    assert unmasked_dict == payload_dict
+
+    unmasked_model = mask_payload(payload_model, unblinded_principal)
+    assert unmasked_model.initials == "JD"
+    assert unmasked_model.ssn == "123-45-6789"
