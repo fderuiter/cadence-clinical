@@ -933,8 +933,6 @@ class ResupplyEvent(AuditedModel):
     triggered_at: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), nullable=False
     )
-
-
 class BiostatExport(AuditedModel):
     """Tracks Dataset-JSON biostat export records."""
 
