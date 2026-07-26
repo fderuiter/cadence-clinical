@@ -118,22 +118,6 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
                 },
             )
 
-        # Check if any scope headers are supplied (V2 with scope)
-        has_scope_headers = (
-            (site_id is not None)
-            or (sponsor_id is not None)
-            or (unblinded_header is not None)
-        )
-
-        if version in ("2", "v2"):
-            if has_scope_headers:
-                if site_id is None or sponsor_id is None or unblinded_header is None:
-                    status_code = 403 if is_mutation else 401
-                    return JSONResponse(
-                        status_code=status_code,
-                        content={"detail": "Missing gateway authentication headers"},
-                    )
-
         change_reason = request.headers.get("X-Change-Reason")
         if not change_reason:
             if request.method in ("GET", "HEAD", "OPTIONS"):
@@ -153,25 +137,25 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
             )
 
         if version in ("2", "v2"):
-            if has_scope_headers:
-                unblinded_val = (
-                    unblinded_header.lower() in ("true", "1", "yes")
-                    if unblinded_header
-                    else False
-                )
-                is_valid_sig = verify_gateway_v2_signature(
-                    user_id=user_id,
-                    roles=roles,
-                    timestamp=timestamp,
-                    change_reason=change_reason,
-                    site_id=site_id or "",
-                    sponsor_id=sponsor_id or "",
-                    unblinded_access=unblinded_val,
-                    signature=signature,
-                    secret=self.gateway_secret,
-                )
-            else:
-                # Fall back to 4-key payload
+            unblinded_val = (
+                unblinded_header.lower() in ("true", "1", "yes")
+                if unblinded_header
+                else False
+            )
+            # Try 7-key signature verification first (modern gateway format)
+            is_valid_sig = verify_gateway_v2_signature(
+                user_id=user_id,
+                roles=roles,
+                timestamp=timestamp,
+                change_reason=change_reason,
+                site_id=site_id or "",
+                sponsor_id=sponsor_id or "",
+                unblinded_access=unblinded_val,
+                signature=signature,
+                secret=self.gateway_secret,
+            )
+            if not is_valid_sig:
+                # Try 4-key signature verification fallback (legacy/backward compatibility)
                 import json
 
                 payload = {
@@ -301,20 +285,14 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
         request.state.user_id = user_id
         request.state.roles = roles
         request.state.change_reason = change_reason
-        if has_scope_headers:
-            request.state.site_id = site_id or ""
-            request.state.sponsor_id = sponsor_id or ""
-            unblinded_val = (
-                unblinded_header.lower() in ("true", "1", "yes")
-                if unblinded_header
-                else False
-            )
-            request.state.unblinded_access = unblinded_val
-        else:
-            request.state.site_id = ""
-            request.state.sponsor_id = ""
-            request.state.unblinded_access = False
-            unblinded_val = False
+        request.state.site_id = site_id or ""
+        request.state.sponsor_id = sponsor_id or ""
+        unblinded_val = (
+            unblinded_header.lower() in ("true", "1", "yes")
+            if unblinded_header
+            else False
+        )
+        request.state.unblinded_access = unblinded_val
 
         # Extract IP address for context injection
         ip_address = request.headers.get(
