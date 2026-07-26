@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ichicsr xmlns="urn:hl7-org:v3" version_index="{{ icsr.version_index }}"{% if icsr.reason_for_change %} reason_for_change="{{ icsr.reason_for_change }}"{% endif %}>
+    <header>
+        <message_id>{{ icsr.header.message_id }}</message_id>
+        <sender_organization>{{ icsr.header.sender_organization }}</sender_organization>
+        <receiver_organization>{{ icsr.header.receiver_organization }}</receiver_organization>
+        <transmission_date>{{ icsr.header.transmission_date }}</transmission_date>
+        <message_type>{{ icsr.header.message_type }}</message_type>
+    </header>
+    <safety_report>
+        <worldwide_unique_case_id>{{ icsr.report_identifiers.worldwide_unique_case_id }}</worldwide_unique_case_id>
+        {% if icsr.report_identifiers.local_report_id %}<local_report_id>{{ icsr.report_identifiers.local_report_id }}</local_report_id>{% endif %}
+        {% if icsr.report_identifiers.first_sender_type %}<first_sender_type>{{ icsr.report_identifiers.first_sender_type }}</first_sender_type>{% endif %}
+    </safety_report>
+    <patient>
+        <patient_id>{{ icsr.patient.patient_id }}</patient_id>
+        <sex>{{ icsr.patient.sex }}</sex>
+        {% if icsr.patient.age is not none %}<age>{{ icsr.patient.age }}</age>{% endif %}
+        {% if icsr.patient.age_unit %}<age_unit>{{ icsr.patient.age_unit }}</age_unit>{% endif %}
+        {% if icsr.patient.birth_date %}<birth_date>{{ icsr.patient.birth_date }}</birth_date>{% endif %}
+    </patient>
+    <reactions>
+        {% for reaction in icsr.reactions %}
+        <reaction>
+            <reaction_term>{{ reaction.reaction_term }}</reaction_term>
+            {% if reaction.meddra_coding %}
+            <meddra_coding>
+                <llt_code>{{ reaction.meddra_coding.llt_code }}</llt_code>
+                <llt_name>{{ reaction.meddra_coding.llt_name }}</llt_name>
+                <pt_code>{{ reaction.meddra_coding.pt_code }}</pt_code>
+                <pt_name>{{ reaction.meddra_coding.pt_name }}</pt_name>
+                <hlt_code>{{ reaction.meddra_coding.hlt_code }}</hlt_code>
+                <hlt_name>{{ reaction.meddra_coding.hlt_name }}</hlt_name>
+                <hlgt_code>{{ reaction.meddra_coding.hlgt_code }}</hlgt_code>
+                <hlgt_name>{{ reaction.meddra_coding.hlgt_name }}</hlgt_name>
+                <soc_code>{{ reaction.meddra_coding.soc_code }}</soc_code>
+                <soc_name>{{ reaction.meddra_coding.soc_name }}</soc_name>
+                {% if reaction.meddra_coding.primary_soc_flag %}<primary_soc_flag>{{ reaction.meddra_coding.primary_soc_flag }}</primary_soc_flag>{% endif %}
+                <score>{{ reaction.meddra_coding.score }}</score>
+            </meddra_coding>
+            {% endif %}
+            {% if reaction.start_date %}<start_date>{{ reaction.start_date }}</start_date>{% endif %}
+            {% if reaction.end_date %}<end_date>{{ reaction.end_date }}</end_date>{% endif %}
+            {% if reaction.outcome %}<outcome>{{ reaction.outcome }}</outcome>{% endif %}
+            <seriousness_death>{{ reaction.seriousness_death }}</seriousness_death>
+            <seriousness_life_threatening>{{ reaction.seriousness_life_threatening }}</seriousness_life_threatening>
+            <seriousness_hospitalization>{{ reaction.seriousness_hospitalization }}</seriousness_hospitalization>
+            <seriousness_disability>{{ reaction.seriousness_disability }}</seriousness_disability>
+            <seriousness_congenital_anomaly>{{ reaction.seriousness_congenital_anomaly }}</seriousness_congenital_anomaly>
+            <seriousness_other_medically_important>{{ reaction.seriousness_other_medically_important }}</seriousness_other_medically_important>
+        </reaction>
+        {% endfor %}
+    </reactions>
+    <suspect_drugs>
+        {% for drug in icsr.suspect_drugs %}
+        <suspect_drug>
+            <drug_name>{{ drug.drug_name }}</drug_name>
+            {% if drug.active_substance_name %}<active_substance_name>{{ drug.active_substance_name }}</active_substance_name>{% endif %}
+            {% if drug.dosage_text %}<dosage_text>{{ drug.dosage_text }}</dosage_text>{% endif %}
+            {% if drug.route_of_administration %}<route_of_administration>{{ drug.route_of_administration }}</route_of_administration>{% endif %}
+            {% if drug.action_taken_with_drug %}<action_taken_with_drug>{{ drug.action_taken_with_drug }}</action_taken_with_drug>{% endif %}
+            <drug_role>{{ drug.drug_role }}</drug_role>
+        </suspect_drug>
+        {% endfor %}
+    </suspect_drugs>
+</ichicsr>
