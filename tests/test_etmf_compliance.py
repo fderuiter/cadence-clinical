@@ -235,7 +235,7 @@ async def test_audit_logs_group_sealing_and_chaining():
     )
     resp_logs = client.get("/api/v1/etmf/audit-logs", headers=auditor_headers)
     assert resp_logs.status_code == 200
-    logs = resp_logs.json()
+    logs = resp_logs.json()["items"]
     assert len(logs) >= 2  # INGEST and AUDIT_VIEW
 
     async with db_manager.get_session_maker()() as session:

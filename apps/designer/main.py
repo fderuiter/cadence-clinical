@@ -6,9 +6,10 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
 from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile, status
+from fastapi.responses import JSONResponse
 from neo4j import AsyncGraphDatabase
 from protocol_render import SoAMatrixView
-from pydantic import BaseModel, TypeAdapter
+from pydantic import BaseModel, Field, TypeAdapter
 
 from apps.designer.db import (
     assert_mock_study_mutable,
@@ -18,6 +19,7 @@ from apps.designer.db import (
     get_mock_rule_by_id,
     get_mock_rules,
     get_study_projection,
+    is_concept_referenced_by_active_recruiting_study,
     terminology_cache,
     update_mock_rule,
 )
@@ -43,6 +45,7 @@ from apps.designer.delta import (
     get_library_object_history,
     get_rules_from_graph,
     get_soa_matrix_projection,
+    instantiate_library_object_in_study,
     link_arm_applicability,
     link_epoch_to_visit,
     link_visit_or_procedure_to_timing,
@@ -175,6 +178,18 @@ class SoALinkResponse(BaseModel):
     message: str = "Link established successfully"
 
 
+class ConceptLockedError(Exception):
+    """Exception raised when attempting to modify a concept referenced by an active-recruiting study."""
+
+    def __init__(self, concept_id: str, message: str = None):
+        self.concept_id = concept_id
+        self.message = (
+            message
+            or f"Concept '{concept_id}' is referenced by an Active-Recruiting study and is locked against direct modifications. Please use the protocol amendment workflow."
+        )
+        super().__init__(self.message)
+
+
 app = FastAPI(title="Cadence Clinical - Designer (MDR/SDR)", version="0.1.0")
 
 app.add_middleware(GatewayAuthMiddleware)
@@ -203,6 +218,19 @@ async def invalid_signature_handler(request: Request, exc: InvalidSignatureError
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
         detail="INVALID_OR_MISSING_SIGNATURE",
+    )
+
+
+@app.exception_handler(ConceptLockedError)
+async def concept_locked_handler(request: Request, exc: ConceptLockedError):
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={
+            "detail": "CONCEPT_LOCKED_ACTIVE_STUDY",
+            "message": exc.message,
+            "concept_id": exc.concept_id,
+            "workflow_suggestion": "To modify this concept, please initiate a protocol amendment workflow via POST /api/designer/protocols/{study_id}/amend.",
+        },
     )
 
 
@@ -727,6 +755,11 @@ class UpdateConceptRequest(BaseModel):
     reason_for_change: str
 
 
+class RenameConceptRequest(BaseModel):
+    display_name: str
+    reason_for_change: str
+
+
 @app.get("/api/v1/mdr/concepts", response_model=ConceptListResponse)
 async def get_concepts(
     terminology: Optional[TerminologyEnum] = None,
@@ -781,8 +814,14 @@ async def create_concept(payload: CreateConceptRequest) -> ConceptDetail:
 
 
 @app.put("/api/v1/mdr/concepts/{id}", response_model=ConceptDetail)
-async def update_concept(id: str, payload: UpdateConceptRequest) -> ConceptDetail:
+async def update_concept(
+    id: str, payload: UpdateConceptRequest, request: Request
+) -> ConceptDetail:
     """Updates an existing concept, creating a new audit history and incrementing version index."""
+    driver = await get_neo4j_driver(request)
+    if await is_concept_referenced_by_active_recruiting_study(id, driver):
+        raise ConceptLockedError(id)
+
     return ConceptDetail(
         id=id,
         concept_code="364075005",
@@ -799,6 +838,41 @@ async def update_concept(id: str, payload: UpdateConceptRequest) -> ConceptDetai
         updated_by="usr_9921a88b2c410",
         reason_for_change=payload.reason_for_change,
     )
+
+
+@app.post("/api/v1/mdr/concepts/{id}/rename", response_model=ConceptDetail)
+async def rename_concept(
+    id: str, payload: RenameConceptRequest, request: Request
+) -> ConceptDetail:
+    """Renames an existing Biomedical Concept if it is not referenced by an Active-Recruiting study."""
+    driver = await get_neo4j_driver(request)
+    if await is_concept_referenced_by_active_recruiting_study(id, driver):
+        raise ConceptLockedError(id)
+
+    return ConceptDetail(
+        id=id,
+        concept_code="364075005",
+        terminology="SNOMED-CT",
+        display_name=payload.display_name,
+        definition="The frequency of the heart rate at complete rest.",
+        version="1.1.0",
+        status="APPROVED",
+        created_at=datetime.now(),
+        created_by="usr_9921a88b2c410",
+        updated_at=datetime.now(),
+        updated_by="usr_9921a88b2c410",
+        reason_for_change=payload.reason_for_change,
+    )
+
+
+@app.delete("/api/v1/mdr/concepts/{id}", status_code=status.HTTP_200_OK)
+async def delete_concept(id: str, request: Request) -> Dict[str, str]:
+    """Deletes an existing Biomedical Concept if it is not referenced by an Active-Recruiting study."""
+    driver = await get_neo4j_driver(request)
+    if await is_concept_referenced_by_active_recruiting_study(id, driver):
+        raise ConceptLockedError(id)
+
+    return {"status": "success", "message": f"Concept {id} deleted successfully"}
 
 
 # ==========================================
@@ -2099,3 +2173,92 @@ async def get_versions_diff_endpoint(
         modified_nodes=modified,
         deleted_nodes=deleted,
     )
+
+
+# ==========================================
+# Library Object Instantiation API Models
+# ==========================================
+
+
+class InstantiateLibraryObjectRequest(BaseModel):
+    library_object_id: str = Field(
+        ..., description="Stable, unique global library ID to instantiate."
+    )
+    version: Optional[int] = Field(
+        None,
+        description="The specific version of the library object to instantiate. Defaults to latest if not specified.",
+    )
+
+
+class InstantiatedFromDetail(BaseModel):
+    library_object_id: str
+    version: int
+    sponsor_id: str
+
+
+class LibraryInstanceResponse(BaseModel):
+    id: str
+    study_id: str
+    object_type: str
+    payload: Dict[str, Any]
+    created_at: str
+    created_by: str
+    instantiated_from: InstantiatedFromDetail
+
+
+@app.post(
+    "/api/v1/studies/{study_id}/library-instances",
+    response_model=LibraryInstanceResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def instantiate_library_object_endpoint(
+    study_id: str,
+    payload: InstantiateLibraryObjectRequest,
+    request: Request,
+) -> LibraryInstanceResponse:
+    """
+    Instantiates a specific version (or latest) of a Global Library object into a study-scoped instance.
+    Enforces that the library object and study both belong to/are accessible by the authenticated sponsor.
+    """
+    driver = await get_neo4j_driver(request)
+
+    # 1. Retrieve sponsor scope & user id
+    sponsor_id = getattr(request.state, "sponsor_id", None) or request.headers.get(
+        "X-Sponsor-Id"
+    )
+    if not sponsor_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Missing authenticated sponsor scope",
+        )
+
+    user_id = getattr(request.state, "user_id", "system")
+
+    # 2. Call the delta manager to run checks and instantiation
+    try:
+        instance = await instantiate_library_object_in_study(
+            driver=driver,
+            study_id=study_id,
+            library_object_id=payload.library_object_id,
+            version=payload.version,
+            sponsor_id=sponsor_id,
+            user_id=user_id,
+        )
+        return LibraryInstanceResponse(**instance)
+    except PermissionError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e),
+        )
+    except ValueError as e:
+        # Check if "not found" is for study or library object
+        err_msg = str(e)
+        if "Study" in err_msg or "Library object" in err_msg or "not found" in err_msg:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=err_msg,
+            )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=err_msg,
+        )

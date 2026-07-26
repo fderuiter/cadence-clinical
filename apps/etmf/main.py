@@ -1,5 +1,6 @@
 import os
 from contextlib import asynccontextmanager
+from datetime import datetime
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
@@ -24,6 +25,10 @@ from apps.etmf.models import (
     TMFDocument,
 )
 from packages.database import DatabaseSessionDependency
+from packages.deid.detector import DeidDetector
+from packages.deid.manifest import build_redaction_manifest, sign_manifest_symmetric
+from packages.deid.models import ComplianceProfile
+from packages.deid.transforms import apply_deid_transforms
 from packages.security import verify_is_auditor, verify_not_auditor
 from packages.security.middleware import GatewayAuthMiddleware
 
@@ -248,6 +253,51 @@ class RedactRequest(BaseModel):
     )
 
 
+class AutomatedRedactRequest(BaseModel):
+    """
+    Payload for requesting automated redaction on an eTMF document.
+    """
+
+    profile: ComplianceProfile = Field(
+        ComplianceProfile.HIPAA,
+        description="The compliance profile governing active detection categories (e.g., HIPAA, GDPR, EU_CTR)",
+    )
+    custom_terms: Optional[List[str]] = Field(
+        None, description="Optional list of custom/literal terms to scan and redact"
+    )
+    strategies: Optional[Dict[str, str]] = Field(
+        None,
+        description="Optional custom mapping of category to specific strategy (e.g., mask, pseudonymize, date_shift, age_cap)",
+    )
+    redacted_filename: Optional[str] = Field(
+        None, description="Optional new filename for the redacted successor document"
+    )
+
+
+class AutomatedRedactResponse(BaseModel):
+    """
+    Response detailing the automated redaction operation outcomes.
+    Crucially, it never exposes raw matched PII/PHI identifiers.
+    """
+
+    status: str = Field(
+        "success", description="Outcome status of the automated redaction"
+    )
+    document_id: str = Field(
+        ..., description="ID of the newly created redacted document version"
+    )
+    version_index: int = Field(
+        ..., description="Version index of the new redacted document"
+    )
+    filename: str = Field(..., description="Filename of the new redacted document")
+    categories_counts: Dict[str, int] = Field(
+        ..., description="Count of redacted items per category"
+    )
+    manifest: Dict[str, Any] = Field(
+        ..., description="The signed manifest and provenance data"
+    )
+
+
 class TransitionRequest(BaseModel):
     """
     Payload to request a secure 21 CFR Part 11 compliant QC transition on a document.
@@ -292,6 +342,20 @@ class AuditLogResponse(BaseModel):
     action: str
     document_id: Optional[str]
     details: str
+
+
+class PaginatedAuditLogResponse(BaseModel):
+    """
+    Paginated representation of eTMF audit trail logs.
+    """
+
+    items: List[AuditLogResponse]
+    total_count: int
+    limit: int
+    offset: int
+    next_page: Optional[str] = None
+    next_cursor: Optional[str] = None
+    has_more: bool
 
 
 class ExpectedDocumentCreate(BaseModel):
@@ -891,39 +955,100 @@ async def download_document(
     )
 
 
-@app.get("/api/v1/etmf/audit-logs", response_model=List[AuditLogResponse])
+@app.get("/api/v1/etmf/audit-logs", response_model=PaginatedAuditLogResponse)
 async def get_audit_trail(
     request: Request,
+    user_id: Optional[str] = Query(None, description="Filter logs by user ID"),
+    action: Optional[str] = Query(None, description="Filter logs by action"),
     document_id: Optional[str] = Query(None, description="Filter logs by document ID"),
+    start_time: Optional[datetime] = Query(
+        None, description="Filter logs starting from this timestamp (inclusive)"
+    ),
+    end_time: Optional[datetime] = Query(
+        None, description="Filter logs up to this timestamp (inclusive)"
+    ),
+    limit: int = Query(
+        50, ge=1, le=250, description="Limit the number of audit log records returned"
+    ),
+    offset: int = Query(0, ge=0, description="Offset for pagination"),
     roles: list[str] = Depends(verify_is_auditor),
     session: AsyncSession = Depends(get_db_session),
-) -> List[AuditLogResponse]:
+) -> PaginatedAuditLogResponse:
     """
     Retrieve audit trail of all eTMF interactions.
     Restricted to authorized roles like regulatory inspectors.
     """
-    user_id = getattr(request.state, "user_id", "anonymous")
+    request_user_id = getattr(request.state, "user_id", "anonymous")
     user_roles = getattr(request.state, "roles", "anonymous")
 
     # Log access to the audit trail itself first
     await write_audit_log(
         session=session,
-        user_id=user_id,
+        user_id=request_user_id,
         user_role=user_roles,
         action="AUDIT_VIEW",
         document_id=document_id,
         details="Accessed eTMF immutable audit trail logs.",
     )
 
-    stmt = select(TMFAuditLog)
+    # 1. Build base filter criteria
+    filters = []
+    if user_id:
+        filters.append(TMFAuditLog.user_id == user_id)
+    if action:
+        filters.append(TMFAuditLog.action == action)
     if document_id:
-        stmt = stmt.where(TMFAuditLog.document_id == document_id)
-    stmt = stmt.order_by(TMFAuditLog.timestamp.desc())
+        filters.append(TMFAuditLog.document_id == document_id)
+    if start_time:
+        filters.append(TMFAuditLog.timestamp >= start_time)
+    if end_time:
+        filters.append(TMFAuditLog.timestamp <= end_time)
+
+    # 2. Query total count
+    from sqlalchemy import func
+
+    count_stmt = select(func.count()).select_from(TMFAuditLog)
+    if filters:
+        count_stmt = count_stmt.where(*filters)
+
+    total_res = await session.execute(count_stmt)
+    total_count = total_res.scalar_one()
+
+    # 3. Query items with pagination and descending timestamp order
+    stmt = select(TMFAuditLog)
+    if filters:
+        stmt = stmt.where(*filters)
+    # Order descending by timestamp, and secondary ID for determinism
+    stmt = stmt.order_by(TMFAuditLog.timestamp.desc(), TMFAuditLog.id.desc())
+    stmt = stmt.offset(offset).limit(limit)
 
     result = await session.execute(stmt)
     logs = result.scalars().all()
 
-    return [
+    # 4. Construct metadata
+    has_more = (offset + limit) < total_count
+    next_page = None
+    next_cursor = None
+    if has_more:
+        next_cursor = str(offset + limit)
+        # Construct next_page URL with existing filters
+        base_path = "/api/v1/etmf/audit-logs"
+        params = []
+        if user_id:
+            params.append(f"user_id={user_id}")
+        if action:
+            params.append(f"action={action}")
+        if document_id:
+            params.append(f"document_id={document_id}")
+        if start_time:
+            params.append(f"start_time={start_time.isoformat()}")
+        if end_time:
+            params.append(f"end_time={end_time.isoformat()}")
+        params.append(f"limit={limit}")
+        params.append(f"offset={offset + limit}")
+        next_page = f"{base_path}?" + "&".join(params)
+
+    items = [
         AuditLogResponse(
             id=log.id,
             timestamp=log.timestamp.isoformat(),
@@ -935,6 +1060,16 @@ async def get_audit_trail(
         )
         for log in logs
     ]
+
+    return PaginatedAuditLogResponse(
+        items=items,
+        total_count=total_count,
+        limit=limit,
+        offset=offset,
+        next_page=next_page,
+        next_cursor=next_cursor,
+        has_more=has_more,
+    )
 
 
 @app.get("/api/v1/etmf/edl", response_model=List[ExpectedDocumentResponse])
@@ -1450,6 +1585,185 @@ async def redact_document_endpoint(
         is_redacted=redacted_doc.is_redacted,
         redaction_source_id=redacted_doc.redaction_source_id,
         redaction_manifest_json=redacted_doc.redaction_manifest_json,
+    )
+
+
+@app.post(
+    "/api/v1/etmf/documents/{document_id}/auto-redact",
+    response_model=AutomatedRedactResponse,
+    status_code=201,
+)
+async def auto_redact_document_endpoint(
+    request: Request,
+    document_id: str,
+    payload: AutomatedRedactRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> AutomatedRedactResponse:
+    """
+    Perform controlled automated redaction on an existing unredacted eTMF document, producing a new
+    redacted document version linked to the source.
+    All redactions are logged to the immutable audit trail and block auditor/inspector personas.
+    """
+    user_id = getattr(request.state, "user_id", "system")
+    user_roles = getattr(request.state, "roles", "system")
+
+    # Only write-privileged roles can redact documents (No Inspectors/Auditors)
+    if isinstance(user_roles, str):
+        roles_list = [r.strip().lower() for r in user_roles.split(",")]
+    else:
+        roles_list = [str(r).strip().lower() for r in user_roles]
+
+    if (
+        "inspector" in roles_list
+        or "regulatory_inspector" in roles_list
+        or "auditor" in roles_list
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Inspectors are restricted to read-only access.",
+        )
+
+    # Restrict affected trial to read-only state if trial is locked
+    from apps.execution.trial_lock import TrialLockManager
+
+    if TrialLockManager.is_locked():
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Trial is currently locked in a read-only state due to a security violation.",
+        )
+
+    # 1. Fetch the source document
+    stmt = select(TMFDocument).where(TMFDocument.id == document_id)
+    result = await session.execute(stmt)
+    source_doc = result.scalars().first()
+    if not source_doc:
+        raise HTTPException(status_code=404, detail="eTMF Document not found")
+
+    # 2. Extract X-Change-Reason
+    change_reason = request.headers.get("X-Change-Reason", "").strip()
+    if not change_reason:
+        # Check if stored in request state
+        change_reason = getattr(request.state, "change_reason", "").strip()
+    if not change_reason:
+        raise HTTPException(
+            status_code=400,
+            detail="Missing change justification reason under X-Change-Reason",
+        )
+
+    # 3. Use DeidDetector to detect PII/PHI candidates
+    detector = DeidDetector()
+    try:
+        results = detector.detect(
+            source_doc.content,
+            profile=payload.profile,
+            custom_terms=payload.custom_terms,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"Detection failed: {str(e)}")
+
+    # 4. Apply transforms
+    try:
+        redacted_content, record = apply_deid_transforms(
+            source_doc.content,
+            results,
+            strategies=payload.strategies,
+            default_strategy="mask",
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=422, detail=f"Redaction transforms failed: {str(e)}"
+        )
+
+    # 5. Determine new version index
+    stmt_v = (
+        select(TMFDocument.version_index)
+        .where(TMFDocument.study_id == source_doc.study_id)
+        .where(TMFDocument.artifact_code == source_doc.artifact_code)
+    )
+    res_v = await session.execute(stmt_v)
+    versions = res_v.scalars().all()
+    new_version_index = max(versions) + 1 if versions else source_doc.version_index + 1
+
+    # 6. Build and symmetrically sign the redaction manifest
+    try:
+        manifest = build_redaction_manifest(
+            redaction_record=record,
+            operator_identity=user_id,
+            reason=change_reason,
+            source_version="v" + str(source_doc.version_index),
+            target_version="v" + str(new_version_index),
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Sign with HMAC symmetric key
+    secret_key = os.getenv(
+        "REDACTION_SIGNING_SECRET", "internal-gateway-secret-12345"
+    ).encode("utf-8")
+    signed_manifest = sign_manifest_symmetric(manifest, secret_key)
+    manifest_data = signed_manifest.model_dump()
+
+    # 7. Prepare and save the new redacted version
+    metadata_json = dict(source_doc.metadata_json) if source_doc.metadata_json else {}
+    metadata_json["change_reason"] = change_reason
+    metadata_json["is_redacted"] = True
+
+    # Build filename
+    redacted_filename = (
+        payload.redacted_filename
+        or f"{os.path.splitext(source_doc.filename)[0]}_redacted{os.path.splitext(source_doc.filename)[1]}"
+    )
+
+    redacted_doc = TMFDocument(
+        study_id=source_doc.study_id,
+        zone=source_doc.zone,
+        section=source_doc.section,
+        artifact_type=source_doc.artifact_type,
+        filename=redacted_filename,
+        content=redacted_content,
+        mime_type=source_doc.mime_type,
+        created_by=user_id,
+        version_index=new_version_index,
+        taxonomy_version=source_doc.taxonomy_version,
+        artifact_code=source_doc.artifact_code,
+        metadata_json=metadata_json,
+        document_type=source_doc.document_type,
+        approval_status=source_doc.approval_status,
+        signature_manifestation=source_doc.signature_manifestation,
+        signer=source_doc.signer,
+        signing_timestamp=source_doc.signing_timestamp,
+        is_redacted=True,
+        redaction_source_id=source_doc.id,
+        redaction_manifest_json=manifest_data,
+    )
+
+    session.add(redacted_doc)
+    await session.flush()
+
+    # 8. Log action to immutable audit trail (REDACT action)
+    manifest_signature = manifest_data.get("signature", "unsigned")
+    details_str = (
+        f"REDACT action executed. Actor: {user_id}, Role: {user_roles}. "
+        f"Source Document Reference ID: {source_doc.id} (Version {source_doc.version_index}). "
+        f"Redacted Document Reference ID: {redacted_doc.id} (Version {redacted_doc.version_index}). "
+        f"Manifest Signature: {manifest_signature}."
+    )
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="REDACT",
+        document_id=redacted_doc.id,
+        details=details_str,
+    )
+
+    return AutomatedRedactResponse(
+        status="success",
+        document_id=redacted_doc.id,
+        version_index=redacted_doc.version_index,
+        filename=redacted_doc.filename,
+        categories_counts=manifest_data.get("categories_counts", {}),
+        manifest=manifest_data,
     )
 
 

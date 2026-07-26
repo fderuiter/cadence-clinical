@@ -207,7 +207,7 @@ async def test_view_download_audit_logging():
     # Retrieve all audit logs
     audit_resp = client.get("/api/v1/etmf/audit-logs", headers=inspector_headers)
     assert audit_resp.status_code == 200
-    logs = audit_resp.json()
+    logs = audit_resp.json()["items"]
 
     # The latest logs should be in descending order (newest first)
     # We expect: AUDIT_VIEW, DOWNLOAD, VIEW, LIST, INGEST
@@ -1221,7 +1221,7 @@ async def test_etmf_qc_lifecycle_and_audit():
         headers=headers_auditor,
     )
     assert resp_logs.status_code == 200
-    logs = resp_logs.json()
+    logs = resp_logs.json()["items"]
     history_view_logs = [
         log
         for log in logs
@@ -1229,3 +1229,167 @@ async def test_etmf_qc_lifecycle_and_audit():
     ]
     assert len(history_view_logs) > 0
     assert "Viewed QC transition history" in history_view_logs[0]["details"]
+
+
+@pytest.mark.asyncio
+async def test_etmf_audit_logs_filtering_and_pagination():
+    """
+    Verify the filterable, paginated audit-log API behaves correctly under multiple scenarios.
+    """
+    client = TestClient(app)
+    admin_headers = get_auth_headers(
+        roles="admin", change_reason="Filtering and pagination testing setup"
+    )
+    inspector_headers = get_auth_headers(roles="regulatory_inspector")
+    non_auditor_headers = get_auth_headers(roles="investigator")
+
+    # 1. Unauthorized caller rejection
+    resp_unauth = client.get("/api/v1/etmf/audit-logs", headers=non_auditor_headers)
+    assert resp_unauth.status_code == 403
+
+    # 2. Ingest several documents to generate multiple log records with different properties
+    # Let's ingest Doc A
+    ingest_a = client.post(
+        "/api/v1/etmf/ingest",
+        json={
+            "study_id": "study_filter_test",
+            "artifact_type": "Clinical Trial Protocol",
+            "filename": "protocol_filter_a.pdf",
+            "content": "Protocol filter testing content A.",
+            "mime_type": "application/pdf",
+        },
+        headers=admin_headers,
+    )
+    assert ingest_a.status_code == 201
+    doc_id_a = ingest_a.json()["document_id"]
+
+    # Let's ingest Doc B with different properties
+    ingest_b = client.post(
+        "/api/v1/etmf/ingest",
+        json={
+            "study_id": "study_filter_test",
+            "artifact_type": "Define-XML Specifications",
+            "filename": "define_filter_b.xml",
+            "content": "Define filter testing content B.",
+            "mime_type": "application/xml",
+        },
+        headers=admin_headers,
+    )
+    assert ingest_b.status_code == 201
+    assert ingest_b.json()["document_id"] is not None
+
+    # 3. Retrieve audit-logs with pagination and check descending ordering
+    resp = client.get(
+        "/api/v1/etmf/audit-logs?limit=3&offset=0", headers=inspector_headers
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "items" in data
+    assert "total_count" in data
+    assert "limit" in data
+    assert "offset" in data
+    assert "has_more" in data
+
+    items = data["items"]
+    # The limit is 3, so we should get at most 3 items
+    assert len(items) <= 3
+    # Check descending order by timestamp or id
+    for i in range(len(items) - 1):
+        assert items[i]["timestamp"] >= items[i + 1]["timestamp"]
+
+    # 4. Independent filters: Filter by user_id
+    # The setup user is "test_user" (since get_auth_headers sets it)
+    resp_user = client.get(
+        "/api/v1/etmf/audit-logs?user_id=test_user", headers=inspector_headers
+    )
+    assert resp_user.status_code == 200
+    items_user = resp_user.json()["items"]
+    assert len(items_user) >= 2
+    for item in items_user:
+        assert item["user_id"] == "test_user"
+
+    # 5. Independent filters: Filter by action (e.g., INGEST)
+    resp_action = client.get(
+        "/api/v1/etmf/audit-logs?action=INGEST", headers=inspector_headers
+    )
+    assert resp_action.status_code == 200
+    items_action = resp_action.json()["items"]
+    assert len(items_action) >= 2
+    for item in items_action:
+        assert item["action"] == "INGEST"
+
+    # 6. Independent filters: Filter by document_id
+    resp_doc_a = client.get(
+        f"/api/v1/etmf/audit-logs?document_id={doc_id_a}", headers=inspector_headers
+    )
+    assert resp_doc_a.status_code == 200
+    items_doc_a = resp_doc_a.json()["items"]
+    assert len(items_doc_a) >= 1
+    for item in items_doc_a:
+        assert item["document_id"] == doc_id_a
+
+    # 7. Joint filters: Filter by user_id, action, and document_id together
+    resp_joint = client.get(
+        f"/api/v1/etmf/audit-logs?user_id=test_user&action=INGEST&document_id={doc_id_a}",
+        headers=inspector_headers,
+    )
+    assert resp_joint.status_code == 200
+    items_joint = resp_joint.json()["items"]
+    assert len(items_joint) == 1
+    assert items_joint[0]["document_id"] == doc_id_a
+    assert items_joint[0]["user_id"] == "test_user"
+    assert items_joint[0]["action"] == "INGEST"
+
+    # 8. Date range filtering
+    # Let's find a timestamp of one of the items
+    sample_timestamp_str = items_joint[0]["timestamp"]
+    # Parse to datetime
+    from datetime import datetime
+
+    sample_timestamp = datetime.fromisoformat(
+        sample_timestamp_str.replace("Z", "+00:00")
+    )
+
+    # If we filter with start_time/end_time surrounding the sample timestamp
+    import datetime as dt
+
+    start_time = sample_timestamp - dt.timedelta(minutes=5)
+    end_time = sample_timestamp + dt.timedelta(minutes=5)
+
+    resp_range = client.get(
+        f"/api/v1/etmf/audit-logs?start_time={start_time.isoformat()}&end_time={end_time.isoformat()}",
+        headers=inspector_headers,
+    )
+    assert resp_range.status_code == 200
+    items_range = resp_range.json()["items"]
+    # Should find at least our logged item
+    found_joint_item = any(item["id"] == items_joint[0]["id"] for item in items_range)
+    assert found_joint_item is True
+
+    # If we filter with start_time strictly in the future, we should get 0 results for that range
+    future_start = datetime.now() + dt.timedelta(days=1)
+    future_end = datetime.now() + dt.timedelta(days=2)
+    resp_future = client.get(
+        f"/api/v1/etmf/audit-logs?start_time={future_start.isoformat()}&end_time={future_end.isoformat()}",
+        headers=inspector_headers,
+    )
+    assert resp_future.status_code == 200
+    assert len(resp_future.json()["items"]) == 0
+
+    # 9. Verify pagination next-page/cursor metadata
+    # Get total count first
+    total_resp = client.get("/api/v1/etmf/audit-logs", headers=inspector_headers)
+    assert total_resp.status_code == 200
+    total_count = total_resp.json()["total_count"]
+
+    if total_count > 1:
+        # Request with limit=1 to trigger next_page / next_cursor / has_more
+        resp_paginated = client.get(
+            "/api/v1/etmf/audit-logs?limit=1", headers=inspector_headers
+        )
+        assert resp_paginated.status_code == 200
+        paginated_data = resp_paginated.json()
+        assert paginated_data["has_more"] is True
+        assert paginated_data["next_cursor"] == "1"
+        assert "offset=1" in paginated_data["next_page"]
+        assert "limit=1" in paginated_data["next_page"]

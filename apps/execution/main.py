@@ -92,6 +92,7 @@ from packages.security import (
     verify_not_auditor,
 )
 from packages.security.middleware import GatewayAuthMiddleware
+from packages.security.signing import generate_canonical_signature
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
@@ -564,7 +565,7 @@ async def create_observation(
                     status = CodingState.SUGGESTED
                     suggestions = match_res.get("suggestions")
                 elif match_status == "UNCODABLE":
-                    status = CodingState.UNCODED
+                    status = CodingState.QUERY_PENDING
 
                 assignment = ClinicalCodingAssignment(
                     verbatim_text=verbatim.strip(),
@@ -583,6 +584,43 @@ async def create_observation(
                     assigned_at=datetime.utcnow(),
                 )
                 session.add(assignment)
+
+                if status == CodingState.QUERY_PENDING:
+                    # Check if an unresolved query already exists on this coordinate to ensure idempotency
+                    stmt_q_exist = select(ClinicalQuery).where(
+                        ClinicalQuery.study_id == study_id,
+                        ClinicalQuery.subject_id == payload.subject_id,
+                        ClinicalQuery.visit_id == payload.visit_id,
+                        ClinicalQuery.domain == payload.domain,
+                        ClinicalQuery.test_code == payload.test_code,
+                        ClinicalQuery.status.in_(
+                            ["CANDIDATE", "OPEN", "ANSWERED", "REOPENED"]
+                        ),
+                        ClinicalQuery.is_deleted.is_(False),
+                    )
+                    res_q_exist = await session.execute(stmt_q_exist)
+                    existing_q = res_q_exist.scalars().first()
+
+                    if not existing_q:
+                        q_explanation = f"The verbatim term '{verbatim.strip()}' in field {payload.test_code} is uncodable. Please split into individual events or clarify spelling."
+                        query = ClinicalQuery(
+                            study_id=study_id,
+                            subject_id=payload.subject_id,
+                            visit_id=payload.visit_id,
+                            domain=payload.domain,
+                            test_code=payload.test_code,
+                            status="OPEN",
+                            explanation=q_explanation,
+                            message=q_explanation,
+                            observation_id=obs.id,
+                            origin="SYSTEM_CODING",
+                            query_type="SYSTEM_CODING",
+                            form_id=f"{payload.domain.upper()}_FORM",
+                            field_id=payload.test_code,
+                            action_required="RE-ENTER_VERBATIM",
+                            created_by="system",
+                        )
+                        session.add(query)
 
                 if status == CodingState.AUTO_CODED:
                     ledger = ClinicalCodingLedger(
@@ -1946,6 +1984,11 @@ class ClinicalQueryResponse(BaseModel):
     cancellation_reason: Optional[str] = None
     escalated_at: Optional[datetime] = None
 
+    form_id: Optional[str] = None
+    field_id: Optional[str] = None
+    query_type: Optional[str] = None
+    action_required: Optional[str] = None
+
 
 class QueryCreate(BaseModel):
     """Pydantic schema for raising a new query."""
@@ -1965,6 +2008,11 @@ class QueryCreate(BaseModel):
     priority: Optional[str] = None
     rule_id: Optional[str] = None
     created_by: Optional[str] = None
+
+    form_id: Optional[str] = None
+    field_id: Optional[str] = None
+    query_type: Optional[str] = None
+    action_required: Optional[str] = None
 
 
 class QueryReopen(BaseModel):
@@ -2005,6 +2053,11 @@ class QueryUpdate(BaseModel):
     resolved_at: Optional[datetime] = None
     cancellation_reason: Optional[str] = None
     escalated_at: Optional[datetime] = None
+
+    form_id: Optional[str] = None
+    field_id: Optional[str] = None
+    query_type: Optional[str] = None
+    action_required: Optional[str] = None
 
 
 class SyncBlockQuery(BaseModel):
@@ -2247,6 +2300,10 @@ async def list_queries(
                     resolved_at=q.resolved_at,
                     cancellation_reason=q.cancellation_reason,
                     escalated_at=q.escalated_at,
+                    form_id=q.form_id,
+                    field_id=q.field_id,
+                    query_type=q.query_type,
+                    action_required=q.action_required,
                 )
             )
         return responses
@@ -2297,6 +2354,10 @@ async def get_query(query_id: str) -> ClinicalQueryResponse:
             resolved_at=q.resolved_at,
             cancellation_reason=q.cancellation_reason,
             escalated_at=q.escalated_at,
+            form_id=q.form_id,
+            field_id=q.field_id,
+            query_type=q.query_type,
+            action_required=q.action_required,
         )
 
 
@@ -2361,6 +2422,10 @@ async def open_query(
             priority=payload.priority,
             rule_id=payload.rule_id,
             created_by=payload.created_by or current_user_id.get(),
+            form_id=payload.form_id,
+            field_id=payload.field_id,
+            query_type=payload.query_type,
+            action_required=payload.action_required,
         )
         session.add(q)
         await session.commit()
@@ -2396,6 +2461,10 @@ async def open_query(
             resolved_at=q_db.resolved_at,
             cancellation_reason=q_db.cancellation_reason,
             escalated_at=q_db.escalated_at,
+            form_id=q_db.form_id,
+            field_id=q_db.field_id,
+            query_type=q_db.query_type,
+            action_required=q_db.action_required,
         )
 
 
@@ -2809,6 +2878,31 @@ class FormSubmissionApprove(BaseModel):
     signing_reason: str
 
 
+class BatchSignOffRequest(BaseModel):
+    study_id: str
+    target_type: str  # "FORM", "VISIT", or "SUBJECT"
+    target_ids: List[str]
+    signing_reason: str
+
+    @model_validator(mode="after")
+    def validate_request(self) -> "BatchSignOffRequest":
+        tt = self.target_type.upper()
+        if tt not in ("FORM", "VISIT", "SUBJECT"):
+            raise ValueError("target_type must be one of: FORM, VISIT, SUBJECT")
+        if self.signing_reason not in VALID_SIGNING_REASONS:
+            raise ValueError(
+                f"Invalid signing reason. Must be one of: {sorted(list(VALID_SIGNING_REASONS))}"
+            )
+        return self
+
+
+class BatchSignOffResponse(BaseModel):
+    status: str
+    approved_submission_ids: List[str]
+    skipped_submission_ids: List[str]
+    skipped_targets: List[str]
+
+
 @app.post(
     "/api/v1/execution/form-submissions",
     response_model=FormSubmissionResponse,
@@ -2962,6 +3056,153 @@ async def approve_form_submission(
         )
 
 
+@app.post(
+    "/api/v1/execution/batch-sign-off",
+    response_model=BatchSignOffResponse,
+)
+async def post_batch_sign_off(
+    request: Request,
+    payload: BatchSignOffRequest,
+) -> BatchSignOffResponse:
+    """Perform a PI-only, atomic batch electronic-signature for form-, visit-, and subject-level sign-off."""
+    verify_change_justification(request)
+
+    user_roles = get_normalized_roles(request)
+    pi_roles = {
+        "pi",
+        "principal investigator",
+        "principal_investigator",
+        "investigator",
+        "site investigator",
+        "site_investigator",
+        "site-investigator",
+        "investigator_user",
+    }
+    if not any(r in pi_roles for r in user_roles):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Only a Principal Investigator (PI) can perform batch electronic sign-off.",
+        )
+
+    target_type_upper = payload.target_type.upper()
+
+    async with db_manager.get_session_maker()() as session:
+        if TrialLockManager.is_locked():
+            raise PermissionError(
+                "Trial is currently locked in a read-only state due to a security violation."
+            )
+
+        async with session.begin():
+            if target_type_upper == "FORM":
+                stmt = select(FormSubmission).where(
+                    FormSubmission.id.in_(payload.target_ids),
+                    FormSubmission.study_id == payload.study_id,
+                    FormSubmission.is_deleted.is_(False),
+                )
+            elif target_type_upper == "VISIT":
+                stmt = select(FormSubmission).where(
+                    FormSubmission.visit_id.in_(payload.target_ids),
+                    FormSubmission.study_id == payload.study_id,
+                    FormSubmission.is_deleted.is_(False),
+                )
+            elif target_type_upper == "SUBJECT":
+                stmt = select(FormSubmission).where(
+                    FormSubmission.subject_id.in_(payload.target_ids),
+                    FormSubmission.study_id == payload.study_id,
+                    FormSubmission.is_deleted.is_(False),
+                )
+            else:
+                raise HTTPException(status_code=400, detail="Invalid target type.")
+
+            res = await session.execute(stmt)
+            resolved_subs = list(res.scalars().all())
+
+            approved_submission_ids = []
+            skipped_submission_ids = []
+            targets_with_approvals = set()
+
+            secret = os.getenv(
+                "GATEWAY_SECRET", "internal-gateway-secret-12345"
+            ).encode()
+
+            for sub in resolved_subs:
+                sub_target_id = None
+                if target_type_upper == "FORM":
+                    sub_target_id = sub.id
+                elif target_type_upper == "VISIT":
+                    sub_target_id = sub.visit_id
+                elif target_type_upper == "SUBJECT":
+                    sub_target_id = sub.subject_id
+
+                if sub.status == "COMPLETED":
+                    if sub.site_id and TrialLockManager.is_site_locked(sub.site_id):
+                        raise PermissionError(
+                            f"Site {sub.site_id} is currently locked in a read-only state."
+                        )
+                    if sub.visit_id and TrialLockManager.is_visit_locked(sub.visit_id):
+                        raise PermissionError(
+                            f"Visit {sub.visit_id} is currently locked in a read-only state."
+                        )
+                    if sub.subject_id and TrialLockManager.is_subject_locked(
+                        sub.subject_id
+                    ):
+                        raise PermissionError(
+                            f"Subject {sub.subject_id} is currently locked in a read-only state."
+                        )
+                    if sub.form_id and TrialLockManager.is_form_locked(sub.form_id):
+                        raise PermissionError(
+                            f"Form {sub.form_id} is currently locked in a read-only state."
+                        )
+
+                    if sub_target_id:
+                        targets_with_approvals.add(sub_target_id)
+
+                    form_payload = {
+                        "study_id": sub.study_id,
+                        "site_id": sub.site_id,
+                        "subject_id": sub.subject_id,
+                        "visit_id": sub.visit_id,
+                        "form_id": sub.form_id,
+                    }
+                    binding_payload = {
+                        "form_payload": form_payload,
+                        "pre_approval_version": sub.version,
+                    }
+                    canonical_hash = generate_canonical_signature(
+                        binding_payload, secret
+                    )
+
+                    manifest = {
+                        "signer_id": request.state.user_id,
+                        "timestamp": datetime.utcnow().isoformat() + "Z",
+                        "signing_reason": payload.signing_reason,
+                        "ip_address": request.headers.get("x-forwarded-for")
+                        or (request.client.host if request.client else "127.0.0.1"),
+                        "user_agent": request.headers.get("user-agent") or "Unknown",
+                        "signed_version": sub.version + 1,
+                        "canonical_signature_hash": canonical_hash,
+                    }
+
+                    sub.status = "APPROVED"
+                    sub.signature_manifest = manifest
+                    session.add(sub)
+                    approved_submission_ids.append(sub.id)
+                else:
+                    skipped_submission_ids.append(sub.id)
+
+            skipped_targets = []
+            for tid in payload.target_ids:
+                if tid not in targets_with_approvals:
+                    skipped_targets.append(tid)
+
+            return BatchSignOffResponse(
+                status="success",
+                approved_submission_ids=approved_submission_ids,
+                skipped_submission_ids=skipped_submission_ids,
+                skipped_targets=skipped_targets,
+            )
+
+
 @app.get(
     "/api/v1/execution/form-submissions",
     response_model=List[FormSubmissionResponse],
@@ -3105,7 +3346,28 @@ async def respond_query(
             resolved_at=q_db.resolved_at,
             cancellation_reason=q_db.cancellation_reason,
             escalated_at=q_db.escalated_at,
+            form_id=q_db.form_id,
+            field_id=q_db.field_id,
+            query_type=q_db.query_type,
+            action_required=q_db.action_required,
         )
+
+
+async def _revert_coding_assignment_if_system_query_resolved(
+    session, q: ClinicalQuery
+) -> None:
+    """Helper to revert a QUERY_PENDING coding assignment back to UNCODED when its system query is closed/cancelled."""
+    if q.origin == "SYSTEM_CODING":
+        stmt_assign = select(ClinicalCodingAssignment).where(
+            ClinicalCodingAssignment.observation_id == q.observation_id,
+            ClinicalCodingAssignment.status == CodingState.QUERY_PENDING,
+            ClinicalCodingAssignment.is_deleted.is_(False),
+        )
+        res_assign = await session.execute(stmt_assign)
+        assignment = res_assign.scalars().first()
+        if assignment:
+            assignment.status = CodingState.UNCODED
+            session.add(assignment)
 
 
 @app.post(
@@ -3145,6 +3407,7 @@ async def close_query(
         q.status = "CLOSED"
         q.resolver = current_user_id.get()
         q.resolved_at = datetime.now()
+        await _revert_coding_assignment_if_system_query_resolved(session, q)
         await session.commit()
 
         # Refresh
@@ -3178,6 +3441,10 @@ async def close_query(
             resolved_at=q_db.resolved_at,
             cancellation_reason=q_db.cancellation_reason,
             escalated_at=q_db.escalated_at,
+            form_id=q_db.form_id,
+            field_id=q_db.field_id,
+            query_type=q_db.query_type,
+            action_required=q_db.action_required,
         )
 
 
@@ -3267,6 +3534,10 @@ async def reopen_query(
             resolved_at=q_db.resolved_at,
             cancellation_reason=q_db.cancellation_reason,
             escalated_at=q_db.escalated_at,
+            form_id=q_db.form_id,
+            field_id=q_db.field_id,
+            query_type=q_db.query_type,
+            action_required=q_db.action_required,
         )
 
 
@@ -3315,6 +3586,7 @@ async def cancel_query(
         q.cancellation_reason = payload.reason
         q.resolver = current_user_id.get()
         q.resolved_at = datetime.now()
+        await _revert_coding_assignment_if_system_query_resolved(session, q)
         await session.commit()
 
         # Refresh
@@ -3348,6 +3620,10 @@ async def cancel_query(
             resolved_at=q_db.resolved_at,
             cancellation_reason=q_db.cancellation_reason,
             escalated_at=q_db.escalated_at,
+            form_id=q_db.form_id,
+            field_id=q_db.field_id,
+            query_type=q_db.query_type,
+            action_required=q_db.action_required,
         )
 
 
@@ -3459,6 +3735,15 @@ async def update_query_state(
         if payload.escalated_at is not None:
             q.escalated_at = payload.escalated_at
 
+        if payload.form_id is not None:
+            q.form_id = payload.form_id
+        if payload.field_id is not None:
+            q.field_id = payload.field_id
+        if payload.query_type is not None:
+            q.query_type = payload.query_type
+        if payload.action_required is not None:
+            q.action_required = payload.action_required
+
         if target_status == "CLOSED":
             q.resolver = current_user_id.get()
             q.resolved_at = datetime.now()
@@ -3476,6 +3761,9 @@ async def update_query_state(
                 q.cancellation_reason = payload.explanation
             q.resolver = current_user_id.get()
             q.resolved_at = datetime.now()
+
+        if target_status in ("CLOSED", "CANCELLED"):
+            await _revert_coding_assignment_if_system_query_resolved(session, q)
 
         await session.commit()
 
@@ -3510,6 +3798,10 @@ async def update_query_state(
             resolved_at=q_db.resolved_at,
             cancellation_reason=q_db.cancellation_reason,
             escalated_at=q_db.escalated_at,
+            form_id=q_db.form_id,
+            field_id=q_db.field_id,
+            query_type=q_db.query_type,
+            action_required=q_db.action_required,
         )
 
 
@@ -4212,6 +4504,22 @@ async def process_coding_action(
                 decision_at=datetime.utcnow(),
             )
             session.add(ledger)
+
+            # Close any open/active SYSTEM_CODING queries for this observation
+            stmt_active_q = select(ClinicalQuery).where(
+                ClinicalQuery.observation_id == assignment.observation_id,
+                ClinicalQuery.origin == "SYSTEM_CODING",
+                ClinicalQuery.status.in_(["CANDIDATE", "OPEN", "ANSWERED", "REOPENED"]),
+                ClinicalQuery.is_deleted.is_(False),
+            )
+            res_active_q = await session.execute(stmt_active_q)
+            active_queries = res_active_q.scalars().all()
+            for active_q in active_queries:
+                active_q.status = "CLOSED"
+                active_q.resolver = actor
+                active_q.resolved_at = datetime.utcnow()
+                active_q.response = f"Resolved via manual coding action: {action_upper} on code {coded_code}."
+                session.add(active_q)
 
         await session.commit()
 
