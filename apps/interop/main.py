@@ -19,7 +19,9 @@ from apps.interop.database import db_manager
 from apps.interop.fhir_adapter import FHIRAdapter
 from apps.interop.models import (
     Base,
+    ClinicalQuery,
     EPROSubmission,
+    EPROSubmissionDefeated,
     Instrument,
     InteropAuditLog,
     SubjectAssignment,
@@ -167,10 +169,79 @@ class BulkSyncPayload(BaseModel):
 async def resolve_and_save_submission(
     session: AsyncSession,
     payload: EPROSubmissionPayload,
+    user_id: str = "system",
+    user_role: str = "system",
+    change_reason: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Save a new ePRO submission or reconcile existing ones based on conflict strategy.
+    Detects structural conflicts and turn them into auditable clinical queries.
     """
+    # Check for missing target records (structural conflict)
+    # 1. Check if Instrument exists
+    stmt_inst = select(Instrument).where(Instrument.id == payload.diary_id)
+    res_inst = await session.execute(stmt_inst)
+    inst = res_inst.scalars().first()
+
+    # 2. Check if SubjectAssignment exists
+    stmt_assign = select(SubjectAssignment).where(
+        SubjectAssignment.subject_id == payload.subject_id,
+        SubjectAssignment.instrument_id == payload.diary_id,
+    )
+    res_assign = await session.execute(stmt_assign)
+    assign = res_assign.scalars().first()
+
+    if not inst or not assign:
+        # We have a structural conflict!
+        markers_dict = payload.offline_sync_markers.model_dump(mode="json")
+
+        # 1. Reject direct structural-conflict updates (so we do not write to EPROSubmission)
+        # 2. Retain reviewable state: persist incoming payload in EPROSubmissionDefeated
+        defeated_sub = EPROSubmissionDefeated(
+            subject_id=payload.subject_id,
+            diary_id=payload.diary_id,
+            device_timestamp=payload.device_timestamp,
+            answers=payload.answers,
+            offline_sync_markers=markers_dict,
+            status="Defeated by online-merge conflict resolution",
+        )
+        session.add(defeated_sub)
+
+        # 3. Create an OPEN clinical query with audit reason "SYSTEM SYNC EXCEPTION TRIGGERED"
+        query = ClinicalQuery(
+            study_id="SYSTEM-SYNC",  # Sensible default
+            subject_id=payload.subject_id,
+            test_code=payload.diary_id,
+            status="OPEN",
+            explanation=f"Structural conflict: target record (Instrument or Assignment) is missing or deleted for Subject {payload.subject_id} and Diary {payload.diary_id}.",
+        )
+        session.add(query)
+        await session.flush()
+
+        # 4. Create an InteropAuditLog record via write_audit_log
+        await write_audit_log(
+            session=session,
+            user_id=user_id,
+            user_role=user_role,
+            action="EPRO_STRUCTURAL_CONFLICT",
+            details=f"Structural conflict on Subject '{payload.subject_id}', Diary '{payload.diary_id}': Target record missing or deleted.",
+            change_reason="SYSTEM SYNC EXCEPTION TRIGGERED",
+        )
+
+        # Return the generated query in the sync result
+        return {
+            "status": "STRUCTURAL_CONFLICT",
+            "query": {
+                "id": query.id,
+                "study_id": query.study_id,
+                "subject_id": query.subject_id,
+                "test_code": query.test_code,
+                "status": query.status,
+                "explanation": query.explanation,
+            },
+        }
+
+    # Normal sync flow:
     # Look for an existing submission with same subject_id and diary_id
     stmt = (
         select(EPROSubmission)
@@ -202,6 +273,18 @@ async def resolve_and_save_submission(
         )
         session.add(new_sub)
         await session.flush()
+
+        # Ensure each reconciliation outcome creates an InteropAuditLog record via write_audit_log,
+        # including decision and version increment.
+        await write_audit_log(
+            session=session,
+            user_id=user_id,
+            user_role=user_role,
+            action="EPRO_RECONCILE",
+            details="Decision: CREATED. Version index is 1.",
+            change_reason=change_reason,
+        )
+
         return {
             "status": "CREATED",
             "id": new_sub.id,
@@ -214,7 +297,19 @@ async def resolve_and_save_submission(
 
     # Conflict scenario!
     if strategy == "CLIENT_WINS":
-        # Overwrite with incoming
+        # Overwrite with incoming.
+        # Persist both winning and defeated inputs and record the status Defeated by online-merge conflict resolution.
+        # Winning is incoming (payload.answers). Defeated is existing (existing.answers).
+        defeated_sub = EPROSubmissionDefeated(
+            subject_id=existing.subject_id,
+            diary_id=existing.diary_id,
+            device_timestamp=existing.device_timestamp,
+            answers=existing.answers,
+            offline_sync_markers=existing.offline_sync_markers,
+            status="Defeated by online-merge conflict resolution",
+        )
+        session.add(defeated_sub)
+
         existing.answers = payload.answers
         existing.device_timestamp = payload.device_timestamp
         existing.offline_sync_markers = markers_dict
@@ -222,6 +317,18 @@ async def resolve_and_save_submission(
         existing.sync_status = "RESOLVED"
         session.add(existing)
         await session.flush()
+
+        # Ensure each reconciliation outcome creates an InteropAuditLog record via write_audit_log,
+        # including decision and version increment.
+        await write_audit_log(
+            session=session,
+            user_id=user_id,
+            user_role=user_role,
+            action="EPRO_RECONCILE",
+            details=f"Decision: CLIENT_WINS. Version incremented to {existing.version_index}.",
+            change_reason=change_reason,
+        )
+
         return {
             "status": "UPDATED_CLIENT_WINS",
             "id": existing.id,
@@ -234,6 +341,17 @@ async def resolve_and_save_submission(
 
     elif strategy == "SERVER_WINS":
         # Keep existing, store incoming as ignored/archived under conflict status
+        # Winning is existing. Defeated is incoming (payload.answers).
+        defeated_sub = EPROSubmissionDefeated(
+            subject_id=payload.subject_id,
+            diary_id=payload.diary_id,
+            device_timestamp=payload.device_timestamp,
+            answers=payload.answers,
+            offline_sync_markers=markers_dict,
+            status="Defeated by online-merge conflict resolution",
+        )
+        session.add(defeated_sub)
+
         conflict_sub = EPROSubmission(
             subject_id=payload.subject_id,
             diary_id=payload.diary_id,
@@ -245,6 +363,18 @@ async def resolve_and_save_submission(
         )
         session.add(conflict_sub)
         await session.flush()
+
+        # Ensure each reconciliation outcome creates an InteropAuditLog record via write_audit_log,
+        # including decision and version increment.
+        await write_audit_log(
+            session=session,
+            user_id=user_id,
+            user_role=user_role,
+            action="EPRO_RECONCILE",
+            details=f"Decision: SERVER_WINS. Version index is {existing.version_index}.",
+            change_reason=change_reason,
+        )
+
         return {
             "status": "IGNORED_SERVER_WINS",
             "id": existing.id,
@@ -257,6 +387,17 @@ async def resolve_and_save_submission(
 
     elif strategy == "MERGE":
         # Merge dictionaries (client overrides server for identical keys)
+        # Winning: the merged dictionary. Defeated: the existing dictionary (as it gets overwritten/modified)
+        defeated_sub = EPROSubmissionDefeated(
+            subject_id=existing.subject_id,
+            diary_id=existing.diary_id,
+            device_timestamp=existing.device_timestamp,
+            answers=existing.answers,
+            offline_sync_markers=existing.offline_sync_markers,
+            status="Defeated by online-merge conflict resolution",
+        )
+        session.add(defeated_sub)
+
         merged_answers = existing.answers.copy()
         merged_answers.update(payload.answers)
 
@@ -267,6 +408,18 @@ async def resolve_and_save_submission(
         existing.sync_status = "RESOLVED"
         session.add(existing)
         await session.flush()
+
+        # Ensure each reconciliation outcome creates an InteropAuditLog record via write_audit_log,
+        # including decision and version increment.
+        await write_audit_log(
+            session=session,
+            user_id=user_id,
+            user_role=user_role,
+            action="EPRO_RECONCILE",
+            details=f"Decision: MERGE. Version incremented to {existing.version_index}.",
+            change_reason=change_reason,
+        )
+
         return {
             "status": "MERGED",
             "id": existing.id,
@@ -336,7 +489,13 @@ async def epro_submit(
     change_reason = getattr(request.state, "change_reason", "system_operation")
 
     # Process and resolve conflict
-    resolved = await resolve_and_save_submission(session, payload)
+    resolved = await resolve_and_save_submission(
+        session,
+        payload,
+        user_id=user_id,
+        user_role=user_roles,
+        change_reason=change_reason,
+    )
 
     # Log action to immutable audit trail
     await write_audit_log(
@@ -372,9 +531,16 @@ async def epro_sync(
     created_count = 0
     updated_count = 0
     ignored_count = 0
+    conflict_count = 0
 
     for sub_payload in payload.submissions:
-        resolved = await resolve_and_save_submission(session, sub_payload)
+        resolved = await resolve_and_save_submission(
+            session,
+            sub_payload,
+            user_id=user_id,
+            user_role=user_roles,
+            change_reason=change_reason,
+        )
         results.append(resolved)
         status = resolved["status"]
         if status == "CREATED":
@@ -383,6 +549,8 @@ async def epro_sync(
             updated_count += 1
         elif status == "IGNORED_SERVER_WINS":
             ignored_count += 1
+        elif status == "STRUCTURAL_CONFLICT":
+            conflict_count += 1
 
     # Log bulk sync to audit trail
     await write_audit_log(
@@ -390,7 +558,7 @@ async def epro_sync(
         user_id=user_id,
         user_role=user_roles,
         action="EPRO_BULK_SYNC",
-        details=f"Processed bulk ePRO sync containing {len(payload.submissions)} items. Created: {created_count}, Reconciled/Updated: {updated_count}, Ignored: {ignored_count}.",
+        details=f"Processed bulk ePRO sync containing {len(payload.submissions)} items. Created: {created_count}, Reconciled/Updated: {updated_count}, Ignored: {ignored_count}, Structural Conflicts: {conflict_count}.",
         change_reason=change_reason,
     )
 
@@ -400,6 +568,7 @@ async def epro_sync(
         "created_count": created_count,
         "updated_count": updated_count,
         "ignored_count": ignored_count,
+        "conflict_count": conflict_count,
         "results": results,
     }
 
