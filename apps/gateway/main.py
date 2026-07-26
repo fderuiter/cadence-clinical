@@ -3,6 +3,7 @@ import hashlib
 import hmac
 import os
 import time
+import uuid
 from typing import Any, Awaitable, Callable, Dict, Optional
 
 import httpx
@@ -469,6 +470,7 @@ class SignatureVerificationRequest(BaseModel):
     password: str
     totp: Optional[str] = None
     action: str
+    batch_id: Optional[str] = None
 
 
 AUTHORIZED_SIGNING_ROLES = {
@@ -492,7 +494,11 @@ AUTHORIZED_SIGNING_ROLES = {
 
 
 def generate_sig_token(
-    user_id: str, username: str, action: str, roles: list[str]
+    user_id: str,
+    username: str,
+    action: str,
+    roles: list[str],
+    batch_id: Optional[str] = None,
 ) -> str:
     """
     Generate a short-lived signature token (JWT) valid for 60 seconds.
@@ -505,7 +511,10 @@ def generate_sig_token(
         "roles": roles,
         "iat": now,
         "exp": now + 60.0,
+        "jti": str(uuid.uuid4()),
     }
+    if batch_id:
+        payload["batch_id"] = batch_id
     return jwt.encode(payload, GATEWAY_SECRET, algorithm="HS256")
 
 
@@ -598,6 +607,7 @@ async def signature_verification(request: Request, body: SignatureVerificationRe
         username=body.username,
         action=body.action,
         roles=normalized_roles,
+        batch_id=body.batch_id,
     )
     return {"sig_token": sig_token}
 
@@ -606,13 +616,14 @@ class ReplayPreventionCache:
     def __init__(self) -> None:
         self.used_tokens: Dict[str, float] = {}
 
-    def is_replayed(self, token: str, exp: float) -> bool:
+    def is_replayed(self, token: str, exp: float, jti: Optional[str] = None) -> bool:
         now = time.time()
         # Prune expired tokens
         self.used_tokens = {t: e for t, e in self.used_tokens.items() if e > now}
-        if token in self.used_tokens:
+        key = jti if jti else token
+        if key in self.used_tokens:
             return True
-        self.used_tokens[token] = exp
+        self.used_tokens[key] = exp
         return False
 
 
@@ -720,7 +731,8 @@ async def proxy_requests(request: Request, path: str) -> Response:
                 )
 
             # Check replay attack
-            if replay_cache.is_replayed(sig_token, sig_payload.get("exp", 0)):
+            jti = sig_payload.get("jti")
+            if replay_cache.is_replayed(sig_token, sig_payload.get("exp", 0), jti):
                 return JSONResponse(
                     status_code=401,
                     content={

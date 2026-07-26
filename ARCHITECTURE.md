@@ -87,6 +87,24 @@ Traditional clinical trial builds require manual, error-prone translation of pro
   * Immutable, append-only, chronological quality logs (`QualityAuditLog`) of all viewed records, updates, and transitions.
   * Restricts access to read-only roles (`auditor`, `inspector`, `regulatory_inspector`) from all mutating operations, gates general write access, and authorizes terminal CAPA approvals or closures only to Quality Oversight roles (`quality_manager`, `qa_lead`, `quality_oversight`, `admin`).
 
+### J. Interoperability & Sync Gateway Service (`apps/interop`)
+* **Role:** EHR FHIR Data Adapter & ePRO Submission Sync Gateway.
+* **Datastore:** SQLite / PostgreSQL Relational Database.
+* **Core Responsibilities:**
+  * Ingests HL7 FHIR bundles, performs PII stripping and pseudonymization, and CDASH mappings to pre-fill observations.
+  * Receives single or bulk ePRO/eCOA submissions from active study subjects.
+  * Implements multi-strategy offline reconciliation (`CLIENT_WINS`, `SERVER_WINS`, `MERGE`) and isolates/logs conflict details in `EPROSubmissionDefeated`.
+  * Triggers auditable open clinical queries automatically for submissions with structural mismatches.
+  * Computes subject compliance schedules and triggers async background notifications (EMAIL, SMS, WEBHOOK, IN_APP).
+
+### K. Patient/Subject Portal (`apps/subject-portal`)
+* **Role:** Standalone Patient-Facing ePRO Web Application.
+* **Core Responsibilities:**
+  * Serves as an isolated, secure Progressive Web App (PWA) client optimized for mobile environments.
+  * Integrates with Keycloak OIDC for authenticated login under the strict `Subject` role.
+  * Implements offline-first caching via service workers and queues signed submissions chronologically inside IndexedDB.
+  * Provides a visual Sync Queue Panel allowing subjects to view transmission logs and online reconciliation decisions.
+
 ---
 
 ## 3. Data Transformation Flow
@@ -104,7 +122,17 @@ Traditional clinical trial builds require manual, error-prone translation of pro
  [ Transformer: USDM -> ODM/XForm ]
                  │
                  ▼
- [ Provisioned into PostgreSQL EDC ]
-                 │
-                 ▼
- [ Live Site Data Entry & Audit Log ]
+ [ Provisioned into PostgreSQL EDC ] ───► [ eCOA Instrument Definition Assigned ]
+                 │                                        │
+                 ▼                                        ▼
+ [ Live Site Data Entry & Audit Log ]    [ Patient Completes ePRO Assessment (PWA) ]
+                                                          │
+                                                    (Network Sync)
+                                                          │
+                                                          ▼
+                                         [ Interop Service Reconciles & Audits ]
+                                                          │
+                                                    (Sync Exception)
+                                                          │
+                                                          ▼
+                                         [ Clinical Query Triggered in EDC ]

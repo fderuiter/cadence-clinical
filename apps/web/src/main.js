@@ -3,6 +3,7 @@ import { createPinia } from "pinia";
 import App from "./App.vue";
 import { router } from "./router";
 import Keycloak from "keycloak-js";
+import { useAuthStore } from "./stores/auth";
 
 const app = createApp(App);
 const pinia = createPinia();
@@ -18,25 +19,58 @@ const keycloakConfig = {
 };
 
 const keycloak = new Keycloak(keycloakConfig);
+window.keycloakInstance = keycloak;
 
-// Initialize Keycloak gracefully (in offline / demo mode, we handle failure to connect)
-keycloak
-  .init({
-    onLoad: "check-sso",
-    silentCheckSsoRedirectUri:
-      window.location.origin + "/silent-check-sso.html",
-    pkceMethod: "S256",
-  })
-  .then((authenticated) => {
-    console.log(`Keycloak initialized. Authenticated: ${authenticated}`);
-    app.mount("#app");
-  })
-  .catch((err) => {
-    console.warn(
-      "Keycloak initialization failed or timed out (offline/demo fallback):",
-      err
+const authStore = useAuthStore(pinia);
+
+// Quick check if Keycloak is reachable to prevent long-hanging initialization
+const checkKeycloakReachable = async () => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 1000);
+  try {
+    // Check OIDC discovery endpoint
+    await fetch(
+      "http://localhost:8080/realms/cadence/.well-known/openid-configuration",
+      {
+        signal: controller.signal,
+        mode: "no-cors",
+      }
     );
-    // Proceed mounting the application even if Keycloak server is not running,
-    // ensuring the standalone web demo remains fully functional for sandbox testing.
+    clearTimeout(timeoutId);
+    return true;
+  } catch {
+    clearTimeout(timeoutId);
+    return false;
+  }
+};
+
+checkKeycloakReachable().then((reachable) => {
+  if (reachable) {
+    keycloak
+      .init({
+        onLoad: "check-sso",
+        silentCheckSsoRedirectUri:
+          window.location.origin + "/silent-check-sso.html",
+        pkceMethod: "S256",
+      })
+      .then((authenticated) => {
+        console.log(`Keycloak initialized. Authenticated: ${authenticated}`);
+        authStore.setAuth(keycloak);
+        app.mount("#app");
+      })
+      .catch((err) => {
+        console.warn(
+          "Keycloak initialization failed (fallback to offline/demo):",
+          err
+        );
+        authStore.isDemoMode = true;
+        app.mount("#app");
+      });
+  } else {
+    console.log(
+      "Keycloak server is offline. Mounting app in offline/demo mode."
+    );
+    authStore.isDemoMode = true;
     app.mount("#app");
-  });
+  }
+});

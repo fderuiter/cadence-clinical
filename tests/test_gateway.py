@@ -584,6 +584,133 @@ def test_signature_gated_mutation_enforcement(monkeypatch: pytest.MonkeyPatch) -
         assert response.json()["detail"] == "REAUTHENTICATION_REQUIRED"
 
 
+def test_signature_verification_with_batch_id(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Test successful re-authentication with an optional batch_id.
+    """
+    monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
+    token = jwt.encode(
+        {
+            "sub": "user1",
+            "preferred_username": "user1",
+            "realm_access": {"roles": ["investigator"]},
+        },
+        "test_secret",
+        algorithm="HS256",
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/auth/signature-verification",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "username": "user1",
+                "password": "correct_password",  # pragma: allowlist secret
+                "totp": "123456",
+                "action": "/api/v1/execution/form-submissions/123/approve",
+                "batch_id": "batch_abc_123",
+            },
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "sig_token" in data
+
+        # Verify batch_id claim inside signature token
+        from apps.gateway.main import GATEWAY_SECRET
+
+        sig_payload = jwt.decode(
+            data["sig_token"], GATEWAY_SECRET, algorithms=["HS256"]
+        )
+        assert sig_payload.get("batch_id") == "batch_abc_123"
+        assert "jti" in sig_payload
+
+
+def test_signature_token_altered_signature_rejected(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Test that an altered or tampered signature token is rejected.
+    """
+    monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
+    token = jwt.encode(
+        {
+            "sub": "user1",
+            "preferred_username": "user1",
+            "realm_access": {"roles": ["investigator"]},
+        },
+        "test_secret",
+        algorithm="HS256",
+    )
+
+    # 1. Re-authenticate to get a valid token
+    with TestClient(app) as client:
+        reauth_resp = client.post(
+            "/api/v1/auth/signature-verification",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "username": "user1",
+                "password": "correct_password",  # pragma: allowlist secret
+                "action": "/api/v1/execution/form-submissions/123/approve",
+            },
+        )
+        assert reauth_resp.status_code == 200
+        valid_token = reauth_resp.json()["sig_token"]
+
+        # 2. Tamper with signature by changing characters at the end of the token string
+        tampered_token = valid_token[:-4] + "AAAA"
+
+        # 3. Call signature-gated endpoint with tampered token -> 401
+        response = client.post(
+            "/api/v1/execution/form-submissions/123/approve",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "X-Sig-Token": tampered_token,
+                "X-Change-Reason": "Valid reason",
+            },
+        )
+        assert response.status_code == 401
+        assert response.json()["detail"] == "REAUTHENTICATION_REQUIRED"
+
+
+def test_signature_token_credentials_not_logged_or_returned(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """
+    Test that user credentials/passwords are neither logged nor returned.
+    """
+    monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
+    token = jwt.encode(
+        {
+            "sub": "user1",
+            "preferred_username": "user1",
+            "realm_access": {"roles": ["investigator"]},
+        },
+        "test_secret",
+        algorithm="HS256",
+    )
+
+    sensitive_password = "very_secret_user_password_123!"  # pragma: allowlist secret
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/v1/auth/signature-verification",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "username": "user1",
+                "password": sensitive_password,  # pragma: allowlist secret
+                "action": "/api/v1/execution/form-submissions/123/approve",
+            },
+        )
+        assert response.status_code == 200
+
+        # Ensure password is not in response content
+        assert sensitive_password not in response.text
+
+        # Ensure password is not in any logs captured during this execution
+        for record in caplog.records:
+            assert sensitive_password not in record.message
+
+
 def test_proxy_requests_terminology_paths(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     Test routing proxies for terminology-related paths.
