@@ -9,10 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 733
-- **Passed:** 733 🟢
-- **Total Automated Test Cases Run:** 740
-- **Passed:** 740 🟢
+- **Total Automated Test Cases Run:** 757
+- **Passed:** 757 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -128,7 +126,7 @@ rapidfuzz               3.14.5
 requests                2.34.2
 rich                    15.0.0
 rsa                     4.9.1
-ruff                    0.15.22
+ruff                    0.16.0
 six                     1.17.0
 sortedcontainers        2.4.0
 soupsieve               2.9.1
@@ -678,6 +676,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_verify_is_auditor_denies_non_auditors` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_not_auditor_allows_others` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_not_auditor_denies_auditors` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_hard_delete_prevented_for_supply_entities` | `tests.test_rtsm_supply` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_site_inventory_unique_constraint` | `tests.test_rtsm_supply` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_supply_entities_audit_trail_and_soft_delete` | `tests.test_rtsm_supply` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_trial_locking_conformity` | `tests.test_rtsm_supply` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_icsr_version_metadata` | `tests.test_sae_icsr` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_invalid_icsr_drug_role` | `tests.test_sae_icsr` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_invalid_icsr_patient_age_negative` | `tests.test_sae_icsr` | *Regression/Helper* | 🟢 PASSED | < 1s |

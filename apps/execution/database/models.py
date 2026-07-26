@@ -824,3 +824,104 @@ class PendingPredecessorCheck(AuditedModel):
     rule_id: Mapped[str] = mapped_column(String(255), nullable=False)
     observation_id: Mapped[str] = mapped_column(String(255), nullable=False)
     test_code: Mapped[str] = mapped_column(String(100), nullable=False)
+
+
+class IPKit(AuditedModel):
+    """Represents a kit in the investigational product (IP) catalog.
+
+    Preserves blinding: only contains blinded kit identifiers. Treatment or
+    drug-code resolution remains confined to an authorized unblinded layer.
+
+    Attributes:
+        study_id (str): The clinical trial study identifier.
+        kit_number (str): Unique, blinded identifier for the kit (e.g. 'KIT-1001').
+        kit_type (str): Blinded category/type code of the kit (e.g. 'Type A').
+        description (str): Optional text describing the kit configuration.
+    """
+
+    __tablename__ = "ip_kits"
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    kit_number: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    kit_type: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(String(1000), nullable=True)
+
+
+class SiteInventory(AuditedModel):
+    """Tracks per-site inventory levels, thresholds, and triggers resupply signals.
+
+    Attributes:
+        study_id (str): The clinical trial study identifier.
+        site_id (str): Site identifier for local stock tracking and isolation.
+        kit_id (str): Blinded reference to the kit catalog entry (kit_number or id).
+        on_hand_qty (int): Current count of kits available on-hand.
+        reorder_threshold (int): Minimum on-hand quantity before a reorder is triggered.
+        resupply_signal (bool): Flag indicating if automatic resupply is active/requested.
+    """
+
+    __tablename__ = "site_inventories"
+    __table_args__ = (
+        UniqueConstraint("site_id", "kit_id", name="uq_site_inventory_site_kit"),
+    )
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    kit_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    on_hand_qty: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    reorder_threshold: Mapped[int] = mapped_column(Integer, default=5, nullable=False)
+    resupply_signal: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+
+
+class KitDispensation(AuditedModel):
+    """Tracks investigational product (IP) kit dispensations to trial subjects.
+
+    Attributes:
+        study_id (str): The clinical trial study identifier.
+        subject_id (str): The pseudonymized unique identifier of the subject.
+        kit_id (str): Reference to the dispensed kit identifier.
+        site_id (str): Site identifier where the dispensation occurred.
+        visit_id (str): Clinical visit/encounter identifier for existing lock validation.
+        quantity (int): Number of kits dispensed.
+        timestamp (datetime): Chronological timestamp of dispensation.
+    """
+
+    __tablename__ = "kit_dispensations"
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    subject_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    kit_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    visit_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    quantity: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+
+
+class ResupplyEvent(AuditedModel):
+    """Tracks threshold-triggered resupply events and requests for site inventories.
+
+    Resupply events are persistable and auditable without writing directly to
+    the audit ledger.
+
+    Attributes:
+        study_id (str): The clinical trial study identifier.
+        site_id (str): Site identifier requiring inventory resupply.
+        kit_id (str): Reference to the kit being resupplied.
+        requested_qty (int): Quantity of kits being requested/ordered.
+        status (str): The lifecycle state of the request (e.g. 'PENDING', 'SHIPPED', 'DELIVERED').
+        triggered_at (datetime): Chronological timestamp when the event was generated.
+    """
+
+    __tablename__ = "resupply_events"
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    kit_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    requested_qty: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(50), default="PENDING", nullable=False)
+    triggered_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
