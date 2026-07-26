@@ -66,3 +66,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-07: Route Terminology APIs through the Gateway](2026-08-07-gateway-terminology-routing.md)
 - [2026-08-07: ePRO Sync Durable Reconciliation, Defeated Record Retention, and Structural Queries](2026-08-07-epro-sync-durable-reconciliation.md)
 - [2026-08-07: Organization Directory Service and Persistence Models Scaffold](2026-08-07-organization-directory-service-foundation.md)
+- [2026-08-08: eCOA Portal and Interop Deployment Architecture](2026-08-08-ecoa-portal-and-interop-deployment.md)
