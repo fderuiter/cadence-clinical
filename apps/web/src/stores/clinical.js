@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import { sha256 } from "../../index.js";
 import { generateGatewaySignature, generateJwtHS256 } from "ui";
+import { useAuthStore } from "./auth.js";
 
 export const useClinicalStore = defineStore("clinical", {
   state: () => {
@@ -314,14 +315,25 @@ export const useClinicalStore = defineStore("clinical", {
       },
       formQueries: savedFormQueries || {},
       ledgerBlocks: savedLedgerBlocks || [],
-      // Keycloak mock user info
-      user: {
+      syncInterval: null,
+    };
+  },
+  getters: {
+    user: () => {
+      const authStore = useAuthStore();
+      if (authStore.isAuthenticated && !authStore.isDemoMode) {
+        return {
+          username: authStore.identity?.username || "unknown",
+          roles: authStore.normalizedRoles,
+          authenticated: true,
+        };
+      }
+      return {
         username: "fderuiter",
         roles: ["Monitor", "Sponsor Admin"],
         authenticated: true,
-      },
-      syncInterval: null,
-    };
+      };
+    },
   },
   actions: {
     async addLedgerBlock(action, details, reason = "System Action") {
@@ -401,8 +413,15 @@ export const useClinicalStore = defineStore("clinical", {
       );
 
       try {
-        const userId = "fderuiter";
-        const roles = "CRA,Data Manager"; // Grant sync role privilege map
+        const authStore = useAuthStore();
+        const userId =
+          authStore.isAuthenticated && !authStore.isDemoMode
+            ? authStore.identity?.username || "unknown"
+            : "fderuiter";
+        const roles =
+          authStore.isAuthenticated && !authStore.isDemoMode
+            ? authStore.rawRoles.join(",")
+            : "CRA,Data Manager"; // Grant sync role privilege map
         const timestamp = String(Date.now() / 1000);
         const secret = "internal-gateway-secret-12345"; // pragma: allowlist secret
 

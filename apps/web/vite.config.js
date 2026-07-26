@@ -14,6 +14,10 @@ export default defineConfig({
       ui: path.resolve(__dirname, "../../packages/ui/index.js"),
     },
   },
+  server: {
+    port: 3000,
+    strictPort: true,
+  },
   build: {
     outDir: "dist",
     emptyOutDir: true,

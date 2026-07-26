@@ -1,5 +1,8 @@
 <template>
-  <div id="section-mdr" class="dashboard-section active">
+  <div
+    id="section-mdr"
+    class="dashboard-section active"
+  >
     <div class="section-header">
       <h2>MDR / Protocol Visualizer</h2>
       <p>
@@ -50,8 +53,13 @@
 
       <!-- Schedule of Activities table -->
       <div class="card">
-        <div class="card-title">Schedule of Activities (SoA) Matrix</div>
-        <div id="soa-matrix-container" v-html="matrixHtml" />
+        <div class="card-title">
+          Schedule of Activities (SoA) Matrix
+        </div>
+        <div
+          id="soa-matrix-container"
+          v-html="matrixHtml"
+        />
       </div>
     </div>
   </div>
