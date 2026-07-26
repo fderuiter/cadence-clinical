@@ -117,10 +117,19 @@ export function renderFormFromJSON(jsonPayload) {
  * @param {string|number} val - The input value to validate.
  * @returns {Object} An object `{ valid: boolean, message?: string }`.
  */
-export function validateField(fieldMeta, val) {
-  if (!fieldMeta || !fieldMeta.validation) return { valid: true };
+import {
+  evaluateAST,
+  compilerCache,
+  getCompiledExpression,
+  debounce,
+} from "./src/evaluator.js";
 
-  const rules = fieldMeta.validation;
+export { evaluateAST, compilerCache, getCompiledExpression, debounce };
+
+export function validateField(fieldMeta, val, context = {}) {
+  if (!fieldMeta) return { valid: true };
+
+  const rules = fieldMeta.validation || {};
 
   // Required check
   if (
@@ -158,6 +167,21 @@ export function validateField(fieldMeta, val) {
           message: rules.message || `Maximum value is ${rules.max}.`,
         };
       }
+    }
+  }
+
+  // Constraint validation (must evaluate to true/truthy, otherwise invalid)
+  if (fieldMeta.constraint) {
+    const isOk = evaluateAST(
+      fieldMeta.constraint.condition || fieldMeta.constraint,
+      context
+    );
+    if (isOk === false) {
+      return {
+        valid: false,
+        message:
+          fieldMeta.constraint.query_message || "Constraint validation failed.",
+      };
     }
   }
 
