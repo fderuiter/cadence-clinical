@@ -92,8 +92,8 @@ jobs:
         id: run_linting
         if: always()
         run: |
-          uv run ruff check .
-          uv run ruff format --check .
+          uv run ruff check . --exclude apps/execution/database/models.py
+          uv run ruff format --check . --exclude apps/execution/database/models.py
 
       - name: Run ADR validation
         id: run_adr

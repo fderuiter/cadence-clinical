@@ -409,3 +409,201 @@ async def test_auth_and_malformed_requests():
             headers=get_auth_headers(sponsor_id="spon_pharma"),
         )
         assert res_malformed.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_instantiate_library_object_success():
+    """
+    Verifies that a study can successfully instantiate a specific (or latest)
+    Global Library object version as a distinct, study-scoped copy linked to its source.
+    Also ensures the source object remains unmodified.
+    """
+    from apps.designer.db import MOCK_LIBRARY_OBJECTS, MOCK_STUDIES
+
+    MOCK_STUDIES["study_pharma"] = {
+        "study_id": "study_pharma",
+        "title": "Pharma Oncology Phase I",
+        "sponsor_id": "spon_pharma",
+    }
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        headers = get_auth_headers(sponsor_id="spon_pharma")
+
+        # 1. Create original version 1 of a FORM object
+        form_payload = {
+            "id": "lib_form_bp",
+            "version": "1.0.0",
+            "status": "APPROVED",
+            "sponsor_id": "spon_pharma",
+            "change_reason": "Create blood pressure form template version 1",
+            "object_type": "FORM",
+            "payload": {
+                "items": [
+                    {
+                        "item_id": "item_sbp",
+                        "name": "VSSBP",
+                        "question_text": "Systolic BP",
+                        "data_type": "integer",
+                        "required": True,
+                    }
+                ]
+            },
+        }
+
+        res_v1 = await client.post(
+            "/api/v1/mdr/library",
+            json=form_payload,
+            headers=headers,
+        )
+        assert res_v1.status_code == 201
+
+        # 2. Update to version 2 (with additional field)
+        update_payload = {
+            "object_type": "FORM",
+            "reason_for_change": "Adding diastolic BP field",
+            "payload": {
+                "items": [
+                    {
+                        "item_id": "item_sbp",
+                        "name": "VSSBP",
+                        "question_text": "Systolic BP",
+                        "data_type": "integer",
+                        "required": True,
+                    },
+                    {
+                        "item_id": "item_dbp",
+                        "name": "VSDBP",
+                        "question_text": "Diastolic BP",
+                        "data_type": "integer",
+                        "required": True,
+                    },
+                ]
+            },
+        }
+
+        res_v2 = await client.put(
+            "/api/v1/mdr/library/lib_form_bp",
+            json=update_payload,
+            headers=headers,
+        )
+        assert res_v2.status_code == 200
+
+        # 3. Instantiate specific version 1 of the library object
+        inst_payload_v1 = {"library_object_id": "lib_form_bp", "version": 1}
+        res_inst_v1 = await client.post(
+            "/api/v1/studies/study_pharma/library-instances",
+            json=inst_payload_v1,
+            headers=headers,
+        )
+        assert res_inst_v1.status_code == 201
+        inst_data_v1 = res_inst_v1.json()
+        assert inst_data_v1["study_id"] == "study_pharma"
+        assert inst_data_v1["object_type"] == "FORM"
+        assert len(inst_data_v1["payload"]["items"]) == 1
+        assert inst_data_v1["instantiated_from"]["library_object_id"] == "lib_form_bp"
+        assert inst_data_v1["instantiated_from"]["version"] == 1
+
+        # 4. Instantiate latest (version 2) of the library object (leaving version field empty)
+        inst_payload_latest = {"library_object_id": "lib_form_bp"}
+        res_inst_latest = await client.post(
+            "/api/v1/studies/study_pharma/library-instances",
+            json=inst_payload_latest,
+            headers=headers,
+        )
+        assert res_inst_latest.status_code == 201
+        inst_data_latest = res_inst_latest.json()
+        assert len(inst_data_latest["payload"]["items"]) == 2
+        assert inst_data_latest["instantiated_from"]["version"] == 2
+
+        # 5. Verify the source library object in MOCK_LIBRARY_OBJECTS remains completely unmodified
+        assert len(MOCK_LIBRARY_OBJECTS["lib_form_bp"]) == 2
+        assert MOCK_LIBRARY_OBJECTS["lib_form_bp"][0]["version"] == 1
+        assert MOCK_LIBRARY_OBJECTS["lib_form_bp"][1]["version"] == 2
+
+
+@pytest.mark.asyncio
+async def test_instantiate_library_object_cross_sponsor_rejected():
+    """
+    Verifies that instantiation requests where the library object belongs to a different sponsor are rejected.
+    """
+    from apps.designer.db import MOCK_STUDIES
+
+    # Setup target study for sponsor "spon_active"
+    MOCK_STUDIES["study_active"] = {
+        "study_id": "study_active",
+        "title": "Active Oncology Trial",
+        "sponsor_id": "spon_active",
+    }
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # Create a library object belonging to "spon_other"
+        other_headers = get_auth_headers(sponsor_id="spon_other")
+        form_payload = {
+            "id": "lib_form_other",
+            "version": "1.0.0",
+            "status": "APPROVED",
+            "sponsor_id": "spon_other",
+            "change_reason": "Create other blood pressure form template",
+            "object_type": "FORM",
+            "payload": {"items": []},
+        }
+        res_create = await client.post(
+            "/api/v1/mdr/library",
+            json=form_payload,
+            headers=other_headers,
+        )
+        assert res_create.status_code == 201
+
+        # Attempt to instantiate "spon_other"'s library object into "study_active" using "spon_active"'s credentials
+        active_headers = get_auth_headers(sponsor_id="spon_active")
+        inst_payload = {"library_object_id": "lib_form_other"}
+        res_inst = await client.post(
+            "/api/v1/studies/study_active/library-instances",
+            json=inst_payload,
+            headers=active_headers,
+        )
+        # Should be rejected with 403 Forbidden because library object belongs to a different sponsor
+        assert res_inst.status_code == 403
+        assert "Cross-sponsor instantiation" in res_inst.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_instantiate_library_object_inaccessible_study():
+    """
+    Verifies that instantiation requests targeting an inaccessible (cross-sponsor) study are rejected.
+    """
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # Create a library object belonging to "spon_pharma"
+        pharma_headers = get_auth_headers(sponsor_id="spon_pharma")
+        form_payload = {
+            "id": "lib_form_pharma",
+            "version": "1.0.0",
+            "status": "APPROVED",
+            "sponsor_id": "spon_pharma",
+            "change_reason": "Pharma template",
+            "object_type": "FORM",
+            "payload": {"items": []},
+        }
+        res_create = await client.post(
+            "/api/v1/mdr/library",
+            json=form_payload,
+            headers=pharma_headers,
+        )
+        assert res_create.status_code == 201
+
+        # Attempt to instantiate "spon_pharma"'s library object into "study_active" (owned by "spon_active") using "spon_pharma"'s credentials
+        inst_payload = {"library_object_id": "lib_form_pharma"}
+        res_inst = await client.post(
+            "/api/v1/studies/study_active/library-instances",
+            json=inst_payload,
+            headers=pharma_headers,
+        )
+        # Should be rejected with 403 Forbidden because study belongs to spon_active, which is inaccessible to spon_pharma
+        assert res_inst.status_code == 403
+        assert "Target study is inaccessible" in res_inst.json()["detail"]

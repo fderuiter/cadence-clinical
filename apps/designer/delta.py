@@ -2979,3 +2979,182 @@ async def compute_graph_diff(
             )
 
     return diff_results
+
+
+# --- Library Object Instantiation Support ---
+MOCK_LIBRARY_INSTANCES: Dict[str, List[Dict[str, Any]]] = {}
+
+
+async def check_library_object_exists_any_sponsor(
+    driver, object_id: str, version: Optional[int] = None
+) -> Optional[Dict[str, Any]]:
+    """
+    Looks up a library object across all sponsors to verify its existence
+    and retrieve its metadata (including sponsor_id).
+    """
+    if driver is None:
+        from apps.designer.db import MOCK_LIBRARY_OBJECTS
+
+        versions = MOCK_LIBRARY_OBJECTS.get(object_id, [])
+        if not versions:
+            return None
+        if version is not None:
+            matching = [v for v in versions if int(v.get("version", 0)) == version]
+            return deserialize_library_props(matching[0]) if matching else None
+        return deserialize_library_props(versions[-1])
+
+    if version is not None:
+        query = """
+        MATCH (n:LibraryObject {id: $object_id, version: $version})
+        RETURN properties(n) as props
+        """
+        async with driver.session() as session:
+            res = await session.run(query, object_id=object_id, version=version)
+            record = await res.single()
+            return deserialize_library_props(record["props"]) if record else None
+    else:
+        query = """
+        MATCH (n:LibraryObject {id: $object_id})
+        WHERE NOT (n)<-[:PREVIOUS_VERSION]-()
+        RETURN properties(n) as props
+        """
+        async with driver.session() as session:
+            res = await session.run(query, object_id=object_id)
+            record = await res.single()
+            return deserialize_library_props(record["props"]) if record else None
+
+
+async def check_study_exists_any_sponsor(
+    driver, study_id: str
+) -> Optional[Dict[str, Any]]:
+    """
+    Looks up a Study across all sponsors to verify existence and check sponsor ownership.
+    """
+    if driver is None:
+        from apps.designer.db import MOCK_STUDIES
+
+        return MOCK_STUDIES.get(study_id)
+
+    query = """
+    MATCH (s:Study {id: $study_id})
+    RETURN properties(s) as props
+    """
+    async with driver.session() as session:
+        res = await session.run(query, study_id=study_id)
+        record = await res.single()
+        return dict(record["props"]) if record else None
+
+
+@with_transaction_retry()
+async def instantiate_library_object_in_study(
+    driver,
+    study_id: str,
+    library_object_id: str,
+    version: Optional[int],
+    sponsor_id: str,
+    user_id: str,
+) -> Dict[str, Any]:
+    """
+    Clones a selected library object/version into a study as a distinct study-scoped object.
+    Records an INSTANTIATED_FROM relationship containing source linkage for traceability.
+    """
+    import copy
+
+    # 1. Fetch library object across all sponsors first
+    library_object = await check_library_object_exists_any_sponsor(
+        driver, library_object_id, version
+    )
+    if not library_object:
+        raise ValueError(f"Library object {library_object_id} not found.")
+
+    if library_object.get("sponsor_id") != sponsor_id:
+        raise PermissionError("Cross-sponsor instantiation is prohibited.")
+
+    # 2. Fetch target study across all sponsors
+    study = await check_study_exists_any_sponsor(driver, study_id)
+    if not study:
+        raise ValueError(f"Study {study_id} not found.")
+
+    study_sponsor_id = study.get("sponsor_id")
+    if study_sponsor_id and study_sponsor_id != sponsor_id:
+        raise PermissionError("Target study is inaccessible (cross-sponsor).")
+
+    instance_id = f"inst_{uuid.uuid4().hex[:12]}"
+
+    if driver is None:
+        if study_id not in MOCK_LIBRARY_INSTANCES:
+            MOCK_LIBRARY_INSTANCES[study_id] = []
+
+        instance = {
+            "id": instance_id,
+            "study_id": study_id,
+            "object_type": library_object["object_type"],
+            "payload": copy.deepcopy(library_object.get("payload")),
+            "created_at": dt.datetime.now().isoformat(),
+            "created_by": user_id,
+            "instantiated_from": {
+                "library_object_id": library_object["id"],
+                "version": library_object.get("version"),
+                "sponsor_id": library_object.get("sponsor_id"),
+            },
+        }
+        MOCK_LIBRARY_INSTANCES[study_id].append(instance)
+        return instance
+
+    # Neo4j implementation
+    import json
+
+    async with driver.session() as session:
+        tx = await session.begin_transaction()
+        async with tx:
+            query = """
+            MATCH (s:Study {id: $study_id})
+            MATCH (lo:LibraryObject {id: $library_object_id, version: $version})
+            CREATE (instance:LibraryObjectInstance {
+                id: $instance_id,
+                study_id: $study_id,
+                object_type: lo.object_type,
+                payload_json: lo.payload_json,
+                created_at: datetime(),
+                created_by: $user_id
+            })
+            CREATE (s)-[:HAS_LIBRARY_INSTANCE]->(instance)
+            CREATE (instance)-[:INSTANTIATED_FROM {
+                library_object_id: lo.id,
+                version: lo.version,
+                sponsor_id: lo.sponsor_id,
+                timestamp: datetime()
+            }]->(lo)
+            RETURN properties(instance) as instance_props, properties(lo) as source_props
+            """
+            res = await tx.run(
+                query,
+                study_id=study_id,
+                library_object_id=library_object["id"],
+                version=library_object["version"],
+                instance_id=instance_id,
+                user_id=user_id,
+            )
+            record = await res.single()
+            if not record:
+                raise ValueError("Failed to instantiate library object in study.")
+
+            instance_props = dict(record["instance_props"])
+            source_props = dict(record["source_props"])
+
+            # Deserialization of payload
+            if "payload_json" in instance_props:
+                try:
+                    instance_props["payload"] = json.loads(
+                        instance_props["payload_json"]
+                    )
+                except Exception:
+                    instance_props["payload"] = {}
+                instance_props.pop("payload_json", None)
+
+            instance_props["instantiated_from"] = {
+                "library_object_id": source_props.get("id"),
+                "version": source_props.get("version"),
+                "sponsor_id": source_props.get("sponsor_id"),
+            }
+            return instance_props
