@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 795
-- **Passed:** 795 🟢
+- **Total Automated Test Cases Run:** 812
+- **Passed:** 812 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -47,73 +47,107 @@ asyncpg            0.31.0
 beautifulsoup4     4.15.0
 brotli             1.2.0
 cadence-clinical         0.1.0       /app
-certifi            2026.7.22
-cffi               2.1.0
-charset-normalizer 3.4.9
-click              8.4.2
-coverage           7.15.2
-cryptography       49.0.0
-cssselect2         0.9.0
-defusedxml         0.7.1
-ecdsa              0.19.2
-et-xmlfile         2.0.0
-fastapi            0.139.2
-fonttools          4.63.0
-greenlet           3.5.4
-h11                0.16.0
-httpcore           1.0.9
-httptools          0.8.0
-httpx              0.28.1
-idna               3.18
-iniconfig          2.3.0
-jinja2             3.1.6
-lxml               6.1.1
-markupsafe         3.0.3
-neo4j              6.2.0
-numpy              2.5.1
-openpyxl           3.1.5
-packaging          26.2
-pandas             3.0.3
-pillow             12.3.0
-pluggy             1.6.0
-pyasn1             0.6.4
-pycparser          3.0
-pydantic           2.13.4
-pydantic-core      2.46.4
-pydyf              0.12.1
-pygments           2.20.0
-pyphen             0.17.2
-pytest             9.1.1
-pytest-asyncio     1.4.0
-pytest-cov         7.1.0
-python-dateutil    2.9.0.post0
-python-docx        1.2.0
-python-dotenv      1.2.2
-python-jose        3.5.0
-python-multipart   0.0.32
-pytz               2026.2
-pyyaml             6.0.3
-rapidfuzz          3.14.5
-requests           2.34.2
-rsa                4.9.1
-six                1.17.0
-soupsieve          2.9.1
-sqlalchemy         2.0.51
-starlette          1.3.1
-tinycss2           1.5.1
-tinyhtml5          2.1.0
-typing-extensions  4.16.0
-typing-inspection  0.4.2
-urllib3            2.7.0
-usdm               0.67.0
-uvicorn            0.51.0
-uvloop             0.22.1
-watchfiles         1.2.0
-weasyprint         69.0
-webencodings       0.5.1
-websockets         16.1.1
-yattag             1.16.1
-zopfli             0.4.3
+certifi                 2026.7.22
+cffi                    2.1.0
+cfgv                    3.5.0
+charset-normalizer      3.4.9
+click                   8.4.2
+coverage                7.15.2
+cryptography            49.0.0
+cssselect2              0.9.0
+cyclonedx-python-lib    11.11.0
+defusedxml              0.7.1
+detect-secrets          1.5.0
+distlib                 0.4.3
+ecdsa                   0.19.2
+et-xmlfile              2.0.0
+fastapi                 0.139.2
+filelock                3.32.0
+fonttools               4.63.0
+greenlet                3.5.4
+h11                     0.16.0
+httpcore                1.0.9
+httptools               0.8.0
+httpx                   0.28.1
+identify                2.6.19
+idna                    3.18
+iniconfig               2.3.0
+jinja2                  3.1.6
+license-expression      30.4.4
+lxml                    6.1.1
+markdown-it-py          4.2.0
+markupsafe              3.0.3
+mdurl                   0.1.2
+msgpack                 1.2.1
+neo4j                   6.2.0
+nodeenv                 1.10.0
+numpy                   2.5.1
+openpyxl                3.1.5
+packageurl-python       0.17.6
+packaging               26.2
+pandas                  3.0.3
+pillow                  12.3.0
+pip                     26.1.2
+pip-api                 0.0.34
+pip-audit               2.10.1
+pip-requirements-parser 32.0.1
+platformdirs            4.11.0
+playwright              1.61.0
+pluggy                  1.6.0
+pre-commit              4.6.1
+py-serializable         2.1.0
+pyasn1                  0.6.4
+pycparser               3.0
+pydantic                2.13.4
+pydantic-core           2.46.4
+pydyf                   0.12.1
+pyee                    13.0.1
+pygments                2.20.0
+pyparsing               3.3.2
+pyphen                  0.17.2
+pytest                  9.1.1
+pytest-asyncio          1.4.0
+pytest-base-url         2.1.0
+pytest-cov              7.1.0
+pytest-playwright       0.8.0
+python-dateutil         2.9.0.post0
+python-discovery        1.5.0
+python-docx             1.2.0
+python-dotenv           1.2.2
+python-jose             3.5.0
+python-multipart        0.0.32
+python-slugify          8.0.4
+pytz                    2026.2
+pyyaml                  6.0.3
+rapidfuzz               3.14.5
+requests                2.34.2
+rich                    15.0.0
+rsa                     4.9.1
+ruff                    0.16.0
+six                     1.17.0
+sortedcontainers        2.4.0
+soupsieve               2.9.1
+sqlalchemy              2.0.51
+starlette               1.3.1
+stevedore               5.9.0
+text-unidecode          1.3
+tinycss2                1.5.1
+tinyhtml5               2.1.0
+tomli                   2.4.1
+tomli-w                 1.2.0
+typing-extensions       4.16.0
+typing-inspection       0.4.2
+urllib3                 2.7.0
+usdm                    0.67.0
+uvicorn                 0.51.0
+uvloop                  0.22.1
+virtualenv              21.7.0
+watchfiles              1.2.0
+weasyprint              69.0
+webencodings            0.5.1
+websockets              16.1.1
+yattag                  1.16.1
+zopfli                  0.4.3
 ```
 
 ## 3. Operational Qualification (OQ)
@@ -163,6 +197,12 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_soft_delete_generates_audit_log` | `tests.test_audit` | PRD-SYS-002 | 🟢 PASSED | < 1s |
 | `test_subject_notification_skips_clinical_auditing` | `tests.test_audit` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_update_generates_audit_log` | `tests.test_audit` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_batch_sign_off_happy_path_form` | `tests.test_batch_sign_off` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_batch_sign_off_locks_and_atomic_rollback` | `tests.test_batch_sign_off` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_batch_sign_off_pi_only` | `tests.test_batch_sign_off` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_batch_sign_off_subject_resolution` | `tests.test_batch_sign_off` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_batch_sign_off_token_replay` | `tests.test_batch_sign_off` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_batch_sign_off_visit_resolution` | `tests.test_batch_sign_off` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_dataset_json_integration_structure` | `tests.test_biostat` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_declarative_mappings_coverage` | `tests.test_biostat` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_extract_ae_sorting_ongoing_supp` | `tests.test_biostat` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -202,6 +242,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_query_state_transition_and_role_boundaries` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_rejection_and_cancellation_reason_requirements` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reopen_transitions` | `tests.test_clinical_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_check_dict_for_value` | `tests.test_concept_locks` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_concept_mutations_locked_active_recruiting` | `tests.test_concept_locks` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_concept_mutations_unreferenced` | `tests.test_concept_locks` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_is_concept_referenced_by_active_recruiting_study` | `tests.test_concept_locks` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_narrative_assembly_and_ref_resolution` | `tests.test_content_assembly` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_narrative_display_rule_duplicate_section_numbers` | `tests.test_content_assembly` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_narrative_display_rule_missing_section_number` | `tests.test_content_assembly` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -378,6 +422,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_qc_history_api_not_found` | `tests.test_etmf_qc` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_qc_transitions_missing_doc` | `tests.test_etmf_qc` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_role_based_access_controls_and_gates` | `tests.test_etmf_qc` | PRD-QC-003 | 🟢 PASSED | < 1s |
+| `test_automated_redaction_basic` | `tests.test_etmf_redaction` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_automated_redaction_errors` | `tests.test_etmf_redaction` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_automated_redaction_profile_scopes` | `tests.test_etmf_redaction` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_automated_redaction_trial_locked` | `tests.test_etmf_redaction` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_redaction_audit_trail_and_provenance` | `tests.test_etmf_redaction` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_redaction_authorization_gates` | `tests.test_etmf_redaction` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_completeness_signature_lifecycle_distinction` | `tests.test_etmf_signatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -448,6 +496,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_valid_visit_detail_validation` | `tests.test_global_library` | PRD-MDR-001 | 🟢 PASSED | < 1s |
 | `test_auth_and_malformed_requests` | `tests.test_global_library_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_create_and_retrieve_library_objects` | `tests.test_global_library_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_instantiate_library_object_cross_sponsor_rejected` | `tests.test_global_library_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_instantiate_library_object_inaccessible_study` | `tests.test_global_library_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_instantiate_library_object_success` | `tests.test_global_library_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_stripe_style_pagination_and_filtering` | `tests.test_global_library_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_update_and_history_versioning` | `tests.test_global_library_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_mock_flow_library_version_chain_and_immutability` | `tests.test_global_library_neo4j` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -691,6 +742,19 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_valid_meddra_coding` | `tests.test_sae_icsr` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_valid_sae_full_normalization` | `tests.test_sae_icsr` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_valid_sae_minimum` | `tests.test_sae_icsr` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_icsr_version_and_reason_for_change_rendering` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_invalid_namespace_fails` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_invalid_root_tag_fails` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_malformed_xml_validation_fails` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_drugs_or_drug_fields_fails` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_header_fails` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_header_fields_fail` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_patient_fails` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_patient_fields_fail` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_reactions_or_reaction_term_fails` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_safety_report_fails` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_worldwide_unique_case_id_fails` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_valid_icsr_rendering_and_validation` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ae_required_optional_and_date_order` | `tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_auditable_model_fields_and_validation` | `tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cm_required_optional_and_date_order` | `tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -749,13 +813,31 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_sha256_hashing_helper` | `tests.test_signature_manifestation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_context_propagation` | `tests.test_signature_manifestation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_manifestation_lifecycle` | `tests.test_signature_manifestation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_audit_reason_enforcement` | `tests.test_soa_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_concurrent_locking_conflict_exception_translation` | `tests.test_soa_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_invalid_signature_exception_translation` | `tests.test_soa_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_rule_soft_delete` | `tests.test_soa_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_soa_crud_lifecycle_endpoints` | `tests.test_soa_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_soa_immutability_guards` | `tests.test_soa_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_soa_immutability_guards_updates` | `tests.test_soa_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_soa_linking_and_matrix_projection` | `tests.test_soa_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_unauthorized_requests` | `tests.test_soa_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_validation_failures` | `tests.test_soa_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_with_mocked_neo4j_driver` | `tests.test_soa_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_assert_study_version_mutable` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_epoch_neo4j` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_form_neo4j` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_get_soa_matrix_projection_neo4j` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_links_neo4j` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_mock_soa_entity_lifecycle` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_mutability_guard_rejects_locked_versions` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_neo4j_driver_operations` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_procedure_neo4j` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_timing_window_neo4j` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_update_study_arm_neo4j` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_visit_neo4j` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_with_transaction_retry_failure_exceeded` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_with_transaction_retry_success_after_retries` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_protocol_amendment_concurrency_race` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_protocol_amendment_invalid_signature_rejected` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_protocol_amendment_invalid_study_404` | `tests.test_study_versions` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -795,6 +877,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_sync_ruleset_dry_run` | `tests.test_sync_ruleset` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_sync_ruleset_permission_denied_403` | `tests.test_sync_ruleset` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_sync_ruleset_update_existing` | `tests.test_sync_ruleset` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_events_captured_in_part_11_audit_history` | `tests.test_system_coding_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_manual_coding_resolution_associates_with_query_and_closes_it` | `tests.test_system_coding_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_resolving_query_reverts_assignment_to_uncoded` | `tests.test_system_coding_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_uncodable_term_creates_query_pending_and_actionable_query` | `tests.test_system_coding_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_uncodable_term_query_creation_is_idempotent` | `tests.test_system_coding_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_terminology_cache_capacity_eviction` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_terminology_cache_hit_and_expiration` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_terminology_cache_thread_safety` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
