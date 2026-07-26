@@ -1,10 +1,11 @@
+import hashlib
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -47,6 +48,42 @@ class DocumentUpdate(BaseModel):
     reason_for_change: str = Field(
         ..., min_length=10, max_length=1000, description="Part 11 reason for change"
     )
+
+
+class EISFIngestionRequest(BaseModel):
+    study_id: str = Field(..., description="The clinical study ID")
+    site_id: str = Field(..., description="The clinical site ID")
+    binder_classification: Optional[str] = Field(
+        None, description="Binder classification"
+    )
+    artifact_type: Optional[str] = Field(
+        None,
+        description="Artifact classification metadata alias for binder_classification",
+    )
+    filename: str = Field(..., description="Document filename")
+    content: str = Field(..., description="Base64 or raw content")
+    mime_type: str = Field(..., description="MIME type")
+    metadata_json: Optional[Dict[str, Any]] = Field(None, description="Metadata JSON")
+    correlation_key: Optional[str] = Field(None, description="Correlation key")
+    content_checksum: Optional[str] = Field(None, description="Content checksum")
+    source_system: str = Field("eISF", description="Source system name")
+    reason_for_change: Optional[str] = Field(
+        None, min_length=10, max_length=1000, description="Part 11 reason for change"
+    )
+
+    @classmethod
+    @model_validator(mode="before")
+    def resolve_binder_class(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            bc = data.get("binder_classification")
+            at = data.get("artifact_type")
+            if not bc and not at:
+                raise ValueError(
+                    "Either binder_classification or artifact_type must be provided"
+                )
+            if not bc:
+                data["binder_classification"] = at
+        return data
 
 
 class DocumentResponse(BaseModel):
@@ -300,6 +337,26 @@ async def create_document(
     # Enforce site isolation
     await enforce_site_isolation(request, payload.site_id, session)
 
+    # Calculate deterministic content checksum
+    checksum = (
+        payload.content_checksum
+        or hashlib.sha256(payload.content.encode("utf-8")).hexdigest()
+    )
+
+    # Calculate version index
+    stmt = (
+        select(ISFDocument)
+        .where(
+            ISFDocument.study_id == payload.study_id,
+            ISFDocument.site_id == payload.site_id,
+            ISFDocument.binder_classification == payload.binder_classification,
+        )
+        .order_by(ISFDocument.version_index.desc())
+    )
+    res = await session.execute(stmt)
+    latest_doc = res.scalars().first()
+    new_version_index = (latest_doc.version_index + 1) if latest_doc else 1
+
     doc = ISFDocument(
         study_id=payload.study_id,
         site_id=payload.site_id,
@@ -307,11 +364,11 @@ async def create_document(
         filename=payload.filename,
         content=payload.content,
         mime_type=payload.mime_type,
-        version_index=1,
+        version_index=new_version_index,
         created_by=user_id,
         metadata_json=payload.metadata_json,
         correlation_key=payload.correlation_key,
-        content_checksum=payload.content_checksum,
+        content_checksum=checksum,
         source_system=payload.source_system,
         sync_status="PENDING",
     )
@@ -325,8 +382,102 @@ async def create_document(
         actor_role=",".join(roles) if isinstance(roles, list) else str(roles),
         action="CREATE_DOCUMENT",
         document_id=doc.id,
-        details=f"Created document '{payload.filename}' for study '{payload.study_id}' and site '{payload.site_id}'.",
+        details=f"Created document '{payload.filename}' for study '{payload.study_id}' and site '{payload.site_id}' (Version {new_version_index}).",
         reason_for_change=payload.reason_for_change,
+    )
+
+    return doc
+
+
+@app.post(
+    "/events/publish",
+    response_model=DocumentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+@app.post(
+    "/api/v1/eisf/ingest",
+    response_model=DocumentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def ingest_document(
+    request: Request,
+    payload: EISFIngestionRequest,
+    _not_auditor=Depends(verify_not_auditor),
+    session: AsyncSession = Depends(get_db_session),
+):
+    user_id = getattr(request.state, "user_id", "system")
+    roles = get_normalized_roles(request)
+
+    # Enforce site isolation
+    await enforce_site_isolation(request, payload.site_id, session)
+
+    # Determine reason for change
+    change_reason = (
+        payload.reason_for_change
+        or getattr(request.state, "change_reason", None)
+        or request.headers.get("x-change-reason")
+        or request.headers.get("X-Change-Reason")
+    )
+    if not change_reason or len(change_reason.strip()) < 10:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Part 11 change justification reason is required and must be at least 10 characters long.",
+        )
+
+    # Calculate deterministic content checksum
+    checksum = (
+        payload.content_checksum
+        or hashlib.sha256(payload.content.encode("utf-8")).hexdigest()
+    )
+
+    # Calculate version index
+    binder_class = payload.binder_classification or payload.artifact_type
+    if not binder_class:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="binder_classification or artifact_type is required",
+        )
+
+    stmt = (
+        select(ISFDocument)
+        .where(
+            ISFDocument.study_id == payload.study_id,
+            ISFDocument.site_id == payload.site_id,
+            ISFDocument.binder_classification == binder_class,
+        )
+        .order_by(ISFDocument.version_index.desc())
+    )
+    res = await session.execute(stmt)
+    latest_doc = res.scalars().first()
+    new_version_index = (latest_doc.version_index + 1) if latest_doc else 1
+
+    doc = ISFDocument(
+        study_id=payload.study_id,
+        site_id=payload.site_id,
+        binder_classification=binder_class,
+        filename=payload.filename,
+        content=payload.content,
+        mime_type=payload.mime_type,
+        version_index=new_version_index,
+        created_by=user_id,
+        metadata_json=payload.metadata_json,
+        correlation_key=payload.correlation_key,
+        content_checksum=checksum,
+        source_system=payload.source_system,
+        sync_status="PENDING",
+    )
+    session.add(doc)
+    await session.flush()
+
+    # Log ingestion to audit trail (action should be INGEST)
+    await write_audit_log(
+        session=session,
+        actor_id=user_id,
+        actor_role=",".join(roles) if isinstance(roles, list) else str(roles),
+        action="INGEST",
+        document_id=doc.id,
+        details=f"Ingested document '{payload.filename}' for study '{payload.study_id}' and site '{payload.site_id}' (Version {new_version_index}).",
+        reason_for_change=change_reason,
     )
 
     return doc
@@ -402,7 +553,10 @@ async def update_document(
     doc.mime_type = payload.mime_type
     doc.metadata_json = payload.metadata_json
     doc.correlation_key = payload.correlation_key
-    doc.content_checksum = payload.content_checksum
+    doc.content_checksum = (
+        payload.content_checksum
+        or hashlib.sha256(payload.content.encode("utf-8")).hexdigest()
+    )
     doc.source_system = payload.source_system
     doc.version_index += 1
 

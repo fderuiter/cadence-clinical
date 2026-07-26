@@ -394,6 +394,34 @@ async def test_epro_submission_and_conflict_resolution():
     Verify ePRO submissions, device timestamp preservation, and offline sync conflict
     strategies (CLIENT_WINS, SERVER_WINS, MERGE).
     """
+    # Set up Instrument and Assignment to prevent structural conflicts
+    async_session = db_manager.get_session_maker()
+    async with async_session() as session:
+        inst = Instrument(
+            id="daily_pain_scale",
+            name="Daily Pain Scale",
+            items={},
+            response_types={},
+            scoring_metadata={},
+            created_by="admin",
+            reason_for_change="Initial setup",
+            version_index=1,
+        )
+        session.add(inst)
+
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        assign = SubjectAssignment(
+            subject_id="subj_abc",
+            instrument_id="daily_pain_scale",
+            start_date=now - timedelta(days=1),
+            end_date=now + timedelta(days=1),
+            created_by="admin",
+            reason_for_change="Assign daily pain scale",
+            version_index=1,
+        )
+        session.add(assign)
+        await session.commit()
+
     client = TestClient(app)
     headers = get_auth_headers(roles="patient_user", change_reason="Submit ePRO diary")
 
@@ -488,6 +516,44 @@ async def test_bulk_offline_sync():
     """
     Test bulk mobile sync endpoint with offline queue reconciliation.
     """
+    # Set up Instrument and Assignment to prevent structural conflicts
+    async_session = db_manager.get_session_maker()
+    async with async_session() as session:
+        inst = Instrument(
+            id="q_pain",
+            name="Pain Questionnaire",
+            items={},
+            response_types={},
+            scoring_metadata={},
+            created_by="admin",
+            reason_for_change="Initial setup",
+            version_index=1,
+        )
+        session.add(inst)
+
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        assign1 = SubjectAssignment(
+            subject_id="subj_1",
+            instrument_id="q_pain",
+            start_date=now - timedelta(days=1),
+            end_date=now + timedelta(days=1),
+            created_by="admin",
+            reason_for_change="Assign daily pain scale 1",
+            version_index=1,
+        )
+        assign2 = SubjectAssignment(
+            subject_id="subj_2",
+            instrument_id="q_pain",
+            start_date=now - timedelta(days=1),
+            end_date=now + timedelta(days=1),
+            created_by="admin",
+            reason_for_change="Assign daily pain scale 2",
+            version_index=1,
+        )
+        session.add(assign1)
+        session.add(assign2)
+        await session.commit()
+
     client = TestClient(app)
     headers = get_auth_headers(roles="patient_user", change_reason="Bulk offline sync")
 
@@ -559,6 +625,44 @@ async def test_subject_role_authorization_and_identity_binding():
     - An authenticated Subject cannot access staff-only endpoints like FHIR prefill (returns 403).
     - Staff members can submit/sync for any subject without restriction.
     """
+    # Set up Instrument and Assignment to prevent structural conflicts
+    async_session = db_manager.get_session_maker()
+    async with async_session() as session:
+        inst = Instrument(
+            id="daily_pain_scale",
+            name="Daily Pain Scale",
+            items={},
+            response_types={},
+            scoring_metadata={},
+            created_by="admin",
+            reason_for_change="Initial setup",
+            version_index=1,
+        )
+        session.add(inst)
+
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        assign1 = SubjectAssignment(
+            subject_id="patient_alice",
+            instrument_id="daily_pain_scale",
+            start_date=now - timedelta(days=1),
+            end_date=now + timedelta(days=1),
+            created_by="admin",
+            reason_for_change="Assign daily pain scale 1",
+            version_index=1,
+        )
+        assign2 = SubjectAssignment(
+            subject_id="patient_bob",
+            instrument_id="daily_pain_scale",
+            start_date=now - timedelta(days=1),
+            end_date=now + timedelta(days=1),
+            created_by="admin",
+            reason_for_change="Assign daily pain scale 2",
+            version_index=1,
+        )
+        session.add(assign1)
+        session.add(assign2)
+        await session.commit()
+
     client = TestClient(app)
 
     # Case 1: Subject submitting their own record -> 201 Created
