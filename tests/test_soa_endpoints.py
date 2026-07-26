@@ -64,10 +64,13 @@ def register_valid_mock_study_version(study_id, version_id, status="DRAFT"):
 
 @pytest.fixture(autouse=True)
 def clean_mock_data():
-    """Clears MOCK_SOA_DATA, MOCK_STUDY_VERSIONS, and MOCK_STUDIES before each test to ensure test isolation."""
+    """Clears MOCK_SOA_DATA, MOCK_STUDY_VERSIONS, and custom keys in MOCK_STUDIES before each test to ensure test isolation."""
     MOCK_SOA_DATA.clear()
     MOCK_STUDY_VERSIONS.clear()
-    MOCK_STUDIES.clear()
+    # Preserves the core template study "study_1" required by other test suites
+    custom_keys = [k for k in MOCK_STUDIES if k != "study_1"]
+    for k in custom_keys:
+        del MOCK_STUDIES[k]
 
 
 @pytest.mark.asyncio
