@@ -564,7 +564,7 @@ async def create_observation(
                     status = CodingState.SUGGESTED
                     suggestions = match_res.get("suggestions")
                 elif match_status == "UNCODABLE":
-                    status = CodingState.UNCODED
+                    status = CodingState.QUERY_PENDING
 
                 assignment = ClinicalCodingAssignment(
                     verbatim_text=verbatim.strip(),
@@ -583,6 +583,43 @@ async def create_observation(
                     assigned_at=datetime.utcnow(),
                 )
                 session.add(assignment)
+
+                if status == CodingState.QUERY_PENDING:
+                    # Check if an unresolved query already exists on this coordinate to ensure idempotency
+                    stmt_q_exist = select(ClinicalQuery).where(
+                        ClinicalQuery.study_id == study_id,
+                        ClinicalQuery.subject_id == payload.subject_id,
+                        ClinicalQuery.visit_id == payload.visit_id,
+                        ClinicalQuery.domain == payload.domain,
+                        ClinicalQuery.test_code == payload.test_code,
+                        ClinicalQuery.status.in_(
+                            ["CANDIDATE", "OPEN", "ANSWERED", "REOPENED"]
+                        ),
+                        ClinicalQuery.is_deleted.is_(False),
+                    )
+                    res_q_exist = await session.execute(stmt_q_exist)
+                    existing_q = res_q_exist.scalars().first()
+
+                    if not existing_q:
+                        q_explanation = f"The verbatim term '{verbatim.strip()}' in field {payload.test_code} is uncodable. Please split into individual events or clarify spelling."
+                        query = ClinicalQuery(
+                            study_id=study_id,
+                            subject_id=payload.subject_id,
+                            visit_id=payload.visit_id,
+                            domain=payload.domain,
+                            test_code=payload.test_code,
+                            status="OPEN",
+                            explanation=q_explanation,
+                            message=q_explanation,
+                            observation_id=obs.id,
+                            origin="SYSTEM_CODING",
+                            query_type="SYSTEM_CODING",
+                            form_id=f"{payload.domain.upper()}_FORM",
+                            field_id=payload.test_code,
+                            action_required="RE-ENTER_VERBATIM",
+                            created_by="system",
+                        )
+                        session.add(query)
 
                 if status == CodingState.AUTO_CODED:
                     ledger = ClinicalCodingLedger(
@@ -1946,6 +1983,11 @@ class ClinicalQueryResponse(BaseModel):
     cancellation_reason: Optional[str] = None
     escalated_at: Optional[datetime] = None
 
+    form_id: Optional[str] = None
+    field_id: Optional[str] = None
+    query_type: Optional[str] = None
+    action_required: Optional[str] = None
+
 
 class QueryCreate(BaseModel):
     """Pydantic schema for raising a new query."""
@@ -1965,6 +2007,11 @@ class QueryCreate(BaseModel):
     priority: Optional[str] = None
     rule_id: Optional[str] = None
     created_by: Optional[str] = None
+
+    form_id: Optional[str] = None
+    field_id: Optional[str] = None
+    query_type: Optional[str] = None
+    action_required: Optional[str] = None
 
 
 class QueryReopen(BaseModel):
@@ -2005,6 +2052,11 @@ class QueryUpdate(BaseModel):
     resolved_at: Optional[datetime] = None
     cancellation_reason: Optional[str] = None
     escalated_at: Optional[datetime] = None
+
+    form_id: Optional[str] = None
+    field_id: Optional[str] = None
+    query_type: Optional[str] = None
+    action_required: Optional[str] = None
 
 
 class SyncBlockQuery(BaseModel):
@@ -2247,6 +2299,10 @@ async def list_queries(
                     resolved_at=q.resolved_at,
                     cancellation_reason=q.cancellation_reason,
                     escalated_at=q.escalated_at,
+                    form_id=q.form_id,
+                    field_id=q.field_id,
+                    query_type=q.query_type,
+                    action_required=q.action_required,
                 )
             )
         return responses
@@ -2297,6 +2353,10 @@ async def get_query(query_id: str) -> ClinicalQueryResponse:
             resolved_at=q.resolved_at,
             cancellation_reason=q.cancellation_reason,
             escalated_at=q.escalated_at,
+            form_id=q.form_id,
+            field_id=q.field_id,
+            query_type=q.query_type,
+            action_required=q.action_required,
         )
 
 
@@ -2361,6 +2421,10 @@ async def open_query(
             priority=payload.priority,
             rule_id=payload.rule_id,
             created_by=payload.created_by or current_user_id.get(),
+            form_id=payload.form_id,
+            field_id=payload.field_id,
+            query_type=payload.query_type,
+            action_required=payload.action_required,
         )
         session.add(q)
         await session.commit()
@@ -2396,6 +2460,10 @@ async def open_query(
             resolved_at=q_db.resolved_at,
             cancellation_reason=q_db.cancellation_reason,
             escalated_at=q_db.escalated_at,
+            form_id=q_db.form_id,
+            field_id=q_db.field_id,
+            query_type=q_db.query_type,
+            action_required=q_db.action_required,
         )
 
 
@@ -3105,7 +3173,28 @@ async def respond_query(
             resolved_at=q_db.resolved_at,
             cancellation_reason=q_db.cancellation_reason,
             escalated_at=q_db.escalated_at,
+            form_id=q_db.form_id,
+            field_id=q_db.field_id,
+            query_type=q_db.query_type,
+            action_required=q_db.action_required,
         )
+
+
+async def _revert_coding_assignment_if_system_query_resolved(
+    session, q: ClinicalQuery
+) -> None:
+    """Helper to revert a QUERY_PENDING coding assignment back to UNCODED when its system query is closed/cancelled."""
+    if q.origin == "SYSTEM_CODING":
+        stmt_assign = select(ClinicalCodingAssignment).where(
+            ClinicalCodingAssignment.observation_id == q.observation_id,
+            ClinicalCodingAssignment.status == CodingState.QUERY_PENDING,
+            ClinicalCodingAssignment.is_deleted.is_(False),
+        )
+        res_assign = await session.execute(stmt_assign)
+        assignment = res_assign.scalars().first()
+        if assignment:
+            assignment.status = CodingState.UNCODED
+            session.add(assignment)
 
 
 @app.post(
@@ -3145,6 +3234,7 @@ async def close_query(
         q.status = "CLOSED"
         q.resolver = current_user_id.get()
         q.resolved_at = datetime.now()
+        await _revert_coding_assignment_if_system_query_resolved(session, q)
         await session.commit()
 
         # Refresh
@@ -3178,6 +3268,10 @@ async def close_query(
             resolved_at=q_db.resolved_at,
             cancellation_reason=q_db.cancellation_reason,
             escalated_at=q_db.escalated_at,
+            form_id=q_db.form_id,
+            field_id=q_db.field_id,
+            query_type=q_db.query_type,
+            action_required=q_db.action_required,
         )
 
 
@@ -3267,6 +3361,10 @@ async def reopen_query(
             resolved_at=q_db.resolved_at,
             cancellation_reason=q_db.cancellation_reason,
             escalated_at=q_db.escalated_at,
+            form_id=q_db.form_id,
+            field_id=q_db.field_id,
+            query_type=q_db.query_type,
+            action_required=q_db.action_required,
         )
 
 
@@ -3315,6 +3413,7 @@ async def cancel_query(
         q.cancellation_reason = payload.reason
         q.resolver = current_user_id.get()
         q.resolved_at = datetime.now()
+        await _revert_coding_assignment_if_system_query_resolved(session, q)
         await session.commit()
 
         # Refresh
@@ -3348,6 +3447,10 @@ async def cancel_query(
             resolved_at=q_db.resolved_at,
             cancellation_reason=q_db.cancellation_reason,
             escalated_at=q_db.escalated_at,
+            form_id=q_db.form_id,
+            field_id=q_db.field_id,
+            query_type=q_db.query_type,
+            action_required=q_db.action_required,
         )
 
 
@@ -3459,6 +3562,15 @@ async def update_query_state(
         if payload.escalated_at is not None:
             q.escalated_at = payload.escalated_at
 
+        if payload.form_id is not None:
+            q.form_id = payload.form_id
+        if payload.field_id is not None:
+            q.field_id = payload.field_id
+        if payload.query_type is not None:
+            q.query_type = payload.query_type
+        if payload.action_required is not None:
+            q.action_required = payload.action_required
+
         if target_status == "CLOSED":
             q.resolver = current_user_id.get()
             q.resolved_at = datetime.now()
@@ -3476,6 +3588,9 @@ async def update_query_state(
                 q.cancellation_reason = payload.explanation
             q.resolver = current_user_id.get()
             q.resolved_at = datetime.now()
+
+        if target_status in ("CLOSED", "CANCELLED"):
+            await _revert_coding_assignment_if_system_query_resolved(session, q)
 
         await session.commit()
 
@@ -3510,6 +3625,10 @@ async def update_query_state(
             resolved_at=q_db.resolved_at,
             cancellation_reason=q_db.cancellation_reason,
             escalated_at=q_db.escalated_at,
+            form_id=q_db.form_id,
+            field_id=q_db.field_id,
+            query_type=q_db.query_type,
+            action_required=q_db.action_required,
         )
 
 
@@ -4212,6 +4331,22 @@ async def process_coding_action(
                 decision_at=datetime.utcnow(),
             )
             session.add(ledger)
+
+            # Close any open/active SYSTEM_CODING queries for this observation
+            stmt_active_q = select(ClinicalQuery).where(
+                ClinicalQuery.observation_id == assignment.observation_id,
+                ClinicalQuery.origin == "SYSTEM_CODING",
+                ClinicalQuery.status.in_(["CANDIDATE", "OPEN", "ANSWERED", "REOPENED"]),
+                ClinicalQuery.is_deleted.is_(False),
+            )
+            res_active_q = await session.execute(stmt_active_q)
+            active_queries = res_active_q.scalars().all()
+            for active_q in active_queries:
+                active_q.status = "CLOSED"
+                active_q.resolver = actor
+                active_q.resolved_at = datetime.utcnow()
+                active_q.response = f"Resolved via manual coding action: {action_upper} on code {coded_code}."
+                session.add(active_q)
 
         await session.commit()
 

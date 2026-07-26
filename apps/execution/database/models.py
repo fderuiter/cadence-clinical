@@ -363,6 +363,11 @@ class ClinicalQuery(AuditedModel):
     cancellation_reason: Mapped[str] = mapped_column(String(1000), nullable=True)
     escalated_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
+    form_id: Mapped[str] = mapped_column(String(255), nullable=True)
+    field_id: Mapped[str] = mapped_column(String(255), nullable=True)
+    query_type: Mapped[str] = mapped_column(String(255), nullable=True)
+    action_required: Mapped[str] = mapped_column(String(255), nullable=True)
+
 
 class SDVSignOff(AuditedModel):
     """Represents an aggregate sign-off record for SDV/TSDV verification.
@@ -933,6 +938,8 @@ class ResupplyEvent(AuditedModel):
     triggered_at: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), nullable=False
     )
+
+
 class BiostatExport(AuditedModel):
     """Tracks Dataset-JSON biostat export records."""
 

@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 790
-- **Passed:** 790 🟢
+- **Total Automated Test Cases Run:** 799
+- **Passed:** 799 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -126,7 +126,7 @@ rapidfuzz               3.14.5
 requests                2.34.2
 rich                    15.0.0
 rsa                     4.9.1
-ruff                    0.15.22
+ruff                    0.16.0
 six                     1.17.0
 sortedcontainers        2.4.0
 soupsieve               2.9.1
@@ -831,6 +831,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_sync_ruleset_dry_run` | `tests.test_sync_ruleset` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_sync_ruleset_permission_denied_403` | `tests.test_sync_ruleset` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_sync_ruleset_update_existing` | `tests.test_sync_ruleset` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_events_captured_in_part_11_audit_history` | `tests.test_system_coding_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_manual_coding_resolution_associates_with_query_and_closes_it` | `tests.test_system_coding_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_resolving_query_reverts_assignment_to_uncoded` | `tests.test_system_coding_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_uncodable_term_creates_query_pending_and_actionable_query` | `tests.test_system_coding_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_uncodable_term_query_creation_is_idempotent` | `tests.test_system_coding_queries` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_terminology_cache_capacity_eviction` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_terminology_cache_hit_and_expiration` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_terminology_cache_thread_safety` | `tests.test_terminology_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
