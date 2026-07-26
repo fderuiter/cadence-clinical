@@ -92,6 +92,7 @@ from packages.security import (
     verify_not_auditor,
 )
 from packages.security.middleware import GatewayAuthMiddleware
+from packages.security.signing import generate_canonical_signature
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
@@ -2809,6 +2810,31 @@ class FormSubmissionApprove(BaseModel):
     signing_reason: str
 
 
+class BatchSignOffRequest(BaseModel):
+    study_id: str
+    target_type: str  # "FORM", "VISIT", or "SUBJECT"
+    target_ids: List[str]
+    signing_reason: str
+
+    @model_validator(mode="after")
+    def validate_request(self) -> "BatchSignOffRequest":
+        tt = self.target_type.upper()
+        if tt not in ("FORM", "VISIT", "SUBJECT"):
+            raise ValueError("target_type must be one of: FORM, VISIT, SUBJECT")
+        if self.signing_reason not in VALID_SIGNING_REASONS:
+            raise ValueError(
+                f"Invalid signing reason. Must be one of: {sorted(list(VALID_SIGNING_REASONS))}"
+            )
+        return self
+
+
+class BatchSignOffResponse(BaseModel):
+    status: str
+    approved_submission_ids: List[str]
+    skipped_submission_ids: List[str]
+    skipped_targets: List[str]
+
+
 @app.post(
     "/api/v1/execution/form-submissions",
     response_model=FormSubmissionResponse,
@@ -2960,6 +2986,153 @@ async def approve_form_submission(
             is_deleted=sub_db.is_deleted,
             signature_manifest=sub_db.signature_manifest,
         )
+
+
+@app.post(
+    "/api/v1/execution/batch-sign-off",
+    response_model=BatchSignOffResponse,
+)
+async def post_batch_sign_off(
+    request: Request,
+    payload: BatchSignOffRequest,
+) -> BatchSignOffResponse:
+    """Perform a PI-only, atomic batch electronic-signature for form-, visit-, and subject-level sign-off."""
+    verify_change_justification(request)
+
+    user_roles = get_normalized_roles(request)
+    pi_roles = {
+        "pi",
+        "principal investigator",
+        "principal_investigator",
+        "investigator",
+        "site investigator",
+        "site_investigator",
+        "site-investigator",
+        "investigator_user",
+    }
+    if not any(r in pi_roles for r in user_roles):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Only a Principal Investigator (PI) can perform batch electronic sign-off.",
+        )
+
+    target_type_upper = payload.target_type.upper()
+
+    async with db_manager.get_session_maker()() as session:
+        if TrialLockManager.is_locked():
+            raise PermissionError(
+                "Trial is currently locked in a read-only state due to a security violation."
+            )
+
+        async with session.begin():
+            if target_type_upper == "FORM":
+                stmt = select(FormSubmission).where(
+                    FormSubmission.id.in_(payload.target_ids),
+                    FormSubmission.study_id == payload.study_id,
+                    FormSubmission.is_deleted.is_(False),
+                )
+            elif target_type_upper == "VISIT":
+                stmt = select(FormSubmission).where(
+                    FormSubmission.visit_id.in_(payload.target_ids),
+                    FormSubmission.study_id == payload.study_id,
+                    FormSubmission.is_deleted.is_(False),
+                )
+            elif target_type_upper == "SUBJECT":
+                stmt = select(FormSubmission).where(
+                    FormSubmission.subject_id.in_(payload.target_ids),
+                    FormSubmission.study_id == payload.study_id,
+                    FormSubmission.is_deleted.is_(False),
+                )
+            else:
+                raise HTTPException(status_code=400, detail="Invalid target type.")
+
+            res = await session.execute(stmt)
+            resolved_subs = list(res.scalars().all())
+
+            approved_submission_ids = []
+            skipped_submission_ids = []
+            targets_with_approvals = set()
+
+            secret = os.getenv(
+                "GATEWAY_SECRET", "internal-gateway-secret-12345"
+            ).encode()
+
+            for sub in resolved_subs:
+                sub_target_id = None
+                if target_type_upper == "FORM":
+                    sub_target_id = sub.id
+                elif target_type_upper == "VISIT":
+                    sub_target_id = sub.visit_id
+                elif target_type_upper == "SUBJECT":
+                    sub_target_id = sub.subject_id
+
+                if sub.status == "COMPLETED":
+                    if sub.site_id and TrialLockManager.is_site_locked(sub.site_id):
+                        raise PermissionError(
+                            f"Site {sub.site_id} is currently locked in a read-only state."
+                        )
+                    if sub.visit_id and TrialLockManager.is_visit_locked(sub.visit_id):
+                        raise PermissionError(
+                            f"Visit {sub.visit_id} is currently locked in a read-only state."
+                        )
+                    if sub.subject_id and TrialLockManager.is_subject_locked(
+                        sub.subject_id
+                    ):
+                        raise PermissionError(
+                            f"Subject {sub.subject_id} is currently locked in a read-only state."
+                        )
+                    if sub.form_id and TrialLockManager.is_form_locked(sub.form_id):
+                        raise PermissionError(
+                            f"Form {sub.form_id} is currently locked in a read-only state."
+                        )
+
+                    if sub_target_id:
+                        targets_with_approvals.add(sub_target_id)
+
+                    form_payload = {
+                        "study_id": sub.study_id,
+                        "site_id": sub.site_id,
+                        "subject_id": sub.subject_id,
+                        "visit_id": sub.visit_id,
+                        "form_id": sub.form_id,
+                    }
+                    binding_payload = {
+                        "form_payload": form_payload,
+                        "pre_approval_version": sub.version,
+                    }
+                    canonical_hash = generate_canonical_signature(
+                        binding_payload, secret
+                    )
+
+                    manifest = {
+                        "signer_id": request.state.user_id,
+                        "timestamp": datetime.utcnow().isoformat() + "Z",
+                        "signing_reason": payload.signing_reason,
+                        "ip_address": request.headers.get("x-forwarded-for")
+                        or (request.client.host if request.client else "127.0.0.1"),
+                        "user_agent": request.headers.get("user-agent") or "Unknown",
+                        "signed_version": sub.version + 1,
+                        "canonical_signature_hash": canonical_hash,
+                    }
+
+                    sub.status = "APPROVED"
+                    sub.signature_manifest = manifest
+                    session.add(sub)
+                    approved_submission_ids.append(sub.id)
+                else:
+                    skipped_submission_ids.append(sub.id)
+
+            skipped_targets = []
+            for tid in payload.target_ids:
+                if tid not in targets_with_approvals:
+                    skipped_targets.append(tid)
+
+            return BatchSignOffResponse(
+                status="success",
+                approved_submission_ids=approved_submission_ids,
+                skipped_submission_ids=skipped_submission_ids,
+                skipped_targets=skipped_targets,
+            )
 
 
 @app.get(

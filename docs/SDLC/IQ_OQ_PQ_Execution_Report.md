@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 790
-- **Passed:** 790 🟢
+- **Total Automated Test Cases Run:** 800
+- **Passed:** 800 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -126,7 +126,7 @@ rapidfuzz               3.14.5
 requests                2.34.2
 rich                    15.0.0
 rsa                     4.9.1
-ruff                    0.15.22
+ruff                    0.16.0
 six                     1.17.0
 sortedcontainers        2.4.0
 soupsieve               2.9.1
@@ -200,6 +200,12 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_soft_delete_generates_audit_log` | `tests.test_audit` | PRD-SYS-002 | 🟢 PASSED | < 1s |
 | `test_subject_notification_skips_clinical_auditing` | `tests.test_audit` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_update_generates_audit_log` | `tests.test_audit` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_batch_sign_off_happy_path_form` | `tests.test_batch_sign_off` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_batch_sign_off_locks_and_atomic_rollback` | `tests.test_batch_sign_off` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_batch_sign_off_pi_only` | `tests.test_batch_sign_off` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_batch_sign_off_subject_resolution` | `tests.test_batch_sign_off` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_batch_sign_off_token_replay` | `tests.test_batch_sign_off` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_batch_sign_off_visit_resolution` | `tests.test_batch_sign_off` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_dataset_json_integration_structure` | `tests.test_biostat` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_declarative_mappings_coverage` | `tests.test_biostat` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_extract_ae_sorting_ongoing_supp` | `tests.test_biostat` | *Regression/Helper* | 🟢 PASSED | < 1s |
