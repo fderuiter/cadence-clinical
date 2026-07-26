@@ -9,10 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 733
-- **Passed:** 733 🟢
-- **Total Automated Test Cases Run:** 740
-- **Passed:** 740 🟢
+- **Total Automated Test Cases Run:** 756
+- **Passed:** 756 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -453,9 +451,12 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_signature_gated_mutation_enforcement` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_gated_mutation_expired_token` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_gated_mutation_mismatched_action` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_signature_token_altered_signature_rejected` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_signature_token_credentials_not_logged_or_returned` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_verification_invalid_credentials` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_verification_role_insufficient` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_verification_success` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_signature_verification_with_batch_id` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_token_invalid` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_invalid_data_element_default_unit_fails` | `tests.test_global_library` | PRD-MDR-001 | 🟢 PASSED | < 1s |
 | `test_invalid_mismatched_type_payload_fails` | `tests.test_global_library` | PRD-MDR-001 | 🟢 PASSED | < 1s |
