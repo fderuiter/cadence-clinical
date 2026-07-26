@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request, status
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -102,6 +102,19 @@ class DocumentResponse(BaseModel):
     content_checksum: Optional[str] = None
     sync_status: str
     source_system: str
+
+
+class BinderSectionStatus(BaseModel):
+    section_name: str
+    required_artifacts: List[str]
+    present: List[str]
+    missing: List[str]
+
+
+class BinderCompletenessResponse(BaseModel):
+    site_id: str
+    is_complete: bool
+    sections: List[BinderSectionStatus]
 
 
 @asynccontextmanager
@@ -270,8 +283,17 @@ async def list_documents(
     request: Request,
     study_id: Optional[str] = Query(None),
     site_id: Optional[str] = Query(None),
+    binder_section: Optional[str] = Query(
+        None, description="Filter by binder section / classification"
+    ),
+    binder_classification: Optional[str] = Query(
+        None, description="Filter by binder section / classification"
+    ),
     session: AsyncSession = Depends(get_db_session),
 ):
+    """
+    List site-scoped, binder-classified documents. Constrains by the authenticated site claim.
+    """
     user_id = getattr(request.state, "user_id", "system")
     roles = get_normalized_roles(request)
 
@@ -295,13 +317,29 @@ async def list_documents(
             await enforce_site_isolation(request, site_id, session)
         site_id_filter = user_site_id
     else:
-        site_id_filter = site_id
+        if user_site_id:
+            if site_id and site_id != user_site_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Forbidden: Access is restricted to your assigned site.",
+                )
+            site_id_filter = user_site_id
+        else:
+            site_id_filter = site_id
 
-    stmt = select(ISFDocument)
+    if not site_id_filter:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="site_id is required and must be provided either in the query or via authenticated claim.",
+        )
+
+    stmt = select(ISFDocument).where(ISFDocument.site_id == site_id_filter)
     if study_id:
         stmt = stmt.where(ISFDocument.study_id == study_id)
-    if site_id_filter:
-        stmt = stmt.where(ISFDocument.site_id == site_id_filter)
+    if binder_section:
+        stmt = stmt.where(ISFDocument.binder_classification == binder_section)
+    if binder_classification:
+        stmt = stmt.where(ISFDocument.binder_classification == binder_classification)
 
     result = await session.execute(stmt)
     docs = result.scalars().all()
@@ -311,7 +349,7 @@ async def list_documents(
         session=session,
         actor_id=user_id,
         actor_role=",".join(roles) if isinstance(roles, list) else str(roles),
-        action="LIST_DOCUMENTS",
+        action="LIST",
         document_id=None,
         details=f"Listed documents (study_id={study_id}, site_id={site_id_filter}).",
         reason_for_change="Standard document access",
@@ -489,6 +527,9 @@ async def get_document(
     document_id: str,
     session: AsyncSession = Depends(get_db_session),
 ):
+    """
+    View metadata for a specific eISF document. Constrains by the authenticated site claim.
+    """
     user_id = getattr(request.state, "user_id", "system")
     roles = get_normalized_roles(request)
 
@@ -504,19 +545,74 @@ async def get_document(
 
     # Enforce site isolation
     await enforce_site_isolation(request, doc.site_id, session)
+    user_site_id = getattr(request.state, "site_id", None)
+    if user_site_id and doc.site_id != user_site_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Access is restricted to your assigned site.",
+        )
 
     # Log view to audit trail
     await write_audit_log(
         session=session,
         actor_id=user_id,
         actor_role=",".join(roles) if isinstance(roles, list) else str(roles),
-        action="VIEW_DOCUMENT",
+        action="VIEW",
         document_id=doc.id,
         details=f"Viewed document '{doc.filename}' (ID: {doc.id}).",
         reason_for_change="Standard document access",
     )
 
     return doc
+
+
+@app.get("/api/v1/eisf/documents/{document_id}/download")
+async def download_document(
+    request: Request,
+    document_id: str,
+    session: AsyncSession = Depends(get_db_session),
+):
+    """
+    Download/stream file content for a specific eISF document. Constrains by the authenticated site claim.
+    """
+    user_id = getattr(request.state, "user_id", "system")
+    roles = get_normalized_roles(request)
+
+    stmt = select(ISFDocument).where(ISFDocument.id == document_id)
+    result = await session.execute(stmt)
+    doc = result.scalars().first()
+
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"eISF Document with ID '{document_id}' not found.",
+        )
+
+    # Enforce site isolation
+    await enforce_site_isolation(request, doc.site_id, session)
+    user_site_id = getattr(request.state, "site_id", None)
+    if user_site_id and doc.site_id != user_site_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Access is restricted to your assigned site.",
+        )
+
+    # Log download to audit trail
+    await write_audit_log(
+        session=session,
+        actor_id=user_id,
+        actor_role=",".join(roles) if isinstance(roles, list) else str(roles),
+        action="DOWNLOAD",
+        document_id=doc.id,
+        details=f"Downloaded document '{doc.filename}' (ID: {doc.id}).",
+        reason_for_change="Standard document download",
+    )
+
+    return Response(
+        content=doc.content,
+        media_type=doc.mime_type,
+        headers={"Content-Disposition": f"attachment; filename={doc.filename}"},
+    )
 
 
 @app.put("/api/v1/eisf/documents/{document_id}", response_model=DocumentResponse)
@@ -617,3 +713,122 @@ async def delete_document(
 
     await session.delete(doc)
     await session.flush()
+
+
+# Standard eISF required binder artifact set by section
+REQUIRED_BINDER_SECTIONS = {
+    "Investigator & Staff": [
+        "Investigator CV",
+        "Delegation of Authority Log",
+    ],
+    "Protocols & Amendments": [
+        "Approved Protocol",
+        "Protocol Sign-off",
+    ],
+    "Regulatory Approvals": [
+        "IRB Approval",
+        "FDA Form 1572",
+    ],
+}
+
+
+@app.get("/api/v1/eisf/completeness", response_model=BinderCompletenessResponse)
+async def get_binder_completeness(
+    request: Request,
+    study_id: str = Query(..., description="The clinical study ID"),
+    site_id: Optional[str] = Query(None, description="The site ID"),
+    session: AsyncSession = Depends(get_db_session),
+):
+    """
+    Check completeness of the electronic Investigator Site File (eISF) binder.
+    Compares filed artifacts for the study and site against a required artifact list by section.
+    Enforces site isolation strictly.
+    """
+    user_id = getattr(request.state, "user_id", "system")
+    roles = get_normalized_roles(request)
+
+    is_site_user = any(
+        role
+        in {
+            "site investigator",
+            "investigator",
+            "site-investigator",
+            "site_investigator",
+            "investigator_user",
+            "crc",
+            "coordinator",
+        }
+        for role in roles
+    )
+    user_site_id = getattr(request.state, "site_id", None)
+
+    if is_site_user:
+        if site_id and site_id != user_site_id:
+            await enforce_site_isolation(request, site_id, session)
+        site_id_filter = user_site_id
+    else:
+        if user_site_id:
+            if site_id and site_id != user_site_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Forbidden: Access is restricted to your assigned site.",
+                )
+            site_id_filter = user_site_id
+        else:
+            site_id_filter = site_id
+
+    if not site_id_filter:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="site_id is required and must be provided either in the query or via authenticated claim.",
+        )
+
+    # Query all filed documents for the site and study
+    stmt = select(ISFDocument).where(
+        ISFDocument.study_id == study_id,
+        ISFDocument.site_id == site_id_filter,
+    )
+    res = await session.execute(stmt)
+    docs = res.scalars().all()
+
+    # Collect unique present binder classifications (case-insensitive for accurate matching)
+    actual_classifications = {doc.binder_classification.strip().lower() for doc in docs}
+
+    sections_status = []
+    global_is_complete = True
+
+    for section_name, required_artifacts in REQUIRED_BINDER_SECTIONS.items():
+        present = []
+        missing = []
+        for req_art in required_artifacts:
+            if req_art.strip().lower() in actual_classifications:
+                present.append(req_art)
+            else:
+                missing.append(req_art)
+                global_is_complete = False
+
+        sections_status.append(
+            BinderSectionStatus(
+                section_name=section_name,
+                required_artifacts=required_artifacts,
+                present=present,
+                missing=missing,
+            )
+        )
+
+    # Log completeness checking action to audit trail
+    await write_audit_log(
+        session=session,
+        actor_id=user_id,
+        actor_role=",".join(roles) if isinstance(roles, list) else str(roles),
+        action="COMPLETENESS",
+        document_id=None,
+        details=f"Checked completeness for study '{study_id}', site '{site_id_filter}'. Complete: {global_is_complete}.",
+        reason_for_change="Standard completeness verification",
+    )
+
+    return BinderCompletenessResponse(
+        site_id=site_id_filter,
+        is_complete=global_is_complete,
+        sections=sections_status,
+    )

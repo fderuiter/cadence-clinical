@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 790
-- **Passed:** 790 🟢
+- **Total Automated Test Cases Run:** 798
+- **Passed:** 798 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -126,7 +126,7 @@ rapidfuzz               3.14.5
 requests                2.34.2
 rich                    15.0.0
 rsa                     4.9.1
-ruff                    0.15.22
+ruff                    0.16.0
 six                     1.17.0
 sortedcontainers        2.4.0
 soupsieve               2.9.1
@@ -369,6 +369,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_eisf_document_lifecycle_same_site` | `tests.test_eisf_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_documents_endpoint_blocks_unauthenticated` | `tests.test_eisf_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_health_unauthenticated` | `tests.test_eisf_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_eisf_auditor_view_and_download_permissions` | `tests.test_eisf_browse_completeness` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_eisf_completeness_workflow` | `tests.test_eisf_browse_completeness` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_eisf_document_listing_with_binder_filters` | `tests.test_eisf_browse_completeness` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_eisf_document_view_and_download_site_isolation` | `tests.test_eisf_browse_completeness` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_ingest_document_event_alias` | `tests.test_eisf_ingest` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_ingest_document_success` | `tests.test_eisf_ingest` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_ingest_missing_change_reason_fails` | `tests.test_eisf_ingest` | *Regression/Helper* | 🟢 PASSED | < 1s |
