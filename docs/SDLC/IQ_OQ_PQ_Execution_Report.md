@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 790
-- **Passed:** 790 🟢
+- **Total Automated Test Cases Run:** 807
+- **Passed:** 807 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -126,7 +126,7 @@ rapidfuzz               3.14.5
 requests                2.34.2
 rich                    15.0.0
 rsa                     4.9.1
-ruff                    0.15.22
+ruff                    0.16.0
 six                     1.17.0
 sortedcontainers        2.4.0
 soupsieve               2.9.1
@@ -727,6 +727,19 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_valid_meddra_coding` | `tests.test_sae_icsr` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_valid_sae_full_normalization` | `tests.test_sae_icsr` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_valid_sae_minimum` | `tests.test_sae_icsr` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_icsr_version_and_reason_for_change_rendering` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_invalid_namespace_fails` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_invalid_root_tag_fails` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_malformed_xml_validation_fails` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_drugs_or_drug_fields_fails` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_header_fails` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_header_fields_fail` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_patient_fails` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_patient_fields_fail` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_reactions_or_reaction_term_fails` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_safety_report_fails` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_worldwide_unique_case_id_fails` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_valid_icsr_rendering_and_validation` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ae_required_optional_and_date_order` | `tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_auditable_model_fields_and_validation` | `tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cm_required_optional_and_date_order` | `tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
