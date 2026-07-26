@@ -28,6 +28,7 @@ from apps.designer.delta import (
     InvalidSignatureError,
     _init_mock_soa,
     amend_protocol_version,
+    compute_graph_diff,
     create_epoch,
     create_procedure,
     create_rule_node,
@@ -100,12 +101,17 @@ class DifferenceResult(BaseModel):
     Attributes:
         field: The name of the field that changed.
         old_value: The previous value of the field.
-        new_value: The updated value of the field.
     """
 
     field: str
     old_value: Any
     new_value: Any
+
+
+class VersionDiffResponse(BaseModel):
+    added_nodes: List[DifferenceResult]
+    modified_nodes: List[DifferenceResult]
+    deleted_nodes: List[DifferenceResult]
 
 
 class CreateSoAEntityRequest(BaseModel):
@@ -1681,3 +1687,60 @@ async def get_soa_projection_endpoint(
     driver = await get_neo4j_driver(request)
     matrix = await get_soa_matrix_projection(driver, version_id)
     return SoAMatrixView(**matrix)
+
+
+@app.get(
+    "/api/v1/studies/{study_id}/versions/diff",
+    response_model=VersionDiffResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def get_versions_diff_endpoint(
+    study_id: str,
+    version_id1: str = Query(..., description="The old version ID"),
+    version_id2: str = Query(..., description="The new version ID"),
+    request: Request = None,
+) -> VersionDiffResponse:
+    """
+    Exposes graph-native, form-level version-diff API.
+    Identifies additions, modifications, and deletions of forms.
+    Returns HTTP 400 Bad Request if either version is nonexistent or unrelated.
+    """
+    driver = await get_neo4j_driver(request)
+    try:
+        diff_dict = await compute_graph_diff(driver, study_id, version_id1, version_id2)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+
+    added = [
+        DifferenceResult(
+            field=node["key"],
+            old_value=None,
+            new_value=node["xform_definition_xml"],
+        )
+        for node in diff_dict["added_nodes"]
+    ]
+    modified = [
+        DifferenceResult(
+            field=node["key"],
+            old_value=node["old_value"],
+            new_value=node["new_value"],
+        )
+        for node in diff_dict["modified_nodes"]
+    ]
+    deleted = [
+        DifferenceResult(
+            field=node["key"],
+            old_value=node["xform_definition_xml"],
+            new_value=None,
+        )
+        for node in diff_dict["deleted_nodes"]
+    ]
+
+    return VersionDiffResponse(
+        added_nodes=added,
+        modified_nodes=modified,
+        deleted_nodes=deleted,
+    )

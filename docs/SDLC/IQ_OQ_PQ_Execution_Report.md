@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 753
-- **Passed:** 753 🟢
+- **Total Automated Test Cases Run:** 760
+- **Passed:** 760 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -176,6 +176,13 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_normalize_sex` | `tests.test_biostat` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_supp_record_row_conversion` | `tests.test_biostat` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_variable_metadata_validation` | `tests.test_biostat` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_adam_dataset_export_success` | `tests.test_biostat_exports` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_biostat_bundle_export_success` | `tests.test_biostat_exports` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_export_validation_failure_handling` | `tests.test_biostat_exports` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_invalid_adam_dataset_rejection` | `tests.test_biostat_exports` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_invalid_sdtm_domain_rejection` | `tests.test_biostat_exports` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_sdtm_domain_export_success` | `tests.test_biostat_exports` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_unauthenticated_access_rejection` | `tests.test_biostat_exports` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_gateway_routing` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cdisc_export_and_validation` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_demographics_encryption` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -302,6 +309,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_valid_skip_logic_schema` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_xpath_compile_logical_and_functions` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_xpath_compile_simple` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_version_diff_success` | `tests.test_designer_version_diff` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_version_diff_unrelated_or_nonexistent` | `tests.test_designer_version_diff` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_authoring_mutations_rejected_for_auditors` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_clause_lifecycle_and_versioning_audit` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_database_url_override_and_init` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -372,6 +381,13 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_completeness_signature_lifecycle_distinction` | `tests.test_etmf_signatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_document_routing_and_classification` | `tests.test_etmf_signatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_lifecycle_with_mock_signature` | `tests.test_etmf_signatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_arithmetic_null_safety_and_bmi` | `tests.test_evaluator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_comparison_null_semantics` | `tests.test_evaluator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_comparison_operators` | `tests.test_evaluator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_field_reference_and_xpath` | `tests.test_evaluator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_indexed_repeat` | `tests.test_evaluator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_is_empty_and_not_empty` | `tests.test_evaluator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_literal_and_constant` | `tests.test_evaluator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_client_configuration_env_vars` | `tests.test_evs_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_client_configuration_overrides` | `tests.test_evs_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_concept_http_status_error_404` | `tests.test_evs_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
