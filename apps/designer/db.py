@@ -327,3 +327,74 @@ class TerminologyCache:
 
 
 terminology_cache = TerminologyCache()
+
+
+def check_dict_for_value(d: Any, target: str) -> bool:
+    """
+    Recursively scan nested dictionaries, lists, or custom objects to find if
+    any value matches the target concept ID or code.
+    """
+    if isinstance(d, dict):
+        for k, v in d.items():
+            if v == target:
+                return True
+            if check_dict_for_value(v, target):
+                return True
+    elif isinstance(d, list):
+        for item in d:
+            if item == target:
+                return True
+            if check_dict_for_value(item, target):
+                return True
+    elif hasattr(d, "__dict__"):
+        for k, v in d.__dict__.items():
+            if not k.startswith("_"):
+                if v == target:
+                    return True
+                if check_dict_for_value(v, target):
+                    return True
+    return False
+
+
+async def is_concept_referenced_by_active_recruiting_study(
+    concept_id: str, driver=None
+) -> bool:
+    """
+    Check if a concept code/ID is referenced by any active recruiting study.
+    Looks across both in-memory MOCK_STUDIES / MOCK_STUDY_VERSIONS and Neo4j database (if driver is active).
+    """
+    # 1. Check in-memory mock data
+    for study_id, study_data in MOCK_STUDIES.items():
+        is_active_recruiting = study_data.get("status") == "Active-Recruiting"
+
+        # Check versions of this study
+        versions = MOCK_STUDY_VERSIONS.get(study_id, [])
+        for v in versions:
+            if v.get("status") == "Active-Recruiting":
+                is_active_recruiting = True
+                break
+
+        if is_active_recruiting:
+            if check_dict_for_value(study_data, concept_id):
+                return True
+
+    # 2. Check Neo4j if driver is provided
+    if driver is not None:
+        try:
+            query = """
+            MATCH (s)
+            WHERE (s:Study OR s:StudyVersion) AND s.status = 'Active-Recruiting'
+            MATCH (s)-[*0..5]->(n)
+            WHERE any(key IN keys(n) WHERE n[key] = $concept_id)
+            RETURN count(n) > 0 AS is_referenced
+            """
+            async with driver.session() as session:
+                result = await session.run(query, concept_id=concept_id)
+                record = await result.single()
+                if record:
+                    return bool(record["is_referenced"])
+        except Exception:
+            # Gracefully ignore Neo4j query errors in offline/test mode
+            pass
+
+    return False
