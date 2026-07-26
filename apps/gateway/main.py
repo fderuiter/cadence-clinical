@@ -234,9 +234,9 @@ def generate_signature(
     timestamp: str,
     version: str = "2",
     change_reason: Optional[str] = None,
-    site_id: str = "",
-    sponsor_id: str = "",
-    unblinded_access: bool = False,
+    site_id: Optional[str] = None,
+    sponsor_id: Optional[str] = None,
+    unblinded_access: Optional[bool] = None,
 ) -> str:
     """
     Generate an HMAC-SHA256 signature for identity headers.
@@ -252,9 +252,9 @@ def generate_signature(
         timestamp (str): The exact timestamp when the signature was created.
         version (str): The signature format version ("1" or "v1" for legacy, "2" or "v2" for canonical JSON).
         change_reason (Optional[str]): The justification reason for the modification (Version 2).
-        site_id (str): The site ID/assigned sites (Version 2).
-        sponsor_id (str): The sponsor ID (Version 2).
-        unblinded_access (bool): Unblinded access flag (Version 2).
+        site_id (Optional[str]): The site ID/assigned sites (Version 2).
+        sponsor_id (Optional[str]): The sponsor ID (Version 2).
+        unblinded_access (Optional[bool]): Unblinded access flag (Version 2).
 
     Returns:
         str: A hexadecimal representation of the HMAC signature.
@@ -268,15 +268,25 @@ def generate_signature(
         ).hexdigest()
 
     cr = change_reason if change_reason is not None else ""
-    payload = {
-        "change_reason": cr,
-        "roles": roles,
-        "timestamp": timestamp,
-        "user_id": user_id,
-        "site_id": site_id,
-        "sponsor_id": sponsor_id,
-        "unblinded_access": unblinded_access,
-    }
+    if site_id is None and sponsor_id is None and unblinded_access is None:
+        payload = {
+            "change_reason": cr,
+            "roles": roles,
+            "timestamp": timestamp,
+            "user_id": user_id,
+        }
+    else:
+        payload = {
+            "change_reason": cr,
+            "roles": roles,
+            "timestamp": timestamp,
+            "user_id": user_id,
+            "site_id": site_id if site_id is not None else "",
+            "sponsor_id": sponsor_id if sponsor_id is not None else "",
+            "unblinded_access": unblinded_access
+            if unblinded_access is not None
+            else False,
+        }
     serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return hmac.new(
         GATEWAY_SECRET.encode(), serialized.encode("utf-8"), hashlib.sha256
