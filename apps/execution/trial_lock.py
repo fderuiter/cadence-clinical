@@ -124,6 +124,12 @@ class TrialLockManager:
             )
 
     @classmethod
+    def unlock_trial(cls):
+        """Unlocks the trial-wide lock state."""
+        cls._is_locked = False
+        cls._locked_at = None
+
+    @classmethod
     def is_locked(cls) -> bool:
         """Returns True if the trial is currently locked."""
         return cls._is_locked
