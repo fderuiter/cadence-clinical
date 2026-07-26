@@ -1,12 +1,14 @@
 import { defineStore } from "pinia";
 import { sha256 } from "../../index.js";
 import { generateGatewaySignature, generateJwtHS256 } from "ui";
+import { soaClient } from "../api/soaClient.js";
 
 export const useClinicalStore = defineStore("clinical", {
   state: () => {
     let savedFormValues = null;
     let savedFormQueries = null;
     let savedLedgerBlocks = null;
+    let savedUsdm = null;
     if (typeof window !== "undefined" && window.localStorage) {
       try {
         savedFormValues = JSON.parse(window.localStorage.getItem("formValues"));
@@ -16,13 +18,14 @@ export const useClinicalStore = defineStore("clinical", {
         savedLedgerBlocks = JSON.parse(
           window.localStorage.getItem("ledgerBlocks")
         );
+        savedUsdm = JSON.parse(window.localStorage.getItem("currentUsdm"));
       } catch (e) {
         console.error("Failed to parse saved state from localStorage", e);
       }
     }
 
     return {
-      currentUsdm: {
+      currentUsdm: savedUsdm || {
         studyId: "STUDY-USDM-001",
         studyTitle: "Phase II Trial of Cadence-001 in Essential Hypertension",
         objectives: [
@@ -321,6 +324,11 @@ export const useClinicalStore = defineStore("clinical", {
         authenticated: true,
       },
       syncInterval: null,
+
+      // --- SoA State ---
+      activeStudyVersionId: "v_draft_01",
+      soaLoading: false,
+      soaError: null,
     };
   },
   actions: {
@@ -361,6 +369,10 @@ export const useClinicalStore = defineStore("clinical", {
         window.localStorage.setItem(
           "ledgerBlocks",
           JSON.stringify(this.ledgerBlocks)
+        );
+        window.localStorage.setItem(
+          "currentUsdm",
+          JSON.stringify(this.currentUsdm)
         );
       }
 
@@ -465,6 +477,121 @@ export const useClinicalStore = defineStore("clinical", {
         console.log("Background sync: Successfully synchronized query blocks.");
       } catch (err) {
         console.warn("Background sync failed (retrying automatically):", err);
+      }
+    },
+
+    // --- SoA Pinia Actions ---
+    async fetchSoAProjection() {
+      this.soaLoading = true;
+      this.soaError = null;
+      try {
+        const data = await soaClient.getSoAProjection(
+          this.currentUsdm.studyId,
+          this.activeStudyVersionId,
+          { userId: "fderuiter", roles: "STUDY_DESIGNER" }
+        );
+        // Map fetched Neo4j projection structure back to our local currentUsdm state
+        this.currentUsdm.epochs = data.epochs || [];
+        this.currentUsdm.encounters = data.encounters || [];
+        this.currentUsdm.rows = data.rows || [];
+        this.soaLoading = false;
+      } catch (err) {
+        this.soaError = err.message;
+        this.soaLoading = false;
+        console.warn(
+          "Backend SoA endpoint failed, relying on local state:",
+          err
+        );
+      }
+    },
+
+    async pushSoAMutation(type, id, properties, changeReason) {
+      this.soaLoading = true;
+      this.soaError = null;
+      const opts = {
+        userId: "fderuiter",
+        roles: "STUDY_DESIGNER",
+        changeReason,
+      };
+      try {
+        if (type === "arms") {
+          await soaClient.saveArm(
+            this.currentUsdm.studyId,
+            this.activeStudyVersionId,
+            id,
+            properties,
+            opts
+          );
+        } else if (type === "epochs") {
+          await soaClient.saveEpoch(
+            this.currentUsdm.studyId,
+            this.activeStudyVersionId,
+            id,
+            properties,
+            opts
+          );
+        } else if (type === "visits") {
+          await soaClient.saveVisit(
+            this.currentUsdm.studyId,
+            this.activeStudyVersionId,
+            id,
+            properties,
+            opts
+          );
+        } else if (type === "procedures") {
+          await soaClient.saveProcedure(
+            this.currentUsdm.studyId,
+            this.activeStudyVersionId,
+            id,
+            properties,
+            opts
+          );
+        }
+        await this.addLedgerBlock(
+          `SOA_MUTATION_${type.toUpperCase()}`,
+          { id, properties },
+          changeReason
+        );
+        await this.fetchSoAProjection();
+      } catch (err) {
+        this.soaError = err.message;
+        this.soaLoading = false;
+        // Log mutation locally even on network failure for compliance
+        await this.addLedgerBlock(
+          `SOA_MUTATION_OFFLINE_${type.toUpperCase()}`,
+          { id, properties, error: err.message },
+          changeReason
+        );
+        throw err;
+      }
+    },
+
+    async pushSoALink(linkType, payload, changeReason) {
+      this.soaLoading = true;
+      this.soaError = null;
+      try {
+        await soaClient.createLink(
+          this.currentUsdm.studyId,
+          this.activeStudyVersionId,
+          linkType,
+          payload,
+          { userId: "fderuiter", roles: "STUDY_DESIGNER", changeReason }
+        );
+        await this.addLedgerBlock(
+          `SOA_LINK_${linkType.toUpperCase()}`,
+          payload,
+          changeReason
+        );
+        await this.fetchSoAProjection();
+      } catch (err) {
+        this.soaError = err.message;
+        this.soaLoading = false;
+        await this.addLedgerBlock(
+          `SOA_LINK_OFFLINE_${linkType.toUpperCase()}`,
+          { payload, error: err.message },
+          changeReason
+        );
+        throw err;
       }
     },
   },
