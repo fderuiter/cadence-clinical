@@ -72,3 +72,5 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-08: Expose Authenticated SDTM/ADaM Dataset-JSON Export Endpoints](2026-08-08-expose-authenticated-sdtm-adam-dataset-json-export-endpoints.md)
 - [2026-08-08: eCOA Portal and Interop Deployment Architecture](2026-08-08-ecoa-portal-and-interop-deployment.md)
 - [2026-08-09: Automated eTMF Document Redaction](2026-08-09-automated-etmf-document-redaction.md)
+- [2026-08-09: Global Library Object Instantiation in Clinical Studies](2026-08-09-global-library-object-instantiation.md)
+- [2026-08-09: Medical Coding Engine and Query Subsystem Integration](2026-08-09-medical-coding-engine-query-integration.md)
