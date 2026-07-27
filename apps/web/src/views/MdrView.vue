@@ -106,40 +106,40 @@
               <label for="new-arm-concept">Arm Type Concept Code</label>
               <input
                 id="new-arm-concept"
-                v-model="newArmConcept"
+                v-model="newArm.concept"
                 type="text"
-                placeholder="e.g. C123"
+                placeholder="Search Arm Type CT..."
                 style="width: 100%; padding: 6px"
-                @input="handleArmConceptInput"
+                @input="searchArmTerminology($event.target.value)"
               />
+              <!-- Autocomplete Suggestion Dropdown -->
               <div
-                v-if="armSearchResults.length > 0"
+                v-if="armSuggestions.length > 0"
                 class="autocomplete-dropdown"
                 style="
                   position: absolute;
-                  left: 0;
-                  right: 0;
                   background: white;
                   border: 1px solid var(--border);
                   border-radius: 4px;
+                  width: 100%;
+                  z-index: 100;
                   max-height: 150px;
                   overflow-y: auto;
-                  z-index: 10;
+                  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                 "
               >
                 <div
-                  v-for="res in armSearchResults"
-                  :key="res.concept_code"
-                  class="autocomplete-item"
+                  v-for="sug in armSuggestions"
+                  :key="sug.concept_code"
                   style="
-                    padding: 6px 12px;
+                    padding: 6px;
                     cursor: pointer;
-                    border-bottom: 1px solid var(--border);
+                    border-bottom: 1px solid #f1f5f9;
                   "
-                  @click="selectArmConcept(res)"
+                  @click="selectArmConcept(sug)"
                 >
-                  <strong>{{ res.concept_code }}</strong> -
-                  {{ res.preferred_name }}
+                  <strong>{{ sug.concept_code }}</strong> -
+                  {{ sug.preferred_name }}
                 </div>
               </div>
             </div>
@@ -247,16 +247,7 @@
                 style="width: 100%; padding: 6px"
               />
             </div>
-            <div class="form-group" style="margin-bottom: 8px">
-              <label for="new-enc-concept">Visit Type Concept Code</label>
-              <input
-                id="new-enc-concept"
-                v-model="newEncConcept"
-                type="text"
-                placeholder="e.g. C123"
-                style="width: 100%; padding: 6px"
-              />
-            </div>
+
             <div class="form-group" style="margin-bottom: 8px">
               <label for="new-enc-seq">Sequence</label>
               <input
@@ -282,6 +273,50 @@
                   {{ ep.epoch_name }}
                 </option>
               </select>
+            </div>
+            <div
+              class="form-group"
+              style="margin-bottom: 8px; position: relative"
+            >
+              <label for="new-enc-concept">Visit Type Concept Code</label>
+              <input
+                id="new-enc-concept"
+                v-model="newEnc.concept"
+                type="text"
+                placeholder="Search Visit Type CT..."
+                style="width: 100%; padding: 6px"
+                @input="searchEncTerminology($event.target.value)"
+              />
+              <!-- Autocomplete Suggestion Dropdown -->
+              <div
+                v-if="encSuggestions.length > 0"
+                class="autocomplete-dropdown"
+                style="
+                  position: absolute;
+                  background: white;
+                  border: 1px solid var(--border);
+                  border-radius: 4px;
+                  width: 100%;
+                  z-index: 100;
+                  max-height: 150px;
+                  overflow-y: auto;
+                  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                "
+              >
+                <div
+                  v-for="sug in encSuggestions"
+                  :key="sug.concept_code"
+                  style="
+                    padding: 6px;
+                    cursor: pointer;
+                    border-bottom: 1px solid #f1f5f9;
+                  "
+                  @click="selectEncConcept(sug)"
+                >
+                  <strong>{{ sug.concept_code }}</strong> -
+                  {{ sug.preferred_name }}
+                </div>
+              </div>
             </div>
             <button
               class="btn btn-primary"
@@ -539,43 +574,82 @@ const authStore = useAuthStore();
 const builderMode = ref(false);
 const usdmText = ref(JSON.stringify(store.currentUsdm, null, 2));
 
-const newArmConcept = ref("");
-const newEncConcept = ref("");
-const armSearchResults = ref([]);
-let debounceTimer = null;
+const armSuggestions = ref([]);
+const encSuggestions = ref([]);
 
-function handleArmConceptInput() {
-  if (debounceTimer) {
-    clearTimeout(debounceTimer);
-  }
-  const val = newArmConcept.value;
-  if (!val || !val.trim()) {
-    armSearchResults.value = [];
-    return;
-  }
-  debounceTimer = setTimeout(async () => {
-    try {
-      const response = await terminologyClient.searchTerminology(val, {
-        userId: authStore.identity?.username || "fderuiter",
-        roles: authStore.identity?.roles?.[0] || "Data Manager",
-      });
-      armSearchResults.value = response.results || [];
-    } catch (err) {
-      console.error(err);
-      armSearchResults.value = [];
-    }
-  }, 300);
+// Debounce helper
+function debounce(fn, delay) {
+  let timeoutId = null;
+  return function (...args) {
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => {
+      fn(...args);
+    }, delay);
+  };
 }
 
-function selectArmConcept(res) {
-  newArmConcept.value = res.concept_code;
-  armSearchResults.value = [];
+const debouncedSearchArm = debounce(async (term) => {
+  if (!term || !term.trim()) {
+    armSuggestions.value = [];
+    return;
+  }
+  try {
+    const res = await terminologyClient.searchTerminology(term, {
+      userId: authStore.identity?.username || "fderuiter",
+      roles: authStore.identity?.roles?.[0] || "investigator",
+      changeReason: "Search terminology",
+    });
+    armSuggestions.value = res.results || [];
+  } catch (err) {
+    console.warn("Failed to search arm terminology:", err);
+  }
+}, 300);
+
+const debouncedSearchEnc = debounce(async (term) => {
+  if (!term || !term.trim()) {
+    encSuggestions.value = [];
+    return;
+  }
+  try {
+    const res = await terminologyClient.searchTerminology(term, {
+      userId: authStore.identity?.username || "fderuiter",
+      roles: authStore.identity?.roles?.[0] || "investigator",
+      changeReason: "Search terminology",
+    });
+    encSuggestions.value = res.results || [];
+  } catch (err) {
+    console.warn("Failed to search encounter/visit terminology:", err);
+  }
+}, 300);
+
+function searchArmTerminology(term) {
+  debouncedSearchArm(term);
+}
+
+function searchEncTerminology(term) {
+  debouncedSearchEnc(term);
+}
+
+function selectArmConcept(sug) {
+  newArm.concept = sug.concept_code;
+  armSuggestions.value = [];
+}
+
+function selectEncConcept(sug) {
+  newEnc.concept = sug.concept_code;
+  encSuggestions.value = [];
 }
 
 // Creation Forms States
-const newArm = reactive({ id: "", name: "" });
+const newArm = reactive({ id: "", name: "", concept: "" });
 const newEpoch = reactive({ id: "", name: "", sequence: 1, arm_id: "" });
-const newEnc = reactive({ id: "", name: "", sequence: 1, epoch_id: "" });
+const newEnc = reactive({
+  id: "",
+  name: "",
+  sequence: 1,
+  epoch_id: "",
+  concept: "",
+});
 const newProc = reactive({ id: "", name: "" });
 
 // Link Applicability States
@@ -891,6 +965,7 @@ function handleAddArm() {
   });
   newArm.id = "";
   newArm.name = "";
+  newArm.concept = "";
 }
 
 function handleAddEpoch() {
@@ -930,6 +1005,7 @@ function handleAddEncounter() {
   });
   newEnc.id = "";
   newEnc.name = "";
+  newEnc.concept = "";
   newEnc.sequence = store.currentUsdm.encounters
     ? store.currentUsdm.encounters.length + 1
     : 1;

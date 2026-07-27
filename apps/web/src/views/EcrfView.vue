@@ -29,7 +29,10 @@
               v-show="store.fieldVisibility[field.id] !== false"
               :id="`field-container-${field.id}`"
               class="clinical-input"
-              :class="{ 'has-error': getValidationError(field) }"
+              :class="{
+                'has-error': getValidationError(field),
+                'clinical-lookup-container': field.type === 'concept_code',
+              }"
               :style="`grid-column: span ${field.gridSpan || 12};`"
             >
               <label :for="field.id">{{ field.label }}</label>
@@ -39,6 +42,12 @@
                   type="text"
                   :name="field.id"
                   :value="store.formValues[field.id]"
+                  autocomplete="off"
+                  @input="
+                    field.type === 'concept_code'
+                      ? handleConceptInput(field, $event.target.value)
+                      : null
+                  "
                   @change="
                     handleFieldChange(field, $event.target.value, $event.target)
                   "
@@ -55,6 +64,36 @@
                   {{ getQueryStatus(field.id) === "NONE" ? "💬" : "⚠️" }}
                 </button>
               </div>
+
+              <!-- Live lookup status indicator -->
+              <template v-if="field.type === 'concept_code'">
+                <div
+                  v-if="
+                    conceptStatuses[field.id] &&
+                    conceptStatuses[field.id] !== 'none'
+                  "
+                  :id="`lookup-status-${field.id}`"
+                  class="lookup-status-indicator"
+                  :class="`lookup-${conceptStatuses[field.id]}`"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <span class="lookup-status-icon" aria-hidden="true">
+                    {{ getStatusIcon(conceptStatuses[field.id]) }}
+                  </span>
+                  <span class="lookup-status-text">
+                    {{ conceptMessages[field.id] }}
+                  </span>
+                </div>
+                <div
+                  v-else
+                  :id="`lookup-status-${field.id}`"
+                  class="lookup-status-indicator"
+                  role="status"
+                  aria-live="polite"
+                  style="display: none"
+                ></div>
+              </template>
 
               <!-- Validation Error -->
               <div
@@ -913,6 +952,89 @@ function getConceptStatusText(fieldId) {
     return `Terminology service degraded. ${stateObj.errorMessage || ""}`;
   }
   return "";
+}
+
+// Live validation states
+const requestCounters = reactive({});
+const conceptStatuses = reactive({});
+const conceptMessages = reactive({});
+
+function getStatusIcon(status) {
+  if (status === "loading") return "⏳";
+  if (status === "valid") return "✅";
+  if (status === "invalid") return "❌";
+  if (status === "degraded") return "⚠️";
+  return "";
+}
+
+// Inline debounce helper
+function localDebounce(fn, delay) {
+  let timeoutId = null;
+  return function (...args) {
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => {
+      fn(...args);
+    }, delay);
+  };
+}
+
+const debouncedValidate = localDebounce(async (fieldId, value) => {
+  if (!value || !value.trim()) {
+    conceptStatuses[fieldId] = "none";
+    conceptMessages[fieldId] = "";
+    return;
+  }
+
+  requestCounters[fieldId] = (requestCounters[fieldId] || 0) + 1;
+  const currentReqId = requestCounters[fieldId];
+
+  try {
+    const res = await terminologyClient.validateSingleCode(value, {
+      userId: store.user?.username || "fderuiter",
+      roles: store.user?.roles ? store.user.roles.join(",") : "investigator",
+      changeReason: "Validate code",
+    });
+
+    if (requestCounters[fieldId] !== currentReqId) {
+      return; // Discard stale response
+    }
+
+    if (res.state === "VALID") {
+      conceptStatuses[fieldId] = "valid";
+      conceptMessages[fieldId] = `Code is valid: "${res.decode}"`;
+    } else if (res.state === "INVALID") {
+      conceptStatuses[fieldId] = "invalid";
+      conceptMessages[fieldId] = `Invalid code: "${value}"`;
+    } else if (res.state === "DEGRADED") {
+      conceptStatuses[fieldId] = "degraded";
+      conceptMessages[fieldId] =
+        res.error_message ||
+        "Terminology service degraded. Validation offline.";
+    }
+  } catch {
+    if (requestCounters[fieldId] !== currentReqId) {
+      return;
+    }
+    conceptStatuses[fieldId] = "degraded";
+    conceptMessages[fieldId] =
+      "Terminology service degraded. Validation offline.";
+  }
+}, 300);
+
+function handleConceptInput(field, value) {
+  const fieldId = field.id;
+  store.formValues[fieldId] = value;
+
+  if (!value || !value.trim()) {
+    conceptStatuses[fieldId] = "none";
+    conceptMessages[fieldId] = "";
+    return;
+  }
+
+  conceptStatuses[fieldId] = "loading";
+  conceptMessages[fieldId] = "Searching terminology database...";
+
+  debouncedValidate(fieldId, value);
 }
 
 // Deep watch formValues to evaluate rules debounced
