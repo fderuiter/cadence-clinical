@@ -938,6 +938,12 @@ watch(
 
 onMounted(() => {
   store.evaluateRules();
+  // Initialize lookup validation for any pre-populated concept_code fields on mount
+  store.ecrfFields.forEach((field) => {
+    if (field.type === "concept_code" && store.formValues[field.id]) {
+      handleConceptInput(field, store.formValues[field.id]);
+    }
+  });
 });
 
 // UI States

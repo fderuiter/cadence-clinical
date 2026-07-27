@@ -144,22 +144,6 @@ export async function generateGatewaySignature(
 }
 
 /**
- * Computes a standard SHA-256 hash using Web Crypto APIs.
- *
- * @param {string} message - The plaintext message to hash.
- * @returns {Promise<string>} The hexadecimal SHA-256 digest.
- */
-export async function sha256(message) {
-  const msgBuffer = new TextEncoder().encode(message);
-  const hashBuffer = await globalThis.crypto.subtle.digest(
-    "SHA-256",
-    msgBuffer
-  );
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-/**
  * Verifies an API Gateway identity signature against expected values.
  * Supports Version 1 (legacy colon concatenated format) and Version 2 (canonical JSON format).
  *
