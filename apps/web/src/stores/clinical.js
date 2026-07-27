@@ -378,6 +378,14 @@ export const useClinicalStore = defineStore("clinical", {
             ],
           },
         },
+        {
+          id: "concept_code",
+          label: "Controlled Terminology Concept Code",
+          type: "concept_code",
+          gridSpan: 12,
+          cdash: "DM.CONCEPT_CODE",
+          value: "",
+        },
       ],
       formValues: savedFormValues || {
         brthdt: "1980-05-12",
@@ -389,6 +397,7 @@ export const useClinicalStore = defineStore("clinical", {
         weight: "70",
         height: "1.75",
         bmi_status: "Normal",
+        concept_code: "",
       },
       fieldVisibility: {},
       formQueries: savedFormQueries || {},
