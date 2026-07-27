@@ -571,9 +571,11 @@ import { ref, computed, watch, reactive } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import { createClinicalVisitMatrix } from "ui";
 import { terminologyClient } from "../api/terminologyClient.js";
+import { useAuthStore } from "../stores/auth.js";
 import { debounce } from "ui";
 
 const store = useClinicalStore();
+const authStore = useAuthStore();
 
 const armSuggestions = ref([]);
 const encSuggestions = ref([]);
@@ -588,8 +590,8 @@ const debouncedSearchArm = debounce(async (term) => {
       ? store.user.roles.join(",")
       : "investigator";
     const res = await terminologyClient.searchTerminology(term, {
-      userId: store.user.username || "fderuiter",
-      roles,
+      userId: authStore.identity?.username || "fderuiter",
+      roles: authStore.identity?.roles?.[0] || "investigator",
       changeReason: "Arm concept search",
     });
     armSuggestions.value = res.results || [];
@@ -608,8 +610,8 @@ const debouncedSearchEnc = debounce(async (term) => {
       ? store.user.roles.join(",")
       : "investigator";
     const res = await terminologyClient.searchTerminology(term, {
-      userId: store.user.username || "fderuiter",
-      roles,
+      userId: authStore.identity?.username || "fderuiter",
+      roles: authStore.identity?.roles?.[0] || "investigator",
       changeReason: "Encounter concept search",
     });
     encSuggestions.value = res.results || [];
