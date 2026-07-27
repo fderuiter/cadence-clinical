@@ -126,13 +126,22 @@ Traditional clinical trial builds require manual, error-prone translation of pro
                  │                                        │
                  ▼                                        ▼
  [ Live Site Data Entry & Audit Log ]    [ Patient Completes ePRO Assessment (PWA) ]
-                                                          │
-                                                    (Network Sync)
-                                                          │
-                                                          ▼
-                                         [ Interop Service Reconciles & Audits ]
-                                                          │
-                                                    (Sync Exception)
-                                                          │
-                                                          ▼
-                                         [ Clinical Query Triggered in EDC ]
+                │                                         │
+                ├─────────────────────────────────────────┘
+                ▼
+ [ CDASH Extractor: SDTM Domains ]
+                │
+                ▼
+ [ Analysis Derivation: ADaM Datasets ]
+                │
+                ▼
+ [ Serializer: CDISC Dataset-JSON 1.0 ]
+                │
+                ▼
+ [ Validator: Conformance Verification ]
+                │
+                ├─────────────────────────┐
+         (If Valid)                 (If Invalid)
+                │                         │
+                ▼                         ▼
+ [ Log SUCCESS in BiostatExport ]  [ Log FAILED & Raise HTTP 422 ]

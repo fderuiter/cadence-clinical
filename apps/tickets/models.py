@@ -4,10 +4,11 @@ SQLAlchemy models for the Tickets service.
 
 import uuid
 from datetime import datetime
+from enum import Enum
 from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, Integer, String, event, func
-from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, event, func
+from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship
 
 
 class Base(DeclarativeBase):
@@ -16,6 +17,40 @@ class Base(DeclarativeBase):
     """
 
     pass
+
+
+class TicketCategory(str, Enum):
+    """
+    Enum representing categories of support tickets.
+    """
+
+    TECHNICAL = "TECHNICAL"
+    CLINICAL = "CLINICAL"
+    HARDWARE = "HARDWARE"
+    ACCESS = "ACCESS"
+    OTHER = "OTHER"
+
+
+class TicketPriority(str, Enum):
+    """
+    Enum representing priority levels of support tickets.
+    """
+
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+    CRITICAL = "CRITICAL"
+
+
+class TicketStatus(str, Enum):
+    """
+    Enum representing statuses of support tickets.
+    """
+
+    OPEN = "OPEN"
+    IN_PROGRESS = "IN_PROGRESS"
+    RESOLVED = "RESOLVED"
+    CLOSED = "CLOSED"
 
 
 class Ticket(Base):
@@ -28,14 +63,45 @@ class Ticket(Base):
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
+    reference: Mapped[str] = mapped_column(
+        String(50), unique=True, index=True, nullable=False
+    )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(String, nullable=False)
-    status: Mapped[str] = mapped_column(
-        String(50), default="OPEN", nullable=False
-    )  # OPEN, IN_PROGRESS, RESOLVED, CLOSED
-    priority: Mapped[str] = mapped_column(
-        String(50), default="LOW", nullable=False
-    )  # LOW, MEDIUM, HIGH, CRITICAL
+    category: Mapped[TicketCategory] = mapped_column(
+        String(50), default=TicketCategory.OTHER, nullable=False
+    )
+    priority: Mapped[TicketPriority] = mapped_column(
+        String(50), default=TicketPriority.LOW, nullable=False
+    )
+    status: Mapped[TicketStatus] = mapped_column(
+        String(50), default=TicketStatus.OPEN, nullable=False
+    )
+    reporter: Mapped[str] = mapped_column(String(255), nullable=False)
+    assignee_user: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    assignee_role: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+
+    # Organization / Site / Study scope
+    org_id: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True, index=True
+    )
+    site_id: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True, index=True
+    )
+    study_id: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True, index=True
+    )
+
+    # Related entity link details
+    related_entity_type: Mapped[Optional[str]] = mapped_column(
+        String(100), nullable=True
+    )
+    related_entity_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+
+    # Optional due date
+    due_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    # Soft delete
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     # 21 CFR Part 11 Compliance Auditing Metadata
@@ -45,6 +111,42 @@ class Ticket(Base):
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    # Relationships
+    comments: Mapped[list["TicketComment"]] = relationship(
+        back_populates="ticket", cascade="all, delete-orphan"
+    )
+    audit_logs: Mapped[list["TicketAuditLog"]] = relationship(back_populates="ticket")
+
+
+class TicketComment(Base):
+    """
+    Represents an auditable comment or note appended to a ticket.
+    """
+
+    __tablename__ = "ticket_comments"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    ticket_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("tickets.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    body: Mapped[str] = mapped_column(String, nullable=False)
+
+    # 21 CFR Part 11 Compliance Auditing Metadata for Comments
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    # Relationships
+    ticket: Mapped["Ticket"] = relationship(back_populates="comments")
 
 
 class TicketAuditLog(Base):
@@ -56,6 +158,12 @@ class TicketAuditLog(Base):
 
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    ticket_id: Mapped[Optional[str]] = mapped_column(
+        String(36),
+        ForeignKey("tickets.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), nullable=False, index=True
@@ -69,6 +177,9 @@ class TicketAuditLog(Base):
     action: Mapped[str] = mapped_column(String(100), nullable=False)
     details: Mapped[str] = mapped_column(String(1000), nullable=False)
     record_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+
+    # Relationships
+    ticket: Mapped[Optional["Ticket"]] = relationship(back_populates="audit_logs")
 
 
 @event.listens_for(Session, "before_flush")
