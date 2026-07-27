@@ -74,6 +74,8 @@ def receive_before_flush(session: Session, flush_context, instances):
             "safety_cases",
             "safety_export_jobs",
             "safety_audit_logs",
+            "tickets",
+            "ticket_audit_logs",
         ):
             return
 

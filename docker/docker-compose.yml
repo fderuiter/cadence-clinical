@@ -156,6 +156,22 @@ services:
       postgres:
         condition: service_healthy
 
+  tickets:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: cadence-tickets
+    command: ["uvicorn", "apps.tickets.main:app", "--host", "0.0.0.0", "--port", "8009", "--reload"]
+    volumes:
+      - ..:/app
+    environment:
+      - TICKETS_DATABASE_URL=sqlite+aiosqlite:////app/tickets.db
+    ports:
+      - "8009:8009"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   subject-portal:
     image: node:20-alpine
     container_name: cadence-subject-portal
@@ -184,6 +200,7 @@ services:
       - CTMS_URL=http://ctms:8005
       - QUALITY_URL=http://quality:8005
       - INTEROP_URL=http://interop:8004
+      - TICKETS_URL=http://tickets:8009
     ports:
       - "8000:8000"
     depends_on:
@@ -198,6 +215,8 @@ services:
       quality:
         condition: service_started
       interop:
+        condition: service_started
+      tickets:
         condition: service_started
       keycloak:
         condition: service_healthy

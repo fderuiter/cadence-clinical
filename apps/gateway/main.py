@@ -124,6 +124,7 @@ SERVICES = {
     "notifications": os.getenv("NOTIFICATIONS_URL", "http://localhost:8006"),
     "quality": os.getenv("QUALITY_URL", "http://localhost:8005"),
     "safety": os.getenv("SAFETY_URL", "http://localhost:8008"),
+    "tickets": os.getenv("TICKETS_URL", "http://localhost:8009"),
 }
 
 jwks_cache: Optional[Dict[str, Any]] = None
@@ -367,6 +368,7 @@ async def get_openapi_json() -> Response:
         notifications_spec,
         quality_spec,
         safety_spec,
+        tickets_spec,
     ) = await asyncio.gather(
         fetch_service_openapi(SERVICES["designer"]),
         fetch_service_openapi(SERVICES["execution"]),
@@ -376,7 +378,17 @@ async def get_openapi_json() -> Response:
         fetch_service_openapi(SERVICES["notifications"]),
         fetch_service_openapi(SERVICES["quality"]),
         fetch_service_openapi(SERVICES["safety"]),
+        fetch_service_openapi(SERVICES["tickets"]),
     )
+
+    if tickets_spec:
+        tickets_spec = rewrite_references(tickets_spec, "Tickets_")
+        for path_str, path_item in tickets_spec.get("paths", {}).items():
+            merged["paths"][f"/tickets{path_str}"] = path_item
+        for schema_name, schema_val in (
+            tickets_spec.get("components", {}).get("schemas", {}).items()
+        ):
+            merged["components"]["schemas"][f"Tickets_{schema_name}"] = schema_val
 
     if safety_spec:
         safety_spec = rewrite_references(safety_spec, "Safety_")
@@ -812,6 +824,8 @@ async def proxy_requests(request: Request, path: str) -> Response:
         target_url = f"{SERVICES['quality']}/{path[len('quality/') :]}"
     elif path.startswith("safety/"):
         target_url = f"{SERVICES['safety']}/{path[len('safety/') :]}"
+    elif path.startswith("tickets/"):
+        target_url = f"{SERVICES['tickets']}/{path[len('tickets/') :]}"
     elif path.startswith("api/v1/terminology"):
         target_url = f"{SERVICES['designer']}/{path}"
     elif path.startswith("terminology/"):
@@ -834,6 +848,8 @@ async def proxy_requests(request: Request, path: str) -> Response:
         target_url = f"{SERVICES['quality']}/{path}"
     elif path.startswith("api/v1/safety"):
         target_url = f"{SERVICES['safety']}/{path}"
+    elif path.startswith("api/v1/tickets"):
+        target_url = f"{SERVICES['tickets']}/{path}"
     else:
         target_url = f"{SERVICES['designer']}/{path}"
 
