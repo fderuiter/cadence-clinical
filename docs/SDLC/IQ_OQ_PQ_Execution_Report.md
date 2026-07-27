@@ -9,11 +9,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1001
-- **Passed:** 1001 🟢
-- **Failed/Errors:** 0 🔴
+- **Total Automated Test Cases Run:** 1016
+- **Passed:** 1011 🟢
+- **Failed/Errors:** 5 🔴
 - **Skipped:** 0 ⚪
-- **Overall Operational Pass Rate:** 100.00%
+- **Overall Operational Pass Rate:** 99.51%
 
 ## 2. Installation Qualification (IQ)
 
@@ -644,11 +644,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_lab_reference_range_audit_and_triggers` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_lab_reference_range_crud_and_precision` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_schema_evolution_migration_upgrade` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
-| `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_scrambled_sequence` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_valid` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | 🔴 FAILED | < 1s |
+| `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | 🔴 FAILED | < 1s |
+| `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | 🔴 FAILED | < 1s |
+| `test_layout_validation_scrambled_sequence` | `tests.test_layout_validator` | *Regression/Helper* | 🔴 FAILED | < 1s |
+| `test_layout_validation_valid` | `tests.test_layout_validator` | *Regression/Helper* | 🔴 FAILED | < 1s |
 | `test_ledger_sealing_and_validation` | `tests.test_ledger_and_triggers` | PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_out_of_band_update_triggers_audit_entry` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_prevent_audit_ledger_seals_mutation` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1129,6 +1129,21 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_convert_unit_temperature` | `tests.test_ucum_coverage` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_normalized_representation` | `tests.test_ucum_coverage` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_normalize_unit_name` | `tests.test_ucum_coverage` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_validate_usdm_endpoint_invalid_422` | `tests.test_usdm_ingestion` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_validate_usdm_endpoint_valid` | `tests.test_usdm_ingestion` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_normalize_usdm_payload_v2_to_v3` | `tests.test_usdm_ingestion` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_resolve_usdm_version_override` | `tests.test_usdm_ingestion` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_resolve_usdm_version_v2` | `tests.test_usdm_ingestion` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_resolve_usdm_version_v3` | `tests.test_usdm_ingestion` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_safe_parse_payload_invalid` | `tests.test_usdm_ingestion` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_safe_parse_payload_json` | `tests.test_usdm_ingestion` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_safe_parse_payload_yaml` | `tests.test_usdm_ingestion` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_validate_usdm_payload_circular_skip_logic` | `tests.test_usdm_ingestion` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_validate_usdm_payload_duplicate_ids` | `tests.test_usdm_ingestion` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_validate_usdm_payload_invalid_structure` | `tests.test_usdm_ingestion` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_validate_usdm_payload_stochastic_math_operators` | `tests.test_usdm_ingestion` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_validate_usdm_payload_valid_v3` | `tests.test_usdm_ingestion` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_validate_usdm_payload_warnings_custom_elements` | `tests.test_usdm_ingestion` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_check_architectural_changes_require_adr_missing_adr` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_check_architectural_changes_require_adr_no_changes` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_check_architectural_changes_require_adr_with_deleted_adr` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
