@@ -27,7 +27,7 @@ from apps.etmf.models import (
 from packages.database import DatabaseSessionDependency
 from packages.deid.detector import DeidDetector
 from packages.deid.manifest import build_redaction_manifest, sign_manifest_symmetric
-from packages.deid.models import ComplianceProfile
+from packages.deid.models import ComplianceProfile, DetectionResult, DetectorCategory
 from packages.deid.transforms import apply_deid_transforms
 from packages.security import verify_is_auditor, verify_not_auditor
 from packages.security.middleware import GatewayAuthMiddleware
@@ -282,6 +282,58 @@ class AutomatedRedactResponse(BaseModel):
 
     status: str = Field(
         "success", description="Outcome status of the automated redaction"
+    )
+    document_id: str = Field(
+        ..., description="ID of the newly created redacted document version"
+    )
+    version_index: int = Field(
+        ..., description="Version index of the new redacted document"
+    )
+    filename: str = Field(..., description="Filename of the new redacted document")
+    categories_counts: Dict[str, int] = Field(
+        ..., description="Count of redacted items per category"
+    )
+    manifest: Dict[str, Any] = Field(
+        ..., description="The signed manifest and provenance data"
+    )
+
+
+class SpanItem(BaseModel):
+    """
+    Explicit character span to redact in manual redaction.
+    """
+
+    start: int = Field(..., description="The character start offset in the source text")
+    end: int = Field(..., description="The character end offset in the source text")
+    label: Optional[str] = Field(
+        "manual", description="Optional label or category for the redacted span"
+    )
+
+
+class ManualRedactRequest(BaseModel):
+    """
+    Payload for submitting manual redaction parameters (spans and/or terms).
+    """
+
+    spans: Optional[List[SpanItem]] = Field(
+        None, description="Explicit character spans to redact"
+    )
+    terms: Optional[List[str]] = Field(
+        None, description="Literal terms to search and redact"
+    )
+    redacted_filename: Optional[str] = Field(
+        None, description="Optional new filename for the redacted successor document"
+    )
+
+
+class ManualRedactResponse(BaseModel):
+    """
+    Response detailing the manual redaction operation outcomes.
+    Crucially, it never exposes raw matched PII/PHI identifiers.
+    """
+
+    status: str = Field(
+        "success", description="Outcome status of the manual redaction"
     )
     document_id: str = Field(
         ..., description="ID of the newly created redacted document version"
@@ -1758,6 +1810,229 @@ async def auto_redact_document_endpoint(
     )
 
     return AutomatedRedactResponse(
+        status="success",
+        document_id=redacted_doc.id,
+        version_index=redacted_doc.version_index,
+        filename=redacted_doc.filename,
+        categories_counts=manifest_data.get("categories_counts", {}),
+        manifest=manifest_data,
+    )
+
+
+@app.post(
+    "/api/v1/etmf/documents/{document_id}/manual-redact",
+    response_model=ManualRedactResponse,
+    status_code=201,
+)
+async def manual_redact_document_endpoint(
+    request: Request,
+    document_id: str,
+    payload: ManualRedactRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> ManualRedactResponse:
+    """
+    Perform controlled manual redaction on an existing unredacted eTMF document using specified character spans and literal terms.
+    Produces a new redacted document version linked to the source.
+    All redactions are logged to the immutable audit trail and block auditor/inspector personas.
+    """
+    user_id = getattr(request.state, "user_id", "system")
+    user_roles = getattr(request.state, "roles", "system")
+
+    # Only write-privileged roles can redact documents (No Inspectors/Auditors)
+    if isinstance(user_roles, str):
+        roles_list = [r.strip().lower() for r in user_roles.split(",")]
+    else:
+        roles_list = [str(r).strip().lower() for r in user_roles]
+
+    if (
+        "inspector" in roles_list
+        or "regulatory_inspector" in roles_list
+        or "auditor" in roles_list
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Inspectors are restricted to read-only access.",
+        )
+
+    # Restrict affected trial to read-only state if trial is locked
+    from apps.execution.trial_lock import TrialLockManager
+
+    if TrialLockManager.is_locked():
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Trial is currently locked in a read-only state due to a security violation.",
+        )
+
+    # 1. Fetch the source document
+    stmt = select(TMFDocument).where(TMFDocument.id == document_id)
+    result = await session.execute(stmt)
+    source_doc = result.scalars().first()
+    if not source_doc:
+        raise HTTPException(status_code=404, detail="eTMF Document not found")
+
+    # 2. Extract X-Change-Reason
+    change_reason = request.headers.get("X-Change-Reason", "").strip()
+    if not change_reason:
+        # Check if stored in request state
+        change_reason = getattr(request.state, "change_reason", "").strip()
+    if not change_reason:
+        raise HTTPException(
+            status_code=400,
+            detail="Missing change justification reason under X-Change-Reason",
+        )
+
+    content_len = len(source_doc.content)
+    results = []
+
+    # 3. Validate and process explicit character spans
+    if payload.spans:
+        sorted_spans = sorted(payload.spans, key=lambda s: s.start)
+        seen = []
+        for span in sorted_spans:
+            if span.start < 0 or span.end > content_len or span.start >= span.end:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Invalid span offsets: [{span.start}, {span.end}] is invalid or out of range for document of length {content_len}.",
+                )
+            # Check overlap with previous span in sorted order
+            for prev in seen:
+                if max(span.start, prev.start) < min(span.end, prev.end):
+                    raise HTTPException(
+                        status_code=422,
+                        detail=f"Overlapping or conflicting span inputs detected: [{span.start}, {span.end}] conflicts with [{prev.start}, {prev.end}].",
+                    )
+            seen.append(span)
+
+            span_value = source_doc.content[span.start : span.end]
+            results.append(
+                DetectionResult(
+                    category=span.label or "manual",
+                    start=span.start,
+                    end=span.end,
+                    value=span_value,
+                )
+            )
+
+    # 4. Safe literal term matching following shared safe escaping/match policy
+    if payload.terms:
+        import re
+        valid_terms = [t for t in payload.terms if t and t.strip()]
+        if valid_terms:
+            # Sort descending to match longer strings first
+            valid_terms.sort(key=len, reverse=True)
+            escaped_terms = [re.escape(term) for term in valid_terms]
+            patterns = []
+            for term in escaped_terms:
+                start_b = r"\b" if re.match(r"^\w", term) else ""
+                end_b = r"\b" if re.search(r"\w$", term) else ""
+                patterns.append(f"{start_b}{term}{end_b}")
+
+            custom_regex = re.compile("|".join(patterns), re.IGNORECASE)
+            for m in custom_regex.finditer(source_doc.content):
+                results.append(
+                    DetectionResult(
+                        category=DetectorCategory.CUSTOM,
+                        start=m.start(),
+                        end=m.end(),
+                        value=m.group(),
+                    )
+                )
+
+    # 5. Apply deid transforms to sanitize content
+    try:
+        redacted_content, record = apply_deid_transforms(
+            source_doc.content,
+            results,
+            default_strategy="mask",
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=422, detail=f"Redaction transforms failed: {str(e)}"
+        )
+
+    # 6. Determine new version index
+    stmt_v = (
+        select(TMFDocument.version_index)
+        .where(TMFDocument.study_id == source_doc.study_id)
+        .where(TMFDocument.artifact_code == source_doc.artifact_code)
+    )
+    res_v = await session.execute(stmt_v)
+    versions = res_v.scalars().all()
+    new_version_index = max(versions) + 1 if versions else source_doc.version_index + 1
+
+    # 7. Build and symmetrically sign the redaction manifest
+    try:
+        manifest = build_redaction_manifest(
+            redaction_record=record,
+            operator_identity=user_id,
+            reason=change_reason,
+            source_version="v" + str(source_doc.version_index),
+            target_version="v" + str(new_version_index),
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    # Sign with HMAC symmetric key
+    secret_key = os.getenv(
+        "REDACTION_SIGNING_SECRET", "internal-gateway-secret-12345"
+    ).encode("utf-8")
+    signed_manifest = sign_manifest_symmetric(manifest, secret_key)
+    manifest_data = signed_manifest.model_dump()
+
+    # 8. Prepare and save the new redacted version
+    metadata_json = dict(source_doc.metadata_json) if source_doc.metadata_json else {}
+    metadata_json["change_reason"] = change_reason
+    metadata_json["is_redacted"] = True
+
+    redacted_filename = (
+        payload.redacted_filename
+        or f"{os.path.splitext(source_doc.filename)[0]}_redacted{os.path.splitext(source_doc.filename)[1]}"
+    )
+
+    redacted_doc = TMFDocument(
+        study_id=source_doc.study_id,
+        zone=source_doc.zone,
+        section=source_doc.section,
+        artifact_type=source_doc.artifact_type,
+        filename=redacted_filename,
+        content=redacted_content,
+        mime_type=source_doc.mime_type,
+        created_by=user_id,
+        version_index=new_version_index,
+        taxonomy_version=source_doc.taxonomy_version,
+        artifact_code=source_doc.artifact_code,
+        metadata_json=metadata_json,
+        document_type=source_doc.document_type,
+        approval_status=source_doc.approval_status,
+        signature_manifestation=source_doc.signature_manifestation,
+        signer=source_doc.signer,
+        signing_timestamp=source_doc.signing_timestamp,
+        is_redacted=True,
+        redaction_source_id=source_doc.id,
+        redaction_manifest_json=manifest_data,
+    )
+
+    session.add(redacted_doc)
+    await session.flush()
+
+    # 9. Log action to immutable audit trail (REDACT action)
+    manifest_signature = manifest_data.get("signature", "unsigned")
+    details_str = (
+        f"REDACT action executed. Actor: {user_id}, Role: {user_roles}. "
+        f"Source Document Reference ID: {source_doc.id} (Version {source_doc.version_index}). "
+        f"Redacted Document Reference ID: {redacted_doc.id} (Version {redacted_doc.version_index}). "
+        f"Manifest Signature: {manifest_signature}."
+    )
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="REDACT",
+        document_id=redacted_doc.id,
+        details=details_str,
+    )
+
+    return ManualRedactResponse(
         status="success",
         document_id=redacted_doc.id,
         version_index=redacted_doc.version_index,
