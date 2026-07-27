@@ -254,6 +254,7 @@ def generate_signature(
         ).hexdigest()
 
     from packages.security.signing import generate_gateway_signature
+
     return generate_gateway_signature(
         user_id=user_id,
         roles=roles,

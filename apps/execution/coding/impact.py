@@ -1,18 +1,19 @@
 import logging
 from datetime import datetime
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.execution.coding.matcher import _get_meddra_hierarchy, _get_whodrug_context
 from apps.execution.database.models import (
     ClinicalCodingAssignment,
     ClinicalCodingLedger,
     CodingState,
-    RecodingState,
     DictionaryType,
     MedDRATerm,
+    RecodingState,
     WHODrugRecord,
 )
-from apps.execution.coding.matcher import _get_meddra_hierarchy, _get_whodrug_context
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,9 @@ async def run_impact_analysis(
     stmt = select(ClinicalCodingAssignment).where(
         ClinicalCodingAssignment.dictionary_type == dict_type_enum,
         ClinicalCodingAssignment.dictionary_version != new_version,
-        ClinicalCodingAssignment.status.in_([CodingState.CODED, CodingState.AUTO_CODED]),
+        ClinicalCodingAssignment.status.in_(
+            [CodingState.CODED, CodingState.AUTO_CODED]
+        ),
         ClinicalCodingAssignment.is_deleted.is_(False),
     )
     res = await session.execute(stmt)
@@ -63,7 +66,9 @@ async def run_impact_analysis(
         )
         res_ledger = await session.execute(stmt_ledger)
         if res_ledger.scalars().first():
-            logger.info(f"Ledger entry already exists for assignment {a.id} on version {new_version}, skipping.")
+            logger.info(
+                f"Ledger entry already exists for assignment {a.id} on version {new_version}, skipping."
+            )
             skipped_count += 1
             continue
 
@@ -85,8 +90,12 @@ async def run_impact_analysis(
             term_obj = res_term.scalars().first()
             if term_obj:
                 code_exists = True
-                new_hierarchy_list = await _get_meddra_hierarchy(session, term_obj, new_version)
-                new_hierarchy = {"hierarchies": new_hierarchy_list} if new_hierarchy_list else {}
+                new_hierarchy_list = await _get_meddra_hierarchy(
+                    session, term_obj, new_version
+                )
+                new_hierarchy = (
+                    {"hierarchies": new_hierarchy_list} if new_hierarchy_list else {}
+                )
 
         elif dict_type_enum == DictionaryType.WHODRUG:
             stmt_rec = select(WHODrugRecord).where(
@@ -97,7 +106,9 @@ async def run_impact_analysis(
             rec_obj = res_rec.scalars().first()
             if rec_obj:
                 code_exists = True
-                atc_context, ingredients = await _get_whodrug_context(session, rec_obj, new_version)
+                atc_context, ingredients = await _get_whodrug_context(
+                    session, rec_obj, new_version
+                )
                 new_hierarchy = {"atc_context": atc_context, "ingredients": ingredients}
 
         if not code_exists:
@@ -135,6 +146,7 @@ async def run_impact_analysis(
             if dict_type_enum == DictionaryType.MEDDRA:
                 old_h_list = old_hierarchy.get("hierarchies", [])
                 new_h_list = new_hierarchy.get("hierarchies", [])
+
                 # Normalize keys and values for comparison
                 def normalize_meddra_h(h):
                     return {
@@ -145,8 +157,27 @@ async def run_impact_analysis(
                         "soc_code": str(h.get("soc_code", "") or ""),
                         "primary_soc_flag": str(h.get("primary_soc_flag", "") or ""),
                     }
-                old_norm = sorted([normalize_meddra_h(h) for h in old_h_list], key=lambda x: (x["llt_code"], x["pt_code"], x["hlt_code"], x["hlgt_code"], x["soc_code"]))
-                new_norm = sorted([normalize_meddra_h(h) for h in new_h_list], key=lambda x: (x["llt_code"], x["pt_code"], x["hlt_code"], x["hlgt_code"], x["soc_code"]))
+
+                old_norm = sorted(
+                    [normalize_meddra_h(h) for h in old_h_list],
+                    key=lambda x: (
+                        x["llt_code"],
+                        x["pt_code"],
+                        x["hlt_code"],
+                        x["hlgt_code"],
+                        x["soc_code"],
+                    ),
+                )
+                new_norm = sorted(
+                    [normalize_meddra_h(h) for h in new_h_list],
+                    key=lambda x: (
+                        x["llt_code"],
+                        x["pt_code"],
+                        x["hlt_code"],
+                        x["hlgt_code"],
+                        x["soc_code"],
+                    ),
+                )
                 hierarchies_equal = old_norm == new_norm
 
             elif dict_type_enum == DictionaryType.WHODRUG:
@@ -155,13 +186,23 @@ async def run_impact_analysis(
                 old_ing = old_hierarchy.get("ingredients", [])
                 new_ing = new_hierarchy.get("ingredients", [])
 
-                old_atc_norm = sorted([str(item.get("atc_code") or "") for item in old_atc])
-                new_atc_norm = sorted([str(item.get("atc_code") or "") for item in new_atc])
+                old_atc_norm = sorted(
+                    [str(item.get("atc_code") or "") for item in old_atc]
+                )
+                new_atc_norm = sorted(
+                    [str(item.get("atc_code") or "") for item in new_atc]
+                )
 
-                old_ing_norm = sorted([str(item.get("ingredient_code") or "") for item in old_ing])
-                new_ing_norm = sorted([str(item.get("ingredient_code") or "") for item in new_ing])
+                old_ing_norm = sorted(
+                    [str(item.get("ingredient_code") or "") for item in old_ing]
+                )
+                new_ing_norm = sorted(
+                    [str(item.get("ingredient_code") or "") for item in new_ing]
+                )
 
-                hierarchies_equal = (old_atc_norm == new_atc_norm) and (old_ing_norm == new_ing_norm)
+                hierarchies_equal = (old_atc_norm == new_atc_norm) and (
+                    old_ing_norm == new_ing_norm
+                )
 
             if hierarchies_equal:
                 # Unchanged - Auto Promotion
@@ -221,7 +262,9 @@ async def run_impact_analysis(
                 )
                 session.add(ledger)
                 reclassified_count += 1
-                logger.info(f"Assignment {a.id} classified as RECLASSIFIED (Code {code})")
+                logger.info(
+                    f"Assignment {a.id} classified as RECLASSIFIED (Code {code})"
+                )
 
     await session.flush()
 

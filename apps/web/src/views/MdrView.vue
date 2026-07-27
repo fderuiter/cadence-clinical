@@ -99,6 +99,38 @@
                 style="width: 100%; padding: 6px"
               />
             </div>
+            <div class="form-group" style="margin-bottom: 8px">
+              <label for="new-arm-concept">Concept Code</label>
+              <input
+                id="new-arm-concept"
+                v-model="newArm.concept"
+                type="text"
+                placeholder="e.g. C123"
+                style="width: 100%; padding: 6px"
+                @input="handleArmConceptInput"
+                autocomplete="off"
+              />
+              <div
+                v-if="armSuggestions.length > 0"
+                class="autocomplete-dropdown"
+                style="
+                  border: 1px solid var(--border);
+                  border-radius: 4px;
+                  max-height: 150px;
+                  overflow-y: auto;
+                  background: white;
+                "
+              >
+                <div
+                  v-for="s in armSuggestions"
+                  :key="s.concept_code"
+                  style="padding: 6px; cursor: pointer"
+                  @click="selectArmSuggestion(s)"
+                >
+                  <strong>{{ s.concept_code }}</strong> - {{ s.preferred_name }}
+                </div>
+              </div>
+            </div>
             <button
               class="btn btn-primary"
               style="width: 100%"
@@ -228,6 +260,17 @@
                   {{ ep.epoch_name }}
                 </option>
               </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 8px">
+              <label for="new-enc-concept">Concept Code</label>
+              <input
+                id="new-enc-concept"
+                v-model="newEnc.concept"
+                type="text"
+                placeholder="e.g. C456"
+                style="width: 100%; padding: 6px"
+                autocomplete="off"
+              />
             </div>
             <button
               class="btn btn-primary"
@@ -476,6 +519,8 @@
 import { ref, computed, watch, reactive } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import { createClinicalVisitMatrix } from "ui";
+import { terminologyClient } from "../api/terminologyClient";
+import { debounce } from "../../index";
 
 const store = useClinicalStore();
 
@@ -483,10 +528,49 @@ const builderMode = ref(false);
 const usdmText = ref(JSON.stringify(store.currentUsdm, null, 2));
 
 // Creation Forms States
-const newArm = reactive({ id: "", name: "" });
+const newArm = reactive({ id: "", name: "", concept: "" });
 const newEpoch = reactive({ id: "", name: "", sequence: 1, arm_id: "" });
-const newEnc = reactive({ id: "", name: "", sequence: 1, epoch_id: "" });
+const newEnc = reactive({
+  id: "",
+  name: "",
+  sequence: 1,
+  epoch_id: "",
+  concept: "",
+});
 const newProc = reactive({ id: "", name: "" });
+
+// Arm Terminology Autocomplete Suggestions
+const armSuggestions = ref([]);
+
+const searchArmTerminology = debounce(async (query) => {
+  if (!query || !query.trim()) {
+    armSuggestions.value = [];
+    return;
+  }
+  try {
+    const authOpts = {
+      userId: store.user.username,
+      roles: store.user.roles ? store.user.roles.join(",") : "Monitor",
+      changeReason: "Search arm concept",
+    };
+    const response = await terminologyClient.searchTerminology(query, authOpts);
+    armSuggestions.value = response?.results || [];
+  } catch (err) {
+    console.error("Autocomplete search failed:", err);
+    armSuggestions.value = [];
+  }
+}, 300);
+
+function handleArmConceptInput(e) {
+  const value = e.target.value;
+  newArm.concept = value;
+  searchArmTerminology(value);
+}
+
+function selectArmSuggestion(s) {
+  newArm.concept = s.concept_code;
+  armSuggestions.value = [];
+}
 
 // Link Applicability States
 const linkPayload = reactive({ procedure_id: "", visit_id: "", timing: "" });
