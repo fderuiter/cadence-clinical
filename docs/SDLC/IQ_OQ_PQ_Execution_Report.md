@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1063
-- **Passed:** 1063 🟢
+- **Total Automated Test Cases Run:** 1067
+- **Passed:** 1067 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -937,6 +937,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_safety_export_job_lifecycle` | `tests.test_safety_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_safety_health_check` | `tests.test_safety_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_unauthenticated_requests_are_rejected` | `tests.test_safety_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gateway_graceful_handling_invalid_downstream` | `tests.test_schema_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_rewrite_references_nested_references` | `tests.test_schema_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_rewrite_references_recursion_protection` | `tests.test_schema_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_static_schema_validation_script` | `tests.test_schema_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ae_required_optional_and_date_order` | `tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_auditable_model_fields_and_validation` | `tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cm_required_optional_and_date_order` | `tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
