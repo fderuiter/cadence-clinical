@@ -11,7 +11,7 @@
     "test": "pnpm -r test && uv run pytest",
     "lint": "pnpm -r lint && uv run ruff check .",
     "format": "pnpm -r format && uv run ruff format .",
-    "check": "pnpm format && pnpm lint && pnpm test && node scripts/check-links.js && python3 scripts/validate_adrs.py && python3 scripts/validate_markdown.py",
+    "check": "concurrently --kill-others-on-fail false -n \"format,lint,test,links,adr,markdown,security\" -c \"magenta,blue,green,cyan,yellow,gray,red\" \"pnpm format\" \"pnpm lint\" \"pnpm test\" \"node scripts/check-links.js\" \"python3 scripts/validate_adrs.py\" \"python3 scripts/validate_markdown.py\" \"uv run bandit -c pyproject.toml -ll -ii -r apps packages\"",
     "build": "pnpm --filter web build",
     "build:docs": "node scripts/build-docs.js"
   },
@@ -30,6 +30,7 @@
   "private": true,
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "concurrently": "^10.0.4",
     "eslint": "^10.7.0",
     "eslint-plugin-vue": "^10.10.0",
     "prettier": "^3.9.6",

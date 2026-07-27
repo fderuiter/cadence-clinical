@@ -98,3 +98,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-13: Standalone In-Application Ticketing Service and Platform Integration](2026-08-13-tickets-service-scaffold-and-gateway-integration.md)
 - [2026-08-14: Biostatistical Export Pipeline Interoperability and Architecture](2026-08-14-biostatistical-export-pipeline-interoperability.md)
 - [2026-08-15: Bidirectional API Contract Enforcement and Legacy Whitelisting](2026-08-15-bidirectional-api-contract-enforcement.md)
+- [2026-08-16: Parallel Continuous Integration Workflows and Local Concurrent Verification](2026-08-16-parallel-ci-workflows-and-local-concurrent-execution.md)
