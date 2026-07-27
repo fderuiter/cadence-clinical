@@ -176,9 +176,9 @@ async def test_database_manager_uninitialized():
     """
     Test exception when getting session maker from an uninitialized CTMS database manager.
     """
-    from apps.ctms.database import CTMSDatabaseManager
+    from packages.database import RelationalDatabaseManager
 
-    mgr = CTMSDatabaseManager()
+    mgr = RelationalDatabaseManager(service_name="CTMS")
     with pytest.raises(Exception) as exc_info:
         mgr.get_session_maker()
     assert "not initialized" in str(exc_info.value)

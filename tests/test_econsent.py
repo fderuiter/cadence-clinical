@@ -1,3 +1,4 @@
+import os
 import time
 from datetime import datetime, timezone
 
@@ -8,7 +9,7 @@ from fastapi.testclient import TestClient
 from pydantic import ValidationError
 from sqlalchemy import select
 
-from apps.econsent.database import EConsentDatabaseManager, db_manager
+from apps.econsent.database import db_manager
 from apps.econsent.main import ConsentDocumentCreate, app
 from apps.econsent.models import (
     Base,
@@ -18,6 +19,7 @@ from apps.econsent.models import (
     ConsentTemplate,
 )
 from apps.gateway.main import generate_signature
+from packages.database import RelationalDatabaseManager
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -88,7 +90,7 @@ def test_uninitialized_database_manager_econsent():
     """
     Ensure the eConsent database manager raises an exception when accessed before initialization.
     """
-    mgr = EConsentDatabaseManager()
+    mgr = RelationalDatabaseManager(service_name="eConsent")
     with pytest.raises(Exception) as exc_info:
         mgr.get_session_maker()
     assert "eConsent database session manager is not initialized" in str(exc_info.value)
@@ -100,8 +102,9 @@ async def test_database_url_override_and_init(monkeypatch):
     Verify that database lifecycle supports ECONSENT_DATABASE_URL override.
     """
     monkeypatch.setenv("ECONSENT_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
-    mgr = EConsentDatabaseManager()
-    mgr.init_db()  # Should pick up ECONSENT_DATABASE_URL from env
+    mgr = RelationalDatabaseManager(service_name="eConsent")
+    db_url = os.environ.get("ECONSENT_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+    mgr.init_db(db_url)  # Should pick up ECONSENT_DATABASE_URL from env
     assert mgr.engine is not None
     assert mgr.session_maker is not None
     await mgr.close()
