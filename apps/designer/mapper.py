@@ -104,6 +104,16 @@ def map_study_to_usdm(study_data: Dict[str, Any]) -> Dict[str, Any]:
             }
         )
 
+    eligibility_criteria = []
+    for crit in study_data.get("eligibility_criteria", []):
+        eligibility_criteria.append({
+            "id": crit.get("id") or crit.get("criterion_id"),
+            "criterion_id": crit.get("id") or crit.get("criterion_id"),
+            "type": crit.get("criterion_type"),
+            "text": crit.get("description"),
+            "expression": crit.get("dsl_source"),
+        })
+
     return {
         "id": study_data["study_id"],
         "name": study_data["title"],
@@ -111,4 +121,5 @@ def map_study_to_usdm(study_data: Dict[str, Any]) -> Dict[str, Any]:
         "description": study_data.get("desc"),
         "arms": arms,
         "rules": mapped_rules,
+        "eligibility_criteria": eligibility_criteria,
     }
