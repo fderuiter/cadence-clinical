@@ -891,7 +891,14 @@ async def proxy_requests(request: Request, path: str) -> Response:
     else:
         site_id_val = str(site_id_val)
 
-    sponsor_id_val = payload.get("sponsor_id", "")
+    custom_attrs = payload.get("custom_attributes") or {}
+    sponsor_id_val = ""
+    if isinstance(custom_attrs, dict):
+        sponsor_id_val = custom_attrs.get("sponsor_id") or ""
+
+    if not sponsor_id_val:
+        sponsor_id_val = payload.get("sponsor_id", "")
+
     if sponsor_id_val is None:
         sponsor_id_val = ""
     else:

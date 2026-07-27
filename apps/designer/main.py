@@ -1225,11 +1225,12 @@ async def create_library_object_endpoint(
     sponsor_id = getattr(request.state, "sponsor_id", None) or request.headers.get(
         "X-Sponsor-Id"
     )
-    if not sponsor_id:
+    if not sponsor_id or not isinstance(sponsor_id, str) or not sponsor_id.strip():
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Forbidden: Missing authenticated sponsor scope",
         )
+    sponsor_id = sponsor_id.strip()
 
     tenant_id = getattr(request.state, "tenant_id", None) or request.headers.get(
         "X-Tenant-Id", "tenant_default"
@@ -1293,11 +1294,12 @@ async def list_library_objects_endpoint(
     sponsor_id = getattr(request.state, "sponsor_id", None) or request.headers.get(
         "X-Sponsor-Id"
     )
-    if not sponsor_id:
+    if not sponsor_id or not isinstance(sponsor_id, str) or not sponsor_id.strip():
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Forbidden: Missing authenticated sponsor scope",
         )
+    sponsor_id = sponsor_id.strip()
 
     # Fetch limit + 1 to detect has_more
     records = await list_library_objects(
@@ -1341,11 +1343,12 @@ async def get_library_object_endpoint(
     sponsor_id = getattr(request.state, "sponsor_id", None) or request.headers.get(
         "X-Sponsor-Id"
     )
-    if not sponsor_id:
+    if not sponsor_id or not isinstance(sponsor_id, str) or not sponsor_id.strip():
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Forbidden: Missing authenticated sponsor scope",
         )
+    sponsor_id = sponsor_id.strip()
 
     if version is not None:
         record = await get_library_object_by_version(driver, id, sponsor_id, version)
@@ -1388,11 +1391,12 @@ async def update_library_object_endpoint(
     sponsor_id = getattr(request.state, "sponsor_id", None) or request.headers.get(
         "X-Sponsor-Id"
     )
-    if not sponsor_id:
+    if not sponsor_id or not isinstance(sponsor_id, str) or not sponsor_id.strip():
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Forbidden: Missing authenticated sponsor scope",
         )
+    sponsor_id = sponsor_id.strip()
 
     # 1. Verify object exists and is owned by the sponsor
     latest = await get_latest_library_object(driver, id, sponsor_id)
@@ -1481,11 +1485,12 @@ async def amend_library_object_endpoint(
     sponsor_id = getattr(request.state, "sponsor_id", None) or request.headers.get(
         "X-Sponsor-Id"
     )
-    if not sponsor_id:
+    if not sponsor_id or not isinstance(sponsor_id, str) or not sponsor_id.strip():
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Forbidden: Missing authenticated sponsor scope",
         )
+    sponsor_id = sponsor_id.strip()
 
     # 1. Verify object exists and is owned by the sponsor
     latest = await get_latest_library_object(driver, id, sponsor_id)
@@ -1547,11 +1552,12 @@ async def get_library_object_history_endpoint(
     sponsor_id = getattr(request.state, "sponsor_id", None) or request.headers.get(
         "X-Sponsor-Id"
     )
-    if not sponsor_id:
+    if not sponsor_id or not isinstance(sponsor_id, str) or not sponsor_id.strip():
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Forbidden: Missing authenticated sponsor scope",
         )
+    sponsor_id = sponsor_id.strip()
 
     records = await get_library_object_history(driver, id, sponsor_id)
     if not records:
@@ -2634,11 +2640,12 @@ async def instantiate_library_object_endpoint(
     sponsor_id = getattr(request.state, "sponsor_id", None) or request.headers.get(
         "X-Sponsor-Id"
     )
-    if not sponsor_id:
+    if not sponsor_id or not isinstance(sponsor_id, str) or not sponsor_id.strip():
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Forbidden: Missing authenticated sponsor scope",
         )
+    sponsor_id = sponsor_id.strip()
 
     user_id = getattr(request.state, "user_id", "system")
 
@@ -2700,11 +2707,12 @@ async def update_library_instance_endpoint(
     sponsor_id = getattr(request.state, "sponsor_id", None) or request.headers.get(
         "X-Sponsor-Id"
     )
-    if not sponsor_id:
+    if not sponsor_id or not isinstance(sponsor_id, str) or not sponsor_id.strip():
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Forbidden: Missing authenticated sponsor scope",
         )
+    sponsor_id = sponsor_id.strip()
 
     user_id = getattr(request.state, "user_id", "system")
 
@@ -2749,11 +2757,12 @@ async def get_library_instance_diff_endpoint(
     sponsor_id = getattr(request.state, "sponsor_id", None) or request.headers.get(
         "X-Sponsor-Id"
     )
-    if not sponsor_id:
+    if not sponsor_id or not isinstance(sponsor_id, str) or not sponsor_id.strip():
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Forbidden: Missing authenticated sponsor scope",
         )
+    sponsor_id = sponsor_id.strip()
 
     try:
         instance = await get_library_instance_in_study(

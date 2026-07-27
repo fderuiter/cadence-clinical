@@ -275,6 +275,7 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
 
         from packages.security.context import (
             current_site_id,
+            current_sponsor_id,
             current_unblinded_access,
         )
 
@@ -286,6 +287,7 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
             datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
         )
         site_token = current_site_id.set(site_id)
+        sponsor_token = current_sponsor_id.set(sponsor_id)
         unblinded_token = current_unblinded_access.set(unblinded_access)
 
         try:
@@ -297,4 +299,5 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
             current_ip_address.reset(ip_token)
             current_timestamp.reset(ts_token)
             current_site_id.reset(site_token)
+            current_sponsor_id.reset(sponsor_token)
             current_unblinded_access.reset(unblinded_token)

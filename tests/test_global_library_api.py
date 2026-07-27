@@ -980,3 +980,120 @@ async def test_library_object_in_use_and_amendments():
             res_put_amended.json()["payload"]["items"][1]["question_text"]
             == "Gender (Male/Female/Other):"
         )
+
+
+@pytest.mark.asyncio
+async def test_sponsor_security_boundaries():
+    """
+    Acceptance Criteria Tests:
+    - Rejects empty or whitespace-only sponsor_id headers with HTTP 403.
+    - Rejects tampered/spoofed/unsigned sponsor_id headers with HTTP 403 or 401.
+    - Rejects cross-sponsor read, update, list, and amend attempts.
+    """
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # Create an object owned by spon_real
+        real_headers = get_auth_headers(sponsor_id="spon_real")
+        form_payload = {
+            "id": "lib_secure_form",
+            "version": "1.0.0",
+            "status": "DRAFT",
+            "sponsor_id": "spon_real",
+            "change_reason": "Setup secure form",
+            "object_type": "FORM",
+            "payload": {"items": []},
+        }
+        res_create = await client.post(
+            "/api/v1/mdr/library",
+            json=form_payload,
+            headers=real_headers,
+        )
+        assert res_create.status_code == 201
+
+        # 1. Reject empty sponsor_id header -> 403
+        headers_empty = get_auth_headers(sponsor_id="")
+        # We manually overwrite X-Sponsor-Id with blank
+        headers_empty["X-Sponsor-Id"] = ""
+        # Regenerate signature with sponsor_id=""
+        from packages.security.signing import generate_gateway_signature
+        headers_empty["X-Gateway-Signature"] = generate_gateway_signature(
+            user_id="test_designer",
+            roles="STUDY_DESIGNER",
+            timestamp=headers_empty["X-Gateway-Timestamp"],
+            secret=GATEWAY_SECRET.encode(),
+            change_reason="Global library test operations",
+            sponsor_id="",
+        )
+        res_empty = await client.get(
+            "/api/v1/mdr/library/lib_secure_form",
+            headers=headers_empty,
+        )
+        assert res_empty.status_code == 403
+
+        # 2. Reject whitespace-only sponsor_id header -> 403
+        headers_ws = get_auth_headers(sponsor_id="   ")
+        headers_ws["X-Sponsor-Id"] = "   "
+        headers_ws["X-Gateway-Signature"] = generate_gateway_signature(
+            user_id="test_designer",
+            roles="STUDY_DESIGNER",
+            timestamp=headers_ws["X-Gateway-Timestamp"],
+            secret=GATEWAY_SECRET.encode(),
+            change_reason="Global library test operations",
+            sponsor_id="   ",
+        )
+        res_ws = await client.get(
+            "/api/v1/mdr/library/lib_secure_form",
+            headers=headers_ws,
+        )
+        assert res_ws.status_code == 403
+
+        # 3. Reject tampered/spoofed sponsor_id header (signature mismatch) -> 403 or 401
+        # Here we sign with spon_fake but try to send spon_real in X-Sponsor-Id header
+        headers_spoof = get_auth_headers(sponsor_id="spon_fake")
+        headers_spoof["X-Sponsor-Id"] = "spon_real"
+        res_spoof = await client.get(
+            "/api/v1/mdr/library/lib_secure_form",
+            headers=headers_spoof,
+        )
+        assert res_spoof.status_code in (401, 403)
+
+        # 4. Deny cross-sponsor GET (read) -> should return 404/403 to prevent disclosure of existence
+        other_headers = get_auth_headers(sponsor_id="spon_other")
+        res_cross_read = await client.get(
+            "/api/v1/mdr/library/lib_secure_form",
+            headers=other_headers,
+        )
+        assert res_cross_read.status_code in (403, 404)
+
+        # 5. Deny cross-sponsor PUT (update) -> 404 or 403
+        update_payload = {
+            "object_type": "FORM",
+            "reason_for_change": "Cross-sponsor update attempt",
+            "payload": {"items": []},
+        }
+        res_cross_update = await client.put(
+            "/api/v1/mdr/library/lib_secure_form",
+            json=update_payload,
+            headers=other_headers,
+        )
+        assert res_cross_update.status_code in (403, 404)
+
+        # 6. Deny cross-sponsor amend -> 404 or 403
+        amend_payload = {
+            "reason_for_change": "Cross-sponsor amend attempt",
+            "payload": {"items": []},
+        }
+        res_cross_amend = await client.post(
+            "/api/v1/mdr/library/lib_secure_form/amend",
+            json=amend_payload,
+            headers=other_headers,
+        )
+        assert res_cross_amend.status_code in (403, 404)
+
+        # 7. Deny cross-sponsor history -> 404 or 403
+        res_cross_history = await client.get(
+            "/api/v1/mdr/library/lib_secure_form/history",
+            headers=other_headers,
+        )
+        assert res_cross_history.status_code in (403, 404)
