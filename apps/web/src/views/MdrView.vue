@@ -607,6 +607,10 @@ function selectArmSuggestion(sug) {
   armSuggestions.value = [];
 }
 
+function selectArmConcept(sug) {
+  selectArmSuggestion(sug);
+}
+
 function handleEncConceptInput(val) {
   if (encConceptTimer) clearTimeout(encConceptTimer);
   if (!val.trim()) {
@@ -627,6 +631,10 @@ function selectEncSuggestion(sug) {
   newEnc.concept_code = sug.concept_code;
   newEnc.name = sug.preferred_name;
   encSuggestions.value = [];
+}
+
+function selectEncConcept(sug) {
+  selectEncSuggestion(sug);
 }
 
 // Link Applicability States
@@ -942,6 +950,7 @@ function handleAddArm() {
   });
   newArm.id = "";
   newArm.name = "";
+  newArm.concept = "";
 }
 
 function handleAddEpoch() {
@@ -981,6 +990,7 @@ function handleAddEncounter() {
   });
   newEnc.id = "";
   newEnc.name = "";
+  newEnc.concept = "";
   newEnc.sequence = store.currentUsdm.encounters
     ? store.currentUsdm.encounters.length + 1
     : 1;

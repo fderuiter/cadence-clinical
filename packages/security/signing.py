@@ -49,6 +49,7 @@ def verify_gateway_signature(
     unblinded_access: bool = False,
 ) -> bool:
     """Verifies an HMAC-SHA256 signature for API Gateway identity and scope headers."""
+    # 1. Verify with the full 7-field scope-aware payload
     expected = generate_gateway_signature(
         user_id=user_id,
         roles=roles,
