@@ -265,6 +265,17 @@ async def process_dictionary_import(
                         session_maker=session_maker,
                     )
 
+                    # Trigger a post-import impact analysis for the imported dictionary/version
+                    from apps.execution.coding.impact import run_impact_analysis
+                    async with session_maker() as analysis_session:
+                        async with analysis_session.begin():
+                            await run_impact_analysis(
+                                session=analysis_session,
+                                dictionary_type=dictionary_type,
+                                new_version=version,
+                                actor="system",
+                            )
+
                 finally:
                     if token is not None:
                         current_session.reset(token)
