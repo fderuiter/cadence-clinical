@@ -25,11 +25,14 @@
           <template v-for="field in store.ecrfFields" :key="field.id">
             <!-- Text input field -->
             <div
-              v-if="field.type !== 'radio' && field.type !== 'concept_code'"
+              v-if="field.type !== 'radio'"
               v-show="store.fieldVisibility[field.id] !== false"
               :id="`field-container-${field.id}`"
               class="clinical-input"
-              :class="{ 'has-error': getValidationError(field) }"
+              :class="{
+                'has-error': getValidationError(field),
+                'clinical-lookup-container': field.type === 'concept_code',
+              }"
               :style="`grid-column: span ${field.gridSpan || 12};`"
             >
               <label :for="field.id">{{ field.label }}</label>
@@ -39,6 +42,12 @@
                   type="text"
                   :name="field.id"
                   :value="store.formValues[field.id]"
+                  autocomplete="off"
+                  @input="
+                    field.type === 'concept_code'
+                      ? handleConceptInput(field, $event.target.value)
+                      : null
+                  "
                   @change="
                     handleFieldChange(field, $event.target.value, $event.target)
                   "
@@ -55,6 +64,36 @@
                   {{ getQueryStatus(field.id) === "NONE" ? "💬" : "⚠️" }}
                 </button>
               </div>
+
+              <!-- Live lookup status indicator -->
+              <template v-if="field.type === 'concept_code'">
+                <div
+                  v-if="
+                    conceptStatuses[field.id] &&
+                    conceptStatuses[field.id] !== 'none'
+                  "
+                  :id="`lookup-status-${field.id}`"
+                  class="lookup-status-indicator"
+                  :class="`lookup-${conceptStatuses[field.id]}`"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <span class="lookup-status-icon" aria-hidden="true">
+                    {{ getStatusIcon(conceptStatuses[field.id]) }}
+                  </span>
+                  <span class="lookup-status-text">
+                    {{ conceptMessages[field.id] }}
+                  </span>
+                </div>
+                <div
+                  v-else
+                  :id="`lookup-status-${field.id}`"
+                  class="lookup-status-indicator"
+                  role="status"
+                  aria-live="polite"
+                  style="display: none"
+                ></div>
+              </template>
 
               <!-- Validation Error -->
               <div
@@ -231,7 +270,7 @@
 
             <!-- Radio input field -->
             <fieldset
-              v-else-if="field.type === 'radio'"
+              v-else
               v-show="store.fieldVisibility[field.id] !== false"
               :id="`field-container-${field.id}`"
               class="clinical-radio-grid"
@@ -435,212 +474,6 @@
                 </div>
               </div>
             </fieldset>
-
-            <!-- Concept Code Lookup Field -->
-            <div
-              v-else-if="field.type === 'concept_code'"
-              v-show="store.fieldVisibility[field.id] !== false"
-              :id="`field-container-${field.id}`"
-              class="clinical-input clinical-lookup-container"
-              :class="{ 'has-error': getValidationError(field) }"
-              :style="`grid-column: span ${field.gridSpan || 12};`"
-            >
-              <label :for="field.id">{{ field.label }}</label>
-              <div class="input-wrapper" style="display: flex; gap: 8px">
-                <input
-                  :id="field.id"
-                  type="text"
-                  :name="field.id"
-                  :value="store.formValues[field.id]"
-                  @input="handleConceptCodeInput(field, $event.target.value)"
-                  style="flex: 1"
-                />
-
-                <!-- Query Flag -->
-                <button
-                  :id="`query-flag-${field.id}`"
-                  class="query-flag"
-                  :class="`query-status-${getQueryStatus(field.id).toLowerCase()}`"
-                  type="button"
-                  @click="toggleQueryPanel(field.id)"
-                >
-                  {{ getQueryStatus(field.id) === "NONE" ? "💬" : "⚠️" }}
-                </button>
-              </div>
-
-              <!-- Lookup Status Indicator -->
-              <div
-                v-if="lookupStatus"
-                :id="`lookup-status-${field.id}`"
-                class="lookup-status"
-                :class="lookupStatusClass"
-                style="margin-top: 4px; font-size: 0.85rem"
-              >
-                {{ lookupStatusText }}
-              </div>
-
-              <!-- Query Panel -->
-              <div
-                v-if="activeQueryPanels[field.id]"
-                :id="`query-panel-${field.id}`"
-                class="query-panel"
-                role="region"
-              >
-                <div class="query-panel-header">
-                  <span class="query-panel-title"
-                    >Query Manager - {{ field.id }}</span
-                  >
-                  <button
-                    type="button"
-                    class="btn-close-panel"
-                    @click="toggleQueryPanel(field.id)"
-                  >
-                    ×
-                  </button>
-                </div>
-                <div class="query-panel-body">
-                  <!-- No Query State -->
-                  <div
-                    v-if="getQueryStatus(field.id) === 'NONE'"
-                    class="query-create-section"
-                  >
-                    <p class="query-panel-instruction">
-                      Raise a query for this field:
-                    </p>
-                    <div class="form-group">
-                      <label :for="`query-message-${field.id}`"
-                        >Discrepancy Message</label
-                      >
-                      <textarea
-                        :id="`query-message-${field.id}`"
-                        v-model="queryInputs[field.id]"
-                        placeholder="Enter clinical discrepancy details..."
-                        required
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      class="btn-submit-query"
-                      @click="createQuery(field.id)"
-                    >
-                      Submit Query
-                    </button>
-                  </div>
-
-                  <!-- Open/Reopened Query State -->
-                  <div
-                    v-else-if="
-                      getQueryStatus(field.id) === 'OPEN' ||
-                      getQueryStatus(field.id) === 'REOPENED'
-                    "
-                    class="query-details"
-                  >
-                    <div
-                      class="query-status-badge"
-                      :class="`badge-${getQueryStatus(field.id).toLowerCase()}`"
-                    >
-                      Status: {{ getQueryStatus(field.id) }}
-                    </div>
-                    <p class="query-current-msg">
-                      <strong>Discrepancy:</strong>
-                      {{ store.formQueries[field.id].message }}
-                    </p>
-                    <p class="query-meta">
-                      Raised by:
-                      {{ store.formQueries[field.id].createdBy || "System" }} on
-                      {{ store.formQueries[field.id].createdAt }}
-                    </p>
-                    <div class="query-respond-section" style="margin-top: 12px">
-                      <div class="form-group">
-                        <label :for="`query-response-${field.id}`"
-                          >Your Response</label
-                        >
-                        <textarea
-                          :id="`query-response-${field.id}`"
-                          v-model="queryResponses[field.id]"
-                          placeholder="Enter clinical justification or resolution explanation..."
-                          required
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        class="btn-respond-query"
-                        @click="respondQuery(field.id)"
-                      >
-                        Submit Response
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- Answered Query State -->
-                  <div
-                    v-else-if="getQueryStatus(field.id) === 'ANSWERED'"
-                    class="query-details"
-                  >
-                    <div class="query-status-badge badge-answered">
-                      Status: ANSWERED
-                    </div>
-                    <p class="query-current-msg">
-                      <strong>Discrepancy:</strong>
-                      {{ store.formQueries[field.id].message }}
-                    </p>
-                    <p class="query-response-msg">
-                      <strong>Response:</strong>
-                      {{ store.formQueries[field.id].response }}
-                    </p>
-                    <p class="query-meta">
-                      Responded by:
-                      {{ store.formQueries[field.id].respondedBy }} on
-                      {{ store.formQueries[field.id].respondedAt }}
-                    </p>
-                    <div
-                      class="query-actions-section"
-                      style="margin-top: 12px; display: flex; gap: 8px"
-                    >
-                      <button
-                        type="button"
-                        class="btn-close-query"
-                        @click="closeQuery(field.id)"
-                      >
-                        Close Query (Resolve)
-                      </button>
-                      <button
-                        type="button"
-                        class="btn-reopen-query"
-                        @click="reopenQuery(field.id)"
-                      >
-                        Reopen Query
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- Closed Query State -->
-                  <div
-                    v-else-if="getQueryStatus(field.id) === 'CLOSED'"
-                    class="query-details"
-                  >
-                    <div class="query-status-badge badge-closed">
-                      Status: CLOSED
-                    </div>
-                    <p class="query-current-msg">
-                      <strong>Discrepancy:</strong>
-                      {{ store.formQueries[field.id].message }}
-                    </p>
-                    <p class="query-response-msg">
-                      <strong>Response:</strong>
-                      {{ store.formQueries[field.id].response }}
-                    </p>
-                    <p class="query-meta">
-                      Closed by: {{ store.formQueries[field.id].closedBy }} on
-                      {{ store.formQueries[field.id].closedAt }}
-                    </p>
-                    <p class="query-history-info">
-                      This query is permanently resolved and closed.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
           </template>
         </form>
 
@@ -1011,94 +844,97 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive, watch, onMounted } from "vue";
+import { ref, reactive, watch, onMounted } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { soaClient } from "../api/soaClient";
 import { validateField } from "../../index";
 import { terminologyClient } from "../api/terminologyClient";
 
-const store = useClinicalStore();
-const authStore = useAuthStore();
-
-// Concept Code Lookup States
-const lookupStatus = ref("");
-const lookupDecode = ref("");
-const lookupErrorMsg = ref("");
-
-const lookupStatusClass = computed(() => {
-  if (lookupStatus.value === "LOADING") return "lookup-loading";
-  if (lookupStatus.value === "VALID") return "lookup-valid";
-  if (lookupStatus.value === "INVALID") return "lookup-invalid";
-  if (lookupStatus.value === "DEGRADED") return "lookup-degraded";
-  return "";
-});
-
-const lookupStatusText = computed(() => {
-  if (lookupStatus.value === "LOADING") return "Validating code...";
-  if (lookupStatus.value === "VALID")
-    return `Code is valid: "${lookupDecode.value}"`;
-  if (lookupStatus.value === "INVALID")
-    return lookupErrorMsg.value || "Invalid code";
-  if (lookupStatus.value === "DEGRADED")
-    return lookupErrorMsg.value || "Terminology service degraded.";
-  return "";
-});
-
+// Debounce helper
 function debounce(fn, delay) {
-  let timer = null;
+  let timeoutId = null;
   return function (...args) {
-    if (timer) clearTimeout(timer);
-    timer = setTimeout(() => {
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => {
       fn(...args);
     }, delay);
   };
 }
 
-let lastRequestId = 0;
+const store = useClinicalStore();
+const authStore = useAuthStore();
 
-const performValidation = async (val) => {
-  if (!val || !val.trim()) {
-    lookupStatus.value = "";
-    lookupDecode.value = "";
-    lookupErrorMsg.value = "";
+// Live validation states
+const requestCounters = reactive({});
+const conceptStatuses = reactive({});
+const conceptMessages = reactive({});
+
+function getStatusIcon(status) {
+  if (status === "loading") return "⏳";
+  if (status === "valid") return "✅";
+  if (status === "invalid") return "❌";
+  if (status === "degraded") return "⚠️";
+  return "";
+}
+
+const debouncedValidate = debounce(async (fieldId, value) => {
+  if (!value || !value.trim()) {
+    conceptStatuses[fieldId] = "none";
+    conceptMessages[fieldId] = "";
     return;
   }
 
-  const requestId = ++lastRequestId;
-  lookupStatus.value = "LOADING";
+  requestCounters[fieldId] = (requestCounters[fieldId] || 0) + 1;
+  const currentReqId = requestCounters[fieldId];
 
   try {
-    const res = await terminologyClient.validateSingleCode(val, {});
-    if (requestId !== lastRequestId) return;
+    const res = await terminologyClient.validateSingleCode(value, {
+      userId: store.user.username || "fderuiter",
+      roles: store.user.roles ? store.user.roles.join(",") : "investigator",
+      changeReason: "Validate code",
+    });
+
+    if (requestCounters[fieldId] !== currentReqId) {
+      return; // Discard stale response
+    }
 
     if (res.state === "VALID") {
-      lookupStatus.value = "VALID";
-      lookupDecode.value = res.decode || "";
-      lookupErrorMsg.value = "";
+      conceptStatuses[fieldId] = "valid";
+      conceptMessages[fieldId] = `Code is valid: "${res.decode}"`;
     } else if (res.state === "INVALID") {
-      lookupStatus.value = "INVALID";
-      lookupDecode.value = "";
-      lookupErrorMsg.value = res.error_message || "Invalid code";
+      conceptStatuses[fieldId] = "invalid";
+      conceptMessages[fieldId] = `Invalid code: "${value}"`;
     } else if (res.state === "DEGRADED") {
-      lookupStatus.value = "DEGRADED";
-      lookupDecode.value = "";
-      lookupErrorMsg.value =
-        res.error_message || "Terminology service degraded.";
+      conceptStatuses[fieldId] = "degraded";
+      conceptMessages[fieldId] =
+        res.error_message ||
+        "Terminology service degraded. Validation offline.";
     }
-  } catch (err) {
-    if (requestId !== lastRequestId) return;
-    lookupStatus.value = "DEGRADED";
-    lookupDecode.value = "";
-    lookupErrorMsg.value = err.message || "Terminology service offline.";
+  } catch {
+    if (requestCounters[fieldId] !== currentReqId) {
+      return;
+    }
+    conceptStatuses[fieldId] = "degraded";
+    conceptMessages[fieldId] =
+      "Terminology service degraded. Validation offline.";
   }
-};
+}, 300);
 
-const debouncedValidate = debounce(performValidation, 300);
+function handleConceptInput(field, value) {
+  const fieldId = field.id;
+  store.formValues[fieldId] = value;
 
-function handleConceptCodeInput(field, val) {
-  store.formValues[field.id] = val;
-  debouncedValidate(val);
+  if (!value || !value.trim()) {
+    conceptStatuses[fieldId] = "none";
+    conceptMessages[fieldId] = "";
+    return;
+  }
+
+  conceptStatuses[fieldId] = "loading";
+  conceptMessages[fieldId] = "Searching terminology database...";
+
+  debouncedValidate(fieldId, value);
 }
 
 // Deep watch formValues to evaluate rules debounced
