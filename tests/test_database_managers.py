@@ -1,86 +1,66 @@
+import asyncio
+
 import pytest
+
+from packages.database import RelationalDatabaseManager
 
 
 def test_interop_database_manager_uninitialized_and_close():
     """
-    Verify InteropDatabaseManager exception and close-twice behavior.
+    Verify Interop database manager exception and close-twice behavior.
     """
-    from apps.interop.database import InteropDatabaseManager
-
-    mgr = InteropDatabaseManager()
+    mgr = RelationalDatabaseManager(service_name="Interop")
     with pytest.raises(Exception, match="not initialized"):
         mgr.get_session_maker()
     # close should handle self.engine=None
-    import asyncio
-
     asyncio.run(mgr.close())
 
 
 def test_notifications_database_manager_uninitialized_and_close():
     """
-    Verify NotificationsDatabaseManager exception and close-twice behavior.
+    Verify Notifications database manager exception and close-twice behavior.
     """
-    from apps.notifications.database import NotificationsDatabaseManager
-
-    mgr = NotificationsDatabaseManager()
+    mgr = RelationalDatabaseManager(service_name="Notifications")
     with pytest.raises(Exception, match="not initialized"):
         mgr.get_session_maker()
-    import asyncio
-
     asyncio.run(mgr.close())
 
 
 def test_econsent_database_manager_uninitialized_and_close():
     """
-    Verify EConsentDatabaseManager exception and close-twice behavior.
+    Verify eConsent database manager exception and close-twice behavior.
     """
-    from apps.econsent.database import EConsentDatabaseManager
-
-    mgr = EConsentDatabaseManager()
+    mgr = RelationalDatabaseManager(service_name="eConsent")
     with pytest.raises(Exception, match="not initialized"):
         mgr.get_session_maker()
-    import asyncio
-
     asyncio.run(mgr.close())
 
 
 def test_eisf_database_manager_uninitialized_and_close():
     """
-    Verify EISFDatabaseManager exception and close-twice behavior.
+    Verify eISF database manager exception and close-twice behavior.
     """
-    from apps.eisf.database import EISFDatabaseManager
-
-    mgr = EISFDatabaseManager()
+    mgr = RelationalDatabaseManager(service_name="eISF")
     with pytest.raises(Exception, match="not initialized"):
         mgr.get_session_maker()
-    import asyncio
-
     asyncio.run(mgr.close())
 
 
 def test_etmf_database_manager_uninitialized_and_close():
     """
-    Verify ETMFDatabaseManager exception and close-twice behavior.
+    Verify eTMF database manager exception and close-twice behavior.
     """
-    from apps.etmf.database import ETMFDatabaseManager
-
-    mgr = ETMFDatabaseManager()
+    mgr = RelationalDatabaseManager(service_name="eTMF")
     with pytest.raises(Exception, match="not initialized"):
         mgr.get_session_maker()
-    import asyncio
-
     asyncio.run(mgr.close())
 
 
 def test_ctms_database_manager_uninitialized_and_close():
     """
-    Verify CTMSDatabaseManager exception and close-twice behavior.
+    Verify CTMS database manager exception and close-twice behavior.
     """
-    from apps.ctms.database import CTMSDatabaseManager
-
-    mgr = CTMSDatabaseManager()
+    mgr = RelationalDatabaseManager(service_name="CTMS")
     with pytest.raises(Exception, match="not initialized"):
         mgr.get_session_maker()
-    import asyncio
-
     asyncio.run(mgr.close())

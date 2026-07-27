@@ -1,6 +1,5 @@
 import os
-from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
@@ -9,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.safety.database import db_manager
 from apps.safety.models import Base, SafetyAuditLog, SafetyCaseICSR, SafetyExportJob
-from packages.database import DatabaseSessionDependency
+from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
 
 
@@ -70,30 +69,14 @@ class SafetyAuditLogResponse(BaseModel):
 DATABASE_URL = os.getenv("SAFETY_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """
-    Handle the lifespan events for the Safety microservice.
-
-    Initializes the database session manager on startup, creates the required
-    schemas, and securely cleans up connections on shutdown.
-    """
-    db_manager.init_db(DATABASE_URL)
-
-    # Automatically create tables for sqlite databases
-    if DATABASE_URL.startswith("sqlite"):
-        async with db_manager.engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-
-    yield
-
-    await db_manager.close()
-
-
 app = FastAPI(
     title="Cadence Clinical - Safety & Pharmacovigilance Gateway",
     version="0.1.0",
-    lifespan=lifespan,
+    lifespan=get_relational_db_lifespan(
+        db_manager=db_manager,
+        database_url=DATABASE_URL,
+        base_metadata=Base.metadata,
+    ),
 )
 
 # Enforce secure gateway authentication middleware

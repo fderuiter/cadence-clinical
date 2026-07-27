@@ -242,9 +242,9 @@ async def test_database_manager_uninitialized_raises_exception():
     """
     Verify that SafetyDatabaseManager raises an exception if get_session_maker is called before init_db.
     """
-    from apps.safety.database import SafetyDatabaseManager
+    from packages.database import RelationalDatabaseManager
 
-    uninit_manager = SafetyDatabaseManager()
+    uninit_manager = RelationalDatabaseManager(service_name="Safety")
     with pytest.raises(Exception) as exc_info:
         uninit_manager.get_session_maker()
     assert "not initialized" in str(exc_info.value)

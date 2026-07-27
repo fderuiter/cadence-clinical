@@ -1,8 +1,7 @@
 import asyncio
 import os
-from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
-from typing import AsyncGenerator, List, Optional
+from typing import List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
@@ -19,6 +18,7 @@ from apps.notifications.models import (
     NotificationPriority,
     NotificationStatus,
 )
+from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.rbac import get_normalized_roles
 
@@ -214,60 +214,43 @@ async def dispatcher_lifecycle_worker() -> None:
         await asyncio.sleep(1.0)
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """
-    Handle the lifespan events for the Notifications application.
+dispatcher_task: Optional[asyncio.Task] = None
 
-    Initializes the database session manager on startup and securely
-    cleans up connections on shutdown. Creates all tables if sqlite is used.
-    Starts and cancels the dispatcher worker.
-    """
-    db_manager.init_db(DATABASE_URL)
 
-    # Automatically create tables for sqlite in-memory/file databases
-    if DATABASE_URL.startswith("sqlite"):
-        async with db_manager.engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-
-    # Start the dispatcher background task
+async def start_dispatcher() -> None:
+    """Startup hook to start the notifications background dispatcher."""
+    global dispatcher_task
     dispatcher_task = asyncio.create_task(dispatcher_lifecycle_worker())
 
-    yield
 
-    # Stop the dispatcher background task cleanly on shutdown
-    dispatcher_task.cancel()
-    try:
-        await dispatcher_task
-    except asyncio.CancelledError:
-        pass
-
-    await db_manager.close()
+async def stop_dispatcher() -> None:
+    """Shutdown hook to cleanly cancel the notifications background dispatcher."""
+    global dispatcher_task
+    if dispatcher_task:
+        dispatcher_task.cancel()
+        try:
+            await dispatcher_task
+        except asyncio.CancelledError:
+            pass
 
 
 app = FastAPI(
     title="Cadence Clinical - Notifications Service",
     version="0.1.0",
-    lifespan=lifespan,
+    lifespan=get_relational_db_lifespan(
+        db_manager=db_manager,
+        database_url=DATABASE_URL,
+        base_metadata=Base.metadata,
+        startup_hooks=[start_dispatcher],
+        shutdown_hooks=[stop_dispatcher],
+    ),
 )
 
 # Enforce secure gateway authentication middleware
 app.add_middleware(GatewayAuthMiddleware)
 
 
-# Dependable to obtain database session
-async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
-    """
-    Dependency to yield an asynchronous database session.
-    """
-    session_maker = db_manager.get_session_maker()
-    async with session_maker() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
+get_db_session = DatabaseSessionDependency(db_manager)
 
 
 async def write_audit_log(

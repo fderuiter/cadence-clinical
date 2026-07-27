@@ -1,7 +1,6 @@
 import os
-from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import Response
@@ -24,7 +23,7 @@ from apps.etmf.models import (
     TMFAuditLog,
     TMFDocument,
 )
-from packages.database import DatabaseSessionDependency
+from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.deid.detector import DeidDetector
 from packages.deid.manifest import build_redaction_manifest, sign_manifest_symmetric
 from packages.deid.models import ComplianceProfile, DetectionResult, DetectorCategory
@@ -91,22 +90,8 @@ async def seed_default_edl(
     await session.flush()
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """
-    Handle the lifespan events for the eTMF application.
-
-    Initializes the database session manager on startup and securely
-    cleans up connections on shutdown. Creates all tables if sqlite in-memory is used.
-    """
-    db_manager.init_db(DATABASE_URL)
-
-    # Automatically create tables for sqlite in-memory/file databases
-    if DATABASE_URL.startswith("sqlite"):
-        async with db_manager.engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-
-    # Idempotently seed default EDL configurations
+async def etmf_startup() -> None:
+    """Startup hook to seed default EDL and start background sealer."""
     session_maker = db_manager.get_session_maker()
     async with session_maker() as session:
         for study_id in [
@@ -120,24 +105,28 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                 await seed_default_edl(session, study_id, milestone)
         await session.commit()
 
-    from apps.etmf.sealer import (
-        start_background_etmf_sealer,
-        stop_background_etmf_sealer,
-    )
+    from apps.etmf.sealer import start_background_etmf_sealer
 
     await start_background_etmf_sealer(db_manager.get_session_maker())
 
-    yield
+
+async def etmf_shutdown() -> None:
+    """Shutdown hook to stop the background sealer."""
+    from apps.etmf.sealer import stop_background_etmf_sealer
 
     await stop_background_etmf_sealer()
-
-    await db_manager.close()
 
 
 app = FastAPI(
     title="Cadence Clinical - Event-Driven eTMF Module",
     version="0.1.0",
-    lifespan=lifespan,
+    lifespan=get_relational_db_lifespan(
+        db_manager=db_manager,
+        database_url=DATABASE_URL,
+        base_metadata=Base.metadata,
+        startup_hooks=[etmf_startup],
+        shutdown_hooks=[etmf_shutdown],
+    ),
 )
 
 # Enforce secure gateway authentication middleware
@@ -625,9 +614,9 @@ async def ingest_document(
             validate_hierarchy(
                 version=taxonomy_version,
                 zone_code=supplied_zone if supplied_zone is not None else zone,
-                section_code=supplied_section
-                if supplied_section is not None
-                else section,
+                section_code=(
+                    supplied_section if supplied_section is not None else section
+                ),
                 artifact_code=artifact_code,
             )
         except ValueError as e:
@@ -857,9 +846,9 @@ async def list_documents(
             approval_status=doc.approval_status,
             signature_manifestation=doc.signature_manifestation,
             signer=doc.signer,
-            signing_timestamp=doc.signing_timestamp.isoformat()
-            if doc.signing_timestamp
-            else None,
+            signing_timestamp=(
+                doc.signing_timestamp.isoformat() if doc.signing_timestamp else None
+            ),
             is_redacted=doc.is_redacted,
             redaction_source_id=doc.redaction_source_id,
             redaction_manifest_json=doc.redaction_manifest_json,
@@ -938,9 +927,9 @@ async def view_document(
         approval_status=doc.approval_status,
         signature_manifestation=doc.signature_manifestation,
         signer=doc.signer,
-        signing_timestamp=doc.signing_timestamp.isoformat()
-        if doc.signing_timestamp
-        else None,
+        signing_timestamp=(
+            doc.signing_timestamp.isoformat() if doc.signing_timestamp else None
+        ),
         is_redacted=doc.is_redacted,
         redaction_source_id=doc.redaction_source_id,
         redaction_manifest_json=doc.redaction_manifest_json,
@@ -1629,9 +1618,11 @@ async def redact_document_endpoint(
         approval_status=redacted_doc.approval_status,
         signature_manifestation=redacted_doc.signature_manifestation,
         signer=redacted_doc.signer,
-        signing_timestamp=redacted_doc.signing_timestamp.isoformat()
-        if redacted_doc.signing_timestamp
-        else None,
+        signing_timestamp=(
+            redacted_doc.signing_timestamp.isoformat()
+            if redacted_doc.signing_timestamp
+            else None
+        ),
         is_redacted=redacted_doc.is_redacted,
         redaction_source_id=redacted_doc.redaction_source_id,
         redaction_manifest_json=redacted_doc.redaction_manifest_json,

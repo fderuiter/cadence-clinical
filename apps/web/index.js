@@ -94,6 +94,8 @@ export function renderFormFromJSON(jsonPayload) {
         gridSpan
       );
     } else if (field.type === "concept_code") {
+      const status = field.status || "none";
+      const statusMessage = field.statusMessage || "";
       const attrs = {};
       if (field.cdash) {
         attrs["data-cdash"] = field.cdash;
@@ -102,8 +104,8 @@ export function renderFormFromJSON(jsonPayload) {
         field.id,
         field.label,
         value,
-        field.status || "none",
-        field.statusMessage || "",
+        status,
+        statusMessage,
         gridSpan,
         attrs
       );
