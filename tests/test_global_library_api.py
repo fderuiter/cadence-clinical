@@ -1,6 +1,3 @@
-import hashlib
-import hmac
-import json
 import time
 
 import httpx
@@ -19,17 +16,17 @@ def get_auth_headers(
     sponsor_id="spon_pharma",
     tenant_id="tenant_001",
 ):
+    from packages.security.signing import generate_gateway_signature
+
     timestamp = str(time.time())
-    payload = {
-        "change_reason": change_reason,
-        "roles": roles,
-        "timestamp": timestamp,
-        "user_id": user_id,
-    }
-    serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
-    signature = hmac.new(
-        GATEWAY_SECRET.encode(), serialized.encode(), hashlib.sha256
-    ).hexdigest()
+    signature = generate_gateway_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        secret=GATEWAY_SECRET.encode(),
+        change_reason=change_reason,
+        sponsor_id=sponsor_id,
+    )
     return {
         "X-User-Id": user_id,
         "X-User-Roles": roles,
@@ -353,8 +350,8 @@ async def test_auth_and_malformed_requests():
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
         # 1. Missing sponsor scope -> should return 403 Forbidden
-        headers_no_sponsor = get_auth_headers()
-        headers_no_sponsor.pop("X-Sponsor-Id")
+        headers_no_sponsor = get_auth_headers(sponsor_id=None)
+        headers_no_sponsor.pop("X-Sponsor-Id", None)
 
         form_payload = {
             "id": "lib_form_test",

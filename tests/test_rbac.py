@@ -509,7 +509,8 @@ def test_can_access_site() -> None:
     assert can_access_site(restricted_dm, "site_Y") is False
 
 
-def test_get_principal_from_request() -> None:
+@pytest.mark.asyncio
+async def test_get_principal_from_request() -> None:
     """Verify get_principal correctly parses and normalizes fastapi request state/headers."""
     from packages.security.rbac import ROLE_CRC, get_principal
 
@@ -533,7 +534,7 @@ def test_get_principal_from_request() -> None:
         "X-Change-Reason": "Testing principal",
     }
 
-    principal = get_principal(MockRequest(headers))
+    principal = await get_principal(MockRequest(headers))
     assert principal.user_id == "u123"
     assert principal.roles == [ROLE_CRC]
     assert principal.assigned_sites == ["site_999"]
