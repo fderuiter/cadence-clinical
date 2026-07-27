@@ -649,41 +649,7 @@ const newEnc = reactive({
 });
 const newProc = reactive({ id: "", name: "" });
 
-const armSuggestions = ref([]);
-let searchDebounceTimer = null;
 
-function handleArmConceptInput(event) {
-  const val = event.target.value;
-  newArm.conceptCode = val;
-
-  if (searchDebounceTimer) {
-    clearTimeout(searchDebounceTimer);
-  }
-
-  if (!val || !val.trim()) {
-    armSuggestions.value = [];
-    return;
-  }
-
-  searchDebounceTimer = setTimeout(async () => {
-    try {
-      const res = await terminologyClient.searchTerminology(val, {
-        userId: "fderuiter",
-        roles: "investigator",
-        changeReason: "Search terminology",
-      });
-      armSuggestions.value = res.results || [];
-    } catch (err) {
-      console.error("Search failed:", err);
-      armSuggestions.value = [];
-    }
-  }, 300);
-}
-
-function selectArmSuggestion(suggestion) {
-  newArm.conceptCode = suggestion.concept_code;
-  armSuggestions.value = [];
-}
 
 // Link Applicability States
 const linkPayload = reactive({ procedure_id: "", visit_id: "", timing: "" });
