@@ -35,6 +35,32 @@ async def setup_notifications_db():
     await db_manager.close()
 
 
+async def _wait_until_processed(delivery_ids: list[str]):
+    for _ in range(100):
+        async with db_manager.get_session_maker()() as session:
+            stmt = select(NotificationDelivery).where(
+                NotificationDelivery.id.in_(delivery_ids)
+            )
+            res = await session.execute(stmt)
+            deliveries = res.scalars().all()
+            if all(d.status != "PENDING" for d in deliveries):
+                return
+        await asyncio.sleep(0.02)
+
+
+async def _wait_until_attempts(delivery_id: str, target_attempts: int):
+    for _ in range(100):
+        async with db_manager.get_session_maker()() as session:
+            stmt = select(NotificationDelivery).where(
+                NotificationDelivery.id == delivery_id
+            )
+            res = await session.execute(stmt)
+            d = res.scalars().first()
+            if d and d.attempts >= target_attempts:
+                return
+        await asyncio.sleep(0.02)
+
+
 def get_auth_headers(
     user_id: str = "notifications_test_user",
     roles: str = "admin",
@@ -138,6 +164,7 @@ async def test_notification_creation_and_auditing():
         assert "EMAIL" in channels_found
         for d in deliveries:
             assert d.status == "PENDING"
+        delivery_ids = [d.id for d in deliveries]
 
     # Execute a poller and dispatcher tick to deliver IN_APP (and update delivery_state to DELIVERED)
     # We will mock send_email_notification to prevent external network traffic/SMTP calls
@@ -146,7 +173,7 @@ async def test_notification_creation_and_auditing():
     ):
         await poll_and_dispatch()
         # Allow async task processing
-        await asyncio.sleep(0.1)
+        await _wait_until_processed(delivery_ids)
 
     # Re-fetch notification detail as the target recipient to satisfy visibility checks
     headers_recipient = get_auth_headers(
@@ -436,7 +463,7 @@ async def test_email_delivery_channel_success():
     mock_smtp_client = AsyncMock()
     with patch("aiosmtplib.SMTP", return_value=mock_smtp_client):
         await poll_and_dispatch()
-        await asyncio.sleep(0.1)
+        await _wait_until_processed([delivery_id])
 
     # Assert SMTP interaction
     assert mock_smtp_client.connect.called
@@ -495,7 +522,7 @@ async def test_webhook_delivery_channel_success():
 
     with patch("httpx.AsyncClient", return_value=mock_context):
         await poll_and_dispatch()
-        await asyncio.sleep(0.1)
+        await _wait_until_processed([delivery_id])
 
     # Assert httpx interaction
     assert mock_client.post.called
@@ -545,7 +572,7 @@ async def test_webhook_delivery_channel_failure_and_retry_backoff():
     # 1st Attempt: Fails with a network/timeout exception
     with patch("httpx.AsyncClient", side_effect=Exception("Connection timed out")):
         await poll_and_dispatch()
-        await asyncio.sleep(0.1)
+        await _wait_until_processed([delivery_id])
 
     async with db_manager.get_session_maker()() as session:
         stmt = select(NotificationDelivery).where(
@@ -566,7 +593,7 @@ async def test_webhook_delivery_channel_failure_and_retry_backoff():
     # 2nd Attempt: Fails again
     with patch("httpx.AsyncClient", side_effect=Exception("Temporary server error")):
         await poll_and_dispatch()
-        await asyncio.sleep(0.1)
+        await _wait_until_attempts(delivery_id, 2)
 
     async with db_manager.get_session_maker()() as session:
         stmt = select(NotificationDelivery).where(
@@ -587,7 +614,7 @@ async def test_webhook_delivery_channel_failure_and_retry_backoff():
     # 3rd Attempt: Reaches maximum allowed attempts
     with patch("httpx.AsyncClient", side_effect=Exception("Terminal failure")):
         await poll_and_dispatch()
-        await asyncio.sleep(0.1)
+        await _wait_until_attempts(delivery_id, 5)
 
     async with db_manager.get_session_maker()() as session:
         stmt = select(NotificationDelivery).where(
