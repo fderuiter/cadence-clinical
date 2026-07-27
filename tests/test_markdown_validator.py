@@ -307,3 +307,111 @@ pytest tests/test_nonexistent.py
         "Target path 'tests/test_nonexistent.py' for executable 'pytest' does not exist."
         in error_msgs
     )
+
+
+def test_python_block_validation(tmp_path):
+    """Verifies static Python AST signature validation logic."""
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+
+    # Create a codebase file with a target function
+    apps_dir = repo_root / "apps" / "designer"
+    apps_dir.mkdir(parents=True)
+    cb_file = apps_dir / "delta.py"
+    cb_file.write_text("def test_func(tx, study_id, object_id):\n    pass\n")
+
+    # Create a markdown file inside docs/
+    docs_dir = repo_root / "docs"
+    docs_dir.mkdir()
+    md_file = docs_dir / "test_doc.md"
+
+    # 1. Signature mismatch
+    md_content = """# Doc
+```python
+def test_func(tx, study_version_id):
+    pass
+```
+"""
+    md_file.write_text(md_content)
+
+    codebase_map = vm.build_codebase_map(repo_root)
+    vm.process_markdown_file(md_file, repo_root, set(), set(), codebase_map)
+    assert len(vm.errors) == 1
+    assert "Mismatched Python signature for function 'test_func'" in vm.errors[0]["message"]
+
+
+def test_json_block_validation(tmp_path):
+    """Verifies JSON schema validation with Pydantic models."""
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+
+    # Create a codebase file with a BaseModel
+    packages_dir = repo_root / "packages" / "core-models"
+    packages_dir.mkdir(parents=True)
+    cb_file = packages_dir / "signature.py"
+    cb_file.write_text("""from pydantic import BaseModel, Field
+class TestModel(BaseModel):
+    id: str = Field(...)
+    name: str = Field(None, description="Optional name")
+""")
+
+    docs_dir = repo_root / "docs"
+    docs_dir.mkdir()
+    md_file = docs_dir / "test_doc.md"
+
+    # 1. Missing required field
+    md_content = """# Doc
+#### TestModel
+```json
+{
+  "name": "John"
+}
+```
+"""
+    md_file.write_text(md_content)
+
+    codebase_map = vm.build_codebase_map(repo_root)
+    vm.process_markdown_file(md_file, repo_root, set(), set(), codebase_map)
+    assert len(vm.errors) == 1
+    assert "JSON example mismatch with Pydantic model 'TestModel'" in vm.errors[0]["message"]
+
+
+def test_skip_and_raw_text_flags(tmp_path):
+    """Verifies that skip and raw-text annotations prevent model validation."""
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+
+    # Create a codebase file with a BaseModel
+    packages_dir = repo_root / "packages" / "core-models"
+    packages_dir.mkdir(parents=True)
+    cb_file = packages_dir / "signature.py"
+    cb_file.write_text("""from pydantic import BaseModel, Field
+class TestModel(BaseModel):
+    id: str = Field(...)
+""")
+
+    docs_dir = repo_root / "docs"
+    docs_dir.mkdir()
+    md_file = docs_dir / "test_doc.md"
+
+    # Both of these should be skipped
+    md_content = """# Doc
+<!-- skip -->
+```json
+{
+  "name": "John"
+}
+```
+
+```json skip
+{
+  "name": "Doe"
+}
+```
+"""
+    md_file.write_text(md_content)
+
+    codebase_map = vm.build_codebase_map(repo_root)
+    vm.process_markdown_file(md_file, repo_root, set(), set(), codebase_map)
+    # Both skipped, so 0 errors!
+    assert len(vm.errors) == 0
