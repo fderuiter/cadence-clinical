@@ -23,6 +23,7 @@ from fastapi import (
 )
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from protocol_version_ref import ProtocolVersionRef
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import select, text
 
@@ -60,6 +61,7 @@ from apps.execution.database.models import (
     FormSubmission,
     ImportState,
     SDVSignOff,
+    SubjectConsent,
     SubjectRandomization,
     TranslationJob,
     TSDVConfig,
@@ -336,6 +338,29 @@ class SubjectResponse(BaseModel):
     encrypted_demographics: Optional[str] = None
 
 
+class SubjectConsentRequest(BaseModel):
+    """Pydantic schema for recording a subject's consent to a protocol version."""
+
+    protocol_version: ProtocolVersionRef
+    icf_signed: bool
+    icf_signed_date: Optional[datetime] = None
+    requires_reconsent: bool = False
+
+
+class SubjectConsentResponse(BaseModel):
+    """Pydantic schema returning subject consent details."""
+
+    id: str
+    subject_id: str
+    study_id: str
+    version_tag: str
+    version_index: int
+    icf_signed: bool
+    icf_signed_date: Optional[datetime] = None
+    requires_reconsent: bool
+    version: int
+
+
 class VisitCreate(BaseModel):
     """Pydantic schema for creating a clinical visit."""
 
@@ -424,6 +449,76 @@ async def create_subject(
             subject_id=subj_db.subject_id,
             study_id=subj_db.study_id,
             encrypted_demographics=subj_db.encrypted_demographics,
+        )
+
+
+@app.post(
+    "/api/v1/execution/subjects/{subject_id}/consent",
+    response_model=SubjectConsentResponse,
+)
+async def record_subject_consent(
+    subject_id: str,
+    payload: SubjectConsentRequest,
+    roles: list[str] = Depends(verify_not_auditor),
+) -> SubjectConsentResponse:
+    """Record or update subject consent for a specific protocol version."""
+    async with db_manager.get_session_maker()() as session:
+        # 1. Verify subject exists
+        stmt_subj = select(ClinicalSubject).where(
+            ClinicalSubject.subject_id == subject_id
+        )
+        res_subj = await session.execute(stmt_subj)
+        subj_db = res_subj.scalars().first()
+        if not subj_db:
+            raise HTTPException(status_code=404, detail="Clinical subject not found.")
+
+        # 2. Check study_id matching
+        if subj_db.study_id != payload.protocol_version.study_id:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Consent study_id '{payload.protocol_version.study_id}' does not match subject's study_id '{subj_db.study_id}'.",
+            )
+
+        # 3. Check if standard subject_consents record exists for this version_index
+        stmt_consent = select(SubjectConsent).where(
+            SubjectConsent.subject_id == subject_id,
+            SubjectConsent.version_index == payload.protocol_version.version_index,
+        )
+        res_consent = await session.execute(stmt_consent)
+        consent_db = res_consent.scalars().first()
+
+        if consent_db:
+            # Update existing
+            consent_db.version_tag = payload.protocol_version.version_tag
+            consent_db.icf_signed = payload.icf_signed
+            consent_db.icf_signed_date = payload.icf_signed_date or datetime.utcnow()
+            consent_db.requires_reconsent = payload.requires_reconsent
+        else:
+            # Create new
+            consent_db = SubjectConsent(
+                subject_id=subject_id,
+                study_id=payload.protocol_version.study_id,
+                version_tag=payload.protocol_version.version_tag,
+                version_index=payload.protocol_version.version_index,
+                icf_signed=payload.icf_signed,
+                icf_signed_date=payload.icf_signed_date or datetime.utcnow(),
+                requires_reconsent=payload.requires_reconsent,
+            )
+            session.add(consent_db)
+
+        await session.commit()
+        await session.refresh(consent_db)
+
+        return SubjectConsentResponse(
+            id=consent_db.id,
+            subject_id=consent_db.subject_id,
+            study_id=consent_db.study_id,
+            version_tag=consent_db.version_tag,
+            version_index=consent_db.version_index,
+            icf_signed=consent_db.icf_signed,
+            icf_signed_date=consent_db.icf_signed_date,
+            requires_reconsent=consent_db.requires_reconsent,
+            version=consent_db.version,
         )
 
 
