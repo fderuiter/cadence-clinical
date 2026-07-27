@@ -8,7 +8,7 @@ import {
   createRuleEditorContainer,
   generateGatewaySignature,
   createClinicalLookupInput,
-  sha256,
+  sha256 as sharedSha256,
   validateField as sharedValidateField,
 } from "ui";
 
