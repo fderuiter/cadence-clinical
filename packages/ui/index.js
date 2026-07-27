@@ -776,6 +776,98 @@ export function createRuleEditorContainer(forms = [], fields = []) {
   `.trim();
 }
 
+/**
+ * Creates an HTML string for a clinical terminology/code lookup input field.
+ * Modeled on existing clinical input patterns, supporting loading, valid,
+ * invalid, and degraded visual states accessibly.
+ *
+ * @param {string} id - The unique identifier for the input element.
+ * @param {string} label - The label text for the input field.
+ * @param {string} [value=""] - The initial value of the input field.
+ * @param {string} [status="none"] - The lookup status: 'none', 'loading', 'valid', 'invalid', 'degraded'.
+ * @param {string} [statusMessage=""] - Accessible text message describing the current status.
+ * @param {number} [gridSpan=12] - Grid span from 1 to 12 for CDASH layouts.
+ * @param {Object} [attributes={}] - Additional custom attributes.
+ * @returns {string} The HTML string representing the lookup input.
+ */
+export function createClinicalLookupInput(
+  id,
+  label,
+  value = "",
+  status = "none",
+  statusMessage = "",
+  gridSpan = 12,
+  attributes = {}
+) {
+  const extraAttrs = Object.entries(attributes)
+    .map(([k, v]) => `${k}="${v}"`)
+    .join(" ");
+
+  let stateClass = "";
+  let ariaLiveMessage = statusMessage;
+  let statusIcon = "";
+
+  if (status === "loading") {
+    stateClass = "lookup-loading";
+    statusIcon = "⏳";
+    if (!ariaLiveMessage) ariaLiveMessage = "Searching terminology database...";
+  } else if (status === "valid") {
+    stateClass = "lookup-valid";
+    statusIcon = "✅";
+    if (!ariaLiveMessage) ariaLiveMessage = "Code is valid.";
+  } else if (status === "invalid") {
+    stateClass = "lookup-invalid";
+    statusIcon = "❌";
+    if (!ariaLiveMessage)
+      ariaLiveMessage = "Invalid code. Please check and try again.";
+  } else if (status === "degraded") {
+    stateClass = "lookup-degraded";
+    statusIcon = "⚠️";
+    if (!ariaLiveMessage)
+      ariaLiveMessage = "Terminology service degraded. Validation offline.";
+  }
+
+  const statusHTML =
+    status !== "none"
+      ? `
+<div class="lookup-status-indicator ${stateClass}" id="lookup-status-${id}" role="status" aria-live="polite">
+  <span class="lookup-status-icon" aria-hidden="true">${statusIcon}</span>
+  <span class="lookup-status-text">${ariaLiveMessage}</span>
+</div>
+  `.trim()
+      : `
+<div class="lookup-status-indicator" id="lookup-status-${id}" role="status" aria-live="polite" style="display: none;"></div>
+  `.trim();
+
+  return `
+<div class="clinical-input clinical-lookup-container grid-span-${gridSpan}" style="grid-column: span ${gridSpan};" id="field-container-${id}" ${extraAttrs}>
+  <label for="${id}">${label}</label>
+  <div class="input-wrapper">
+    <input type="text" id="${id}" name="${id}" value="${value}" autocomplete="off" />
+  </div>
+  ${statusHTML}
+</div>
+  `.trim();
+}
+
+/**
+ * A small debounce utility that limits function execution during rapid invocation.
+ *
+ * @param {Function} func - The function to debounce.
+ * @param {number} wait - The delay in milliseconds before executing the function.
+ * @returns {Function} The debounced function.
+ */
+export function debounce(func, wait) {
+  let timeout;
+  return function (...args) {
+    const context = this;
+    clearTimeout(timeout);
+    timeout = setTimeout(() => {
+      func.apply(context, args);
+    }, wait);
+  };
+}
+
 export {
   canonicalSerialize,
   generateCanonicalSignature,

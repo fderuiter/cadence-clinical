@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   createClinicalInput,
   createClinicalRadioGrid,
@@ -6,6 +6,8 @@ import {
   createClinicalSoAMatrix,
   createClinicalQueryFlag,
   createQueryPanel,
+  createClinicalLookupInput,
+  debounce,
 } from "../index.js";
 
 describe("createClinicalInput", () => {
@@ -326,5 +328,89 @@ describe("createRuleEditorContainer", () => {
     expect(html).toContain('id="conditions-list"');
     expect(html).toContain('id="btn-add-condition"');
     expect(html).toContain('id="btn-save-rule"');
+  });
+});
+
+describe("createClinicalLookupInput", () => {
+  it("renders input field and label by default with status hidden", () => {
+    const html = createClinicalLookupInput("meddraCode", "MedDRA Code", "C123");
+    expect(html).toContain('id="meddraCode"');
+    expect(html).toContain('value="C123"');
+    expect(html).toContain("MedDRA Code");
+    expect(html).toContain('style="display: none;"');
+  });
+
+  it("renders loading state accessibly with default message", () => {
+    const html = createClinicalLookupInput(
+      "meddraCode",
+      "MedDRA Code",
+      "",
+      "loading"
+    );
+    expect(html).toContain('class="lookup-status-indicator lookup-loading"');
+    expect(html).toContain('role="status"');
+    expect(html).toContain('aria-live="polite"');
+    expect(html).toContain("⏳");
+    expect(html).toContain("Searching terminology database...");
+  });
+
+  it("renders valid state accessibly with custom message", () => {
+    const html = createClinicalLookupInput(
+      "meddraCode",
+      "MedDRA Code",
+      "C321",
+      "valid",
+      "Code is verified in NCI Thesaurus."
+    );
+    expect(html).toContain('class="lookup-status-indicator lookup-valid"');
+    expect(html).toContain("✅");
+    expect(html).toContain("Code is verified in NCI Thesaurus.");
+  });
+
+  it("renders invalid state accessibly", () => {
+    const html = createClinicalLookupInput(
+      "meddraCode",
+      "MedDRA Code",
+      "XYZ",
+      "invalid"
+    );
+    expect(html).toContain('class="lookup-status-indicator lookup-invalid"');
+    expect(html).toContain("❌");
+    expect(html).toContain("Invalid code. Please check and try again.");
+  });
+
+  it("renders degraded state accessibly", () => {
+    const html = createClinicalLookupInput(
+      "meddraCode",
+      "MedDRA Code",
+      "C111",
+      "degraded"
+    );
+    expect(html).toContain('class="lookup-status-indicator lookup-degraded"');
+    expect(html).toContain("⚠️");
+    expect(html).toContain("Terminology service degraded. Validation offline.");
+  });
+});
+
+describe("debounce", () => {
+  it("delays execution and bounds rapid invocations to a single call", () => {
+    vi.useFakeTimers();
+    const callback = vi.fn();
+    const debounced = debounce(callback, 200);
+
+    debounced("first");
+    debounced("second");
+    debounced("third");
+
+    expect(callback).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(199);
+    expect(callback).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(1);
+    expect(callback).toHaveBeenCalledTimes(1);
+    expect(callback).toHaveBeenCalledWith("third");
+
+    vi.useRealTimers();
   });
 });

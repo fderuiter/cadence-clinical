@@ -510,6 +510,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_instantiate_library_object_cross_sponsor_rejected` | `tests.test_global_library_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_instantiate_library_object_inaccessible_study` | `tests.test_global_library_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_instantiate_library_object_success` | `tests.test_global_library_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_library_instance_updates_and_inheritance_diffs` | `tests.test_global_library_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_stripe_style_pagination_and_filtering` | `tests.test_global_library_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_update_and_history_versioning` | `tests.test_global_library_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_mock_flow_library_version_chain_and_immutability` | `tests.test_global_library_neo4j` | *Regression/Helper* | 🟢 PASSED | < 1s |

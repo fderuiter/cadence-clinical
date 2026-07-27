@@ -815,3 +815,47 @@ main {
   padding: 48px;
   font-style: italic;
 }
+
+/* Terminology Code Lookup Styles */
+.clinical-lookup-container {
+  position: relative;
+}
+
+.lookup-status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-top: 6px;
+  padding: 6px 10px;
+  border-radius: 4px;
+}
+
+.lookup-status-indicator.lookup-loading {
+  color: var(--neutral-dark);
+  background-color: var(--neutral-light);
+  border: 1px solid var(--border);
+}
+
+.lookup-status-indicator.lookup-valid {
+  color: var(--success);
+  background-color: var(--success-bg);
+  border: 1px solid rgba(22, 163, 74, 0.2);
+}
+
+.lookup-status-indicator.lookup-invalid {
+  color: var(--error);
+  background-color: var(--error-bg);
+  border: 1px solid rgba(220, 38, 38, 0.2);
+}
+
+.lookup-status-indicator.lookup-degraded {
+  color: var(--warning);
+  background-color: var(--warning-bg);
+  border: 1px solid rgba(234, 88, 12, 0.2);
+}
+
+.lookup-status-icon {
+  font-size: 1rem;
+}
