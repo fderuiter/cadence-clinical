@@ -875,4 +875,6 @@ export {
   generateGatewaySignature,
   verifyGatewaySignature,
   generateJwtHS256,
+  sha256,
+  validateField,
 } from "./signing.js";
