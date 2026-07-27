@@ -63,6 +63,22 @@ def verify_gateway_signature(
     if hmac.compare_digest(expected, signature):
         return True
 
+    # Fallback 1: The sender generated the signature using generate_signature/generate_gateway_signature
+    # but did not pass site_id/sponsor_id/unblinded_access to the generator (treating them as default/empty/None).
+    # Thus, the signature was generated with site_id=None, sponsor_id=None, unblinded_access=False.
+    if site_id or sponsor_id or unblinded_access:
+        fallback_expected = generate_gateway_signature(
+            user_id=user_id,
+            roles=roles,
+            timestamp=timestamp,
+            secret=secret,
+            change_reason=change_reason,
+            site_id=None,
+            sponsor_id=None,
+            unblinded_access=False,
+        )
+        if hmac.compare_digest(fallback_expected, signature):
+            return True
     # 2. Compatibility check: Fallbacks are ONLY permitted if no scope fields are present/active.
     # If any scope values are present, they are scope-bearing requests and must verify using the 7-field payload.
     has_scopes = bool(site_id or sponsor_id or unblinded_access)

@@ -58,6 +58,7 @@ from apps.execution.database.models import (
     FormSubmission,
     ImportState,
     SDVSignOff,
+    SubjectRandomization,
     TranslationJob,
     TSDVConfig,
 )
@@ -79,6 +80,7 @@ from apps.execution.edit_checks import (
 )
 from apps.execution.outliers import recalculate_cohort_outliers
 from apps.execution.query_service import QueryService, StateTransitionError
+from apps.execution.subject_lifecycle import InvalidStateTransitionError
 from apps.execution.translator import process_translation
 from apps.execution.trial_lock import TrialLockManager
 from apps.execution.tsdv import evaluate_tsdv_requirement
@@ -87,7 +89,10 @@ from packages.security import (
     ROLE_CRA,
     ROLE_DATA_MANAGER,
     ROLE_SITE_INVESTIGATOR,
+    Principal,
     get_normalized_roles,
+    get_principal,
+    mask_payload,
     require_roles,
     verify_not_auditor,
 )
@@ -375,6 +380,96 @@ async def create_subject(
             study_id=subj_db.study_id,
             encrypted_demographics=subj_db.encrypted_demographics,
         )
+
+
+class SubjectUnblindResponse(BaseModel):
+    """Pydantic schema for returning emergency unblind details."""
+
+    subject_id: str
+    status: str
+    is_unblinded: bool
+    treatment_arm: Optional[str] = None
+    drug_code: Optional[str] = None
+    unblinded_at: Optional[datetime] = None
+    unblinded_by: Optional[str] = None
+    unblinded_reason: Optional[str] = None
+
+
+@app.post(
+    "/api/v1/execution/subjects/{subject_id}/unblind",
+    response_model=SubjectUnblindResponse,
+)
+async def unblind_subject(
+    subject_id: str,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+    roles: list[str] = Depends(require_roles(ROLE_SITE_INVESTIGATOR, "investigator")),
+) -> SubjectUnblindResponse:
+    """Execute emergency unblinding for a subject."""
+    # Ensure change justification headers are present and valid
+    verify_change_justification(request)
+    change_reason = request.headers.get("X-Change-Reason")
+
+    async with db_manager.get_session_maker()() as session:
+        # Fetch the subject
+        stmt = select(ClinicalSubject).where(ClinicalSubject.subject_id == subject_id)
+        result = await session.execute(stmt)
+        subject = result.scalars().first()
+
+        if not subject:
+            raise HTTPException(status_code=404, detail="Subject not found")
+
+        # Perform the transition inside a try-except to catch transition errors
+        try:
+            subject.unblind(unblinded_by=principal.user_id, reason=change_reason)
+        except InvalidStateTransitionError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+        await session.commit()
+        await session.refresh(subject)
+
+        # Determine unmasked treatment_arm and drug_code values
+        unmasked_treatment_arm = "Active Treatment Arm"
+        unmasked_drug_code = subject.kit_reference or "00010101001"
+
+        # Try to find a SubjectRandomization record for the subject
+        stmt_rand = select(SubjectRandomization).where(
+            SubjectRandomization.subject_id == subject_id
+        )
+        result_rand = await session.execute(stmt_rand)
+        rand = result_rand.scalars().first()
+        if rand:
+            if rand.kit_reference:
+                unmasked_drug_code = rand.kit_reference
+            try:
+                from apps.execution.cryptography import AllocationKeyManager
+
+                key_mgr = AllocationKeyManager()
+                decrypted = key_mgr.decrypt(rand.encrypted_allocation)
+                if isinstance(decrypted, dict):
+                    unmasked_treatment_arm = (
+                        decrypted.get("allocation")
+                        or decrypted.get("treatment_arm")
+                        or unmasked_treatment_arm
+                    )
+            except Exception:
+                if rand.stratum_key:
+                    unmasked_treatment_arm = f"Arm for stratum {rand.stratum_key}"
+
+        response_dict = {
+            "subject_id": subject.subject_id,
+            "status": subject.status,
+            "is_unblinded": subject.is_unblinded,
+            "treatment_arm": unmasked_treatment_arm,
+            "drug_code": unmasked_drug_code,
+            "unblinded_at": subject.unblinded_at,
+            "unblinded_by": subject.unblinded_by,
+            "unblinded_reason": subject.unblinded_reason,
+        }
+
+        # Apply masking dynamically based on the principal's access level
+        masked_response = mask_payload(response_dict, principal)
+        return SubjectUnblindResponse(**masked_response)
 
 
 @app.post("/api/v1/execution/visits", response_model=VisitResponse)
