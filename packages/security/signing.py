@@ -63,7 +63,6 @@ def verify_gateway_signature(
     if hmac.compare_digest(expected, signature):
         return True
 
-
     # 2. Compatibility check: Fallbacks are ONLY permitted if no scope fields are present/active.
     # If any scope values are present, they are scope-bearing requests and must verify using the 7-field payload.
     has_scopes = bool(site_id or sponsor_id or unblinded_access)

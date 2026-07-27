@@ -1118,6 +1118,7 @@ const requestCounters = reactive({});
 const conceptStatuses = reactive({});
 const conceptMessages = reactive({});
 
+// eslint-disable-next-line no-unused-vars
 function getStatusIcon(status) {
   if (status === "loading") return "⏳";
   if (status === "valid") return "✅";

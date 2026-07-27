@@ -150,7 +150,7 @@ export function validateField(fieldMeta, val, context = {}) {
 }
 
 // Re-export sha256 from the shared ui library to prevent duplicate implementations
-export { sha256 };
+export { sharedSha256 as sha256 };
 
 /**
  * Renders the clinical trial management system (CTMS) dashboard view.
