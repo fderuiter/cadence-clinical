@@ -388,7 +388,7 @@ export const useClinicalStore = defineStore("clinical", {
         },
         {
           id: "concept_code",
-          label: "Concept Code (NCI Thesaurus)",
+          label: "Controlled Terminology Concept Code",
           type: "concept_code",
           gridSpan: 12,
           cdash: "DM.CONCEPT_CODE",

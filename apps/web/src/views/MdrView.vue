@@ -101,7 +101,7 @@
             </div>
             <div
               class="form-group"
-              style="margin-bottom: 8px; position: relative"
+              style="position: relative; margin-bottom: 8px"
             >
               <label for="new-arm-concept">Arm Type Concept Code</label>
               <input
@@ -278,7 +278,7 @@
             </div>
             <div
               class="form-group"
-              style="margin-bottom: 8px; position: relative"
+              style="position: relative; margin-bottom: 8px"
             >
               <label for="new-enc-concept">Visit Type Concept Code</label>
               <input

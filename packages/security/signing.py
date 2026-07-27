@@ -63,7 +63,7 @@ def verify_gateway_signature(
     if hmac.compare_digest(expected, signature):
         return True
 
-    # 2. Fallback 1: check if signature was generated with empty scopes (site_id=None, sponsor_id=None, unblinded_access=False)
+    # Fallback 1: check if signature was generated with empty scopes (site_id=None, sponsor_id=None, unblinded_access=False)
     scope_free_expected = generate_gateway_signature(
         user_id=user_id,
         roles=roles,
@@ -77,20 +77,21 @@ def verify_gateway_signature(
     if hmac.compare_digest(scope_free_expected, signature):
         return True
 
+    # Fallback 2: check if signature was generated with the absolute legacy v2 payload (completely missing keys)
     legacy_payload = {
         "change_reason": change_reason if change_reason is not None else "",
         "roles": roles,
         "timestamp": timestamp,
         "user_id": user_id,
     }
-    # 3. Fallback 2: check if signature was generated with the absolute legacy v2 payload (completely missing keys) for backward-compatibility
-    serialized_legacy = json.dumps(
-        legacy_payload, sort_keys=True, separators=(",", ":")
-    )
-    expected_legacy = hmac.new(
-        secret, serialized_legacy.encode("utf-8"), hashlib.sha256
+    serialized = json.dumps(legacy_payload, sort_keys=True, separators=(",", ":"))
+    legacy_expected = hmac.new(
+        secret, serialized.encode("utf-8"), hashlib.sha256
     ).hexdigest()
-    return hmac.compare_digest(expected_legacy, signature)
+    if hmac.compare_digest(legacy_expected, signature):
+        return True
+
+    return False
 
 
 def canonical_serialize(payload: Dict[str, Any]) -> bytes:
