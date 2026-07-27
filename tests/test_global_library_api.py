@@ -16,9 +16,9 @@ def get_auth_headers(
     sponsor_id="spon_pharma",
     tenant_id="tenant_001",
 ):
-    timestamp = str(time.time())
     from packages.security.signing import generate_gateway_signature
 
+    timestamp = str(time.time())
     signature = generate_gateway_signature(
         user_id=user_id,
         roles=roles,
