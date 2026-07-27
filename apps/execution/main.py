@@ -2475,8 +2475,6 @@ async def open_query(
     Returns:
         ClinicalQueryResponse: The newly opened clinical query.
     """
-    verify_change_justification(request)
-
     target_status = (payload.status or "OPEN").upper()
     if target_status not in ("CANDIDATE", "OPEN"):
         raise HTTPException(
@@ -2623,8 +2621,6 @@ async def create_or_update_tsdv_config(
 
     Restricts config writes to CRA/Data Manager roles with GxP change justifications.
     """
-    verify_change_justification(request)
-
     async with db_manager.get_session_maker()() as session:
         async with session.begin():
             await session.execute(
@@ -3004,11 +3000,11 @@ class BatchSignOffResponse(BaseModel):
     status_code=201,
 )
 async def create_form_submission(
-    request: Request, payload: FormSubmissionCreate
+    request: Request,
+    payload: FormSubmissionCreate,
+    roles: list[str] = Depends(verify_not_auditor),
 ) -> FormSubmissionResponse:
     """Create a new FormSubmission in DRAFT status."""
-    verify_change_justification(request)
-
     async with db_manager.get_session_maker()() as session:
         sub = FormSubmission(
             study_id=payload.study_id,
@@ -3046,11 +3042,11 @@ async def create_form_submission(
     response_model=FormSubmissionResponse,
 )
 async def complete_form_submission(
-    submission_id: str, request: Request
+    submission_id: str,
+    request: Request,
+    roles: list[str] = Depends(verify_not_auditor),
 ) -> FormSubmissionResponse:
     """Transition a FormSubmission from DRAFT to COMPLETED."""
-    verify_change_justification(request)
-
     async with db_manager.get_session_maker()() as session:
         stmt = select(FormSubmission).where(
             FormSubmission.id == submission_id, FormSubmission.is_deleted.is_(False)
@@ -3093,12 +3089,12 @@ async def complete_form_submission(
     response_model=FormSubmissionResponse,
 )
 async def approve_form_submission(
-    submission_id: str, request: Request, payload: FormSubmissionApprove
+    submission_id: str,
+    request: Request,
+    payload: FormSubmissionApprove,
+    roles: list[str] = Depends(require_roles(ROLE_SITE_INVESTIGATOR)),
 ) -> FormSubmissionResponse:
     """PI Approve/Sign-off a completed FormSubmission."""
-    verify_change_justification(request)
-    verify_roles(request, ["investigator"])
-
     # Validate signing reason
     if payload.signing_reason not in VALID_SIGNING_REASONS:
         raise HTTPException(
@@ -3158,27 +3154,14 @@ async def approve_form_submission(
 async def post_batch_sign_off(
     request: Request,
     payload: BatchSignOffRequest,
-) -> BatchSignOffResponse:
-    """Perform a PI-only, atomic batch electronic-signature for form-, visit-, and subject-level sign-off."""
-    verify_change_justification(request)
-
-    user_roles = get_normalized_roles(request)
-    pi_roles = {
-        "pi",
-        "principal investigator",
-        "principal_investigator",
-        "investigator",
-        "site investigator",
-        "site_investigator",
-        "site-investigator",
-        "investigator_user",
-    }
-    if not any(r in pi_roles for r in user_roles):
-        raise HTTPException(
-            status_code=403,
+    roles: list[str] = Depends(
+        require_roles(
+            ROLE_SITE_INVESTIGATOR,
             detail="Forbidden: Only a Principal Investigator (PI) can perform batch electronic sign-off.",
         )
-
+    ),
+) -> BatchSignOffResponse:
+    """Perform a PI-only, atomic batch electronic-signature for form-, visit-, and subject-level sign-off."""
     target_type_upper = payload.target_type.upper()
 
     async with db_manager.get_session_maker()() as session:
@@ -3389,8 +3372,6 @@ async def respond_query(
     Returns:
         ClinicalQueryResponse: The updated query with ANSWERED status.
     """
-    verify_change_justification(request)
-
     async with db_manager.get_session_maker()() as session:
         stmt = select(ClinicalQuery).where(
             ClinicalQuery.id == query_id, ClinicalQuery.is_deleted.is_(False)
@@ -3483,8 +3464,6 @@ async def close_query(
     Returns:
         ClinicalQueryResponse: The updated query with CLOSED status.
     """
-    verify_change_justification(request)
-
     async with db_manager.get_session_maker()() as session:
         stmt = select(ClinicalQuery).where(
             ClinicalQuery.id == query_id, ClinicalQuery.is_deleted.is_(False)
@@ -3563,8 +3542,6 @@ async def reopen_query(
     Returns:
         ClinicalQueryResponse: The updated query with REOPENED status.
     """
-    verify_change_justification(request)
-
     if payload is not None:
         reason_str = payload.reason or ""
     else:
@@ -3656,8 +3633,6 @@ async def cancel_query(
     Returns:
         ClinicalQueryResponse: The updated query with CANCELLED status.
     """
-    verify_change_justification(request)
-
     if not payload.reason or not payload.reason.strip():
         raise HTTPException(
             status_code=400, detail="Cancellation requires a non-empty reason."
@@ -3727,7 +3702,12 @@ async def cancel_query(
     response_model=ClinicalQueryResponse,
 )
 async def update_query_state(
-    query_id: str, request: Request, payload: QueryUpdate
+    query_id: str,
+    request: Request,
+    payload: QueryUpdate,
+    roles: list[str] = Depends(
+        require_roles(ROLE_CRA, ROLE_DATA_MANAGER, ROLE_SITE_INVESTIGATOR)
+    ),
 ) -> ClinicalQueryResponse:
     """Transition a query through the designated state sequence and perform role checks.
 
@@ -3739,8 +3719,6 @@ async def update_query_state(
     Returns:
         ClinicalQueryResponse: The updated query record and audit trail.
     """
-    verify_change_justification(request)
-
     async with db_manager.get_session_maker()() as session:
         stmt = select(ClinicalQuery).where(
             ClinicalQuery.id == query_id, ClinicalQuery.is_deleted.is_(False)
@@ -3770,7 +3748,7 @@ async def update_query_state(
             raise HTTPException(status_code=400, detail=str(e))
 
         # Enforce role boundaries depending on target transition state
-        user_roles = get_normalized_roles(request)
+        user_roles = roles
         cra_dm_roles = {
             "cra",
             "data manager",
@@ -3916,8 +3894,6 @@ async def sync_queries(
     Translates local ledger blocks to correct fields in the target database schema,
     verifying caller roles and payload integrity.
     """
-    verify_change_justification(request)
-
     # We map fieldId to CDASH domain & test_code
     field_map = {
         "brthdt": ("DM", "BRTHDT"),
@@ -4094,7 +4070,6 @@ async def lock_site_endpoint(
     roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER)),
 ) -> dict[str, str]:
     """Locks or freezes a specific site."""
-    verify_change_justification(request)
     TrialLockManager.lock_site(site_id)
     return {"status": "success", "message": f"Site {site_id} is locked/frozen."}
 
@@ -4107,7 +4082,6 @@ async def unlock_site_endpoint(
     roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER)),
 ) -> dict[str, str]:
     """Unlocks or unfreezes a specific site."""
-    verify_change_justification(request)
     TrialLockManager.unlock_site(site_id)
     return {"status": "success", "message": f"Site {site_id} is unlocked/unfrozen."}
 
@@ -4120,7 +4094,6 @@ async def lock_visit_endpoint(
     roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER)),
 ) -> dict[str, str]:
     """Locks or freezes a specific visit."""
-    verify_change_justification(request)
     TrialLockManager.lock_visit(visit_id)
     return {"status": "success", "message": f"Visit {visit_id} is locked/frozen."}
 
@@ -4133,7 +4106,6 @@ async def unlock_visit_endpoint(
     roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER)),
 ) -> dict[str, str]:
     """Unlocks or unfreezes a specific visit."""
-    verify_change_justification(request)
     TrialLockManager.unlock_visit(visit_id)
     return {"status": "success", "message": f"Visit {visit_id} is unlocked/unfrozen."}
 
@@ -4146,7 +4118,6 @@ async def lock_form_endpoint(
     roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER)),
 ) -> dict[str, str]:
     """Locks or freezes a specific form."""
-    verify_change_justification(request)
     TrialLockManager.lock_form(form_id)
     return {"status": "success", "message": f"Form {form_id} is locked/frozen."}
 
@@ -4159,7 +4130,6 @@ async def unlock_form_endpoint(
     roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER)),
 ) -> dict[str, str]:
     """Unlocks or unfreezes a specific form."""
-    verify_change_justification(request)
     TrialLockManager.unlock_form(form_id)
     return {"status": "success", "message": f"Form {form_id} is unlocked/unfrozen."}
 
@@ -4172,7 +4142,6 @@ async def lock_subject_endpoint(
     roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER)),
 ) -> dict[str, str]:
     """Locks or freezes a specific subject."""
-    verify_change_justification(request)
     TrialLockManager.lock_subject(subject_id)
     return {"status": "success", "message": f"Subject {subject_id} is locked/frozen."}
 
@@ -4185,7 +4154,6 @@ async def unlock_subject_endpoint(
     roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER)),
 ) -> dict[str, str]:
     """Unlocks or unfreezes a specific subject."""
-    verify_change_justification(request)
     TrialLockManager.unlock_subject(subject_id)
     return {
         "status": "success",
@@ -4200,7 +4168,6 @@ async def lock_trial_endpoint(
     roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER)),
 ) -> dict[str, str]:
     """Locks or freezes the trial/study."""
-    verify_change_justification(request)
     reason = request.headers.get("X-Change-Reason", "Sponsor Lock")
     TrialLockManager.lock_trial(reason=reason)
     return {"status": "success", "message": "Trial is locked/frozen."}
@@ -4213,7 +4180,6 @@ async def unlock_trial_endpoint(
     roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER)),
 ) -> dict[str, str]:
     """Unlocks or unfreezes the trial/study."""
-    verify_change_justification(request)
     TrialLockManager.unlock_trial()
     return {"status": "success", "message": "Trial is unlocked/unfrozen."}
 
@@ -4249,8 +4215,6 @@ async def post_impact_analysis(
     ),
 ) -> ImpactAnalysisResponse:
     """Manually triggers up-versioning impact analysis on existing coded assignments."""
-    verify_change_justification(request)
-
     from apps.execution.coding.impact import run_impact_analysis
 
     async with db_manager.get_session_maker()() as session:
@@ -4405,9 +4369,6 @@ async def process_coding_action(
     roles: list[str] = Depends(require_roles("data manager")),
 ) -> CodingAssignmentResponse:
     """Accepts a suggestion or submits a manual override, persisting results and updating the ledger."""
-    # Enforce GxP signature-gated/justification requirement
-    verify_change_justification(request)
-
     action_upper = payload.action.upper()
     if action_upper not in ("ACCEPT", "OVERRIDE", "QUERY"):
         raise HTTPException(

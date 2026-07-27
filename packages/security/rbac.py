@@ -560,25 +560,40 @@ ROLE_EXPANSIONS = {
 }
 
 
-def require_roles(*allowed_roles: str):
+def require_roles(*allowed_roles: str, detail: Optional[str] = None):
     """
     FastAPI dependency factory to enforce that the caller has at least one of the allowed roles.
     Allows case-insensitive, whitespace-insensitive matches and role synonym expansion.
     """
 
     def dependency(request: Request) -> list[str]:
-        roles = get_normalized_roles(request)
+        raw_roles = get_normalized_roles(request)
+        roles = []
+        for r in raw_roles:
+            norm_r = r.strip().lower()
+            if norm_r in ("sponsor admin", "sponsor_admin"):
+                roles.append("sponsor_admin")
+            else:
+                roles.append(normalize_role(r))
         expanded_allowed = set()
         for role in allowed_roles:
             norm_role = role.strip().lower()
-            expanded_allowed.add(norm_role)
+            # Normalize allowed roles as well so we can compare canonical forms
+            norm_role_canonical = (
+                "sponsor_admin"
+                if norm_role in ("sponsor admin", "sponsor_admin")
+                else normalize_role(norm_role)
+            )
+            expanded_allowed.add(norm_role_canonical)
+            if norm_role_canonical in ROLE_EXPANSIONS:
+                expanded_allowed.update(ROLE_EXPANSIONS[norm_role_canonical])
             if norm_role in ROLE_EXPANSIONS:
                 expanded_allowed.update(ROLE_EXPANSIONS[norm_role])
 
         if not any(role in expanded_allowed for role in roles):
             raise HTTPException(
                 status_code=403,
-                detail="User role is not authorized for this action.",
+                detail=detail or "User role is not authorized for this action.",
             )
         return roles
 

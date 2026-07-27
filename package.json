@@ -11,7 +11,7 @@
     "test": "pnpm -r test && uv run pytest",
     "lint": "pnpm -r lint && uv run ruff check .",
     "format": "pnpm -r format && uv run ruff format .",
-    "check": "pnpm format && pnpm lint && pnpm test && node scripts/check-links.js && uv run python scripts/validate_adrs.py && uv run python scripts/validate_markdown.py",
+    "check": "pnpm format && pnpm lint && pnpm test && node scripts/check-links.js && python3 scripts/validate_adrs.py && python3 scripts/validate_markdown.py",
     "build": "pnpm --filter web build",
     "build:docs": "node scripts/build-docs.js"
   },

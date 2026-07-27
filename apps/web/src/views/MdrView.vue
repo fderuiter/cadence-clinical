@@ -106,7 +106,7 @@
               <label for="new-arm-concept">Arm Type Concept Code</label>
               <input
                 id="new-arm-concept"
-                v-model="newArm.concept"
+                v-model="newArm.concept_code"
                 type="text"
                 placeholder="Search Arm Type CT..."
                 style="width: 100%; padding: 6px"
@@ -257,23 +257,6 @@
                 style="width: 100%; padding: 6px"
               />
             </div>
-            <div class="form-group" style="margin-bottom: 8px">
-              <label for="new-enc-epoch">Associated Epoch</label>
-              <select
-                id="new-enc-epoch"
-                v-model="newEnc.epoch_id"
-                style="width: 100%; padding: 6px"
-              >
-                <option value="">-- Select Epoch --</option>
-                <option
-                  v-for="ep in store.currentUsdm.epochs"
-                  :key="ep.epoch_id"
-                  :value="ep.epoch_id"
-                >
-                  {{ ep.epoch_name }}
-                </option>
-              </select>
-            </div>
             <div
               class="form-group"
               style="margin-bottom: 8px; position: relative"
@@ -281,7 +264,7 @@
               <label for="new-enc-concept">Visit Type Concept Code</label>
               <input
                 id="new-enc-concept"
-                v-model="newEnc.concept"
+                v-model="newEnc.concept_code"
                 type="text"
                 placeholder="Search Visit Type CT..."
                 style="width: 100%; padding: 6px"
@@ -317,6 +300,23 @@
                   {{ sug.preferred_name }}
                 </div>
               </div>
+            </div>
+            <div class="form-group" style="margin-bottom: 8px">
+              <label for="new-enc-epoch">Associated Epoch</label>
+              <select
+                id="new-enc-epoch"
+                v-model="newEnc.epoch_id"
+                style="width: 100%; padding: 6px"
+              >
+                <option value="">-- Select Epoch --</option>
+                <option
+                  v-for="ep in store.currentUsdm.epochs"
+                  :key="ep.epoch_id"
+                  :value="ep.epoch_id"
+                >
+                  {{ ep.epoch_name }}
+                </option>
+              </select>
             </div>
             <button
               class="btn btn-primary"
@@ -567,26 +567,13 @@ import { useClinicalStore } from "../stores/clinical";
 import { createClinicalVisitMatrix } from "ui";
 import { terminologyClient } from "../api/terminologyClient.js";
 import { useAuthStore } from "../stores/auth.js";
+import { debounce } from "ui";
 
 const store = useClinicalStore();
 const authStore = useAuthStore();
 
-const builderMode = ref(false);
-const usdmText = ref(JSON.stringify(store.currentUsdm, null, 2));
-
 const armSuggestions = ref([]);
 const encSuggestions = ref([]);
-
-// Debounce helper
-function debounce(fn, delay) {
-  let timeoutId = null;
-  return function (...args) {
-    if (timeoutId) clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => {
-      fn(...args);
-    }, delay);
-  };
-}
 
 const debouncedSearchArm = debounce(async (term) => {
   if (!term || !term.trim()) {
@@ -597,7 +584,7 @@ const debouncedSearchArm = debounce(async (term) => {
     const res = await terminologyClient.searchTerminology(term, {
       userId: authStore.identity?.username || "fderuiter",
       roles: authStore.identity?.roles?.[0] || "investigator",
-      changeReason: "Search terminology",
+      changeReason: "Arm concept search",
     });
     armSuggestions.value = res.results || [];
   } catch (err) {
@@ -614,7 +601,7 @@ const debouncedSearchEnc = debounce(async (term) => {
     const res = await terminologyClient.searchTerminology(term, {
       userId: authStore.identity?.username || "fderuiter",
       roles: authStore.identity?.roles?.[0] || "investigator",
-      changeReason: "Search terminology",
+      changeReason: "Encounter concept search",
     });
     encSuggestions.value = res.results || [];
   } catch (err) {
@@ -631,24 +618,27 @@ function searchEncTerminology(term) {
 }
 
 function selectArmConcept(sug) {
-  newArm.concept = sug.concept_code;
+  newArm.concept_code = sug.concept_code;
   armSuggestions.value = [];
 }
 
 function selectEncConcept(sug) {
-  newEnc.concept = sug.concept_code;
+  newEnc.concept_code = sug.concept_code;
   encSuggestions.value = [];
 }
 
+const builderMode = ref(false);
+const usdmText = ref(JSON.stringify(store.currentUsdm, null, 2));
+
 // Creation Forms States
-const newArm = reactive({ id: "", name: "", concept: "" });
+const newArm = reactive({ id: "", name: "", concept_code: "" });
 const newEpoch = reactive({ id: "", name: "", sequence: 1, arm_id: "" });
 const newEnc = reactive({
   id: "",
   name: "",
   sequence: 1,
   epoch_id: "",
-  concept: "",
+  concept_code: "",
 });
 const newProc = reactive({ id: "", name: "" });
 
@@ -965,7 +955,7 @@ function handleAddArm() {
   });
   newArm.id = "";
   newArm.name = "";
-  newArm.concept = "";
+  newArm.concept_code = "";
 }
 
 function handleAddEpoch() {
@@ -1005,10 +995,11 @@ function handleAddEncounter() {
   });
   newEnc.id = "";
   newEnc.name = "";
-  newEnc.concept = "";
+  newEnc.concept_code = "";
   newEnc.sequence = store.currentUsdm.encounters
     ? store.currentUsdm.encounters.length + 1
     : 1;
+  newEnc.concept_code = "";
 }
 
 function handleAddProcedure() {
