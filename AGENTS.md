@@ -5,23 +5,6 @@ Cadence Clinical is a unified, standalone eClinical platform synthesizing upstre
 
 ---
 
-## Multi-Repository Context & System Boundaries
-
-When operating within the multi-repository workspace, you have access to three connected repositories:
-
-1. **`openstudybuilder-ref`** *(READ-ONLY REFERENCE)*
-   - Use strictly as a reference blueprint for CDISC USDM graph algorithms, protocol versioning logic, and Schedule of Activities (SoA) definitions.
-   - **DO NOT** edit or submit commits to this repository.
-
-2. **`openclinica-ref`** *(READ-ONLY REFERENCE)*
-   - Use strictly as a reference blueprint for eCRF form evaluation, OpenRosa/Enketo XForm rendering rules, subject state machines, query management, and audit log schemas.
-   - **DO NOT** edit or submit commits to this repository.
-
-3. **`cadence-clinical`** *(PRIMARY OWNED REPOSITORY)*
-   - **ALL** new code generation, refactoring, API endpoints, Pydantic v2 domain models, Keycloak OIDC configs, and Docker setups MUST be authored strictly within this repository.
-
----
-
 ## Technical Stack & Standards
 
 - **Language & Runtime:** Python 3.11+
