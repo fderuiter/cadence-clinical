@@ -46,6 +46,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-25: FDA 21 CFR Part 11 Offline Sync Ledger & Digital Signatures](2026-07-25-part11-offline-sync-ledger.md)
 - [2026-07-26: CTMS Foundation, Database, Auditing, and RBAC Infrastructure](2026-07-26-ctms-foundation-infrastructure.md)
 - [2026-07-27: Quality & CAPA Foundation and Domain Models](2026-07-27-quality-capa-scaffold.md)
+- [2026-07-27: Unified Database Audit Mixin and Session Hook Factory](2026-07-27-unified-database-audit-mixin-and-hooks.md)
 - [2026-07-28: SDV/TSDV Persistence Foundation and Migration Support](2026-07-28-sdv-tsdv-persistence-foundation.md)
 - [2026-07-29: TMF Reference Model Taxonomy Integration](2026-07-29-tmf-reference-model-taxonomy-integration.md)
 - [2026-07-30: Rule Authoring, Validation, and DDF Delivery](2026-07-30-rule-authoring-validation-and-ddf-delivery.md)
