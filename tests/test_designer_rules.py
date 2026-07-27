@@ -62,6 +62,8 @@ def get_auth_headers(
 
 
 def test_valid_skip_logic_schema():
+    # @req:PRD-EDC-003
+    # @req:PRD-EDC-004
     payload = {
         "type": "skip_logic",
         "condition": {

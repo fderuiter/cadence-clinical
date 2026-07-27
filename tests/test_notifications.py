@@ -62,6 +62,7 @@ def get_auth_headers(
 def test_notifications_health_check():
     """
     Verify health check of independent Notifications service.
+    # @req:Trace-10
     """
     client = TestClient(app)
     response = client.get("/health")

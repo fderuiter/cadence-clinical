@@ -62,7 +62,9 @@ describe("PI Sign-Off Worklist and Re-authentication Flow", () => {
 
     // Modal should be open
     expect(wrapper.find("#reauth-modal").exists()).toBe(true);
-    expect(wrapper.find("#reauth-username").element.value).toBe(clinicalStore.user.username);
+    expect(wrapper.find("#reauth-username").element.value).toBe(
+      clinicalStore.user.username
+    );
   });
 
   it("obtains a signature token and triggers batch sign-off successfully, then clears credentials", async () => {
@@ -73,8 +75,14 @@ describe("PI Sign-Off Worklist and Re-authentication Flow", () => {
     });
 
     // Mock API success responses
-    soaClient.verifySignature.mockResolvedValue({ sig_token: "mock-jwt-sig-token" });
-    soaClient.batchSignOff.mockResolvedValue({ status: "success", approved_submission_ids: ["FSUB-001"], skipped_submission_ids: [] });
+    soaClient.verifySignature.mockResolvedValue({
+      sig_token: "mock-jwt-sig-token",
+    });
+    soaClient.batchSignOff.mockResolvedValue({
+      status: "success",
+      approved_submission_ids: ["FSUB-001"],
+      skipped_submission_ids: [],
+    });
 
     // Open reauth modal
     await wrapper.find("#signoff-target-type").setValue("VISIT");
@@ -92,14 +100,14 @@ describe("PI Sign-Off Worklist and Re-authentication Flow", () => {
     await wrapper.find("#btn-confirm-reauth").trigger("click");
 
     // Wait for async actions and DOM update
-    await new Promise(resolve => setTimeout(resolve, 10));
+    await new Promise((resolve) => setTimeout(resolve, 10));
     await wrapper.vm.$nextTick();
 
     // Verify correct API invocation
     expect(soaClient.verifySignature).toHaveBeenCalledWith(
       {
         username: "fderuiter",
-        password: "valid_password",
+        password: "valid_password", // pragma: allowlist secret
         totp: null,
         action: "/api/v1/execution/batch-sign-off",
       },
@@ -137,7 +145,9 @@ describe("PI Sign-Off Worklist and Re-authentication Flow", () => {
     });
 
     // Mock API returning 401 failure
-    soaClient.verifySignature.mockRejectedValue(new Error("REAUTHENTICATION_REQUIRED"));
+    soaClient.verifySignature.mockRejectedValue(
+      new Error("REAUTHENTICATION_REQUIRED")
+    );
 
     // Open reauth modal
     await wrapper.find("#signoff-target-type").setValue("SUBJECT");
@@ -151,12 +161,14 @@ describe("PI Sign-Off Worklist and Re-authentication Flow", () => {
     await wrapper.find("#btn-confirm-reauth").trigger("click");
 
     // Wait for async actions and DOM update
-    await new Promise(resolve => setTimeout(resolve, 10));
+    await new Promise((resolve) => setTimeout(resolve, 10));
     await wrapper.vm.$nextTick();
 
     // Modal should still be open
     expect(wrapper.find("#reauth-modal").exists()).toBe(true);
-    expect(wrapper.text()).toContain("Identity verification expired or invalid");
+    expect(wrapper.text()).toContain(
+      "Identity verification expired or invalid"
+    );
 
     // Ensure password gets completely wiped
     expect(wrapper.vm.reauthPassword).toBe("");

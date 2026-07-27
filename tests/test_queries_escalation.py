@@ -33,7 +33,10 @@ async def setup_test_db():
 @pytest.mark.asyncio
 @patch("apps.execution.queries_escalation.NotificationRouter.send_email")
 async def test_threshold_boundaries_and_escalation(mock_send_email):
-    """Test that queries are escalated if they are unresolved for more than 14 days, and not otherwise."""
+    """Test that queries are escalated if they are unresolved for more than 14 days, and not otherwise.
+    # @req:PRD-QRY-001
+    # @req:PRD-QRY-002
+    """
     session_maker = db_manager.get_session_maker()
     now = datetime.now()
 

@@ -34,6 +34,7 @@ def test_strategy_client_wins_no_existing():
 def test_strategy_client_wins_existing():
     """
     CLIENT_WINS strategy when existing record exists: incoming should overwrite everything.
+    # @req:PRD-EDC-008
     """
     existing_data = {"key": "old_val", "other": "keep"}
     existing_metadata = SyncMetadata(
@@ -56,6 +57,7 @@ def test_strategy_client_wins_existing():
 def test_strategy_server_wins():
     """
     SERVER_WINS strategy: existing record is kept; incoming is ignored.
+    # @req:Trace-9
     """
     existing_data = {"key": "old_val"}
     existing_metadata = SyncMetadata(

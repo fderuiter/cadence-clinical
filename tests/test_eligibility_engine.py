@@ -14,9 +14,10 @@ from eligibility import (
 )
 
 
-# @req:PRD-ELIGIBILITY-001
 def test_parse_simple_expressions():
-    """Verify parser correctly builds AST for simple comparison and literal expressions."""
+    """Verify parser correctly builds AST for simple comparison and literal expressions.
+    # @req:PRD-MDR-007
+    """
     node1 = parse_dsl("eCRF.DM.AGE >= 18")
     assert node1.type == "comparison"
     assert node1.operator == ">="

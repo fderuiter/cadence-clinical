@@ -48,6 +48,7 @@ async def test_eisf_document_creation_and_site_scoped():
     """
     Verify that every document is site-scoped and binder-classified, and that
     all required fields are correctly persisted and retrieved.
+    # @req:PRD-EDC-005
     """
     async with db_manager.get_session_maker()() as session:
         # Create a site-scoped, binder-classified document

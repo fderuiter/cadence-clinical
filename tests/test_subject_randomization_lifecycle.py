@@ -46,7 +46,12 @@ async def setup_db():
 
 
 def test_pure_python_transition_guard():
-    """Verify that only documented transitions are allowed by the pure-Python guard."""
+    """Verify that only documented transitions are allowed by the pure-Python guard.
+    # @req:PRD-MDR-006
+    # @req:PRD-SUB-002
+    # @req:PRD-SUB-005
+    # @req:PRD-SUB-006
+    """
     # Screen fails and screen passes
     guard_subject_transition("SCREENING", "SCREEN_FAILED")
     guard_subject_transition("SCREENING", "ENROLLED")

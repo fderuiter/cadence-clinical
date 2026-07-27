@@ -125,6 +125,10 @@ async def validate_layout_html(html_content: str):
 
 @pytest.mark.asyncio
 async def test_layout_validation_valid():
+    # @req:PRD-EDC-006
+    # @req:PRD-EDC-007
+    # @req:PRD-EDC-009
+    # @req:PRD-EDC-010
     html = """
     <html xmlns="http://www.w3.org/1999/xhtml" xmlns:xf="http://www.w3.org/2002/xforms">
       <head><title>Test</title></head>

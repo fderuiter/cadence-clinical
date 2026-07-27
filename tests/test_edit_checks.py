@@ -31,7 +31,10 @@ async def setup_test_db() -> AsyncGenerator[None, None]:
 
 @pytest.mark.asyncio
 async def test_same_record_failure_outlier_and_auto_close() -> None:
-    """Test that a same-record failure opens exactly one query, is not duplicated, and auto-closes on correction."""
+    """Test that a same-record failure opens exactly one query, is not duplicated, and auto-closes on correction.
+    # @req:PRD-QRY-003
+    # @req:PRD-QRY-004
+    """
     headers = get_v2_auth_headers(
         user_id="dm_user_001",
         roles="Data Manager",

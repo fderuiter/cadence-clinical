@@ -15,6 +15,7 @@ def test_verify_token_invalid() -> None:
     Test verifying an invalid token.
 
     Ensures that passing an invalid token to verify_token raises an exception.
+    # @req:Trace-8
     """
     with pytest.raises(Exception):
         verify_token("invalid_token")

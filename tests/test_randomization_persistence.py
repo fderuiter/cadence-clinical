@@ -47,7 +47,10 @@ async def setup_db():
 
 @pytest.mark.asyncio
 async def test_randomization_entities_audit_trail_and_soft_delete():
-    """Verify that RandomizationConfig, StratumState, and SubjectRandomization participate in the GxP audit trail, version index, and soft deletion."""
+    """Verify that RandomizationConfig, StratumState, and SubjectRandomization participate in the GxP audit trail, version index, and soft deletion.
+    # @req:PRD-SUB-003
+    # @req:PRD-SUB-004
+    """
     current_user_id.set("user_rtsm_mgr")
     current_change_reason.set("Configure RTSM for Study A")
 

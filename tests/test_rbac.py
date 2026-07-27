@@ -476,7 +476,9 @@ def test_has_permission() -> None:
 
 
 def test_can_access_site() -> None:
-    """Verify can_access_site denies investigator/crc when site is outside their scope."""
+    """Verify can_access_site denies investigator/crc when site is outside their scope.
+    # @req:PRD-SYS-004
+    """
     from packages.security.rbac import (
         ROLE_CRC,
         ROLE_INVESTIGATOR,

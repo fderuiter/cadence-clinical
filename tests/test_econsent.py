@@ -62,6 +62,7 @@ def test_econsent_health_check():
     """
     Verify health check of independent eConsent service is publicly accessible
     and bypasses GatewayAuthMiddleware checks.
+    # @req:PRD-SUB-007
     """
     client = TestClient(app)
     response = client.get("/health")

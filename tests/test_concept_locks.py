@@ -26,7 +26,9 @@ def test_check_dict_for_value():
 
 @pytest.mark.asyncio
 async def test_is_concept_referenced_by_active_recruiting_study():
-    """Verify is_concept_referenced_by_active_recruiting_study identifies references under Active-Recruiting."""
+    """Verify is_concept_referenced_by_active_recruiting_study identifies references under Active-Recruiting.
+    # @req:PRD-MDR-002
+    """
     # Setup mock studies & versions
     MOCK_STUDIES["study_recruiting_test"] = {
         "study_id": "study_recruiting_test",

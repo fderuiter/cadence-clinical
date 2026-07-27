@@ -27,6 +27,8 @@ async def setup_eisf_db_for_ingest():
 async def test_eisf_ingest_document_success() -> None:
     """
     Test successful ingestion of a document with manual API and event publication alias.
+    # @req:PRD-EDC-001
+    # @req:PRD-EDC-002
     """
     client = TestClient(eisf_app)
     headers = get_eisf_auth_headers(
