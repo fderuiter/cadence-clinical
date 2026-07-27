@@ -887,7 +887,6 @@ import { useAuthStore } from "../stores/auth";
 import { soaClient } from "../api/soaClient";
 import { validateField } from "../../index";
 import { terminologyClient } from "../api/terminologyClient";
-
 const store = useClinicalStore();
 const authStore = useAuthStore();
 
@@ -916,7 +915,11 @@ function handleConceptCodeInput(field, val) {
   debounceTimers[field.id] = setTimeout(async () => {
     const reqId = ++latestRequestId;
     try {
-      const response = await terminologyClient.validateSingleCode(val, {});
+      const response = await terminologyClient.validateSingleCode(val, {
+        userId: store.user?.username || "fderuiter",
+        roles: store.user?.roles ? store.user.roles.join(",") : "investigator",
+        changeReason: "Validate code",
+      });
       if (reqId !== latestRequestId) return;
 
       if (response && response.state) {
@@ -926,11 +929,11 @@ function handleConceptCodeInput(field, val) {
             `Code is valid: "${response.decode}"`;
         } else if (response.state === "INVALID") {
           conceptCodeStatusMessage[field.id] =
-            `Invalid code: "${val}". Not found in NCI Thesaurus.`;
+            `Invalid code: "${val}"`;
         } else if (response.state === "DEGRADED") {
           conceptCodeStatus[field.id] = "degraded";
           conceptCodeStatusMessage[field.id] =
-            "Terminology service degraded. Validation offline.";
+            response.error_message || "Terminology service degraded. Validation offline.";
         }
       }
     } catch {

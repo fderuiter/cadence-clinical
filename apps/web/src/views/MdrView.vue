@@ -108,10 +108,11 @@
                 id="new-arm-concept"
                 v-model="newArm.concept_code"
                 type="text"
-                placeholder="e.g. C4872"
+                placeholder="Search Arm Type CT..."
                 style="width: 100%; padding: 6px"
-                @input="handleArmConceptInput($event.target.value)"
+                @input="searchArmTerminology($event.target.value)"
               />
+              <!-- Autocomplete Suggestion Dropdown -->
               <div
                 v-if="armSuggestions.length > 0"
                 class="autocomplete-dropdown"
@@ -119,23 +120,26 @@
                   position: absolute;
                   background: white;
                   border: 1px solid var(--border);
+                  border-radius: 4px;
                   width: 100%;
-                  z-index: 10;
+                  z-index: 100;
                   max-height: 150px;
                   overflow-y: auto;
+                  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                 "
               >
                 <div
-                  v-for="s in armSuggestions"
-                  :key="s.concept_code"
+                  v-for="sug in armSuggestions"
+                  :key="sug.concept_code"
                   style="
                     padding: 6px;
                     cursor: pointer;
-                    border-bottom: 1px solid var(--border);
+                    border-bottom: 1px solid #f1f5f9;
                   "
-                  @click="selectArmConcept(s)"
+                  @click="selectArmConcept(sug)"
                 >
-                  <strong>{{ s.concept_code }}</strong> - {{ s.preferred_name }}
+                  <strong>{{ sug.concept_code }}</strong> -
+                  {{ sug.preferred_name }}
                 </div>
               </div>
             </div>
@@ -261,10 +265,11 @@
                 id="new-enc-concept"
                 v-model="newEnc.concept_code"
                 type="text"
-                placeholder="e.g. C123"
+                placeholder="Search Visit Type CT..."
                 style="width: 100%; padding: 6px"
-                @input="handleEncConceptInput($event.target.value)"
+                @input="searchEncTerminology($event.target.value)"
               />
+              <!-- Autocomplete Suggestion Dropdown -->
               <div
                 v-if="encSuggestions.length > 0"
                 class="autocomplete-dropdown"
@@ -272,23 +277,26 @@
                   position: absolute;
                   background: white;
                   border: 1px solid var(--border);
+                  border-radius: 4px;
                   width: 100%;
-                  z-index: 10;
+                  z-index: 100;
                   max-height: 150px;
                   overflow-y: auto;
+                  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                 "
               >
                 <div
-                  v-for="s in encSuggestions"
-                  :key="s.concept_code"
+                  v-for="sug in encSuggestions"
+                  :key="sug.concept_code"
                   style="
                     padding: 6px;
                     cursor: pointer;
-                    border-bottom: 1px solid var(--border);
+                    border-bottom: 1px solid #f1f5f9;
                   "
-                  @click="selectEncConcept(s)"
+                  @click="selectEncConcept(sug)"
                 >
-                  <strong>{{ s.concept_code }}</strong> - {{ s.preferred_name }}
+                  <strong>{{ sug.concept_code }}</strong> -
+                  {{ sug.preferred_name }}
                 </div>
               </div>
             </div>
@@ -563,6 +571,72 @@ const store = useClinicalStore();
 const builderMode = ref(false);
 const usdmText = ref(JSON.stringify(store.currentUsdm, null, 2));
 
+const armSuggestions = ref([]);
+const encSuggestions = ref([]);
+
+// Debounce helper
+function debounce(fn, delay) {
+  let timeoutId = null;
+  return function (...args) {
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => {
+      fn(...args);
+    }, delay);
+  };
+}
+
+const debouncedSearchArm = debounce(async (term) => {
+  if (!term || !term.trim()) {
+    armSuggestions.value = [];
+    return;
+  }
+  try {
+    const res = await terminologyClient.searchTerminology(term, {
+      userId: "fderuiter",
+      roles: "investigator",
+      changeReason: "Search terminology",
+    });
+    armSuggestions.value = res.results || [];
+  } catch (err) {
+    console.warn("Failed to search arm terminology:", err);
+  }
+}, 300);
+
+const debouncedSearchEnc = debounce(async (term) => {
+  if (!term || !term.trim()) {
+    encSuggestions.value = [];
+    return;
+  }
+  try {
+    const res = await terminologyClient.searchTerminology(term, {
+      userId: "fderuiter",
+      roles: "investigator",
+      changeReason: "Search terminology",
+    });
+    encSuggestions.value = res.results || [];
+  } catch (err) {
+    console.warn("Failed to search encounter/visit terminology:", err);
+  }
+}, 300);
+
+function searchArmTerminology(term) {
+  debouncedSearchArm(term);
+}
+
+function searchEncTerminology(term) {
+  debouncedSearchEnc(term);
+}
+
+function selectArmConcept(sug) {
+  newArm.concept_code = sug.concept_code;
+  armSuggestions.value = [];
+}
+
+function selectEncConcept(sug) {
+  newEnc.concept_code = sug.concept_code;
+  encSuggestions.value = [];
+}
+
 // Creation Forms States
 const newArm = reactive({ id: "", name: "", concept_code: "" });
 const newEpoch = reactive({ id: "", name: "", sequence: 1, arm_id: "" });
@@ -574,72 +648,6 @@ const newEnc = reactive({
   concept_code: "",
 });
 const newProc = reactive({ id: "", name: "" });
-
-// Concept Autocomplete States
-const armSuggestions = ref([]);
-const encSuggestions = ref([]);
-let armDebounceTimer = null;
-let encDebounceTimer = null;
-
-function handleArmConceptInput(val) {
-  newArm.concept_code = val;
-  if (!val || val.trim().length < 2) {
-    armSuggestions.value = [];
-    return;
-  }
-
-  if (armDebounceTimer) {
-    clearTimeout(armDebounceTimer);
-  }
-
-  armDebounceTimer = setTimeout(async () => {
-    try {
-      const response = await terminologyClient.searchTerminology(val, {});
-      if (response && response.results) {
-        armSuggestions.value = response.results;
-      } else {
-        armSuggestions.value = [];
-      }
-    } catch {
-      armSuggestions.value = [];
-    }
-  }, 300);
-}
-
-function selectArmConcept(s) {
-  newArm.concept_code = s.concept_code;
-  armSuggestions.value = [];
-}
-
-function handleEncConceptInput(val) {
-  newEnc.concept_code = val;
-  if (!val || val.trim().length < 2) {
-    encSuggestions.value = [];
-    return;
-  }
-
-  if (encDebounceTimer) {
-    clearTimeout(encDebounceTimer);
-  }
-
-  encDebounceTimer = setTimeout(async () => {
-    try {
-      const response = await terminologyClient.searchTerminology(val, {});
-      if (response && response.results) {
-        encSuggestions.value = response.results;
-      } else {
-        encSuggestions.value = [];
-      }
-    } catch {
-      encSuggestions.value = [];
-    }
-  }, 300);
-}
-
-function selectEncConcept(s) {
-  newEnc.concept_code = s.concept_code;
-  encSuggestions.value = [];
-}
 
 // Link Applicability States
 const linkPayload = reactive({ procedure_id: "", visit_id: "", timing: "" });
@@ -954,6 +962,7 @@ function handleAddArm() {
   });
   newArm.id = "";
   newArm.name = "";
+  newArm.concept_code = "";
 }
 
 function handleAddEpoch() {
@@ -993,6 +1002,7 @@ function handleAddEncounter() {
   });
   newEnc.id = "";
   newEnc.name = "";
+  newEnc.concept_code = "";
   newEnc.sequence = store.currentUsdm.encounters
     ? store.currentUsdm.encounters.length + 1
     : 1;

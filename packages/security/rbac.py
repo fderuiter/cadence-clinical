@@ -223,20 +223,30 @@ def can_access_site(principal: Principal, site_id: str) -> bool:
     return True
 
 
-def get_principal(request: Request) -> Principal:
+def get_principal_sync(request: Request) -> Principal:
     """
-    FastAPI dependency to extract identity and authorization attributes
-    from request context and headers, returning a normalized Principal.
+    Synchronous helper to extract identity and authorization attributes
+    from request context, query parameters, and headers, returning a normalized Principal.
     """
     # 1. User ID
-    user_id = getattr(request.state, "user_id", None) or request.headers.get(
-        "X-User-Id", ""
-    )
+    user_id = ""
+    if hasattr(request, "state"):
+        user_id = getattr(request.state, "user_id", None) or ""
+    if not user_id and hasattr(request, "headers"):
+        user_id = (
+            request.headers.get("X-User-Id") or request.headers.get("x-user-id") or ""
+        )
 
     # 2. Roles (raw)
-    roles_val = getattr(request.state, "roles", None)
-    if roles_val is None:
-        roles_val = request.headers.get("X-User-Roles", "")
+    roles_val = None
+    if hasattr(request, "state"):
+        roles_val = getattr(request.state, "roles", None)
+    if roles_val is None and hasattr(request, "headers"):
+        roles_val = (
+            request.headers.get("X-User-Roles")
+            or request.headers.get("x-user-roles")
+            or ""
+        )
 
     if isinstance(roles_val, str):
         raw_roles = [r.strip().lower() for r in roles_val.split(",") if r.strip()]
@@ -248,8 +258,10 @@ def get_principal(request: Request) -> Principal:
     normalized_roles = [normalize_role(r) for r in raw_roles]
 
     # 3. Assigned Sites
-    site_id_val = getattr(request.state, "site_id", None)
-    if site_id_val is None:
+    site_id_val = None
+    if hasattr(request, "state"):
+        site_id_val = getattr(request.state, "site_id", None)
+    if site_id_val is None and hasattr(request, "headers"):
         site_id_val = (
             request.headers.get("X-Site-Id")
             or request.headers.get("x-site-id")
@@ -259,23 +271,62 @@ def get_principal(request: Request) -> Principal:
 
     assigned_sites = []
     if site_id_val:
-        # Handle potential comma-separated sites
         assigned_sites = [s.strip() for s in site_id_val.split(",") if s.strip()]
 
     # 4. Unblinded status
-    unblinded_header = request.headers.get(
-        "X-Unblinded-Access", ""
-    ) or request.headers.get("x-unblinded-access", "")
     unblinded_access = False
-    if unblinded_header.lower() in ("true", "1", "yes"):
-        unblinded_access = True
-    elif hasattr(request.state, "unblinded_access"):
+    if hasattr(request, "headers"):
+        unblinded_header = (
+            request.headers.get("X-Unblinded-Access")
+            or request.headers.get("x-unblinded-access")
+            or ""
+        )
+        if unblinded_header.lower() in ("true", "1", "yes"):
+            unblinded_access = True
+    if (
+        not unblinded_access
+        and hasattr(request, "state")
+        and hasattr(request.state, "unblinded_access")
+    ):
         unblinded_access = bool(request.state.unblinded_access)
 
-    # 5. Change reason
-    change_reason = getattr(
-        request.state, "change_reason", None
-    ) or request.headers.get("X-Change-Reason")
+    # 5. Change reason (State, query parameters, headers)
+    change_reason = None
+
+    # State
+    if hasattr(request, "state"):
+        change_reason = getattr(request.state, "change_reason", None) or getattr(
+            request.state, "reason_for_change", None
+        )
+        if change_reason:
+            change_reason = str(change_reason).strip()
+
+    # Query Parameters
+    if not change_reason:
+        try:
+            if hasattr(request, "query_params") and request.query_params:
+                for key in ("change_reason", "reason_for_change", "reason"):
+                    val = request.query_params.get(key)
+                    if val and str(val).strip():
+                        change_reason = str(val).strip()
+                        break
+        except Exception:
+            pass
+
+    # Headers
+    if not change_reason and hasattr(request, "headers") and request.headers:
+        for key in (
+            "X-Change-Reason",
+            "x-change-reason",
+            "X-Reason-For-Change",
+            "x-reason-for-change",
+            "Reason-For-Change",
+            "reason-for-change",
+        ):
+            val = request.headers.get(key)
+            if val and str(val).strip():
+                change_reason = str(val).strip()
+                break
 
     return Principal(
         user_id=user_id,
@@ -284,6 +335,99 @@ def get_principal(request: Request) -> Principal:
         unblinded_access=unblinded_access,
         change_reason=change_reason,
     )
+
+
+async def get_principal(request: Request) -> Principal:
+    """
+    FastAPI dependency to extract identity and authorization attributes
+    from request context and headers, returning a normalized Principal.
+    """
+    import json
+
+    principal = get_principal_sync(request)
+
+    # If change_reason is not found yet, and it is a write operation, check body
+    if (
+        not principal.change_reason
+        and hasattr(request, "method")
+        and request.method in ("POST", "PUT", "PATCH")
+    ):
+        try:
+            content_type = (
+                request.headers.get("content-type", "")
+                if hasattr(request, "headers")
+                else ""
+            )
+            if "application/json" in content_type:
+                body = await request.body()
+                if body:
+                    body_json = json.loads(body)
+
+                    def find_reason_in_dict(d: dict) -> Optional[str]:
+                        for key in ("reason_for_change", "change_reason", "reason"):
+                            if key in d and isinstance(d[key], str) and d[key].strip():
+                                return d[key].strip()
+                        for v in d.values():
+                            if isinstance(v, dict):
+                                res = find_reason_in_dict(v)
+                                if res:
+                                    return res
+                        return None
+
+                    if isinstance(body_json, dict):
+                        principal.change_reason = find_reason_in_dict(body_json)
+
+                # Reset receive stream so downstream route can read it again
+                async def receive():
+                    return {"type": "http.request", "body": body, "more_body": False}
+
+                request._receive = receive
+            elif (
+                "application/x-www-form-urlencoded" in content_type
+                or "multipart/form-data" in content_type
+            ):
+                form = await request.form()
+                for key in ("reason_for_change", "change_reason", "reason"):
+                    val = form.get(key)
+                    if val and str(val).strip():
+                        principal.change_reason = str(val).strip()
+                        break
+        except Exception:
+            pass
+
+    # Ensure change_reason is clean
+    if principal.change_reason:
+        principal.change_reason = principal.change_reason.strip()
+
+    # Reject write operations with a descriptive error if the resolved change justification is less than 10 characters long on ingestion/doc routes
+    if hasattr(request, "method") and request.method in (
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+    ):
+        path_lower = request.url.path.lower() if hasattr(request, "url") else ""
+        is_ingest_or_doc_route = any(
+            p in path_lower
+            for p in (
+                "/eisf/",
+                "/etmf/",
+                "/econsent/",
+                "document",
+                "ingest",
+                "upload",
+                "expected-document",
+                "edl",
+            )
+        )
+        if is_ingest_or_doc_route:
+            if not principal.change_reason or len(principal.change_reason) < 10:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Part 11 change justification reason is required and must be at least 10 characters long.",
+                )
+
+    return principal
 
 
 def require_permission(permission: str) -> Callable[[Principal], Principal]:
