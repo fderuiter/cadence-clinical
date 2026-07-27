@@ -8,7 +8,7 @@
 ---
 
 ## 1. Context & Problem Statement
-To maintain strict GxP and FDA 21 CFR Part 11 compliance, the API Gateway must guarantee that critical security mechanisms—specifically JWT token verification and digital signature checks—cannot be bypassed in a production or staging environment. 
+To maintain strict GxP and FDA 21 CFR Part 11 compliance, the API Gateway must guarantee that critical security mechanisms—specifically JWT token verification and digital signature checks—cannot be bypassed in a production or staging environment.
 
 Previously, test bypass configuration flags could be accidentally propagated to production without any automated guardrails to prevent them from executing. To eliminate the risk of accidental authentication bypasses, we need "fail-fast" programmatic environment checks at the startup phase.
 
