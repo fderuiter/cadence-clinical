@@ -3454,6 +3454,7 @@ async def get_library_instance_in_study(
 
 # --- Eligibility Criteria Persistence Operations ---
 
+
 @with_transaction_retry()
 async def create_eligibility_criterion(
     driver,
@@ -3467,8 +3468,13 @@ async def create_eligibility_criterion(
     Creates a new stable EligibilityCriterion root node and its first version EligibilityCriterionVersion.
     """
     import json
+
     if driver is None:
-        from apps.designer.db import assert_mock_study_mutable, MOCK_ELIGIBILITY_CRITERIA
+        from apps.designer.db import (
+            MOCK_ELIGIBILITY_CRITERIA,
+            assert_mock_study_mutable,
+        )
+
         assert_mock_study_mutable(study_id)
 
         # Check duplicate
@@ -3581,8 +3587,13 @@ async def update_eligibility_criterion(
     Bumps version index and creates a new EligibilityCriterionVersion node connected to previous one.
     """
     import json
+
     if driver is None:
-        from apps.designer.db import assert_mock_study_mutable, MOCK_ELIGIBILITY_CRITERIA
+        from apps.designer.db import (
+            MOCK_ELIGIBILITY_CRITERIA,
+            assert_mock_study_mutable,
+        )
+
         assert_mock_study_mutable(study_id)
 
         found = None
@@ -3593,16 +3604,18 @@ async def update_eligibility_criterion(
         if not found:
             raise ValueError(f"Eligibility Criterion {criterion_id} not found")
 
-        found.update({
-            "criterion_type": criterion_data["criterion_type"],
-            "description": criterion_data["description"],
-            "dsl_source": criterion_data["dsl_source"],
-            "condition": criterion_data["condition"],
-            "expected_outcome": criterion_data.get("expected_outcome", True),
-            "updated_by": user_id,
-            "updated_at": dt.datetime.now().isoformat(),
-            "reason_for_change": change_reason,
-        })
+        found.update(
+            {
+                "criterion_type": criterion_data["criterion_type"],
+                "description": criterion_data["description"],
+                "dsl_source": criterion_data["dsl_source"],
+                "condition": criterion_data["condition"],
+                "expected_outcome": criterion_data.get("expected_outcome", True),
+                "updated_by": user_id,
+                "updated_at": dt.datetime.now().isoformat(),
+                "reason_for_change": change_reason,
+            }
+        )
         found["version_index"] += 1
         return found["version_index"]
 
@@ -3679,14 +3692,22 @@ async def update_eligibility_criterion(
             return record["version_index"] if record else None
 
 
-async def get_eligibility_criteria_from_graph(driver, study_id: str) -> List[Dict[str, Any]]:
+async def get_eligibility_criteria_from_graph(
+    driver, study_id: str
+) -> List[Dict[str, Any]]:
     """
     Retrieves all non-deleted active eligibility criteria for a specific clinical study.
     """
     import json
+
     if driver is None:
         from apps.designer.db import MOCK_ELIGIBILITY_CRITERIA
-        return [c for c in MOCK_ELIGIBILITY_CRITERIA.get(study_id, []) if not c.get("is_deleted", False)]
+
+        return [
+            c
+            for c in MOCK_ELIGIBILITY_CRITERIA.get(study_id, [])
+            if not c.get("is_deleted", False)
+        ]
 
     query = """
     MATCH (s:Study {id: $study_id})-[:HAS_CRITERION]->(ec:EligibilityCriterion)-[:HAS_VERSION]->(ecv:EligibilityCriterionVersion)
