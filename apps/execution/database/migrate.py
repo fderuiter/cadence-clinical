@@ -382,6 +382,27 @@ async def upgrade_existing_tables(conn) -> None:
                     )
                 )
 
+    # Upgrade clinical_coding_ledger with new columns
+    ledger_cols = await conn.run_sync(
+        lambda sc: get_table_columns(sc, "clinical_coding_ledger")
+    )
+    if ledger_cols:
+        new_ledger_cols = [
+            ("old_hierarchy", "JSON"),
+            ("new_hierarchy", "JSON"),
+            ("recoding_status", "VARCHAR(50)"),
+        ]
+        for col_name, col_type in new_ledger_cols:
+            if col_name not in ledger_cols:
+                print(
+                    f"Adding missing column {col_name} to clinical_coding_ledger table..."
+                )
+                await conn.execute(
+                    text(
+                        f"ALTER TABLE clinical_coding_ledger ADD COLUMN {col_name} {col_type};"
+                    )
+                )
+
     # List of other tables to upgrade with site_id
     tables_to_upgrade = [
         "clinical_queries",

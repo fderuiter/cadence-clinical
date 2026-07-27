@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 856
-- **Passed:** 856 🟢
+- **Total Automated Test Cases Run:** 858
+- **Passed:** 858 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -126,7 +126,7 @@ rapidfuzz               3.14.5
 requests                2.34.2
 rich                    15.0.0
 rsa                     4.9.1
-ruff                    0.15.22
+ruff                    0.16.0
 six                     1.17.0
 sortedcontainers        2.4.0
 soupsieve               2.9.1
@@ -627,6 +627,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_whodrug_import_happy_path` | `tests.test_medical_coding` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_whodrug_lookup_endpoint_happy_path` | `tests.test_medical_coding` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_whodrug_record_unique_constraint` | `tests.test_medical_coding` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_impact_analysis_meddra_and_whodrug_lifecycle` | `tests.test_medical_coding_impact` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_auto_coding_on_observation_creation` | `tests.test_medical_coding_lifecycle` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_coder_action_accept_and_override_lifecycle` | `tests.test_medical_coding_lifecycle` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_mid_confidence_persists_as_suggestions` | `tests.test_medical_coding_lifecycle` | *Regression/Helper* | 🟢 PASSED | < 1s |
