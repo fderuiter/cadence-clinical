@@ -1,8 +1,7 @@
 import os
-from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -27,54 +26,27 @@ from apps.interop.models import (
     SubjectAssignment,
     SubjectNotification,
 )
+from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
 
 DATABASE_URL = os.getenv("INTEROP_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """
-    Handle the lifespan events for the Interop application.
-
-    Initializes the database session manager on startup, creates the required
-    schemas, and securely cleans up connections on shutdown.
-    """
-    db_manager.init_db(DATABASE_URL)
-
-    # Automatically create tables for sqlite in-memory/file databases
-    if DATABASE_URL.startswith("sqlite"):
-        async with db_manager.engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-
-    yield
-
-    await db_manager.close()
-
-
 app = FastAPI(
     title="Cadence Clinical - FHIR / eSource & eCOA Sync Gateway",
     version="0.1.0",
-    lifespan=lifespan,
+    lifespan=get_relational_db_lifespan(
+        db_manager=db_manager,
+        database_url=DATABASE_URL,
+        base_metadata=Base.metadata,
+    ),
 )
 
 # Enforce secure gateway authentication middleware
 app.add_middleware(GatewayAuthMiddleware)
 
 
-# Dependency to obtain database session
-async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
-    """
-    Dependency to yield an asynchronous database session.
-    """
-    session_maker = db_manager.get_session_maker()
-    async with session_maker() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
+get_db_session = DatabaseSessionDependency(db_manager)
 
 
 # Helper to secure and log actions to the audit ledger
