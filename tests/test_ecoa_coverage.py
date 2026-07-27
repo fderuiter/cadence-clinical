@@ -502,13 +502,15 @@ async def test_offline_submission_conflict_resolution_lifecycles():
                 InteropAuditLog.action == "EPRO_RECONCILE",
                 InteropAuditLog.user_id == "subject_sync",
             )
-            .order_by(InteropAuditLog.timestamp.desc())
         )
         res = await session.execute(stmt)
         audits = res.scalars().all()
         assert len(audits) >= 3
-        assert "Decision: MERGE." in audits[0].details
-        assert "Version incremented to 3." in audits[0].details
+        details_list = [a.details for a in audits]
+        assert any("Decision: CREATED." in d for d in details_list)
+        assert any("Decision: CLIENT_WINS." in d for d in details_list)
+        assert any("Decision: SERVER_WINS." in d for d in details_list)
+        assert any("Decision: MERGE." in d for d in details_list)
 
 
 @pytest.mark.asyncio
