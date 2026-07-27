@@ -7,6 +7,7 @@ import {
   createConditionRow,
   createRuleEditorContainer,
   generateGatewaySignature,
+  sha256,
 } from "ui";
 
 /**
@@ -188,21 +189,8 @@ export function validateField(fieldMeta, val, context = {}) {
   return { valid: true };
 }
 
-/**
- * Computes a standard SHA-256 hash using Web Crypto APIs.
- *
- * @param {string} message - The plaintext message to hash.
- * @returns {Promise<string>} The hexadecimal SHA-256 digest.
- */
-export async function sha256(message) {
-  const msgBuffer = new TextEncoder().encode(message);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-  return hashHex;
-}
+// Re-export sha256 from the shared ui library to prevent duplicate implementations
+export { sha256 };
 
 /**
  * Renders the clinical trial management system (CTMS) dashboard view.

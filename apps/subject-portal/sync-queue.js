@@ -29,9 +29,13 @@ export async function getClientId() {
       if (request.result) {
         resolve(request.result.value);
       } else {
-        const newId = (typeof crypto !== "undefined" && crypto.randomUUID)
-          ? crypto.randomUUID()
-          : "client-" + Math.random().toString(36).substring(2, 15) + "-" + Date.now();
+        const newId =
+          typeof crypto !== "undefined" && crypto.randomUUID
+            ? crypto.randomUUID()
+            : "client-" +
+              Math.random().toString(36).substring(2, 15) +
+              "-" +
+              Date.now();
 
         const writeTx = db.transaction("config", "readwrite");
         const writeStore = writeTx.objectStore("config");
@@ -70,7 +74,14 @@ export async function getNextSequenceNumber() {
   });
 }
 
-export async function queueSubmission({ subject_id, diary_id, assignment_id, answers, change_reason, username }) {
+export async function queueSubmission({
+  subject_id,
+  diary_id,
+  assignment_id,
+  answers,
+  change_reason,
+  username,
+}) {
   const db = await openDatabase();
   const sequence_number = await getNextSequenceNumber();
   const client_id = await getClientId();
@@ -89,7 +100,7 @@ export async function queueSubmission({ subject_id, diary_id, assignment_id, ans
     status: "QUEUED",
     resolved_answers: null,
     resolved_at: null,
-    error: null
+    error: null,
   };
 
   return new Promise((resolve, reject) => {
@@ -140,7 +151,11 @@ export async function getAllSubmissions() {
   });
 }
 
-export async function updateSubmissionStatus(sequence_number, status, additionalFields = {}) {
+export async function updateSubmissionStatus(
+  sequence_number,
+  status,
+  additionalFields = {}
+) {
   const db = await openDatabase();
   return new Promise((resolve, reject) => {
     const tx = db.transaction("submissions", "readwrite");
