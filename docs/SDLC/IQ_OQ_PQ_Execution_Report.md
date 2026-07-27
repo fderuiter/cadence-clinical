@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 877
-- **Passed:** 877 🟢
+- **Total Automated Test Cases Run:** 885
+- **Passed:** 885 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -126,7 +126,7 @@ rapidfuzz               3.14.5
 requests                2.34.2
 rich                    15.0.0
 rsa                     4.9.1
-ruff                    0.15.22
+ruff                    0.16.0
 six                     1.17.0
 sortedcontainers        2.4.0
 soupsieve               2.9.1
@@ -227,6 +227,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_invalid_sdtm_domain_rejection` | `tests.test_biostat_exports` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_sdtm_domain_export_success` | `tests.test_biostat_exports` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_unauthenticated_access_rejection` | `tests.test_biostat_exports` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_rtm_generation_conftest_hook_detection` | `tests.test_cli_etmf_archival` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_rtm_generation_with_cli_overrides` | `tests.test_cli_etmf_archival` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_gateway_routing` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cdisc_export_and_validation` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_demographics_encryption` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -585,8 +587,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_ledger_sealing_and_validation` | `tests.test_ledger_and_triggers` | PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_out_of_band_update_triggers_audit_entry` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_prevent_audit_ledger_seals_mutation` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_prevent_audit_log_mutation` | `tests.test_ledger_and_triggers` | PRD-SYS-001, Trace-1 | 🟢 PASSED | < 1s |
-| `test_prevent_hard_delete_on_audited_model` | `tests.test_ledger_and_triggers` | PRD-SYS-002, Trace-1 | 🟢 PASSED | < 1s |
+| `test_prevent_audit_log_mutation` | `tests.test_ledger_and_triggers` | Trace-1, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_prevent_hard_delete_on_audited_model` | `tests.test_ledger_and_triggers` | Trace-1, PRD-SYS-002 | 🟢 PASSED | < 1s |
 | `test_designer_gateway_auth_expired_timestamp` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_designer_gateway_auth_invalid_signature` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_designer_gateway_auth_invalid_timestamp` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -689,6 +691,12 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_rendered_protocol_document_with_usdm_study` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_soa_matrix_view` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_synopsis_view_parsing` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_protocol_version_ref_accepted_statuses` | `tests.test_protocol_version_ref` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_protocol_version_ref_serialization` | `tests.test_protocol_version_ref` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_protocol_version_ref_valid_payload` | `tests.test_protocol_version_ref` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_protocol_version_ref_validation_blank_fields` | `tests.test_protocol_version_ref` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_protocol_version_ref_validation_index` | `tests.test_protocol_version_ref` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_protocol_version_ref_validation_status` | `tests.test_protocol_version_ref` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_capa_creation_validations_and_closed_deviation` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_capa_transition_edge_cases_and_optimistic_locking` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_capa_update_edge_cases_and_optional_fields` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
