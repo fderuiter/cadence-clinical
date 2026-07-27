@@ -11,7 +11,9 @@
     "test": "pnpm -r test && uv run pytest",
     "lint": "pnpm -r lint && uv run ruff check .",
     "format": "pnpm -r format && uv run ruff format .",
-    "check": "pnpm format && pnpm lint && pnpm test && node scripts/check-links.js && uv run python scripts/validate_adrs.py && uv run python scripts/validate_markdown.py"
+    "check": "pnpm format && pnpm lint && pnpm test && node scripts/check-links.js && uv run python scripts/validate_adrs.py && uv run python scripts/validate_markdown.py",
+    "build": "pnpm --filter web build",
+    "build:docs": "node scripts/build-docs.js"
   },
   "repository": {
     "type": "git",
@@ -31,6 +33,7 @@
     "eslint": "^10.7.0",
     "eslint-plugin-vue": "^10.10.0",
     "prettier": "^3.9.6",
+    "vitepress": "^1.6.4",
     "vitest": "^4.1.10"
   }
 }

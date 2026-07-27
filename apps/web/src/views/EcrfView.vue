@@ -494,7 +494,7 @@
 
             <!-- Radio input field -->
             <fieldset
-              v-else
+              v-else-if="field.type === 'radio'"
               v-show="store.fieldVisibility[field.id] !== false"
               :id="`field-container-${field.id}`"
               class="clinical-radio-grid"
@@ -1073,11 +1073,85 @@ import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { soaClient } from "../api/soaClient";
 import { validateField } from "../../index";
-import { terminologyClient } from "../api/terminologyClient";
-import { debounce } from "ui";
+import { terminologyClient } from "../api/terminologyClient.js";
 
 const store = useClinicalStore();
 const authStore = useAuthStore();
+
+const conceptValidationStates = reactive({});
+const conceptRequestIds = reactive({});
+
+// eslint-disable-next-line no-unused-vars
+function handleConceptCodeInput(field, newValue) {
+  store.formValues[field.id] = newValue;
+
+  if (field._debounceTimer) {
+    clearTimeout(field._debounceTimer);
+  }
+
+  if (!newValue || !newValue.trim()) {
+    conceptValidationStates[field.id] = null;
+    return;
+  }
+
+  if (!conceptRequestIds[field.id]) {
+    conceptRequestIds[field.id] = 0;
+  }
+  const currentReqId = ++conceptRequestIds[field.id];
+
+  field._debounceTimer = setTimeout(async () => {
+    try {
+      const response = await terminologyClient.validateSingleCode(newValue, {
+        userId: authStore.identity?.username || "fderuiter",
+        roles: authStore.identity?.roles?.[0] || "Data Manager",
+      });
+
+      if (currentReqId !== conceptRequestIds[field.id]) {
+        return;
+      }
+
+      conceptValidationStates[field.id] = {
+        state: response.state,
+        decode: response.decode,
+        errorMessage: response.error_message,
+      };
+    } catch (err) {
+      if (currentReqId !== conceptRequestIds[field.id]) {
+        return;
+      }
+      conceptValidationStates[field.id] = {
+        state: "DEGRADED",
+        errorMessage: err.message || "Terminology service offline",
+      };
+    }
+  }, 300);
+}
+
+// eslint-disable-next-line no-unused-vars
+function getConceptStatusClass(fieldId) {
+  const stateObj = conceptValidationStates[fieldId];
+  if (!stateObj) return "";
+  if (stateObj.state === "VALID") return "lookup-valid";
+  if (stateObj.state === "INVALID") return "lookup-invalid";
+  if (stateObj.state === "DEGRADED") return "lookup-degraded";
+  return "";
+}
+
+// eslint-disable-next-line no-unused-vars
+function getConceptStatusText(fieldId) {
+  const stateObj = conceptValidationStates[fieldId];
+  if (!stateObj) return "";
+  if (stateObj.state === "VALID") {
+    return `Code is valid: "${stateObj.decode}"`;
+  }
+  if (stateObj.state === "INVALID") {
+    return `Invalid code: ${stateObj.errorMessage || ""}`;
+  }
+  if (stateObj.state === "DEGRADED") {
+    return `Terminology service degraded. ${stateObj.errorMessage || ""}`;
+  }
+  return "";
+}
 
 // Live validation states
 const requestCounters = reactive({});
@@ -1092,7 +1166,18 @@ function getStatusIcon(status) {
   return "";
 }
 
-const debouncedValidate = debounce(async (fieldId, value) => {
+// Inline debounce helper
+function localDebounce(fn, delay) {
+  let timeoutId = null;
+  return function (...args) {
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => {
+      fn(...args);
+    }, delay);
+  };
+}
+
+const debouncedValidate = localDebounce(async (fieldId, value) => {
   if (!value || !value.trim()) {
     conceptStatuses[fieldId] = "none";
     conceptMessages[fieldId] = "";
@@ -1104,8 +1189,8 @@ const debouncedValidate = debounce(async (fieldId, value) => {
 
   try {
     const res = await terminologyClient.validateSingleCode(value, {
-      userId: store.user.username || "fderuiter",
-      roles: store.user.roles ? store.user.roles.join(",") : "investigator",
+      userId: store.user?.username || "fderuiter",
+      roles: store.user?.roles ? store.user.roles.join(",") : "investigator",
       changeReason: "Validate code",
     });
 
