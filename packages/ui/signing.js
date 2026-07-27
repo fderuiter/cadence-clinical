@@ -227,6 +227,25 @@ export async function generateJwtHS256(payload, secret) {
 }
 
 /**
+ * Computes a standard SHA-256 hash of a message using Web Crypto APIs.
+ *
+ * @param {string} message - The plaintext message to hash.
+ * @returns {Promise<string>} The hexadecimal SHA-256 digest.
+ */
+export async function sha256(message) {
+  const msgBuffer = new TextEncoder().encode(message);
+  const hashBuffer = await globalThis.crypto.subtle.digest(
+    "SHA-256",
+    msgBuffer
+  );
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  return hashHex;
+}
+
+/**
  * Standard CDASH clinical standard field validation logic.
  *
  * @param {Object} fieldMeta - Metadata of the field containing validation rules.
