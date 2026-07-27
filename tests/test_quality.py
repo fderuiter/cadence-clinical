@@ -767,3 +767,42 @@ def test_endpoint_change_reason_check_via_mock(monkeypatch):
     )
     assert res.status_code == 403
     assert "Missing change justification reason" in res.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_quality_audit_hooks_site_and_blinding_propagation():
+    """
+    Verify that Quality dynamic audit hooks capture and persist site_id and unblinded_access in the JSON details column.
+    """
+    import json
+
+    from packages.security.context import audit_context
+
+    async with db_manager.get_session_maker()() as session:
+        with audit_context(
+            user_id="site_auditor",
+            change_reason="Verify site alignment",
+            site_id="site_abc",
+            unblinded_access=True,
+        ):
+            deviation = Deviation(
+                study_id="study_abc",
+                site_id="site_abc",
+                title="Protocol Deviation A",
+                description="Subject did not meet inclusion criteria but was randomized.",
+                type=DeviationType.ELIGIBILITY,
+                severity=DeviationSeverity.MAJOR,
+                created_by="site_auditor",
+            )
+            session.add(deviation)
+            await session.flush()
+
+            # Retrieve the created audit log from QualityAuditLog
+            stmt = select(QualityAuditLog).order_by(QualityAuditLog.timestamp.desc())
+            res = await session.execute(stmt)
+            logs = res.scalars().all()
+
+            assert len(logs) >= 1
+            log_details = json.loads(logs[0].details)
+            assert log_details["site_id"] == "site_abc"
+            assert log_details["unblinded_access"] is True

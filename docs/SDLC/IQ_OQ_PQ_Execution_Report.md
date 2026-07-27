@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 885
-- **Passed:** 885 🟢
+- **Total Automated Test Cases Run:** 886
+- **Passed:** 886 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -708,6 +708,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_lifespan_coverage` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_list_deviations_filters` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_missing_change_reasons_unauthorized` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_quality_audit_hooks_site_and_blinding_propagation` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_quality_audit_log_append_only` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_quality_database_schema_creation` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_quality_health_check` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |

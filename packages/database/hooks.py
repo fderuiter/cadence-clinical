@@ -1,16 +1,20 @@
 import json
 from datetime import datetime
 from typing import Any, Optional
+
 from sqlalchemy import event, inspect
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import get_history
+
+from packages.database.mixins import AuditMixin
 from packages.security.context import (
     current_change_reason,
     current_ip_address,
+    current_site_id,
     current_timestamp,
+    current_unblinded_access,
     current_user_id,
 )
-from packages.database.mixins import AuditMixin
 
 
 def get_primary_key(obj: Any) -> str:
@@ -52,7 +56,9 @@ def register_audit_hooks(
 
     app_prefix = get_app_prefix(audit_log_class)
 
-    def receive_before_flush(session: Session, flush_context: Any, instances: Any) -> None:
+    def receive_before_flush(
+        session: Session, flush_context: Any, instances: Any
+    ) -> None:
         if not session.is_modified:
             # Check for deleted instances even if not modified (in case of only deletes)
             if not session.deleted:
@@ -82,13 +88,19 @@ def register_audit_hooks(
             or "system_operation"
         )
         ip_address = (
-            session.info.get("ip_address")
-            or current_ip_address.get()
-            or "127.0.0.1"
+            session.info.get("ip_address") or current_ip_address.get() or "127.0.0.1"
         )
         timestamp = session.info.get("timestamp") or current_timestamp.get()
         if timestamp is None:
             timestamp = datetime.utcnow()
+
+        # Dynamic GxP site-isolation and blinding scope context
+        site_id = session.info.get("site_id") or current_site_id.get()
+        unblinded_access = (
+            session.info.get("unblinded_access")
+            if session.info.get("unblinded_access") is not None
+            else current_unblinded_access.get()
+        )
 
         audit_logs = []
 
@@ -126,15 +138,26 @@ def register_audit_hooks(
                 kwargs["change_reason"] = reason
             if hasattr(audit_log_class, "timestamp"):
                 kwargs["timestamp"] = timestamp
+            if hasattr(audit_log_class, "site_id"):
+                kwargs["site_id"] = site_id
+            if hasattr(audit_log_class, "unblinded_access"):
+                kwargs["unblinded_access"] = unblinded_access
+            if hasattr(audit_log_class, "ip_address"):
+                kwargs["ip_address"] = ip_address
             if hasattr(audit_log_class, "details"):
-                kwargs["details"] = json.dumps({
-                    "table_name": obj.__tablename__,
-                    "record_id": get_primary_key(obj) or "pending",
-                    "action": "INSERT",
-                    "old_values": None,
-                    "new_values": new_values,
-                    "change_reason": reason,
-                })
+                kwargs["details"] = json.dumps(
+                    {
+                        "table_name": obj.__tablename__,
+                        "record_id": get_primary_key(obj) or "pending",
+                        "action": "INSERT",
+                        "old_values": None,
+                        "new_values": new_values,
+                        "change_reason": reason,
+                        "site_id": site_id,
+                        "unblinded_access": unblinded_access,
+                        "ip_address": ip_address,
+                    }
+                )
 
             audit_logs.append(audit_log_class(**kwargs))
 
@@ -159,9 +182,7 @@ def register_audit_hooks(
                         else getattr(obj, attr.key)
                     )
                     new_val = (
-                        history.added[0]
-                        if history.added
-                        else getattr(obj, attr.key)
+                        history.added[0] if history.added else getattr(obj, attr.key)
                     )
 
                     if old_val != new_val:
@@ -205,15 +226,26 @@ def register_audit_hooks(
                     kwargs["change_reason"] = reason
                 if hasattr(audit_log_class, "timestamp"):
                     kwargs["timestamp"] = timestamp
+                if hasattr(audit_log_class, "site_id"):
+                    kwargs["site_id"] = site_id
+                if hasattr(audit_log_class, "unblinded_access"):
+                    kwargs["unblinded_access"] = unblinded_access
+                if hasattr(audit_log_class, "ip_address"):
+                    kwargs["ip_address"] = ip_address
                 if hasattr(audit_log_class, "details"):
-                    kwargs["details"] = json.dumps({
-                        "table_name": obj.__tablename__,
-                        "record_id": get_primary_key(obj),
-                        "action": action,
-                        "old_values": old_values,
-                        "new_values": new_values,
-                        "change_reason": reason,
-                    })
+                    kwargs["details"] = json.dumps(
+                        {
+                            "table_name": obj.__tablename__,
+                            "record_id": get_primary_key(obj),
+                            "action": action,
+                            "old_values": old_values,
+                            "new_values": new_values,
+                            "change_reason": reason,
+                            "site_id": site_id,
+                            "unblinded_access": unblinded_access,
+                            "ip_address": ip_address,
+                        }
+                    )
 
                 audit_logs.append(audit_log_class(**kwargs))
 
