@@ -2,10 +2,16 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
+const repoRoot = path.resolve(__dirname, '..');
+
+/**
+ * Executes a shell command from the application directory.
+ * @param {string} command - The shell command to execute.
+ */
 function runCommand(command) {
   console.log(`Running: ${command}`);
   try {
-    execSync(command, { stdio: 'inherit', cwd: '/app' });
+    execSync(command, { stdio: 'inherit', cwd: repoRoot });
   } catch (error) {
     console.error(`Command failed: ${command}`);
     throw error;
@@ -25,9 +31,9 @@ try {
 
   // 3. Prepare files for VitePress
   console.log('--- Step 3: Preparing Documentation Files ---');
-  fs.copyFileSync('/app/README.md', '/app/docs/index.md');
-  fs.copyFileSync('/app/ARCHITECTURE.md', '/app/docs/ARCHITECTURE.md');
-  fs.copyFileSync('/app/AGENTS.md', '/app/docs/AGENTS.md');
+  fs.copyFileSync(path.join(repoRoot, 'README.md'), path.join(repoRoot, 'docs', 'index.md'));
+  fs.copyFileSync(path.join(repoRoot, 'ARCHITECTURE.md'), path.join(repoRoot, 'docs', 'ARCHITECTURE.md'));
+  fs.copyFileSync(path.join(repoRoot, 'AGENTS.md'), path.join(repoRoot, 'docs', 'AGENTS.md'));
   console.log('Successfully prepared README.md, ARCHITECTURE.md, and AGENTS.md');
 
   // 4. Build VitePress static portal
@@ -41,7 +47,7 @@ try {
 } finally {
   console.log('--- Cleanup Temporary Docs ---');
   for (const file of ['index.md', 'ARCHITECTURE.md', 'AGENTS.md']) {
-    const filePath = path.join('/app/docs', file);
+    const filePath = path.join(repoRoot, 'docs', file);
     if (fs.existsSync(filePath)) {
       try {
         fs.unlinkSync(filePath);

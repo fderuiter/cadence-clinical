@@ -68,6 +68,12 @@ def verify_gateway_signature(
     # Thus, the signature was generated with site_id=None, sponsor_id=None, unblinded_access=False.
     if site_id or sponsor_id or unblinded_access:
         fallback_expected = generate_gateway_signature(
+    # 2. Compatibility check: Fallbacks are ONLY permitted if no scope fields are present/active.
+    # If any scope values are present, they are scope-bearing requests and must verify using the 7-field payload.
+    has_scopes = bool(site_id or sponsor_id or unblinded_access)
+    if not has_scopes:
+        # Fallback 1: Verify as if scope fields were omitted from the signature generation (e.g., site_id=None, sponsor_id=None)
+        no_scope_expected = generate_gateway_signature(
             user_id=user_id,
             roles=roles,
             timestamp=timestamp,
@@ -77,7 +83,23 @@ def verify_gateway_signature(
             sponsor_id=None,
             unblinded_access=False,
         )
-        if hmac.compare_digest(fallback_expected, signature):
+        if hmac.compare_digest(no_scope_expected, signature):
+            return True
+
+        # Fallback 2: Verify with legacy 4-field payload for backward compatibility
+        legacy_payload = {
+            "change_reason": change_reason if change_reason is not None else "",
+            "roles": roles,
+            "timestamp": timestamp,
+            "user_id": user_id,
+        }
+        legacy_serialized = json.dumps(
+            legacy_payload, sort_keys=True, separators=(",", ":")
+        )
+        legacy_expected = hmac.new(
+            secret, legacy_serialized.encode("utf-8"), hashlib.sha256
+        ).hexdigest()
+        if hmac.compare_digest(legacy_expected, signature):
             return True
 
     # 2. Fallback to verify with the legacy 4-field payload for backward-compatibility

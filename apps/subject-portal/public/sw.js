@@ -4,7 +4,7 @@ const ASSETS = [
   "/subject-portal/index.html",
   "/subject-portal/style.css",
   "/subject-portal/index.js",
-  "/subject-portal/manifest.json"
+  "/subject-portal/manifest.json",
 ];
 
 // Install event: Pre-cache core shell resources
@@ -13,7 +13,10 @@ self.addEventListener("install", (event) => {
     caches.open(CACHE_NAME).then((cache) => {
       console.log("[Service Worker] Pre-caching offline assets");
       return cache.addAll(ASSETS).catch((err) => {
-        console.warn("[Service Worker] Some pre-cache assets could not be retrieved during install:", err);
+        console.warn(
+          "[Service Worker] Some pre-cache assets could not be retrieved during install:",
+          err
+        );
       });
     })
   );
@@ -66,7 +69,10 @@ self.addEventListener("fetch", (event) => {
       })
       .catch(() => {
         // Fallback to cache on network failure
-        console.log("[Service Worker] Network failed, serving from cache:", event.request.url);
+        console.log(
+          "[Service Worker] Network failed, serving from cache:",
+          event.request.url
+        );
         return caches.match(event.request).then((cachedResponse) => {
           if (cachedResponse) {
             return cachedResponse;

@@ -1037,6 +1037,165 @@ import { validateField } from "../../index";
 import { terminologyClient } from "../api/terminologyClient";
 const store = useClinicalStore();
 const authStore = useAuthStore();
+
+const conceptValidationStates = reactive({});
+const conceptRequestIds = reactive({});
+
+// eslint-disable-next-line no-unused-vars
+function handleConceptCodeInput(field, newValue) {
+  store.formValues[field.id] = newValue;
+
+  if (field._debounceTimer) {
+    clearTimeout(field._debounceTimer);
+  }
+
+  if (!newValue || !newValue.trim()) {
+    conceptValidationStates[field.id] = null;
+    return;
+  }
+
+  if (!conceptRequestIds[field.id]) {
+    conceptRequestIds[field.id] = 0;
+  }
+  const currentReqId = ++conceptRequestIds[field.id];
+
+  field._debounceTimer = setTimeout(async () => {
+    try {
+      const response = await terminologyClient.validateSingleCode(newValue, {
+        userId: authStore.identity?.username || "fderuiter",
+        roles: authStore.identity?.roles?.[0] || "Data Manager",
+      });
+
+      if (currentReqId !== conceptRequestIds[field.id]) {
+        return;
+      }
+
+      conceptValidationStates[field.id] = {
+        state: response.state,
+        decode: response.decode,
+        errorMessage: response.error_message,
+      };
+    } catch (err) {
+      if (currentReqId !== conceptRequestIds[field.id]) {
+        return;
+      }
+      conceptValidationStates[field.id] = {
+        state: "DEGRADED",
+        errorMessage: err.message || "Terminology service offline",
+      };
+    }
+  }, 300);
+}
+
+// eslint-disable-next-line no-unused-vars
+function getConceptStatusClass(fieldId) {
+  const stateObj = conceptValidationStates[fieldId];
+  if (!stateObj) return "";
+  if (stateObj.state === "VALID") return "lookup-valid";
+  if (stateObj.state === "INVALID") return "lookup-invalid";
+  if (stateObj.state === "DEGRADED") return "lookup-degraded";
+  return "";
+}
+
+// eslint-disable-next-line no-unused-vars
+function getConceptStatusText(fieldId) {
+  const stateObj = conceptValidationStates[fieldId];
+  if (!stateObj) return "";
+  if (stateObj.state === "VALID") {
+    return `Code is valid: "${stateObj.decode}"`;
+  }
+  if (stateObj.state === "INVALID") {
+    return `Invalid code: ${stateObj.errorMessage || ""}`;
+  }
+  if (stateObj.state === "DEGRADED") {
+    return `Terminology service degraded. ${stateObj.errorMessage || ""}`;
+  }
+  return "";
+}
+
+// Live validation states
+const requestCounters = reactive({});
+const conceptStatuses = reactive({});
+const conceptMessages = reactive({});
+
+function getStatusIcon(status) {
+  if (status === "loading") return "⏳";
+  if (status === "valid") return "✅";
+  if (status === "invalid") return "❌";
+  if (status === "degraded") return "⚠️";
+  return "";
+}
+
+// Inline debounce helper
+function localDebounce(fn, delay) {
+  let timeoutId = null;
+  return function (...args) {
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => {
+      fn(...args);
+    }, delay);
+  };
+}
+
+const debouncedValidate = localDebounce(async (fieldId, value) => {
+  if (!value || !value.trim()) {
+    conceptStatuses[fieldId] = "none";
+    conceptMessages[fieldId] = "";
+    return;
+  }
+
+  requestCounters[fieldId] = (requestCounters[fieldId] || 0) + 1;
+  const currentReqId = requestCounters[fieldId];
+
+  try {
+    const res = await terminologyClient.validateSingleCode(value, {
+      userId: store.user?.username || "fderuiter",
+      roles: store.user?.roles ? store.user.roles.join(",") : "investigator",
+      changeReason: "Validate code",
+    });
+
+    if (requestCounters[fieldId] !== currentReqId) {
+      return; // Discard stale response
+    }
+
+    if (res.state === "VALID") {
+      conceptStatuses[fieldId] = "valid";
+      conceptMessages[fieldId] = `Code is valid: "${res.decode}"`;
+    } else if (res.state === "INVALID") {
+      conceptStatuses[fieldId] = "invalid";
+      conceptMessages[fieldId] = `Invalid code: "${value}"`;
+    } else if (res.state === "DEGRADED") {
+      conceptStatuses[fieldId] = "degraded";
+      conceptMessages[fieldId] =
+        res.error_message ||
+        "Terminology service degraded. Validation offline.";
+    }
+  } catch {
+    if (requestCounters[fieldId] !== currentReqId) {
+      return;
+    }
+    conceptStatuses[fieldId] = "degraded";
+    conceptMessages[fieldId] =
+      "Terminology service degraded. Validation offline.";
+  }
+}, 300);
+
+function handleConceptInput(field, value) {
+  const fieldId = field.id;
+  store.formValues[fieldId] = value;
+
+  if (!value || !value.trim()) {
+    conceptStatuses[fieldId] = "none";
+    conceptMessages[fieldId] = "";
+    return;
+  }
+
+  conceptStatuses[fieldId] = "loading";
+  conceptMessages[fieldId] = "Searching terminology database...";
+
+  debouncedValidate(fieldId, value);
+}
+
 // Deep watch formValues to evaluate rules debounced
 watch(
   () => store.formValues,
@@ -1048,6 +1207,12 @@ watch(
 
 onMounted(() => {
   store.evaluateRules();
+  // Initialize lookup validation for any pre-populated concept_code fields on mount
+  store.ecrfFields.forEach((field) => {
+    if (field.type === "concept_code" && store.formValues[field.id]) {
+      handleConceptInput(field, store.formValues[field.id]);
+    }
+  });
 });
 
 // Lookup Status States

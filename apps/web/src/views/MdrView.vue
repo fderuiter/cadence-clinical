@@ -567,26 +567,13 @@ import { useClinicalStore } from "../stores/clinical";
 import { createClinicalVisitMatrix } from "ui";
 import { terminologyClient } from "../api/terminologyClient.js";
 import { useAuthStore } from "../stores/auth.js";
+import { debounce } from "ui";
 
 const store = useClinicalStore();
 const authStore = useAuthStore();
 
-const builderMode = ref(false);
-const usdmText = ref(JSON.stringify(store.currentUsdm, null, 2));
-
 const armSuggestions = ref([]);
 const encSuggestions = ref([]);
-
-// Debounce helper
-function debounce(fn, delay) {
-  let timeoutId = null;
-  return function (...args) {
-    if (timeoutId) clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => {
-      fn(...args);
-    }, delay);
-  };
-}
 
 const debouncedSearchArm = debounce(async (term) => {
   if (!term || !term.trim()) {
@@ -597,7 +584,7 @@ const debouncedSearchArm = debounce(async (term) => {
     const res = await terminologyClient.searchTerminology(term, {
       userId: authStore.identity?.username || "fderuiter",
       roles: authStore.identity?.roles?.[0] || "investigator",
-      changeReason: "Search terminology",
+      changeReason: "Arm concept search",
     });
     armSuggestions.value = res.results || [];
   } catch (err) {
@@ -614,7 +601,7 @@ const debouncedSearchEnc = debounce(async (term) => {
     const res = await terminologyClient.searchTerminology(term, {
       userId: authStore.identity?.username || "fderuiter",
       roles: authStore.identity?.roles?.[0] || "investigator",
-      changeReason: "Search terminology",
+      changeReason: "Encounter concept search",
     });
     encSuggestions.value = res.results || [];
   } catch (err) {
@@ -639,6 +626,9 @@ function selectEncConcept(sug) {
   newEnc.concept_code = sug.concept_code;
   encSuggestions.value = [];
 }
+
+const builderMode = ref(false);
+const usdmText = ref(JSON.stringify(store.currentUsdm, null, 2));
 
 // Creation Forms States
 const newArm = reactive({ id: "", name: "", concept_code: "" });
@@ -1009,6 +999,7 @@ function handleAddEncounter() {
   newEnc.sequence = store.currentUsdm.encounters
     ? store.currentUsdm.encounters.length + 1
     : 1;
+  newEnc.concept_code = "";
 }
 
 function handleAddProcedure() {

@@ -6,6 +6,11 @@ import { fileURLToPath } from 'url'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
+/**
+ * Builds sidebar entries for architectural decision records.
+ *
+ * @return {Array<{text: string, link: string}>} ADR sidebar entries ordered by filename in reverse order.
+ */
 function getAdrSidebar() {
   const adrDir = path.resolve(__dirname, '../adr')
   if (!fs.existsSync(adrDir)) return []
@@ -23,6 +28,10 @@ function getAdrSidebar() {
     })
 }
 
+/**
+ * Builds sidebar entries from the Markdown files in the SDLC documentation directory.
+ * @return {Array<{text: string, link: string}>} Sorted sidebar entries using each file's first H1 heading or filename as its text.
+ */
 function getSdlcSidebar() {
   const sdlcDir = path.resolve(__dirname, '../SDLC')
   if (!fs.existsSync(sdlcDir)) return []
