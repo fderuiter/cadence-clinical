@@ -370,11 +370,13 @@ async def main() -> None:
     # 1. Resolve Active Connection Strings
     postgres_url = os.getenv(
         "DATABASE_URL",
-        "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc",
+        "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc",  # pragma: allowlist secret
     )
     neo4j_uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
     neo4j_user = os.getenv("NEO4J_USER", "neo4j")
-    neo4j_password = os.getenv("NEO4J_PASSWORD", "cadence_password")
+    neo4j_password = os.getenv(
+        "NEO4J_PASSWORD", "cadence_password"
+    )  # pragma: allowlist secret
 
     sqlite_databases = {
         "eTMF": (get_sqlite_url("ETMF_DATABASE_URL", "tmf.db"), ETMFBase.metadata),

@@ -8,7 +8,7 @@ def test_reset_db_safety_guard_production():
     """
     env = os.environ.copy()
     env["DATABASE_URL"] = (
-        "postgresql+asyncpg://cadence:cadence_password@prod-db.cadence.com:5432/cadence_edc"
+        "postgresql+asyncpg://cadence:cadence_password@prod-db.cadence.com:5432/cadence_edc"  # pragma: allowlist secret
     )
 
     res = subprocess.run(
@@ -30,7 +30,7 @@ def test_reset_db_safety_guard_non_local():
     """
     env = os.environ.copy()
     env["DATABASE_URL"] = (
-        "postgresql+asyncpg://cadence:cadence_password@remote-host:5432/cadence_edc"
+        "postgresql+asyncpg://cadence:cadence_password@remote-host:5432/cadence_edc"  # pragma: allowlist secret
     )
 
     res = subprocess.run(
@@ -55,7 +55,7 @@ def test_reset_db_success_offline():
     env = os.environ.copy()
     # Set all connection strings to local/in-memory to ensure safety and speed
     env["DATABASE_URL"] = (
-        "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"
+        "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"  # pragma: allowlist secret
     )
     env["NEO4J_URI"] = "bolt://localhost:7687"
     env["ETMF_DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
