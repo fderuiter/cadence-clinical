@@ -393,6 +393,9 @@ export const useClinicalStore = defineStore("clinical", {
           gridSpan: 12,
           cdash: "DM.CONCEPT_CODE",
           value: "",
+          validation: {
+            required: false,
+          },
         },
       ],
       formValues: savedFormValues || {

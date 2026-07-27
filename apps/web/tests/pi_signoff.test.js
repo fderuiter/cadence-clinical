@@ -91,7 +91,7 @@ describe("PI Sign-Off Worklist and Re-authentication Flow", () => {
 
     // Enter credentials
     const passwordInput = wrapper.find("#reauth-password");
-    await passwordInput.setValue("valid_password");
+    await passwordInput.setValue("valid_password"); // pragma: allowlist secret
 
     // Mock window.alert to avoid prompt blocks in tests
     const alertMock = vi.spyOn(window, "alert").mockImplementation(() => {});
@@ -100,7 +100,7 @@ describe("PI Sign-Off Worklist and Re-authentication Flow", () => {
     await wrapper.find("#btn-confirm-reauth").trigger("click");
 
     // Wait for async actions and DOM update
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    await new Promise((resolve) => setTimeout(resolve, 100));
     await wrapper.vm.$nextTick();
 
     // Verify correct API invocation
@@ -155,13 +155,13 @@ describe("PI Sign-Off Worklist and Re-authentication Flow", () => {
     await wrapper.find("#btn-pi-signoff").trigger("click");
 
     // Enter invalid credentials
-    await wrapper.find("#reauth-password").setValue("invalid_password");
+    await wrapper.find("#reauth-password").setValue("invalid_password"); // pragma: allowlist secret
 
     // Confirm
     await wrapper.find("#btn-confirm-reauth").trigger("click");
 
     // Wait for async actions and DOM update
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    await new Promise((resolve) => setTimeout(resolve, 100));
     await wrapper.vm.$nextTick();
 
     // Modal should still be open
