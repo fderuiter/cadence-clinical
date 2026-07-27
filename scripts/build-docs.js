@@ -2,6 +2,10 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
+/**
+ * Executes a shell command from the application directory.
+ * @param {string} command - The shell command to execute.
+ */
 function runCommand(command) {
   console.log(`Running: ${command}`);
   try {
