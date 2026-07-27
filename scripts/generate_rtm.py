@@ -2,7 +2,6 @@
 import argparse
 import os
 import re
-import subprocess
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 
@@ -185,8 +184,7 @@ def scan_tests(tests_dir):
     sorted_test_mappings = {}
     for req_id in sorted(test_mappings.keys()):
         sorted_test_mappings[req_id] = sorted(
-            test_mappings[req_id],
-            key=lambda x: (x["file"], x["test_name"], x["line"])
+            test_mappings[req_id], key=lambda x: (x["file"], x["test_name"], x["line"])
         )
 
     return sorted_test_mappings, test_cases_all
@@ -515,7 +513,9 @@ def generate_qualification_report(
                         matching_reqs.append(req_id)
 
             reqs_str = (
-                ", ".join(sorted(matching_reqs)) if matching_reqs else "*Regression/Helper*"
+                ", ".join(sorted(matching_reqs))
+                if matching_reqs
+                else "*Regression/Helper*"
             )
             status_emoji = (
                 "🟢 PASSED"
