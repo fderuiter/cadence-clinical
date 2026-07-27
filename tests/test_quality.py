@@ -290,9 +290,9 @@ async def test_database_manager_uninitialized_raises_exception():
     """
     Verify that QualityDatabaseManager raises an exception if get_session_maker is called before init_db.
     """
-    from apps.quality.database import QualityDatabaseManager
+    from packages.database import RelationalDatabaseManager
 
-    uninit_manager = QualityDatabaseManager()
+    uninit_manager = RelationalDatabaseManager(service_name="Quality")
     with pytest.raises(Exception) as exc_info:
         uninit_manager.get_session_maker()
     assert "not initialized" in str(exc_info.value)
@@ -314,9 +314,9 @@ async def test_sqlite_pragma_exception_handling():
     """
     from unittest.mock import MagicMock
 
-    from apps.quality.database import QualityDatabaseManager
+    from packages.database import RelationalDatabaseManager
 
-    local_db_mgr = QualityDatabaseManager()
+    local_db_mgr = RelationalDatabaseManager(service_name="Quality")
     local_db_mgr.init_db("sqlite+aiosqlite:///:memory:")
 
     # Find the set_sqlite_pragma listener in local_db_mgr.engine.sync_engine.pool.dispatch.connect
