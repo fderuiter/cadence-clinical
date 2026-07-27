@@ -8,7 +8,7 @@
 ---
 
 ## 1. Context & Problem Statement
-The lack of automated architectural boundary checks allowed potential direct dependencies between isolated applications and domain logic packages. Additionally, duplicate cryptographic signature verification logic was written across different packages, which increases compliance risk and makes updates to security protocols difficult to roll out consistently. 
+The lack of automated architectural boundary checks allowed potential direct dependencies between isolated applications and domain logic packages. Additionally, duplicate cryptographic signature verification logic was written across different packages, which increases compliance risk and makes updates to security protocols difficult to roll out consistently.
 
 ## 2. Decision Drivers & Constraints
 * **Driver 1:** Enforce strict architectural boundary checks in local development and continuous integration environments.
@@ -24,7 +24,7 @@ The lack of automated architectural boundary checks allowed potential direct dep
   * ❌ High probability of regression and compliance gaps due to manual slips.
 
 ### Option 2: Centralized verification and automated boundary checks (Selected)
-* **Overview:** 
+* **Overview:**
   1. Route all electronic X.509 signature verification methods to `asymmetric_verify` in `packages.security.signing`.
   2. Implement strict ESLint `no-restricted-imports` configuration for JavaScript and Vue.
   3. Enforce Ruff `TID251` (flake8-tidy-imports) banned API check specifically on Python domain libraries under `packages/` to restrict imports of application-level files.
