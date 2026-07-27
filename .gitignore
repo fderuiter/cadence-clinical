@@ -123,3 +123,8 @@ Thumbs.db
 !.vscode/launch.json
 !.vscode/extensions.json
 .cursor/
+
+# ------------------------------------------
+# Isolated eTMF generation target directory
+# ------------------------------------------
+tmp_etmf/

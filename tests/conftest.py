@@ -252,14 +252,28 @@ def pytest_sessionfinish(session, exitstatus):
     """
     import subprocess
     import sys
+    import os
 
     print(
         "\n--- Running Automated Requirements Traceability Matrix (RTM) Generator ---"
     )
     try:
+        cmd = [sys.executable, "scripts/generate_rtm.py"]
+
+        # Check for output dir environment variable
+        output_dir = os.environ.get("RTM_OUTPUT_DIR") or os.environ.get("GENERATE_RTM_OUTPUT_DIR")
+        if output_dir:
+            cmd.extend(["--output-dir", output_dir])
+
+        # Check for dynamic timestamp environment variable
+        dynamic_val = os.environ.get("RTM_DYNAMIC_TIMESTAMP") or os.environ.get("GENERATE_RTM_DYNAMIC_TIMESTAMP")
+        if dynamic_val is not None:
+            if dynamic_val.lower() not in ("", "0", "false", "no", "off"):
+                cmd.append("--dynamic-timestamp")
+
         # Run the script using the same python interpreter
         result = subprocess.run(
-            [sys.executable, "scripts/generate_rtm.py"],
+            cmd,
             capture_output=True,
             text=True,
             check=False,
