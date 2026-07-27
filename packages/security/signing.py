@@ -62,19 +62,33 @@ def verify_gateway_signature(
     if hmac.compare_digest(expected, signature):
         return True
 
-    # Fallback for legacy v2 format (without site_id, sponsor_id, unblinded_access)
-    if not site_id and not sponsor_id and not unblinded_access:
-        legacy_payload = {
-            "change_reason": change_reason if change_reason is not None else "",
-            "roles": roles,
-            "timestamp": timestamp,
-            "user_id": user_id,
-        }
-        serialized = json.dumps(legacy_payload, sort_keys=True, separators=(",", ":"))
-        legacy_expected = hmac.new(
-            secret, serialized.encode("utf-8"), hashlib.sha256
-        ).hexdigest()
-        return hmac.compare_digest(legacy_expected, signature)
+    # Fallback 1: check if signature was generated with empty scopes (site_id=None, sponsor_id=None, unblinded_access=False)
+    scope_free_expected = generate_gateway_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        secret=secret,
+        change_reason=change_reason,
+        site_id=None,
+        sponsor_id=None,
+        unblinded_access=False,
+    )
+    if hmac.compare_digest(scope_free_expected, signature):
+        return True
+
+    # Fallback 2: check if signature was generated with the absolute legacy v2 payload (completely missing keys)
+    legacy_payload = {
+        "change_reason": change_reason if change_reason is not None else "",
+        "roles": roles,
+        "timestamp": timestamp,
+        "user_id": user_id,
+    }
+    serialized = json.dumps(legacy_payload, sort_keys=True, separators=(",", ":"))
+    legacy_expected = hmac.new(
+        secret, serialized.encode("utf-8"), hashlib.sha256
+    ).hexdigest()
+    if hmac.compare_digest(legacy_expected, signature):
+        return True
 
     return False
 
