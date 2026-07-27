@@ -227,6 +227,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_invalid_sdtm_domain_rejection` | `tests.test_biostat_exports` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_sdtm_domain_export_success` | `tests.test_biostat_exports` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_unauthenticated_access_rejection` | `tests.test_biostat_exports` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_rtm_generation_conftest_hook_detection` | `tests.test_cli_etmf_archival` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_rtm_generation_with_cli_overrides` | `tests.test_cli_etmf_archival` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_gateway_routing` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cdisc_export_and_validation` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_demographics_encryption` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -585,8 +587,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_ledger_sealing_and_validation` | `tests.test_ledger_and_triggers` | PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_out_of_band_update_triggers_audit_entry` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_prevent_audit_ledger_seals_mutation` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_prevent_audit_log_mutation` | `tests.test_ledger_and_triggers` | Trace-1, PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_prevent_hard_delete_on_audited_model` | `tests.test_ledger_and_triggers` | Trace-1, PRD-SYS-002 | 🟢 PASSED | < 1s |
+| `test_prevent_audit_log_mutation` | `tests.test_ledger_and_triggers` | PRD-SYS-001, Trace-1 | 🟢 PASSED | < 1s |
+| `test_prevent_hard_delete_on_audited_model` | `tests.test_ledger_and_triggers` | PRD-SYS-002, Trace-1 | 🟢 PASSED | < 1s |
 | `test_designer_gateway_auth_expired_timestamp` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_designer_gateway_auth_invalid_signature` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_designer_gateway_auth_invalid_timestamp` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -989,7 +991,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_translation_validation_failure` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_site_and_visit_locks` | `tests.test_trial_lock` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_subject_and_form_locks` | `tests.test_trial_lock` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_trial_lock_freeze` | `tests.test_trial_lock` | PRD-SYS-003, Trace-3 | 🟢 PASSED | < 1s |
+| `test_trial_lock_freeze` | `tests.test_trial_lock` | Trace-3, PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_api_tsdv_config_authorization_and_upsert` | `tests.test_tsdv_logic` | PRD-QRY-007 | 🟢 PASSED | < 1s |
 | `test_api_tsdv_config_validation` | `tests.test_tsdv_logic` | PRD-QRY-007 | 🟢 PASSED | < 1s |
 | `test_api_tsdv_evaluation_endpoint` | `tests.test_tsdv_logic` | PRD-QRY-007 | 🟢 PASSED | < 1s |
