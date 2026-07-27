@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import argparse
+from datetime import datetime, timezone
 import os
 import re
 import subprocess
@@ -249,13 +251,15 @@ def get_installed_packages():
 
 
 def generate_rtm_md(
-    requirements, test_mappings, test_results, test_cases_all, output_path
+    requirements, test_mappings, test_results, test_cases_all, output_path, timestamp=None
 ):
+    if timestamp is None:
+        timestamp = get_stable_timestamp()
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     with open(output_path, "w", encoding="utf-8") as f:
         f.write("# Requirements Traceability Matrix (RTM)\n\n")
-        f.write(f"*Generated on:* {get_stable_timestamp()}\n")
+        f.write(f"*Generated on:* {timestamp}\n")
         f.write(
             "*Regulatory Compliance Standards:* FDA 21 CFR Part 11, EU Annex 11, GAMP 5, IEC 62304 Section 5.7 & 5.8\n\n"
         )
@@ -371,8 +375,10 @@ def generate_rtm_md(
 
 
 def generate_qualification_report(
-    requirements, test_mappings, test_results, test_cases_all, output_path
+    requirements, test_mappings, test_results, test_cases_all, output_path, timestamp=None
 ):
+    if timestamp is None:
+        timestamp = get_stable_timestamp()
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     # Analyze results
@@ -387,7 +393,7 @@ def generate_qualification_report(
         f.write(
             "# GxP Installation & Operational Qualification (IQ/OQ/PQ) Execution Report\n\n"
         )
-        f.write(f"*Execution Date:* {get_stable_timestamp()}\n")
+        f.write(f"*Execution Date:* {timestamp}\n")
         f.write(
             "*Regulatory Protocol:* FDA 21 CFR Part 11, EU Annex 11, GAMP 5 Category 4/5, IEC 62304 Class B\n\n"
         )
@@ -549,6 +555,23 @@ def generate_qualification_report(
 
 
 def main():
+    parser = argparse.ArgumentParser(
+        description="Generate Requirements Traceability Matrix and Qualification Execution Report."
+    )
+    parser.add_argument(
+        "--output-dir",
+        "-o",
+        default="docs/SDLC",
+        help="Directory where report files are saved (default: docs/SDLC)"
+    )
+    parser.add_argument(
+        "--dynamic-timestamp",
+        "-d",
+        action="store_true",
+        help="Use current UTC system timestamp instead of the stable baseline timestamp."
+    )
+    args = parser.parse_args()
+
     print(
         "Initializing Requirements Traceability Matrix & Qualification Log Generator..."
     )
@@ -591,17 +614,23 @@ def main():
                 "time": "0.01",
             }
 
+    timestamp = (
+        datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+        if args.dynamic_timestamp
+        else get_stable_timestamp()
+    )
+
     # 4. Generate RTM Markdown
-    rtm_out = "docs/SDLC/Requirements_Traceability_Matrix.md"
+    rtm_out = os.path.join(args.output_dir, "Requirements_Traceability_Matrix.md")
     generate_rtm_md(
-        all_requirements, test_mappings, test_results, test_cases_all, rtm_out
+        all_requirements, test_mappings, test_results, test_cases_all, rtm_out, timestamp=timestamp
     )
     print(f"Requirements Traceability Matrix successfully written to {rtm_out}")
 
     # 5. Generate Qualification Report
-    qual_out = "docs/SDLC/IQ_OQ_PQ_Execution_Report.md"
+    qual_out = os.path.join(args.output_dir, "IQ_OQ_PQ_Execution_Report.md")
     generate_qualification_report(
-        all_requirements, test_mappings, test_results, test_cases_all, qual_out
+        all_requirements, test_mappings, test_results, test_cases_all, qual_out, timestamp=timestamp
     )
     print(f"Qualification Execution Report successfully written to {qual_out}")
 

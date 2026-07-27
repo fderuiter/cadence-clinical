@@ -235,44 +235,35 @@ def generate_signature(
     timestamp: str,
     version: str = "2",
     change_reason: Optional[str] = None,
+    site_id: Optional[str] = None,
+    sponsor_id: Optional[str] = None,
+    unblinded_access: bool = False,
 ) -> str:
     """
-    Generate an HMAC-SHA256 signature for identity headers.
+    Generate an HMAC-SHA256 signature for identity and scope headers.
 
-    Uses a shared secret to cryptographically sign the user identity
+    Uses a shared secret to cryptographically sign the user identity, scope,
     and timestamp, allowing downstream services to trust the injected headers.
 
     Supports Version 1 (legacy colon-concatenated format) and Version 2 (canonical JSON format).
-
-    Args:
-        user_id (str): The unique user identifier.
-        roles (str): Comma-separated roles assigned to the user.
-        timestamp (str): The exact timestamp when the signature was created.
-        version (str): The signature format version ("1" or "v1" for legacy, "2" or "v2" for canonical JSON).
-        change_reason (Optional[str]): The justification reason for the modification (Version 2).
-
-    Returns:
-        str: A hexadecimal representation of the HMAC signature.
     """
-    import json
-
     if version in ("1", "v1"):
         payload_v1 = f"{user_id}:{roles}:{timestamp}"
         return hmac.new(
             GATEWAY_SECRET.encode(), payload_v1.encode("utf-8"), hashlib.sha256
         ).hexdigest()
 
-    cr = change_reason if change_reason is not None else ""
-    payload = {
-        "change_reason": cr,
-        "roles": roles,
-        "timestamp": timestamp,
-        "user_id": user_id,
-    }
-    serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
-    return hmac.new(
-        GATEWAY_SECRET.encode(), serialized.encode("utf-8"), hashlib.sha256
-    ).hexdigest()
+    from packages.security.signing import generate_gateway_signature
+    return generate_gateway_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        secret=GATEWAY_SECRET.encode(),
+        change_reason=change_reason,
+        site_id=site_id,
+        sponsor_id=sponsor_id,
+        unblinded_access=unblinded_access,
+    )
 
 
 @app.get("/openapi.json", include_in_schema=False)
@@ -763,15 +754,29 @@ async def proxy_requests(request: Request, path: str) -> Response:
                 },
             )
 
-    roles = ""
+    roles_set = set()
     realm_access = payload.get("realm_access", {})
     if isinstance(realm_access, dict):
-        roles = ",".join(realm_access.get("roles", []))
+        for r in realm_access.get("roles", []):
+            roles_set.add(str(r))
     else:
         roles_list = payload.get("roles", [])
-        roles = (
-            ",".join(roles_list) if isinstance(roles_list, list) else str(roles_list)
-        )
+        if isinstance(roles_list, list):
+            for r in roles_list:
+                roles_set.add(str(r))
+        elif roles_list:
+            roles_set.add(str(roles_list))
+
+    resource_access = payload.get("resource_access", {})
+    if isinstance(resource_access, dict):
+        for client_id, client_data in resource_access.items():
+            if isinstance(client_data, dict):
+                c_roles = client_data.get("roles", [])
+                if isinstance(c_roles, list):
+                    for r in c_roles:
+                        roles_set.add(str(r))
+
+    roles = ",".join(sorted(list(roles_set)))
 
     # Subject / Patient security routing boundary checks
     user_roles_list = [r.strip().lower() for r in roles.split(",") if r.strip()]
@@ -834,11 +839,23 @@ async def proxy_requests(request: Request, path: str) -> Response:
     headers = dict(request.headers)
     headers.pop("host", None)
 
-    change_reason = request.headers.get("x-change-reason")
+    # Clean up incoming headers to prevent client-side spoofing of identity and scope claims
     for k in list(headers.keys()):
-        if k.lower() == "x-change-reason":
+        k_lower = k.lower()
+        if k_lower in (
+            "x-user-id",
+            "x-user-roles",
+            "x-gateway-timestamp",
+            "x-gateway-signature",
+            "x-signature-version",
+            "x-change-reason",
+            "x-site-id",
+            "x-sponsor-id",
+            "x-unblinded-access",
+        ):
             headers.pop(k, None)
 
+    change_reason = request.headers.get("x-change-reason")
     if change_reason is not None:
         if len(change_reason) > 255:
             return JSONResponse(
@@ -847,9 +864,37 @@ async def proxy_requests(request: Request, path: str) -> Response:
             )
         headers["X-Change-Reason"] = change_reason
 
+    # Extract site lists, sponsor_id, and unblinded_access from the claims/JWT payload
+    site_id_val = payload.get("site_id", "")
+    # Check if list and convert to comma-separated string
+    if isinstance(site_id_val, list):
+        site_id_val = ",".join(str(s) for s in site_id_val)
+    elif site_id_val is None:
+        site_id_val = ""
+    else:
+        site_id_val = str(site_id_val)
+
+    sponsor_id_val = payload.get("sponsor_id", "")
+    if sponsor_id_val is None:
+        sponsor_id_val = ""
+    else:
+        sponsor_id_val = str(sponsor_id_val)
+
+    unblinded_access_claim = payload.get("unblinded_access", False)
+    unblinded_access_val = False
+    if unblinded_access_claim in (True, "true", "True", 1, "1"):
+        unblinded_access_val = True
+
     timestamp = str(time.time())
     signature = generate_signature(
-        user_id, roles, timestamp, version="2", change_reason=change_reason
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        version="2",
+        change_reason=change_reason,
+        site_id=site_id_val if site_id_val else None,
+        sponsor_id=sponsor_id_val if sponsor_id_val else None,
+        unblinded_access=unblinded_access_val,
     )
 
     headers["X-User-Id"] = user_id
@@ -857,6 +902,12 @@ async def proxy_requests(request: Request, path: str) -> Response:
     headers["X-Gateway-Timestamp"] = timestamp
     headers["X-Gateway-Signature"] = signature
     headers["X-Signature-Version"] = "2"
+    if site_id_val:
+        headers["X-Site-Id"] = site_id_val
+    if sponsor_id_val:
+        headers["X-Sponsor-Id"] = sponsor_id_val
+    if unblinded_access_val:
+        headers["X-Unblinded-Access"] = "true"
 
     try:
         body: bytes = await request.body()
