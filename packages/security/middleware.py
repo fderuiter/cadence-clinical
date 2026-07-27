@@ -1,7 +1,6 @@
 import datetime
 import hashlib
 import hmac
-import json
 import os
 import time
 from typing import Awaitable, Callable
@@ -141,6 +140,7 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
 
         if version in ("2", "v2"):
             from packages.security.signing import verify_gateway_signature
+
             is_valid_sig = verify_gateway_signature(
                 user_id=user_id,
                 roles=roles,
