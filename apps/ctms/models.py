@@ -1,3 +1,4 @@
+from packages.database import AuditMixin
 import uuid
 from datetime import datetime
 from typing import Optional
@@ -31,7 +32,7 @@ class CTMSAuditLog(Base):
     details: Mapped[str] = mapped_column(String(1000), nullable=False)
 
 
-class CTMSStudy(Base):
+class CTMSStudy(AuditMixin, Base):
     """
     Example CTMS domain model representing a clinical trial metadata boundary
     with mandatory Part 11 audit fields.
@@ -46,16 +47,8 @@ class CTMSStudy(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     status: Mapped[str] = mapped_column(String(50), default="ACTIVE", nullable=False)
 
-    # Standard Part 11 Audit Fields
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
-    )
-    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
-    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
-    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
-
-class MonitoringVisit(Base):
+class MonitoringVisit(AuditMixin, Base):
     """
     Represents a clinical trial site monitoring visit report (MVR) lifecycle.
     """
@@ -73,16 +66,8 @@ class MonitoringVisit(Base):
     actual_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     status: Mapped[str] = mapped_column(String(50), default="SCHEDULED", nullable=False)
 
-    # Standard Part 11 Audit Fields
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
-    )
-    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
-    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
-    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
-
-class MonitoringVisitFinding(Base):
+class MonitoringVisitFinding(AuditMixin, Base):
     """
     Represents an individual monitoring visit finding or action item.
     """
@@ -101,16 +86,8 @@ class MonitoringVisitFinding(Base):
         String(50), default="OPEN", nullable=False
     )  # OPEN, RESOLVED
 
-    # Standard Part 11 Audit Fields
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
-    )
-    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
-    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
-    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
-
-class GeneratedLetter(Base):
+class GeneratedLetter(AuditMixin, Base):
     """
     Represents a persisted confirmation or follow-up letter generated for a monitoring visit.
     Ensures that letters can be retrieved without re-rendering previously issued content.
@@ -127,16 +104,8 @@ class GeneratedLetter(Base):
     )  # CONFIRMATION, FOLLOW_UP
     rendered_content: Mapped[str] = mapped_column(String(100000), nullable=False)
 
-    # Standard Part 11 Audit Fields
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
-    )
-    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
-    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
-    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
-
-class RecruitmentRecord(Base):
+class RecruitmentRecord(AuditMixin, Base):
     """
     Tracks site recruitment metrics for clinical studies with standard Part 11 audit fields.
     """
@@ -153,16 +122,8 @@ class RecruitmentRecord(Base):
     target_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     as_of_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
-    # Standard Part 11 Audit Fields
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
-    )
-    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
-    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
-    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
-
-class SiteMilestone(Base):
+class SiteMilestone(AuditMixin, Base):
     """
     Represents site milestones with planning details and status tracking under Part 11 compliance.
     """
@@ -179,16 +140,8 @@ class SiteMilestone(Base):
     actual_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     status: Mapped[str] = mapped_column(String(50), default="PLANNED", nullable=False)
 
-    # Standard Part 11 Audit Fields
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
-    )
-    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
-    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
-    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
-
-class CRAAllocation(Base):
+class CRAAllocation(AuditMixin, Base):
     """
     Represents allocation of a CRA to a site and study with active/inactive statuses.
     """
@@ -209,16 +162,8 @@ class CRAAllocation(Base):
         DateTime, nullable=True
     )
 
-    # Standard Part 11 Audit Fields
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
-    )
-    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
-    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
-    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
-
-class InvestigatorGrant(Base):
+class InvestigatorGrant(AuditMixin, Base):
     """
     Represents an Investigator Grant for a site and study, tracking the total budget
     and approval status under Part 11.
@@ -235,16 +180,8 @@ class InvestigatorGrant(Base):
     currency: Mapped[str] = mapped_column(String(10), default="USD", nullable=False)
     status: Mapped[str] = mapped_column(String(50), default="DRAFT", nullable=False)
 
-    # Standard Part 11 Audit Fields
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
-    )
-    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
-    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
-    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
-
-class BudgetLineItem(Base):
+class BudgetLineItem(AuditMixin, Base):
     """
     Represents a specific line item in the budget of an Investigator Grant.
     """
@@ -264,16 +201,8 @@ class BudgetLineItem(Base):
     description: Mapped[str] = mapped_column(String(255), nullable=False)
     amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
 
-    # Standard Part 11 Audit Fields
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
-    )
-    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
-    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
-    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
-
-class PaymentMilestone(Base):
+class PaymentMilestone(AuditMixin, Base):
     """
     Represents a predefined payment milestone triggered automatically or manually.
     """
@@ -295,16 +224,8 @@ class PaymentMilestone(Base):
     is_triggered: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     triggered_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
-    # Standard Part 11 Audit Fields
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
-    )
-    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
-    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
-    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
-
-class InvestigatorPayable(Base):
+class InvestigatorPayable(AuditMixin, Base):
     """
     Tracks payables generated dynamically from milestones or custom triggers.
     """
@@ -332,14 +253,6 @@ class InvestigatorPayable(Base):
     )
     due_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     paid_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-
-    # Standard Part 11 Audit Fields
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
-    )
-    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
-    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
-    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
 
 async def write_audit_log(

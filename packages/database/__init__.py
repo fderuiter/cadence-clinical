@@ -3,6 +3,9 @@ from typing import Any, AsyncGenerator, Optional
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from packages.database.mixins import AuditMixin, SharedAuditMixin
+from packages.database.hooks import register_audit_hooks, setup_audit_hooks
+
 
 class RelationalDatabaseManager:
     """
@@ -13,6 +16,7 @@ class RelationalDatabaseManager:
         self.service_name = service_name
         self.engine: Any = None
         self.session_maker: Optional[async_sessionmaker[AsyncSession]] = None
+        self._audit_hooks: list[tuple[Any, Optional[list[str]]]] = []
 
     def init_db(self, database_url: str, **kwargs: Any) -> None:
         self.engine = create_async_engine(database_url, **kwargs)
@@ -32,6 +36,7 @@ class RelationalDatabaseManager:
         self.session_maker = async_sessionmaker(
             bind=self.engine, class_=AsyncSession, expire_on_commit=False
         )
+
 
     async def close(self) -> None:
         if self.engine:

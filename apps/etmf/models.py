@@ -1,3 +1,4 @@
+from packages.database import AuditMixin
 import uuid
 from datetime import datetime
 from typing import Any, Dict, Optional
@@ -10,7 +11,7 @@ class Base(DeclarativeBase):
     pass
 
 
-class ExpectedDocument(Base):
+class ExpectedDocument(AuditMixin, Base):
     """
     Represents an Expected Document List (EDL) rule that specifies required
     artifact types for a given study/site and milestone.
@@ -31,14 +32,6 @@ class ExpectedDocument(Base):
     section: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     metadata_json: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
 
-    # Standard Part 11 Audit Fields
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
-    )
-    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
-    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
-    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
-
 
 class TMFDocumentType:
     FORM_1572 = "FORM_1572"
@@ -55,7 +48,7 @@ class DocumentStatus:
     REJECTED = "REJECTED"
 
 
-class TMFDocument(Base):
+class TMFDocument(AuditMixin, Base):
     """
     Represents an archived document in the electronic Trial Master File (eTMF)
     structured on the DIA TMF Reference Model (Zones 1-11).
@@ -76,11 +69,6 @@ class TMFDocument(Base):
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
     content: Mapped[str] = mapped_column(String, nullable=False)
     mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
-    )
-    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
-    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     status: Mapped[str] = mapped_column(String(50), default="DRAFT", nullable=False)
     taxonomy_version: Mapped[str] = mapped_column(
         String(50), default="v3.2.0", nullable=False

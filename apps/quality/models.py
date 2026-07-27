@@ -1,3 +1,4 @@
+from packages.database import AuditMixin
 import uuid
 from datetime import datetime
 from enum import Enum
@@ -44,7 +45,7 @@ class DeviationType(str, Enum):
     OTHER = "OTHER"
 
 
-class Deviation(Base):
+class Deviation(AuditMixin, Base):
     """
     Represents a clinical protocol deviation or quality deviation event
     with mandatory Part 11 audit fields and lifecycle controls.
@@ -70,14 +71,6 @@ class Deviation(Base):
         Boolean, default=False, nullable=False
     )
 
-    # Traceability & Mutable-Record Audit Fields
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
-    )
-    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
-    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
-    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
-
     # Relationships
     root_cause_analysis: Mapped[Optional["RootCauseAnalysis"]] = relationship(
         back_populates="deviation", uselist=False, cascade="all, delete-orphan"
@@ -87,7 +80,7 @@ class Deviation(Base):
     )
 
 
-class RootCauseAnalysis(Base):
+class RootCauseAnalysis(AuditMixin, Base):
     """
     Represents a Root Cause Analysis (RCA) linked to a specific deviation.
     """
@@ -108,17 +101,11 @@ class RootCauseAnalysis(Base):
     investigation_details: Mapped[str] = mapped_column(String, nullable=False)
     root_cause_summary: Mapped[str] = mapped_column(String, nullable=False)
 
-    # Traceability & Mutable-Record Audit Fields
+    
     study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     site_id: Mapped[Optional[str]] = mapped_column(
         String(255), nullable=True, index=True
     )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
-    )
-    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
-    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
-    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
 
     # Relationships
     deviation: Mapped["Deviation"] = relationship(back_populates="root_cause_analysis")
@@ -127,7 +114,7 @@ class RootCauseAnalysis(Base):
     )
 
 
-class CAPARecord(Base):
+class CAPARecord(AuditMixin, Base):
     """
     Represents a Corrective and Preventive Action (CAPA) record linked to a deviation and an optional RCA.
     """
@@ -161,17 +148,11 @@ class CAPARecord(Base):
         DateTime, nullable=True
     )
 
-    # Traceability & Mutable-Record Audit Fields
+    
     study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     site_id: Mapped[Optional[str]] = mapped_column(
         String(255), nullable=True, index=True
     )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
-    )
-    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
-    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
-    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
 
     # Relationships
     deviation: Mapped["Deviation"] = relationship(back_populates="capa_records")
