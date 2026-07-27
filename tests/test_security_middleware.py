@@ -675,35 +675,42 @@ def test_downstream_signature_gated_endpoint_replay_blocked() -> None:
     assert response2.json()["detail"] == "REAUTHENTICATION_REQUIRED"
 
 
-def test_strict_scope_fallback_rules() -> None:
+def test_verify_gateway_signature_scope_fallback_restrictions() -> None:
     """
-    Test that legacy/no-scope fallbacks are strictly not allowed when
-    scopes are supplied on the request, complying with Issue #118.
+    Test that legacy/no-scope signature fallback is only allowed when
+    no scope variables (site_id, sponsor_id, unblinded_access) are present.
     """
     from packages.security.signing import (
         generate_gateway_signature,
         verify_gateway_signature,
     )
 
-    secret = b"internal-gateway-secret-12345"
-    user_id = "test_user"
+    secret = b"test-secret-key-12345"
+    user_id = "user_001"
     roles = "investigator"
-    timestamp = str(time.time())
-    change_reason = "PI Sign-off"
+    timestamp = "1234567890"
+    change_reason = "gxp signoff"
 
-    # 1. Scope-less signature (legacy/fallback-style)
-    legacy_sig = generate_gateway_signature(
-        user_id=user_id,
-        roles=roles,
-        timestamp=timestamp,
-        secret=secret,
-        change_reason=change_reason,
-        site_id=None,
-        sponsor_id=None,
-        unblinded_access=False,
+    # 1. Generate a legacy 4-key v2 signature (which does not sign scope parameters)
+    import hashlib
+    import hmac
+    import json
+
+    legacy_payload = {
+        "change_reason": change_reason,
+        "roles": roles,
+        "timestamp": timestamp,
+        "user_id": user_id,
+    }
+    legacy_serialized = json.dumps(
+        legacy_payload, sort_keys=True, separators=(",", ":")
     )
+    legacy_sig = hmac.new(
+        secret, legacy_serialized.encode("utf-8"), hashlib.sha256
+    ).hexdigest()
 
-    # If scopes are completely absent, fallback is ALLOWED and verification passes
+    # 2. Case A: Scopes are completely absent/falsy.
+    # Legacy fallback should be allowed.
     assert (
         verify_gateway_signature(
             user_id=user_id,
@@ -719,7 +726,8 @@ def test_strict_scope_fallback_rules() -> None:
         is True
     )
 
-    # If site_id or other scopes are present, fallback must be BLOCKED/REJECTED
+    # 3. Case B: A scope is present in the request.
+    # Legacy fallback should be strictly rejected.
     assert (
         verify_gateway_signature(
             user_id=user_id,
@@ -728,7 +736,7 @@ def test_strict_scope_fallback_rules() -> None:
             signature=legacy_sig,
             secret=secret,
             change_reason=change_reason,
-            site_id="site_abc",  # Scope supplied on request
+            site_id="site_active_01",
             sponsor_id=None,
             unblinded_access=False,
         )
@@ -744,7 +752,7 @@ def test_strict_scope_fallback_rules() -> None:
             secret=secret,
             change_reason=change_reason,
             site_id=None,
-            sponsor_id="sponsor_xyz",  # Scope supplied on request
+            sponsor_id="sponsor_active_01",
             unblinded_access=False,
         )
         is False
@@ -760,7 +768,33 @@ def test_strict_scope_fallback_rules() -> None:
             change_reason=change_reason,
             site_id=None,
             sponsor_id=None,
-            unblinded_access=True,  # Scope supplied on request
+            unblinded_access=True,
         )
         is False
+    )
+
+    # 4. Case C: A correct 7-field scope-signed signature passes verification.
+    scope_sig = generate_gateway_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        secret=secret,
+        change_reason=change_reason,
+        site_id="site_active_01",
+        sponsor_id="sponsor_active_01",
+        unblinded_access=True,
+    )
+    assert (
+        verify_gateway_signature(
+            user_id=user_id,
+            roles=roles,
+            timestamp=timestamp,
+            signature=scope_sig,
+            secret=secret,
+            change_reason=change_reason,
+            site_id="site_active_01",
+            sponsor_id="sponsor_active_01",
+            unblinded_access=True,
+        )
+        is True
     )
