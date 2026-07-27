@@ -49,6 +49,7 @@ def verify_gateway_signature(
     unblinded_access: bool = False,
 ) -> bool:
     """Verifies an HMAC-SHA256 signature for API Gateway identity and scope headers."""
+    # 1. Verify with the full 7-field scope-aware payload
     expected = generate_gateway_signature(
         user_id=user_id,
         roles=roles,
@@ -62,7 +63,7 @@ def verify_gateway_signature(
     if hmac.compare_digest(expected, signature):
         return True
 
-    # Fallback 1: Verify as if scope fields were omitted from the signature generation (e.g., site_id=None, sponsor_id=None)
+    # 2. Fallback 1: Verify as if scope fields were omitted from the signature generation (e.g., site_id=None, sponsor_id=None)
     no_scope_expected = generate_gateway_signature(
         user_id=user_id,
         roles=roles,
@@ -76,7 +77,7 @@ def verify_gateway_signature(
     if hmac.compare_digest(no_scope_expected, signature):
         return True
 
-    # Fallback 2: Verify with 4-key dictionary payload for backward compatibility with older/simple testing
+    # 3. Fallback 2: Verify with legacy 4-field payload for backward compatibility
     legacy_payload = {
         "change_reason": change_reason if change_reason is not None else "",
         "roles": roles,
