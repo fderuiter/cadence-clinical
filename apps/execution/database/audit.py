@@ -93,6 +93,91 @@ def receive_before_flush(session: Session, flush_context, instances):
         if not hasattr(obj, "__tablename__") or obj.__tablename__ == "audit_logs":
             continue
 
+        # Check standard re-consent requirements for subject-covered records
+        tablename = getattr(obj, "__tablename__", None)
+        if tablename in (
+            "clinical_subjects",
+            "clinical_visits",
+            "clinical_observations",
+            "form_submissions",
+        ):
+            # Avoid blocking new subjects on initial insert
+            if not (obj in session.new and tablename == "clinical_subjects"):
+                subject_id = getattr(obj, "subject_id", None) or getattr(
+                    obj, "subject", None
+                )
+                if tablename == "clinical_subjects" and not subject_id:
+                    subject_id = getattr(obj, "subject_id", None) or getattr(
+                        obj, "id", None
+                    )
+
+                study_id = getattr(obj, "study_id", None) or getattr(obj, "study", None)
+
+                if subject_id:
+                    from sqlalchemy import select
+
+                    from .models import ClinicalSubject, SubjectConsent
+
+                    try:
+                        with session.no_autoflush:
+                            if not study_id:
+                                stmt_subj = select(ClinicalSubject).where(
+                                    (ClinicalSubject.subject_id == subject_id)
+                                    | (ClinicalSubject.id == subject_id)
+                                )
+                                subj_res = session.execute(stmt_subj).scalars().first()
+                                if subj_res:
+                                    study_id = subj_res.study_id
+                                    subject_id = subj_res.subject_id
+
+                            if study_id:
+                                # 1. Fetch user's consented versions
+                                stmt_user_consents = select(SubjectConsent).where(
+                                    SubjectConsent.subject_id == subject_id,
+                                    SubjectConsent.study_id == study_id,
+                                    SubjectConsent.icf_signed.is_(True),
+                                )
+                                user_consents = (
+                                    session.execute(stmt_user_consents).scalars().all()
+                                )
+                                user_consented_indices = {
+                                    c.version_index for c in user_consents
+                                }
+                                max_consented_v = (
+                                    max(user_consented_indices)
+                                    if user_consented_indices
+                                    else 0
+                                )
+
+                                # 2. Check direct re-consent flag on any S's consent record
+                                stmt_direct = select(SubjectConsent).where(
+                                    SubjectConsent.subject_id == subject_id,
+                                    SubjectConsent.study_id == study_id,
+                                    SubjectConsent.requires_reconsent.is_(True),
+                                )
+                                direct_reconsent = (
+                                    session.execute(stmt_direct).scalars().first()
+                                )
+
+                                # 3. Check for any newer version defined for this study that requires re-consent but is not consented by S
+                                stmt_higher = select(SubjectConsent).where(
+                                    SubjectConsent.study_id == study_id,
+                                    SubjectConsent.version_index > max_consented_v,
+                                    SubjectConsent.requires_reconsent.is_(True),
+                                )
+                                higher_reconsent = (
+                                    session.execute(stmt_higher).scalars().first()
+                                )
+
+                                if direct_reconsent or higher_reconsent:
+                                    raise PermissionError(
+                                        "Re-Consent Required - Demographics & Visit Forms Locked"
+                                    )
+                    except PermissionError:
+                        raise
+                    except Exception:
+                        pass
+
         site_id = getattr(obj, "site_id", None) or getattr(obj, "site", None)
         if site_id is not None and TrialLockManager.is_site_locked(str(site_id)):
             raise PermissionError(
