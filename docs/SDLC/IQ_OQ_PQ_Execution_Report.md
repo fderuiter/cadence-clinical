@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1009
-- **Passed:** 1009 🟢
+- **Total Automated Test Cases Run:** 1011
+- **Passed:** 1011 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -540,6 +540,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_form_submission_validation` | `tests.test_form_submissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_cors_headers` | `tests.test_gateway` | PRD-UNI-001 | 🟢 PASSED | < 1s |
 | `test_gateway_rate_limiting` | `tests.test_gateway` | PRD-UNI-001 | 🟢 PASSED | < 1s |
+| `test_gateway_sponsor_claim_extraction` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_subject_role_routing_restrictions` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_generate_signature` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_generate_signature_v2` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -578,6 +579,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_instantiate_library_object_success` | `tests.test_global_library_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_library_instance_updates_and_inheritance_diffs` | `tests.test_global_library_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_library_object_in_use_and_amendments` | `tests.test_global_library_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_sponsor_security_boundaries` | `tests.test_global_library_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_stripe_style_pagination_and_filtering` | `tests.test_global_library_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_update_and_history_versioning` | `tests.test_global_library_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_mock_flow_library_version_chain_and_immutability` | `tests.test_global_library_neo4j` | *Regression/Helper* | 🟢 PASSED | < 1s |

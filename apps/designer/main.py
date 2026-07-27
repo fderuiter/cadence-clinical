@@ -669,7 +669,6 @@ async def study_differences(
 # ==========================================
 
 
-
 class CreateEligibilityCriterionRequest(BaseModel):
     criterion_id: str = Field(
         ...,

@@ -16,7 +16,7 @@ from apps.etmf.sealer import (
 )
 from apps.gateway.main import generate_signature
 
-GATEWAY_SECRET = "internal-gateway-secret-12345"
+GATEWAY_SECRET = "internal-gateway-secret-12345"  # pragma: allowlist secret
 
 
 @pytest_asyncio.fixture(autouse=True)
