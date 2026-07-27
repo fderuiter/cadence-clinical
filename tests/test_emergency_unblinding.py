@@ -282,3 +282,39 @@ async def test_unblind_success_masked_access() -> None:
         assert data["drug_code"] == "Obfuscated Kit"
         assert data["unblinded_by"] == "test_inv"
         assert data["unblinded_reason"] == "Emergency unblinding requested"
+
+
+@pytest.mark.asyncio
+async def test_unblind_irreversible() -> None:
+    """The unblinding transition must be irreversible, preventing any return to a blinded/active state."""
+    from apps.execution.subject_lifecycle import InvalidStateTransitionError
+
+    async with db_manager.get_session_maker()() as session:
+        subj = ClinicalSubject(
+            subject_id="SUBJ-005",
+            study_id="STUDY-1",
+        )
+        session.add(subj)
+        await session.flush()
+        subj.status = "ENROLLED"
+        await session.flush()
+        subj.status = "RANDOMIZED"
+        await session.flush()
+        subj.status = "UNBLINDED"
+        await session.commit()
+
+        # Try to transition back to RANDOMIZED
+        with pytest.raises(InvalidStateTransitionError) as exc_info:
+            subj.status = "RANDOMIZED"
+        assert "Transition from UNBLINDED to RANDOMIZED is forbidden" in str(exc_info.value)
+
+        # Try to transition back to ACTIVE
+        with pytest.raises(InvalidStateTransitionError) as exc_info:
+            subj.status = "ACTIVE"
+        assert "Transition from UNBLINDED to ACTIVE is forbidden" in str(exc_info.value)
+
+        # Try to transition back to SCREENING
+        with pytest.raises(InvalidStateTransitionError) as exc_info:
+            subj.status = "SCREENING"
+        assert "Transition from UNBLINDED to SCREENING is forbidden" in str(exc_info.value)
+
