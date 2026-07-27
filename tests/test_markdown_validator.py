@@ -337,7 +337,10 @@ def test_func(tx, study_version_id):
     codebase_map = vm.build_codebase_map(repo_root)
     vm.process_markdown_file(md_file, repo_root, set(), set(), codebase_map)
     assert len(vm.errors) == 1
-    assert "Mismatched Python signature for function 'test_func'" in vm.errors[0]["message"]
+    assert (
+        "Mismatched Python signature for function 'test_func'"
+        in vm.errors[0]["message"]
+    )
 
 
 def test_json_block_validation(tmp_path):
@@ -373,7 +376,10 @@ class TestModel(BaseModel):
     codebase_map = vm.build_codebase_map(repo_root)
     vm.process_markdown_file(md_file, repo_root, set(), set(), codebase_map)
     assert len(vm.errors) == 1
-    assert "JSON example mismatch with Pydantic model 'TestModel'" in vm.errors[0]["message"]
+    assert (
+        "JSON example mismatch with Pydantic model 'TestModel'"
+        in vm.errors[0]["message"]
+    )
 
 
 def test_skip_and_raw_text_flags(tmp_path):
