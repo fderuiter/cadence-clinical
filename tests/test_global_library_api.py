@@ -1,6 +1,3 @@
-import hashlib
-import hmac
-import json
 import time
 
 import httpx
@@ -20,6 +17,7 @@ def get_auth_headers(
     tenant_id="tenant_001",
 ):
     from packages.security.signing import generate_gateway_signature
+
     timestamp = str(time.time())
     signature = generate_gateway_signature(
         user_id=user_id,

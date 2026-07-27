@@ -234,7 +234,10 @@ export async function generateJwtHS256(payload, secret) {
  */
 export async function sha256(message) {
   const msgBuffer = new TextEncoder().encode(message);
-  const hashBuffer = await globalThis.crypto.subtle.digest("SHA-256", msgBuffer);
+  const hashBuffer = await globalThis.crypto.subtle.digest(
+    "SHA-256",
+    msgBuffer
+  );
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   const hashHex = hashArray
     .map((b) => b.toString(16).padStart(2, "0"))
@@ -251,7 +254,12 @@ export async function sha256(message) {
  * @param {Function|null} [evaluateASTFn=null] - AST evaluation callback.
  * @returns {Object} { valid: boolean, message?: string }
  */
-export function validateField(fieldMeta, val, context = {}, evaluateASTFn = null) {
+export function validateField(
+  fieldMeta,
+  val,
+  context = {},
+  evaluateASTFn = null
+) {
   if (!fieldMeta) return { valid: true };
 
   const rules = fieldMeta.validation || {};
@@ -306,7 +314,8 @@ export function validateField(fieldMeta, val, context = {}, evaluateASTFn = null
         return {
           valid: false,
           message:
-            fieldMeta.constraint.query_message || "Constraint validation failed.",
+            fieldMeta.constraint.query_message ||
+            "Constraint validation failed.",
         };
       }
     }

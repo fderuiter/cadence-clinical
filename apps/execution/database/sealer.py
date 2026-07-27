@@ -10,15 +10,16 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.execution.trial_lock import TrialLockManager
-from packages.security.signing import clean_json_val, compute_merkle_root, compute_block_hash
+from packages.security.signing import (
+    clean_json_val,
+    compute_block_hash,
+    compute_merkle_root,
+)
 
 logger = logging.getLogger("sealer")
 
 _sealer_task: Optional[asyncio.Task] = None
 _should_run: bool = False
-
-
-
 
 
 def clean_query(query_str: str, db: AsyncSession) -> str:
@@ -237,7 +238,9 @@ async def validate_ledger_integrity(db: AsyncSession) -> bool:
                 )
 
             # Recompute Block Hash
-            computed_block_hash = compute_block_hash(expected_prev_hash, computed_merkle_root)
+            computed_block_hash = compute_block_hash(
+                expected_prev_hash, computed_merkle_root
+            )
 
             if computed_block_hash != curr_hash_in_db:
                 raise ValueError(

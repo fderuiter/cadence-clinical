@@ -8,7 +8,7 @@ to detect copied blocks of logic before commits or merges.
 import hashlib
 import os
 import sys
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Tuple
 
 
 def normalize_line(line: str) -> str:
@@ -69,7 +69,7 @@ def scan_file_for_lines(
                 norm = normalize_line(line)
                 if norm:
                     valid_lines.append((norm, idx, line.rstrip()))
-    except Exception as e:
+    except Exception:
         pass
     return valid_lines
 

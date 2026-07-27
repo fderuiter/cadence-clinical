@@ -10,15 +10,15 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.execution.trial_lock import TrialLockManager
-from packages.security.signing import clean_json_val, compute_merkle_root, compute_block_hash
+from packages.security.signing import (
+    compute_block_hash,
+    compute_merkle_root,
+)
 
 logger = logging.getLogger("etmf-sealer")
 
 _sealer_task: Optional[asyncio.Task] = None
 _should_run: bool = False
-
-
-
 
 
 async def execute_etmf_audit_sealing_cycle(
@@ -201,7 +201,9 @@ async def validate_etmf_ledger_integrity(db: AsyncSession) -> bool:
                 )
 
             # Recompute Block Hash
-            computed_block_hash = compute_block_hash(expected_prev_hash, computed_merkle_root)
+            computed_block_hash = compute_block_hash(
+                expected_prev_hash, computed_merkle_root
+            )
 
             if computed_block_hash != curr_hash_in_db:
                 raise ValueError(

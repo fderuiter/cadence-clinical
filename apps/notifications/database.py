@@ -1,5 +1,3 @@
-from typing import Any, Optional
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from packages.database import RelationalDatabaseManager
 
 
