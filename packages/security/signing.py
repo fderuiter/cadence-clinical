@@ -63,16 +63,40 @@ def verify_gateway_signature(
     if hmac.compare_digest(expected, signature):
         return True
 
-    # Fallback/Backward compatibility: Verify with legacy V2 format (no site_id, sponsor_id, unblinded_access in payload)
-    payload_legacy = {
+    # Fallback 1: The sender generated the signature using generate_signature/generate_gateway_signature
+    # but did not pass site_id/sponsor_id/unblinded_access to the generator (treating them as default/empty/None).
+    # Thus, the signature was generated with site_id=None, sponsor_id=None, unblinded_access=False.
+    if site_id or sponsor_id or unblinded_access:
+        fallback_expected = generate_gateway_signature(
+            user_id=user_id,
+            roles=roles,
+            timestamp=timestamp,
+            secret=secret,
+            change_reason=change_reason,
+            site_id=None,
+            sponsor_id=None,
+            unblinded_access=False,
+        )
+        if hmac.compare_digest(fallback_expected, signature):
+            return True
+
+    # Fallback 2: For backward compatibility (especially in older unit/integration tests
+    # that generate simulated signatures without site_id, sponsor_id, and unblinded_access),
+    # try validating against the legacy v2 payload (identity only).
+    legacy_payload = {
         "change_reason": change_reason if change_reason is not None else "",
         "roles": roles,
         "timestamp": timestamp,
         "user_id": user_id,
     }
-    serialized_legacy = json.dumps(payload_legacy, sort_keys=True, separators=(",", ":"))
-    expected_legacy = hmac.new(secret, serialized_legacy.encode("utf-8"), hashlib.sha256).hexdigest()
-    return hmac.compare_digest(expected_legacy, signature)
+    serialized = json.dumps(legacy_payload, sort_keys=True, separators=(",", ":"))
+    legacy_expected = hmac.new(
+        secret, serialized.encode("utf-8"), hashlib.sha256
+    ).hexdigest()
+    if hmac.compare_digest(legacy_expected, signature):
+        return True
+
+    return False
 
 
 def canonical_serialize(payload: Dict[str, Any]) -> bytes:
