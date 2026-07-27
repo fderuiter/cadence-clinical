@@ -1,0 +1,16 @@
+# Production values for Cadence Clinical Platform
+global:
+  image:
+    repository: 123456789012.dkr.ecr.us-east-1.amazonaws.com/cadence-clinical
+    tag: latest
+    pullPolicy: IfNotPresent
+  deployment:
+    color: blue
+    replicas: 3
+    resources:
+      limits:
+        cpu: 2000m
+        memory: 4Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
