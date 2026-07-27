@@ -121,7 +121,9 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
     // Check default tasks rendering
     const tasksList = document.getElementById("tasks-list-container");
     expect(tasksList.innerHTML).toContain("Daily Health &amp; Vital Diary");
-    expect(tasksList.innerHTML).toContain("Weekly Symptoms &amp; eCOA Checklist");
+    expect(tasksList.innerHTML).toContain(
+      "Weekly Symptoms &amp; eCOA Checklist"
+    );
   });
 
   it("handles navigation between primary patient-facing views", async () => {
@@ -130,13 +132,21 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
 
     // Start with tasks view active
     portal.showView("view-tasks");
-    expect(document.getElementById("view-tasks").classList.contains("active")).toBe(true);
-    expect(document.getElementById("view-compliance").classList.contains("active")).toBe(false);
+    expect(
+      document.getElementById("view-tasks").classList.contains("active")
+    ).toBe(true);
+    expect(
+      document.getElementById("view-compliance").classList.contains("active")
+    ).toBe(false);
 
     // Switch to compliance
     portal.showView("view-compliance");
-    expect(document.getElementById("view-tasks").classList.contains("active")).toBe(false);
-    expect(document.getElementById("view-compliance").classList.contains("active")).toBe(true);
+    expect(
+      document.getElementById("view-tasks").classList.contains("active")
+    ).toBe(false);
+    expect(
+      document.getElementById("view-compliance").classList.contains("active")
+    ).toBe(true);
   });
 
   it("renders eCOA questionnaire fields dynamically based on definition", async () => {
@@ -147,17 +157,25 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
     portal.startQuestionnaire("assign_01");
 
     // Check header info
-    expect(document.getElementById("questionnaire-title").textContent).toBe("Daily Health & Vital Diary");
+    expect(document.getElementById("questionnaire-title").textContent).toBe(
+      "Daily Health & Vital Diary"
+    );
 
     // Check input fields rendering
-    const formContainer = document.getElementById("questionnaire-form-container");
+    const formContainer = document.getElementById(
+      "questionnaire-form-container"
+    );
     expect(formContainer.innerHTML).toContain("Systolic Blood Pressure (mmHg)");
     expect(formContainer.innerHTML).toContain('id="vssbp"');
-    expect(formContainer.innerHTML).toContain("Diastolic Blood Pressure (mmHg)");
+    expect(formContainer.innerHTML).toContain(
+      "Diastolic Blood Pressure (mmHg)"
+    );
     expect(formContainer.innerHTML).toContain('id="vsdpb"');
 
     // Check choice single / radio grid rendering
-    expect(formContainer.innerHTML).toContain("Are you experiencing any new physical symptoms today?");
+    expect(formContainer.innerHTML).toContain(
+      "Are you experiencing any new physical symptoms today?"
+    );
     expect(formContainer.innerHTML).toContain('name="has_symptoms"');
     expect(formContainer.innerHTML).toContain('value="Yes"');
     expect(formContainer.innerHTML).toContain('value="No"');
@@ -200,7 +218,9 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
     await portal.initializeApp();
 
     // Check initial compliance rate (1 completed out of 3 total = 33%)
-    expect(document.getElementById("compliance-rate-pct").textContent).toBe("33%");
+    expect(document.getElementById("compliance-rate-pct").textContent).toBe(
+      "33%"
+    );
 
     // Mock completion of assignment 1
     portal.startQuestionnaire("assign_01");
@@ -219,8 +239,12 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
     await portal.verifyAndSubmitSignature();
 
     // Compliance should now be 2 completed out of 3 = 67%
-    expect(document.getElementById("compliance-rate-pct").textContent).toBe("67%");
-    expect(String(document.getElementById("compliance-completed-count").textContent)).toBe("2");
+    expect(document.getElementById("compliance-rate-pct").textContent).toBe(
+      "67%"
+    );
+    expect(
+      String(document.getElementById("compliance-completed-count").textContent)
+    ).toBe("2");
 
     // History table should contain completed status for Daily Health & Vital Diary
     const historyTbody = document.getElementById("compliance-history-tbody");
@@ -232,16 +256,22 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
     await portal.initializeApp();
 
     // Unread notification counts (initially 2 unread)
-    expect(String(document.getElementById("unread-count").textContent)).toBe("2");
+    expect(String(document.getElementById("unread-count").textContent)).toBe(
+      "2"
+    );
 
     const inboxContainer = document.getElementById("inbox-container");
-    expect(inboxContainer.innerHTML).toContain("Reminder: Daily Health &amp; Vital Diary is due shortly.");
+    expect(inboxContainer.innerHTML).toContain(
+      "Reminder: Daily Health &amp; Vital Diary is due shortly."
+    );
 
     // Acknowledge notification 1
     await portal.acknowledgeNotification("notif_01");
 
     // Unread count should drop to 1
-    expect(String(document.getElementById("unread-count").textContent)).toBe("1");
+    expect(String(document.getElementById("unread-count").textContent)).toBe(
+      "1"
+    );
 
     // Audit trail should contain ACKNOWLEDGE_NOTIFICATION entry
     const ledgerTimeline = document.getElementById("portal-ledger-timeline");
@@ -252,7 +282,9 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
     it("is installable as PWA with a manifest link", async () => {
       const manifestLink = document.querySelector('link[rel="manifest"]');
       expect(manifestLink).not.toBeNull();
-      expect(manifestLink.getAttribute("href")).toBe("/subject-portal/manifest.json");
+      expect(manifestLink.getAttribute("href")).toBe(
+        "/subject-portal/manifest.json"
+      );
     });
 
     it("queues submissions in IndexedDB when offline and persists them across reload", async () => {
@@ -341,17 +373,28 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       globalThis.fetch = vi.fn().mockImplementation(() =>
         Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({
-            status: "success",
-            processed_count: 2,
-            created_count: 2,
-            updated_count: 0,
-            ignored_count: 0,
-            results: [
-              { status: "CREATED", id: "sub1", diary_id: "inst_daily_diary", answers: { vssbp: "118" } },
-              { status: "UPDATED_CLIENT_WINS", id: "sub2", diary_id: "inst_weekly_symptoms", answers: { severity: "None" } }
-            ]
-          }),
+          json: () =>
+            Promise.resolve({
+              status: "success",
+              processed_count: 2,
+              created_count: 2,
+              updated_count: 0,
+              ignored_count: 0,
+              results: [
+                {
+                  status: "CREATED",
+                  id: "sub1",
+                  diary_id: "inst_daily_diary",
+                  answers: { vssbp: "118" },
+                },
+                {
+                  status: "UPDATED_CLIENT_WINS",
+                  id: "sub2",
+                  diary_id: "inst_weekly_symptoms",
+                  answers: { severity: "None" },
+                },
+              ],
+            }),
         })
       );
 
@@ -366,8 +409,12 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       const lastCallArg = globalThis.fetch.mock.calls[0];
       const requestBody = JSON.parse(lastCallArg[1].body);
       expect(requestBody.submissions).toHaveLength(2);
-      expect(requestBody.submissions[0].offline_sync_markers.sequence_number).toBe(1);
-      expect(requestBody.submissions[1].offline_sync_markers.sequence_number).toBe(2);
+      expect(
+        requestBody.submissions[0].offline_sync_markers.sequence_number
+      ).toBe(1);
+      expect(
+        requestBody.submissions[1].offline_sync_markers.sequence_number
+      ).toBe(2);
 
       // Verify status updates to SYNCED in UI
       const syncList = document.getElementById("sync-queue-list");
@@ -395,9 +442,11 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       await portal.verifyAndSubmitSignature();
 
       // Mock fetch failure
-      globalThis.fetch = vi.fn().mockImplementation(() =>
-        Promise.reject(new TypeError("Failed to fetch"))
-      );
+      globalThis.fetch = vi
+        .fn()
+        .mockImplementation(() =>
+          Promise.reject(new TypeError("Failed to fetch"))
+        );
 
       // Attempt sync while online
       portal.state.session.isOfflineMode = false;
@@ -437,17 +486,33 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       globalThis.fetch = vi.fn().mockImplementation(() =>
         Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({
-            status: "success",
-            processed_count: 2,
-            created_count: 0,
-            updated_count: 1,
-            ignored_count: 1,
-            results: [
-              { status: "MERGED", id: "sub1", diary_id: "inst_daily_diary", answers: { vssbp: "120", vsdpb: "80", vshr: "72", has_symptoms: "Yes" } },
-              { status: "IGNORED_SERVER_WINS", id: "sub2", diary_id: "inst_weekly_symptoms", answers: { severity: "None" } }
-            ]
-          }),
+          json: () =>
+            Promise.resolve({
+              status: "success",
+              processed_count: 2,
+              created_count: 0,
+              updated_count: 1,
+              ignored_count: 1,
+              results: [
+                {
+                  status: "MERGED",
+                  id: "sub1",
+                  diary_id: "inst_daily_diary",
+                  answers: {
+                    vssbp: "120",
+                    vsdpb: "80",
+                    vshr: "72",
+                    has_symptoms: "Yes",
+                  },
+                },
+                {
+                  status: "IGNORED_SERVER_WINS",
+                  id: "sub2",
+                  diary_id: "inst_weekly_symptoms",
+                  answers: { severity: "None" },
+                },
+              ],
+            }),
         })
       );
 
@@ -458,8 +523,12 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       const syncList = document.getElementById("sync-queue-list");
       expect(syncList.innerHTML).toContain("MERGED");
       expect(syncList.innerHTML).toContain("CONFLICT (Ignored)");
-      expect(syncList.innerHTML).toContain("Conflict resolved: Server data was preserved; local entry archived.");
-      expect(syncList.innerHTML).toContain("Conflict resolved: Local and server entries were combined.");
+      expect(syncList.innerHTML).toContain(
+        "Conflict resolved: Server data was preserved; local entry archived."
+      );
+      expect(syncList.innerHTML).toContain(
+        "Conflict resolved: Local and server entries were combined."
+      );
     });
   });
 });
