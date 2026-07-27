@@ -99,6 +99,48 @@
                 style="width: 100%; padding: 6px"
               />
             </div>
+            <div
+              class="form-group"
+              style="margin-bottom: 8px; position: relative"
+            >
+              <label for="new-arm-concept">Arm Concept Code</label>
+              <input
+                id="new-arm-concept"
+                v-model="newArm.concept_code"
+                type="text"
+                placeholder="e.g. C123"
+                style="width: 100%; padding: 6px"
+                @input="handleArmConceptInput($event.target.value)"
+              />
+              <div
+                v-if="armSuggestions.length > 0"
+                class="autocomplete-dropdown"
+                style="
+                  position: absolute;
+                  background: white;
+                  border: 1px solid var(--border);
+                  width: 100%;
+                  z-index: 1000;
+                  max-height: 150px;
+                  overflow-y: auto;
+                "
+              >
+                <div
+                  v-for="sug in armSuggestions"
+                  :key="sug.concept_code"
+                  class="autocomplete-item"
+                  style="
+                    padding: 6px;
+                    cursor: pointer;
+                    border-bottom: 1px solid var(--border);
+                  "
+                  @click="selectArmSuggestion(sug)"
+                >
+                  <strong>{{ sug.concept_code }}</strong> -
+                  {{ sug.preferred_name }}
+                </div>
+              </div>
+            </div>
             <button
               class="btn btn-primary"
               style="width: 100%"
@@ -228,6 +270,48 @@
                   {{ ep.epoch_name }}
                 </option>
               </select>
+            </div>
+            <div
+              class="form-group"
+              style="margin-bottom: 8px; position: relative"
+            >
+              <label for="new-enc-concept">Visit Concept Code</label>
+              <input
+                id="new-enc-concept"
+                v-model="newEnc.concept_code"
+                type="text"
+                placeholder="e.g. C456"
+                style="width: 100%; padding: 6px"
+                @input="handleEncConceptInput($event.target.value)"
+              />
+              <div
+                v-if="encSuggestions.length > 0"
+                class="autocomplete-dropdown"
+                style="
+                  position: absolute;
+                  background: white;
+                  border: 1px solid var(--border);
+                  width: 100%;
+                  z-index: 1000;
+                  max-height: 150px;
+                  overflow-y: auto;
+                "
+              >
+                <div
+                  v-for="sug in encSuggestions"
+                  :key="sug.concept_code"
+                  class="autocomplete-item"
+                  style="
+                    padding: 6px;
+                    cursor: pointer;
+                    border-bottom: 1px solid var(--border);
+                  "
+                  @click="selectEncSuggestion(sug)"
+                >
+                  <strong>{{ sug.concept_code }}</strong> -
+                  {{ sug.preferred_name }}
+                </div>
+              </div>
             </div>
             <button
               class="btn btn-primary"
@@ -476,6 +560,7 @@
 import { ref, computed, watch, reactive } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import { createClinicalVisitMatrix } from "ui";
+import { terminologyClient } from "../api/terminologyClient";
 
 const store = useClinicalStore();
 
@@ -483,10 +568,66 @@ const builderMode = ref(false);
 const usdmText = ref(JSON.stringify(store.currentUsdm, null, 2));
 
 // Creation Forms States
-const newArm = reactive({ id: "", name: "" });
+const newArm = reactive({ id: "", name: "", concept_code: "" });
 const newEpoch = reactive({ id: "", name: "", sequence: 1, arm_id: "" });
-const newEnc = reactive({ id: "", name: "", sequence: 1, epoch_id: "" });
+const newEnc = reactive({
+  id: "",
+  name: "",
+  sequence: 1,
+  epoch_id: "",
+  concept_code: "",
+});
 const newProc = reactive({ id: "", name: "" });
+
+const armSuggestions = ref([]);
+const encSuggestions = ref([]);
+
+let armConceptTimer = null;
+let encConceptTimer = null;
+
+function handleArmConceptInput(val) {
+  if (armConceptTimer) clearTimeout(armConceptTimer);
+  if (!val.trim()) {
+    armSuggestions.value = [];
+    return;
+  }
+  armConceptTimer = setTimeout(async () => {
+    try {
+      const res = await terminologyClient.searchTerminology(val, {});
+      armSuggestions.value = res.results || [];
+    } catch {
+      armSuggestions.value = [];
+    }
+  }, 300);
+}
+
+function selectArmSuggestion(sug) {
+  newArm.concept_code = sug.concept_code;
+  newArm.name = sug.preferred_name;
+  armSuggestions.value = [];
+}
+
+function handleEncConceptInput(val) {
+  if (encConceptTimer) clearTimeout(encConceptTimer);
+  if (!val.trim()) {
+    encSuggestions.value = [];
+    return;
+  }
+  encConceptTimer = setTimeout(async () => {
+    try {
+      const res = await terminologyClient.searchTerminology(val, {});
+      encSuggestions.value = res.results || [];
+    } catch {
+      encSuggestions.value = [];
+    }
+  }, 300);
+}
+
+function selectEncSuggestion(sug) {
+  newEnc.concept_code = sug.concept_code;
+  newEnc.name = sug.preferred_name;
+  encSuggestions.value = [];
+}
 
 // Link Applicability States
 const linkPayload = reactive({ procedure_id: "", visit_id: "", timing: "" });
