@@ -321,21 +321,58 @@ async def get_openapi_json() -> Response:
             pass
         return None
 
-    def rewrite_references(data: Any, prefix: str) -> Any:
+    def is_valid_openapi_spec(spec: Any) -> bool:
+        """
+        Check if the schema payload is a valid OpenAPI specification structure.
+
+        Args:
+            spec (Any): The schema payload to validate.
+
+        Returns:
+            bool: True if the schema is a dictionary with a valid structure, False otherwise.
+        """
+        if not isinstance(spec, dict):
+            return False
+        if "paths" in spec and not isinstance(spec["paths"], dict):
+            return False
+        if "components" in spec:
+            if not isinstance(spec["components"], dict):
+                return False
+            if "schemas" in spec["components"] and not isinstance(
+                spec["components"]["schemas"], dict
+            ):
+                return False
+        return True
+
+    def rewrite_references(
+        data: Any, prefix: str, visited: Optional[set] = None
+    ) -> Any:
         """
         Recursively rewrite component references in an OpenAPI schema payload.
 
         Appends the given prefix to all `$ref` pointer targets to avoid naming collisions
         between different service schemas.
+        Uses a visited set to detect and protect against infinite recursion loops.
 
         Args:
             data (Any): A segment of the OpenAPI schema data structure.
             prefix (str): The string prefix to append to component references.
+            visited (Optional[set]): A set of python object ids to prevent infinite recursion on cyclic data structures.
 
         Returns:
             Any: The transformed data structure with rewritten references.
         """
+        if visited is None:
+            visited = set()
+
+        if id(data) in visited:
+            return {
+                "type": "object",
+                "description": "Circular reference detected and isolated",
+            }
+
         if isinstance(data, dict):
+            visited.add(id(data))
             new_data = {}
             for k, v in data.items():
                 if (
@@ -346,10 +383,14 @@ async def get_openapi_json() -> Response:
                     ref_name = v[len("#/components/schemas/") :]
                     new_data[k] = f"#/components/schemas/{prefix}{ref_name}"
                 else:
-                    new_data[k] = rewrite_references(v, prefix)
+                    new_data[k] = rewrite_references(v, prefix, visited)
+            visited.remove(id(data))
             return new_data
         elif isinstance(data, list):
-            return [rewrite_references(item, prefix) for item in data]
+            visited.add(id(data))
+            new_list = [rewrite_references(item, prefix, visited) for item in data]
+            visited.remove(id(data))
+            return new_list
         return data
 
     merged = {
@@ -381,86 +422,117 @@ async def get_openapi_json() -> Response:
         fetch_service_openapi(SERVICES["tickets"]),
     )
 
-    if tickets_spec:
-        tickets_spec = rewrite_references(tickets_spec, "Tickets_")
-        for path_str, path_item in tickets_spec.get("paths", {}).items():
-            merged["paths"][f"/tickets{path_str}"] = path_item
-        for schema_name, schema_val in (
-            tickets_spec.get("components", {}).get("schemas", {}).items()
-        ):
-            merged["components"]["schemas"][f"Tickets_{schema_name}"] = schema_val
+    if tickets_spec and is_valid_openapi_spec(tickets_spec):
+        try:
+            tickets_spec = rewrite_references(tickets_spec, "Tickets_")
+            for path_str, path_item in tickets_spec.get("paths", {}).items():
+                merged["paths"][f"/tickets{path_str}"] = path_item
+            for schema_name, schema_val in (
+                tickets_spec.get("components", {}).get("schemas", {}).items()
+            ):
+                merged["components"]["schemas"][f"Tickets_{schema_name}"] = schema_val
+        except Exception:
+            pass
 
-    if safety_spec:
-        safety_spec = rewrite_references(safety_spec, "Safety_")
-        for path_str, path_item in safety_spec.get("paths", {}).items():
-            merged["paths"][f"/safety{path_str}"] = path_item
-        for schema_name, schema_val in (
-            safety_spec.get("components", {}).get("schemas", {}).items()
-        ):
-            merged["components"]["schemas"][f"Safety_{schema_name}"] = schema_val
+    if safety_spec and is_valid_openapi_spec(safety_spec):
+        try:
+            safety_spec = rewrite_references(safety_spec, "Safety_")
+            for path_str, path_item in safety_spec.get("paths", {}).items():
+                merged["paths"][f"/safety{path_str}"] = path_item
+            for schema_name, schema_val in (
+                safety_spec.get("components", {}).get("schemas", {}).items()
+            ):
+                merged["components"]["schemas"][f"Safety_{schema_name}"] = schema_val
+        except Exception:
+            pass
 
-    if quality_spec:
-        quality_spec = rewrite_references(quality_spec, "Quality_")
-        for path_str, path_item in quality_spec.get("paths", {}).items():
-            merged["paths"][f"/quality{path_str}"] = path_item
-        for schema_name, schema_val in (
-            quality_spec.get("components", {}).get("schemas", {}).items()
-        ):
-            merged["components"]["schemas"][f"Quality_{schema_name}"] = schema_val
+    if quality_spec and is_valid_openapi_spec(quality_spec):
+        try:
+            quality_spec = rewrite_references(quality_spec, "Quality_")
+            for path_str, path_item in quality_spec.get("paths", {}).items():
+                merged["paths"][f"/quality{path_str}"] = path_item
+            for schema_name, schema_val in (
+                quality_spec.get("components", {}).get("schemas", {}).items()
+            ):
+                merged["components"]["schemas"][f"Quality_{schema_name}"] = schema_val
+        except Exception:
+            pass
 
-    if notifications_spec:
-        notifications_spec = rewrite_references(notifications_spec, "Notifications_")
-        for path_str, path_item in notifications_spec.get("paths", {}).items():
-            merged["paths"][f"/notifications{path_str}"] = path_item
-        for schema_name, schema_val in (
-            notifications_spec.get("components", {}).get("schemas", {}).items()
-        ):
-            merged["components"]["schemas"][f"Notifications_{schema_name}"] = schema_val
+    if notifications_spec and is_valid_openapi_spec(notifications_spec):
+        try:
+            notifications_spec = rewrite_references(
+                notifications_spec, "Notifications_"
+            )
+            for path_str, path_item in notifications_spec.get("paths", {}).items():
+                merged["paths"][f"/notifications{path_str}"] = path_item
+            for schema_name, schema_val in (
+                notifications_spec.get("components", {}).get("schemas", {}).items()
+            ):
+                merged["components"]["schemas"][f"Notifications_{schema_name}"] = (
+                    schema_val
+                )
+        except Exception:
+            pass
 
-    if ctms_spec:
-        ctms_spec = rewrite_references(ctms_spec, "Ctms_")
-        for path_str, path_item in ctms_spec.get("paths", {}).items():
-            merged["paths"][f"/ctms{path_str}"] = path_item
-        for schema_name, schema_val in (
-            ctms_spec.get("components", {}).get("schemas", {}).items()
-        ):
-            merged["components"]["schemas"][f"Ctms_{schema_name}"] = schema_val
+    if ctms_spec and is_valid_openapi_spec(ctms_spec):
+        try:
+            ctms_spec = rewrite_references(ctms_spec, "Ctms_")
+            for path_str, path_item in ctms_spec.get("paths", {}).items():
+                merged["paths"][f"/ctms{path_str}"] = path_item
+            for schema_name, schema_val in (
+                ctms_spec.get("components", {}).get("schemas", {}).items()
+            ):
+                merged["components"]["schemas"][f"Ctms_{schema_name}"] = schema_val
+        except Exception:
+            pass
 
-    if designer_spec:
-        designer_spec = rewrite_references(designer_spec, "Designer_")
-        for path_str, path_item in designer_spec.get("paths", {}).items():
-            merged["paths"][f"/designer{path_str}"] = path_item
-        for schema_name, schema_val in (
-            designer_spec.get("components", {}).get("schemas", {}).items()
-        ):
-            merged["components"]["schemas"][f"Designer_{schema_name}"] = schema_val
+    if designer_spec and is_valid_openapi_spec(designer_spec):
+        try:
+            designer_spec = rewrite_references(designer_spec, "Designer_")
+            for path_str, path_item in designer_spec.get("paths", {}).items():
+                merged["paths"][f"/designer{path_str}"] = path_item
+            for schema_name, schema_val in (
+                designer_spec.get("components", {}).get("schemas", {}).items()
+            ):
+                merged["components"]["schemas"][f"Designer_{schema_name}"] = schema_val
+        except Exception:
+            pass
 
-    if execution_spec:
-        execution_spec = rewrite_references(execution_spec, "Execution_")
-        for path_str, path_item in execution_spec.get("paths", {}).items():
-            merged["paths"][f"/execution{path_str}"] = path_item
-        for schema_name, schema_val in (
-            execution_spec.get("components", {}).get("schemas", {}).items()
-        ):
-            merged["components"]["schemas"][f"Execution_{schema_name}"] = schema_val
+    if execution_spec and is_valid_openapi_spec(execution_spec):
+        try:
+            execution_spec = rewrite_references(execution_spec, "Execution_")
+            for path_str, path_item in execution_spec.get("paths", {}).items():
+                merged["paths"][f"/execution{path_str}"] = path_item
+            for schema_name, schema_val in (
+                execution_spec.get("components", {}).get("schemas", {}).items()
+            ):
+                merged["components"]["schemas"][f"Execution_{schema_name}"] = schema_val
+        except Exception:
+            pass
 
-    if etmf_spec:
-        etmf_spec = rewrite_references(etmf_spec, "ETMF_")
-        for path_str, path_item in etmf_spec.get("paths", {}).items():
-            merged["paths"][f"/etmf{path_str}"] = path_item
-        for schema_name, schema_val in (
-            etmf_spec.get("components", {}).get("schemas", {}).items()
-        ):
-            merged["components"]["schemas"][f"ETMF_{schema_name}"] = schema_val
+    if etmf_spec and is_valid_openapi_spec(etmf_spec):
+        try:
+            etmf_spec = rewrite_references(etmf_spec, "ETMF_")
+            for path_str, path_item in etmf_spec.get("paths", {}).items():
+                merged["paths"][f"/etmf{path_str}"] = path_item
+            for schema_name, schema_val in (
+                etmf_spec.get("components", {}).get("schemas", {}).items()
+            ):
+                merged["components"]["schemas"][f"ETMF_{schema_name}"] = schema_val
+        except Exception:
+            pass
 
-    if interop_spec:
-        interop_spec = rewrite_references(interop_spec, "Interop_")
-        for path_str, path_item in interop_spec.get("paths", {}).items():
-            merged["paths"][f"/interop{path_str}"] = path_item
-        for schema_name, schema_val in (
-            interop_spec.get("components", {}).get("schemas", {}).items()
-        ):
-            merged["components"]["schemas"][f"Interop_{schema_name}"] = schema_val
+    if interop_spec and is_valid_openapi_spec(interop_spec):
+        try:
+            interop_spec = rewrite_references(interop_spec, "Interop_")
+            for path_str, path_item in interop_spec.get("paths", {}).items():
+                merged["paths"][f"/interop{path_str}"] = path_item
+            for schema_name, schema_val in (
+                interop_spec.get("components", {}).get("schemas", {}).items()
+            ):
+                merged["components"]["schemas"][f"Interop_{schema_name}"] = schema_val
+        except Exception:
+            pass
 
     return JSONResponse(merged)
 
