@@ -131,25 +131,36 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
                 content={"detail": "Change reason exceeds 255 characters"},
             )
 
+        # Retrieve optional scope headers from API gateway
+        site_id = request.headers.get("X-Site-Id")
+        sponsor_id = request.headers.get("X-Sponsor-Id")
+        unblinded_header = request.headers.get("X-Unblinded-Access", "")
+        unblinded_access = False
+        if unblinded_header.lower() in ("true", "1", "yes"):
+            unblinded_access = True
+
         if version in ("2", "v2"):
-            payload = {
-                "change_reason": change_reason,
-                "roles": roles,
-                "timestamp": timestamp,
-                "user_id": user_id,
-            }
-            serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
-            expected_signature = hmac.new(
-                self.gateway_secret, serialized.encode(), hashlib.sha256
-            ).hexdigest()
+            from packages.security.signing import verify_gateway_signature
+            is_valid_sig = verify_gateway_signature(
+                user_id=user_id,
+                roles=roles,
+                timestamp=timestamp,
+                signature=signature,
+                secret=self.gateway_secret,
+                change_reason=change_reason,
+                site_id=site_id,
+                sponsor_id=sponsor_id,
+                unblinded_access=unblinded_access,
+            )
         else:
-            # Version 1/v1 (legacy colon concatenated format)
+            # Version 1/v1 (legacy colon concatenated format) - doesn't support scope
             serialized = f"{user_id}:{roles}:{timestamp}"
             expected_signature = hmac.new(
                 self.gateway_secret, serialized.encode(), hashlib.sha256
             ).hexdigest()
+            is_valid_sig = hmac.compare_digest(expected_signature, signature)
 
-        if not hmac.compare_digest(expected_signature, signature):
+        if not is_valid_sig:
             status_code = 403 if is_mutation else 401
             return JSONResponse(
                 status_code=status_code, content={"detail": "Invalid gateway signature"}
@@ -251,6 +262,9 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
         request.state.user_id = user_id
         request.state.roles = roles
         request.state.change_reason = change_reason
+        request.state.site_id = site_id
+        request.state.sponsor_id = sponsor_id
+        request.state.unblinded_access = unblinded_access
 
         # Extract IP address for context injection
         ip_address = request.headers.get(
@@ -259,6 +273,11 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
         if "," in ip_address:
             ip_address = ip_address.split(",")[0].strip()
 
+        from packages.security.context import (
+            current_site_id,
+            current_unblinded_access,
+        )
+
         # Set the thread-safe context variables
         user_token = current_user_id.set(user_id)
         reason_token = current_change_reason.set(change_reason or "system_operation")
@@ -266,6 +285,8 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
         ts_token = current_timestamp.set(
             datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
         )
+        site_token = current_site_id.set(site_id)
+        unblinded_token = current_unblinded_access.set(unblinded_access)
 
         try:
             return await call_next(request)
@@ -275,3 +296,5 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
             current_change_reason.reset(reason_token)
             current_ip_address.reset(ip_token)
             current_timestamp.reset(ts_token)
+            current_site_id.reset(site_token)
+            current_unblinded_access.reset(unblinded_token)
