@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1067
-- **Passed:** 1067 🟢
+- **Total Automated Test Cases Run:** 1070
+- **Passed:** 1070 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -887,6 +887,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_verify_not_auditor_allows_others` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_not_auditor_denies_auditors` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_subject_consent_blocking_and_reconsent_lifecycle` | `tests.test_reconsent_blocking` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_reset_db_safety_guard_non_local` | `tests.test_reset_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_reset_db_safety_guard_production` | `tests.test_reset_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_reset_db_success_offline` | `tests.test_reset_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_block_allocation_mechanics` | `tests.test_rtsm_algorithms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_block_allocation_uneven_ratios` | `tests.test_rtsm_algorithms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_canonical_stratum_key_generation` | `tests.test_rtsm_algorithms` | *Regression/Helper* | 🟢 PASSED | < 1s |
