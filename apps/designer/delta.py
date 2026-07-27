@@ -3450,3 +3450,259 @@ async def get_library_instance_in_study(
             instance_props["instantiated_from"] = None
 
         return instance_props
+
+
+# --- Eligibility Criteria Persistence Operations ---
+
+@with_transaction_retry()
+async def create_eligibility_criterion(
+    driver,
+    study_id: str,
+    user_id: str,
+    change_reason: str,
+    criterion_id: str,
+    criterion_data: Dict[str, Any],
+) -> str:
+    """
+    Creates a new stable EligibilityCriterion root node and its first version EligibilityCriterionVersion.
+    """
+    import json
+    if driver is None:
+        from apps.designer.db import assert_mock_study_mutable, MOCK_ELIGIBILITY_CRITERIA
+        assert_mock_study_mutable(study_id)
+
+        # Check duplicate
+        if study_id in MOCK_ELIGIBILITY_CRITERIA:
+            for c in MOCK_ELIGIBILITY_CRITERIA[study_id]:
+                if c["id"] == criterion_id and not c.get("is_deleted", False):
+                    raise ConcurrentLockingError("Criterion already exists")
+
+        crit = {
+            "id": criterion_id,
+            "criterion_id": criterion_id,
+            "study_id": study_id,
+            "criterion_type": criterion_data["criterion_type"],
+            "description": criterion_data["description"],
+            "dsl_source": criterion_data["dsl_source"],
+            "condition": criterion_data["condition"],
+            "expected_outcome": criterion_data.get("expected_outcome", True),
+            "version_index": 1,
+            "is_deleted": False,
+            "created_by": user_id,
+            "created_at": dt.datetime.now().isoformat(),
+            "reason_for_change": change_reason,
+        }
+        if study_id not in MOCK_ELIGIBILITY_CRITERIA:
+            MOCK_ELIGIBILITY_CRITERIA[study_id] = []
+        MOCK_ELIGIBILITY_CRITERIA[study_id].append(crit)
+        return criterion_id
+
+    action_id = str(uuid.uuid4())
+    condition_json = json.dumps(criterion_data.get("condition", {}))
+
+    query = """
+    MATCH (s:Study {id: $study_id})
+
+    MERGE (ec:EligibilityCriterion {id: $criterion_id, study_id: $study_id})
+    ON CREATE SET ec.created_at = datetime()
+
+    MERGE (s)-[:HAS_CRITERION]->(ec)
+
+    CREATE (a:Action {
+        id: $action_id,
+        user_id: $user_id,
+        change_reason: $change_reason,
+        timestamp: datetime()
+    })
+
+    CREATE (ecv:EligibilityCriterionVersion {
+        id: $criterion_id,
+        criterion_type: $criterion_type,
+        description: $description,
+        dsl_source: $dsl_source,
+        condition_json: $condition_json,
+        expected_outcome: $expected_outcome,
+        version_index: 1,
+        is_deleted: false
+    })
+    CREATE (ec)-[:HAS_VERSION]->(ecv)
+    CREATE (a)-[:AFTER]->(ecv)
+
+    RETURN ec.id as criterion_id
+    """
+
+    async with driver.session() as session:
+        tx = await session.begin_transaction()
+        async with tx:
+            await assert_graph_mutable(tx, study_id=study_id)
+            await tx.run(
+                "MATCH (s:Study {id: $study_id}) SET s._lock = true", study_id=study_id
+            )
+            # Check duplicate in active versions of this study
+            check_res = await tx.run(
+                """
+                MATCH (s:Study {id: $study_id})-[:HAS_CRITERION]->(ec:EligibilityCriterion {id: $criterion_id})-[:HAS_VERSION]->(ecv:EligibilityCriterionVersion)
+                WHERE NOT (ecv)<-[:PREVIOUS_VERSION]-() AND ecv.is_deleted = false
+                RETURN ecv.id as id
+                """,
+                study_id=study_id,
+                criterion_id=criterion_id,
+            )
+            if await check_res.single():
+                raise ConcurrentLockingError("Criterion already exists")
+
+            result = await tx.run(
+                query,
+                study_id=study_id,
+                action_id=action_id,
+                user_id=user_id,
+                change_reason=change_reason,
+                criterion_id=criterion_id,
+                criterion_type=criterion_data["criterion_type"],
+                description=criterion_data["description"],
+                dsl_source=criterion_data["dsl_source"],
+                condition_json=condition_json,
+                expected_outcome=criterion_data.get("expected_outcome", True),
+            )
+            record = await result.single()
+            return record["criterion_id"] if record else None
+
+
+@with_transaction_retry()
+async def update_eligibility_criterion(
+    driver,
+    study_id: str,
+    criterion_id: str,
+    user_id: str,
+    change_reason: str,
+    criterion_data: Dict[str, Any],
+) -> int:
+    """
+    Bumps version index and creates a new EligibilityCriterionVersion node connected to previous one.
+    """
+    import json
+    if driver is None:
+        from apps.designer.db import assert_mock_study_mutable, MOCK_ELIGIBILITY_CRITERIA
+        assert_mock_study_mutable(study_id)
+
+        found = None
+        for c in MOCK_ELIGIBILITY_CRITERIA.get(study_id, []):
+            if c["id"] == criterion_id and not c.get("is_deleted", False):
+                found = c
+                break
+        if not found:
+            raise ValueError(f"Eligibility Criterion {criterion_id} not found")
+
+        found.update({
+            "criterion_type": criterion_data["criterion_type"],
+            "description": criterion_data["description"],
+            "dsl_source": criterion_data["dsl_source"],
+            "condition": criterion_data["condition"],
+            "expected_outcome": criterion_data.get("expected_outcome", True),
+            "updated_by": user_id,
+            "updated_at": dt.datetime.now().isoformat(),
+            "reason_for_change": change_reason,
+        })
+        found["version_index"] += 1
+        return found["version_index"]
+
+    action_id = str(uuid.uuid4())
+    condition_json = json.dumps(criterion_data.get("condition", {}))
+
+    query = """
+    MATCH (s:Study {id: $study_id})-[:HAS_CRITERION]->(ec:EligibilityCriterion {id: $criterion_id})
+
+    OPTIONAL MATCH (ec)-[:HAS_VERSION]->(old_ecv:EligibilityCriterionVersion)
+    WHERE NOT (old_ecv)<-[:PREVIOUS_VERSION]-()
+
+    CREATE (a:Action {
+        id: $action_id,
+        user_id: $user_id,
+        change_reason: $change_reason,
+        timestamp: datetime()
+    })
+
+    CREATE (new_ecv:EligibilityCriterionVersion {
+        id: $criterion_id,
+        criterion_type: $criterion_type,
+        description: $description,
+        dsl_source: $dsl_source,
+        condition_json: $condition_json,
+        expected_outcome: $expected_outcome,
+        version_index: coalesce(old_ecv.version_index, 0) + 1,
+        is_deleted: false
+    })
+    CREATE (ec)-[:HAS_VERSION]->(new_ecv)
+    CREATE (a)-[:AFTER]->(new_ecv)
+
+    WITH a, old_ecv, new_ecv
+    WHERE old_ecv IS NOT NULL
+    CREATE (a)-[:BEFORE]->(old_ecv)
+    CREATE (new_ecv)-[:PREVIOUS_VERSION]->(old_ecv)
+
+    RETURN new_ecv.version_index as version_index
+    """
+
+    async with driver.session() as session:
+        tx = await session.begin_transaction()
+        async with tx:
+            await assert_graph_mutable(tx, study_id=study_id)
+            await tx.run(
+                "MATCH (s:Study {id: $study_id}) SET s._lock = true", study_id=study_id
+            )
+            # Check existence
+            check_res = await tx.run(
+                """
+                MATCH (s:Study {id: $study_id})-[:HAS_CRITERION]->(ec:EligibilityCriterion {id: $criterion_id})
+                RETURN ec.id as id
+                """,
+                study_id=study_id,
+                criterion_id=criterion_id,
+            )
+            if not (await check_res.single()):
+                raise ValueError(f"Eligibility Criterion {criterion_id} not found")
+
+            result = await tx.run(
+                query,
+                study_id=study_id,
+                criterion_id=criterion_id,
+                action_id=action_id,
+                user_id=user_id,
+                change_reason=change_reason,
+                criterion_type=criterion_data["criterion_type"],
+                description=criterion_data["description"],
+                dsl_source=criterion_data["dsl_source"],
+                condition_json=condition_json,
+                expected_outcome=criterion_data.get("expected_outcome", True),
+            )
+            record = await result.single()
+            return record["version_index"] if record else None
+
+
+async def get_eligibility_criteria_from_graph(driver, study_id: str) -> List[Dict[str, Any]]:
+    """
+    Retrieves all non-deleted active eligibility criteria for a specific clinical study.
+    """
+    import json
+    if driver is None:
+        from apps.designer.db import MOCK_ELIGIBILITY_CRITERIA
+        return [c for c in MOCK_ELIGIBILITY_CRITERIA.get(study_id, []) if not c.get("is_deleted", False)]
+
+    query = """
+    MATCH (s:Study {id: $study_id})-[:HAS_CRITERION]->(ec:EligibilityCriterion)-[:HAS_VERSION]->(ecv:EligibilityCriterionVersion)
+    WHERE NOT (ecv)<-[:PREVIOUS_VERSION]-() AND ecv.is_deleted = false
+    RETURN ecv {.*} as criterion_props
+    """
+    async with driver.session() as session:
+        result = await session.run(query, study_id=study_id)
+        records = await result.all()
+        criteria = []
+        for record in records:
+            props = dict(record["criterion_props"])
+            if props.get("condition_json"):
+                props["condition"] = json.loads(props["condition_json"])
+            # Map expected_outcome to bool if it's there
+            if "expected_outcome" in props:
+                props["expected_outcome"] = bool(props["expected_outcome"])
+            criteria.append(props)
+        return criteria
