@@ -601,6 +601,74 @@ def test_signature_gated_mutation_enforcement(monkeypatch: pytest.MonkeyPatch) -
         assert response.json()["detail"] == "REAUTHENTICATION_REQUIRED"
 
 
+def test_gateway_sponsor_claim_extraction(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Test that the gateway successfully extracts custom_attributes.sponsor_id claim,
+    handles top-level sponsor_id fallback, and prevents incoming X-Sponsor-Id spoofing.
+    """
+    monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
+
+    # Mock send downstream
+    mock_send = AsyncMock()
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.content = b'{"status": "ok"}'
+    mock_resp.headers = {"content-type": "application/json"}
+    mock_send.return_value = mock_resp
+    monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
+
+    # 1. Custom attributes sponsor_id extraction
+    token_nested = jwt.encode(
+        {
+            "sub": "user_nested",
+            "roles": ["sponsor_designer"],
+            "custom_attributes": {"sponsor_id": "spon_nested_123"},
+        },
+        "test_secret",
+        algorithm="HS256",
+    )
+
+    with TestClient(app) as client:
+        res = client.get(
+            "/designer/test",
+            headers={"Authorization": f"Bearer {token_nested}"},
+        )
+        assert res.status_code == 200
+        sent_request = mock_send.call_args.args[0]
+        assert sent_request.headers.get("X-Sponsor-Id") == "spon_nested_123"
+
+        # 2. Fallback to top-level sponsor_id claim
+        token_fallback = jwt.encode(
+            {
+                "sub": "user_fallback",
+                "roles": ["sponsor_designer"],
+                "sponsor_id": "spon_fallback_456",
+            },
+            "test_secret",
+            algorithm="HS256",
+        )
+        res_fb = client.get(
+            "/designer/test",
+            headers={"Authorization": f"Bearer {token_fallback}"},
+        )
+        assert res_fb.status_code == 200
+        sent_request_fb = mock_send.call_args.args[0]
+        assert sent_request_fb.headers.get("X-Sponsor-Id") == "spon_fallback_456"
+
+        # 3. Prevent incoming X-Sponsor-Id spoofing (should be stripped/overridden)
+        res_spoof = client.get(
+            "/designer/test",
+            headers={
+                "Authorization": f"Bearer {token_nested}",
+                "X-Sponsor-Id": "spon_hacker_789",  # Spoofed client header
+            },
+        )
+        assert res_spoof.status_code == 200
+        sent_request_spoof = mock_send.call_args.args[0]
+        # Should be overridden by the trusted token's claim!
+        assert sent_request_spoof.headers.get("X-Sponsor-Id") == "spon_nested_123"
+
+
 def test_signature_verification_with_batch_id(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     Test successful re-authentication with an optional batch_id.

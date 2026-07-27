@@ -15,6 +15,7 @@ current_change_reason = contextvars.ContextVar(
 current_ip_address = contextvars.ContextVar("current_ip_address", default="127.0.0.1")
 current_timestamp = contextvars.ContextVar("current_timestamp", default=None)
 current_site_id = contextvars.ContextVar("current_site_id", default=None)
+current_sponsor_id = contextvars.ContextVar("current_sponsor_id", default=None)
 current_unblinded_access = contextvars.ContextVar(
     "current_unblinded_access", default=False
 )
@@ -33,6 +34,7 @@ def audit_context(
     timestamp: datetime | None = None,
     signature_context: Any | None = None,
     site_id: str | None = None,
+    sponsor_id: str | None = None,
     unblinded_access: bool = False,
 ) -> Generator[None, None, None]:
     """Context manager to bind user identity, change reason, IP address, timestamp, and signature context.
@@ -65,6 +67,9 @@ def audit_context(
     ip_token = current_ip_address.set(ip)
     ts_token = current_timestamp.set(ts)
     sig_token = current_signature_context.set(signature_context)
+    site_token = current_site_id.set(site_id)
+    sponsor_token = current_sponsor_id.set(sponsor_id)
+    unblinded_token = current_unblinded_access.set(unblinded_access)
     try:
         yield
     finally:
@@ -73,6 +78,9 @@ def audit_context(
         current_ip_address.reset(ip_token)
         current_timestamp.reset(ts_token)
         current_signature_context.reset(sig_token)
+        current_site_id.reset(site_token)
+        current_sponsor_id.reset(sponsor_token)
+        current_unblinded_access.reset(unblinded_token)
 
 
 def audit_context_decorator(
