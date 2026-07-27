@@ -115,17 +115,25 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
     portal.startQuestionnaire("assign_01");
 
     // Title and description match MOCK_INSTRUMENTS
-    expect(document.getElementById("questionnaire-title").textContent).toBe("Daily Health & Vital Diary");
+    expect(document.getElementById("questionnaire-title").textContent).toBe(
+      "Daily Health & Vital Diary"
+    );
     expect(document.getElementById("questionnaire-desc").textContent).toBe(
       "Please record your systolic/diastolic blood pressure, pulse, and current symptoms."
     );
 
     // Form container contains vital fields and radio inputs
-    const formContainer = document.getElementById("questionnaire-form-container");
+    const formContainer = document.getElementById(
+      "questionnaire-form-container"
+    );
     expect(formContainer.innerHTML).toContain("Systolic Blood Pressure (mmHg)");
-    expect(formContainer.innerHTML).toContain("Diastolic Blood Pressure (mmHg)");
+    expect(formContainer.innerHTML).toContain(
+      "Diastolic Blood Pressure (mmHg)"
+    );
     expect(formContainer.innerHTML).toContain("Pulse Rate (bpm)");
-    expect(formContainer.innerHTML).toContain("Are you experiencing any new physical symptoms today?");
+    expect(formContainer.innerHTML).toContain(
+      "Are you experiencing any new physical symptoms today?"
+    );
   });
 
   it("checks input validator, clinical bounds constraints, and error feedback", async () => {
@@ -164,10 +172,18 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
     await portal.initializeApp();
 
     // Initial compliance checks
-    expect(document.getElementById("compliance-rate-pct").textContent).toBe("33%");
-    expect(document.getElementById("compliance-completed-count").textContent).toBe("1");
-    expect(document.getElementById("compliance-pending-count").textContent).toBe("1");
-    expect(document.getElementById("compliance-overdue-count").textContent).toBe("1");
+    expect(document.getElementById("compliance-rate-pct").textContent).toBe(
+      "33%"
+    );
+    expect(
+      document.getElementById("compliance-completed-count").textContent
+    ).toBe("1");
+    expect(
+      document.getElementById("compliance-pending-count").textContent
+    ).toBe("1");
+    expect(
+      document.getElementById("compliance-overdue-count").textContent
+    ).toBe("1");
 
     // Complete the pending assignment
     portal.startQuestionnaire("assign_01");
@@ -182,10 +198,18 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
     await portal.verifyAndSubmitSignature();
 
     // Compliance changes to 2/3 (67%)
-    expect(document.getElementById("compliance-rate-pct").textContent).toBe("67%");
-    expect(document.getElementById("compliance-completed-count").textContent).toBe("2");
-    expect(document.getElementById("compliance-pending-count").textContent).toBe("0");
-    expect(document.getElementById("compliance-overdue-count").textContent).toBe("1");
+    expect(document.getElementById("compliance-rate-pct").textContent).toBe(
+      "67%"
+    );
+    expect(
+      document.getElementById("compliance-completed-count").textContent
+    ).toBe("2");
+    expect(
+      document.getElementById("compliance-pending-count").textContent
+    ).toBe("0");
+    expect(
+      document.getElementById("compliance-overdue-count").textContent
+    ).toBe("1");
   });
 
   it("handles offline queueing in IndexedDB, sequence preservation, and sequential sync upon online transition", async () => {
@@ -272,7 +296,11 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
     await portal.verifyAndSubmitSignature();
 
     // Sync fails with network error
-    globalThis.fetch = vi.fn().mockImplementation(() => Promise.reject(new Error("Network connection dropped")));
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation(() =>
+        Promise.reject(new Error("Network connection dropped"))
+      );
 
     // Put online and try sync
     portal.state.session.isOfflineMode = false;
@@ -330,6 +358,8 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
     // Renders as MERGED with detail message
     const syncList = document.getElementById("sync-queue-list");
     expect(syncList.innerHTML).toContain("MERGED");
-    expect(syncList.innerHTML).toContain("Conflict resolved: Local and server entries were combined.");
+    expect(syncList.innerHTML).toContain(
+      "Conflict resolved: Local and server entries were combined."
+    );
   });
 });

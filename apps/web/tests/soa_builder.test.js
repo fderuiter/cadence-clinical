@@ -67,8 +67,12 @@ describe("SoA Matrix Pure Function Unit Tests", () => {
     );
 
     // Verify encounter name headers
-    expect(html).toContain('<th scope="col" class="encounter-header">Week 1</th>');
-    expect(html).toContain('<th scope="col" class="encounter-header">Week 2</th>');
+    expect(html).toContain(
+      '<th scope="col" class="encounter-header">Week 1</th>'
+    );
+    expect(html).toContain(
+      '<th scope="col" class="encounter-header">Week 2</th>'
+    );
 
     // Verify cell conditional/optional/applicable styles
     expect(html).toContain('class="status-applicable"');
@@ -91,7 +95,11 @@ describe("SoA Matrix Pure Function Unit Tests", () => {
     const soaData = {
       epochs: [{ epoch_id: "EP-COMMON", epoch_name: "Common Epoch" }],
       encounters: [
-        { encounter_id: "E1", encounter_name: "Screening", epoch_id: "EP-COMMON" },
+        {
+          encounter_id: "E1",
+          encounter_name: "Screening",
+          epoch_id: "EP-COMMON",
+        },
       ],
       rows: [
         {
@@ -149,7 +157,9 @@ describe("SoA Request Construction & Serialization Unit Tests", () => {
     expect(requestOpts.headers["X-Signature-Version"]).toBe("2");
     expect(requestOpts.headers["X-Gateway-Signature"]).toBeDefined();
     expect(requestOpts.headers["X-Gateway-Timestamp"]).toBeDefined();
-    expect(requestOpts.headers["X-Change-Reason"]).toBe("Testing signed headers");
+    expect(requestOpts.headers["X-Change-Reason"]).toBe(
+      "Testing signed headers"
+    );
 
     const body = JSON.parse(requestOpts.body);
     expect(body).toEqual({
@@ -183,7 +193,9 @@ describe("SoA Request Construction & Serialization Unit Tests", () => {
     expect(mockFetch).toHaveBeenCalledTimes(1);
     const [url, requestOpts] = mockFetch.mock.calls[0];
 
-    expect(url).toContain("/api/v1/studies/STUDY-01/versions/v_draft_01/arms/ARM-Z");
+    expect(url).toContain(
+      "/api/v1/studies/STUDY-01/versions/v_draft_01/arms/ARM-Z"
+    );
     expect(requestOpts.method).toBe("PUT");
     const body = JSON.parse(requestOpts.body);
     expect(body).toEqual({
@@ -204,7 +216,9 @@ describe("SoA Builder Signed API Client & Store Integration", () => {
       ok: true,
       json: async () => ({
         epochs: [{ epoch_id: "EP-1", epoch_name: "Epoch 1" }],
-        encounters: [{ encounter_id: "E1", encounter_name: "Visit 1", epoch_id: "EP-1" }],
+        encounters: [
+          { encounter_id: "E1", encounter_name: "Visit 1", epoch_id: "EP-1" },
+        ],
         rows: [{ activity_id: "ACT1", activity_name: "Vitals", cells: [] }],
       }),
     });
@@ -300,7 +314,9 @@ describe("SoA Authoring Failure & Immutability Guards", () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 403,
-      json: async () => ({ detail: "IMMUTABILITY_VIOLATION: Locked Version cannot be modified" }),
+      json: async () => ({
+        detail: "IMMUTABILITY_VIOLATION: Locked Version cannot be modified",
+      }),
     });
 
     const store = useClinicalStore();
@@ -316,7 +332,9 @@ describe("SoA Authoring Failure & Immutability Guards", () => {
     await expect(triggerMutation()).rejects.toThrow("IMMUTABILITY_VIOLATION");
 
     // The store state captures the exception as the error state
-    expect(store.soaError).toBe("IMMUTABILITY_VIOLATION: Locked Version cannot be modified");
+    expect(store.soaError).toBe(
+      "IMMUTABILITY_VIOLATION: Locked Version cannot be modified"
+    );
 
     // Ledgers capture the offline/failed attempt as well
     const ledger = store.ledgerBlocks;
@@ -329,7 +347,9 @@ describe("SoA Authoring Failure & Immutability Guards", () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 400,
-      json: async () => ({ detail: "Missing mandatory fields properties.name" }),
+      json: async () => ({
+        detail: "Missing mandatory fields properties.name",
+      }),
     });
 
     const store = useClinicalStore();
@@ -363,7 +383,9 @@ describe("SoA Authoring Failure & Immutability Guards", () => {
         "Trigger signature verification failure"
       );
 
-    await expect(triggerMutation()).rejects.toThrow("INVALID_OR_MISSING_SIGNATURE");
+    await expect(triggerMutation()).rejects.toThrow(
+      "INVALID_OR_MISSING_SIGNATURE"
+    );
     expect(store.soaError).toBe("INVALID_OR_MISSING_SIGNATURE");
   });
 

@@ -1133,7 +1133,15 @@ def main():
         dirs[:] = [d for d in dirs if d not in exclude_dirs and not d.startswith(".")]
         for f in files:
             if f.endswith(".md"):
-                md_files.append(Path(root) / f)
+                file_path = Path(root) / f
+                # Skip SDLC documentation suite from standard CLI validation as they contain intentional
+                # compliance drifts used for testing the linter in gxp_compliance_suite.py
+                if (
+                    "docs/SDLC" in file_path.as_posix()
+                    or "docs\\SDLC" in file_path.as_posix()
+                ):
+                    continue
+                md_files.append(file_path)
 
     print("Building codebase map for targeted validations...")
     codebase_map = build_codebase_map(repo_root)
