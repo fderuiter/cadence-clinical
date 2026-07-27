@@ -29,7 +29,10 @@
               v-show="store.fieldVisibility[field.id] !== false"
               :id="`field-container-${field.id}`"
               class="clinical-input"
-              :class="{ 'has-error': getValidationError(field) }"
+              :class="{
+                'has-error': getValidationError(field),
+                'clinical-lookup-container': field.type === 'concept_code',
+              }"
               :style="`grid-column: span ${field.gridSpan || 12};`"
             >
               <label :for="field.id">{{ field.label }}</label>
@@ -39,6 +42,12 @@
                   type="text"
                   :name="field.id"
                   :value="store.formValues[field.id]"
+                  autocomplete="off"
+                  @input="
+                    field.type === 'concept_code'
+                      ? handleConceptInput(field, $event.target.value)
+                      : null
+                  "
                   @change="
                     handleFieldChange(field, $event.target.value, $event.target)
                   "
@@ -55,6 +64,36 @@
                   {{ getQueryStatus(field.id) === "NONE" ? "💬" : "⚠️" }}
                 </button>
               </div>
+
+              <!-- Live lookup status indicator -->
+              <template v-if="field.type === 'concept_code'">
+                <div
+                  v-if="
+                    conceptStatuses[field.id] &&
+                    conceptStatuses[field.id] !== 'none'
+                  "
+                  :id="`lookup-status-${field.id}`"
+                  class="lookup-status-indicator"
+                  :class="`lookup-${conceptStatuses[field.id]}`"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <span class="lookup-status-icon" aria-hidden="true">
+                    {{ getStatusIcon(conceptStatuses[field.id]) }}
+                  </span>
+                  <span class="lookup-status-text">
+                    {{ conceptMessages[field.id] }}
+                  </span>
+                </div>
+                <div
+                  v-else
+                  :id="`lookup-status-${field.id}`"
+                  class="lookup-status-indicator"
+                  role="status"
+                  aria-live="polite"
+                  style="display: none"
+                ></div>
+              </template>
 
               <!-- Validation Error -->
               <div
@@ -536,16 +575,32 @@
       </div>
 
       <!-- PI Sign-Off Worklist and Verification Card -->
-      <div class="card" style="display: flex; flex-direction: column; gap: 16px;">
+      <div
+        class="card"
+        style="display: flex; flex-direction: column; gap: 16px"
+      >
         <div class="card-title">PI Sign-Off Worklist & Verification</div>
         <p style="font-size: 0.85rem; color: #475569; margin-bottom: 4px">
-          Perform a 21 CFR Part 11 compliant electronic signature. This action requires re-authenticating the Principal Investigator credentials to obtain a secure single-use signature token.
+          Perform a 21 CFR Part 11 compliant electronic signature. This action
+          requires re-authenticating the Principal Investigator credentials to
+          obtain a secure single-use signature token.
         </p>
 
-        <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; flex-direction: column; gap: 12px">
           <div class="form-group">
-            <label for="signoff-target-type">Sign-Off Scope (Granularity)</label>
-            <select id="signoff-target-type" v-model="signoffTargetType" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;">
+            <label for="signoff-target-type"
+              >Sign-Off Scope (Granularity)</label
+            >
+            <select
+              id="signoff-target-type"
+              v-model="signoffTargetType"
+              style="
+                width: 100%;
+                padding: 8px;
+                border: 1px solid var(--border);
+                border-radius: 4px;
+              "
+            >
               <option value="FORM">FORM Level</option>
               <option value="VISIT">VISIT Level</option>
               <option value="SUBJECT">SUBJECT Level</option>
@@ -554,16 +609,43 @@
 
           <div class="form-group">
             <label for="signoff-target-id">Select Target ID</label>
-            <select id="signoff-target-id" v-model="signoffTargetId" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;">
+            <select
+              id="signoff-target-id"
+              v-model="signoffTargetId"
+              style="
+                width: 100%;
+                padding: 8px;
+                border: 1px solid var(--border);
+                border-radius: 4px;
+              "
+            >
               <option value="">-- Choose ID --</option>
               <template v-if="signoffTargetType === 'SUBJECT'">
-                <option v-for="sub in availableSubjects" :key="sub" :value="sub">{{ sub }}</option>
+                <option
+                  v-for="sub in availableSubjects"
+                  :key="sub"
+                  :value="sub"
+                >
+                  {{ sub }}
+                </option>
               </template>
               <template v-else-if="signoffTargetType === 'VISIT'">
-                <option v-for="visit in availableVisits" :key="visit" :value="visit">{{ visit }}</option>
+                <option
+                  v-for="visit in availableVisits"
+                  :key="visit"
+                  :value="visit"
+                >
+                  {{ visit }}
+                </option>
               </template>
               <template v-else-if="signoffTargetType === 'FORM'">
-                <option v-for="form in availableFormSubmissions" :key="form" :value="form">{{ form }}</option>
+                <option
+                  v-for="form in availableFormSubmissions"
+                  :key="form"
+                  :value="form"
+                >
+                  {{ form }}
+                </option>
               </template>
               <option value="custom">-- Enter Custom --</option>
             </select>
@@ -571,19 +653,50 @@
 
           <div v-if="signoffTargetId === 'custom'" class="form-group">
             <label for="signoff-custom-target-id">Custom Target ID Value</label>
-            <input id="signoff-custom-target-id" type="text" placeholder="Enter custom target ID..." style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;" @input="e => customTargetId = e.target.value" />
+            <input
+              id="signoff-custom-target-id"
+              type="text"
+              placeholder="Enter custom target ID..."
+              style="
+                width: 100%;
+                padding: 8px;
+                border: 1px solid var(--border);
+                border-radius: 4px;
+              "
+              @input="(e) => (customTargetId = e.target.value)"
+            />
           </div>
 
           <div class="form-group">
             <label for="signoff-reason">Signing Reason / Attestation</label>
-            <select id="signoff-reason" v-model="signoffReason" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;">
-              <option v-for="reason in validSigningReasons" :key="reason" :value="reason">{{ reason }}</option>
+            <select
+              id="signoff-reason"
+              v-model="signoffReason"
+              style="
+                width: 100%;
+                padding: 8px;
+                border: 1px solid var(--border);
+                border-radius: 4px;
+              "
+            >
+              <option
+                v-for="reason in validSigningReasons"
+                :key="reason"
+                :value="reason"
+              >
+                {{ reason }}
+              </option>
             </select>
           </div>
         </div>
 
-        <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
-          <button id="btn-pi-signoff" class="btn btn-primary" type="button" @click="handleSignOffSubmit">
+        <div style="display: flex; justify-content: flex-end; margin-top: 8px">
+          <button
+            id="btn-pi-signoff"
+            class="btn btn-primary"
+            type="button"
+            @click="handleSignOffSubmit"
+          >
             ✍️ Sign Off Target
           </button>
         </div>
@@ -665,7 +778,12 @@
               id="reauth-username"
               v-model="reauthUsername"
               type="text"
-              style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;"
+              style="
+                width: 100%;
+                padding: 8px;
+                border: 1px solid var(--border);
+                border-radius: 4px;
+              "
             />
           </div>
           <div class="form-group" style="margin-bottom: 12px">
@@ -676,7 +794,12 @@
               type="password"
               placeholder="Enter your password to confirm identity..."
               required
-              style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;"
+              style="
+                width: 100%;
+                padding: 8px;
+                border: 1px solid var(--border);
+                border-radius: 4px;
+              "
               @keyup.enter="confirmReauth"
             />
           </div>
@@ -687,7 +810,12 @@
               v-model="reauthTotp"
               type="text"
               placeholder="Enter 6-digit TOTP code..."
-              style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;"
+              style="
+                width: 100%;
+                padding: 8px;
+                border: 1px solid var(--border);
+                border-radius: 4px;
+              "
             />
           </div>
           <div
@@ -721,9 +849,93 @@ import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { soaClient } from "../api/soaClient";
 import { validateField } from "../../index";
+import { terminologyClient } from "../api/terminologyClient";
+
+// Debounce helper
+function debounce(fn, delay) {
+  let timeoutId = null;
+  return function (...args) {
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => {
+      fn(...args);
+    }, delay);
+  };
+}
 
 const store = useClinicalStore();
 const authStore = useAuthStore();
+
+// Live validation states
+const requestCounters = reactive({});
+const conceptStatuses = reactive({});
+const conceptMessages = reactive({});
+
+function getStatusIcon(status) {
+  if (status === "loading") return "⏳";
+  if (status === "valid") return "✅";
+  if (status === "invalid") return "❌";
+  if (status === "degraded") return "⚠️";
+  return "";
+}
+
+const debouncedValidate = debounce(async (fieldId, value) => {
+  if (!value || !value.trim()) {
+    conceptStatuses[fieldId] = "none";
+    conceptMessages[fieldId] = "";
+    return;
+  }
+
+  requestCounters[fieldId] = (requestCounters[fieldId] || 0) + 1;
+  const currentReqId = requestCounters[fieldId];
+
+  try {
+    const res = await terminologyClient.validateSingleCode(value, {
+      userId: store.user.username || "fderuiter",
+      roles: store.user.roles ? store.user.roles.join(",") : "investigator",
+      changeReason: "Validate code",
+    });
+
+    if (requestCounters[fieldId] !== currentReqId) {
+      return; // Discard stale response
+    }
+
+    if (res.state === "VALID") {
+      conceptStatuses[fieldId] = "valid";
+      conceptMessages[fieldId] = `Code is valid: "${res.decode}"`;
+    } else if (res.state === "INVALID") {
+      conceptStatuses[fieldId] = "invalid";
+      conceptMessages[fieldId] = `Invalid code: "${value}"`;
+    } else if (res.state === "DEGRADED") {
+      conceptStatuses[fieldId] = "degraded";
+      conceptMessages[fieldId] =
+        res.error_message ||
+        "Terminology service degraded. Validation offline.";
+    }
+  } catch {
+    if (requestCounters[fieldId] !== currentReqId) {
+      return;
+    }
+    conceptStatuses[fieldId] = "degraded";
+    conceptMessages[fieldId] =
+      "Terminology service degraded. Validation offline.";
+  }
+}, 300);
+
+function handleConceptInput(field, value) {
+  const fieldId = field.id;
+  store.formValues[fieldId] = value;
+
+  if (!value || !value.trim()) {
+    conceptStatuses[fieldId] = "none";
+    conceptMessages[fieldId] = "";
+    return;
+  }
+
+  conceptStatuses[fieldId] = "loading";
+  conceptMessages[fieldId] = "Searching terminology database...";
+
+  debouncedValidate(fieldId, value);
+}
 
 // Deep watch formValues to evaluate rules debounced
 watch(
@@ -909,7 +1121,8 @@ function respondQuery(fieldId) {
 function closeQuery(fieldId) {
   pendingCloseQueryFieldId.value = fieldId;
   reauthAction.value = "CLOSE_QUERY";
-  reauthUsername.value = store.user.username || authStore.identity?.username || "fderuiter";
+  reauthUsername.value =
+    store.user.username || authStore.identity?.username || "fderuiter";
   reauthPassword.value = "";
   reauthTotp.value = "";
   reauthError.value = "";
@@ -917,13 +1130,17 @@ function closeQuery(fieldId) {
 }
 
 function handleSignOffSubmit() {
-  const targetId = signoffTargetId.value === "custom" ? customTargetId.value : signoffTargetId.value;
+  const targetId =
+    signoffTargetId.value === "custom"
+      ? customTargetId.value
+      : signoffTargetId.value;
   if (!targetId || !targetId.trim()) {
     alert("Please select or enter a valid Target ID first.");
     return;
   }
   reauthAction.value = "BATCH_SIGN_OFF";
-  reauthUsername.value = store.user.username || authStore.identity?.username || "fderuiter";
+  reauthUsername.value =
+    store.user.username || authStore.identity?.username || "fderuiter";
   reauthPassword.value = "";
   reauthTotp.value = "";
   reauthError.value = "";
@@ -985,34 +1202,46 @@ async function confirmReauth() {
 
     showReauthModal.value = false;
     reauthError.value = "";
-    alert("Identity verified. Query closed and logged to cryptographic ledger.");
+    alert(
+      "Identity verified. Query closed and logged to cryptographic ledger."
+    );
   } else if (action === "BATCH_SIGN_OFF") {
     try {
       reauthError.value = "";
 
       // 1. Obtain signature token
-      const reauthRes = await soaClient.verifySignature({
-        username,
-        password,
-        totp,
-        action: "/api/v1/execution/batch-sign-off"
-      }, authStore.accessToken);
+      const reauthRes = await soaClient.verifySignature(
+        {
+          username,
+          password,
+          totp,
+          action: "/api/v1/execution/batch-sign-off",
+        },
+        authStore.accessToken
+      );
 
       const sigToken = reauthRes.sig_token;
 
       // 2. Call batch sign-off
-      const targetId = signoffTargetId.value === "custom" ? customTargetId.value : signoffTargetId.value;
-      const signoffRes = await soaClient.batchSignOff({
-        studyId: store.currentUsdm.studyId || "STUDY-USDM-001",
-        targetType: signoffTargetType.value,
-        targetIds: [targetId],
-        signingReason: signoffReason.value,
-      }, {
-        userId: username,
-        roles: store.user.roles ? store.user.roles.join(",") : "investigator",
-        changeReason: signoffReason.value,
-        sigToken,
-      }, authStore.accessToken);
+      const targetId =
+        signoffTargetId.value === "custom"
+          ? customTargetId.value
+          : signoffTargetId.value;
+      const signoffRes = await soaClient.batchSignOff(
+        {
+          studyId: store.currentUsdm.studyId || "STUDY-USDM-001",
+          targetType: signoffTargetType.value,
+          targetIds: [targetId],
+          signingReason: signoffReason.value,
+        },
+        {
+          userId: username,
+          roles: store.user.roles ? store.user.roles.join(",") : "investigator",
+          changeReason: signoffReason.value,
+          sigToken,
+        },
+        authStore.accessToken
+      );
 
       // 3. Document in ledger
       await store.addLedgerBlock(
@@ -1029,14 +1258,17 @@ async function confirmReauth() {
       // Clean up variables & UI state
       showReauthModal.value = false;
       reauthTotp.value = "";
-      alert(`Signature Token obtained successfully.\nBatch sign-off completed for ${signoffTargetType.value} ${targetId}!`);
+      alert(
+        `Signature Token obtained successfully.\nBatch sign-off completed for ${signoffTargetType.value} ${targetId}!`
+      );
     } catch (err) {
       // Explicitly wipe credentials on failure
       reauthPassword.value = "";
       reauthTotp.value = "";
 
       if (err.message === "REAUTHENTICATION_REQUIRED" || err.status === 401) {
-        reauthError.value = "Identity verification expired or invalid. Please try again.";
+        reauthError.value =
+          "Identity verification expired or invalid. Please try again.";
         showReauthModal.value = true;
       } else {
         reauthError.value = err.message || "Failed to complete batch sign-off.";

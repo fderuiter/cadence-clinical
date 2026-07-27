@@ -234,9 +234,7 @@ def get_principal_sync(request: Request) -> Principal:
         user_id = getattr(request.state, "user_id", None) or ""
     if not user_id and hasattr(request, "headers"):
         user_id = (
-            request.headers.get("X-User-Id")
-            or request.headers.get("x-user-id")
-            or ""
+            request.headers.get("X-User-Id") or request.headers.get("x-user-id") or ""
         )
 
     # 2. Roles (raw)
@@ -285,7 +283,11 @@ def get_principal_sync(request: Request) -> Principal:
         )
         if unblinded_header.lower() in ("true", "1", "yes"):
             unblinded_access = True
-    if not unblinded_access and hasattr(request, "state") and hasattr(request.state, "unblinded_access"):
+    if (
+        not unblinded_access
+        and hasattr(request, "state")
+        and hasattr(request.state, "unblinded_access")
+    ):
         unblinded_access = bool(request.state.unblinded_access)
 
     # 5. Change reason (State, query parameters, headers)
@@ -293,9 +295,8 @@ def get_principal_sync(request: Request) -> Principal:
 
     # State
     if hasattr(request, "state"):
-        change_reason = (
-            getattr(request.state, "change_reason", None)
-            or getattr(request.state, "reason_for_change", None)
+        change_reason = getattr(request.state, "change_reason", None) or getattr(
+            request.state, "reason_for_change", None
         )
         if change_reason:
             change_reason = str(change_reason).strip()
@@ -346,14 +347,22 @@ async def get_principal(request: Request) -> Principal:
     principal = get_principal_sync(request)
 
     # If change_reason is not found yet, and it is a write operation, check body
-    if not principal.change_reason and hasattr(request, "method") and request.method in ("POST", "PUT", "PATCH"):
+    if (
+        not principal.change_reason
+        and hasattr(request, "method")
+        and request.method in ("POST", "PUT", "PATCH")
+    ):
         try:
-            content_type = request.headers.get("content-type", "") if hasattr(request, "headers") else ""
+            content_type = (
+                request.headers.get("content-type", "")
+                if hasattr(request, "headers")
+                else ""
+            )
             if "application/json" in content_type:
                 body = await request.body()
                 if body:
                     body_json = json.loads(body)
-                    
+
                     def find_reason_in_dict(d: dict) -> Optional[str]:
                         for key in ("reason_for_change", "change_reason", "reason"):
                             if key in d and isinstance(d[key], str) and d[key].strip():
@@ -364,14 +373,19 @@ async def get_principal(request: Request) -> Principal:
                                 if res:
                                     return res
                         return None
-                    
+
                     if isinstance(body_json, dict):
                         principal.change_reason = find_reason_in_dict(body_json)
+
                 # Reset receive stream so downstream route can read it again
                 async def receive():
                     return {"type": "http.request", "body": body, "more_body": False}
+
                 request._receive = receive
-            elif "application/x-www-form-urlencoded" in content_type or "multipart/form-data" in content_type:
+            elif (
+                "application/x-www-form-urlencoded" in content_type
+                or "multipart/form-data" in content_type
+            ):
                 form = await request.form()
                 for key in ("reason_for_change", "change_reason", "reason"):
                     val = form.get(key)
@@ -386,7 +400,12 @@ async def get_principal(request: Request) -> Principal:
         principal.change_reason = principal.change_reason.strip()
 
     # Reject write operations with a descriptive error if the resolved change justification is less than 10 characters long on ingestion/doc routes
-    if hasattr(request, "method") and request.method in ("POST", "PUT", "PATCH", "DELETE"):
+    if hasattr(request, "method") and request.method in (
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+    ):
         path_lower = request.url.path.lower() if hasattr(request, "url") else ""
         is_ingest_or_doc_route = any(
             p in path_lower

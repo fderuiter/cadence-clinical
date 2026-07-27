@@ -70,7 +70,9 @@ def verify_gateway_signature(
         "timestamp": timestamp,
         "user_id": user_id,
     }
-    serialized_legacy = json.dumps(legacy_payload, sort_keys=True, separators=(",", ":"))
+    serialized_legacy = json.dumps(
+        legacy_payload, sort_keys=True, separators=(",", ":")
+    )
     expected_legacy = hmac.new(
         secret, serialized_legacy.encode("utf-8"), hashlib.sha256
     ).hexdigest()

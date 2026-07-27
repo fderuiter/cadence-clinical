@@ -15,7 +15,9 @@ current_change_reason = contextvars.ContextVar(
 current_ip_address = contextvars.ContextVar("current_ip_address", default="127.0.0.1")
 current_timestamp = contextvars.ContextVar("current_timestamp", default=None)
 current_site_id = contextvars.ContextVar("current_site_id", default=None)
-current_unblinded_access = contextvars.ContextVar("current_unblinded_access", default=False)
+current_unblinded_access = contextvars.ContextVar(
+    "current_unblinded_access", default=False
+)
 
 # Context variable for propagating the current Part 11 signature manifestation context
 current_signature_context = contextvars.ContextVar(
