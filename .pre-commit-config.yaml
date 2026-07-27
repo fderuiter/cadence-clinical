@@ -39,3 +39,10 @@ repos:
         language: system
         files: \.md$
         pass_filenames: false
+
+      - id: detect-code-duplication
+        name: Detect Code Duplication
+        entry: python3 scripts/detect_duplication.py
+        language: system
+        files: \.(py|js|vue)$
+        pass_filenames: true
