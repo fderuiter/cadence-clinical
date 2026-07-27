@@ -225,3 +225,16 @@ export async function generateJwtHS256(payload, secret) {
   const signatureStr = base64url(new Uint8Array(signatureBuffer));
   return tokenInput + "." + signatureStr;
 }
+
+/**
+ * Centralized SHA-256 hash helper using subtle crypto.
+ *
+ * @param {string} message - The string message to hash.
+ * @returns {Promise<string>} A hex-encoded representation of the SHA-256 hash.
+ */
+export async function sha256(message) {
+  const msgBuffer = new TextEncoder().encode(message);
+  const hashBuffer = await globalThis.crypto.subtle.digest("SHA-256", msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}

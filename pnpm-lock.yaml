@@ -17,6 +17,9 @@ importers:
       eslint-plugin-vue:
         specifier: ^10.10.0
         version: 10.10.0(eslint@10.7.0)(vue-eslint-parser@10.4.1(eslint@10.7.0))
+      jscpd:
+        specifier: ^5.0.12
+        version: 5.0.12
       prettier:
         specifier: ^3.9.6
         version: 3.9.6
@@ -840,6 +843,44 @@ packages:
 
   js-cookie@3.0.8:
     resolution: {integrity: sha512-yeJd4aNAdYZQjaon2bpD/Gb0B/omw7HQOsynXXcOiWVCacbBcPlgn8S/d1X6blFSaHao7ozqtW7NZW19xpCtIw==}
+
+  jscpd-darwin-arm64@5.0.12:
+    resolution: {integrity: sha512-CQCDYhQY9yOGGeauzkRGYW/QtXurPCjfDkEhUoM/M5UdmpzxfG3i9mnNsaheJ0RdFRf73mL7JaLVRP8U2l5/kA==}
+    cpu: [arm64]
+    os: [darwin]
+
+  jscpd-darwin-x64@5.0.12:
+    resolution: {integrity: sha512-7XNCDfChP9fPkIWLepd0zGnTov7/5mR7rJ5Utc1MdWFdgkN//qz6FAJ1FhQA0E/qjFedy9XTucfUCgLybSBsjw==}
+    cpu: [x64]
+    os: [darwin]
+
+  jscpd-linux-arm64-gnu@5.0.12:
+    resolution: {integrity: sha512-i/usHD0/8twzb2Qo4vFWcnuAD4IDLS6K/mTXwYy1CiJZDw4gmjfH45jtjdKUyoutTAiNs+ZWZgx1gIRljUbFuA==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  jscpd-linux-x64-gnu@5.0.12:
+    resolution: {integrity: sha512-TqaeSTaGawcqyXSrQvYJFtLRn4aQeHgphGGsq2ZtVAg+lPeuMmh81c3bl0yi2dL3gDX1RGBQKBVul1XQknOuoA==}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  jscpd-linux-x64-musl@5.0.12:
+    resolution: {integrity: sha512-WelugY1/rdoo0Y0sqJ2XQOIvyIZTfRe+vP3MJe4XvEUwPF0v+9SQoS34FnfblRhsddVixyNkgl7x/sHid9UMJw==}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
+
+  jscpd-windows-x64-msvc@5.0.12:
+    resolution: {integrity: sha512-01x1klKjvfzI6Of5tI9u72x7TIQZQLLG6kMdsEPJKl/BXbskdknrfCepeTXRBbdFPKs25jfcd0klZ4OdDvww5w==}
+    cpu: [x64]
+    os: [win32]
+
+  jscpd@5.0.12:
+    resolution: {integrity: sha512-87dC+akj2mCywlt8p3xnRlDg0B55u4GDbfE9cuwOOeIxbEuWuIoNqGoYi65A0516aJ4EzAjGwBj1Qb/Ahc8WAQ==}
+    engines: {node: '>=18'}
+    hasBin: true
 
   jsdom@29.1.1:
     resolution: {integrity: sha512-ECi4Fi2f7BdJtUKTflYRTiaMxIB0O6zfR1fX0GXpUrf6flp8QIYn1UT20YQqdSOfk2dfkCwS8LAFoJDEppNK5Q==}
@@ -2152,6 +2193,33 @@ snapshots:
       nopt: 7.2.1
 
   js-cookie@3.0.8: {}
+
+  jscpd-darwin-arm64@5.0.12:
+    optional: true
+
+  jscpd-darwin-x64@5.0.12:
+    optional: true
+
+  jscpd-linux-arm64-gnu@5.0.12:
+    optional: true
+
+  jscpd-linux-x64-gnu@5.0.12:
+    optional: true
+
+  jscpd-linux-x64-musl@5.0.12:
+    optional: true
+
+  jscpd-windows-x64-msvc@5.0.12:
+    optional: true
+
+  jscpd@5.0.12:
+    optionalDependencies:
+      jscpd-darwin-arm64: 5.0.12
+      jscpd-darwin-x64: 5.0.12
+      jscpd-linux-arm64-gnu: 5.0.12
+      jscpd-linux-x64-gnu: 5.0.12
+      jscpd-linux-x64-musl: 5.0.12
+      jscpd-windows-x64-msvc: 5.0.12
 
   jsdom@29.1.1:
     dependencies:

@@ -1,5 +1,8 @@
 import {
   generateGatewaySignature,
+  sha256,
+  createClinicalInput,
+  createClinicalRadioGrid,
 } from "ui";
 import {
   queueSubmission,
@@ -123,14 +126,6 @@ function showView(viewId) {
     const tab = document.getElementById("tab-btn-inbox");
     if (tab) tab.classList.add("active");
   }
-}
-
-// SHA-256 Hash helper
-async function sha256(message) {
-  const msgBuffer = new TextEncoder().encode(message);
-  const hashBuffer = await globalThis.crypto.subtle.digest("SHA-256", msgBuffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 // 21 CFR Part 11 Compliant Cryptographic Audit Ledger logging
@@ -324,36 +319,9 @@ function startQuestionnaire(assignmentId) {
 
   Object.entries(instrument.items).forEach(([id, field]) => {
     if (field.type === "choice_single") {
-      // Create Clinical Radio Grid equivalent
-      const optionsHtml = field.options
-        .map((opt, idx) => `
-          <div class="radio-option">
-            <input type="radio" id="${id}_option_${idx}" name="${id}" value="${opt}" />
-            <label for="${id}_option_${idx}">${opt}</label>
-          </div>
-        `)
-        .join("");
-
-      formHtml += `
-        <fieldset class="clinical-radio-grid grid-span-12" style="grid-column: span 12;" id="field-container-${id}">
-          <legend>${field.label}</legend>
-          <div class="radio-options-wrapper">
-            <div class="radio-options">
-              ${optionsHtml}
-            </div>
-          </div>
-        </fieldset>
-      `;
+      formHtml += createClinicalRadioGrid(id, field.label, field.options, "");
     } else {
-      // Create Clinical Input equivalent
-      formHtml += `
-        <div class="clinical-input grid-span-12" style="grid-column: span 12;" id="field-container-${id}">
-          <label for="${id}">${field.label}</label>
-          <div class="input-wrapper">
-            <input type="text" id="${id}" name="${id}" value="" />
-          </div>
-        </div>
-      `;
+      formHtml += createClinicalInput(id, field.label, "");
     }
   });
 

@@ -30,6 +30,7 @@
     "@eslint/js": "^10.0.1",
     "eslint": "^10.7.0",
     "eslint-plugin-vue": "^10.10.0",
+    "jscpd": "^5.0.12",
     "prettier": "^3.9.6",
     "vitest": "^4.1.10"
   }

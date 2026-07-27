@@ -117,6 +117,12 @@ jobs:
           git add .secrets.baseline
           uv run pre-commit run detect-secrets --all-files
 
+      - name: Run code duplication check
+        id: run_duplication
+        if: always()
+        run: |
+          node scripts/scan-duplication.js
+
       - name: Run tests and coverage
         id: run_tests
         if: always()
