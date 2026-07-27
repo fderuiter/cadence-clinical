@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 938
-- **Passed:** 938 🟢
+- **Total Automated Test Cases Run:** 939
+- **Passed:** 939 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -38,119 +38,128 @@ The Installation Qualification verifies that the software execution environment,
 ```
 Package                 Version     Editable project location
 ----------------------- ----------- -------------------------
-aiosmtplib              5.1.2
-aiosqlite               0.22.1
-annotated-doc           0.0.4
-annotated-types         0.7.0
-anyio                   4.14.2
-asyncpg                 0.31.0
-bandit                  1.9.4
-beautifulsoup4          4.15.0
-boolean-py              5.0
-brotli                  1.2.0
-cachecontrol            0.14.4
+aiosmtplib               5.1.2      
+aiosqlite                0.22.1     
+annotated-doc            0.0.4      
+annotated-types          0.7.0      
+anyio                    4.14.2     
+asyncpg                  0.31.0     
+bandit                   1.9.4      
+beautifulsoup4           4.15.0     
+boolean-py               5.0        
+brotli                   1.2.0      
+brotlicffi               1.2.0.1    
+cachecontrol             0.14.4     
 cadence-clinical         0.1.0       /app
-certifi                 2026.7.22
-cffi                    2.1.0
-cfgv                    3.5.0
-charset-normalizer      3.4.9
-click                   8.4.2
-coverage                7.15.2
-cryptography            49.0.0
-cssselect2              0.9.0
-cyclonedx-python-lib    11.11.0
-defusedxml              0.7.1
-detect-secrets          1.5.0
-distlib                 0.4.3
-ecdsa                   0.19.2
-et-xmlfile              2.0.0
-fastapi                 0.139.2
-filelock                3.32.0
-fonttools               4.63.0
-greenlet                3.5.4
-h11                     0.16.0
-httpcore                1.0.9
-httptools               0.8.0
-httpx                   0.28.1
-identify                2.6.19
-idna                    3.18
-iniconfig               2.3.0
-jinja2                  3.1.6
-license-expression      30.4.4
-lxml                    6.1.1
-markdown-it-py          4.2.0
-markupsafe              3.0.3
-mdurl                   0.1.2
-msgpack                 1.2.1
-neo4j                   6.2.0
-nodeenv                 1.10.0
-numpy                   2.5.1
-openpyxl                3.1.5
-packageurl-python       0.17.6
-packaging               26.2
-pandas                  3.0.3
-pillow                  12.3.0
-pip                     26.1.2
-pip-api                 0.0.34
-pip-audit               2.10.1
-pip-requirements-parser 32.0.1
-platformdirs            4.11.0
-playwright              1.61.0
-pluggy                  1.6.0
-pre-commit              4.6.1
-py-serializable         2.1.0
-pyasn1                  0.6.4
-pycparser               3.0
-pydantic                2.13.4
-pydantic-core           2.46.4
-pydyf                   0.12.1
-pyee                    13.0.1
-pygments                2.20.0
-pyparsing               3.3.2
-pyphen                  0.17.2
-pytest                  9.1.1
-pytest-asyncio          1.4.0
-pytest-base-url         2.1.0
-pytest-cov              7.1.0
-pytest-playwright       0.8.0
-python-dateutil         2.9.0.post0
-python-discovery        1.5.0
-python-docx             1.2.0
-python-dotenv           1.2.2
-python-jose             3.5.0
-python-multipart        0.0.32
-python-slugify          8.0.4
-pytz                    2026.2
-pyyaml                  6.0.3
-rapidfuzz               3.14.5
-requests                2.34.2
-rich                    15.0.0
-rsa                     4.9.1
-ruff                    0.15.22
-six                     1.17.0
-sortedcontainers        2.4.0
-soupsieve               2.9.1
-sqlalchemy              2.0.51
-starlette               1.3.1
-stevedore               5.9.0
-text-unidecode          1.3
-tinycss2                1.5.1
-tinyhtml5               2.1.0
-tomli                   2.4.1
-tomli-w                 1.2.0
-typing-extensions       4.16.0
-typing-inspection       0.4.2
-urllib3                 2.7.0
-usdm                    0.67.0
-uvicorn                 0.51.0
-uvloop                  0.22.1
-virtualenv              21.7.0
-watchfiles              1.2.0
-weasyprint              69.0
-webencodings            0.5.1
-websockets              16.1.1
-yattag                  1.16.1
-zopfli                  0.4.3
+certifi                  2026.7.22  
+cffi                     2.1.0      
+cfgv                     3.5.0      
+charset-normalizer       3.4.9      
+click                    8.4.2      
+colorama                 0.4.6      
+coverage                 7.15.2     
+cryptography             49.0.0     
+cssselect2               0.9.0      
+cyclonedx-python-lib     11.11.0    
+defusedxml               0.7.1      
+detect-secrets           1.5.0      
+distlib                  0.4.3      
+docraptor                3.1.0      
+ecdsa                    0.19.2     
+et-xmlfile               2.0.0      
+fastapi                  0.139.2    
+fhir-core                1.1.9      
+fhir-resources           8.3.0      
+filelock                 3.32.0     
+fonttools                4.63.0     
+greenlet                 3.5.4      
+h11                      0.16.0     
+httpcore                 1.0.9      
+httptools                0.8.0      
+httpx                    0.28.1     
+identify                 2.6.19     
+idna                     3.18       
+iniconfig                2.3.0      
+jinja2                   3.1.6      
+license-expression       30.4.4     
+lxml                     6.1.1      
+markdown-it-py           4.2.0      
+markupsafe               3.0.3      
+mdurl                    0.1.2      
+msgpack                  1.2.1      
+neo4j                    6.2.0      
+nodeenv                  1.10.0     
+numpy                    2.4.6      
+numpy                    2.5.1      
+openpyxl                 3.1.5      
+packageurl-python        0.17.6     
+packaging                26.2       
+pandas                   3.0.3      
+pillow                   12.3.0     
+pip                      26.1.2     
+pip-api                  0.0.34     
+pip-audit                2.10.1     
+pip-requirements-parser  32.0.1     
+platformdirs             4.11.0     
+playwright               1.61.0     
+pluggy                   1.6.0      
+pre-commit               4.6.1      
+py-serializable          2.1.0      
+pyasn1                   0.6.4      
+pycparser                3.0        
+pydantic                 2.13.4     
+pydantic-core            2.46.4     
+pydyf                    0.12.1     
+pyee                     13.0.1     
+pygments                 2.20.0     
+pyparsing                3.3.2      
+pyphen                   0.17.2     
+pytest                   9.1.1      
+pytest-asyncio           1.4.0      
+pytest-base-url          2.1.0      
+pytest-cov               7.1.0      
+pytest-playwright        0.8.0      
+python-dateutil          2.9.0.post0
+python-discovery         1.5.0      
+python-docx              1.2.0      
+python-dotenv            1.2.2      
+python-jose              3.5.0      
+python-multipart         0.0.32     
+python-slugify           8.0.4      
+pytz                     2026.2     
+pyyaml                   6.0.3      
+rapidfuzz                3.14.5     
+requests                 2.34.2     
+rich                     15.0.0     
+rsa                      4.9.1      
+ruff                     0.15.22    
+six                      1.17.0     
+sortedcontainers         2.4.0      
+soupsieve                2.9.1      
+sqlalchemy               2.0.51     
+starlette                1.3.1      
+stevedore                5.9.0      
+stringcase               1.2.0      
+text-unidecode           1.3        
+tinycss2                 1.5.1      
+tinyhtml5                2.1.0      
+tomli                    2.4.1      
+tomli-w                  1.2.0      
+typing-extensions        4.16.0     
+typing-inspection        0.4.2      
+tzdata                   2026.3     
+urllib3                  2.7.0      
+usdm                     0.66.0     
+usdm                     0.67.0     
+uvicorn                  0.51.0     
+uvloop                   0.22.1     
+virtualenv               21.7.0     
+watchfiles               1.2.0      
+weasyprint               69.0       
+webencodings             0.5.1      
+websockets               16.1.1     
+yattag                   1.16.1     
+zopfli                   0.4.3      
 ```
 
 ## 3. Operational Qualification (OQ)
@@ -258,9 +267,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_successful_assembly_and_synopsis` | `tests.test_content_assembly` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_unresolved_reference_invalid_attribute` | `tests.test_content_assembly` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_unresolved_reference_non_existent_id` | `tests.test_content_assembly` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_encryption_decryption_with_rotation` | `tests.test_cryptography` | Trace-2, PRD-MDR-005 | 🟢 PASSED | < 1s |
-| `test_key_splitting` | `tests.test_cryptography` | Trace-2, PRD-MDR-005 | 🟢 PASSED | < 1s |
-| `test_cra_allocations_rbac_reassignment_workload` | `tests.test_ctms` | Trace-6, PRD-CTMS-003 | 🟢 PASSED | < 1s |
+| `test_encryption_decryption_with_rotation` | `tests.test_cryptography` | PRD-MDR-005, Trace-2 | 🟢 PASSED | < 1s |
+| `test_key_splitting` | `tests.test_cryptography` | PRD-MDR-005, Trace-2 | 🟢 PASSED | < 1s |
+| `test_cra_allocations_rbac_reassignment_workload` | `tests.test_ctms` | PRD-CTMS-003, Trace-6 | 🟢 PASSED | < 1s |
 | `test_create_and_list_studies_rbac` | `tests.test_ctms` | PRD-CTMS-004, Trace-6 | 🟢 PASSED | < 1s |
 | `test_ctms_health_check` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_database_manager_uninitialized` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -270,12 +279,12 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_milestone_trigger_manual` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_milestone_trigger_study_approved` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_milestone_trigger_visit_completed_automated` | `tests.test_ctms` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_monitoring_visit_invalid_state_and_findings` | `tests.test_ctms` | Trace-6, PRD-CTMS-002 | 🟢 PASSED | < 1s |
-| `test_monitoring_visit_scheduling_respects_cra_allocation` | `tests.test_ctms` | Trace-6, PRD-CTMS-003 | 🟢 PASSED | < 1s |
-| `test_monitoring_visit_workflow_happy_path` | `tests.test_ctms` | Trace-6, PRD-CTMS-002 | 🟢 PASSED | < 1s |
-| `test_monitoring_visit_workflow_rbac_denials` | `tests.test_ctms` | Trace-6, PRD-CTMS-002 | 🟢 PASSED | < 1s |
+| `test_monitoring_visit_invalid_state_and_findings` | `tests.test_ctms` | PRD-CTMS-002, Trace-6 | 🟢 PASSED | < 1s |
+| `test_monitoring_visit_scheduling_respects_cra_allocation` | `tests.test_ctms` | PRD-CTMS-003, Trace-6 | 🟢 PASSED | < 1s |
+| `test_monitoring_visit_workflow_happy_path` | `tests.test_ctms` | PRD-CTMS-002, Trace-6 | 🟢 PASSED | < 1s |
+| `test_monitoring_visit_workflow_rbac_denials` | `tests.test_ctms` | PRD-CTMS-002, Trace-6 | 🟢 PASSED | < 1s |
 | `test_recruitment_records_crud_and_audit` | `tests.test_ctms` | PRD-CTMS-004, Trace-6 | 🟢 PASSED | < 1s |
-| `test_site_milestones_crud_and_audit` | `tests.test_ctms` | Trace-6, PRD-CTMS-001 | 🟢 PASSED | < 1s |
+| `test_site_milestones_crud_and_audit` | `tests.test_ctms` | PRD-CTMS-001, Trace-6 | 🟢 PASSED | < 1s |
 | `test_ctms_database_manager_uninitialized_and_close` | `tests.test_database_managers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_econsent_database_manager_uninitialized_and_close` | `tests.test_database_managers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_database_manager_uninitialized_and_close` | `tests.test_database_managers` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -872,7 +881,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_map_to_sdtm_orchestrator` | `tests.test_sdtm_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_map_vs` | `tests.test_sdtm_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_to_dtc` | `tests.test_sdtm_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_clinical_observation_sdv_defaults` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-007, PRD-QRY-005 | 🟢 PASSED | < 1s |
+| `test_clinical_observation_sdv_defaults` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005, PRD-QRY-007 | 🟢 PASSED | < 1s |
 | `test_sdv_automatic_verification_drop` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005, PRD-QRY-006 | 🟢 PASSED | < 1s |
 | `test_sdv_sign_off_persistence_and_audit` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005 | 🟢 PASSED | < 1s |
 | `test_sdv_signoff_endpoint_and_idempotency` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005, PRD-QRY-006 | 🟢 PASSED | < 1s |
@@ -1045,7 +1054,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_translation_validation_failure` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_site_and_visit_locks` | `tests.test_trial_lock` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_subject_and_form_locks` | `tests.test_trial_lock` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_trial_lock_freeze` | `tests.test_trial_lock` | Trace-3, PRD-SYS-003 | 🟢 PASSED | < 1s |
+| `test_trial_lock_freeze` | `tests.test_trial_lock` | PRD-SYS-003, Trace-3 | 🟢 PASSED | < 1s |
 | `test_api_tsdv_config_authorization_and_upsert` | `tests.test_tsdv_logic` | PRD-QRY-007 | 🟢 PASSED | < 1s |
 | `test_api_tsdv_config_validation` | `tests.test_tsdv_logic` | PRD-QRY-007 | 🟢 PASSED | < 1s |
 | `test_api_tsdv_evaluation_endpoint` | `tests.test_tsdv_logic` | PRD-QRY-007 | 🟢 PASSED | < 1s |

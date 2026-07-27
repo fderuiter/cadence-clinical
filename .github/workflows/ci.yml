@@ -145,7 +145,23 @@ jobs:
         if: always()
         env:
           TEST_DATABASE_URL: "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"
-        run: uv run pytest
+        run: uv run pytest --junitxml=report.xml
+
+      - name: Generate Compliance Reports
+        id: generate_reports
+        if: always() && steps.run_tests.outcome == 'success'
+        run: uv run python scripts/generate_rtm.py
+
+      - name: Assert No Documentation Git Diff
+        id: assert_no_diff
+        if: always() && steps.generate_reports.outcome == 'success'
+        run: |
+          echo "==== Comparing freshly generated reports against checked-in files ===="
+          git diff --exit-code docs/SDLC/Requirements_Traceability_Matrix.md docs/SDLC/IQ_OQ_PQ_Execution_Report.md || {
+            echo "::error::GxP compliance documentation is out of sync with the current system state!"
+            echo "::error::Please run 'uv run pytest --junitxml=report.xml' followed by 'python scripts/generate_rtm.py' locally, and commit/push the updated files in 'docs/SDLC/'."
+            exit 1
+          }
 
       - name: Post PR Quality Checklist Comment
         if: always() && github.event_name == 'pull_request'
