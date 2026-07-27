@@ -868,3 +868,18 @@ main {
 .lookup-status-icon {
   font-size: 1rem;
 }
+
+/* Helper cards styling */
+.helper-info-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  background-color: #f8fafc;
+}
+
+.helper-info-card-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--primary);
+}
