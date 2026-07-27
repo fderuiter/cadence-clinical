@@ -53,7 +53,7 @@ jobs:
           echo "Target Clinical Archive: https://etmf.clinical.cadence.internal/api/v1/archive"
           echo "Protocol: FDA 21 CFR Part 11 / EU Annex 11 Compliant"
           echo "Publishing artifacts from isolated directory 'tmp_etmf/'..."
-          
+
           # Simulate posting files to eTMF API
           for file in tmp_etmf/*; do
             filename=$(basename "$file")
@@ -61,5 +61,5 @@ jobs:
             echo "File checksum: $(sha256sum "$file" | cut -d' ' -f1)"
             echo "Successfully archived $filename in eTMF."
           done
-          
+
           echo "=== eTMF Archival Complete - All Release Audits Preserved ==="
