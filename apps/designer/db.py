@@ -39,6 +39,9 @@ MOCK_STUDIES = {
 # In-memory rule mock store fallback
 MOCK_RULES: Dict[str, List[Dict[str, Any]]] = {}
 
+# In-memory eligibility criteria mock store fallback
+MOCK_ELIGIBILITY_CRITERIA: Dict[str, List[Dict[str, Any]]] = {}
+
 # --- Mock Study Version Content ---
 MOCK_STUDY_VERSIONS: Dict[str, List[Dict[str, Any]]] = {}
 MOCK_STUDY_PROJECTIONS_BY_VERSION: Dict[str, Dict[str, Any]] = {}
@@ -129,6 +132,10 @@ def get_study_projection(study_id: str) -> Optional[Dict[str, Any]]:
     # Dynamically inject non-soft-deleted mock rules
     study["rules"] = [
         r for r in MOCK_RULES.get(study_id, []) if not r.get("is_deleted", False)
+    ]
+    # Dynamically inject non-soft-deleted mock eligibility criteria
+    study["eligibility_criteria"] = [
+        c for c in MOCK_ELIGIBILITY_CRITERIA.get(study_id, []) if not c.get("is_deleted", False)
     ]
     return study
 
