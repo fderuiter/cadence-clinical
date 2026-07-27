@@ -13,8 +13,7 @@ def test_rtm_generation_with_cli_overrides(tmp_path):
         "--dynamic-timestamp",
     ]
 
-    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-    assert result.returncode == 0
+    subprocess.run(cmd, capture_output=True, text=True, check=True)
 
     # Assert reports exist
     rtm_file = output_dir / "Requirements_Traceability_Matrix.md"

@@ -10,29 +10,16 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.execution.trial_lock import TrialLockManager
+from packages.security.signing import (
+    clean_json_val,
+    compute_block_hash,
+    compute_merkle_root,
+)
 
 logger = logging.getLogger("sealer")
 
 _sealer_task: Optional[asyncio.Task] = None
 _should_run: bool = False
-
-
-def clean_json_val(val: Any) -> str:
-    """
-    Ensure consistent, deterministic serialization of JSON values for hashing.
-    Parses and formats dictionaries/lists to remove any whitespace or key order differences.
-    """
-    if val is None:
-        return "null"
-    if isinstance(val, (dict, list)):
-        return json.dumps(val, sort_keys=True)
-    if isinstance(val, str):
-        try:
-            parsed = json.loads(val)
-            return json.dumps(parsed, sort_keys=True)
-        except Exception:
-            return json.dumps(val)
-    return json.dumps(val)
 
 
 def clean_query(query_str: str, db: AsyncSession) -> str:
@@ -117,12 +104,10 @@ async def execute_audit_sealing_cycle(
         record_ids.append(rec.id)
 
     # 3. Calculate Merkle Root of records
-    combined_records_payload = "".join(record_hashes).encode("utf-8")
-    merkle_root = hashlib.sha256(combined_records_payload).hexdigest()
+    merkle_root = compute_merkle_root(record_hashes)
 
     # 4. Calculate Block Hash
-    block_input = (previous_hash + merkle_root).encode("utf-8")
-    current_block_hash = hashlib.sha256(block_input).hexdigest()
+    current_block_hash = compute_block_hash(previous_hash, merkle_root)
 
     # 5. Insert Ledger Seal Record
     await db.execute(
@@ -244,8 +229,7 @@ async def validate_ledger_integrity(db: AsyncSession) -> bool:
                 record_hashes.append(rec_hash)
 
             # Recompute Merkle root
-            combined_records_payload = "".join(record_hashes).encode("utf-8")
-            computed_merkle_root = hashlib.sha256(combined_records_payload).hexdigest()
+            computed_merkle_root = compute_merkle_root(record_hashes)
 
             if computed_merkle_root != merkle_root_in_db:
                 raise ValueError(
@@ -254,8 +238,9 @@ async def validate_ledger_integrity(db: AsyncSession) -> bool:
                 )
 
             # Recompute Block Hash
-            block_input = (expected_prev_hash + computed_merkle_root).encode("utf-8")
-            computed_block_hash = hashlib.sha256(block_input).hexdigest()
+            computed_block_hash = compute_block_hash(
+                expected_prev_hash, computed_merkle_root
+            )
 
             if computed_block_hash != curr_hash_in_db:
                 raise ValueError(
