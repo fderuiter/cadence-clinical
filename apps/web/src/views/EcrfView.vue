@@ -1118,6 +1118,16 @@ const requestCounters = reactive({});
 const conceptStatuses = reactive({});
 const conceptMessages = reactive({});
 
+/*
+function getStatusIcon(status) {
+  if (status === "loading") return "⏳";
+  if (status === "valid") return "✅";
+  if (status === "invalid") return "❌";
+  if (status === "degraded") return "⚠️";
+  return "";
+}
+*/
+
 // Inline debounce helper
 function localDebounce(fn, delay) {
   let timeoutId = null;

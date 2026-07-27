@@ -1196,6 +1196,7 @@ components:
             data_type:
               type: string
               example: NUMERIC
+          required: [domain, variable_name, data_type]
         allowable_units:
           type: array
           items:
@@ -1207,6 +1208,7 @@ components:
               name:
                 type: string
                 example: millimeter of mercury
+            required: [ucum_code, name]
         version:
           type: string
           example: 1.0.0
@@ -1245,10 +1247,24 @@ components:
           type: string
         cdash_mapping:
           type: object
+          properties:
+            domain:
+              type: string
+            variable_name:
+              type: string
+            data_type:
+              type: string
+          required: [domain, variable_name, data_type]
         allowable_units:
           type: array
           items:
             type: object
+            properties:
+              ucum_code:
+                type: string
+              name:
+                type: string
+            required: [ucum_code, name]
         change_reason:
           type: string
 
@@ -1262,10 +1278,24 @@ components:
           type: string
         cdash_mapping:
           type: object
+          properties:
+            domain:
+              type: string
+            variable_name:
+              type: string
+            data_type:
+              type: string
+          required: [domain, variable_name, data_type]
         allowable_units:
           type: array
           items:
             type: object
+            properties:
+              ucum_code:
+                type: string
+              name:
+                type: string
+            required: [ucum_code, name]
         reason_for_change:
           type: string
 
@@ -1317,8 +1347,10 @@ components:
 
     MedDRACodingResult:
       type: object
-      required: [matches]
+      required: [status, matches]
       properties:
+        status:
+          type: string
         matches:
           type: array
           items:
@@ -1374,6 +1406,7 @@ components:
               type: number
             unit:
               type: string
+          required: [value, unit]
         target:
           type: object
           properties:
@@ -1381,6 +1414,7 @@ components:
               type: number
             unit:
               type: string
+          required: [value, unit]
         is_compatible:
           type: boolean
         scale_factor:

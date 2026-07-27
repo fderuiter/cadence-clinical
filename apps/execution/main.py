@@ -21,6 +21,8 @@ from fastapi import (
     Response,
     UploadFile,
 )
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import select, text
 
@@ -141,9 +143,52 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await db_manager.close()
 
 
+class InvalidParam(BaseModel):
+    field: Optional[str] = None
+    reason: Optional[str] = None
+    value: Optional[str] = None
+
+
+class ProblemDetails(BaseModel):
+    type: str
+    title: str
+    status: int
+    detail: str
+    instance: str
+    code: str
+    invalid_params: Optional[List[InvalidParam]] = None
+
+
 app = FastAPI(
     title="Cadence Clinical - EDC Execution Engine", version="0.1.0", lifespan=lifespan
 )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    validation_errors_list = []
+    for err in exc.errors():
+        loc_path = err.get("loc", [])
+        field_path = (
+            " -> ".join(str(item) for item in loc_path) if loc_path else "unknown"
+        )
+        msg = err.get("msg", "Validation error")
+        val = err.get("input")
+        val_str = str(val) if val is not None else ""
+        validation_errors_list.append(
+            InvalidParam(field=field_path, reason=msg, value=val_str)
+        )
+    problem = ProblemDetails(
+        type="https://api.cadence-clinical.com/errors/validation-failed",
+        title="Request Validation Failed",
+        status=400,
+        detail="The request body fails to satisfy schema rules. Refer to 'invalid_params' for details.",
+        instance=request.url.path,
+        code="REQUEST_VALIDATION_ERROR",
+        invalid_params=validation_errors_list,
+    )
+    return JSONResponse(status_code=400, content=problem.model_dump(exclude_none=True))
+
 
 app.add_middleware(ContextResetMiddleware)
 app.add_middleware(GatewayAuthMiddleware)
@@ -2019,7 +2064,11 @@ async def get_whodrug_code(
         )
 
 
-@app.post("/api/v1/dictionaries/ucum/convert", response_model=UCUMConvertResponse)
+@app.post(
+    "/api/v1/dictionaries/ucum/convert",
+    response_model=UCUMConvertResponse,
+    responses={400: {"model": ProblemDetails}},
+)
 async def post_ucum_convert(payload: UCUMConvertRequest) -> UCUMConvertResponse:
     """Standardizes numeric values and verifies scale compatibility between source and target codes."""
     return UCUMConvertResponse(

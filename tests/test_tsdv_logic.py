@@ -263,7 +263,7 @@ async def test_api_tsdv_config_validation():
             },
             headers=get_v2_auth_headers(),
         )
-        assert resp.status_code == 422
+        assert resp.status_code == 400
 
         # 2. Invalid initial_full_sdv_subject_count (negative)
         resp = await client.post(
@@ -275,7 +275,7 @@ async def test_api_tsdv_config_validation():
             },
             headers=get_v2_auth_headers(),
         )
-        assert resp.status_code == 422
+        assert resp.status_code == 400
 
         # 3. Missing trial_random_seed when random_sample_percentage > 0
         resp = await client.post(
@@ -288,7 +288,7 @@ async def test_api_tsdv_config_validation():
             },
             headers=get_v2_auth_headers(),
         )
-        assert resp.status_code == 422
+        assert resp.status_code == 400
 
 
 @pytest.mark.asyncio

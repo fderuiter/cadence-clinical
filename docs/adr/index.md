@@ -91,4 +91,5 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-11: VitePress Workspace Documentation Portal](2026-08-11-vitepress-workspace-documentation-portal.md)
 - [2026-08-11: Gateway Signature Legacy V2 Fallback](2026-08-11-gateway-signature-legacy-v2-fallback.md)
 - [2026-08-11: Standardize PR Templates and Centralize Shared Hashing & Radio Grid Layouts](2026-08-11-standardize-pr-templates-and-centralize-hashing-grid-layout.md)
+- [2026-08-11: Bidirectional Field Parity and RFC 7807 Validation Schemas](2026-08-11-bidirectional-field-parity-and-rfc7807-validation-schemas.md)
 - [2026-08-12: Secure Unblinding Signature Fallback Restriction](2026-08-12-secure-unblinding-signature-fallback-restriction.md)
