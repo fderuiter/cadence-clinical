@@ -63,21 +63,26 @@ def verify_gateway_signature(
     if hmac.compare_digest(expected, signature):
         return True
 
-    # 2. Fallback to verify with the legacy 4-field payload for backward-compatibility
-    # when legacy tests or clients sign only identity attributes (4-key format).
-    legacy_payload = {
-        "change_reason": change_reason if change_reason is not None else "",
-        "roles": roles,
-        "timestamp": timestamp,
-        "user_id": user_id,
-    }
-    legacy_serialized = json.dumps(
-        legacy_payload, sort_keys=True, separators=(",", ":")
-    )
-    legacy_expected = hmac.new(
-        secret, legacy_serialized.encode("utf-8"), hashlib.sha256
-    ).hexdigest()
-    return hmac.compare_digest(legacy_expected, signature)
+    # Fallback to the legacy 4-key v2 payload format (without site_id, sponsor_id, unblinded_access)
+    # when these scope parameters are empty or falsy. This maintains compatibility
+    # with existing tests and clients that do not yet include these fields in their signature.
+    if (not site_id) and (not sponsor_id) and (not unblinded_access):
+        legacy_payload = {
+            "change_reason": change_reason if change_reason is not None else "",
+            "roles": roles,
+            "timestamp": timestamp,
+            "user_id": user_id,
+        }
+        serialized_legacy = json.dumps(
+            legacy_payload, sort_keys=True, separators=(",", ":")
+        )
+        expected_legacy = hmac.new(
+            secret, serialized_legacy.encode("utf-8"), hashlib.sha256
+        ).hexdigest()
+        if hmac.compare_digest(expected_legacy, signature):
+            return True
+
+    return False
 
 
 def canonical_serialize(payload: Dict[str, Any]) -> bytes:
@@ -184,3 +189,37 @@ def capture_certificate_identifiers(cert_pem: str) -> Dict[str, str]:
         "sha256_fingerprint": sha256_fingerprint,
         "subject_key_identifier": ski or sha256_fingerprint,
     }
+
+
+def clean_json_val(val: Any) -> str:
+    """
+    Ensure consistent, deterministic serialization of JSON values for hashing.
+    Parses and formats dictionaries/lists to remove any whitespace or key order differences.
+    """
+    if val is None:
+        return "null"
+    if isinstance(val, (dict, list)):
+        return json.dumps(val, sort_keys=True)
+    if isinstance(val, str):
+        try:
+            parsed = json.loads(val)
+            return json.dumps(parsed, sort_keys=True)
+        except Exception:
+            return json.dumps(val)
+    return json.dumps(val)
+
+
+def compute_merkle_root(record_hashes: list[str]) -> str:
+    """
+    Computes the Merkle Root hash from a list of record hashes.
+    """
+    combined_records_payload = "".join(record_hashes).encode("utf-8")
+    return hashlib.sha256(combined_records_payload).hexdigest()
+
+
+def compute_block_hash(previous_hash: str, merkle_root: str) -> str:
+    """
+    Computes a sequential block-level chaining hash using the previous block hash and the current Merkle root.
+    """
+    block_input = (previous_hash + merkle_root).encode("utf-8")
+    return hashlib.sha256(block_input).hexdigest()
