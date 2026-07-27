@@ -126,7 +126,7 @@ rapidfuzz               3.14.5
 requests                2.34.2
 rich                    15.0.0
 rsa                     4.9.1
-ruff                    0.15.22
+ruff                    0.16.0
 six                     1.17.0
 sortedcontainers        2.4.0
 soupsieve               2.9.1
@@ -819,7 +819,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_map_to_sdtm_orchestrator` | `tests.test_sdtm_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_map_vs` | `tests.test_sdtm_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_to_dtc` | `tests.test_sdtm_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_clinical_observation_sdv_defaults` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005, PRD-QRY-007 | 🟢 PASSED | < 1s |
+| `test_clinical_observation_sdv_defaults` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-007, PRD-QRY-005 | 🟢 PASSED | < 1s |
 | `test_sdv_automatic_verification_drop` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005, PRD-QRY-006 | 🟢 PASSED | < 1s |
 | `test_sdv_sign_off_persistence_and_audit` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005 | 🟢 PASSED | < 1s |
 | `test_sdv_signoff_endpoint_and_idempotency` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005, PRD-QRY-006 | 🟢 PASSED | < 1s |
