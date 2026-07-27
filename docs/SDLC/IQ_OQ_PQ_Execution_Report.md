@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 938
-- **Passed:** 938 🟢
+- **Total Automated Test Cases Run:** 965
+- **Passed:** 965 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -621,7 +621,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_out_of_band_update_triggers_audit_entry` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_prevent_audit_ledger_seals_mutation` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_prevent_audit_log_mutation` | `tests.test_ledger_and_triggers` | PRD-SYS-001, Trace-1 | 🟢 PASSED | < 1s |
-| `test_prevent_hard_delete_on_audited_model` | `tests.test_ledger_and_triggers` | Trace-1, PRD-SYS-002 | 🟢 PASSED | < 1s |
+| `test_prevent_hard_delete_on_audited_model` | `tests.test_ledger_and_triggers` | PRD-SYS-002, Trace-1 | 🟢 PASSED | < 1s |
 | `test_designer_gateway_auth_expired_timestamp` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_designer_gateway_auth_invalid_signature` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_designer_gateway_auth_invalid_timestamp` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -806,6 +806,33 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_verify_is_auditor_denies_non_auditors` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_not_auditor_allows_others` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_not_auditor_denies_auditors` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_prd_edc_001_spreadsheet_structure` | `tests.test_rtm_mappings` | PRD-EDC-001 | 🟢 PASSED | < 1s |
+| `test_prd_edc_002_field_ingestion_validation` | `tests.test_rtm_mappings` | PRD-EDC-002 | 🟢 PASSED | < 1s |
+| `test_prd_edc_003_skip_logic` | `tests.test_rtm_mappings` | PRD-EDC-003 | 🟢 PASSED | < 1s |
+| `test_prd_edc_004_cascading_nullification` | `tests.test_rtm_mappings` | PRD-EDC-004 | 🟢 PASSED | < 1s |
+| `test_prd_edc_005_realtime_row_ingestion` | `tests.test_rtm_mappings` | PRD-EDC-005 | 🟢 PASSED | < 1s |
+| `test_prd_edc_006_advanced_inputs_vas` | `tests.test_rtm_mappings` | PRD-EDC-006 | 🟢 PASSED | < 1s |
+| `test_prd_edc_007_local_indexeddb_security` | `tests.test_rtm_mappings` | PRD-EDC-007 | 🟢 PASSED | < 1s |
+| `test_prd_edc_008_conflict_resolution` | `tests.test_rtm_mappings` | PRD-EDC-008 | 🟢 PASSED | < 1s |
+| `test_prd_edc_009_vas_slider_spec` | `tests.test_rtm_mappings` | PRD-EDC-009 | 🟢 PASSED | < 1s |
+| `test_prd_edc_010_body_map_coordinates` | `tests.test_rtm_mappings` | PRD-EDC-010 | 🟢 PASSED | < 1s |
+| `test_prd_mdr_002_concept_locks` | `tests.test_rtm_mappings` | PRD-MDR-002 | 🟢 PASSED | < 1s |
+| `test_prd_mdr_006_blinding_constraints` | `tests.test_rtm_mappings` | PRD-MDR-006 | 🟢 PASSED | < 1s |
+| `test_prd_mdr_007_ie_mapping_to_ecrf` | `tests.test_rtm_mappings` | PRD-MDR-007 | 🟢 PASSED | < 1s |
+| `test_prd_qry_001_query_state_transitions` | `tests.test_rtm_mappings` | PRD-QRY-001 | 🟢 PASSED | < 1s |
+| `test_prd_qry_002_query_escalation` | `tests.test_rtm_mappings` | PRD-QRY-002 | 🟢 PASSED | < 1s |
+| `test_prd_qry_003_cross_form_edit_checks` | `tests.test_rtm_mappings` | PRD-QRY-003 | 🟢 PASSED | < 1s |
+| `test_prd_qry_004_longitudinal_validation` | `tests.test_rtm_mappings` | PRD-QRY-004 | 🟢 PASSED | < 1s |
+| `test_prd_sub_002_partial_visit_queries` | `tests.test_rtm_mappings` | PRD-SUB-002 | 🟢 PASSED | < 1s |
+| `test_prd_sub_003_stratified_block_randomization` | `tests.test_rtm_mappings` | PRD-SUB-003 | 🟢 PASSED | < 1s |
+| `test_prd_sub_004_dynamic_minimization` | `tests.test_rtm_mappings` | PRD-SUB-004 | 🟢 PASSED | < 1s |
+| `test_prd_sub_005_emergency_unblinding_auth` | `tests.test_rtm_mappings` | PRD-SUB-005 | 🟢 PASSED | < 1s |
+| `test_prd_sub_006_unblinding_state_mutation` | `tests.test_rtm_mappings` | PRD-SUB-006 | 🟢 PASSED | < 1s |
+| `test_prd_sub_007_reconsent_gating` | `tests.test_rtm_mappings` | PRD-SUB-007 | 🟢 PASSED | < 1s |
+| `test_prd_sys_004_site_isolation` | `tests.test_rtm_mappings` | PRD-SYS-004 | 🟢 PASSED | < 1s |
+| `test_trace_10_multichannel_notifications` | `tests.test_rtm_mappings` | Trace-10 | 🟢 PASSED | < 1s |
+| `test_trace_8_ecoa_subject_identity` | `tests.test_rtm_mappings` | Trace-8 | 🟢 PASSED | < 1s |
+| `test_trace_9_epro_offline_sync` | `tests.test_rtm_mappings` | Trace-9 | 🟢 PASSED | < 1s |
 | `test_hard_delete_prevented_for_supply_entities` | `tests.test_rtsm_supply` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_site_inventory_unique_constraint` | `tests.test_rtsm_supply` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_supply_entities_audit_trail_and_soft_delete` | `tests.test_rtsm_supply` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1044,7 +1071,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_translation_validation_failure` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_site_and_visit_locks` | `tests.test_trial_lock` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_subject_and_form_locks` | `tests.test_trial_lock` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_trial_lock_freeze` | `tests.test_trial_lock` | PRD-SYS-003, Trace-3 | 🟢 PASSED | < 1s |
+| `test_trial_lock_freeze` | `tests.test_trial_lock` | Trace-3, PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_api_tsdv_config_authorization_and_upsert` | `tests.test_tsdv_logic` | PRD-QRY-007 | 🟢 PASSED | < 1s |
 | `test_api_tsdv_config_validation` | `tests.test_tsdv_logic` | PRD-QRY-007 | 🟢 PASSED | < 1s |
 | `test_api_tsdv_evaluation_endpoint` | `tests.test_tsdv_logic` | PRD-QRY-007 | 🟢 PASSED | < 1s |
