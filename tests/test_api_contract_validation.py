@@ -149,10 +149,15 @@ def assert_schema_parity(
         # Compare Required fields list
         s_req = set(s_resolved.get("required", []))
         c_req = set(c_resolved.get("required", []))
-        # Ensure that required fields in specification are also required in codebase
-        missing_reqs = s_req - c_req
-        assert not missing_reqs, (
-            f"Required properties {missing_reqs} in spec contract are not marked required in codebase at {path_context}"
+
+        # Ensure bidirectional parity of required fields
+        missing_in_code = s_req - c_req
+        missing_in_spec = c_req - s_req
+        assert not missing_in_code, (
+            f"Required properties {missing_in_code} in spec contract are not marked required in codebase at {path_context}"
+        )
+        assert not missing_in_spec, (
+            f"Required properties {missing_in_spec} in codebase are not marked required in spec contract at {path_context}"
         )
 
     # Compare Items for arrays
@@ -396,7 +401,8 @@ def test_api_responses_parity(loaded_specs):
                 # We skip checking standard gateway error responses (401, 403, 404, 429, 500)
                 # because they are handled by security middleware or global error handlers,
                 # but we require absolute parity for success responses (200, 201, 202, etc.)
-                if status_code in ["401", "403", "404", "429", "500", "400"]:
+                # HTTP 400 must NOT be bypassed and must strictly match documented ProblemDetails specification.
+                if status_code in ["401", "403", "404", "429", "500"]:
                     continue
 
                 assert status_code in code_responses, (

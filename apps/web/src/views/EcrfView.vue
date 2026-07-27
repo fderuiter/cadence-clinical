@@ -1119,6 +1119,7 @@ const conceptStatuses = reactive({});
 const conceptMessages = reactive({});
 
 // eslint-disable-next-line no-unused-vars
+/*
 function getStatusIcon(status) {
   if (status === "loading") return "⏳";
   if (status === "valid") return "✅";
@@ -1126,6 +1127,7 @@ function getStatusIcon(status) {
   if (status === "degraded") return "⚠️";
   return "";
 }
+*/
 
 // Inline debounce helper
 function localDebounce(fn, delay) {

@@ -584,7 +584,7 @@ async def test_api_validation_failures():
             json={"id": "arm_invalid"},
             headers=headers,
         )
-        assert res.status_code == 422
+        assert res.status_code == 400
 
         # Invalid linking payloads (missing target_type or fields)
         res_link = await client.post(
@@ -592,7 +592,7 @@ async def test_api_validation_failures():
             json={"epoch_id": ""},  # missing visit_id
             headers=headers,
         )
-        assert res_link.status_code == 422
+        assert res_link.status_code == 400
 
 
 @pytest.mark.asyncio

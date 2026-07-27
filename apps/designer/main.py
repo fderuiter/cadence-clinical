@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
 from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from neo4j import AsyncGraphDatabase
 from protocol_render import SoAMatrixView
@@ -192,7 +193,46 @@ class ConceptLockedError(Exception):
         super().__init__(self.message)
 
 
+class InvalidParam(BaseModel):
+    field: Optional[str] = None
+    reason: Optional[str] = None
+    value: Optional[str] = None
+
+
+class ProblemDetails(BaseModel):
+    type: str
+    title: str
+    status: int
+    detail: str
+    instance: str
+    code: str
+    invalid_params: Optional[List[InvalidParam]] = None
+
+
 app = FastAPI(title="Cadence Clinical - Designer (MDR/SDR)", version="0.1.0")
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    invalid_params = []
+    for error in exc.errors():
+        loc = error.get("loc", [])
+        field_path = " -> ".join(str(item) for item in loc) if loc else "unknown"
+        msg = error.get("msg", "Validation error")
+        val = error.get("input")
+        val_str = str(val) if val is not None else ""
+        invalid_params.append(InvalidParam(field=field_path, reason=msg, value=val_str))
+    problem = ProblemDetails(
+        type="https://api.cadence-clinical.com/errors/validation-failed",
+        title="Request Validation Failed",
+        status=400,
+        detail="The request body fails to satisfy schema rules. Refer to 'invalid_params' for details.",
+        instance=request.url.path,
+        code="REQUEST_VALIDATION_ERROR",
+        invalid_params=invalid_params,
+    )
+    return JSONResponse(status_code=400, content=problem.model_dump(exclude_none=True))
+
 
 app.add_middleware(GatewayAuthMiddleware)
 
@@ -797,7 +837,12 @@ async def get_concepts(
     )
 
 
-@app.post("/api/v1/mdr/concepts", response_model=ConceptDetail, status_code=201)
+@app.post(
+    "/api/v1/mdr/concepts",
+    response_model=ConceptDetail,
+    status_code=201,
+    responses={400: {"model": ProblemDetails}},
+)
 async def create_concept(payload: CreateConceptRequest) -> ConceptDetail:
     """Creates a new Biomedical Concept inside the MDR graph repository."""
     return ConceptDetail(
@@ -815,7 +860,11 @@ async def create_concept(payload: CreateConceptRequest) -> ConceptDetail:
     )
 
 
-@app.put("/api/v1/mdr/concepts/{id}", response_model=ConceptDetail)
+@app.put(
+    "/api/v1/mdr/concepts/{id}",
+    response_model=ConceptDetail,
+    responses={400: {"model": ProblemDetails}},
+)
 async def update_concept(
     id: str, payload: UpdateConceptRequest, request: Request
 ) -> ConceptDetail:
