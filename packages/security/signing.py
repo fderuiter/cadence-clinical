@@ -62,16 +62,22 @@ def verify_gateway_signature(
     if hmac.compare_digest(expected, signature):
         return True
 
-    # Fallback to legacy version 2 payload (without optional scopes) for backward compatibility
-    legacy_payload = {
-        "change_reason": change_reason if change_reason is not None else "",
-        "roles": roles,
-        "timestamp": timestamp,
-        "user_id": user_id,
-    }
-    legacy_serialized = json.dumps(legacy_payload, sort_keys=True, separators=(",", ":"))
-    legacy_expected = hmac.new(secret, legacy_serialized.encode("utf-8"), hashlib.sha256).hexdigest()
-    return hmac.compare_digest(legacy_expected, signature)
+    # Legacy fallback for backward-compatible test suites and unscoped requests
+    if not site_id and not sponsor_id and not unblinded_access:
+        legacy_payload = {
+            "change_reason": change_reason if change_reason is not None else "",
+            "roles": roles,
+            "timestamp": timestamp,
+            "user_id": user_id,
+        }
+        serialized = json.dumps(legacy_payload, sort_keys=True, separators=(",", ":"))
+        legacy_expected = hmac.new(
+            secret, serialized.encode("utf-8"), hashlib.sha256
+        ).hexdigest()
+        if hmac.compare_digest(legacy_expected, signature):
+            return True
+
+    return False
 
 
 def canonical_serialize(payload: Dict[str, Any]) -> bytes:
