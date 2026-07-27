@@ -1,5 +1,5 @@
-import pytest
 import httpx
+import pytest
 from sqlalchemy import select
 
 from apps.execution.database.core import db_manager
@@ -8,16 +8,16 @@ from apps.execution.database.models import (
     Base,
     ClinicalCodingAssignment,
     ClinicalCodingLedger,
-    CodingState,
-    RecodingState,
     ClinicalSubject,
+    CodingState,
     MedDRAHierarchy,
     MedDRATerm,
-    WHODrugRecord,
+    RecodingState,
     WHODrugATC,
     WHODrugDrugATC,
-    WHODrugIngredient,
     WHODrugDrugIngredient,
+    WHODrugIngredient,
+    WHODrugRecord,
 )
 from apps.execution.main import app
 from apps.execution.trial_lock import TrialLockManager
@@ -457,14 +457,18 @@ async def test_impact_analysis_meddra_and_whodrug_lifecycle():
             assert len(ledgers) == 3
 
             # Verify ledger records historical and current coding meanings
-            m1_ledger = next(l for l in ledgers if l.assignment_id == "A-M1")
+            m1_ledger = next(
+                ledger for ledger in ledgers if ledger.assignment_id == "A-M1"
+            )
             assert m1_ledger.old_dictionary_version == "25.0"
             assert m1_ledger.new_dictionary_version == "26.0"
             assert m1_ledger.old_coded_code == "M1"
             assert m1_ledger.new_coded_code == "M1"
             assert m1_ledger.recoding_status == RecodingState.NONE
 
-            m2_ledger = next(l for l in ledgers if l.assignment_id == "A-M2")
+            m2_ledger = next(
+                ledger for ledger in ledgers if ledger.assignment_id == "A-M2"
+            )
             assert m2_ledger.old_dictionary_version == "25.0"
             assert m2_ledger.new_dictionary_version == "26.0"
             assert m2_ledger.old_coded_code == "M2"
@@ -476,7 +480,9 @@ async def test_impact_analysis_meddra_and_whodrug_lifecycle():
             )
             assert m2_ledger.new_hierarchy["hierarchies"][0]["hlt_code"] == "H2_NEW"
 
-            m3_ledger = next(l for l in ledgers if l.assignment_id == "A-M3")
+            m3_ledger = next(
+                ledger for ledger in ledgers if ledger.assignment_id == "A-M3"
+            )
             assert m3_ledger.old_dictionary_version == "25.0"
             assert m3_ledger.new_dictionary_version == "26.0"
             assert m3_ledger.old_coded_code == "M3"

@@ -99,6 +99,50 @@
                 style="width: 100%; padding: 6px"
               />
             </div>
+            <div
+              class="form-group"
+              style="margin-bottom: 8px; position: relative"
+            >
+              <label for="new-arm-concept">Arm Type Concept Code</label>
+              <input
+                id="new-arm-concept"
+                v-model="newArmConcept"
+                type="text"
+                placeholder="e.g. C123"
+                style="width: 100%; padding: 6px"
+                @input="handleArmConceptInput"
+              />
+              <div
+                v-if="armSearchResults.length > 0"
+                class="autocomplete-dropdown"
+                style="
+                  position: absolute;
+                  left: 0;
+                  right: 0;
+                  background: white;
+                  border: 1px solid var(--border);
+                  border-radius: 4px;
+                  max-height: 150px;
+                  overflow-y: auto;
+                  z-index: 10;
+                "
+              >
+                <div
+                  v-for="res in armSearchResults"
+                  :key="res.concept_code"
+                  class="autocomplete-item"
+                  style="
+                    padding: 6px 12px;
+                    cursor: pointer;
+                    border-bottom: 1px solid var(--border);
+                  "
+                  @click="selectArmConcept(res)"
+                >
+                  <strong>{{ res.concept_code }}</strong> -
+                  {{ res.preferred_name }}
+                </div>
+              </div>
+            </div>
             <button
               class="btn btn-primary"
               style="width: 100%"
@@ -200,6 +244,16 @@
                 v-model="newEnc.name"
                 type="text"
                 placeholder="e.g. Week 6"
+                style="width: 100%; padding: 6px"
+              />
+            </div>
+            <div class="form-group" style="margin-bottom: 8px">
+              <label for="new-enc-concept">Visit Type Concept Code</label>
+              <input
+                id="new-enc-concept"
+                v-model="newEncConcept"
+                type="text"
+                placeholder="e.g. C123"
                 style="width: 100%; padding: 6px"
               />
             </div>
@@ -476,11 +530,47 @@
 import { ref, computed, watch, reactive } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import { createClinicalVisitMatrix } from "ui";
+import { terminologyClient } from "../api/terminologyClient.js";
+import { useAuthStore } from "../stores/auth.js";
 
 const store = useClinicalStore();
+const authStore = useAuthStore();
 
 const builderMode = ref(false);
 const usdmText = ref(JSON.stringify(store.currentUsdm, null, 2));
+
+const newArmConcept = ref("");
+const newEncConcept = ref("");
+const armSearchResults = ref([]);
+let debounceTimer = null;
+
+function handleArmConceptInput() {
+  if (debounceTimer) {
+    clearTimeout(debounceTimer);
+  }
+  const val = newArmConcept.value;
+  if (!val || !val.trim()) {
+    armSearchResults.value = [];
+    return;
+  }
+  debounceTimer = setTimeout(async () => {
+    try {
+      const response = await terminologyClient.searchTerminology(val, {
+        userId: authStore.identity?.username || "fderuiter",
+        roles: authStore.identity?.roles?.[0] || "Data Manager",
+      });
+      armSearchResults.value = response.results || [];
+    } catch (err) {
+      console.error(err);
+      armSearchResults.value = [];
+    }
+  }, 300);
+}
+
+function selectArmConcept(res) {
+  newArmConcept.value = res.concept_code;
+  armSearchResults.value = [];
+}
 
 // Creation Forms States
 const newArm = reactive({ id: "", name: "" });

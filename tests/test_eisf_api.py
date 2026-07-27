@@ -36,7 +36,12 @@ def get_eisf_auth_headers(
     """
     timestamp = str(time.time())
     sig = generate_signature(
-        user_id, roles, timestamp, version="2", change_reason=change_reason
+        user_id,
+        roles,
+        timestamp,
+        version="2",
+        change_reason=change_reason,
+        site_id=site_id,
     )
     headers = {
         "X-User-Id": user_id,
