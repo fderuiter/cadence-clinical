@@ -574,8 +574,6 @@ const usdmText = ref(JSON.stringify(store.currentUsdm, null, 2));
 const armSuggestions = ref([]);
 const encSuggestions = ref([]);
 
-
-
 const debouncedSearchArm = debounce(async (term) => {
   if (!term || !term.trim()) {
     armSuggestions.value = [];
@@ -639,8 +637,6 @@ const newEnc = reactive({
   concept: "",
 });
 const newProc = reactive({ id: "", name: "" });
-
-
 
 // Link Applicability States
 const linkPayload = reactive({ procedure_id: "", visit_id: "", timing: "" });

@@ -7,6 +7,8 @@ import {
   createConditionRow,
   createRuleEditorContainer,
   generateGatewaySignature,
+  sha256 as sharedSha256,
+  validateField as sharedValidateField,
 } from "ui";
 
 /**
@@ -127,65 +129,7 @@ import {
 export { evaluateAST, compilerCache, getCompiledExpression, debounce };
 
 export function validateField(fieldMeta, val, context = {}) {
-  if (!fieldMeta) return { valid: true };
-
-  const rules = fieldMeta.validation || {};
-
-  // Required check
-  if (
-    rules.required &&
-    (val === undefined || val === null || val.toString().trim() === "")
-  ) {
-    return { valid: false, message: "This field is required." };
-  }
-
-  // Only perform format/range validation if there is a value entered
-  if (val !== undefined && val !== null && val.toString().trim() !== "") {
-    // Pattern (Regex) check
-    if (rules.pattern) {
-      const regex = new RegExp(rules.pattern);
-      if (!regex.test(val)) {
-        return { valid: false, message: rules.message || "Invalid format." };
-      }
-    }
-
-    // Min / Max (Numeric check)
-    if (rules.min !== undefined || rules.max !== undefined) {
-      const num = parseFloat(val);
-      if (isNaN(num)) {
-        return { valid: false, message: "Value must be a number." };
-      }
-      if (rules.min !== undefined && num < rules.min) {
-        return {
-          valid: false,
-          message: rules.message || `Minimum value is ${rules.min}.`,
-        };
-      }
-      if (rules.max !== undefined && num > rules.max) {
-        return {
-          valid: false,
-          message: rules.message || `Maximum value is ${rules.max}.`,
-        };
-      }
-    }
-  }
-
-  // Constraint validation (must evaluate to true/truthy, otherwise invalid)
-  if (fieldMeta.constraint) {
-    const isOk = evaluateAST(
-      fieldMeta.constraint.condition || fieldMeta.constraint,
-      context
-    );
-    if (isOk === false) {
-      return {
-        valid: false,
-        message:
-          fieldMeta.constraint.query_message || "Constraint validation failed.",
-      };
-    }
-  }
-
-  return { valid: true };
+  return sharedValidateField(fieldMeta, val, context, evaluateAST);
 }
 
 /**
@@ -195,13 +139,7 @@ export function validateField(fieldMeta, val, context = {}) {
  * @returns {Promise<string>} The hexadecimal SHA-256 digest.
  */
 export async function sha256(message) {
-  const msgBuffer = new TextEncoder().encode(message);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-  return hashHex;
+  return sharedSha256(message);
 }
 
 /**
