@@ -149,7 +149,7 @@ def assert_schema_parity(
         # Compare Required fields list
         s_req = set(s_resolved.get("required", []))
         c_req = set(c_resolved.get("required", []))
-        
+
         # Ensure bidirectional parity of required fields
         missing_in_code = s_req - c_req
         missing_in_spec = c_req - s_req

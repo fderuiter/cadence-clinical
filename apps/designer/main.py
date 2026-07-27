@@ -211,6 +211,7 @@ class ProblemDetails(BaseModel):
 
 app = FastAPI(title="Cadence Clinical - Designer (MDR/SDR)", version="0.1.0")
 
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     invalid_params = []
@@ -220,13 +221,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         msg = error.get("msg", "Validation error")
         val = error.get("input")
         val_str = str(val) if val is not None else ""
-        invalid_params.append(
-            InvalidParam(
-                field=field_path,
-                reason=msg,
-                value=val_str
-            )
-        )
+        invalid_params.append(InvalidParam(field=field_path, reason=msg, value=val_str))
     problem = ProblemDetails(
         type="https://api.cadence-clinical.com/errors/validation-failed",
         title="Request Validation Failed",
@@ -234,12 +229,10 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         detail="The request body fails to satisfy schema rules. Refer to 'invalid_params' for details.",
         instance=request.url.path,
         code="REQUEST_VALIDATION_ERROR",
-        invalid_params=invalid_params
+        invalid_params=invalid_params,
     )
-    return JSONResponse(
-        status_code=400,
-        content=problem.model_dump(exclude_none=True)
-    )
+    return JSONResponse(status_code=400, content=problem.model_dump(exclude_none=True))
+
 
 app.add_middleware(GatewayAuthMiddleware)
 
@@ -844,7 +837,12 @@ async def get_concepts(
     )
 
 
-@app.post("/api/v1/mdr/concepts", response_model=ConceptDetail, status_code=201, responses={400: {"model": ProblemDetails}})
+@app.post(
+    "/api/v1/mdr/concepts",
+    response_model=ConceptDetail,
+    status_code=201,
+    responses={400: {"model": ProblemDetails}},
+)
 async def create_concept(payload: CreateConceptRequest) -> ConceptDetail:
     """Creates a new Biomedical Concept inside the MDR graph repository."""
     return ConceptDetail(
@@ -862,7 +860,11 @@ async def create_concept(payload: CreateConceptRequest) -> ConceptDetail:
     )
 
 
-@app.put("/api/v1/mdr/concepts/{id}", response_model=ConceptDetail, responses={400: {"model": ProblemDetails}})
+@app.put(
+    "/api/v1/mdr/concepts/{id}",
+    response_model=ConceptDetail,
+    responses={400: {"model": ProblemDetails}},
+)
 async def update_concept(
     id: str, payload: UpdateConceptRequest, request: Request
 ) -> ConceptDetail:

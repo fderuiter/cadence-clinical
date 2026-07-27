@@ -158,21 +158,20 @@ app = FastAPI(
     title="Cadence Clinical - EDC Execution Engine", version="0.1.0", lifespan=lifespan
 )
 
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    invalid_params = []
-    for error in exc.errors():
-        loc = error.get("loc", [])
-        field_path = " -> ".join(str(item) for item in loc) if loc else "unknown"
-        msg = error.get("msg", "Validation error")
-        val = error.get("input")
+    validation_errors_list = []
+    for err in exc.errors():
+        loc_path = err.get("loc", [])
+        field_path = (
+            " -> ".join(str(item) for item in loc_path) if loc_path else "unknown"
+        )
+        msg = err.get("msg", "Validation error")
+        val = err.get("input")
         val_str = str(val) if val is not None else ""
-        invalid_params.append(
-            InvalidParam(
-                field=field_path,
-                reason=msg,
-                value=val_str
-            )
+        validation_errors_list.append(
+            InvalidParam(field=field_path, reason=msg, value=val_str)
         )
     problem = ProblemDetails(
         type="https://api.cadence-clinical.com/errors/validation-failed",
@@ -181,12 +180,10 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         detail="The request body fails to satisfy schema rules. Refer to 'invalid_params' for details.",
         instance=request.url.path,
         code="REQUEST_VALIDATION_ERROR",
-        invalid_params=invalid_params
+        invalid_params=validation_errors_list,
     )
-    return JSONResponse(
-        status_code=400,
-        content=problem.model_dump(exclude_none=True)
-    )
+    return JSONResponse(status_code=400, content=problem.model_dump(exclude_none=True))
+
 
 app.add_middleware(ContextResetMiddleware)
 app.add_middleware(GatewayAuthMiddleware)
@@ -1972,7 +1969,11 @@ async def get_whodrug_code(
         )
 
 
-@app.post("/api/v1/dictionaries/ucum/convert", response_model=UCUMConvertResponse, responses={400: {"model": ProblemDetails}})
+@app.post(
+    "/api/v1/dictionaries/ucum/convert",
+    response_model=UCUMConvertResponse,
+    responses={400: {"model": ProblemDetails}},
+)
 async def post_ucum_convert(payload: UCUMConvertRequest) -> UCUMConvertResponse:
     """Standardizes numeric values and verifies scale compatibility between source and target codes."""
     return UCUMConvertResponse(
