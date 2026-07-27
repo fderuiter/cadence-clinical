@@ -252,6 +252,8 @@ class VS(AuditableModel):
         None, description="Date/Time of Vital Signs Measurement (Expected)"
     )
     VSBLFL: Optional[str] = Field(None, description="Baseline Flag (Permissible)")
+    VSSTAT: Optional[str] = Field(None, description="Completion Status (Permissible)")
+    VSREASND: Optional[str] = Field(None, description="Reason Not Done (Permissible)")
 
     @field_validator("STUDYID", "DOMAIN", "USUBJID", "VSTESTCD", "VSTEST")
     @classmethod
@@ -302,6 +304,8 @@ class LB(AuditableModel):
         None, description="Date/Time of Specimen Collection (Expected)"
     )
     LBLOINC: Optional[str] = Field(None, description="LOINC Code (Permissible)")
+    LBSTAT: Optional[str] = Field(None, description="Completion Status (Permissible)")
+    LBREASND: Optional[str] = Field(None, description="Reason Not Done (Permissible)")
 
     @field_validator("STUDYID", "DOMAIN", "USUBJID", "LBTESTCD", "LBTEST")
     @classmethod

@@ -788,8 +788,11 @@ def extract_vs(
         subject_vs_records = []
 
         for group_key, group_obs in groups.items():
-            # Find any qualifiers like VSPOS on this page/group
+            VS_MEASUREMENT_CODES = {"SYSBP", "DIABP", "TEMP", "PULSE", "HEIGHT", "WEIGHT", "RESP", "MAP", "BMI", "SPO2"}
+            measurements = []
+            unmapped_observations = []
             vspos = None
+
             for o in group_obs:
                 tcode = str(get_value(o, "test_code")).upper()
                 if tcode == "VSPOS":
@@ -800,42 +803,72 @@ def extract_vs(
                         if val_str is not None
                         else (str(val_num) if val_num is not None else None)
                     )
-
-            # For each measurement observation (not VSPOS) on this page
-            for o in group_obs:
-                tcode = str(get_value(o, "test_code")).upper()
-                if tcode == "VSPOS":
-                    continue
-
-                val_num = get_value(o, "value")
-                val_str = get_value(o, "value_string")
-
-                # VSORRES: preserve verbatim numeric result (as int or float if possible)
-                vsorres = val_num if val_num is not None else None
-                if vsorres is None and val_str is not None:
-                    try:
-                        vsorres = float(val_str)
-                    except ValueError:
-                        pass
-
-                vsorresu = get_value(o, "unit")
-                vsstresn = get_value(o, "normalized_value")
-                vsstresu = get_value(o, "normalized_unit")
-
-                # Fallback to original values if standardized are missing
-                if vsstresn is None:
-                    vsstresn = vsorres
-                if vsstresu is None:
-                    vsstresu = vsorresu
-
-                # VSSTRESC: standardized result as character string
-                if vsstresn is not None:
-                    if isinstance(vsstresn, float) and vsstresn.is_integer():
-                        vsstresc = str(int(vsstresn))
-                    else:
-                        vsstresc = str(vsstresn)
+                elif (
+                    tcode in VS_MEASUREMENT_CODES
+                    or get_value(o, "value") is not None
+                    or get_value(o, "value_string") is not None
+                ):
+                    measurements.append(o)
                 else:
-                    vsstresc = val_str or ""
+                    unmapped_observations.append(o)
+
+            if not measurements:
+                measurements = [o for o in group_obs if str(get_value(o, "test_code")).upper() != "VSPOS"]
+                unmapped_observations = []
+
+            for o in measurements:
+                tcode = str(get_value(o, "test_code")).upper()
+                null_flav = get_value(o, "null_flavor")
+
+                vsstat = ""
+                vsreasnd = ""
+
+                if null_flav:
+                    vsstat = "NOT DONE"
+                    NULL_FLAVOR_REASONS = {
+                        "NI": "No Information",
+                        "NA": "Not Applicable",
+                        "UNK": "Unknown",
+                        "ASKU": "Asked but Unknown",
+                        "NASK": "Not Asked",
+                        "MSNG": "Missing",
+                    }
+                    vsreasnd = NULL_FLAVOR_REASONS.get(str(null_flav).strip().upper(), str(null_flav))
+                    vsorres = None
+                    vsorresu = ""
+                    vsstresn = None
+                    vsstresu = ""
+                    vsstresc = ""
+                else:
+                    val_num = get_value(o, "value")
+                    val_str = get_value(o, "value_string")
+
+                    # VSORRES: preserve verbatim numeric result (as int or float if possible)
+                    vsorres = val_num if val_num is not None else None
+                    if vsorres is None and val_str is not None:
+                        try:
+                            vsorres = float(val_str)
+                        except ValueError:
+                            pass
+
+                    vsorresu = get_value(o, "unit")
+                    vsstresn = get_value(o, "normalized_value")
+                    vsstresu = get_value(o, "normalized_unit")
+
+                    # Fallback to original values if standardized are missing
+                    if vsstresn is None:
+                        vsstresn = vsorres
+                    if vsstresu is None:
+                        vsstresu = vsorresu
+
+                    # VSSTRESC: standardized result as character string
+                    if vsstresn is not None:
+                        if isinstance(vsstresn, float) and vsstresn.is_integer():
+                            vsstresc = str(int(vsstresn))
+                        else:
+                            vsstresc = str(vsstresn)
+                    else:
+                        vsstresc = val_str or ""
 
                 obs_dt = get_value(o, "observation_date")
                 dtc_str = ""
@@ -861,7 +894,9 @@ def extract_vs(
                     "VSPOS": pos or "",
                     "VSDTC": dtc_str,
                     "VSBLFL": "",
-                    "_unmapped_obs": [],
+                    "VSSTAT": vsstat,
+                    "VSREASND": vsreasnd,
+                    "_unmapped_obs": list(unmapped_observations),
                 }
                 subject_vs_records.append(record_data)
 
@@ -937,6 +972,8 @@ def extract_vs(
                 "VSPOS": rec["VSPOS"],
                 "VSDTC": rec["VSDTC"],
                 "VSBLFL": rec["VSBLFL"] or "",
+                "VSSTAT": rec.get("VSSTAT", ""),
+                "VSREASND": rec.get("VSREASND", ""),
             }
             vs_records.append(final_record)
 
