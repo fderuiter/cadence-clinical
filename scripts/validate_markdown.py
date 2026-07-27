@@ -519,9 +519,10 @@ def import_class_by_name_from_map(class_name, codebase_map):
             p = occ['file_path']
             try:
                 module_name = p.stem
-                spec = importlib.util.spec_from_file_location(module_name, str(p))
+                temp_mod_name = f"gxp_import_temp_{module_name}"
+                spec = importlib.util.spec_from_file_location(temp_mod_name, str(p))
                 module = importlib.util.module_from_spec(spec)
-                sys.modules[module_name] = module
+                sys.modules[temp_mod_name] = module
                 spec.loader.exec_module(module)
                 cls = getattr(module, class_name, None)
                 if cls is not None:
