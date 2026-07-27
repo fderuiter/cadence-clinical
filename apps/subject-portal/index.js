@@ -130,8 +130,6 @@ function showView(viewId) {
 }
 
 
-
-
 // 21 CFR Part 11 Compliant Cryptographic Audit Ledger logging
 async function logAuditRecord(action, details, reason = "Patient action verified") {
   const timestamp = new Date().toISOString();

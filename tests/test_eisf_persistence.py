@@ -1,9 +1,12 @@
+import os
+
 import pytest
 import pytest_asyncio
 from sqlalchemy import select
 
-from apps.eisf.database import EISFDatabaseManager, db_manager
+from apps.eisf.database import db_manager
 from apps.eisf.models import Base, ISFAuditLog, ISFDocument
+from packages.database import RelationalDatabaseManager
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -24,7 +27,7 @@ def test_uninitialized_database_manager_eisf():
     """
     Ensure the EISF database manager raises an exception when accessed before initialization.
     """
-    mgr = EISFDatabaseManager()
+    mgr = RelationalDatabaseManager(service_name="eISF")
     with pytest.raises(Exception) as exc_info:
         mgr.get_session_maker()
     assert "eISF database session manager is not initialized" in str(exc_info.value)
@@ -36,8 +39,9 @@ async def test_database_url_override_and_init(monkeypatch):
     Verify that database lifecycle supports EISF_DATABASE_URL override.
     """
     monkeypatch.setenv("EISF_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
-    mgr = EISFDatabaseManager()
-    mgr.init_db()  # Should pick up EISF_DATABASE_URL from env
+    mgr = RelationalDatabaseManager(service_name="eISF")
+    db_url = os.environ.get("EISF_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+    mgr.init_db(db_url)  # Should pick up EISF_DATABASE_URL from env
     assert mgr.engine is not None
     assert mgr.session_maker is not None
     await mgr.close()

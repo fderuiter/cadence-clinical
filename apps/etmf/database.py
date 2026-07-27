@@ -1,13 +1,3 @@
 from packages.database import RelationalDatabaseManager
 
-
-class ETMFDatabaseManager(RelationalDatabaseManager):
-    """
-    Manages the lifecycle of the eTMF service's database connections and sessions.
-    """
-
-    def __init__(self) -> None:
-        super().__init__(service_name="eTMF")
-
-
-db_manager = ETMFDatabaseManager()
+db_manager = RelationalDatabaseManager(service_name="eTMF")
