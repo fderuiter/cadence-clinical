@@ -107,7 +107,7 @@ describe("PI Sign-Off Worklist and Re-authentication Flow", () => {
     expect(soaClient.verifySignature).toHaveBeenCalledWith(
       {
         username: "fderuiter",
-        password: "valid_password",
+        password: "valid_password", // pragma: allowlist secret
         totp: null,
         action: "/api/v1/execution/batch-sign-off",
       },
