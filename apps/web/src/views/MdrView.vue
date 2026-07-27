@@ -103,12 +103,12 @@
               class="form-group"
               style="margin-bottom: 8px; position: relative"
             >
-              <label for="new-arm-concept">Arm Concept Code</label>
+              <label for="new-arm-concept">Arm Type Concept Code</label>
               <input
                 id="new-arm-concept"
                 v-model="newArm.concept"
                 type="text"
-                placeholder="e.g. C123"
+                placeholder="Search Arm Type CT..."
                 style="width: 100%; padding: 6px"
                 @input="searchArmTerminology($event.target.value)"
               />
@@ -137,7 +137,7 @@
                   style="
                     padding: 6px;
                     cursor: pointer;
-                    border-bottom: 1px solid var(--border);
+                    border-bottom: 1px solid #f1f5f9;
                   "
                   @click="selectArmConcept(sug)"
                 >
@@ -280,12 +280,12 @@
               class="form-group"
               style="margin-bottom: 8px; position: relative"
             >
-              <label for="new-enc-concept">Encounter Concept Code</label>
+              <label for="new-enc-concept">Visit Type Concept Code</label>
               <input
                 id="new-enc-concept"
                 v-model="newEnc.concept"
                 type="text"
-                placeholder="e.g. C456"
+                placeholder="Search Visit Type CT..."
                 style="width: 100%; padding: 6px"
                 @input="searchEncTerminology($event.target.value)"
               />
