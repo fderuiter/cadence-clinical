@@ -267,6 +267,15 @@ main {
   background-color: var(--success-bg);
 }
 
+.status-approved,
+.status-signed-off,
+.status-verified {
+  color: #15803d; /* deep green */
+  background-color: #dcfce7; /* green 100 */
+  border: 1px solid #86efac;
+  font-weight: 700;
+}
+
 .status-pending {
   color: var(--warning);
   background-color: var(--warning-bg);
