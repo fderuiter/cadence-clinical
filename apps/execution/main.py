@@ -4127,6 +4127,46 @@ async def unlock_trial_endpoint(
 # Coder Action and Coding Assignment API
 # ==========================================
 
+class ImpactAnalysisRequest(BaseModel):
+    dictionary_type: str
+    new_version: str
+
+
+class ImpactAnalysisResponse(BaseModel):
+    status: str
+    dictionary_type: str
+    new_version: str
+    metrics: dict
+
+
+@app.post(
+    "/api/v1/execution/coding/impact-analysis",
+    response_model=ImpactAnalysisResponse,
+)
+async def post_impact_analysis(
+    request: Request,
+    payload: ImpactAnalysisRequest,
+    roles: list[str] = Depends(require_roles("data manager", "sponsor_dm", "TERMINOLOGY_MANAGER", "SYSTEM_ADMIN")),
+) -> ImpactAnalysisResponse:
+    """Manually triggers up-versioning impact analysis on existing coded assignments."""
+    verify_change_justification(request)
+
+    from apps.execution.coding.impact import run_impact_analysis
+    async with db_manager.get_session_maker()() as session:
+        async with session.begin():
+            metrics = await run_impact_analysis(
+                session=session,
+                dictionary_type=payload.dictionary_type,
+                new_version=payload.new_version,
+                actor=current_user_id.get() or "system",
+            )
+            return ImpactAnalysisResponse(
+                status="success",
+                dictionary_type=payload.dictionary_type,
+                new_version=payload.new_version,
+                metrics=metrics,
+            )
+
 
 class CodingAssignmentResponse(BaseModel):
     id: str
