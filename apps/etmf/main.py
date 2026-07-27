@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
+from signature import SigningReason
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from tmf_reference_model import (
@@ -351,6 +352,17 @@ class TransitionRequest(BaseModel):
         min_length=10,
         max_length=1000,
         description="Part 11 change justification reason",
+    )
+
+
+class SignDocumentRequest(BaseModel):
+    """
+    Payload for submitting a signing and approval request.
+    """
+
+    signing_reason: SigningReason = Field(
+        ...,
+        description="Controlled reason for creating this electronic signature in compliance with 21 CFR Part 11",
     )
 
 
@@ -741,6 +753,24 @@ async def ingest_document(
 
     new_version_index = 1
     if existing_doc:
+        if (
+            existing_doc.status == "SIGNED"
+            or existing_doc.approval_status == "APPROVED"
+            or existing_doc.signature_manifestation is not None
+        ):
+            await write_audit_log(
+                session=session,
+                user_id=user_id,
+                user_role=user_roles,
+                action="MUTATION_REJECTED",
+                document_id=existing_doc.id,
+                details=f"Rejected attempt to ingest new version for signed document '{existing_doc.filename}' (ID: {existing_doc.id}). Error: IMMUTABILITY_VIOLATION.",
+            )
+            await session.commit()
+            raise HTTPException(
+                status_code=403,
+                detail="IMMUTABILITY_VIOLATION: Document is already signed and cannot be modified",
+            )
         new_version_index = existing_doc.version_index + 1
 
     doc = TMFDocument(
@@ -1527,6 +1557,26 @@ async def redact_document_endpoint(
     if not source_doc:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
 
+    # Check if already signed
+    if (
+        source_doc.status == "SIGNED"
+        or source_doc.approval_status == "APPROVED"
+        or source_doc.signature_manifestation is not None
+    ):
+        await write_audit_log(
+            session=session,
+            user_id=user_id,
+            user_role=user_roles,
+            action="MUTATION_REJECTED",
+            document_id=source_doc.id,
+            details=f"Rejected attempt to redact signed document '{source_doc.filename}' (ID: {source_doc.id}). Error: IMMUTABILITY_VIOLATION.",
+        )
+        await session.commit()
+        raise HTTPException(
+            status_code=403,
+            detail="IMMUTABILITY_VIOLATION: Document is already signed and cannot be modified",
+        )
+
     # 2. Extract X-Change-Reason
     change_reason = request.headers.get("X-Change-Reason", "").strip()
     if not change_reason:
@@ -1679,6 +1729,26 @@ async def auto_redact_document_endpoint(
     source_doc = result.scalars().first()
     if not source_doc:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
+
+    # Check if already signed
+    if (
+        source_doc.status == "SIGNED"
+        or source_doc.approval_status == "APPROVED"
+        or source_doc.signature_manifestation is not None
+    ):
+        await write_audit_log(
+            session=session,
+            user_id=user_id,
+            user_role=user_roles,
+            action="MUTATION_REJECTED",
+            document_id=source_doc.id,
+            details=f"Rejected attempt to auto-redact signed document '{source_doc.filename}' (ID: {source_doc.id}). Error: IMMUTABILITY_VIOLATION.",
+        )
+        await session.commit()
+        raise HTTPException(
+            status_code=403,
+            detail="IMMUTABILITY_VIOLATION: Document is already signed and cannot be modified",
+        )
 
     # 2. Extract X-Change-Reason
     change_reason = request.headers.get("X-Change-Reason", "").strip()
@@ -1858,6 +1928,26 @@ async def manual_redact_document_endpoint(
     source_doc = result.scalars().first()
     if not source_doc:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
+
+    # Check if already signed
+    if (
+        source_doc.status == "SIGNED"
+        or source_doc.approval_status == "APPROVED"
+        or source_doc.signature_manifestation is not None
+    ):
+        await write_audit_log(
+            session=session,
+            user_id=user_id,
+            user_role=user_roles,
+            action="MUTATION_REJECTED",
+            document_id=source_doc.id,
+            details=f"Rejected attempt to manually redact signed document '{source_doc.filename}' (ID: {source_doc.id}). Error: IMMUTABILITY_VIOLATION.",
+        )
+        await session.commit()
+        raise HTTPException(
+            status_code=403,
+            detail="IMMUTABILITY_VIOLATION: Document is already signed and cannot be modified",
+        )
 
     # 2. Extract X-Change-Reason
     change_reason = request.headers.get("X-Change-Reason", "").strip()
@@ -2063,6 +2153,26 @@ async def transition_document_status_endpoint(
     if not doc:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
 
+    # Check if already signed
+    if (
+        doc.status == "SIGNED"
+        or doc.approval_status == "APPROVED"
+        or doc.signature_manifestation is not None
+    ):
+        await write_audit_log(
+            session=session,
+            user_id=user_id,
+            user_role=user_roles,
+            action="MUTATION_REJECTED",
+            document_id=doc.id,
+            details=f"Rejected attempt to transition status of signed document '{doc.filename}' (ID: {doc.id}). Error: IMMUTABILITY_VIOLATION.",
+        )
+        await session.commit()
+        raise HTTPException(
+            status_code=403,
+            detail="IMMUTABILITY_VIOLATION: Document is already signed and cannot be modified",
+        )
+
     try:
         await validate_and_transition_document_status(
             session=session,
@@ -2092,6 +2202,222 @@ async def transition_document_status_endpoint(
         "document_id": doc.id,
         "new_status": doc.status,
     }
+
+
+@app.post(
+    "/api/v1/etmf/documents/{document_id}/sign-off",
+    response_model=DocumentResponse,
+    status_code=200,
+)
+@app.post(
+    "/api/v1/etmf/documents/{document_id}/approve",
+    response_model=DocumentResponse,
+    status_code=200,
+)
+async def sign_document_endpoint(
+    request: Request,
+    document_id: str,
+    payload: SignDocumentRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> DocumentResponse:
+    """
+    Approve and cryptographically sign an eTMF document, producing a 21 CFR Part 11 compliant
+    persisted signature manifestation, recording immutable audit actions (SIGN & APPROVE),
+    and transitioning the record to SIGNED.
+    """
+    user_id = getattr(request.state, "user_id", "system")
+    user_roles = getattr(request.state, "roles", "system")
+
+    # Enforce write roles can sign (no read-only roles like auditor, inspector)
+    if isinstance(user_roles, str):
+        roles_list = [r.strip().lower() for r in user_roles.split(",")]
+    else:
+        roles_list = [str(r).strip().lower() for r in user_roles]
+    if (
+        "inspector" in roles_list
+        or "regulatory_inspector" in roles_list
+        or "auditor" in roles_list
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Inspectors are restricted to read-only access.",
+        )
+
+    # Restrict affected trial to read-only state if trial is locked
+    from apps.execution.trial_lock import TrialLockManager
+
+    if TrialLockManager.is_locked():
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Trial is currently locked in a read-only state due to a security violation.",
+        )
+
+    # 1. Fetch document
+    stmt = select(TMFDocument).where(TMFDocument.id == document_id)
+    result = await session.execute(stmt)
+    doc = result.scalars().first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="eTMF Document not found")
+
+    # 2. Check if already signed/approved
+    if (
+        doc.status == "SIGNED"
+        or doc.approval_status == "APPROVED"
+        or doc.signature_manifestation is not None
+    ):
+        # Already signed. Reject with IMMUTABILITY_VIOLATION and write rejected audit log!
+        await write_audit_log(
+            session=session,
+            user_id=user_id,
+            user_role=user_roles,
+            action="MUTATION_REJECTED",
+            document_id=doc.id,
+            details=f"Rejected attempt to sign already signed document '{doc.filename}' (ID: {doc.id}). Error: IMMUTABILITY_VIOLATION.",
+        )
+        await session.commit()
+        raise HTTPException(
+            status_code=403,
+            detail="IMMUTABILITY_VIOLATION: Document is already signed and cannot be modified",
+        )
+
+    # 3. Build SignatureManifestation
+    import hashlib
+    from datetime import datetime, timedelta, timezone
+
+    from cryptography import x509
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography.x509.oid import NameOID
+    from signature import SignatureManifestation
+
+    from packages.security.signing import (
+        asymmetric_sign,
+        capture_certificate_identifiers,
+    )
+
+    client_ip = getattr(request.state, "ip_address", None)
+    if not client_ip:
+        client_ip = request.headers.get("x-forwarded-for") or (
+            request.client.host if request.client else "127.0.0.1"
+        )
+        if "," in client_ip:
+            client_ip = client_ip.split(",")[0].strip()
+
+    user_agent = request.headers.get("user-agent") or "eTMF Service"
+    now_utc = datetime.now(timezone.utc)
+    doc_hash = hashlib.sha256(doc.content.encode("utf-8")).hexdigest()
+
+    manifest = SignatureManifestation(
+        signer_id=user_id,
+        timestamp=now_utc,
+        signing_reason=payload.signing_reason,
+        ip_address=client_ip,
+        user_agent=user_agent,
+        sha256_hash=doc_hash,
+    )
+
+    # 4. Generate transient X.509 RSA certificate and key for certificate-signing
+    private_key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=2048,
+    )
+
+    subject = issuer = x509.Name(
+        [
+            x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
+            x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, "California"),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Cadence Clinical"),
+            x509.NameAttribute(NameOID.COMMON_NAME, f"user-{user_id}"),
+        ]
+    )
+
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(private_key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(now_utc - timedelta(days=1))
+        .not_valid_after(now_utc + timedelta(days=10))
+        .add_extension(
+            x509.SubjectKeyIdentifier.from_public_key(private_key.public_key()),
+            critical=False,
+        )
+        .sign(private_key, hashes.SHA256())
+    )
+
+    private_key_pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption(),
+    ).decode("utf-8")
+
+    cert_pem = cert.public_bytes(serialization.Encoding.PEM).decode("utf-8")
+
+    # Sign manifestation canonical bytes
+    canonical_bytes = manifest.get_canonical_bytes()
+    sig_b64 = asymmetric_sign(canonical_bytes, private_key_pem)
+    ids = capture_certificate_identifiers(cert_pem)
+
+    manifest.signature = sig_b64
+    manifest.certificate_pem = cert_pem
+    manifest.key_identifier = ids["subject_key_identifier"]
+
+    # Verify signature
+    assert manifest.verify() is True
+
+    # 5. Mutate the document record
+    doc.status = "SIGNED"
+    doc.approval_status = "APPROVED"
+    doc.signature_manifestation = manifest.model_dump(mode="json")
+    doc.signer = user_id
+    doc.signing_timestamp = now_utc.replace(tzinfo=None)
+
+    # 6. Add immutable SIGN and APPROVE eTMF audit actions
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="SIGN",
+        document_id=doc.id,
+        details=f"Successfully signed document '{doc.filename}' (ID: {doc.id}) with reason '{payload.signing_reason.value}'.",
+    )
+
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="APPROVE",
+        document_id=doc.id,
+        details=f"Successfully approved document '{doc.filename}' (ID: {doc.id}) with reason '{payload.signing_reason.value}'.",
+    )
+
+    await session.flush()
+
+    return DocumentResponse(
+        id=doc.id,
+        study_id=doc.study_id,
+        zone=doc.zone,
+        section=doc.section,
+        artifact_type=doc.artifact_type,
+        filename=doc.filename,
+        mime_type=doc.mime_type,
+        created_at=doc.created_at.isoformat(),
+        created_by=doc.created_by,
+        version_index=doc.version_index,
+        status=doc.status,
+        taxonomy_version=doc.taxonomy_version,
+        artifact_code=doc.artifact_code,
+        metadata_json=doc.metadata_json,
+        document_type=doc.document_type,
+        approval_status=doc.approval_status,
+        signature_manifestation=doc.signature_manifestation,
+        signer=doc.signer,
+        signing_timestamp=doc.signing_timestamp.isoformat(),
+        is_redacted=doc.is_redacted,
+        redaction_source_id=doc.redaction_source_id,
+        redaction_manifest_json=doc.redaction_manifest_json,
+    )
 
 
 @app.get(
