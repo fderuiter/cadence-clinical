@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1001
-- **Passed:** 1001 🟢
+- **Total Automated Test Cases Run:** 1012
+- **Passed:** 1012 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -311,7 +311,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_validator_empty_studyid_usubjid` | `tests.test_dataset_json` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validator_missing_required_variables` | `tests.test_dataset_json` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_basic_detection_results` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_compliance_profiles` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_compliance_profiles` | `tests.test_deid` | PRD-TMF-005 | 🟢 PASSED | < 1s |
 | `test_custom_literal_terms` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_dates_detector` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_deidentify_free_text_direct` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -333,6 +333,17 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_redaction_manifest_asymmetric_tamper_evident` | `tests.test_deid_transforms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_redaction_manifest_symmetric_tamper_evident` | `tests.test_deid_transforms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_shift_date_string` | `tests.test_deid_transforms` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_age_capping_and_edge_cases` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
+| `test_compliance_profiles` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
+| `test_date_shifting_and_edge_cases` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
+| `test_detections_all_categories` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
+| `test_hmac_pseudonymization_determinism` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
+| `test_manifest_tamper_evident_asymmetric` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
+| `test_manifest_tamper_evident_symmetric` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
+| `test_no_raw_matched_values_persisted` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
+| `test_overlap_resolution_comprehensive` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
+| `test_source_documents_remain_unchanged` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
+| `test_transforms_all_strategies` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
 | `test_delegation_allowed_non_pi_when_not_enforced` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_delegation_denied_site_mismatch` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_delegation_denied_sponsor_mismatch` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -504,16 +515,16 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_qc_history_api_not_found` | `tests.test_etmf_qc` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_qc_transitions_missing_doc` | `tests.test_etmf_qc` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_role_based_access_controls_and_gates` | `tests.test_etmf_qc` | PRD-QC-003 | 🟢 PASSED | < 1s |
-| `test_automated_redaction_basic` | `tests.test_etmf_redaction` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_automated_redaction_errors` | `tests.test_etmf_redaction` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_automated_redaction_profile_scopes` | `tests.test_etmf_redaction` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_automated_redaction_trial_locked` | `tests.test_etmf_redaction` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_manual_redaction_authorization_and_lock` | `tests.test_etmf_redaction` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_manual_redaction_literal_escaping` | `tests.test_etmf_redaction` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_manual_redaction_span_validation` | `tests.test_etmf_redaction` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_manual_redaction_success` | `tests.test_etmf_redaction` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_redaction_audit_trail_and_provenance` | `tests.test_etmf_redaction` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_redaction_authorization_gates` | `tests.test_etmf_redaction` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_automated_redaction_basic` | `tests.test_etmf_redaction` | PRD-TMF-005 | 🟢 PASSED | < 1s |
+| `test_automated_redaction_errors` | `tests.test_etmf_redaction` | PRD-TMF-005 | 🟢 PASSED | < 1s |
+| `test_automated_redaction_profile_scopes` | `tests.test_etmf_redaction` | PRD-TMF-005 | 🟢 PASSED | < 1s |
+| `test_automated_redaction_trial_locked` | `tests.test_etmf_redaction` | PRD-TMF-005 | 🟢 PASSED | < 1s |
+| `test_manual_redaction_authorization_and_lock` | `tests.test_etmf_redaction` | PRD-TMF-005 | 🟢 PASSED | < 1s |
+| `test_manual_redaction_literal_escaping` | `tests.test_etmf_redaction` | PRD-TMF-005 | 🟢 PASSED | < 1s |
+| `test_manual_redaction_span_validation` | `tests.test_etmf_redaction` | PRD-TMF-005 | 🟢 PASSED | < 1s |
+| `test_manual_redaction_success` | `tests.test_etmf_redaction` | PRD-TMF-005 | 🟢 PASSED | < 1s |
+| `test_redaction_audit_trail_and_provenance` | `tests.test_etmf_redaction` | PRD-TMF-005 | 🟢 PASSED | < 1s |
+| `test_redaction_authorization_gates` | `tests.test_etmf_redaction` | PRD-TMF-005 | 🟢 PASSED | < 1s |
 | `test_completeness_signature_lifecycle_distinction` | `tests.test_etmf_signatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_document_routing_and_classification` | `tests.test_etmf_signatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_lifecycle_with_mock_signature` | `tests.test_etmf_signatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
