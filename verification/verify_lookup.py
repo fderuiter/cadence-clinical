@@ -1,15 +1,18 @@
-import os
 import http.server
+import os
 import socketserver
 import threading
+
 from playwright.sync_api import sync_playwright
 
 PORT = 9099
 
+
 class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
-        self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
         super().end_headers()
+
 
 def run_server():
     os.chdir("/app")
@@ -19,11 +22,13 @@ def run_server():
         print(f"Serving HTTP at port {PORT}")
         httpd.serve_forever()
 
+
 def run_verification():
     server_thread = threading.Thread(target=run_server, daemon=True)
     server_thread.start()
 
     import time
+
     time.sleep(1)
 
     url = f"http://localhost:{PORT}/verification/index.html"
@@ -44,6 +49,7 @@ def run_verification():
 
         browser.close()
         print("Verification screenshot captured successfully.")
+
 
 if __name__ == "__main__":
     run_verification()
