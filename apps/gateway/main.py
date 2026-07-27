@@ -1,7 +1,9 @@
 import asyncio
 import hashlib
 import hmac
+import logging
 import os
+import sys
 import time
 import uuid
 from typing import Any, Awaitable, Callable, Dict, Optional
@@ -14,6 +16,41 @@ from fastapi.responses import JSONResponse
 from jose import JWTError, jwt
 from pydantic import BaseModel
 from starlette.middleware.base import BaseHTTPMiddleware
+
+
+def validate_environment() -> None:
+    """
+    Validate that no test bypass configurations are enabled in production or staging environments.
+    Crashes the application immediately if any bypass variables are active.
+    """
+    app_env = os.getenv("APP_ENV", "").strip().lower()
+    # Non-development environments (e.g. production or staging)
+    if app_env and app_env not in ("development", "dev", "test"):
+        errors = []
+        test_secret = os.getenv("JWT_TEST_SECRET")
+        allow_unverified = os.getenv("ALLOW_UNVERIFIED_JWT_FOR_TEST")
+        skip_jwks = os.getenv("SKIP_JWKS_FETCH")
+
+        if test_secret:
+            errors.append("JWT_TEST_SECRET")
+        if allow_unverified and allow_unverified.strip().lower() not in (
+            "false",
+            "0",
+            "",
+        ):
+            errors.append("ALLOW_UNVERIFIED_JWT_FOR_TEST")
+        if skip_jwks and skip_jwks.strip().lower() not in ("false", "0", ""):
+            errors.append("SKIP_JWKS_FETCH")
+
+        if errors:
+            error_msg = f"SECURITY ALERT: Invalid non-development configuration detected. Application cannot start in mode '{app_env}' with test bypass parameters active: {', '.join(errors)}."
+            print(error_msg, file=sys.stderr)
+            logger = logging.getLogger("gateway")
+            logger.error(error_msg)
+            sys.exit(1)
+
+
+validate_environment()
 
 app = FastAPI(
     title="Cadence Clinical - API Gateway",
