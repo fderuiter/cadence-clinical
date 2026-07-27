@@ -5,9 +5,9 @@
 
 ## 1. Traceability Summary
 
-- **Total Documented Requirements:** 55
-- **Total Mapped to Automated Tests:** 28
-- **Traceability Coverage:** 50.9%
+- **Total Documented Requirements:** 54
+- **Total Mapped to Automated Tests:** 31
+- **Traceability Coverage:** 57.4%
 - **SRS Requirements Mapped:** 7 of 10 (70.0%)
 
 ⚠️ **WARNING:** SRS coverage is below 100%. GxP validation requires 100% of functional requirements defined in the SRS to map to automated test cases.
@@ -22,8 +22,8 @@
 | PRD-CTMS-004 | PRD | **Standard GxP Site Audit trail** | `test_create_and_list_studies_rbac` (tests/test_ctms.py) ⚪<br>`test_get_audit_trail_rbac` (tests/test_ctms.py) ⚪<br>`test_recruitment_records_crud_and_audit` (tests/test_ctms.py) ⚪ | ❌ **Failed** |
 | PRD-EDC-001 | PRD | **Spreadsheet Ingestion Sheet Structure** | *None* | ❌ **Unmapped** |
 | PRD-EDC-002 | PRD | **Field-Level Ingestion Validations** | *None* | ❌ **Unmapped** |
-| PRD-EDC-003 | PRD | **Dynamic Skip Logic Evaluation** | *None* | ❌ **Unmapped** |
-| PRD-EDC-004 | PRD | **Cascading Dependent Nullification (Orphan Data Safeguard)** | *None* | ❌ **Unmapped** |
+| PRD-EDC-003 | PRD | **Dynamic Skip Logic Evaluation** | `test_scenario_skip_logic_and_cascading_nullification` (tests/test_edit_checks_scenarios.py) 🟢 | ✅ **Passed** |
+| PRD-EDC-004 | PRD | **Cascading Dependent Nullification (Orphan Data Safeguard)** | `test_scenario_skip_logic_and_cascading_nullification` (tests/test_edit_checks_scenarios.py) 🟢 | ✅ **Passed** |
 | PRD-EDC-005 | PRD | **Real-Time Row Ingestion and Index Tracking** | *None* | ❌ **Unmapped** |
 | PRD-EDC-006 | PRD | **Advanced Inputs (VAS and Interactive Body Maps)** | *None* | ❌ **Unmapped** |
 | PRD-EDC-007 | PRD | **Local IndexedDB Security & State Preservation** | *None* | ❌ **Unmapped** |
@@ -76,8 +76,6 @@
 
 - **PRD-EDC-001** (PRD): Spreadsheet Ingestion Sheet Structure
 - **PRD-EDC-002** (PRD): Field-Level Ingestion Validations
-- **PRD-EDC-003** (PRD): Dynamic Skip Logic Evaluation
-- **PRD-EDC-004** (PRD): Cascading Dependent Nullification (Orphan Data Safeguard)
 - **PRD-EDC-005** (PRD): Real-Time Row Ingestion and Index Tracking
 - **PRD-EDC-006** (PRD): Advanced Inputs (VAS and Interactive Body Maps)
 - **PRD-EDC-007** (PRD): Local IndexedDB Security & State Preservation
@@ -89,8 +87,6 @@
 - **PRD-MDR-007** (PRD): Logical Mapping of I/E Criteria to eCRF Fields
 - **PRD-QRY-001** (PRD): Query State Transitions and Constraints
 - **PRD-QRY-002** (PRD): Query Escalation Rules
-- **PRD-QRY-003** (PRD): Cross-Form Edit Check Execution
-- **PRD-QRY-004** (PRD): Longitudinal Validation and Repeat-Visit Logic
 - **PRD-SUB-002** (PRD): Partial Visit Query Capability on Withdrawn Subjects
 - **PRD-SUB-003** (PRD): Stratified Block Randomization
 - **PRD-SUB-004** (PRD): Dynamic Minimization Algorithm

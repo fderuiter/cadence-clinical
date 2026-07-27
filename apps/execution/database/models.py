@@ -227,6 +227,30 @@ class ClinicalSubject(AuditedModel):
         self.withdrawal_reason = reason
 
 
+class SubjectConsent(AuditedModel):
+    """Represents a subject's consent status for a specific protocol version/index.
+
+    Attributes:
+        subject_id (str): Clinical subject identifier.
+        study_id (str): Unique clinical trial study identifier.
+        version_tag (str): Semantic protocol version tag.
+        version_index (int): Chronological protocol version index.
+        icf_signed (bool): Indicates if the informed consent form is signed.
+        icf_signed_date (datetime): Chronological timestamp when the ICF was signed.
+        requires_reconsent (bool): Indicates if re-consent is required.
+    """
+
+    __tablename__ = "subject_consents"
+
+    subject_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    version_tag: Mapped[str] = mapped_column(String(50), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    icf_signed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    icf_signed_date: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    requires_reconsent: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+
 class ClinicalVisit(AuditedModel):
     """Represents a scheduled clinical event/visit for a subject.
 

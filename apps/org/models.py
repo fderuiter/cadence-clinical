@@ -10,7 +10,7 @@ import uuid
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import JSON, Boolean, DateTime, Integer, String, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -42,14 +42,22 @@ class Organization(Base):
     )
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
-    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    version_index: Mapped[int] = mapped_column(
+        Integer, primary_key=True, default=1, nullable=False
+    )
 
     # Relationships
     sites: Mapped[List["Site"]] = relationship(
-        "Site", back_populates="organization", cascade="all, delete-orphan"
+        "Site",
+        primaryjoin="Organization.id == foreign(Site.organization_id)",
+        back_populates="organization",
+        cascade="all, delete-orphan",
     )
     personnel: Mapped[List["Personnel"]] = relationship(
-        "Personnel", back_populates="organization", cascade="all, delete-orphan"
+        "Personnel",
+        primaryjoin="Organization.id == foreign(Personnel.organization_id)",
+        back_populates="organization",
+        cascade="all, delete-orphan",
     )
 
 
@@ -64,13 +72,9 @@ class Site(Base):
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
-    site_id: Mapped[str] = mapped_column(
-        String(255), nullable=False, index=True, unique=True
-    )
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    organization_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("organizations.id"), nullable=False
-    )
+    organization_id: Mapped[str] = mapped_column(String(36), nullable=False)
     study_id: Mapped[Optional[str]] = mapped_column(
         String(255), nullable=True, index=True
     )
@@ -81,11 +85,15 @@ class Site(Base):
     )
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
-    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    version_index: Mapped[int] = mapped_column(
+        Integer, primary_key=True, default=1, nullable=False
+    )
 
     # Relationships
     organization: Mapped["Organization"] = relationship(
-        "Organization", back_populates="sites"
+        "Organization",
+        primaryjoin="foreign(Site.organization_id) == remote(Organization.id)",
+        back_populates="sites",
     )
     personnel: Mapped[List["Personnel"]] = relationship(
         "Personnel",
@@ -117,14 +125,10 @@ class Personnel(Base):
     )
     first_name: Mapped[str] = mapped_column(String(100), nullable=False)
     last_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    email: Mapped[str] = mapped_column(
-        String(255), nullable=False, unique=True, index=True
-    )
+    email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     role: Mapped[str] = mapped_column(String(100), nullable=False)  # ClinicalStaffRole
 
-    organization_id: Mapped[Optional[str]] = mapped_column(
-        String(36), ForeignKey("organizations.id"), nullable=True
-    )
+    organization_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
     site_id: Mapped[Optional[str]] = mapped_column(
         String(255), nullable=True, index=True
     )
@@ -138,11 +142,15 @@ class Personnel(Base):
     )
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
-    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    version_index: Mapped[int] = mapped_column(
+        Integer, primary_key=True, default=1, nullable=False
+    )
 
     # Relationships
     organization: Mapped[Optional["Organization"]] = relationship(
-        "Organization", back_populates="personnel"
+        "Organization",
+        primaryjoin="foreign(Personnel.organization_id) == remote(Organization.id)",
+        back_populates="personnel",
     )
     site: Mapped[Optional["Site"]] = relationship(
         "Site",
@@ -166,12 +174,8 @@ class DelegationOfAuthority(Base):
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
-    delegator_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("personnel.id"), nullable=False
-    )
-    delegatee_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("personnel.id"), nullable=False
-    )
+    delegator_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    delegatee_id: Mapped[str] = mapped_column(String(36), nullable=False)
     site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
 
@@ -186,14 +190,18 @@ class DelegationOfAuthority(Base):
     )
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
-    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    version_index: Mapped[int] = mapped_column(
+        Integer, primary_key=True, default=1, nullable=False
+    )
 
     # Relationships
     delegator: Mapped["Personnel"] = relationship(
-        "Personnel", foreign_keys=[delegator_id]
+        "Personnel",
+        primaryjoin="foreign(DelegationOfAuthority.delegator_id) == Personnel.id",
     )
     delegatee: Mapped["Personnel"] = relationship(
-        "Personnel", foreign_keys=[delegatee_id]
+        "Personnel",
+        primaryjoin="foreign(DelegationOfAuthority.delegatee_id) == Personnel.id",
     )
     site: Mapped[Optional["Site"]] = relationship(
         "Site",
