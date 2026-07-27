@@ -39,3 +39,10 @@ repos:
         language: system
         files: \.md$
         pass_filenames: false
+
+      - id: check-workspace-boundaries
+        name: Verify Workspace Import Boundaries
+        entry: pnpm lint
+        language: system
+        files: \.(js|vue|mjs|py)$
+        pass_filenames: false

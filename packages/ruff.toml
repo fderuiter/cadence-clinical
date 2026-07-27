@@ -1,0 +1,5 @@
+[lint]
+select = ["TID251"]
+
+[lint.flake8-tidy-imports.banned-api]
+"apps".msg = "Domain logic packages must not import from application containers (apps/*)."

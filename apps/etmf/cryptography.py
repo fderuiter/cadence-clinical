@@ -3,10 +3,6 @@ import logging
 import re
 from typing import Any, Dict, Optional, Tuple
 
-from cryptography import x509
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
-
 logger = logging.getLogger("etmf-cryptography")
 
 
@@ -151,28 +147,15 @@ def extract_signature_from_content(
 def verify_x509_signature(
     cert_pem: str, signature_bytes: bytes, signed_data: bytes
 ) -> bool:
-    """
-    Performs active cryptographic verification of signed data using an X.509 certificate.
-    """
-    try:
-        # Load the certificate
-        cert = x509.load_pem_x509_certificate(cert_pem.encode("utf-8"))
-        public_key = cert.public_key()
+    """Performs active cryptographic verification of signed data using an X.509 certificate.
 
-        # Verify the signature using the public key
-        if isinstance(public_key, rsa.RSAPublicKey):
-            public_key.verify(
-                signature_bytes, signed_data, padding.PKCS1v15(), hashes.SHA256()
-            )
-        elif isinstance(public_key, ec.EllipticCurvePublicKey):
-            public_key.verify(signature_bytes, signed_data, ec.ECDSA(hashes.SHA256()))
-        else:
-            logger.warning("Unsupported public key type for active validation.")
-            return False
-        return True
-    except Exception as e:
-        logger.error("Active signature verification failed: %s", e)
-        return False
+    This function delegates the cryptographic verification to the centralized
+    asymmetric_verify function in packages.security.signing.
+    """
+    from packages.security.signing import asymmetric_verify
+
+    signature_b64 = base64.b64encode(signature_bytes).decode("utf-8")
+    return asymmetric_verify(signed_data, signature_b64, cert_pem)
 
 
 def validate_document_signature(

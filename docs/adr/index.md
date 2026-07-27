@@ -82,3 +82,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-09: Global Library Object Instantiation in Clinical Studies](2026-08-09-global-library-object-instantiation.md)
 - [2026-08-09: Medical Coding Engine and Query Subsystem Integration](2026-08-09-medical-coding-engine-query-integration.md)
 - [2026-08-10: Debounced Clinical Code Lookup UI Primitive](2026-08-10-debounced-clinical-code-lookup-ui-primitive.md)
+- [2026-08-11: Standardizing Workspace Boundaries and Cryptographic Verification](2026-08-11-standardizing-workspace-boundaries-and-cryptographic-verification.md)
