@@ -72,7 +72,7 @@ We need a centralized, reusable `AuditMixin` and a configurable session hook fac
 2. **`packages/database/hooks.py`**:
    - `register_audit_hooks` (aliased to `setup_audit_hooks`): Sets up a SQLAlchemy `before_flush` session event listener to:
      - Raise `ValueError` on attempted deletion of models inheriting from `AuditMixin` or existing audit log classes.
-     - Extract contextual variables (user identity, IP, change reason, timestamp) from `packages/security/context` thread-local variables.
+     - Extract contextual variables (user identity, IP, change reason, timestamp) from `packages/security/context.py` thread-local variables.
      - Automatically populate and append serialized pre/post-mutation states as `INSERT` and `UPDATE` records to the registered audit log table.
      - Auto-increment model `version_index` on updates.
 
