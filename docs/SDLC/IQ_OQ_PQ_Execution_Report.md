@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 885
-- **Passed:** 885 🟢
+- **Total Automated Test Cases Run:** 891
+- **Passed:** 891 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -409,6 +409,12 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_parse_invalid_syntax` | `tests.test_eligibility_engine` | PRD-ELIGIBILITY-004 | 🟢 PASSED | < 1s |
 | `test_parse_logical_and_nested_expressions` | `tests.test_eligibility_engine` | PRD-ELIGIBILITY-003 | 🟢 PASSED | < 1s |
 | `test_parse_simple_expressions` | `tests.test_eligibility_engine` | PRD-ELIGIBILITY-002 | 🟢 PASSED | < 1s |
+| `test_unblind_missing_sig_token` | `tests.test_emergency_unblinding` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_unblind_screening_status_error` | `tests.test_emergency_unblinding` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_unblind_subject_not_found` | `tests.test_emergency_unblinding` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_unblind_success_authorized_access` | `tests.test_emergency_unblinding` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_unblind_success_masked_access` | `tests.test_emergency_unblinding` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_unblind_withdrawn_status_error` | `tests.test_emergency_unblinding` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_automated_ingestion_and_version_indexing` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_canonical_catalog_ingestion_validations` | `tests.test_etmf` | PRD-TMF-002, PRD-TMF-003, Trace-5 | 🟢 PASSED | < 1s |
 | `test_completeness_checking_transitions` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -587,8 +593,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_ledger_sealing_and_validation` | `tests.test_ledger_and_triggers` | PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_out_of_band_update_triggers_audit_entry` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_prevent_audit_ledger_seals_mutation` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_prevent_audit_log_mutation` | `tests.test_ledger_and_triggers` | PRD-SYS-001, Trace-1 | 🟢 PASSED | < 1s |
-| `test_prevent_hard_delete_on_audited_model` | `tests.test_ledger_and_triggers` | PRD-SYS-002, Trace-1 | 🟢 PASSED | < 1s |
+| `test_prevent_audit_log_mutation` | `tests.test_ledger_and_triggers` | Trace-1, PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_prevent_hard_delete_on_audited_model` | `tests.test_ledger_and_triggers` | Trace-1, PRD-SYS-002 | 🟢 PASSED | < 1s |
 | `test_designer_gateway_auth_expired_timestamp` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_designer_gateway_auth_invalid_signature` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_designer_gateway_auth_invalid_timestamp` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
