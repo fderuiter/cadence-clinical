@@ -649,8 +649,6 @@ const newEnc = reactive({
 });
 const newProc = reactive({ id: "", name: "" });
 
-
-
 // Link Applicability States
 const linkPayload = reactive({ procedure_id: "", visit_id: "", timing: "" });
 

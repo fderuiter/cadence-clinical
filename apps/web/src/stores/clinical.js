@@ -406,7 +406,6 @@ export const useClinicalStore = defineStore("clinical", {
         weight: "70",
         height: "1.75",
         bmi_status: "Normal",
-        concept_code: "",
       },
       fieldVisibility: {},
       formQueries: savedFormQueries || {},
