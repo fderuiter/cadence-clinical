@@ -13,6 +13,7 @@ ROW_KEYS: dict[str, str] = {
     "Dependency & Static Audit": "audit",
     "Dependency, Static Audit & Secrets Scan": "audit",
     "Git Merge Conflicts": "conflict",
+    "Requirements Traceability": "trace",
 }
 
 
@@ -91,7 +92,7 @@ def merge_outcomes(
 ) -> dict[str, str]:
     """Merge newly supplied outcomes with existing ones to avoid state erasure."""
     merged: dict[str, str] = {}
-    for key in ["lint", "test", "frontend", "adr", "audit", "conflict"]:
+    for key in ["lint", "test", "frontend", "adr", "audit", "conflict", "trace"]:
         new_val = new_outcomes.get(key)
         existing_val = existing_outcomes.get(key)
 
@@ -111,6 +112,7 @@ def build_comment_body(outcomes: dict[str, str], has_failures: bool) -> str:
     emoji_frontend = get_status_emoji(outcomes.get("frontend"))
     emoji_adr = get_status_emoji(outcomes.get("adr"))
     emoji_audit = get_status_emoji(outcomes.get("audit"))
+    emoji_trace = get_status_emoji(outcomes.get("trace"))
 
     # Turn the conflict emoji into a positive "No Conflict" if it's success (Passed), or "Conflict Detected" if it's failure
     conflict_val = outcomes.get("conflict", "success").lower()
@@ -193,6 +195,7 @@ def build_comment_body(outcomes: dict[str, str], has_failures: bool) -> str:
 | **Linting & Formatting** (Ruff) | {emoji_lint} |
 | **Backend Tests & Coverage** (pytest) | {emoji_test} |
 | **Frontend Checks** (pnpm check) | {emoji_frontend} |
+| **Requirements Traceability** (generate_rtm) | {emoji_trace} |
 | **ADR Validation** (validate_adrs.py) | {emoji_adr} |
 | **Dependency, Static Audit & Secrets Scan** (pip-audit/bandit/detect-secrets) | {emoji_audit} |
 | **Git Merge Conflicts** | {emoji_conflict} |
@@ -307,6 +310,7 @@ def main() -> None:
         "adr": os.environ.get("ADR_OUTCOME", ""),
         "audit": combined_audit,
         "conflict": os.environ.get("CONFLICT_OUTCOME", ""),
+        "trace": os.environ.get("TRACE_OUTCOME", ""),
     }
 
     # Fetch existing comments to see if we have an existing checklist comment

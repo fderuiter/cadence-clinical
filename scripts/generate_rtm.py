@@ -605,6 +605,35 @@ def main():
     )
     print(f"Qualification Execution Report successfully written to {qual_out}")
 
+    # 6. Strict Coverage Check
+    import sys
+    strict_mode = (
+        "--strict" in sys.argv
+        or "--check-only" in sys.argv
+        or os.environ.get("STRICT_RTM", "").lower() in ("true", "1", "yes")
+        or os.environ.get("RTM_CHECK_ONLY", "").lower() in ("true", "1", "yes")
+    )
+    if strict_mode:
+        unmapped_list = [
+            req_id
+            for req_id in all_requirements
+            if req_id not in test_mappings or not test_mappings[req_id]
+        ]
+        if unmapped_list:
+            print(
+                f"ERROR: Requirements traceability validation failed. There are {len(unmapped_list)} unmapped requirements:"
+            )
+            for req_id in sorted(unmapped_list):
+                req = all_requirements[req_id]
+                source_doc = "SRS" if "SRS" in req["source"] else "PRD"
+                print(f"  - {req_id} ({source_doc}): {req['title']}")
+            sys.exit(1)
+        else:
+            print(
+                "SUCCESS: Requirements traceability validation passed. All requirements are mapped to tests!"
+            )
+            sys.exit(0)
+
 
 if __name__ == "__main__":
     main()

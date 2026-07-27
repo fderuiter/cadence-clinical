@@ -124,6 +124,11 @@ jobs:
           TEST_DATABASE_URL: "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"
         run: uv run pytest
 
+      - name: Run requirements traceability check
+        id: run_traceability
+        if: always()
+        run: python3 scripts/generate_rtm.py --strict
+
       - name: Post PR Quality Checklist Comment
         if: always() && github.event_name == 'pull_request'
         env:
@@ -136,6 +141,7 @@ jobs:
           AUDIT_OUTCOME: ${{ steps.run_audit.outcome }}
           STATIC_OUTCOME: ${{ steps.run_static.outcome }}
           SECRETS_OUTCOME: ${{ steps.run_secrets.outcome }}
+          TRACE_OUTCOME: ${{ steps.run_traceability.outcome }}
         run: python3 scripts/post_pr_comment.py
   classify:
     name: Classify Change

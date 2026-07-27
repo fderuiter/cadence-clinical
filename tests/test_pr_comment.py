@@ -31,6 +31,7 @@ def test_parse_existing_outcomes():
 | **Linting & Formatting** (Ruff) | ❌ Failed |
 | **Backend Tests & Coverage** (pytest) | ✅ Passed |
 | **Frontend Checks** (pnpm check) | ⚪ Skipped |
+| **Requirements Traceability** (generate_rtm) | ✅ Passed |
 | **ADR Validation** (validate_adrs.py) | ⚠️ Warning |
 | **Dependency & Static Audit** (pip-audit/bandit) | ⚪ Skip/Unknown |
 | **Git Merge Conflicts** | ❌ Conflicts Detected |
@@ -39,6 +40,7 @@ def test_parse_existing_outcomes():
     assert outcomes.get("lint") == "failure"
     assert outcomes.get("test") == "success"
     assert outcomes.get("frontend") == "skipped"
+    assert outcomes.get("trace") == "success"
     assert outcomes.get("adr") == "warning"
     assert outcomes.get("audit") == "skipped"
     assert outcomes.get("conflict") == "failure"
@@ -52,12 +54,14 @@ def test_merge_outcomes():
         "adr": "warning",
         "audit": "skipped",
         "conflict": "success",
+        "trace": "failure",
     }
     # If we run conflict check and get no conflicts, but we didn't run the others (they are empty/skipped)
     new_runs = {
         "conflict": "success",
         "lint": "",  # omitted/not run
         "test": "skipped",  # explicitly skipped
+        "trace": "",  # omitted/not run
     }
     merged = merge_outcomes(new_runs, existing)
     assert merged.get("conflict") == "success"
@@ -65,6 +69,7 @@ def test_merge_outcomes():
     assert merged.get("test") == "success"  # preserved!
     assert merged.get("frontend") == "skipped"  # preserved!
     assert merged.get("adr") == "warning"  # preserved!
+    assert merged.get("trace") == "failure"  # preserved!
 
 
 def test_combined_audit_logic():
@@ -96,11 +101,13 @@ def test_build_comment_body():
         "adr": "success",
         "audit": "success",
         "conflict": "success",
+        "trace": "success",
     }
     body = build_comment_body(outcomes, has_failures=False)
     assert "### ✅ All Quality Gates Passed Successfully" in body
     assert "✅ Passed" in body
     assert "✅ No Conflicts" in body
+    assert "**Requirements Traceability** (generate_rtm)" in body
 
     body_fail = build_comment_body(outcomes, has_failures=True)
     assert "### ⚠️ Quality Gate Alerts & Review Checklist Required" in body_fail
