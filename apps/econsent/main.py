@@ -1,8 +1,7 @@
 import os
 import uuid
-from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import AsyncGenerator, Optional
+from typing import Optional
 
 from audit import AuditFields
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -18,6 +17,7 @@ from apps.econsent.models import (
     ConsentDocument,
     ConsentTemplate,
 )
+from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.rbac import verify_not_auditor
 
@@ -197,45 +197,21 @@ class ComposedTemplateResponse(BaseModel):
 DATABASE_URL = os.getenv("ECONSENT_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """
-    Lifespan events for the eConsent microservice.
-    Initializes database manager, creates SQLite tables, and disposes resources on shutdown.
-    """
-    db_manager.init_db(DATABASE_URL)
-
-    if DATABASE_URL.startswith("sqlite"):
-        async with db_manager.engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-
-    yield
-
-    await db_manager.close()
-
-
 app = FastAPI(
     title="Cadence Clinical - eConsent",
     version="0.1.0",
-    lifespan=lifespan,
+    lifespan=get_relational_db_lifespan(
+        db_manager=db_manager,
+        database_url=DATABASE_URL,
+        base_metadata=Base.metadata,
+    ),
 )
 
 # Register secure API gateway authentication and context propagation middleware
 app.add_middleware(GatewayAuthMiddleware)
 
 
-async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
-    """
-    Dependency to yield an asynchronous database session.
-    """
-    session_maker = db_manager.get_session_maker()
-    async with session_maker() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
+get_db_session = DatabaseSessionDependency(db_manager)
 
 
 async def write_audit_log(
