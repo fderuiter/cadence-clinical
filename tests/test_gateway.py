@@ -1025,7 +1025,7 @@ def test_gateway_startup_production_with_test_secret() -> None:
 
     env = {
         "APP_ENV": "production",
-        "JWT_TEST_SECRET": "some_test_secret",
+        "JWT_TEST_SECRET": "some_test_secret",  # pragma: allowlist secret
     }
     result = subprocess.run(
         [sys.executable, "-c", "import apps.gateway.main"],
@@ -1094,7 +1094,7 @@ def test_gateway_startup_development_with_bypass_configs() -> None:
 
     env = {
         "APP_ENV": "development",
-        "JWT_TEST_SECRET": "some_secret",
+        "JWT_TEST_SECRET": "some_secret",  # pragma: allowlist secret
         "ALLOW_UNVERIFIED_JWT_FOR_TEST": "true",
         "SKIP_JWKS_FETCH": "true",
     }
