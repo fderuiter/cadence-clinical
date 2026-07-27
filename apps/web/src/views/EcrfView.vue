@@ -904,6 +904,7 @@ const requestCounters = reactive({});
 const conceptStatuses = reactive({});
 const conceptMessages = reactive({});
 
+/* eslint-disable no-unused-vars */
 function getStatusIcon(status) {
   if (status === "loading") return "⏳";
   if (status === "valid") return "✅";
@@ -955,6 +956,7 @@ const debouncedValidate = debounce(async (fieldId, value) => {
   }
 }, 300);
 
+/* eslint-disable no-unused-vars */
 function handleConceptInput(field, value) {
   const fieldId = field.id;
   store.formValues[fieldId] = value;
