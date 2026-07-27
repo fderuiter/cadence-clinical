@@ -1,11 +1,11 @@
 import json
+
 import pytest
 import yaml
 
-from apps.designer.mapper import map_study_to_usdm
 from apps.designer.inverse_mapper import map_usdm_to_study
-from apps.designer.serialization import serialize_usdm, USDMSerializationError
-from apps.designer.db import terminology_cache
+from apps.designer.mapper import map_study_to_usdm
+from apps.designer.serialization import USDMSerializationError, serialize_usdm
 
 
 def test_serialize_usdm_canonical_json():
@@ -58,7 +58,9 @@ def test_serialize_usdm_canonical_json():
     usdm_payload = map_study_to_usdm(study_data)
 
     # 2. Serialize to canonical JSON
-    serialized_json = serialize_usdm(usdm_payload, format_type="json", style="canonical", validate=True)
+    serialized_json = serialize_usdm(
+        usdm_payload, format_type="json", style="canonical", validate=True
+    )
 
     # Check that it is a valid JSON string and can be parsed
     parsed = json.loads(serialized_json)
@@ -102,7 +104,9 @@ def test_serialize_usdm_canonical_yaml():
     usdm_payload = map_study_to_usdm(study_data)
 
     # Serialize to canonical YAML
-    serialized_yaml = serialize_usdm(usdm_payload, format_type="yaml", style="canonical", validate=True)
+    serialized_yaml = serialize_usdm(
+        usdm_payload, format_type="yaml", style="canonical", validate=True
+    )
 
     # Check that it is a valid YAML and can be parsed
     parsed = yaml.safe_load(serialized_yaml)
@@ -125,10 +129,14 @@ def test_serialize_usdm_validation_errors():
     # Test pre-flight identity check during serialization
     dummy_payload = {
         "id": "",  # Empty ID
-        "name": "Valid Name"
+        "name": "Valid Name",
     }
-    with pytest.raises(USDMSerializationError, match="Study must contain a non-empty physical ID"):
-        serialize_usdm(dummy_payload, format_type="json", style="canonical", validate=False)
+    with pytest.raises(
+        USDMSerializationError, match="Study must contain a non-empty physical ID"
+    ):
+        serialize_usdm(
+            dummy_payload, format_type="json", style="canonical", validate=False
+        )
 
 
 def test_round_trip_canonical_serialization_verification():
@@ -187,7 +195,9 @@ def test_round_trip_canonical_serialization_verification():
     usdm_payload = map_study_to_usdm(original_study)
 
     # 2. Serialize to canonical JSON
-    serialized_json = serialize_usdm(usdm_payload, format_type="json", style="canonical", validate=True)
+    serialized_json = serialize_usdm(
+        usdm_payload, format_type="json", style="canonical", validate=True
+    )
 
     # 3. Parse JSON back to dictionary (this simulates clean exported artifact payload)
     clean_usdm_dict = json.loads(serialized_json)

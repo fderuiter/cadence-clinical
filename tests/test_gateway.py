@@ -219,7 +219,9 @@ def test_proxy_requests_paths(monkeypatch: pytest.MonkeyPatch) -> None:
         )
 
         # Test notifications prefix
-        res = client.get("/notifications/test", headers={"Authorization": f"Bearer {token}"})
+        res = client.get(
+            "/notifications/test", headers={"Authorization": f"Bearer {token}"}
+        )
         assert res.status_code == 200
         assert str(mock_send.call_args.args[0].url) == "http://localhost:8006/test"
 

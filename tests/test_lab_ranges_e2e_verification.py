@@ -1,19 +1,19 @@
 import hashlib
 import hmac
+import json
 import os
 import time
-import json
+
 import httpx
 import pytest
 import pytest_asyncio
-from sqlalchemy import select, update, text
+from sqlalchemy import select
 
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import (
     AuditLog,
     Base,
     ClinicalObservation,
-    LabReferenceRange,
 )
 from apps.execution.main import app
 
@@ -83,7 +83,7 @@ async def test_lab_ranges_comprehensive_e2e_workflow() -> None:
             "demographics": {
                 "name": "Jane Doe",
                 "birthdate": "1995-06-15",  # Age ~31 in 2026
-                "gender": "Female",        # Normalized to 'F'
+                "gender": "Female",  # Normalized to 'F'
             },
         }
         res_subj = await client.post(
@@ -117,7 +117,9 @@ async def test_lab_ranges_comprehensive_e2e_workflow() -> None:
         res_r_central = await client.post(
             "/api/v1/execution/lab-ranges",
             json=central_range_payload,
-            headers=get_auth_headers(roles="cra", change_reason="Adding Central Hemoglobin Range"),
+            headers=get_auth_headers(
+                roles="cra", change_reason="Adding Central Hemoglobin Range"
+            ),
         )
         assert res_r_central.status_code == 201
         central_range_id = res_r_central.json()["id"]
@@ -142,7 +144,9 @@ async def test_lab_ranges_comprehensive_e2e_workflow() -> None:
         res_r_local_gen = await client.post(
             "/api/v1/execution/lab-ranges",
             json=local_generic_payload,
-            headers=get_auth_headers(roles="cra", change_reason="Adding Local Generic Hemoglobin Range"),
+            headers=get_auth_headers(
+                roles="cra", change_reason="Adding Local Generic Hemoglobin Range"
+            ),
         )
         assert res_r_local_gen.status_code == 201
 
@@ -166,7 +170,9 @@ async def test_lab_ranges_comprehensive_e2e_workflow() -> None:
         res_r_local_site_a = await client.post(
             "/api/v1/execution/lab-ranges",
             json=local_site_a_payload,
-            headers=get_auth_headers(roles="cra", change_reason="Adding Local SITE-A Hemoglobin Range"),
+            headers=get_auth_headers(
+                roles="cra", change_reason="Adding Local SITE-A Hemoglobin Range"
+            ),
         )
         assert res_r_local_site_a.status_code == 201
         local_site_a_range_id = res_r_local_site_a.json()["id"]
@@ -186,7 +192,9 @@ async def test_lab_ranges_comprehensive_e2e_workflow() -> None:
         res_obs_a = await client.post(
             "/api/v1/execution/observations",
             json=obs_site_a_payload,
-            headers=get_auth_headers(roles="cra", change_reason="Capturing SITE-A Hemoglobin"),
+            headers=get_auth_headers(
+                roles="cra", change_reason="Capturing SITE-A Hemoglobin"
+            ),
         )
         assert res_obs_a.status_code == 200
         obs_a_data = res_obs_a.json()
@@ -195,7 +203,10 @@ async def test_lab_ranges_comprehensive_e2e_workflow() -> None:
         # 11.2 is NORMAL under local SITE-A range (11.0 - 15.0)
         assert obs_a_data["lab_indicator"] == "NORMAL"
         assert obs_a_data["lab_out_of_range"] is False
-        assert json.loads(obs_a_data["matched_normal_bounds"]) == {"low": 11.0, "high": 15.0}
+        assert json.loads(obs_a_data["matched_normal_bounds"]) == {
+            "low": 11.0,
+            "high": 15.0,
+        }
 
         # 4. Create observation for SITE-B, source LOCAL -> Must match LOCAL generic range (no site-specific range for SITE-B)
         obs_site_b_payload = {
@@ -212,14 +223,19 @@ async def test_lab_ranges_comprehensive_e2e_workflow() -> None:
         res_obs_b = await client.post(
             "/api/v1/execution/observations",
             json=obs_site_b_payload,
-            headers=get_auth_headers(roles="cra", change_reason="Capturing SITE-B Hemoglobin"),
+            headers=get_auth_headers(
+                roles="cra", change_reason="Capturing SITE-B Hemoglobin"
+            ),
         )
         assert res_obs_b.status_code == 200
         obs_b_data = res_obs_b.json()
         # 11.2 is LOW under LOCAL generic range (11.5 - 15.5)
         assert obs_b_data["lab_indicator"] == "LOW"
         assert obs_b_data["lab_out_of_range"] is True
-        assert json.loads(obs_b_data["matched_normal_bounds"]) == {"low": 11.5, "high": 15.5}
+        assert json.loads(obs_b_data["matched_normal_bounds"]) == {
+            "low": 11.5,
+            "high": 15.5,
+        }
 
         # 5. Create observation with source CENTRAL -> Must match CENTRAL range
         obs_central_payload = {
@@ -236,14 +252,19 @@ async def test_lab_ranges_comprehensive_e2e_workflow() -> None:
         res_obs_c = await client.post(
             "/api/v1/execution/observations",
             json=obs_central_payload,
-            headers=get_auth_headers(roles="cra", change_reason="Capturing Central Hemoglobin"),
+            headers=get_auth_headers(
+                roles="cra", change_reason="Capturing Central Hemoglobin"
+            ),
         )
         assert res_obs_c.status_code == 200
         obs_c_data = res_obs_c.json()
         # 11.2 is LOW under CENTRAL range (12.0 - 16.0)
         assert obs_c_data["lab_indicator"] == "LOW"
         assert obs_c_data["lab_out_of_range"] is True
-        assert json.loads(obs_c_data["matched_normal_bounds"]) == {"low": 12.0, "high": 16.0}
+        assert json.loads(obs_c_data["matched_normal_bounds"]) == {
+            "low": 12.0,
+            "high": 16.0,
+        }
 
         # 6. Verify No-Match Behavior
         # Creating an observation for a test code with no configured range
@@ -272,7 +293,9 @@ async def test_lab_ranges_comprehensive_e2e_workflow() -> None:
         # Soft delete the local site-specific range for SITE-A
         res_del = await client.delete(
             f"/api/v1/execution/lab-ranges/{local_site_a_range_id}",
-            headers=get_auth_headers(roles="cra", change_reason="Soft-deleting SITE-A range"),
+            headers=get_auth_headers(
+                roles="cra", change_reason="Soft-deleting SITE-A range"
+            ),
         )
         assert res_del.status_code == 200
         assert res_del.json()["is_deleted"] is True
@@ -293,14 +316,20 @@ async def test_lab_ranges_comprehensive_e2e_workflow() -> None:
         res_obs_a_retry = await client.post(
             "/api/v1/execution/observations",
             json=obs_site_a_retry,
-            headers=get_auth_headers(roles="cra", change_reason="Capturing SITE-A Hemoglobin after range deletion"),
+            headers=get_auth_headers(
+                roles="cra",
+                change_reason="Capturing SITE-A Hemoglobin after range deletion",
+            ),
         )
         assert res_obs_a_retry.status_code == 200
         obs_a_retry_data = res_obs_a_retry.json()
         # Falls back to local generic -> 11.2 is LOW
         assert obs_a_retry_data["lab_indicator"] == "LOW"
         assert obs_a_retry_data["lab_out_of_range"] is True
-        assert json.loads(obs_a_retry_data["matched_normal_bounds"]) == {"low": 11.5, "high": 15.5}
+        assert json.loads(obs_a_retry_data["matched_normal_bounds"]) == {
+            "low": 11.5,
+            "high": 15.5,
+        }
 
         # 8. Create additional observations to establish a statistical cohort for testing coexistence with outlier flags
         # Outlier calculation standard deviation-based needs multiple observations to calculate stats
@@ -320,7 +349,9 @@ async def test_lab_ranges_comprehensive_e2e_workflow() -> None:
             res_cohort = await client.post(
                 "/api/v1/execution/observations",
                 json=cohort_payload,
-                headers=get_auth_headers(roles="cra", change_reason="Establishing normal cohort"),
+                headers=get_auth_headers(
+                    roles="cra", change_reason="Establishing normal cohort"
+                ),
             )
             assert res_cohort.status_code == 200
             assert res_cohort.json()["is_outlier"] is False
@@ -339,7 +370,9 @@ async def test_lab_ranges_comprehensive_e2e_workflow() -> None:
         res_outlier = await client.post(
             "/api/v1/execution/observations",
             json=outlier_payload,
-            headers=get_auth_headers(roles="cra", change_reason="Capturing extreme outlier"),
+            headers=get_auth_headers(
+                roles="cra", change_reason="Capturing extreme outlier"
+            ),
         )
         assert res_outlier.status_code == 200
         outlier_data = res_outlier.json()
@@ -356,7 +389,9 @@ async def test_lab_ranges_comprehensive_e2e_workflow() -> None:
         res_upd = await client.put(
             f"/api/v1/execution/lab-ranges/{central_range_id}",
             json=update_central_payload,
-            headers=get_auth_headers(roles="cra", change_reason="Modifying CENTRAL low bound to 11.0"),
+            headers=get_auth_headers(
+                roles="cra", change_reason="Modifying CENTRAL low bound to 11.0"
+            ),
         )
         assert res_upd.status_code == 200
         assert res_upd.json()["low_bound"] == 11.0
@@ -370,7 +405,9 @@ async def test_lab_ranges_comprehensive_e2e_workflow() -> None:
         res_recalc = await client.post(
             "/api/v1/execution/lab-ranges/recalculate",
             json=recalc_payload,
-            headers=get_auth_headers(roles="cra", change_reason="Triggering recalculation post-bounds update"),
+            headers=get_auth_headers(
+                roles="cra", change_reason="Triggering recalculation post-bounds update"
+            ),
         )
         assert res_recalc.status_code == 200
         recalc_res_data = res_recalc.json()
@@ -388,7 +425,10 @@ async def test_lab_ranges_comprehensive_e2e_workflow() -> None:
             assert obs_c_db.lab_indicator == "NORMAL"
             assert obs_c_db.lab_out_of_range is False
             assert obs_c_db.version == 2
-            assert json.loads(obs_c_db.matched_normal_bounds) == {"low": 11.0, "high": 16.0}
+            assert json.loads(obs_c_db.matched_normal_bounds) == {
+                "low": 11.0,
+                "high": 16.0,
+            }
 
             # Check that is_outlier remains untouched/coexisting correctly
             stmt_outlier = select(ClinicalObservation).where(

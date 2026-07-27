@@ -8,8 +8,8 @@
 ---
 
 ## 1. Context & Problem Statement
-To ensure continuous audit-readiness in compliance with 21 CFR Part 11 and GxP standards, the Cadence Clinical Platform requires automated generation of SDLC reports, including the Requirements Traceability Matrix (RTM) and Qualification Execution reports. 
-However, non-deterministic file traversal and environment-dependent package listing (e.g., active pip environment scans) resulted in false-positive git diff failures in CI pipelines. 
+To ensure continuous audit-readiness in compliance with 21 CFR Part 11 and GxP standards, the Cadence Clinical Platform requires automated generation of SDLC reports, including the Requirements Traceability Matrix (RTM) and Qualification Execution reports.
+However, non-deterministic file traversal and environment-dependent package listing (e.g., active pip environment scans) resulted in false-positive git diff failures in CI pipelines.
 Additionally, the signature verification fallback logic in `packages/security/signing.py` contained broken/incomplete syntax fragments causing overall linting and parser check failures.
 
 ## 2. Decision Drivers & Constraints

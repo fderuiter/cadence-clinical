@@ -2,18 +2,13 @@ import hashlib
 import hmac
 import json
 import time
-import pytest
+
 import httpx
+import pytest
 
 from apps.designer.db import (
-    MOCK_STUDIES,
-    MOCK_STUDY_VERSIONS,
     MOCK_ELIGIBILITY_CRITERIA,
-)
-from apps.designer.delta import (
-    create_eligibility_criterion,
-    update_eligibility_criterion,
-    get_eligibility_criteria_from_graph,
+    MOCK_STUDY_VERSIONS,
 )
 from apps.designer.main import app
 
@@ -117,7 +112,10 @@ async def test_eligibility_criteria_crud_endpoints():
         assert updated_data["criterion_id"] == "INC_01"
         assert updated_data["dsl_source"] == "eCRF.DM.AGE >= 21"
         assert updated_data["version_index"] == 2
-        assert updated_data["reason_for_change"] == "Updating minimum age requirement to 21"
+        assert (
+            updated_data["reason_for_change"]
+            == "Updating minimum age requirement to 21"
+        )
 
 
 @pytest.mark.asyncio
@@ -153,13 +151,17 @@ async def test_eligibility_criteria_immutability():
 
     # Freeze the study version
     from apps.designer.db import create_mock_study_version
-    create_mock_study_version("study_1", {
-        "id": "v1_frozen",
-        "version_tag": "1.0",
-        "status": "LOCKED",
-        "version_index": 1,
-        "created_by": "test_designer",
-    })
+
+    create_mock_study_version(
+        "study_1",
+        {
+            "id": "v1_frozen",
+            "version_tag": "1.0",
+            "status": "LOCKED",
+            "version_index": 1,
+            "created_by": "test_designer",
+        },
+    )
 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"

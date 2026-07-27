@@ -13,8 +13,8 @@ import pytest
 from pydantic import ValidationError
 
 from apps.execution.rtsm_allocation import (
-    RTSMAllocator,
     RandomizationConfigSchema,
+    RTSMAllocator,
     generate_canonical_stratum_key,
 )
 
@@ -132,12 +132,18 @@ def test_canonical_stratum_key_generation():
     assert key1 == key2
 
     # 3. Missing factor in subject factors raises ValueError
-    with pytest.raises(ValueError, match="Missing required stratification factor value"):
+    with pytest.raises(
+        ValueError, match="Missing required stratification factor value"
+    ):
         generate_canonical_stratum_key({"gender": "M"}, ["gender", "age_group"])
 
     # 4. None value for factor raises ValueError
-    with pytest.raises(ValueError, match="Missing required stratification factor value"):
-        generate_canonical_stratum_key({"gender": "M", "age_group": None}, ["gender", "age_group"])
+    with pytest.raises(
+        ValueError, match="Missing required stratification factor value"
+    ):
+        generate_canonical_stratum_key(
+            {"gender": "M", "age_group": None}, ["gender", "age_group"]
+        )
 
 
 def test_block_allocation_mechanics():
@@ -207,19 +213,23 @@ def test_stratified_block_isolation():
     allocator = RTSMAllocator(config)
 
     # Stratum 1: gender=M
-    res_m = allocator.allocate(subject_factors={"gender": "M"}, sequence=None, block_index=0)
+    res_m = allocator.allocate(
+        subject_factors={"gender": "M"}, sequence=None, block_index=0
+    )
     assert res_m["stratum_key"] == "gender=M"
     seq_m = res_m["updated_sequence"]
     idx_m = res_m["updated_block_index"]
 
     # Stratum 2: gender=F (has completely separate sequence and index, should not interfere with M)
-    res_f = allocator.allocate(subject_factors={"gender": "F"}, sequence=None, block_index=0)
+    res_f = allocator.allocate(
+        subject_factors={"gender": "F"}, sequence=None, block_index=0
+    )
     assert res_f["stratum_key"] == "gender=F"
-    seq_f = res_f["updated_sequence"]
-    idx_f = res_f["updated_block_index"]
 
     # Continue allocating for gender=M using its own sequence
-    res_m2 = allocator.allocate(subject_factors={"gender": "M"}, sequence=seq_m, block_index=idx_m)
+    res_m2 = allocator.allocate(
+        subject_factors={"gender": "M"}, sequence=seq_m, block_index=idx_m
+    )
     assert res_m2["updated_block_index"] == 2
     assert res_m2["updated_sequence"] == seq_m
 
@@ -268,7 +278,9 @@ def test_minimization_imbalance_and_biased_coin():
     # - age_group=GE_65: Arm A is 0, Arm B count becomes 3. Imbalance Range = 3.
     # Total Arm B imbalance score = 4
     # Preferred arm is Arm A (score 2 < 4). Since p_preferred = 1.0, it MUST allocate Arm A!
-    res2 = allocator.allocate(subject_factors=new_subject, previous_allocations=previous)
+    res2 = allocator.allocate(
+        subject_factors=new_subject, previous_allocations=previous
+    )
     assert res2["allocation"] == "Arm A"
 
 
