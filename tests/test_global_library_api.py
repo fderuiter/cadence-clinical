@@ -607,3 +607,182 @@ async def test_instantiate_library_object_inaccessible_study():
         # Should be rejected with 403 Forbidden because study belongs to spon_active, which is inaccessible to spon_pharma
         assert res_inst.status_code == 403
         assert "Target study is inaccessible" in res_inst.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_library_instance_updates_and_inheritance_diffs():
+    """
+    Acceptance Criteria Tests:
+    1. Identifies added, removed, and changed fields with source and instance values.
+    2. A newly instantiated, unmodified object has an empty diff.
+    3. Updating the instance records only its override data and leaves the source immutable.
+    4. Covers scalar, nested, and collection payload differences.
+    """
+    from apps.designer.db import MOCK_STUDIES
+
+    # Setup study and source object in mock
+    MOCK_STUDIES["study_test_diffs"] = {
+        "study_id": "study_test_diffs",
+        "title": "Oncology Study with Diffs",
+        "sponsor_id": "spon_pharma",
+    }
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        headers = get_auth_headers(sponsor_id="spon_pharma")
+
+        # 1. Create source library object with complex payload (scalar, nested, collections)
+        form_payload = {
+            "id": "lib_complex_form",
+            "version": "1.0.0",
+            "status": "APPROVED",
+            "sponsor_id": "spon_pharma",
+            "change_reason": "Create complex form blueprint",
+            "object_type": "FORM",
+            "payload": {
+                "items": [
+                    {
+                        "item_id": "item_age",
+                        "name": "AGE",
+                        "question_text": "How old are you?",
+                        "data_type": "integer",
+                        "required": True,
+                    },
+                    {
+                        "item_id": "item_sex",
+                        "name": "SEX",
+                        "question_text": "What is your sex?",
+                        "data_type": "text",
+                        "required": False,
+                    },
+                ]
+            },
+        }
+
+        res_create = await client.post(
+            "/api/v1/mdr/library",
+            json=form_payload,
+            headers=headers,
+        )
+        assert res_create.status_code == 201
+
+        # 2. Instantiate unmodified object inside study
+        inst_payload = {"library_object_id": "lib_complex_form"}
+        res_inst = await client.post(
+            "/api/v1/studies/study_test_diffs/library-instances",
+            json=inst_payload,
+            headers=headers,
+        )
+        assert res_inst.status_code == 201
+        inst_data = res_inst.json()
+        instance_id = inst_data["id"]
+
+        # 3. Newly instantiated, unmodified object MUST have an empty diff
+        res_diff_unmodified = await client.get(
+            f"/api/v1/studies/study_test_diffs/library-instances/{instance_id}/diff",
+            headers=headers,
+        )
+        assert res_diff_unmodified.status_code == 200
+        assert res_diff_unmodified.json() == []  # Empty diff!
+
+        # 4. Perform an update (overrides) to the instance payload:
+        # - "custom_title": "Subject Demographics" (Scalar added)
+        # - "nested_custom.allow_skip": True (Nested added)
+        # - "nested_custom.additional_key": "custom" (Nested added)
+        # - "items.[0].question_text": "Please enter your age:" (Scalar changed inside collection)
+        # - "items.[1].item_id": "item_weight" (Scalar changed inside collection)
+        # - "items.[1].name": "WEIGHT" (Scalar changed inside collection)
+        # - "items.[1].question_text": "Body Weight" (Scalar changed inside collection)
+        # - "items.[1].data_type": "numeric" (Scalar changed inside collection)
+        # - "items.[1].required": True (Scalar changed inside collection)
+        updated_payload = {
+            "payload": {
+                "custom_title": "Subject Demographics",
+                "nested_custom": {
+                    "allow_skip": True,
+                    "additional_key": "custom",
+                },
+                "items": [
+                    {
+                        "item_id": "item_age",
+                        "name": "AGE",
+                        "question_text": "Please enter your age:",
+                        "data_type": "integer",
+                        "required": True,
+                    },
+                    {
+                        "item_id": "item_weight",
+                        "name": "WEIGHT",
+                        "question_text": "Body Weight",
+                        "data_type": "numeric",
+                        "required": True,
+                    },
+                ],
+            }
+        }
+
+        res_update = await client.put(
+            f"/api/v1/studies/study_test_diffs/library-instances/{instance_id}",
+            json=updated_payload,
+            headers=headers,
+        )
+        assert res_update.status_code == 200
+        up_instance_data = res_update.json()
+        assert up_instance_data["payload"]["custom_title"] == "Subject Demographics"
+
+        # 5. Verify the source remains completely immutable
+        # Let's fetch the original library object source and confirm its payload is unmodified
+        res_source = await client.get(
+            "/api/v1/mdr/library/lib_complex_form?version=1",
+            headers=headers,
+        )
+        assert res_source.status_code == 200
+        source_data = res_source.json()
+        assert source_data["payload"]["items"][0]["question_text"] == "How old are you?"
+        assert len(source_data["payload"]["items"]) == 2
+
+        # 6. Retrieve inheritance diff view and analyze added, removed, and changed fields
+        res_diff_modified = await client.get(
+            f"/api/v1/studies/study_test_diffs/library-instances/{instance_id}/diff",
+            headers=headers,
+        )
+        assert res_diff_modified.status_code == 200
+        diffs = res_diff_modified.json()
+
+        # Let's map diffs by field name for verification
+        diff_map = {d["field"]: d for d in diffs}
+
+        # Check scalar added
+        assert "custom_title" in diff_map
+        assert diff_map["custom_title"]["old_value"] is None
+        assert diff_map["custom_title"]["new_value"] == "Subject Demographics"
+
+        # Check nested added
+        assert "nested_custom.allow_skip" in diff_map
+        assert diff_map["nested_custom.allow_skip"]["old_value"] is None
+        assert diff_map["nested_custom.allow_skip"]["new_value"] is True
+
+        assert "nested_custom.additional_key" in diff_map
+        assert diff_map["nested_custom.additional_key"]["old_value"] is None
+        assert diff_map["nested_custom.additional_key"]["new_value"] == "custom"
+
+        # Check collection item changed
+        assert "items.[0].question_text" in diff_map
+        assert diff_map["items.[0].question_text"]["old_value"] == "How old are you?"
+        assert (
+            diff_map["items.[0].question_text"]["new_value"] == "Please enter your age:"
+        )
+
+        # Check list item modification differences
+        assert "items.[1].item_id" in diff_map
+        assert diff_map["items.[1].item_id"]["old_value"] == "item_sex"
+        assert diff_map["items.[1].item_id"]["new_value"] == "item_weight"
+
+        assert "items.[1].name" in diff_map
+        assert diff_map["items.[1].name"]["old_value"] == "SEX"
+        assert diff_map["items.[1].name"]["new_value"] == "WEIGHT"
+
+        assert "items.[1].data_type" in diff_map
+        assert diff_map["items.[1].data_type"]["old_value"] == "text"
+        assert diff_map["items.[1].data_type"]["new_value"] == "numeric"

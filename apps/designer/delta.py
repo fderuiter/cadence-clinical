@@ -3158,3 +3158,213 @@ async def instantiate_library_object_in_study(
                 "sponsor_id": source_props.get("sponsor_id"),
             }
             return instance_props
+
+
+@with_transaction_retry()
+async def update_library_instance_in_study(
+    driver,
+    study_id: str,
+    instance_id: str,
+    payload: Dict[str, Any],
+    sponsor_id: str,
+    user_id: str,
+) -> Dict[str, Any]:
+    """
+    Updates the payload of a study-scoped library instance.
+    Leaves the parent library object completely immutable.
+    """
+    import copy
+
+    # 1. Fetch target study to verify existence and sponsor ownership
+    study = await check_study_exists_any_sponsor(driver, study_id)
+    if not study:
+        raise ValueError(f"Study {study_id} not found.")
+
+    study_sponsor_id = study.get("sponsor_id")
+    if study_sponsor_id and study_sponsor_id != sponsor_id:
+        raise PermissionError("Target study is inaccessible (cross-sponsor).")
+
+    if driver is None:
+        instances = MOCK_LIBRARY_INSTANCES.get(study_id, [])
+        target_instance = None
+        for inst in instances:
+            if inst["id"] == instance_id:
+                target_instance = inst
+                break
+        if not target_instance:
+            raise ValueError(
+                f"Library instance {instance_id} not found in study {study_id}."
+            )
+
+        # Update the payload
+        target_instance["payload"] = copy.deepcopy(payload)
+        target_instance["updated_at"] = dt.datetime.now().isoformat()
+        target_instance["updated_by"] = user_id
+        return target_instance
+
+    # Neo4j implementation
+    import json
+
+    async with driver.session() as session:
+        tx = await session.begin_transaction()
+        async with tx:
+            # Find target instance under study
+            find_query = """
+            MATCH (s:Study {id: $study_id})-[:HAS_LIBRARY_INSTANCE]->(instance:LibraryObjectInstance {id: $instance_id})
+            RETURN properties(instance) as instance_props
+            """
+            res = await tx.run(find_query, study_id=study_id, instance_id=instance_id)
+            record = await res.single()
+            if not record:
+                raise ValueError(
+                    f"Library instance {instance_id} not found in study {study_id}."
+                )
+
+            # Update instance's payload_json
+            update_query = """
+            MATCH (s:Study {id: $study_id})-[:HAS_LIBRARY_INSTANCE]->(instance:LibraryObjectInstance {id: $instance_id})
+            SET instance.payload_json = $payload_json,
+                instance.updated_at = datetime(),
+                instance.updated_by = $user_id
+
+            WITH instance
+            OPTIONAL MATCH (instance)-[:INSTANTIATED_FROM]->(lo:LibraryObject)
+            RETURN properties(instance) as instance_props, properties(lo) as source_props
+            """
+            payload_json = json.dumps(payload)
+            res_update = await tx.run(
+                update_query,
+                study_id=study_id,
+                instance_id=instance_id,
+                payload_json=payload_json,
+                user_id=user_id,
+            )
+            record_update = await res_update.single()
+            if not record_update:
+                raise ValueError("Failed to update library instance.")
+
+            instance_props = dict(record_update["instance_props"])
+            source_props = record_update["source_props"]
+
+            # Deserialization of payload
+            instance_props["payload"] = payload
+            instance_props.pop("payload_json", None)
+
+            if "created_at" in instance_props and not isinstance(
+                instance_props["created_at"], str
+            ):
+                if hasattr(instance_props["created_at"], "isoformat"):
+                    instance_props["created_at"] = instance_props[
+                        "created_at"
+                    ].isoformat()
+                else:
+                    instance_props["created_at"] = str(instance_props["created_at"])
+
+            if "updated_at" in instance_props and not isinstance(
+                instance_props["updated_at"], str
+            ):
+                if hasattr(instance_props["updated_at"], "isoformat"):
+                    instance_props["updated_at"] = instance_props[
+                        "updated_at"
+                    ].isoformat()
+                else:
+                    instance_props["updated_at"] = str(instance_props["updated_at"])
+
+            if source_props:
+                source_props = dict(source_props)
+                instance_props["instantiated_from"] = {
+                    "library_object_id": source_props.get("id"),
+                    "version": source_props.get("version"),
+                    "sponsor_id": source_props.get("sponsor_id"),
+                }
+            else:
+                instance_props["instantiated_from"] = None
+
+            return instance_props
+
+
+async def get_library_instance_in_study(
+    driver,
+    study_id: str,
+    instance_id: str,
+    sponsor_id: str,
+) -> Dict[str, Any]:
+    """
+    Retrieves a study-scoped library instance and its linked source metadata.
+    """
+    # Verify target study to check sponsor ownership
+    study = await check_study_exists_any_sponsor(driver, study_id)
+    if not study:
+        raise ValueError(f"Study {study_id} not found.")
+
+    study_sponsor_id = study.get("sponsor_id")
+    if study_sponsor_id and study_sponsor_id != sponsor_id:
+        raise PermissionError("Target study is inaccessible (cross-sponsor).")
+
+    if driver is None:
+        instances = MOCK_LIBRARY_INSTANCES.get(study_id, [])
+        target_instance = None
+        for inst in instances:
+            if inst["id"] == instance_id:
+                target_instance = inst
+                break
+        if not target_instance:
+            raise ValueError(
+                f"Library instance {instance_id} not found in study {study_id}."
+            )
+        return target_instance
+
+    # Neo4j implementation
+    import json
+
+    async with driver.session() as session:
+        query = """
+        MATCH (s:Study {id: $study_id})-[:HAS_LIBRARY_INSTANCE]->(instance:LibraryObjectInstance {id: $instance_id})
+        OPTIONAL MATCH (instance)-[:INSTANTIATED_FROM]->(lo:LibraryObject)
+        RETURN properties(instance) as instance_props, properties(lo) as source_props
+        """
+        res = await session.run(query, study_id=study_id, instance_id=instance_id)
+        record = await res.single()
+        if not record:
+            raise ValueError(
+                f"Library instance {instance_id} not found in study {study_id}."
+            )
+
+        instance_props = dict(record["instance_props"])
+        source_props = record["source_props"]
+
+        # Deserialization of payload
+        if "payload_json" in instance_props:
+            try:
+                instance_props["payload"] = json.loads(instance_props["payload_json"])
+            except Exception:
+                instance_props["payload"] = {}
+            instance_props.pop("payload_json", None)
+
+        if "created_at" in instance_props and not isinstance(
+            instance_props["created_at"], str
+        ):
+            if hasattr(instance_props["created_at"], "isoformat"):
+                instance_props["created_at"] = instance_props["created_at"].isoformat()
+            else:
+                instance_props["created_at"] = str(instance_props["created_at"])
+
+        if "updated_at" in instance_props and not isinstance(
+            instance_props["updated_at"], str
+        ):
+            if hasattr(instance_props["updated_at"], "isoformat"):
+                instance_props["updated_at"] = instance_props["updated_at"].isoformat()
+            else:
+                instance_props["updated_at"] = str(instance_props["updated_at"])
+
+        if source_props:
+            source_props = dict(source_props)
+            instance_props["instantiated_from"] = {
+                "library_object_id": source_props.get("id"),
+                "version": source_props.get("version"),
+                "sponsor_id": source_props.get("sponsor_id"),
+            }
+        else:
+            instance_props["instantiated_from"] = None
+
+        return instance_props

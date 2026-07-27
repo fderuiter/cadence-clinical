@@ -41,6 +41,7 @@ from apps.designer.delta import (
     create_visit,
     delete_rule_node,
     get_latest_library_object,
+    get_library_instance_in_study,
     get_library_object_by_version,
     get_library_object_history,
     get_rules_from_graph,
@@ -52,6 +53,7 @@ from apps.designer.delta import (
     link_visit_to_procedure,
     list_library_objects,
     update_epoch,
+    update_library_instance_in_study,
     update_procedure,
     update_rule_node,
     update_study_arm,
@@ -2262,3 +2264,164 @@ async def instantiate_library_object_endpoint(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=err_msg,
         )
+
+
+class UpdateLibraryInstanceRequest(BaseModel):
+    payload: Dict[str, Any] = Field(
+        ..., description="The complete updated payload of the library instance."
+    )
+
+
+@app.put(
+    "/api/v1/studies/{study_id}/library-instances/{instance_id}",
+    response_model=LibraryInstanceResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def update_library_instance_endpoint(
+    study_id: str,
+    instance_id: str,
+    payload: UpdateLibraryInstanceRequest,
+    request: Request,
+) -> LibraryInstanceResponse:
+    """
+    Updates the payload of an instantiated library object inside a study.
+    Verifies that target study belongs to or is accessible by the authenticated sponsor,
+    leaving the global library source immutable.
+    """
+    driver = await get_neo4j_driver(request)
+
+    # 1. Retrieve sponsor scope & user id
+    sponsor_id = getattr(request.state, "sponsor_id", None) or request.headers.get(
+        "X-Sponsor-Id"
+    )
+    if not sponsor_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Missing authenticated sponsor scope",
+        )
+
+    user_id = getattr(request.state, "user_id", "system")
+
+    # 2. Call delta manager to apply payload updates
+    try:
+        updated_instance = await update_library_instance_in_study(
+            driver=driver,
+            study_id=study_id,
+            instance_id=instance_id,
+            payload=payload.payload,
+            sponsor_id=sponsor_id,
+            user_id=user_id,
+        )
+        return LibraryInstanceResponse(**updated_instance)
+    except PermissionError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e),
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+
+
+@app.get(
+    "/api/v1/studies/{study_id}/library-instances/{instance_id}/diff",
+    response_model=List[DifferenceResult],
+    status_code=status.HTTP_200_OK,
+)
+async def get_library_instance_diff_endpoint(
+    study_id: str,
+    instance_id: str,
+    request: Request,
+) -> List[DifferenceResult]:
+    """
+    Returns field-level dot-notated differences between the library instance payload and its linked source version.
+    """
+    driver = await get_neo4j_driver(request)
+
+    sponsor_id = getattr(request.state, "sponsor_id", None) or request.headers.get(
+        "X-Sponsor-Id"
+    )
+    if not sponsor_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Missing authenticated sponsor scope",
+        )
+
+    try:
+        instance = await get_library_instance_in_study(
+            driver=driver,
+            study_id=study_id,
+            instance_id=instance_id,
+            sponsor_id=sponsor_id,
+        )
+    except PermissionError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e),
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+
+    inst_from = instance.get("instantiated_from")
+    if not inst_from:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Instance does not have a linked source library object.",
+        )
+
+    source_obj_id = inst_from.get("library_object_id")
+    source_version = inst_from.get("version")
+    source_sponsor_id = inst_from.get("sponsor_id")
+
+    source_obj = await get_library_object_by_version(
+        driver=driver,
+        object_id=source_obj_id,
+        sponsor_id=source_sponsor_id,
+        version=source_version,
+    )
+    if not source_obj:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Source library object {source_obj_id} version {source_version} not found.",
+        )
+
+    source_payload = source_obj.get("payload") or {}
+    instance_payload = instance.get("payload") or {}
+
+    def flatten_dict(d: Any, parent_key: str = "", sep: str = ".") -> Dict[str, Any]:
+        """
+        Recursively flatten a nested dictionary or list into a flat dictionary.
+        """
+        items: List[Tuple[str, Any]] = []
+        if isinstance(d, dict):
+            for k, v in d.items():
+                new_key = f"{parent_key}{sep}{k}" if parent_key else k
+                items.extend(flatten_dict(v, new_key, sep=sep).items())
+        elif isinstance(d, list):
+            for i, v in enumerate(d):
+                new_key = f"{parent_key}{sep}[{i}]" if parent_key else f"[{i}]"
+                items.extend(flatten_dict(v, new_key, sep=sep).items())
+        else:
+            items.append((parent_key, d))
+        return dict(items)
+
+    flat_source = flatten_dict(source_payload)
+    flat_instance = flatten_dict(instance_payload)
+
+    all_keys = set(flat_source.keys()).union(set(flat_instance.keys()))
+    differences = []
+
+    for key in sorted(all_keys):
+        val1 = flat_source.get(key)
+        val2 = flat_instance.get(key)
+        if val1 != val2:
+            differences.append(
+                DifferenceResult(field=key, old_value=val1, new_value=val2)
+            )
+
+    return differences
