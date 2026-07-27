@@ -250,9 +250,9 @@ def pytest_sessionfinish(session, exitstatus):
     Hook to run after the test session finishes to generate/update the
     Requirements Traceability Matrix (RTM) and GxP Qualification Report.
     """
+    import os
     import subprocess
     import sys
-    import os
 
     print(
         "\n--- Running Automated Requirements Traceability Matrix (RTM) Generator ---"

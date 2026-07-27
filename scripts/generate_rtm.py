@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 import argparse
-from datetime import datetime, timezone
 import os
 import re
 import subprocess
 import xml.etree.ElementTree as ET
+from datetime import datetime, timezone
 
 
 def get_stable_timestamp():
