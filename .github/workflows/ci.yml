@@ -11,58 +11,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
-    name: Test and Coverage
+  style:
+    name: Style and Lint Verification
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write
-    services:
-      postgres:
-        image: postgres:15-alpine
-        env:
-          POSTGRES_USER: cadence
-          POSTGRES_PASSWORD: cadence_password
-          POSTGRES_DB: cadence_edc
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
+    outputs:
+      linting_outcome: ${{ steps.run_linting.outcome }}
+      frontend_outcome: ${{ steps.run_frontend.outcome }}
+      adr_outcome: ${{ steps.run_adr.outcome }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
           persist-credentials: false
           fetch-depth: 0
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v3
-        with:
-          enable-cache: false
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: uv sync --all-extras
-
-      # Playwright browsers must be installed before running pnpm check.
-      # This is because pnpm check executes the full pytest suite (including layout validators),
-      # which requires chromium to be available.
-      - name: Install Playwright Browsers
-        run: |
-          for i in {1..3}; do
-            uv run playwright install chromium --with-deps && break || {
-              echo "Playwright install failed on attempt $i, retrying in 10s..."
-              sleep 10
-            }
-          done
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -78,10 +41,23 @@ jobs:
       - name: Install Node dependencies
         run: pnpm install
 
-      - name: Run frontend checks
+      - name: Run frontend style and lint
         id: run_frontend
         if: always()
-        run: pnpm -r format && pnpm -r lint && pnpm -r test
+        run: pnpm -r format && pnpm -r lint
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: uv sync --all-extras
 
       - name: Run markdown link verification
         id: run_link_check
@@ -99,23 +75,6 @@ jobs:
         id: run_adr
         if: always()
         run: python3 scripts/validate_adrs.py
-
-      - name: Run static analysis
-        id: run_static
-        if: always()
-        run: uv run bandit -c pyproject.toml -ll -ii -r apps packages
-
-      - name: Run dependency audit
-        id: run_audit
-        if: always()
-        run: python3 scripts/validate_vulnerabilities.py
-
-      - name: Run secret detection
-        id: run_secrets
-        if: always()
-        run: |
-          git add .secrets.baseline
-          uv run pre-commit run detect-secrets --all-files
 
       - name: Run code duplication verification
         id: run_duplication
@@ -140,21 +99,234 @@ jobs:
             fi
           fi
 
-      - name: Run tests and coverage
+  security:
+    name: Security and Vulnerability Audit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      audit_outcome: ${{ steps.run_audit.outcome }}
+      static_outcome: ${{ steps.run_static.outcome }}
+      secrets_outcome: ${{ steps.run_secrets.outcome }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Run static analysis
+        id: run_static
+        if: always()
+        run: uv run bandit -c pyproject.toml -ll -ii -r apps packages
+
+      - name: Run dependency audit
+        id: run_audit
+        if: always()
+        run: python3 scripts/validate_vulnerabilities.py
+
+      - name: Run secret detection
+        id: run_secrets
+        if: always()
+        run: |
+          git add .secrets.baseline
+          uv run pre-commit run detect-secrets --all-files
+
+  unit-tests:
+    name: Frontend & Backend Unit Tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: cadence
+          POSTGRES_PASSWORD: cadence_password
+          POSTGRES_DB: cadence_edc
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    outputs:
+      test_outcome: ${{ steps.run_tests.outcome }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install Node dependencies
+        run: pnpm install
+
+      - name: Run frontend unit tests
+        run: pnpm -r test
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Run backend unit tests and coverage
         id: run_tests
         if: always()
         env:
           TEST_DATABASE_URL: "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"
-        run: uv run pytest --junitxml=report.xml
+        run: uv run pytest --ignore=tests/test_layout_validator.py --junitxml=report-unit.xml
+
+      - name: Upload unit test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-report-unit
+          path: report-unit.xml
+
+  integration-tests:
+    name: Playwright Integration Tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: cadence
+          POSTGRES_PASSWORD: cadence_password
+          POSTGRES_DB: cadence_edc
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    outputs:
+      test_outcome: ${{ steps.run_tests.outcome }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Install Playwright Browsers
+        run: |
+          for i in {1..3}; do
+            uv run playwright install chromium --with-deps && break || {
+              echo "Playwright install failed on attempt $i, retrying in 10s..."
+              sleep 10
+            }
+          done
+
+      - name: Run backend integration tests
+        id: run_tests
+        if: always()
+        env:
+          TEST_DATABASE_URL: "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"
+        run: uv run pytest tests/test_layout_validator.py --no-cov --junitxml=report-integration.xml
+
+      - name: Upload integration test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-report-integration
+          path: report-integration.xml
+
+  compliance:
+    name: GxP Compliance & Qualification Reporting
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests]
+    if: always() && needs.unit-tests.outputs.test_outcome == 'success' && needs.integration-tests.outputs.test_outcome == 'success'
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Download Unit Test Report
+        uses: actions/download-artifact@v4
+        with:
+          name: junit-report-unit
+          path: .
+
+      - name: Download Integration Test Report
+        uses: actions/download-artifact@v4
+        with:
+          name: junit-report-integration
+          path: .
+
+      - name: Merge JUnit XML Reports
+        run: python3 scripts/merge_junit.py report.xml report-unit.xml report-integration.xml
 
       - name: Generate Compliance Reports
-        id: generate_reports
-        if: always() && steps.run_tests.outcome == 'success'
         run: uv run python scripts/generate_rtm.py
 
       - name: Assert No Documentation Git Diff
-        id: assert_no_diff
-        if: always() && steps.generate_reports.outcome == 'success'
         run: |
           echo "==== Comparing freshly generated reports against checked-in files ===="
           git diff --exit-code docs/SDLC/Requirements_Traceability_Matrix.md docs/SDLC/IQ_OQ_PQ_Execution_Report.md || {
@@ -163,18 +335,32 @@ jobs:
             exit 1
           }
 
-      - name: Post PR Quality Checklist Comment
-        if: always() && github.event_name == 'pull_request'
+  comment:
+    name: Post PR Quality Checklist Comment
+    if: always() && github.event_name == 'pull_request'
+    needs: [style, security, unit-tests, integration-tests]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Post PR Comment
         env:
-          GH_TOKEN: ${{ secrets.PAT_FDERUITER }}
-          PR_NUMBER: ${{ github.event.pull_request && github.event.pull_request.number || '' }}
-          LINTING_OUTCOME: ${{ steps.run_linting.outcome }}
-          TEST_OUTCOME: ${{ steps.run_tests.outcome }}
-          FRONTEND_OUTCOME: ${{ steps.run_frontend.outcome }}
-          ADR_OUTCOME: ${{ steps.run_adr.outcome }}
-          AUDIT_OUTCOME: ${{ steps.run_audit.outcome }}
-          STATIC_OUTCOME: ${{ steps.run_static.outcome }}
-          SECRETS_OUTCOME: ${{ steps.run_secrets.outcome }}
+          GH_TOKEN: ${{ secrets.PAT_FDERUITER || secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          LINTING_OUTCOME: ${{ needs.style.outputs.linting_outcome }}
+          TEST_OUTCOME: ${{ (needs.unit-tests.outputs.test_outcome == 'success' && needs.integration-tests.outputs.test_outcome == 'success') && 'success' || 'failure' }}
+          FRONTEND_OUTCOME: ${{ needs.style.outputs.frontend_outcome }}
+          ADR_OUTCOME: ${{ needs.style.outputs.adr_outcome }}
+          AUDIT_OUTCOME: ${{ needs.security.outputs.audit_outcome }}
+          STATIC_OUTCOME: ${{ needs.security.outputs.static_outcome }}
+          SECRETS_OUTCOME: ${{ needs.security.outputs.secrets_outcome }}
         run: python3 scripts/post_pr_comment.py
   classify:
     name: Classify Change
@@ -224,7 +410,7 @@ jobs:
 
   automerge:
     name: Approve and Automerge
-    needs: [classify, test]
+    needs: [classify, style, security, unit-tests, integration-tests, compliance]
     if: github.event_name == 'pull_request' && needs.classify.outputs.is_safe == 'true'
     runs-on: ubuntu-latest
     permissions:
