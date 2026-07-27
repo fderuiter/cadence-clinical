@@ -18,6 +18,12 @@ from apps.interop.models import (
     InteropAuditLog,
     SubjectAssignment,
 )
+from apps.interop.sync_engine import (
+    SyncMetadata,
+    SyncRecord,
+    get_signature_payload,
+)
+from packages.security.signing import generate_canonical_signature
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -290,3 +296,287 @@ async def test_structural_conflict_on_missing_target():
         assert audit_entry is not None
         assert audit_entry.change_reason == "SYSTEM SYNC EXCEPTION TRIGGERED"
         assert "missing or deleted" in audit_entry.details
+
+
+@pytest.mark.asyncio
+async def test_submit_with_valid_signature():
+    """
+    Test submitting an ePRO diary with a valid cryptographic signature.
+    The response should propagate the valid signature validation status and reconciliation result.
+    """
+    async_session = db_manager.get_session_maker()
+    async with async_session() as session:
+        inst = Instrument(
+            id="diary_signed",
+            name="Signed Diary",
+            items={},
+            response_types={},
+            scoring_metadata={},
+            created_by="admin",
+            reason_for_change="Setup signed tracker",
+            version_index=1,
+        )
+        session.add(inst)
+
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        assign = SubjectAssignment(
+            subject_id="subject_signed",
+            instrument_id="diary_signed",
+            start_date=now - timedelta(days=2),
+            end_date=now + timedelta(days=2),
+            created_by="admin",
+            reason_for_change="Setup assignment",
+            version_index=1,
+        )
+        session.add(assign)
+        await session.commit()
+
+    # Construct incoming record payload to sign
+    subject_id = "subject_signed"
+    diary_id = "diary_signed"
+    client_id = "dev_secure"
+    answers = {"pain": 3}
+    device_timestamp = datetime.now(timezone.utc)
+
+    # In main.py, timestamps default to device_timestamp for each key
+    timestamps = {"pain": device_timestamp}
+
+    incoming_record = SyncRecord(
+        deduplication_key=f"{subject_id}:{diary_id}",
+        data=answers,
+        metadata=SyncMetadata(
+            timestamps=timestamps,
+            modified_by=client_id,
+        ),
+    )
+
+    secret_bytes = b"internal-gateway-secret-12345"
+    sig_payload = get_signature_payload(incoming_record)
+    sig = generate_canonical_signature(sig_payload, secret_bytes)
+
+    client = TestClient(app)
+    headers = get_auth_headers(
+        roles="Subject", change_reason="Signed submit", user_id="subject_signed"
+    )
+
+    payload = {
+        "subject_id": subject_id,
+        "diary_id": diary_id,
+        "device_timestamp": device_timestamp.isoformat(),
+        "answers": answers,
+        "offline_sync_markers": {
+            "sequence_number": 1,
+            "client_id": client_id,
+            "conflict_strategy": "CLIENT_WINS",
+            "signature": sig,
+            "timestamps": {"pain": device_timestamp.isoformat()},
+        },
+    }
+
+    resp = client.post("/api/v1/interop/epro/submit", json=payload, headers=headers)
+    assert resp.status_code == 201
+    res_data = resp.json()
+    assert res_data["status"] == "CREATED"
+    assert res_data["signature_validation"]["status"] == "VALID"
+    assert res_data["reconciliation_result"]["status"] == "CREATED"
+
+
+@pytest.mark.asyncio
+async def test_submit_with_invalid_signature_fails():
+    """
+    Test submitting an ePRO diary with an invalid cryptographic signature.
+    Should raise 400 Bad Request.
+    """
+    async_session = db_manager.get_session_maker()
+    async with async_session() as session:
+        inst = Instrument(
+            id="diary_signed_err",
+            name="Signed Diary Err",
+            items={},
+            response_types={},
+            scoring_metadata={},
+            created_by="admin",
+            reason_for_change="Setup signed tracker",
+            version_index=1,
+        )
+        session.add(inst)
+
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        assign = SubjectAssignment(
+            subject_id="subject_signed_err",
+            instrument_id="diary_signed_err",
+            start_date=now - timedelta(days=2),
+            end_date=now + timedelta(days=2),
+            created_by="admin",
+            reason_for_change="Setup assignment",
+            version_index=1,
+        )
+        session.add(assign)
+        await session.commit()
+
+    client = TestClient(app)
+    headers = get_auth_headers(
+        roles="Subject",
+        change_reason="Invalid signature submit",
+        user_id="subject_signed_err",
+    )
+
+    payload = {
+        "subject_id": "subject_signed_err",
+        "diary_id": "diary_signed_err",
+        "device_timestamp": datetime.now(timezone.utc).isoformat(),
+        "answers": {"pain": 3},
+        "offline_sync_markers": {
+            "sequence_number": 1,
+            "client_id": "dev_secure",
+            "conflict_strategy": "CLIENT_WINS",
+            "signature": "invalid_sig_12345",
+        },
+    }
+
+    resp = client.post("/api/v1/interop/epro/submit", json=payload, headers=headers)
+    assert resp.status_code == 400
+    assert "Invalid signature" in resp.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_bulk_sync_with_valid_signatures_and_tallies():
+    """
+    Test that bulk sync processes multiple signed submissions correctly,
+    verifying tally counts (CREATED, UPDATED_CLIENT_WINS, MERGED, IGNORED_SERVER_WINS, STRUCTURAL_CONFLICT)
+    and ensuring responses propagate details.
+    """
+    async_session = db_manager.get_session_maker()
+    async with async_session() as session:
+        # Instrument exists
+        inst = Instrument(
+            id="bulk_diary",
+            name="Bulk Signed Diary",
+            items={},
+            response_types={},
+            scoring_metadata={},
+            created_by="admin",
+            reason_for_change="Setup bulk tracker",
+            version_index=1,
+        )
+        session.add(inst)
+
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        # Assignment exists for subject_bulk_1 but NOT subject_bulk_ghost
+        assign = SubjectAssignment(
+            subject_id="subject_bulk_1",
+            instrument_id="bulk_diary",
+            start_date=now - timedelta(days=2),
+            end_date=now + timedelta(days=2),
+            created_by="admin",
+            reason_for_change="Setup assignment",
+            version_index=1,
+        )
+        session.add(assign)
+        await session.commit()
+
+    # We will submit three entries:
+    # 1. subject_bulk_1: bulk_diary - valid signature (CREATED)
+    # 2. subject_bulk_ghost: bulk_diary - no signature (STRUCTURAL_CONFLICT)
+    # 3. subject_bulk_1: bulk_diary - valid signature (UPDATED_CLIENT_WINS)
+
+    secret_bytes = b"internal-gateway-secret-12345"
+    device_timestamp = datetime.now(timezone.utc)
+
+    # Entry 1
+    incoming_1 = SyncRecord(
+        deduplication_key="subject_bulk_1:bulk_diary",
+        data={"pain": 2},
+        metadata=SyncMetadata(
+            timestamps={"pain": device_timestamp},
+            modified_by="dev_bulk",
+        ),
+    )
+    sig_1 = generate_canonical_signature(
+        get_signature_payload(incoming_1), secret_bytes
+    )
+
+    # Entry 3
+    incoming_3 = SyncRecord(
+        deduplication_key="subject_bulk_1:bulk_diary",
+        data={"pain": 6},
+        metadata=SyncMetadata(
+            timestamps={"pain": device_timestamp + timedelta(seconds=10)},
+            modified_by="dev_bulk",
+        ),
+    )
+    sig_3 = generate_canonical_signature(
+        get_signature_payload(incoming_3), secret_bytes
+    )
+
+    bulk_payload = {
+        "submissions": [
+            {
+                "subject_id": "subject_bulk_1",
+                "diary_id": "bulk_diary",
+                "device_timestamp": device_timestamp.isoformat(),
+                "answers": {"pain": 2},
+                "offline_sync_markers": {
+                    "sequence_number": 1,
+                    "client_id": "dev_bulk",
+                    "conflict_strategy": "CLIENT_WINS",
+                    "signature": sig_1,
+                },
+            },
+            {
+                "subject_id": "subject_bulk_ghost",
+                "diary_id": "bulk_diary",
+                "device_timestamp": device_timestamp.isoformat(),
+                "answers": {"pain": 5},
+                "offline_sync_markers": {
+                    "sequence_number": 1,
+                    "client_id": "dev_bulk",
+                    "conflict_strategy": "CLIENT_WINS",
+                },
+            },
+            {
+                "subject_id": "subject_bulk_1",
+                "diary_id": "bulk_diary",
+                "device_timestamp": (
+                    device_timestamp + timedelta(seconds=10)
+                ).isoformat(),
+                "answers": {"pain": 6},
+                "offline_sync_markers": {
+                    "sequence_number": 2,
+                    "client_id": "dev_bulk",
+                    "conflict_strategy": "CLIENT_WINS",
+                    "signature": sig_3,
+                    "timestamps": {
+                        "pain": (device_timestamp + timedelta(seconds=10)).isoformat()
+                    },
+                },
+            },
+        ]
+    }
+
+    client = TestClient(app)
+    # Since Bob cannot sync Alice's bulk sync, we must use staff/admin or match Bob's own bulk identity.
+    # Let's use admin headers to bypass the verification check
+    headers = get_auth_headers(
+        roles="admin,sponsor_dm", change_reason="Bulk sync regression test"
+    )
+
+    resp = client.post("/api/v1/interop/epro/sync", json=bulk_payload, headers=headers)
+    assert resp.status_code == 200
+    data = resp.json()
+
+    assert data["processed_count"] == 3
+    assert data["created_count"] == 1
+    assert data["updated_count"] == 1
+    assert data["conflict_count"] == 1  # structural conflict
+    assert data["ignored_count"] == 0
+
+    results = data["results"]
+    assert results[0]["status"] == "CREATED"
+    assert results[0]["signature_validation"]["status"] == "VALID"
+
+    assert results[1]["status"] == "STRUCTURAL_CONFLICT"
+    assert results[1]["signature_validation"]["status"] == "SKIPPED"
+
+    assert results[2]["status"] == "UPDATED_CLIENT_WINS"
+    assert results[2]["signature_validation"]["status"] == "VALID"
