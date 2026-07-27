@@ -1,5 +1,7 @@
+from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, Optional
 
+from fastapi import FastAPI
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -65,3 +67,45 @@ class DatabaseSessionDependency:
             except Exception:
                 await session.rollback()
                 raise
+
+
+def get_relational_db_lifespan(
+    db_manager: RelationalDatabaseManager,
+    database_url: str,
+    base_metadata: Optional[Any] = None,
+    startup_hooks: Optional[list] = None,
+    shutdown_hooks: Optional[list] = None,
+    **kwargs: Any,
+) -> Any:
+    """
+    Unified application lifecycle wrapper that automatically handles database connection
+    setup and local migrations (on SQLite), and supports parameterized callback hooks for
+    executing service-specific startup and shutdown tasks.
+    """
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+        # Initialize database engine and session maker
+        db_manager.init_db(database_url, **kwargs)
+
+        # Run local migrations if using sqlite
+        if database_url.startswith("sqlite") and base_metadata is not None:
+            async with db_manager.engine.begin() as conn:
+                await conn.run_sync(base_metadata.create_all)
+
+        # Run service-specific asynchronous startup tasks
+        if startup_hooks:
+            for hook in startup_hooks:
+                await hook()
+
+        try:
+            yield
+        finally:
+            # Run service-specific asynchronous shutdown tasks
+            if shutdown_hooks:
+                for hook in shutdown_hooks:
+                    await hook()
+            # Clean up database engine
+            await db_manager.close()
+
+    return lifespan

@@ -1,7 +1,6 @@
 import os
-from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import AsyncGenerator, List, Optional
+from typing import List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -26,36 +25,20 @@ from apps.ctms.models import (
     write_audit_log,
 )
 from apps.ctms.rendering import render_confirmation_letter, render_follow_up_letter
-from packages.database import DatabaseSessionDependency
+from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
 
 DATABASE_URL = os.getenv("CTMS_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """
-    Handle the lifespan events for the CTMS application.
-
-    Initializes the database session manager on startup and securely
-    cleans up connections on shutdown. Creates all tables if sqlite is used.
-    """
-    db_manager.init_db(DATABASE_URL)
-
-    # Automatically create tables for sqlite in-memory/file databases
-    if DATABASE_URL.startswith("sqlite"):
-        async with db_manager.engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-
-    yield
-
-    await db_manager.close()
-
-
 app = FastAPI(
     title="Cadence Clinical - CTMS",
     version="0.1.0",
-    lifespan=lifespan,
+    lifespan=get_relational_db_lifespan(
+        db_manager=db_manager,
+        database_url=DATABASE_URL,
+        base_metadata=Base.metadata,
+    ),
 )
 
 # Enforce secure gateway authentication middleware
@@ -1259,12 +1242,12 @@ async def create_site_milestone(
         site_id=milestone.site_id,
         study_id=milestone.study_id,
         milestone_type=milestone.milestone_type,
-        planned_date=milestone.planned_date.isoformat()
-        if milestone.planned_date
-        else None,
-        actual_date=milestone.actual_date.isoformat()
-        if milestone.actual_date
-        else None,
+        planned_date=(
+            milestone.planned_date.isoformat() if milestone.planned_date else None
+        ),
+        actual_date=(
+            milestone.actual_date.isoformat() if milestone.actual_date else None
+        ),
         status=milestone.status,
         created_at=milestone.created_at.isoformat(),
         created_by=milestone.created_by,
@@ -1327,12 +1310,12 @@ async def update_site_milestone(
         site_id=milestone.site_id,
         study_id=milestone.study_id,
         milestone_type=milestone.milestone_type,
-        planned_date=milestone.planned_date.isoformat()
-        if milestone.planned_date
-        else None,
-        actual_date=milestone.actual_date.isoformat()
-        if milestone.actual_date
-        else None,
+        planned_date=(
+            milestone.planned_date.isoformat() if milestone.planned_date else None
+        ),
+        actual_date=(
+            milestone.actual_date.isoformat() if milestone.actual_date else None
+        ),
         status=milestone.status,
         created_at=milestone.created_at.isoformat(),
         created_by=milestone.created_by,
@@ -1476,9 +1459,11 @@ async def allocate_cra(
         study_id=allocation.study_id,
         status=allocation.status,
         effective_start_date=allocation.effective_start_date.isoformat(),
-        effective_end_date=allocation.effective_end_date.isoformat()
-        if allocation.effective_end_date
-        else None,
+        effective_end_date=(
+            allocation.effective_end_date.isoformat()
+            if allocation.effective_end_date
+            else None
+        ),
         created_at=allocation.created_at.isoformat(),
         created_by=allocation.created_by,
         reason_for_change=allocation.reason_for_change,
@@ -1542,9 +1527,11 @@ async def update_cra_allocation(
         study_id=allocation.study_id,
         status=allocation.status,
         effective_start_date=allocation.effective_start_date.isoformat(),
-        effective_end_date=allocation.effective_end_date.isoformat()
-        if allocation.effective_end_date
-        else None,
+        effective_end_date=(
+            allocation.effective_end_date.isoformat()
+            if allocation.effective_end_date
+            else None
+        ),
         created_at=allocation.created_at.isoformat(),
         created_by=allocation.created_by,
         reason_for_change=allocation.reason_for_change,
@@ -1605,9 +1592,9 @@ async def list_cra_allocations(
             study_id=a.study_id,
             status=a.status,
             effective_start_date=a.effective_start_date.isoformat(),
-            effective_end_date=a.effective_end_date.isoformat()
-            if a.effective_end_date
-            else None,
+            effective_end_date=(
+                a.effective_end_date.isoformat() if a.effective_end_date else None
+            ),
             created_at=a.created_at.isoformat(),
             created_by=a.created_by,
             reason_for_change=a.reason_for_change,

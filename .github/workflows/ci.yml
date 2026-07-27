@@ -117,6 +117,29 @@ jobs:
           git add .secrets.baseline
           uv run pre-commit run detect-secrets --all-files
 
+      - name: Run code duplication verification
+        id: run_duplication
+        if: always()
+        run: |
+          git fetch origin main --depth=1 || true
+          CHANGED_FILES=""
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            CHANGED_FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null | grep -E '\.(py|js|vue)$' || true)
+          else
+            CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD 2>/dev/null | grep -E '\.(py|js|vue)$' || true)
+          fi
+          if [ -n "$CHANGED_FILES" ]; then
+            python3 scripts/detect_duplication.py $CHANGED_FILES
+          else
+            # Fallback to scanning git status (staged/unstaged files)
+            CHANGED_FILES=$(git status --porcelain | awk '{print $2}' | grep -E '\.(py|js|vue)$' || true)
+            if [ -n "$CHANGED_FILES" ]; then
+              python3 scripts/detect_duplication.py $CHANGED_FILES
+            else
+              echo "No relevant files changed."
+            fi
+          fi
+
       - name: Run tests and coverage
         id: run_tests
         if: always()

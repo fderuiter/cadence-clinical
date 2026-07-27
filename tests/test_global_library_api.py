@@ -27,18 +27,16 @@ def get_auth_headers(
         change_reason=change_reason,
         sponsor_id=sponsor_id,
     )
-    headers = {
+    return {
         "X-User-Id": user_id,
         "X-User-Roles": roles,
         "X-Gateway-Timestamp": timestamp,
         "X-Gateway-Signature": signature,
         "X-Signature-Version": "2",
         "X-Change-Reason": change_reason,
+        "X-Sponsor-Id": sponsor_id,
         "X-Tenant-Id": tenant_id,
     }
-    if sponsor_id is not None:
-        headers["X-Sponsor-Id"] = sponsor_id
-    return headers
 
 
 @pytest.fixture(autouse=True)
@@ -353,6 +351,7 @@ async def test_auth_and_malformed_requests():
     ) as client:
         # 1. Missing sponsor scope -> should return 403 Forbidden
         headers_no_sponsor = get_auth_headers(sponsor_id=None)
+        headers_no_sponsor.pop("X-Sponsor-Id", None)
 
         form_payload = {
             "id": "lib_form_test",

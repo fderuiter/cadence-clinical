@@ -687,9 +687,9 @@ def test_uninitialized_database_manager():
     """
     Cover the exception path when database manager is uninitialized.
     """
-    from apps.etmf.database import ETMFDatabaseManager
+    from packages.database import RelationalDatabaseManager
 
-    mgr = ETMFDatabaseManager()
+    mgr = RelationalDatabaseManager(service_name="eTMF")
     with pytest.raises(Exception) as exc_info:
         mgr.get_session_maker()
     assert "not initialized" in str(exc_info.value)
