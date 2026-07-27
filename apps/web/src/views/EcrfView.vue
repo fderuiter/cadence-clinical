@@ -698,34 +698,6 @@
                 </div>
               </div>
             </fieldset>
-
-            <!-- Concept Code lookup field -->
-            <div
-              v-else-if="field.type === 'concept_code'"
-              v-show="store.fieldVisibility[field.id] !== false"
-              :id="`field-container-${field.id}`"
-              class="clinical-input clinical-lookup-container"
-              :style="`grid-column: span ${field.gridSpan || 12};`"
-            >
-              <label :for="field.id">{{ field.label }}</label>
-              <div class="input-wrapper">
-                <input
-                  :id="field.id"
-                  type="text"
-                  :name="field.id"
-                  :value="store.formValues[field.id]"
-                  @input="handleConceptCodeInput(field, $event.target.value)"
-                />
-              </div>
-              <!-- Status indicator -->
-              <div
-                v-if="conceptValidationStates[field.id]"
-                :id="`lookup-status-${field.id}`"
-                :class="getConceptStatusClass(field.id)"
-              >
-                {{ getConceptStatusText(field.id) }}
-              </div>
-            </div>
           </template>
         </form>
 
@@ -1109,6 +1081,7 @@ const authStore = useAuthStore();
 const conceptValidationStates = reactive({});
 const conceptRequestIds = reactive({});
 
+// eslint-disable-next-line no-unused-vars
 function handleConceptCodeInput(field, newValue) {
   store.formValues[field.id] = newValue;
 
@@ -1154,6 +1127,7 @@ function handleConceptCodeInput(field, newValue) {
   }, 300);
 }
 
+// eslint-disable-next-line no-unused-vars
 function getConceptStatusClass(fieldId) {
   const stateObj = conceptValidationStates[fieldId];
   if (!stateObj) return "";
@@ -1163,6 +1137,7 @@ function getConceptStatusClass(fieldId) {
   return "";
 }
 
+// eslint-disable-next-line no-unused-vars
 function getConceptStatusText(fieldId) {
   const stateObj = conceptValidationStates[fieldId];
   if (!stateObj) return "";
