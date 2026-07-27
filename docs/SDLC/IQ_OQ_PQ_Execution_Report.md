@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 856
-- **Passed:** 856 🟢
+- **Total Automated Test Cases Run:** 867
+- **Passed:** 867 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -767,6 +767,16 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_missing_safety_report_fails` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_missing_worldwide_unique_case_id_fails` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_valid_icsr_rendering_and_validation` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_database_manager_uninitialized_raises_exception` | `tests.test_safety_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_list_audit_logs_endpoint` | `tests.test_safety_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_change_reason_fails_mutations` | `tests.test_safety_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_nonexistent_resources_return_404` | `tests.test_safety_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_safety_audit_log_immutable_ledger` | `tests.test_safety_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_safety_case_lifecycle` | `tests.test_safety_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_safety_database_schema_creation` | `tests.test_safety_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_safety_export_job_lifecycle` | `tests.test_safety_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_safety_health_check` | `tests.test_safety_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_unauthenticated_requests_are_rejected` | `tests.test_safety_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ae_required_optional_and_date_order` | `tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_auditable_model_fields_and_validation` | `tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cm_required_optional_and_date_order` | `tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
