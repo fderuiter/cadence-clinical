@@ -1,0 +1,3 @@
+"""
+Tickets microservice package.
+"""

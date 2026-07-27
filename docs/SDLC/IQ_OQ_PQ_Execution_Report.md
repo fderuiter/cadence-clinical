@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 892
-- **Passed:** 892 🟢
+- **Total Automated Test Cases Run:** 900
+- **Passed:** 900 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -825,7 +825,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_map_to_sdtm_orchestrator` | `tests.test_sdtm_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_map_vs` | `tests.test_sdtm_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_to_dtc` | `tests.test_sdtm_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_clinical_observation_sdv_defaults` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005, PRD-QRY-007 | 🟢 PASSED | < 1s |
+| `test_clinical_observation_sdv_defaults` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-007, PRD-QRY-005 | 🟢 PASSED | < 1s |
 | `test_sdv_automatic_verification_drop` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005, PRD-QRY-006 | 🟢 PASSED | < 1s |
 | `test_sdv_sign_off_persistence_and_audit` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005 | 🟢 PASSED | < 1s |
 | `test_sdv_signoff_endpoint_and_idempotency` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005, PRD-QRY-006 | 🟢 PASSED | < 1s |
@@ -964,6 +964,14 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_validate_study_terminology_endpoint_not_found` | `tests.test_terminology_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validate_study_terminology_endpoint_success` | `tests.test_terminology_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validate_study_terminology_fully_valid` | `tests.test_terminology_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_list_ticket_audit_logs_endpoint` | `tests.test_tickets_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_change_reason_fails_mutations` | `tests.test_tickets_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_nonexistent_resources_return_404` | `tests.test_tickets_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_ticket_audit_log_immutable_ledger` | `tests.test_tickets_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_tickets_database_schema_creation` | `tests.test_tickets_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_tickets_health_check` | `tests.test_tickets_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_tickets_lifecycle` | `tests.test_tickets_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_unauthenticated_requests_are_rejected` | `tests.test_tickets_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_active_version_selection` | `tests.test_tmf_reference_model` | PRD-TMF-001 | 🟢 PASSED | < 1s |
 | `test_artifact_parent_identification` | `tests.test_tmf_reference_model` | PRD-TMF-001 | 🟢 PASSED | < 1s |
 | `test_canonical_11_zones` | `tests.test_tmf_reference_model` | PRD-TMF-001 | 🟢 PASSED | < 1s |
