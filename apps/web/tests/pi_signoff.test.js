@@ -91,7 +91,7 @@ describe("PI Sign-Off Worklist and Re-authentication Flow", () => {
 
     // Enter credentials
     const passwordInput = wrapper.find("#reauth-password");
-    await passwordInput.setValue("valid_password");
+    await passwordInput.setValue("valid_password"); // pragma: allowlist secret
 
     // Mock window.alert to avoid prompt blocks in tests
     const alertMock = vi.spyOn(window, "alert").mockImplementation(() => {});
@@ -155,7 +155,7 @@ describe("PI Sign-Off Worklist and Re-authentication Flow", () => {
     await wrapper.find("#btn-pi-signoff").trigger("click");
 
     // Enter invalid credentials
-    await wrapper.find("#reauth-password").setValue("invalid_password");
+    await wrapper.find("#reauth-password").setValue("invalid_password"); // pragma: allowlist secret
 
     // Confirm
     await wrapper.find("#btn-confirm-reauth").trigger("click");

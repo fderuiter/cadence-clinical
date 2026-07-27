@@ -247,6 +247,7 @@
                 style="width: 100%; padding: 6px"
               />
             </div>
+
             <div class="form-group" style="margin-bottom: 8px">
               <label for="new-enc-seq">Sequence</label>
               <input
@@ -564,9 +565,11 @@
 import { ref, computed, watch, reactive } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import { createClinicalVisitMatrix } from "ui";
-import { terminologyClient } from "../api/terminologyClient";
+import { terminologyClient } from "../api/terminologyClient.js";
+import { useAuthStore } from "../stores/auth.js";
 
 const store = useClinicalStore();
+const authStore = useAuthStore();
 
 const builderMode = ref(false);
 const usdmText = ref(JSON.stringify(store.currentUsdm, null, 2));
@@ -592,8 +595,8 @@ const debouncedSearchArm = debounce(async (term) => {
   }
   try {
     const res = await terminologyClient.searchTerminology(term, {
-      userId: "fderuiter",
-      roles: "investigator",
+      userId: authStore.identity?.username || "fderuiter",
+      roles: authStore.identity?.roles?.[0] || "investigator",
       changeReason: "Search terminology",
     });
     armSuggestions.value = res.results || [];
@@ -609,8 +612,8 @@ const debouncedSearchEnc = debounce(async (term) => {
   }
   try {
     const res = await terminologyClient.searchTerminology(term, {
-      userId: "fderuiter",
-      roles: "investigator",
+      userId: authStore.identity?.username || "fderuiter",
+      roles: authStore.identity?.roles?.[0] || "investigator",
       changeReason: "Search terminology",
     });
     encSuggestions.value = res.results || [];

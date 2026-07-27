@@ -86,3 +86,5 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-11: Unified Parameterized Relational Database Lifespan Wrapper](2026-08-11-unified-parameterized-relational-database-lifespan-wrapper.md)
 - [2026-07-27: Backward-Compatible Gateway Signature Verification](2026-07-27-backward-compatible-gateway-signature-verification.md)
 - [2026-08-11: Declarative Route Dependencies and Fallback Signature Verification](2026-08-11-declarative-dependencies-and-signature-verification-fallback.md)
+- [2026-08-11: VitePress Workspace Documentation Portal](2026-08-11-vitepress-workspace-documentation-portal.md)
+- [2026-08-11: Gateway Signature Legacy V2 Fallback](2026-08-11-gateway-signature-legacy-v2-fallback.md)

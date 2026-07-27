@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "vite",
-    "build": "vite build --base=/cadence-clinical/",
+    "build": "vite build --base=/cadence-clinical/ && node ../../scripts/build-docs.js",
     "test": "vitest run",
     "lint": "eslint .",
     "format": "prettier --write ."

@@ -455,7 +455,7 @@
 
             <!-- Radio input field -->
             <fieldset
-              v-else
+              v-else-if="field.type === 'radio'"
               v-show="store.fieldVisibility[field.id] !== false"
               :id="`field-container-${field.id}`"
               class="clinical-radio-grid"
@@ -1037,7 +1037,6 @@ import { validateField } from "../../index";
 import { terminologyClient } from "../api/terminologyClient";
 const store = useClinicalStore();
 const authStore = useAuthStore();
-
 // Deep watch formValues to evaluate rules debounced
 watch(
   () => store.formValues,
