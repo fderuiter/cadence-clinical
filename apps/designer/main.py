@@ -29,6 +29,7 @@ from apps.designer.delta import (
     ConcurrentLockingError,
     ImmutabilityViolationError,
     InvalidSignatureError,
+    LibraryObjectInUseError,
     _init_mock_soa,
     amend_protocol_version,
     compute_graph_diff,
@@ -260,6 +261,14 @@ async def invalid_signature_handler(request: Request, exc: InvalidSignatureError
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
         detail="INVALID_OR_MISSING_SIGNATURE",
+    )
+
+
+@app.exception_handler(LibraryObjectInUseError)
+async def library_object_in_use_handler(request: Request, exc: LibraryObjectInUseError):
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail="LIBRARY_OBJECT_IN_USE",
     )
 
 
@@ -1161,6 +1170,97 @@ async def update_library_object_endpoint(
 
     try:
         record = await create_library_object_version(driver, id, properties)
+        return map_db_to_library_detail(record)
+    except ImmutabilityViolationError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="IMMUTABILITY_VIOLATION",
+        )
+    except ConcurrentLockingError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="CONCURRENT_LOCKING_CONFLICT",
+        )
+
+
+class LibraryObjectAmendRequest(BaseModel):
+    """
+    Payload for the Library Object Amendment endpoint.
+    """
+
+    reason_for_change: str = Field(
+        ..., description="Mandatory reason for initiating the amendment."
+    )
+    payload: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Optional updated payload for the amended version. If not provided, the latest payload is cloned.",
+    )
+
+
+@app.post(
+    "/api/v1/mdr/library/{id}/amend",
+    response_model=LibraryObjectDetail,
+    status_code=status.HTTP_201_CREATED,
+)
+async def amend_library_object_endpoint(
+    id: str,
+    payload: LibraryObjectAmendRequest,
+    request: Request,
+) -> LibraryObjectDetail:
+    """
+    Initiates an amendment on a library object that is in use by creating a successor draft version.
+    """
+    driver = await get_neo4j_driver(request)
+
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = payload.reason_for_change
+
+    if not change_reason or not change_reason.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing change justification reason",
+        )
+
+    sponsor_id = getattr(request.state, "sponsor_id", None) or request.headers.get(
+        "X-Sponsor-Id"
+    )
+    if not sponsor_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Missing authenticated sponsor scope",
+        )
+
+    # 1. Verify object exists and is owned by the sponsor
+    latest = await get_latest_library_object(driver, id, sponsor_id)
+    if not latest:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Library object {id} not found under sponsor {sponsor_id}.",
+        )
+
+    # 2. Determine payload to use: caller-supplied or clone latest
+    final_payload = (
+        payload.payload if payload.payload is not None else latest.get("payload") or {}
+    )
+
+    # 3. Save new version
+    properties = {
+        "object_type": latest.get("object_type"),
+        "sponsor_id": sponsor_id,
+        "tenant_id": latest.get("tenant_id", "tenant_default"),
+        "status": "DRAFT",
+        "created_at": latest.get("created_at") or datetime.now().isoformat(),
+        "created_by": latest.get("created_by") or user_id,
+        "updated_at": datetime.now().isoformat(),
+        "updated_by": user_id,
+        "reason_for_change": change_reason,
+        "payload": final_payload,
+    }
+
+    try:
+        record = await create_library_object_version(
+            driver, id, properties, is_amendment=True
+        )
         return map_db_to_library_detail(record)
     except ImmutabilityViolationError:
         raise HTTPException(

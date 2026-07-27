@@ -783,3 +783,200 @@ async def test_library_instance_updates_and_inheritance_diffs():
         assert "items.[1].data_type" in diff_map
         assert diff_map["items.[1].data_type"]["old_value"] == "text"
         assert diff_map["items.[1].data_type"]["new_value"] == "numeric"
+
+
+@pytest.mark.asyncio
+async def test_library_object_in_use_and_amendments():
+    """
+    Acceptance Criteria Tests:
+    1. Direct mutation of an in-use library version is rejected with a clear client-visible 409 error.
+    2. An amendment creates a successor version (status DRAFT, incremented version) and retains source traceability for existing instances.
+    3. Unused draft objects remain editable (can be mutated directly using PUT).
+    4. Tests cover active vs. inactive study references.
+    """
+    from apps.designer.db import MOCK_STUDIES, MOCK_STUDY_VERSIONS
+
+    # Clean setups for our specific test study IDs to ensure isolation, preserving global study_1
+    MOCK_STUDIES.pop("study_inactive", None)
+    MOCK_STUDIES.pop("study_active", None)
+    MOCK_STUDY_VERSIONS.pop("study_inactive", None)
+    MOCK_STUDY_VERSIONS.pop("study_active", None)
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        headers = get_auth_headers(sponsor_id="spon_pharma")
+
+        # 1. Create original library object (version 1)
+        form_payload = {
+            "id": "lib_amend_form",
+            "version": "1.0.0",
+            "status": "APPROVED",
+            "sponsor_id": "spon_pharma",
+            "change_reason": "Create form for amendment testing",
+            "object_type": "FORM",
+            "payload": {
+                "items": [
+                    {
+                        "item_id": "item_age",
+                        "name": "AGE",
+                        "question_text": "Age:",
+                        "data_type": "integer",
+                    }
+                ]
+            },
+        }
+
+        res_create = await client.post(
+            "/api/v1/mdr/library",
+            json=form_payload,
+            headers=headers,
+        )
+        assert res_create.status_code == 201
+
+        # Setup studies:
+        # study_inactive: Not active/recruiting (status is "DRAFT")
+        # study_active: Active/recruiting (status is "Active-Recruiting")
+        MOCK_STUDIES["study_inactive"] = {
+            "study_id": "study_inactive",
+            "title": "Inactive Study",
+            "status": "DRAFT",
+            "sponsor_id": "spon_pharma",
+        }
+        MOCK_STUDIES["study_active"] = {
+            "study_id": "study_active",
+            "title": "Active Recruiting Study",
+            "status": "Active-Recruiting",
+            "sponsor_id": "spon_pharma",
+        }
+
+        # 2. Instantiate this library version in the inactive study
+        inst_payload_inactive = {"library_object_id": "lib_amend_form", "version": 1}
+        res_inst_inactive = await client.post(
+            "/api/v1/studies/study_inactive/library-instances",
+            json=inst_payload_inactive,
+            headers=headers,
+        )
+        assert res_inst_inactive.status_code == 201
+
+        # Since it is only used by study_inactive (which is in DRAFT, not active),
+        # direct mutation via PUT should still succeed!
+        update_payload = {
+            "object_type": "FORM",
+            "reason_for_change": "Updating form in inactive state",
+            "payload": {
+                "items": [
+                    {
+                        "item_id": "item_age",
+                        "name": "AGE",
+                        "question_text": "Enter age in years:",
+                        "data_type": "integer",
+                    }
+                ]
+            },
+        }
+        res_put_inactive = await client.put(
+            "/api/v1/mdr/library/lib_amend_form",
+            json=update_payload,
+            headers=headers,
+        )
+        # Verify it succeeds and increments version (version 2)
+        assert res_put_inactive.status_code == 200
+        assert res_put_inactive.json()["version"] == "2.0.0"
+
+        # 3. Now instantiate version 2 in the active study!
+        inst_payload_active = {"library_object_id": "lib_amend_form", "version": 2}
+        res_inst_active = await client.post(
+            "/api/v1/studies/study_active/library-instances",
+            json=inst_payload_active,
+            headers=headers,
+        )
+        assert res_inst_active.status_code == 201
+        instance_id_active = res_inst_active.json()["id"]
+
+        # Since version 2 is now in use by an active recruiting study,
+        # direct mutation via PUT must be rejected with 409 Conflict / "LIBRARY_OBJECT_IN_USE"!
+        res_put_rejected = await client.put(
+            "/api/v1/mdr/library/lib_amend_form",
+            json=update_payload,
+            headers=headers,
+        )
+        assert res_put_rejected.status_code == 409
+        assert res_put_rejected.json()["detail"] == "LIBRARY_OBJECT_IN_USE"
+
+        # 4. Perform an amendment via POST /api/v1/mdr/library/{id}/amend
+        amend_payload = {
+            "reason_for_change": "Amending to add a gender field for the active trial successor",
+            "payload": {
+                "items": [
+                    {
+                        "item_id": "item_age",
+                        "name": "AGE",
+                        "question_text": "Enter age in years:",
+                        "data_type": "integer",
+                    },
+                    {
+                        "item_id": "item_gender",
+                        "name": "GENDER",
+                        "question_text": "Gender:",
+                        "data_type": "text",
+                    },
+                ]
+            },
+        }
+        res_amend = await client.post(
+            "/api/v1/mdr/library/lib_amend_form/amend",
+            json=amend_payload,
+            headers=headers,
+        )
+        assert res_amend.status_code == 201
+        amend_data = res_amend.json()
+        assert amend_data["version"] == "3.0.0"  # Created successor version 3
+        assert amend_data["status"] == "DRAFT"
+        assert len(amend_data["payload"]["items"]) == 2
+
+        # 5. Check source traceability: The existing active study instance of version 2 still points to version 2
+        from apps.designer.delta import get_library_instance_in_study
+
+        inst_data = await get_library_instance_in_study(
+            driver=None,
+            study_id="study_active",
+            instance_id=instance_id_active,
+            sponsor_id="spon_pharma",
+        )
+        assert (
+            inst_data["instantiated_from"]["version"] == 2
+        )  # Unchanged! Preservation of traceability.
+
+        # 6. Verify that the newly created successor version 3 (which is a DRAFT and unused) is mutable directly!
+        amended_update_payload = {
+            "object_type": "FORM",
+            "reason_for_change": "Refining gender field options in the new draft version",
+            "payload": {
+                "items": [
+                    {
+                        "item_id": "item_age",
+                        "name": "AGE",
+                        "question_text": "Enter age in years:",
+                        "data_type": "integer",
+                    },
+                    {
+                        "item_id": "item_gender",
+                        "name": "GENDER",
+                        "question_text": "Gender (Male/Female/Other):",
+                        "data_type": "text",
+                    },
+                ]
+            },
+        }
+        res_put_amended = await client.put(
+            "/api/v1/mdr/library/lib_amend_form",
+            json=amended_update_payload,
+            headers=headers,
+        )
+        assert res_put_amended.status_code == 200
+        assert res_put_amended.json()["version"] == "4.0.0"
+        assert (
+            res_put_amended.json()["payload"]["items"][1]["question_text"]
+            == "Gender (Male/Female/Other):"
+        )

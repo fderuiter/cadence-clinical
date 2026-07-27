@@ -17,6 +17,9 @@ This matrix details the distribution of core compliance and tracking features ac
 | **ePRO Patient Diary Submissions** | N/A | Secured REST single/bulk submissions with deterministic conflict strategy resolution | v1.6.0 | Supported |
 | **Offline PWA Portal & Sync**     | Independent client UI and IndexedDB queue | N/A (Client-side execution cached via Service Workers) | v1.6.0 | Supported |
 | **Multi-Channel Patient Alerts**  | N/A | Automated compliance reminders computed from Subject Assignments via SMS/Email/Webhook | v1.6.0 | Supported |
+| **Medical Coding: AE Coverage**   | N/A | Automated MedDRA dictionary coding and system query generation for Adverse Events (AETERM) | v1.5.0 | Supported |
+| **Medical Coding: MH Coverage**   | N/A | Automated MedDRA dictionary coding and system query generation for Medical History (MHTERM) | v1.5.0 | Supported |
+| **Medical Coding: CM Coverage**   | N/A | Automated WHODrug dictionary coding and system query generation for Concomitant Medications (CMTRT) | v1.5.0 | Supported |
 | **SDTM/ADaM CDISC Export**        | N/A | Secured Dataset-JSON 1.0.0 format exports (DM, AE, VS, LB, MH, ADSL, ADAE, ADVS) with audit trails | v1.7.0 | Supported |
 
 ---
@@ -38,6 +41,7 @@ The table below specifies how individual clinical domain entities are processed,
 | **Subject Assignments** | Interop Service | SQLite/PostgreSQL | Explicit `InteropAuditLog` writes with Part 11 metadata |
 | **ePRO Submissions** | Interop Service | SQLite/PostgreSQL | Immutable database-level submission logging and conflict strategy reconciliation |
 | **Patient Notifications**| Interop Service | SQLite/PostgreSQL | Append-only delivery logs and read acknowledgment timestamp auditing |
+| **Clinical Coding Assignments**| Execution | SQLite/PostgreSQL | Automated event-driven coding assignments, manual review overrides, system coding query triggers, and version up-versioning ledgers |
 | **Biostatistical Exports** | Execution | SQLite/PostgreSQL | Audit-logged `BiostatExport` transactions with Dataset-JSON validation |
 
 ---
