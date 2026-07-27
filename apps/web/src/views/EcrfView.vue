@@ -494,7 +494,7 @@
 
             <!-- Radio input field -->
             <fieldset
-              v-else
+              v-else-if="field.type === 'radio'"
               v-show="store.fieldVisibility[field.id] !== false"
               :id="`field-container-${field.id}`"
               class="clinical-radio-grid"
@@ -1073,8 +1073,7 @@ import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { soaClient } from "../api/soaClient";
 import { validateField } from "../../index";
-import { terminologyClient } from "../api/terminologyClient";
-import { debounce } from "ui";
+import { terminologyClient } from "../api/terminologyClient.js";
 
 const store = useClinicalStore();
 const authStore = useAuthStore();
@@ -1092,7 +1091,18 @@ function getStatusIcon(status) {
   return "";
 }
 
-const debouncedValidate = debounce(async (fieldId, value) => {
+// Inline debounce helper
+function localDebounce(fn, delay) {
+  let timeoutId = null;
+  return function (...args) {
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => {
+      fn(...args);
+    }, delay);
+  };
+}
+
+const debouncedValidate = localDebounce(async (fieldId, value) => {
   if (!value || !value.trim()) {
     conceptStatuses[fieldId] = "none";
     conceptMessages[fieldId] = "";
@@ -1104,8 +1114,8 @@ const debouncedValidate = debounce(async (fieldId, value) => {
 
   try {
     const res = await terminologyClient.validateSingleCode(value, {
-      userId: store.user.username || "fderuiter",
-      roles: store.user.roles ? store.user.roles.join(",") : "investigator",
+      userId: store.user?.username || "fderuiter",
+      roles: store.user?.roles ? store.user.roles.join(",") : "investigator",
       changeReason: "Validate code",
     });
 

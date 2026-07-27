@@ -86,4 +86,6 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-10: Debounced Clinical Code Lookup UI Primitive](2026-08-10-debounced-clinical-code-lookup-ui-primitive.md)
 - [2026-08-11: Unified Parameterized Relational Database Lifespan Wrapper](2026-08-11-unified-parameterized-relational-database-lifespan-wrapper.md)
 - [2026-07-27: Backward-Compatible Gateway Signature Verification](2026-07-27-backward-compatible-gateway-signature-verification.md)
+- [2026-08-11: VitePress Workspace Documentation Portal](2026-08-11-vitepress-workspace-documentation-portal.md)
+- [2026-08-11: Gateway Signature Legacy V2 Fallback](2026-08-11-gateway-signature-legacy-v2-fallback.md)
 - [2026-08-11: Standardize PR Templates and Centralize Shared Hashing & Radio Grid Layouts](2026-08-11-standardize-pr-templates-and-centralize-hashing-grid-layout.md)

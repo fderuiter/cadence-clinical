@@ -247,6 +247,7 @@
                 style="width: 100%; padding: 6px"
               />
             </div>
+
             <div class="form-group" style="margin-bottom: 8px">
               <label for="new-enc-seq">Sequence</label>
               <input
@@ -564,10 +565,12 @@
 import { ref, computed, watch, reactive } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import { createClinicalVisitMatrix } from "ui";
-import { terminologyClient } from "../api/terminologyClient";
+import { terminologyClient } from "../api/terminologyClient.js";
+import { useAuthStore } from "../stores/auth.js";
 import { debounce } from "ui";
 
 const store = useClinicalStore();
+const authStore = useAuthStore();
 
 const armSuggestions = ref([]);
 const encSuggestions = ref([]);
@@ -578,12 +581,9 @@ const debouncedSearchArm = debounce(async (term) => {
     return;
   }
   try {
-    const roles = store.user.roles
-      ? store.user.roles.join(",")
-      : "investigator";
     const res = await terminologyClient.searchTerminology(term, {
-      userId: store.user.username || "fderuiter",
-      roles,
+      userId: authStore.identity?.username || "fderuiter",
+      roles: authStore.identity?.roles?.[0] || "investigator",
       changeReason: "Arm concept search",
     });
     armSuggestions.value = res.results || [];
@@ -598,12 +598,9 @@ const debouncedSearchEnc = debounce(async (term) => {
     return;
   }
   try {
-    const roles = store.user.roles
-      ? store.user.roles.join(",")
-      : "investigator";
     const res = await terminologyClient.searchTerminology(term, {
-      userId: store.user.username || "fderuiter",
-      roles,
+      userId: authStore.identity?.username || "fderuiter",
+      roles: authStore.identity?.roles?.[0] || "investigator",
       changeReason: "Encounter concept search",
     });
     encSuggestions.value = res.results || [];

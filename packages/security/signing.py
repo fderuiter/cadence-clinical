@@ -63,6 +63,15 @@ def verify_gateway_signature(
     if hmac.compare_digest(expected, signature):
         return True
 
+    # Legacy fallbacks are strictly only allowed when all scope values are completely absent
+    has_scopes = (
+        (site_id is not None and site_id != "")
+        or (sponsor_id is not None and sponsor_id != "")
+        or unblinded_access
+    )
+    if has_scopes:
+        return False
+
     # 2. Fallback 1: Verify as if scope fields were omitted from the signature generation (e.g., site_id=None, sponsor_id=None)
     no_scope_expected = generate_gateway_signature(
         user_id=user_id,

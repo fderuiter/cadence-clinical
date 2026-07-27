@@ -673,3 +673,94 @@ def test_downstream_signature_gated_endpoint_replay_blocked() -> None:
     )
     assert response2.status_code == 401
     assert response2.json()["detail"] == "REAUTHENTICATION_REQUIRED"
+
+
+def test_strict_scope_fallback_rules() -> None:
+    """
+    Test that legacy/no-scope fallbacks are strictly not allowed when
+    scopes are supplied on the request, complying with Issue #118.
+    """
+    from packages.security.signing import (
+        generate_gateway_signature,
+        verify_gateway_signature,
+    )
+
+    secret = b"internal-gateway-secret-12345"
+    user_id = "test_user"
+    roles = "investigator"
+    timestamp = str(time.time())
+    change_reason = "PI Sign-off"
+
+    # 1. Scope-less signature (legacy/fallback-style)
+    legacy_sig = generate_gateway_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        secret=secret,
+        change_reason=change_reason,
+        site_id=None,
+        sponsor_id=None,
+        unblinded_access=False,
+    )
+
+    # If scopes are completely absent, fallback is ALLOWED and verification passes
+    assert (
+        verify_gateway_signature(
+            user_id=user_id,
+            roles=roles,
+            timestamp=timestamp,
+            signature=legacy_sig,
+            secret=secret,
+            change_reason=change_reason,
+            site_id=None,
+            sponsor_id=None,
+            unblinded_access=False,
+        )
+        is True
+    )
+
+    # If site_id or other scopes are present, fallback must be BLOCKED/REJECTED
+    assert (
+        verify_gateway_signature(
+            user_id=user_id,
+            roles=roles,
+            timestamp=timestamp,
+            signature=legacy_sig,
+            secret=secret,
+            change_reason=change_reason,
+            site_id="site_abc",  # Scope supplied on request
+            sponsor_id=None,
+            unblinded_access=False,
+        )
+        is False
+    )
+
+    assert (
+        verify_gateway_signature(
+            user_id=user_id,
+            roles=roles,
+            timestamp=timestamp,
+            signature=legacy_sig,
+            secret=secret,
+            change_reason=change_reason,
+            site_id=None,
+            sponsor_id="sponsor_xyz",  # Scope supplied on request
+            unblinded_access=False,
+        )
+        is False
+    )
+
+    assert (
+        verify_gateway_signature(
+            user_id=user_id,
+            roles=roles,
+            timestamp=timestamp,
+            signature=legacy_sig,
+            secret=secret,
+            change_reason=change_reason,
+            site_id=None,
+            sponsor_id=None,
+            unblinded_access=True,  # Scope supplied on request
+        )
+        is False
+    )
