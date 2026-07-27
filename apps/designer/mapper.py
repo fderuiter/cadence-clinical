@@ -131,19 +131,26 @@ def map_study_to_usdm(study_data: Dict[str, Any]) -> Dict[str, Any]:
 
     eligibility_criteria = []
     for crit in study_data.get("eligibility_criteria", []):
-        eligibility_criteria.append({
-            "id": crit.get("id") or crit.get("criterion_id"),
-            "criterion_id": crit.get("id") or crit.get("criterion_id"),
-            "type": crit.get("criterion_type"),
-            "text": crit.get("description"),
-            "expression": crit.get("dsl_source"),
-        })
+        eligibility_criteria.append(
+            {
+                "id": crit.get("id") or crit.get("criterion_id"),
+                "criterion_id": crit.get("id") or crit.get("criterion_id"),
+                "type": crit.get("criterion_type"),
+                "text": crit.get("description"),
+                "expression": crit.get("dsl_source"),
+            }
+        )
 
     # --- 2. Build Canonical USDM v3 Schema ---
     study_id = study_data["study_id"]
     study_title = study_data["title"]
 
-    def make_code_obj(concept_id: str, default_code: str, default_decode: str, default_system: str = "NCI") -> Dict[str, Any]:
+    def make_code_obj(
+        concept_id: str,
+        default_code: str,
+        default_decode: str,
+        default_system: str = "NCI",
+    ) -> Dict[str, Any]:
         concept_data = None
         if concept_id:
             concept_data = terminology_cache.get(concept_id)
@@ -166,7 +173,7 @@ def map_study_to_usdm(study_data: Dict[str, Any]) -> Dict[str, Any]:
             "codeSystem": system_val,
             "codeSystemVersion": "1.0",
             "decode": decode_val,
-            "instanceType": "Code"
+            "instanceType": "Code",
         }
 
     canonical_arms = []
@@ -183,7 +190,9 @@ def map_study_to_usdm(study_data: Dict[str, Any]) -> Dict[str, Any]:
             visit_id = visit_data["visit_id"]
             visit_name = visit_data["name"]
             visit_type_concept_id = visit_data.get("visit_type_concept_id")
-            visit_type_code = make_code_obj(visit_type_concept_id, "C789", "Screening Visit")
+            visit_type_code = make_code_obj(
+                visit_type_concept_id, "C789", "Screening Visit"
+            )
 
             arm_activities = []
             for act_data in visit_data.get("activities", []):
@@ -196,44 +205,52 @@ def map_study_to_usdm(study_data: Dict[str, Any]) -> Dict[str, Any]:
                     if rule.get("type") in ("skip_logic", "constraint") and rule.get(
                         "target_field"
                     ) in (act_id, act_name):
-                        act_rules.append({
-                            "id": to_uuid(rule["id"], "rule"),
-                            "_original_id": rule["id"],
-                            "type": rule["type"],
-                            "condition": rule["condition"],
-                            "action": rule.get("action"),
-                            "query_message": rule.get("query_message"),
-                            "version_index": rule.get("version_index", 1),
-                        })
+                        act_rules.append(
+                            {
+                                "id": to_uuid(rule["id"], "rule"),
+                                "_original_id": rule["id"],
+                                "type": rule["type"],
+                                "condition": rule["condition"],
+                                "action": rule.get("action"),
+                                "query_message": rule.get("query_message"),
+                                "version_index": rule.get("version_index", 1),
+                            }
+                        )
 
                 act_dict = {
                     "id": to_uuid(act_id, "activity"),
                     "_original_id": act_id,
                     "name": act_name,
-                    "instanceType": "Activity"
+                    "instanceType": "Activity",
                 }
                 if act_rules:
                     act_dict["rules"] = act_rules
                 arm_activities.append(act_dict)
 
-            arm_visits.append({
-                "id": to_uuid(visit_id, "visit"),
-                "_original_id": visit_id,
-                "name": visit_name,
-                "visit_type": visit_type_code,
-                "activities": arm_activities,
-            })
+            arm_visits.append(
+                {
+                    "id": to_uuid(visit_id, "visit"),
+                    "_original_id": visit_id,
+                    "name": visit_name,
+                    "visit_type": visit_type_code,
+                    "activities": arm_activities,
+                }
+            )
 
-        canonical_arms.append({
-            "id": to_uuid(arm_id, "arm"),
-            "_original_id": arm_id,
-            "name": arm_name,
-            "type": type_code,
-            "dataOriginDescription": "Assigned",
-            "dataOriginType": make_code_obj(None, "data_origin_default", "Data Origin Default"),
-            "instanceType": "StudyArm",
-            "visits": arm_visits  # Nested for 100% loss-less mapping
-        })
+        canonical_arms.append(
+            {
+                "id": to_uuid(arm_id, "arm"),
+                "_original_id": arm_id,
+                "name": arm_name,
+                "type": type_code,
+                "dataOriginDescription": "Assigned",
+                "dataOriginType": make_code_obj(
+                    None, "data_origin_default", "Data Origin Default"
+                ),
+                "instanceType": "StudyArm",
+                "visits": arm_visits,  # Nested for 100% loss-less mapping
+            }
+        )
 
     unique_visits = {}
     unique_activities = {}
@@ -251,24 +268,30 @@ def map_study_to_usdm(study_data: Dict[str, Any]) -> Dict[str, Any]:
     for v_id, visit_data in unique_visits.items():
         visit_name = visit_data["name"]
         visit_type_concept_id = visit_data.get("visit_type_concept_id")
-        visit_type_code = make_code_obj(visit_type_concept_id, "C789", "Screening Visit")
-        canonical_encounters.append({
-            "id": to_uuid(v_id, "visit"),
-            "_original_id": v_id,
-            "name": visit_name,
-            "type": visit_type_code,
-            "instanceType": "Encounter"
-        })
+        visit_type_code = make_code_obj(
+            visit_type_concept_id, "C789", "Screening Visit"
+        )
+        canonical_encounters.append(
+            {
+                "id": to_uuid(v_id, "visit"),
+                "_original_id": v_id,
+                "name": visit_name,
+                "type": visit_type_code,
+                "instanceType": "Encounter",
+            }
+        )
 
     canonical_activities = []
     for act_id, act_data in unique_activities.items():
         act_name = act_data["name"]
-        canonical_activities.append({
-            "id": to_uuid(act_id, "activity"),
-            "_original_id": act_id,
-            "name": act_name,
-            "instanceType": "Activity"
-        })
+        canonical_activities.append(
+            {
+                "id": to_uuid(act_id, "activity"),
+                "_original_id": act_id,
+                "name": act_name,
+                "instanceType": "Activity",
+            }
+        )
 
     canonical_criteria = []
     for crit in study_data.get("eligibility_criteria", []):
@@ -276,24 +299,26 @@ def map_study_to_usdm(study_data: Dict[str, Any]) -> Dict[str, Any]:
         crit_type = crit.get("criterion_type") or "inclusion"
         crit_desc = crit.get("description") or "Eligibility Criterion"
 
-        canonical_criteria.append({
-            "id": to_uuid(crit_id, "criterion"),
-            "_original_id": crit_id,
-            "name": crit_id,
-            "description": crit_desc,
-            "category": make_code_obj(None, crit_type, crit_type, "CDISC-CT"),
-            "identifier": crit_id,
-            "criterionItemId": to_uuid(crit_id, "criterion_item"),
-            "instanceType": "EligibilityCriterion",
-            "_dsl_source": crit.get("dsl_source")
-        })
+        canonical_criteria.append(
+            {
+                "id": to_uuid(crit_id, "criterion"),
+                "_original_id": crit_id,
+                "name": crit_id,
+                "description": crit_desc,
+                "category": make_code_obj(None, crit_type, crit_type, "CDISC-CT"),
+                "identifier": crit_id,
+                "criterionItemId": to_uuid(crit_id, "criterion_item"),
+                "instanceType": "EligibilityCriterion",
+                "_dsl_source": crit.get("dsl_source"),
+            }
+        )
 
     default_epoch = {
         "id": to_uuid(f"{study_id}_epoch_default", "epoch"),
         "_original_id": f"{study_id}_epoch_default",
         "name": "Default Epoch",
         "type": make_code_obj(None, "epoch_type_default", "Epoch Type Default"),
-        "instanceType": "StudyEpoch"
+        "instanceType": "StudyEpoch",
     }
 
     default_population = {
@@ -301,7 +326,7 @@ def map_study_to_usdm(study_data: Dict[str, Any]) -> Dict[str, Any]:
         "_original_id": f"{study_id}_population",
         "name": "Study Population",
         "includesHealthySubjects": False,
-        "instanceType": "StudyDesignPopulation"
+        "instanceType": "StudyDesignPopulation",
     }
 
     canonical_design = {
@@ -317,24 +342,26 @@ def map_study_to_usdm(study_data: Dict[str, Any]) -> Dict[str, Any]:
         "encounters": canonical_encounters,
         "activities": canonical_activities,
         "eligibilityCriteria": canonical_criteria,
-        "instanceType": "InterventionalStudyDesign"
+        "instanceType": "InterventionalStudyDesign",
     }
 
     audit_metadata = {
         "reason_for_change": study_data.get("change_reason") or "Initial setup",
-        "changeReason": study_data.get("change_reason") or "Initial setup"
+        "changeReason": study_data.get("change_reason") or "Initial setup",
     }
 
     canonical_versions = [
         {
-            "id": to_uuid(f"{study_id}_version_{study_data['current_version']}", "version"),
+            "id": to_uuid(
+                f"{study_id}_version_{study_data['current_version']}", "version"
+            ),
             "_original_id": f"{study_id}_version_{study_data['current_version']}",
             "versionIdentifier": study_data["current_version"],
             "rationale": "Initial Version",
             "studyIdentifiers": [],
             "titles": [],
             "instanceType": "StudyVersion",
-            "studyDesigns": [canonical_design]
+            "studyDesigns": [canonical_design],
         }
     ]
 
@@ -348,10 +375,9 @@ def map_study_to_usdm(study_data: Dict[str, Any]) -> Dict[str, Any]:
         "arms": arms,
         "rules": mapped_rules,
         "eligibility_criteria": eligibility_criteria,
-
         # Standard Canonical USDM v3 Structure
         "instanceType": "Study",
         "audit_metadata": audit_metadata,
         "reason_for_change": study_data.get("change_reason") or "Initial setup",
-        "versions": canonical_versions
+        "versions": canonical_versions,
     }

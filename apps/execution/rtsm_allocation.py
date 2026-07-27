@@ -14,6 +14,7 @@ deterministic seeding (via random.Random) for GxP-compliant reproducibility.
 
 import random
 from typing import Any, Dict, List, Optional, Tuple, Union
+
 from pydantic import BaseModel, Field, model_validator
 
 
@@ -84,7 +85,9 @@ class RandomizationConfigSchema(BaseModel):
                 self.block_sizes = [ratio_sum]
 
             if not self.block_sizes:
-                raise ValueError("block_sizes list cannot be empty for block randomization.")
+                raise ValueError(
+                    "block_sizes list cannot be empty for block randomization."
+                )
 
             for size in self.block_sizes:
                 if size <= 0:
@@ -111,7 +114,9 @@ class RandomizationConfigSchema(BaseModel):
                     "stratification_factors must be provided and non-empty for MINIMIZATION."
                 )
             if not (0.5 <= self.p_preferred <= 1.0):
-                raise ValueError("p_preferred must be a float between 0.5 and 1.0 inclusive.")
+                raise ValueError(
+                    "p_preferred must be a float between 0.5 and 1.0 inclusive."
+                )
             if self.factor_weights:
                 active_factors_list = (
                     list(self.stratification_factors.keys())
@@ -124,7 +129,9 @@ class RandomizationConfigSchema(BaseModel):
                             f"Factor weight key '{factor}' not found in stratification_factors."
                         )
                     if weight < 0:
-                        raise ValueError(f"Factor weight for '{factor}' must be non-negative.")
+                        raise ValueError(
+                            f"Factor weight for '{factor}' must be non-negative."
+                        )
 
         return self
 
@@ -160,7 +167,9 @@ def generate_canonical_stratum_key(
     parts = []
     for factor in sorted_factors:
         if factor not in subject_factors or subject_factors[factor] is None:
-            raise ValueError(f"Missing required stratification factor value for: '{factor}'")
+            raise ValueError(
+                f"Missing required stratification factor value for: '{factor}'"
+            )
         val = str(subject_factors[factor]).strip()
         parts.append(f"{factor}={val}")
 
@@ -271,7 +280,10 @@ def allocate_minimization(
                     or {}
                 )
                 prev_arm = prev.get("allocation")
-                if prev_arm in baseline_counts and prev_factors.get(factor) == new_subj_val:
+                if (
+                    prev_arm in baseline_counts
+                    and prev_factors.get(factor) == new_subj_val
+                ):
                     baseline_counts[prev_arm] += 1
 
             # 2. Add the hypothetical assignment to candidate_arm
@@ -300,13 +312,13 @@ def allocate_minimization(
     other_arms = [arm for arm, score in imbalance_scores.items() if score > min_score]
 
     M = len(best_arms)
-    O = len(other_arms)
+    num_other = len(other_arms)
 
     # Compute selection probabilities
     # Best arms share p_preferred equally
     # Other arms share (1 - p_preferred) equally
     probabilities = {}
-    if O == 0:
+    if num_other == 0:
         # All arms are tied
         for arm in arms:
             probabilities[arm] = 1.0 / K
@@ -314,7 +326,7 @@ def allocate_minimization(
         for arm in best_arms:
             probabilities[arm] = p_preferred / M
         for arm in other_arms:
-            probabilities[arm] = (1.0 - p_preferred) / O
+            probabilities[arm] = (1.0 - p_preferred) / num_other
 
     # Choose arm based on computed probabilities
     population = list(probabilities.keys())
@@ -381,12 +393,16 @@ class RTSMAllocator:
             # Unstratified block randomization ignores subject_factors
             stratum_key = "DEFAULT"
         else:
-            stratum_key = generate_canonical_stratum_key(subject_factors, active_factors)
+            stratum_key = generate_canonical_stratum_key(
+                subject_factors, active_factors
+            )
 
         # 2. Route to appropriate algorithm
         if self.config.algorithm_type in ("PERMUTED_BLOCK", "STRATIFIED_BLOCK"):
             if self.config.block_sizes is None:
-                raise ValueError("block_sizes must be configured for block-based randomization.")
+                raise ValueError(
+                    "block_sizes must be configured for block-based randomization."
+                )
 
             allocated_arm, updated_seq, updated_idx = allocate_block(
                 sequence=sequence,
@@ -423,4 +439,6 @@ class RTSMAllocator:
             }
 
         else:
-            raise ValueError(f"Unsupported algorithm type: '{self.config.algorithm_type}'")
+            raise ValueError(
+                f"Unsupported algorithm type: '{self.config.algorithm_type}'"
+            )

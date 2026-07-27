@@ -46,6 +46,7 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
 
     # 1. Preprocess canonical nested structures to populate top-level legacy fields if missing
     import copy
+
     data = copy.deepcopy(usdm_data)
 
     if "versions" in data:
@@ -56,7 +57,10 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
             if "version" not in data:
                 data["version"] = version_node.get("versionIdentifier")
             if "_original_id" not in data and version_node.get("_original_id"):
-                data["_original_id"] = data.get("_original_id") or version_node.get("_original_id").split("_version_")[0]
+                data["_original_id"] = (
+                    data.get("_original_id")
+                    or version_node.get("_original_id").split("_version_")[0]
+                )
 
             designs = version_node.get("studyDesigns", [])
             if designs and isinstance(designs, list) and isinstance(designs[0], dict):
@@ -77,8 +81,13 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
                             for visit in arm_copy["visits"]:
                                 if isinstance(visit, dict):
                                     visit_copy = dict(visit)
-                                    if "visit_type" in visit_copy and "visit_type_concept_id" not in visit_copy:
-                                        visit_copy["visit_type_concept_id"] = resolve_concept_id(visit_copy["visit_type"])
+                                    if (
+                                        "visit_type" in visit_copy
+                                        and "visit_type_concept_id" not in visit_copy
+                                    ):
+                                        visit_copy["visit_type_concept_id"] = (
+                                            resolve_concept_id(visit_copy["visit_type"])
+                                        )
                                     mapped_visits.append(visit_copy)
                             arm_copy["visits"] = mapped_visits
                         extracted_arms.append(arm_copy)
@@ -100,20 +109,32 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
                         data["rules"] = extracted_rules
 
                 # Reconstruct eligibility_criteria
-                if "eligibility_criteria" not in data or not data["eligibility_criteria"]:
+                if (
+                    "eligibility_criteria" not in data
+                    or not data["eligibility_criteria"]
+                ):
                     extracted_criteria = []
                     for crit in design_node.get("eligibilityCriteria", []):
                         if isinstance(crit, dict):
                             crit_copy = dict(crit)
                             category_obj = crit_copy.get("category") or {}
-                            crit_type = category_obj.get("code") if isinstance(category_obj, dict) else "inclusion"
-                            extracted_criteria.append({
-                                "id": crit_copy.get("_original_id") or crit_copy.get("id"),
-                                "criterion_id": crit_copy.get("_original_id") or crit_copy.get("id"),
-                                "criterion_type": crit_type,
-                                "description": crit_copy.get("description"),
-                                "dsl_source": crit_copy.get("_dsl_source") or crit_copy.get("expression")
-                            })
+                            crit_type = (
+                                category_obj.get("code")
+                                if isinstance(category_obj, dict)
+                                else "inclusion"
+                            )
+                            extracted_criteria.append(
+                                {
+                                    "id": crit_copy.get("_original_id")
+                                    or crit_copy.get("id"),
+                                    "criterion_id": crit_copy.get("_original_id")
+                                    or crit_copy.get("id"),
+                                    "criterion_type": crit_type,
+                                    "description": crit_copy.get("description"),
+                                    "dsl_source": crit_copy.get("_dsl_source")
+                                    or crit_copy.get("expression"),
+                                }
+                            )
                     if extracted_criteria:
                         data["eligibility_criteria"] = extracted_criteria
 
@@ -178,7 +199,16 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
 
             # Check for extra/unmapped keys inside arm_type
             if isinstance(arm_type, dict):
-                known_concept_keys = {"id", "_original_id", "code", "decode", "system", "codeSystem", "codeSystemVersion", "instanceType"}
+                known_concept_keys = {
+                    "id",
+                    "_original_id",
+                    "code",
+                    "decode",
+                    "system",
+                    "codeSystem",
+                    "codeSystemVersion",
+                    "instanceType",
+                }
                 extra_concept_keys = set(arm_type.keys()) - known_concept_keys
                 if extra_concept_keys:
                     preservation_metadata["unmapped_fields"][
@@ -186,7 +216,17 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
                     ] = {k: arm_type[k] for k in extra_concept_keys}
 
         # Collect extra arm keys to prevent silent data drop
-        known_arm_keys = {"id", "_original_id", "name", "arm_type", "type", "visits", "dataOriginDescription", "dataOriginType", "instanceType"}
+        known_arm_keys = {
+            "id",
+            "_original_id",
+            "name",
+            "arm_type",
+            "type",
+            "visits",
+            "dataOriginDescription",
+            "dataOriginType",
+            "instanceType",
+        }
         extra_arm_keys = set(arm.keys()) - known_arm_keys
         if extra_arm_keys:
             preservation_metadata["unmapped_fields"][f"arm_{arm_id}"] = {
@@ -219,7 +259,16 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
 
                 # Check for extra keys in visit_type
                 if isinstance(visit_type, dict):
-                    known_concept_keys = {"id", "_original_id", "code", "decode", "system", "codeSystem", "codeSystemVersion", "instanceType"}
+                    known_concept_keys = {
+                        "id",
+                        "_original_id",
+                        "code",
+                        "decode",
+                        "system",
+                        "codeSystem",
+                        "codeSystemVersion",
+                        "instanceType",
+                    }
                     extra_v_concept_keys = set(visit_type.keys()) - known_concept_keys
                     if extra_v_concept_keys:
                         preservation_metadata["unmapped_fields"][
@@ -227,7 +276,14 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
                         ] = {k: visit_type[k] for k in extra_v_concept_keys}
 
             # Collect extra visit keys
-            known_visit_keys = {"id", "_original_id", "name", "visit_type", "type", "activities"}
+            known_visit_keys = {
+                "id",
+                "_original_id",
+                "name",
+                "visit_type",
+                "type",
+                "activities",
+            }
             extra_visit_keys = set(visit.keys()) - known_visit_keys
             if extra_visit_keys:
                 preservation_metadata["unmapped_fields"][f"visit_{visit_id}"] = {
@@ -359,13 +415,15 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
     for crit in data.get("eligibility_criteria", []):
         if isinstance(crit, dict):
             elig_id = crit.get("id") or crit.get("criterion_id")
-            eligibility_criteria_list.append({
-                "id": elig_id,
-                "criterion_id": elig_id,
-                "criterion_type": crit.get("criterion_type") or crit.get("type"),
-                "description": crit.get("description") or crit.get("text"),
-                "dsl_source": crit.get("dsl_source") or crit.get("expression")
-            })
+            eligibility_criteria_list.append(
+                {
+                    "id": elig_id,
+                    "criterion_id": elig_id,
+                    "criterion_type": crit.get("criterion_type") or crit.get("type"),
+                    "description": crit.get("description") or crit.get("text"),
+                    "dsl_source": crit.get("dsl_source") or crit.get("expression"),
+                }
+            )
 
     # 5. Construct final study projection dictionary
     study_projection = {

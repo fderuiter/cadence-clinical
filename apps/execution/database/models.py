@@ -248,7 +248,9 @@ class SubjectConsent(AuditedModel):
     version_index: Mapped[int] = mapped_column(Integer, nullable=False)
     icf_signed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     icf_signed_date: Mapped[datetime] = mapped_column(DateTime, nullable=True)
-    requires_reconsent: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    requires_reconsent: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
 
 
 class ClinicalVisit(AuditedModel):

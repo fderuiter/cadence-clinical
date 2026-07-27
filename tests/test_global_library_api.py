@@ -1017,6 +1017,7 @@ async def test_sponsor_security_boundaries():
         headers_empty["X-Sponsor-Id"] = ""
         # Regenerate signature with sponsor_id=""
         from packages.security.signing import generate_gateway_signature
+
         headers_empty["X-Gateway-Signature"] = generate_gateway_signature(
             user_id="test_designer",
             roles="STUDY_DESIGNER",

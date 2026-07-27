@@ -2,9 +2,10 @@ import os
 import time
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple
 
 import httpx
+from eligibility import EligibilityCriterion, ExpressionNode, parse_dsl
 from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -33,6 +34,7 @@ from apps.designer.delta import (
     _init_mock_soa,
     amend_protocol_version,
     compute_graph_diff,
+    create_eligibility_criterion,
     create_epoch,
     create_library_object_version,
     create_procedure,
@@ -42,6 +44,7 @@ from apps.designer.delta import (
     create_timing_window,
     create_visit,
     delete_rule_node,
+    get_eligibility_criteria_from_graph,
     get_latest_library_object,
     get_library_instance_in_study,
     get_library_object_by_version,
@@ -54,6 +57,7 @@ from apps.designer.delta import (
     link_visit_or_procedure_to_timing,
     link_visit_to_procedure,
     list_library_objects,
+    update_eligibility_criterion,
     update_epoch,
     update_library_instance_in_study,
     update_procedure,
@@ -61,11 +65,7 @@ from apps.designer.delta import (
     update_study_arm,
     update_timing_window,
     update_visit,
-    create_eligibility_criterion,
-    update_eligibility_criterion,
-    get_eligibility_criteria_from_graph,
 )
-from eligibility import EligibilityCriterion, ExpressionNode, parse_dsl
 from apps.designer.evs_client import NCIEVSClient
 from apps.designer.library import (
     CreateLibraryObjectRequest,
@@ -668,44 +668,71 @@ async def study_differences(
 # Eligibility Criteria API Models and Routes
 # ==========================================
 
-from typing import Literal
 
 class CreateEligibilityCriterionRequest(BaseModel):
-    criterion_id: str = Field(..., description="Unique identifier of this eligibility criterion, e.g., 'INC_01'.")
-    criterion_type: Literal["inclusion", "exclusion"] = Field(..., description="Whether this is an inclusion or exclusion criterion.")
-    description: str = Field(..., description="Human-readable text description of the criterion.")
-    dsl_source: str = Field(..., description="The raw DSL statement source, e.g., 'eCRF.DM.AGE >= 18'.")
-    expected_outcome: bool = Field(True, description="Expected Boolean outcome of evaluating the condition node.")
+    criterion_id: str = Field(
+        ...,
+        description="Unique identifier of this eligibility criterion, e.g., 'INC_01'.",
+    )
+    criterion_type: Literal["inclusion", "exclusion"] = Field(
+        ..., description="Whether this is an inclusion or exclusion criterion."
+    )
+    description: str = Field(
+        ..., description="Human-readable text description of the criterion."
+    )
+    dsl_source: str = Field(
+        ..., description="The raw DSL statement source, e.g., 'eCRF.DM.AGE >= 18'."
+    )
+    expected_outcome: bool = Field(
+        True, description="Expected Boolean outcome of evaluating the condition node."
+    )
     change_reason: str = Field(..., description="Reason for creating this criterion.")
 
 
 class UpdateEligibilityCriterionRequest(BaseModel):
-    criterion_type: Literal["inclusion", "exclusion"] = Field(..., description="Whether this is an inclusion or exclusion criterion.")
-    description: str = Field(..., description="Human-readable text description of the criterion.")
-    dsl_source: str = Field(..., description="The raw DSL statement source, e.g., 'eCRF.DM.AGE >= 18'.")
-    expected_outcome: bool = Field(True, description="Expected Boolean outcome of evaluating the condition node.")
+    criterion_type: Literal["inclusion", "exclusion"] = Field(
+        ..., description="Whether this is an inclusion or exclusion criterion."
+    )
+    description: str = Field(
+        ..., description="Human-readable text description of the criterion."
+    )
+    dsl_source: str = Field(
+        ..., description="The raw DSL statement source, e.g., 'eCRF.DM.AGE >= 18'."
+    )
+    expected_outcome: bool = Field(
+        True, description="Expected Boolean outcome of evaluating the condition node."
+    )
     change_reason: str = Field(..., description="Reason for updating this criterion.")
 
 
 def map_db_to_criterion(db_crit: Dict[str, Any]) -> EligibilityCriterion:
-    reason = db_crit.get("reason_for_change") or db_crit.get("change_reason") or "Initial setup"
+    reason = (
+        db_crit.get("reason_for_change")
+        or db_crit.get("change_reason")
+        or "Initial setup"
+    )
     created_by = db_crit.get("created_by") or "system"
     cond = db_crit["condition"]
     if isinstance(cond, dict):
         cond = ExpressionNode(**cond)
     import datetime
+
     created_at = db_crit.get("created_at")
     if not created_at:
         created_at = datetime.datetime.now(datetime.timezone.utc)
     elif isinstance(created_at, str):
         try:
-            created_at = datetime.datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+            created_at = datetime.datetime.fromisoformat(
+                created_at.replace("Z", "+00:00")
+            )
         except Exception:
             created_at = datetime.datetime.now(datetime.timezone.utc)
     else:
         try:
             if hasattr(created_at, "isoformat"):
-                created_at = datetime.datetime.fromisoformat(created_at.isoformat().replace("Z", "+00:00"))
+                created_at = datetime.datetime.fromisoformat(
+                    created_at.isoformat().replace("Z", "+00:00")
+                )
             else:
                 created_at = datetime.datetime.now(datetime.timezone.utc)
         except Exception:
@@ -725,7 +752,11 @@ def map_db_to_criterion(db_crit: Dict[str, Any]) -> EligibilityCriterion:
     )
 
 
-@app.get("/api/v1/studies/{study_id}/eligibility-criteria", response_model=List[EligibilityCriterion], status_code=status.HTTP_200_OK)
+@app.get(
+    "/api/v1/studies/{study_id}/eligibility-criteria",
+    response_model=List[EligibilityCriterion],
+    status_code=status.HTTP_200_OK,
+)
 async def list_eligibility_criteria(study_id: str, request: Request):
     """
     Retrieves all active eligibility criteria for a specific clinical study.
@@ -743,8 +774,14 @@ async def list_eligibility_criteria(study_id: str, request: Request):
     return [map_db_to_criterion(c) for c in raw_criteria]
 
 
-@app.get("/api/v1/studies/{study_id}/eligibility-criteria/{criterion_id}", response_model=EligibilityCriterion, status_code=status.HTTP_200_OK)
-async def get_eligibility_criterion_detail(study_id: str, criterion_id: str, request: Request):
+@app.get(
+    "/api/v1/studies/{study_id}/eligibility-criteria/{criterion_id}",
+    response_model=EligibilityCriterion,
+    status_code=status.HTTP_200_OK,
+)
+async def get_eligibility_criterion_detail(
+    study_id: str, criterion_id: str, request: Request
+):
     """
     Retrieves details for a specific eligibility criterion by ID.
     """
@@ -758,10 +795,16 @@ async def get_eligibility_criterion_detail(study_id: str, criterion_id: str, req
         if c.get("id") == criterion_id or c.get("criterion_id") == criterion_id:
             return map_db_to_criterion(c)
 
-    raise HTTPException(status_code=404, detail=f"Eligibility Criterion {criterion_id} not found")
+    raise HTTPException(
+        status_code=404, detail=f"Eligibility Criterion {criterion_id} not found"
+    )
 
 
-@app.post("/api/v1/studies/{study_id}/eligibility-criteria", response_model=EligibilityCriterion, status_code=status.HTTP_201_CREATED)
+@app.post(
+    "/api/v1/studies/{study_id}/eligibility-criteria",
+    response_model=EligibilityCriterion,
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_eligibility_criterion_endpoint(
     study_id: str, payload: CreateEligibilityCriterionRequest, request: Request
 ):
@@ -774,9 +817,15 @@ async def create_eligibility_criterion_endpoint(
 
     # Extract identity & change reason from context/header
     user_id = getattr(request.state, "user_id", "system")
-    change_reason = payload.change_reason or getattr(request.state, "change_reason", None) or request.headers.get("X-Change-Reason", "Create eligibility criterion")
+    change_reason = (
+        payload.change_reason
+        or getattr(request.state, "change_reason", None)
+        or request.headers.get("X-Change-Reason", "Create eligibility criterion")
+    )
     if not change_reason or not change_reason.strip():
-         raise HTTPException(status_code=400, detail="Missing change justification reason")
+        raise HTTPException(
+            status_code=400, detail="Missing change justification reason"
+        )
 
     # Parse and validate DSL
     try:
@@ -798,7 +847,12 @@ async def create_eligibility_criterion_endpoint(
     driver = getattr(request.app.state, "driver", None)
     try:
         await create_eligibility_criterion(
-            driver, study_id, user_id, change_reason, payload.criterion_id, criterion_data
+            driver,
+            study_id,
+            user_id,
+            change_reason,
+            payload.criterion_id,
+            criterion_data,
         )
     except ImmutabilityViolationError:
         raise
@@ -810,15 +864,27 @@ async def create_eligibility_criterion_endpoint(
     # Fetch back the created item to return
     raw_criteria = await get_eligibility_criteria_from_graph(driver, study_id)
     for c in raw_criteria:
-        if c.get("id") == payload.criterion_id or c.get("criterion_id") == payload.criterion_id:
+        if (
+            c.get("id") == payload.criterion_id
+            or c.get("criterion_id") == payload.criterion_id
+        ):
             return map_db_to_criterion(c)
 
-    raise HTTPException(status_code=500, detail="Failed to retrieve created eligibility criterion")
+    raise HTTPException(
+        status_code=500, detail="Failed to retrieve created eligibility criterion"
+    )
 
 
-@app.put("/api/v1/studies/{study_id}/eligibility-criteria/{criterion_id}", response_model=EligibilityCriterion, status_code=status.HTTP_200_OK)
+@app.put(
+    "/api/v1/studies/{study_id}/eligibility-criteria/{criterion_id}",
+    response_model=EligibilityCriterion,
+    status_code=status.HTTP_200_OK,
+)
 async def update_eligibility_criterion_endpoint(
-    study_id: str, criterion_id: str, payload: UpdateEligibilityCriterionRequest, request: Request
+    study_id: str,
+    criterion_id: str,
+    payload: UpdateEligibilityCriterionRequest,
+    request: Request,
 ):
     """
     Updates an eligibility criterion for a specific clinical study, parsing and validating the DSL.
@@ -828,9 +894,15 @@ async def update_eligibility_criterion_endpoint(
         raise HTTPException(status_code=404, detail="Study not found")
 
     user_id = getattr(request.state, "user_id", "system")
-    change_reason = payload.change_reason or getattr(request.state, "change_reason", None) or request.headers.get("X-Change-Reason", "Update eligibility criterion")
+    change_reason = (
+        payload.change_reason
+        or getattr(request.state, "change_reason", None)
+        or request.headers.get("X-Change-Reason", "Update eligibility criterion")
+    )
     if not change_reason or not change_reason.strip():
-         raise HTTPException(status_code=400, detail="Missing change justification reason")
+        raise HTTPException(
+            status_code=400, detail="Missing change justification reason"
+        )
 
     # Parse and validate DSL
     try:
@@ -867,7 +939,9 @@ async def update_eligibility_criterion_endpoint(
         if c.get("id") == criterion_id or c.get("criterion_id") == criterion_id:
             return map_db_to_criterion(c)
 
-    raise HTTPException(status_code=500, detail="Failed to retrieve updated eligibility criterion")
+    raise HTTPException(
+        status_code=500, detail="Failed to retrieve updated eligibility criterion"
+    )
 
 
 @app.post("/api/v1/mappings/upload", status_code=status.HTTP_200_OK)

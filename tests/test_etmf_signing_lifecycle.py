@@ -1,18 +1,22 @@
 import time
+
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
-from sqlalchemy import select
 from jose import jwt
+from signature import SignatureManifestation
+from sqlalchemy import select
 
 from apps.etmf.database import db_manager
 from apps.etmf.main import app
 from apps.etmf.models import Base, TMFAuditLog, TMFDocument
-from apps.etmf.sealer import execute_etmf_audit_sealing_cycle, validate_etmf_ledger_integrity
+from apps.etmf.sealer import (
+    execute_etmf_audit_sealing_cycle,
+    validate_etmf_ledger_integrity,
+)
 from apps.gateway.main import generate_signature
-from signature import SignatureManifestation
 
-GATEWAY_SECRET = "internal-gateway-secret-12345"
+GATEWAY_SECRET = "internal-gateway-secret-12345"  # pragma: allowlist secret
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -194,7 +198,9 @@ async def test_etmf_signing_reauth_failures():
 
     # 1. Missing signature token -> 411 / 401 depending on middleware
     no_token_headers = get_auth_headers(roles="admin", change_reason="No token")
-    resp_no_token = client.post(action_path, json={"signing_reason": "APPROVAL"}, headers=no_token_headers)
+    resp_no_token = client.post(
+        action_path, json={"signing_reason": "APPROVAL"}, headers=no_token_headers
+    )
     assert resp_no_token.status_code == 401
     assert "re-authentication is required" in resp_no_token.json()["message"].lower()
 
@@ -214,7 +220,9 @@ async def test_etmf_signing_reauth_failures():
         change_reason="Expired token",
         sig_token_custom=expired_token,
     )
-    resp_expired = client.post(action_path, json={"signing_reason": "APPROVAL"}, headers=expired_headers)
+    resp_expired = client.post(
+        action_path, json={"signing_reason": "APPROVAL"}, headers=expired_headers
+    )
     assert resp_expired.status_code == 401
     assert "invalid signature token" in resp_expired.json()["message"].lower()
 
@@ -228,13 +236,17 @@ async def test_etmf_signing_reauth_failures():
         "exp": time.time() + 300.0,
         "jti": "jti-mismatch-123",
     }
-    mismatch_user_token = jwt.encode(mismatch_user_payload, GATEWAY_SECRET, algorithm="HS256")
+    mismatch_user_token = jwt.encode(
+        mismatch_user_payload, GATEWAY_SECRET, algorithm="HS256"
+    )
     mismatch_headers = get_auth_headers(
         roles="admin",
         change_reason="User mismatch",
         sig_token_custom=mismatch_user_token,
     )
-    resp_mismatch = client.post(action_path, json={"signing_reason": "APPROVAL"}, headers=mismatch_headers)
+    resp_mismatch = client.post(
+        action_path, json={"signing_reason": "APPROVAL"}, headers=mismatch_headers
+    )
     assert resp_mismatch.status_code == 401
     assert "mismatch" in resp_mismatch.json()["message"].lower()
 
@@ -248,13 +260,19 @@ async def test_etmf_signing_reauth_failures():
         "exp": time.time() + 300.0,
         "jti": "jti-mismatch-action-123",
     }
-    mismatch_action_token = jwt.encode(mismatch_action_payload, GATEWAY_SECRET, algorithm="HS256")
+    mismatch_action_token = jwt.encode(
+        mismatch_action_payload, GATEWAY_SECRET, algorithm="HS256"
+    )
     mismatch_action_headers = get_auth_headers(
         roles="admin",
         change_reason="Action mismatch",
         sig_token_custom=mismatch_action_token,
     )
-    resp_mismatch_action = client.post(action_path, json={"signing_reason": "APPROVAL"}, headers=mismatch_action_headers)
+    resp_mismatch_action = client.post(
+        action_path,
+        json={"signing_reason": "APPROVAL"},
+        headers=mismatch_action_headers,
+    )
     assert resp_mismatch_action.status_code == 401
     assert "mismatch" in resp_mismatch_action.json()["message"].lower()
 
@@ -303,15 +321,22 @@ async def test_etmf_post_signature_locking():
         change_reason="Sign-off Form 1572",
         action_path=action_path,
     )
-    resp_resign = client.post(action_path, json={"signing_reason": "APPROVAL"}, headers=fresh_sig_headers)
+    resp_resign = client.post(
+        action_path, json={"signing_reason": "APPROVAL"}, headers=fresh_sig_headers
+    )
     assert resp_resign.status_code == 403
     assert "IMMUTABILITY_VIOLATION" in resp_resign.json()["detail"]
 
     # Attempt B: Transition status of the signed document -> 403 IMMUTABILITY_VIOLATION
-    trans_headers = get_auth_headers(roles="admin", change_reason="Try to transition status")
+    trans_headers = get_auth_headers(
+        roles="admin", change_reason="Try to transition status"
+    )
     resp_transition = client.post(
         f"/api/v1/etmf/documents/{doc_id}/transition",
-        json={"to_status": "TECHNICAL_QC", "reason_for_change": "Forced status edit attempt"},
+        json={
+            "to_status": "TECHNICAL_QC",
+            "reason_for_change": "Forced status edit attempt",
+        },
         headers=trans_headers,
     )
     assert resp_transition.status_code == 403
@@ -329,7 +354,9 @@ async def test_etmf_post_signature_locking():
     resp_redact = client.post(
         f"/api/v1/etmf/documents/{doc_id}/redact",
         json=redact_payload,
-        headers=get_auth_headers(roles="admin", change_reason="Standard redaction attempt"),
+        headers=get_auth_headers(
+            roles="admin", change_reason="Standard redaction attempt"
+        ),
     )
     assert resp_redact.status_code == 403
     assert "IMMUTABILITY_VIOLATION" in resp_redact.json()["detail"]
@@ -347,7 +374,9 @@ async def test_etmf_post_signature_locking():
     resp_manual = client.post(
         f"/api/v1/etmf/documents/{doc_id}/manual-redact",
         json={"terms": ["Investigator"]},
-        headers=get_auth_headers(roles="admin", change_reason="Manual redaction attempt"),
+        headers=get_auth_headers(
+            roles="admin", change_reason="Manual redaction attempt"
+        ),
     )
     assert resp_manual.status_code == 403
     assert "IMMUTABILITY_VIOLATION" in resp_manual.json()["detail"]
@@ -363,14 +392,18 @@ async def test_etmf_post_signature_locking():
             "mime_type": "application/pdf",
             "metadata_json": {"requires_signature": False},
         },
-        headers=get_auth_headers(roles="admin", change_reason="Attempt new version ingestion"),
+        headers=get_auth_headers(
+            roles="admin", change_reason="Attempt new version ingestion"
+        ),
     )
     assert resp_ingest_new_version.status_code == 403
     assert "IMMUTABILITY_VIOLATION" in resp_ingest_new_version.json()["detail"]
 
     # 4. Verify MUTATION_REJECTED action inside TMFAuditLog
     async with db_manager.get_session_maker()() as session:
-        stmt_audit = select(TMFAuditLog).where(TMFAuditLog.action == "MUTATION_REJECTED")
+        stmt_audit = select(TMFAuditLog).where(
+            TMFAuditLog.action == "MUTATION_REJECTED"
+        )
         logs = (await session.execute(stmt_audit)).scalars().all()
         # Assert at least one attempt was logged with details of the rejection
         assert len(logs) > 0

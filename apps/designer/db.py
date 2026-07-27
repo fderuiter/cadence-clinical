@@ -135,7 +135,9 @@ def get_study_projection(study_id: str) -> Optional[Dict[str, Any]]:
     ]
     # Dynamically inject non-soft-deleted mock eligibility criteria
     study["eligibility_criteria"] = [
-        c for c in MOCK_ELIGIBILITY_CRITERIA.get(study_id, []) if not c.get("is_deleted", False)
+        c
+        for c in MOCK_ELIGIBILITY_CRITERIA.get(study_id, [])
+        if not c.get("is_deleted", False)
     ]
     return study
 

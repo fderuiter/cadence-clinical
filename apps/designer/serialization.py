@@ -1,14 +1,17 @@
 import json
-import yaml
 from typing import Any, Dict, List
-from apps.designer.usdm_ingestion import validate_usdm_payload
+
+import yaml
+
 from apps.designer.mapper import to_uuid
+from apps.designer.usdm_ingestion import validate_usdm_payload
 
 
 class USDMSerializationError(ValueError):
     """
     Custom exception raised when exported USDM payload fails validation.
     """
+
     def __init__(self, message: str, errors: List[Dict[str, Any]]):
         self.errors = errors
         self.message = message
@@ -20,6 +23,7 @@ def get_canonical_payload(usdm_dict: Dict[str, Any]) -> Dict[str, Any]:
     Extracts and normalizes standard canonical USDM structure from a mapped payload.
     """
     import copy
+
     payload = copy.deepcopy(usdm_dict)
 
     # Ensure study-level id is a valid UUID and preserve original ID
@@ -36,7 +40,7 @@ def get_canonical_payload(usdm_dict: Dict[str, Any]) -> Dict[str, Any]:
         "instanceType",
         "versions",
         "audit_metadata",
-        "reason_for_change"
+        "reason_for_change",
     }
 
     return {k: payload[k] for k in standard_keys if k in payload}
@@ -46,7 +50,7 @@ def serialize_usdm(
     usdm_dict: Dict[str, Any],
     format_type: str = "json",
     style: str = "canonical",
-    validate: bool = True
+    validate: bool = True,
 ) -> str:
     """
     Serializes a mapped USDM dictionary to a deterministic string (JSON or YAML),
@@ -71,32 +75,46 @@ def serialize_usdm(
     if sty == "canonical":
         export_dict = get_canonical_payload(usdm_dict)
     elif sty == "legacy":
-        legacy_keys = {"id", "name", "version", "description", "arms", "rules", "eligibility_criteria"}
+        legacy_keys = {
+            "id",
+            "name",
+            "version",
+            "description",
+            "arms",
+            "rules",
+            "eligibility_criteria",
+        }
         export_dict = {k: usdm_dict[k] for k in legacy_keys if k in usdm_dict}
     elif sty == "both":
         export_dict = dict(usdm_dict)
     else:
-        raise ValueError(f"Unsupported style: '{style}'. Must be 'canonical', 'legacy', or 'both'.")
+        raise ValueError(
+            f"Unsupported style: '{style}'. Must be 'canonical', 'legacy', or 'both'."
+        )
 
     # 2. Check basic physical identity rules before serializing
     errors = []
     if "id" not in export_dict or not export_dict["id"]:
-        errors.append({
-            "field": "id",
-            "reason": "Study must contain a non-empty physical ID.",
-            "value": export_dict.get("id")
-        })
+        errors.append(
+            {
+                "field": "id",
+                "reason": "Study must contain a non-empty physical ID.",
+                "value": export_dict.get("id"),
+            }
+        )
     if "name" not in export_dict or not export_dict["name"]:
-        errors.append({
-            "field": "name",
-            "reason": "Study must contain a non-empty physical name/title.",
-            "value": export_dict.get("name")
-        })
+        errors.append(
+            {
+                "field": "name",
+                "reason": "Study must contain a non-empty physical name/title.",
+                "value": export_dict.get("name"),
+            }
+        )
 
     if errors:
         raise USDMSerializationError(
             f"USDM Export Validation Failed on pre-flight checks: {errors}",
-            errors=errors
+            errors=errors,
         )
 
     # 3. Deterministic serialization
@@ -105,7 +123,9 @@ def serialize_usdm(
     elif fmt in ("yaml", "yml"):
         serialized = yaml.dump(export_dict, default_flow_style=False, sort_keys=True)
     else:
-        raise ValueError(f"Unsupported format type: '{format_type}'. Must be 'json' or 'yaml'.")
+        raise ValueError(
+            f"Unsupported format type: '{format_type}'. Must be 'json' or 'yaml'."
+        )
 
     # 4. Optional validation using the shared validation foundation
     if validate:
@@ -120,7 +140,7 @@ def serialize_usdm(
                 ]
                 raise USDMSerializationError(
                     f"Exported USDM payload failed validation against official USDM schema. Errors: {errors_list}",
-                    errors=errors_list
+                    errors=errors_list,
                 )
 
     return serialized
