@@ -128,3 +128,6 @@ Thumbs.db
 # Sandbox / Prototyping Folder
 # ------------------------------------------
 scratch/
+# Isolated eTMF generation target directory
+# ------------------------------------------
+tmp_etmf/
