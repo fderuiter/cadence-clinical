@@ -267,6 +267,7 @@ async def process_dictionary_import(
 
                     # Trigger a post-import impact analysis for the imported dictionary/version
                     from apps.execution.coding.impact import run_impact_analysis
+
                     async with session_maker() as analysis_session:
                         async with analysis_session.begin():
                             await run_impact_analysis(

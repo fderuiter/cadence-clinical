@@ -85,7 +85,6 @@ from apps.execution.tsdv import evaluate_tsdv_requirement
 from apps.execution.ucum import convert_unit, get_normalized_representation
 from packages.security import (
     ROLE_CRA,
-    ROLE_CRC,
     ROLE_DATA_MANAGER,
     ROLE_SITE_INVESTIGATOR,
     get_normalized_roles,
@@ -4094,6 +4093,7 @@ async def unlock_trial_endpoint(
 # Coder Action and Coding Assignment API
 # ==========================================
 
+
 class ImpactAnalysisRequest(BaseModel):
     dictionary_type: str
     new_version: str
@@ -4113,10 +4113,15 @@ class ImpactAnalysisResponse(BaseModel):
 async def post_impact_analysis(
     request: Request,
     payload: ImpactAnalysisRequest,
-    roles: list[str] = Depends(require_roles("data manager", "sponsor_dm", "TERMINOLOGY_MANAGER", "SYSTEM_ADMIN")),
+    roles: list[str] = Depends(
+        require_roles(
+            "data manager", "sponsor_dm", "TERMINOLOGY_MANAGER", "SYSTEM_ADMIN"
+        )
+    ),
 ) -> ImpactAnalysisResponse:
     """Manually triggers up-versioning impact analysis on existing coded assignments."""
     from apps.execution.coding.impact import run_impact_analysis
+
     async with db_manager.get_session_maker()() as session:
         async with session.begin():
             metrics = await run_impact_analysis(

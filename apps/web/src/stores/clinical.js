@@ -378,6 +378,17 @@ export const useClinicalStore = defineStore("clinical", {
             ],
           },
         },
+        {
+          id: "concept_code",
+          label: "NCI Thesaurus Concept Code",
+          type: "concept_code",
+          gridSpan: 12,
+          cdash: "VS.CONCEPT_CODE",
+          value: "",
+          validation: {
+            required: true,
+          },
+        },
       ],
       formValues: savedFormValues || {
         brthdt: "1980-05-12",
@@ -389,6 +400,7 @@ export const useClinicalStore = defineStore("clinical", {
         weight: "70",
         height: "1.75",
         bmi_status: "Normal",
+        concept_code: "",
       },
       fieldVisibility: {},
       formQueries: savedFormQueries || {},

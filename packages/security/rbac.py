@@ -435,7 +435,11 @@ def require_roles(*allowed_roles: str, detail: Optional[str] = None):
         for role in allowed_roles:
             norm_role = role.strip().lower()
             # Normalize allowed roles as well so we can compare canonical forms
-            norm_role_canonical = "sponsor_admin" if norm_role in ("sponsor admin", "sponsor_admin") else normalize_role(norm_role)
+            norm_role_canonical = (
+                "sponsor_admin"
+                if norm_role in ("sponsor admin", "sponsor_admin")
+                else normalize_role(norm_role)
+            )
             expanded_allowed.add(norm_role_canonical)
             if norm_role_canonical in ROLE_EXPANSIONS:
                 expanded_allowed.update(ROLE_EXPANSIONS[norm_role_canonical])
