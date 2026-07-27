@@ -8,12 +8,21 @@ from datetime import datetime
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
 from apps.gateway.main import generate_signature
 from apps.tickets.database import db_manager
 from apps.tickets.main import app
-from apps.tickets.models import Base, Ticket, TicketAuditLog
+from apps.tickets.models import (
+    Base,
+    Ticket,
+    TicketAuditLog,
+    TicketCategory,
+    TicketComment,
+    TicketPriority,
+    TicketStatus,
+)
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -288,3 +297,185 @@ def test_nonexistent_resources_return_404():
     res_ticket = client.get("/api/v1/tickets/nonexistent-ticket-id", headers=headers)
     assert res_ticket.status_code == 404
     assert "Ticket with ID" in res_ticket.json()["detail"]
+
+
+def test_tickets_enums_and_models_attributes():
+    """
+    Verify enums and models attributes exist and conform to spec.
+    """
+    # Enums assertions and docstrings
+    assert TicketCategory.TECHNICAL.value == "TECHNICAL"
+    assert TicketCategory.CLINICAL.value == "CLINICAL"
+    assert TicketCategory.HARDWARE.value == "HARDWARE"
+    assert TicketCategory.ACCESS.value == "ACCESS"
+    assert TicketCategory.OTHER.value == "OTHER"
+    assert TicketCategory.__doc__ is not None
+
+    assert TicketPriority.LOW.value == "LOW"
+    assert TicketPriority.MEDIUM.value == "MEDIUM"
+    assert TicketPriority.HIGH.value == "HIGH"
+    assert TicketPriority.CRITICAL.value == "CRITICAL"
+    assert TicketPriority.__doc__ is not None
+
+    assert TicketStatus.OPEN.value == "OPEN"
+    assert TicketStatus.IN_PROGRESS.value == "IN_PROGRESS"
+    assert TicketStatus.RESOLVED.value == "RESOLVED"
+    assert TicketStatus.CLOSED.value == "CLOSED"
+    assert TicketStatus.__doc__ is not None
+
+
+@pytest.mark.asyncio
+async def test_comments_creation_and_retrieval_scoped():
+    """
+    Verify creation of ticket comments and efficient, ascending chronological retrieval.
+    """
+    client = TestClient(app)
+    headers = get_auth_headers(
+        roles="admin", change_reason="Creating a ticket for comments test"
+    )
+
+    # 1. Create a Ticket
+    payload = {
+        "title": "Comment test ticket",
+        "description": "Ticket description.",
+        "category": "TECHNICAL",
+        "priority": "LOW",
+    }
+    res_create = client.post("/api/v1/tickets", json=payload, headers=headers)
+    assert res_create.status_code == 201
+    ticket_id = res_create.json()["id"]
+
+    # 2. Add multiple comments to the ticket
+    comment_headers = get_auth_headers(
+        roles="admin", change_reason="Adding first comment"
+    )
+    res_comment1 = client.post(
+        f"/api/v1/tickets/{ticket_id}/comments",
+        json={"body": "This is the first comment."},
+        headers=comment_headers,
+    )
+    assert res_comment1.status_code == 201
+    data_comment1 = res_comment1.json()
+    assert data_comment1["ticket_id"] == ticket_id
+    assert data_comment1["body"] == "This is the first comment."
+    assert data_comment1["created_by"] == "tickets_test_user"
+    assert data_comment1["reason_for_change"] == "Adding first comment"
+    assert data_comment1["version_index"] == 1
+
+    # Sleep slightly to ensure distinct created_at timestamps if needed (SQLite datetime defaults may be identical in the same millisecond)
+    time.sleep(0.1)
+
+    comment_headers2 = get_auth_headers(
+        roles="admin", change_reason="Adding second comment"
+    )
+    res_comment2 = client.post(
+        f"/api/v1/tickets/{ticket_id}/comments",
+        json={"body": "This is the second comment."},
+        headers=comment_headers2,
+    )
+    assert res_comment2.status_code == 201
+
+    # 3. List comments and verify referential integrity and ascending chronological ordering
+    res_list = client.get(f"/api/v1/tickets/{ticket_id}/comments", headers=headers)
+    assert res_list.status_code == 200
+    comments = res_list.json()
+    assert len(comments) == 2
+    assert comments[0]["body"] == "This is the first comment."
+    assert comments[1]["body"] == "This is the second comment."
+
+    # 4. Verify cascade delete referential integrity
+    async with db_manager.get_session_maker()() as session:
+        # Fetch comments in DB
+        db_comments = await session.execute(
+            select(TicketComment).where(TicketComment.ticket_id == ticket_id)
+        )
+        assert len(db_comments.scalars().all()) == 2
+
+        # Delete the ticket
+        db_ticket = await session.get(Ticket, ticket_id)
+        await session.delete(db_ticket)
+        await session.commit()
+
+        # Verify comment rows are gone via CASCADE
+        db_comments_after = await session.execute(
+            select(TicketComment).where(TicketComment.ticket_id == ticket_id)
+        )
+        assert len(db_comments_after.scalars().all()) == 0
+
+
+@pytest.mark.asyncio
+async def test_ticket_scoped_audit_logs():
+    """
+    Verify audit records can be retrieved filtered by ticket_id.
+    """
+    client = TestClient(app)
+    headers = get_auth_headers(roles="admin", change_reason="Audit scoping test")
+
+    # Create Ticket 1
+    t1_res = client.post(
+        "/api/v1/tickets",
+        json={"title": "Ticket 1", "description": "D1", "priority": "LOW"},
+        headers=headers,
+    )
+    t1_id = t1_res.json()["id"]
+
+    # Create Ticket 2
+    t2_res = client.post(
+        "/api/v1/tickets",
+        json={"title": "Ticket 2", "description": "D2", "priority": "HIGH"},
+        headers=headers,
+    )
+    t2_id = t2_res.json()["id"]
+    assert t2_id is not None
+
+    # Retrieve audit logs filtered by Ticket 1
+    res_audit_t1 = client.get(
+        f"/api/v1/tickets/audit-logs?ticket_id={t1_id}", headers=headers
+    )
+    assert res_audit_t1.status_code == 200
+    t1_logs = res_audit_t1.json()
+
+    # Filter log entries that have ticket_id == t1_id
+    # Note: there might be other log entries (like list logs) in the return if not fully filtered,
+    # but the endpoint filters by ticket_id in SQL if passed. Let's verify all returned items have ticket_id == t1_id
+    # wait, our endpoint writes a self-auditing TICKET_AUDIT_LOG_LIST entry with ticket_id=ticket_id, which is also filtered correctly!
+    for log in t1_logs:
+        assert log["ticket_id"] == t1_id
+
+
+@pytest.mark.asyncio
+async def test_ticket_concurrent_reference_generation():
+    """
+    Verify ticket reference generation is unique and safe under concurrent creations.
+    """
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        headers = get_auth_headers(
+            roles="admin", change_reason="Concurrent creation test"
+        )
+        payload = {
+            "title": "Concurrent Ticket",
+            "description": "Testing uniqueness under concurrency.",
+            "priority": "LOW",
+            "category": "TECHNICAL",
+        }
+        # Run 10 requests concurrently
+        import asyncio
+
+        tasks = [
+            ac.post("/api/v1/tickets", json=payload, headers=headers) for _ in range(10)
+        ]
+        responses = await asyncio.gather(*tasks)
+
+        references = []
+        for r in responses:
+            assert r.status_code == 201, f"Failed concurrent insert: {r.text}"
+            data = r.json()
+            assert data["reference"] is not None
+            references.append(data["reference"])
+
+        # Ensure all references are unique and formatted correctly
+        assert len(references) == 10
+        assert len(set(references)) == 10
+        for ref in references:
+            assert ref.startswith("TKT-")
