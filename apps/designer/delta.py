@@ -308,7 +308,7 @@ async def assert_library_object_mutable(
                             )
         return
 
-    has_session = hasattr(driver_or_tx, "session")
+    has_session = hasattr(driver_or_tx, "session") and callable(driver_or_tx.session)
     query = """
     MATCH (s:Study)-[:HAS_LIBRARY_INSTANCE]->(instance:LibraryObjectInstance)-[:INSTANTIATED_FROM]->(lo:LibraryObject {id: $object_id})
     WHERE (lo.version = $version OR $version IS NULL)

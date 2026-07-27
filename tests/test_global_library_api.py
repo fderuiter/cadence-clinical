@@ -796,9 +796,11 @@ async def test_library_object_in_use_and_amendments():
     """
     from apps.designer.db import MOCK_STUDIES, MOCK_STUDY_VERSIONS
 
-    # Clean setups
-    MOCK_STUDIES.clear()
-    MOCK_STUDY_VERSIONS.clear()
+    # Clean setups for our specific test study IDs to ensure isolation, preserving global study_1
+    MOCK_STUDIES.pop("study_inactive", None)
+    MOCK_STUDIES.pop("study_active", None)
+    MOCK_STUDY_VERSIONS.pop("study_inactive", None)
+    MOCK_STUDY_VERSIONS.pop("study_active", None)
 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
