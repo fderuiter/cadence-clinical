@@ -607,10 +607,6 @@ function selectArmSuggestion(sug) {
   armSuggestions.value = [];
 }
 
-function selectArmConcept(sug) {
-  selectArmSuggestion(sug);
-}
-
 function handleEncConceptInput(val) {
   if (encConceptTimer) clearTimeout(encConceptTimer);
   if (!val.trim()) {
@@ -631,10 +627,6 @@ function selectEncSuggestion(sug) {
   newEnc.concept_code = sug.concept_code;
   newEnc.name = sug.preferred_name;
   encSuggestions.value = [];
-}
-
-function selectEncConcept(sug) {
-  selectEncSuggestion(sug);
 }
 
 // Link Applicability States

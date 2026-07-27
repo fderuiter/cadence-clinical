@@ -1157,10 +1157,6 @@ function handleConceptCodeInput(field, val) {
   }, 300);
 }
 
-function handleConceptInput(field, val) {
-  handleConceptCodeInput(field, val);
-}
-
 // Deep watch formValues to evaluate rules debounced
 watch(
   () => store.formValues,
