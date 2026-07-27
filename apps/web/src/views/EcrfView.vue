@@ -29,7 +29,9 @@
               v-show="store.fieldVisibility[field.id] !== false"
               :id="`field-container-${field.id}`"
               class="clinical-input"
-              :class="{ 'has-error': getValidationError(field) }"
+              :class="{
+                'has-error': getValidationError(field),
+              }"
               :style="`grid-column: span ${field.gridSpan || 12};`"
             >
               <label :for="field.id">{{ field.label }}</label>
@@ -39,6 +41,7 @@
                   type="text"
                   :name="field.id"
                   :value="store.formValues[field.id]"
+                  autocomplete="off"
                   @change="
                     handleFieldChange(field, $event.target.value, $event.target)
                   "

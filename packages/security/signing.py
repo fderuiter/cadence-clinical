@@ -49,6 +49,7 @@ def verify_gateway_signature(
     unblinded_access: bool = False,
 ) -> bool:
     """Verifies an HMAC-SHA256 signature for API Gateway identity and scope headers."""
+    # 1. Verify with the full 7-field scope-aware payload
     expected = generate_gateway_signature(
         user_id=user_id,
         roles=roles,
@@ -197,3 +198,37 @@ def capture_certificate_identifiers(cert_pem: str) -> Dict[str, str]:
         "sha256_fingerprint": sha256_fingerprint,
         "subject_key_identifier": ski or sha256_fingerprint,
     }
+
+
+def clean_json_val(val: Any) -> str:
+    """
+    Ensure consistent, deterministic serialization of JSON values for hashing.
+    Parses and formats dictionaries/lists to remove any whitespace or key order differences.
+    """
+    if val is None:
+        return "null"
+    if isinstance(val, (dict, list)):
+        return json.dumps(val, sort_keys=True)
+    if isinstance(val, str):
+        try:
+            parsed = json.loads(val)
+            return json.dumps(parsed, sort_keys=True)
+        except Exception:
+            return json.dumps(val)
+    return json.dumps(val)
+
+
+def compute_merkle_root(record_hashes: list[str]) -> str:
+    """
+    Computes the Merkle Root hash from a list of record hashes.
+    """
+    combined_records_payload = "".join(record_hashes).encode("utf-8")
+    return hashlib.sha256(combined_records_payload).hexdigest()
+
+
+def compute_block_hash(previous_hash: str, merkle_root: str) -> str:
+    """
+    Computes a sequential block-level chaining hash using the previous block hash and the current Merkle root.
+    """
+    block_input = (previous_hash + merkle_root).encode("utf-8")
+    return hashlib.sha256(block_input).hexdigest()

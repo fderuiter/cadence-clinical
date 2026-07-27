@@ -225,3 +225,101 @@ export async function generateJwtHS256(payload, secret) {
   const signatureStr = base64url(new Uint8Array(signatureBuffer));
   return tokenInput + "." + signatureStr;
 }
+
+/**
+ * Computes a standard SHA-256 hash of a message using Web Crypto APIs.
+ *
+ * @param {string} message - The plaintext message to hash.
+ * @returns {Promise<string>} The hexadecimal SHA-256 digest.
+ */
+export async function sha256(message) {
+  const msgBuffer = new TextEncoder().encode(message);
+  const hashBuffer = await globalThis.crypto.subtle.digest(
+    "SHA-256",
+    msgBuffer
+  );
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  return hashHex;
+}
+
+/**
+ * Standard CDASH clinical standard field validation logic.
+ *
+ * @param {Object} fieldMeta - Metadata of the field containing validation rules.
+ * @param {any} val - Entered value of the field.
+ * @param {Object} [context={}] - Evaluation context for constraints.
+ * @param {Function|null} [evaluateASTFn=null] - AST evaluation callback.
+ * @returns {Object} { valid: boolean, message?: string }
+ */
+export function validateField(
+  fieldMeta,
+  val,
+  context = {},
+  evaluateASTFn = null
+) {
+  if (!fieldMeta) return { valid: true };
+
+  const rules = fieldMeta.validation || {};
+
+  // Required check
+  if (
+    rules.required &&
+    (val === undefined || val === null || val.toString().trim() === "")
+  ) {
+    return { valid: false, message: "This field is required." };
+  }
+
+  // Only perform format/range validation if there is a value entered
+  if (val !== undefined && val !== null && val.toString().trim() !== "") {
+    // Pattern (Regex) check
+    if (rules.pattern) {
+      const regex = new RegExp(rules.pattern);
+      if (!regex.test(val)) {
+        return { valid: false, message: rules.message || "Invalid format." };
+      }
+    }
+
+    // Min / Max (Numeric check)
+    if (rules.min !== undefined || rules.max !== undefined) {
+      const num = parseFloat(val);
+      if (isNaN(num)) {
+        return { valid: false, message: "Value must be a number." };
+      }
+      if (rules.min !== undefined && num < rules.min) {
+        return {
+          valid: false,
+          message: rules.message || `Minimum value is ${rules.min}.`,
+        };
+      }
+      if (rules.max !== undefined && num > rules.max) {
+        return {
+          valid: false,
+          message: rules.message || `Maximum value is ${rules.max}.`,
+        };
+      }
+    }
+  }
+
+  // Constraint validation (must evaluate to true/truthy, otherwise invalid)
+  if (fieldMeta.constraint) {
+    if (evaluateASTFn) {
+      const isOk = evaluateASTFn(
+        fieldMeta.constraint.condition || fieldMeta.constraint,
+        context
+      );
+      if (isOk === false) {
+        return {
+          valid: false,
+          message:
+            fieldMeta.constraint.query_message ||
+            "Constraint validation failed.",
+        };
+      }
+    }
+  }
+
+  return { valid: true };
+}
