@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Clinical Code Lookup Verification</title>
+  <!-- Link the style.css file from apps/web/src/style.css -->
+  <link rel="stylesheet" href="../apps/web/src/style.css">
+  <style>
+    body {
+      padding: 40px;
+      background-color: #f1f5f9;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    }
+    h2 {
+      margin-bottom: 20px;
+      color: #0f172a;
+    }
+    .state-group {
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px dashed #e2e8f0;
+    }
+    .state-title {
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: #64748b;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>NCI Thesaurus Code Lookup UI Primitive States</h2>
+
+    <div class="state-group">
+      <div class="state-title">Default/Initial State (No Lookup Status)</div>
+      <div id="default-state"></div>
+    </div>
+
+    <div class="state-group">
+      <div class="state-title">Loading State</div>
+      <div id="loading-state"></div>
+    </div>
+
+    <div class="state-group">
+      <div class="state-title">Valid State</div>
+      <div id="valid-state"></div>
+    </div>
+
+    <div class="state-group">
+      <div class="state-title">Invalid State</div>
+      <div id="invalid-state"></div>
+    </div>
+
+    <div class="state-group">
+      <div class="state-title">Degraded State</div>
+      <div id="degraded-state"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createClinicalLookupInput } from '../packages/ui/index.js';
+
+    document.getElementById('default-state').innerHTML = createClinicalLookupInput(
+      'code-default',
+      'Concept Code Lookup (Default)',
+      'C123'
+    );
+
+    document.getElementById('loading-state').innerHTML = createClinicalLookupInput(
+      'code-loading',
+      'Concept Code Lookup (Loading)',
+      'C45',
+      'loading'
+    );
+
+    document.getElementById('valid-state').innerHTML = createClinicalLookupInput(
+      'code-valid',
+      'Concept Code Lookup (Valid)',
+      'C12345',
+      'valid',
+      'Code is valid: "Adverse Event" in NCI Thesaurus.'
+    );
+
+    document.getElementById('invalid-state').innerHTML = createClinicalLookupInput(
+      'code-invalid',
+      'Concept Code Lookup (Invalid)',
+      'NOT_A_CODE',
+      'invalid',
+      'Invalid code "NOT_A_CODE". Not found in NCI Thesaurus.'
+    );
+
+    document.getElementById('degraded-state').innerHTML = createClinicalLookupInput(
+      'code-degraded',
+      'Concept Code Lookup (Degraded)',
+      'C999',
+      'degraded',
+      'Terminology service timeout. Validation offline.'
+    );
+  </script>
+</body>
+</html>
