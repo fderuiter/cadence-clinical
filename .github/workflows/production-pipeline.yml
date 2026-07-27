@@ -1,11 +1,65 @@
-# Placeholder for production pipeline workflow
 name: Production Pipeline
+
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+
 jobs:
-  build:
+  release-and-archive:
     runs-on: ubuntu-latest
     steps:
-      - name: Dummy step
-        run: echo "Hello"
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install UV Package Manager
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install Dependencies
+        run: |
+          uv venv
+          echo ".venv/bin" >> $GITHUB_PATH
+          uv pip install -e .[dev]
+
+      - name: Create Isolated Output Directory
+        run: mkdir -p tmp_etmf
+
+      - name: Generate Reports with Overrides
+        run: |
+          python scripts/generate_rtm.py --output-dir tmp_etmf --dynamic-timestamp
+
+      - name: Verify Isolated Generation
+        run: |
+          if [ ! -f "tmp_etmf/Requirements_Traceability_Matrix.md" ]; then
+            echo "Error: Requirements_Traceability_Matrix.md was not generated in tmp_etmf/"
+            exit 1
+          fi
+          if [ ! -f "tmp_etmf/IQ_OQ_PQ_Execution_Report.md" ]; then
+            echo "Error: IQ_OQ_PQ_Execution_Report.md was not generated in tmp_etmf/"
+            exit 1
+          fi
+          echo "Reports successfully validated in isolated directory."
+
+      - name: Simulate eTMF Archival
+        run: |
+          echo "=== Beginning Electronic Trial Master File (eTMF) Archival ==="
+          echo "Target Clinical Archive: https://etmf.clinical.cadence.internal/api/v1/archive"
+          echo "Protocol: FDA 21 CFR Part 11 / EU Annex 11 Compliant"
+          echo "Publishing artifacts from isolated directory 'tmp_etmf/'..."
+          
+          # Simulate posting files to eTMF API
+          for file in tmp_etmf/*; do
+            filename=$(basename "$file")
+            echo "Uploading $filename to eTMF..."
+            echo "File checksum: $(sha256sum "$file" | cut -d' ' -f1)"
+            echo "Successfully archived $filename in eTMF."
+          done
+          
+          echo "=== eTMF Archival Complete - All Release Audits Preserved ==="
