@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 import argparse
-from datetime import datetime, timezone
 import os
 import re
 import subprocess
 import xml.etree.ElementTree as ET
+from datetime import datetime, timezone
 
 
 def get_stable_timestamp():
@@ -251,7 +251,12 @@ def get_installed_packages():
 
 
 def generate_rtm_md(
-    requirements, test_mappings, test_results, test_cases_all, output_path, timestamp=None
+    requirements,
+    test_mappings,
+    test_results,
+    test_cases_all,
+    output_path,
+    timestamp=None,
 ):
     if timestamp is None:
         timestamp = get_stable_timestamp()
@@ -375,7 +380,12 @@ def generate_rtm_md(
 
 
 def generate_qualification_report(
-    requirements, test_mappings, test_results, test_cases_all, output_path, timestamp=None
+    requirements,
+    test_mappings,
+    test_results,
+    test_cases_all,
+    output_path,
+    timestamp=None,
 ):
     if timestamp is None:
         timestamp = get_stable_timestamp()
@@ -562,13 +572,13 @@ def main():
         "--output-dir",
         "-o",
         default="docs/SDLC",
-        help="Directory where report files are saved (default: docs/SDLC)"
+        help="Directory where report files are saved (default: docs/SDLC)",
     )
     parser.add_argument(
         "--dynamic-timestamp",
         "-d",
         action="store_true",
-        help="Use current UTC system timestamp instead of the stable baseline timestamp."
+        help="Use current UTC system timestamp instead of the stable baseline timestamp.",
     )
     args = parser.parse_args()
 
@@ -623,14 +633,24 @@ def main():
     # 4. Generate RTM Markdown
     rtm_out = os.path.join(args.output_dir, "Requirements_Traceability_Matrix.md")
     generate_rtm_md(
-        all_requirements, test_mappings, test_results, test_cases_all, rtm_out, timestamp=timestamp
+        all_requirements,
+        test_mappings,
+        test_results,
+        test_cases_all,
+        rtm_out,
+        timestamp=timestamp,
     )
     print(f"Requirements Traceability Matrix successfully written to {rtm_out}")
 
     # 5. Generate Qualification Report
     qual_out = os.path.join(args.output_dir, "IQ_OQ_PQ_Execution_Report.md")
     generate_qualification_report(
-        all_requirements, test_mappings, test_results, test_cases_all, qual_out, timestamp=timestamp
+        all_requirements,
+        test_mappings,
+        test_results,
+        test_cases_all,
+        qual_out,
+        timestamp=timestamp,
     )
     print(f"Qualification Execution Report successfully written to {qual_out}")
 
