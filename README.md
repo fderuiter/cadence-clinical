@@ -67,6 +67,24 @@ Cadence Clinical is organized as a reverse-proxy fronted microservices topology 
 ### Identity and Access Control (RBAC)
 Authentication and Authorization are centralized at the API Gateway (`apps/gateway/`) using **Keycloak OpenID Connect (OIDC)**. Incoming JWT tokens are parsed to extract user roles, site scopes, and unblinded access attributes. The gateway strips incoming client-side claims headers and propagates securely signed gateway headers (`X-User-Id`, `X-User-Roles`, etc.) signed with a shared HMAC-SHA256 signature version 2 format to downstream services.
 
+### Notifications Service Integration & Deployment Configurations
+The multi-channel **Notifications Service** (`apps/notifications`) is fully integrated into the API Gateway and Docker Compose network.
+Requests to `/notifications/` and `/api/v1/notifications/` are securely routed through the central gateway, which enforces identity verification, rate limiting, and HMAC-SHA256 signature verification.
+
+For deployment, the Notifications Service depends on several environment variables that can be configured in your deployment settings:
+- **`NOTIFICATIONS_DATABASE_URL`**: Relational database connection string (defaults to a local SQLite database `/app/notifications.db` or standard PostgreSQL URL).
+- **`SMTP_HOST`**: Host address for the SMTP server (defaults to `smtp.mailhog.local` in development).
+- **`SMTP_PORT`**: Port number for SMTP transmission (defaults to `1025`).
+- **`SMTP_USERNAME`**: SMTP server username for authentication (non-secret development placeholder is `dev_user`).
+- **`SMTP_PASSWORD`**: SMTP server password for authentication (non-secret development placeholder is `dev_password`).
+- **`SMTP_USE_TLS`**: Enforce TLS protocol (defaults to `false` for development).
+- **`SMTP_USE_SSL`**: Enforce SSL protocol (defaults to `false` for development).
+- **`SMTP_SENDER`**: Originating email address (defaults to `no-reply@cadenceclinical.com`).
+- **`WEBHOOK_URL`**: Target endpoint for outbound event webhooks (defaults to `http://webhooks.local/receiver`).
+- **`WEBHOOK_SIGNING_SECRET`**: HMAC secret used to canonically sign outgoing webhook payloads to ensure integrity (defaults to `dev_webhook_secret_key_12345`).
+- **`WEBHOOK_TIMEOUT`**: Timeout duration in seconds for dispatching a webhook request (defaults to `5.0`).
+- **`NOTIFICATION_MAX_ATTEMPTS`**: Maximum retry attempts for failed email/webhook notification deliveries (defaults to `5`).
+
 - **Role-Based Access Control (RBAC)** restricts operational paths. For example, Subjects are limited exclusively to ePRO submission endpoints, while only Quality Oversight roles can close or cancel CAPA workflows.
 - **Gateway Step-Up Re-Authentication** is enforced on signature-gated mutations (e.g., PI batch sign-offs, subject randomization). A short-lived (60-second) `sig_token` must be requested with re-supplied password credentials and TOTP to satisfy 21 CFR Part 11 electronic signature mandates.
 

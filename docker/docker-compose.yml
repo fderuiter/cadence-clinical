@@ -172,6 +172,32 @@ services:
       postgres:
         condition: service_healthy
 
+  notifications:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: cadence-notifications
+    command: ["uvicorn", "apps.notifications.main:app", "--host", "0.0.0.0", "--port", "8006", "--reload"]
+    volumes:
+      - ..:/app
+    environment:
+      - NOTIFICATIONS_DATABASE_URL=sqlite+aiosqlite:////app/notifications.db
+      - SMTP_HOST=smtp.mailhog.local
+      - SMTP_PORT=1025
+      - SMTP_USERNAME=dev_user
+      - SMTP_PASSWORD=dev_password
+      - SMTP_USE_TLS=false
+      - SMTP_USE_SSL=false
+      - SMTP_SENDER=no-reply@cadenceclinical.com
+      - WEBHOOK_URL=http://webhooks.local/receiver
+      - WEBHOOK_SIGNING_SECRET=dev_webhook_secret_key_12345
+      - WEBHOOK_TIMEOUT=5.0
+    ports:
+      - "8006:8006"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   subject-portal:
     image: node:20-alpine
     container_name: cadence-subject-portal
@@ -201,6 +227,7 @@ services:
       - QUALITY_URL=http://quality:8005
       - INTEROP_URL=http://interop:8004
       - TICKETS_URL=http://tickets:8009
+      - NOTIFICATIONS_URL=http://notifications:8006
     ports:
       - "8000:8000"
     depends_on:
@@ -217,6 +244,8 @@ services:
       interop:
         condition: service_started
       tickets:
+        condition: service_started
+      notifications:
         condition: service_started
       keycloak:
         condition: service_healthy

@@ -15,16 +15,15 @@ def resolve_concept_id(concept_dict: Optional[Dict[str, Any]]) -> Optional[str]:
     if not code:
         return None
 
-    # Search terminology_cache (using status to see what's loaded or direct lookup keys)
-    # Actually, terminology_cache maps concept_id (key) -> details.
-    # Let's search the cache internally or search the MOCK_TERMINOLOGY details.
+    # Try _original_id first
+    if "_original_id" in concept_dict and concept_dict["_original_id"]:
+        return str(concept_dict["_original_id"])
+
+    # Search terminology_cache details
     for k, details in MOCK_TERMINOLOGY.items():
         if isinstance(details, dict) and details.get("code") == code:
             return k
 
-    # Also, we can inspect terminology_cache's internal cache if we have access,
-    # but since TerminologyCache has thread-safe _cache, we can do a quick scan if needed.
-    # But usually, standard concept codes are stored directly. Let's return the code if no match is found.
     return str(code)
 
 
@@ -45,44 +44,123 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
     if not isinstance(usdm_data, dict):
         raise ValueError("USDM payload must be a dictionary")
 
-    # 1. Enforce physical identity and basic study identification metrics
-    study_id = usdm_data.get("id")
-    title = usdm_data.get("name")
+    # 1. Preprocess canonical nested structures to populate top-level legacy fields if missing
+    import copy
+    data = copy.deepcopy(usdm_data)
+
+    if "versions" in data:
+        versions = data.get("versions", [])
+        if versions and isinstance(versions, list) and isinstance(versions[0], dict):
+            version_node = versions[0]
+
+            if "version" not in data:
+                data["version"] = version_node.get("versionIdentifier")
+            if "_original_id" not in data and version_node.get("_original_id"):
+                data["_original_id"] = data.get("_original_id") or version_node.get("_original_id").split("_version_")[0]
+
+            designs = version_node.get("studyDesigns", [])
+            if designs and isinstance(designs, list) and isinstance(designs[0], dict):
+                design_node = designs[0]
+
+                # Reconstruct arms, visits, activities
+                if "arms" not in data or not data["arms"]:
+                    extracted_arms = []
+                    for arm in design_node.get("arms", []):
+                        if not isinstance(arm, dict):
+                            continue
+                        arm_copy = dict(arm)
+                        if "type" in arm_copy and "arm_type" not in arm_copy:
+                            arm_copy["arm_type"] = arm_copy.pop("type")
+
+                        if "visits" in arm_copy:
+                            mapped_visits = []
+                            for visit in arm_copy["visits"]:
+                                if isinstance(visit, dict):
+                                    visit_copy = dict(visit)
+                                    if "visit_type" in visit_copy and "visit_type_concept_id" not in visit_copy:
+                                        visit_copy["visit_type_concept_id"] = resolve_concept_id(visit_copy["visit_type"])
+                                    mapped_visits.append(visit_copy)
+                            arm_copy["visits"] = mapped_visits
+                        extracted_arms.append(arm_copy)
+                    data["arms"] = extracted_arms
+
+                # Reconstruct top-level rules
+                if "rules" not in data or not data["rules"]:
+                    extracted_rules = []
+                    for arm in design_node.get("arms", []):
+                        if isinstance(arm, dict) and "visits" in arm:
+                            for visit in arm["visits"]:
+                                if isinstance(visit, dict) and "activities" in visit:
+                                    for act in visit["activities"]:
+                                        if isinstance(act, dict) and "rules" in act:
+                                            for rule in act["rules"]:
+                                                if isinstance(rule, dict):
+                                                    extracted_rules.append(rule)
+                    if extracted_rules:
+                        data["rules"] = extracted_rules
+
+                # Reconstruct eligibility_criteria
+                if "eligibility_criteria" not in data or not data["eligibility_criteria"]:
+                    extracted_criteria = []
+                    for crit in design_node.get("eligibilityCriteria", []):
+                        if isinstance(crit, dict):
+                            crit_copy = dict(crit)
+                            category_obj = crit_copy.get("category") or {}
+                            crit_type = category_obj.get("code") if isinstance(category_obj, dict) else "inclusion"
+                            extracted_criteria.append({
+                                "id": crit_copy.get("_original_id") or crit_copy.get("id"),
+                                "criterion_id": crit_copy.get("_original_id") or crit_copy.get("id"),
+                                "criterion_type": crit_type,
+                                "description": crit_copy.get("description"),
+                                "dsl_source": crit_copy.get("_dsl_source") or crit_copy.get("expression")
+                            })
+                    if extracted_criteria:
+                        data["eligibility_criteria"] = extracted_criteria
+
+    # 2. Enforce physical identity and basic study identification metrics
+    study_id = data.get("_original_id") or data.get("id")
+    title = data.get("name")
     if not study_id:
         raise ValueError("USDM payload must contain a non-empty 'id' field")
     if not title:
         raise ValueError("USDM payload must contain a non-empty 'name' field")
 
-    current_version = usdm_data.get("version")
-    desc = usdm_data.get("description")
+    current_version = data.get("version")
+    desc = data.get("description")
 
-    # 2. Reconstruct arms, visits, and activities
+    # 3. Reconstruct arms, visits, and activities
     arms_projection = []
     preservation_metadata: Dict[str, Any] = {"unmapped_fields": {}}
 
     # Standard fields for study
     known_study_keys = {
         "id",
+        "_original_id",
         "name",
         "version",
         "description",
         "arms",
         "rules",
+        "eligibility_criteria",
         "preservation_metadata",
+        "versions",
+        "instanceType",
+        "audit_metadata",
+        "reason_for_change",
     }
-    extra_study_keys = set(usdm_data.keys()) - known_study_keys
+    extra_study_keys = set(data.keys()) - known_study_keys
     if extra_study_keys:
         preservation_metadata["unmapped_fields"]["study"] = {
-            k: usdm_data[k] for k in extra_study_keys
+            k: data[k] for k in extra_study_keys
         }
 
     # Gather embedded rules from activities during nested traversal
     embedded_rules = []
 
-    for arm in usdm_data.get("arms", []):
+    for arm in data.get("arms", []):
         if not isinstance(arm, dict):
             continue
-        arm_id = arm.get("id")
+        arm_id = arm.get("_original_id") or arm.get("id")
         arm_name = arm.get("name")
         if not arm_id:
             raise ValueError("Every arm in USDM arms list must have an 'id'")
@@ -92,7 +170,7 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
         arm_projection = {"arm_id": arm_id, "name": arm_name, "visits": []}
 
         # Resolve arm type concept lookup
-        arm_type = arm.get("arm_type")
+        arm_type = arm.get("arm_type") or arm.get("type")
         if arm_type:
             concept_id = resolve_concept_id(arm_type)
             if concept_id:
@@ -100,7 +178,7 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
 
             # Check for extra/unmapped keys inside arm_type
             if isinstance(arm_type, dict):
-                known_concept_keys = {"code", "decode", "system"}
+                known_concept_keys = {"id", "_original_id", "code", "decode", "system", "codeSystem", "codeSystemVersion", "instanceType"}
                 extra_concept_keys = set(arm_type.keys()) - known_concept_keys
                 if extra_concept_keys:
                     preservation_metadata["unmapped_fields"][
@@ -108,7 +186,7 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
                     ] = {k: arm_type[k] for k in extra_concept_keys}
 
         # Collect extra arm keys to prevent silent data drop
-        known_arm_keys = {"id", "name", "arm_type", "visits"}
+        known_arm_keys = {"id", "_original_id", "name", "arm_type", "type", "visits", "dataOriginDescription", "dataOriginType", "instanceType"}
         extra_arm_keys = set(arm.keys()) - known_arm_keys
         if extra_arm_keys:
             preservation_metadata["unmapped_fields"][f"arm_{arm_id}"] = {
@@ -119,7 +197,7 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
         for visit in arm.get("visits", []):
             if not isinstance(visit, dict):
                 continue
-            visit_id = visit.get("id")
+            visit_id = visit.get("_original_id") or visit.get("id")
             visit_name = visit.get("name")
             if not visit_id:
                 raise ValueError(f"Every visit in arm '{arm_id}' must have an 'id'")
@@ -133,7 +211,7 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
             }
 
             # Resolve visit type concept lookup
-            visit_type = visit.get("visit_type")
+            visit_type = visit.get("visit_type") or visit.get("type")
             if visit_type:
                 v_concept_id = resolve_concept_id(visit_type)
                 if v_concept_id:
@@ -141,7 +219,7 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
 
                 # Check for extra keys in visit_type
                 if isinstance(visit_type, dict):
-                    known_concept_keys = {"code", "decode", "system"}
+                    known_concept_keys = {"id", "_original_id", "code", "decode", "system", "codeSystem", "codeSystemVersion", "instanceType"}
                     extra_v_concept_keys = set(visit_type.keys()) - known_concept_keys
                     if extra_v_concept_keys:
                         preservation_metadata["unmapped_fields"][
@@ -149,7 +227,7 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
                         ] = {k: visit_type[k] for k in extra_v_concept_keys}
 
             # Collect extra visit keys
-            known_visit_keys = {"id", "name", "visit_type", "activities"}
+            known_visit_keys = {"id", "_original_id", "name", "visit_type", "type", "activities"}
             extra_visit_keys = set(visit.keys()) - known_visit_keys
             if extra_visit_keys:
                 preservation_metadata["unmapped_fields"][f"visit_{visit_id}"] = {
@@ -160,7 +238,7 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
             for act in visit.get("activities", []):
                 if not isinstance(act, dict):
                     continue
-                act_id = act.get("id")
+                act_id = act.get("_original_id") or act.get("id")
                 act_name = act.get("name")
                 if not act_id:
                     raise ValueError(
@@ -175,7 +253,7 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
                 visit_projection["activities"].append(act_projection)
 
                 # Collect extra activity keys
-                known_act_keys = {"id", "name", "rules"}
+                known_act_keys = {"id", "_original_id", "name", "rules", "instanceType"}
                 extra_act_keys = set(act.keys()) - known_act_keys
                 if extra_act_keys:
                     preservation_metadata["unmapped_fields"][f"activity_{act_id}"] = {
@@ -185,7 +263,6 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
                 # Extract and store embedded rules if present
                 for r in act.get("rules", []):
                     if isinstance(r, dict):
-                        # Ensure we map the target field to act_id or act_name if not provided in rule
                         rule_copy = dict(r)
                         if "target_field" not in rule_copy:
                             rule_copy["target_field"] = act_id
@@ -195,14 +272,14 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
 
         arms_projection.append(arm_projection)
 
-    # 3. Reconstruct Rules with strict AST schema checks and circular dependency detection
+    # 4. Reconstruct Rules with strict AST schema checks and circular dependency detection
     rules_dict: Dict[str, Dict[str, Any]] = {}
 
     # Process top-level rules first
-    for r in usdm_data.get("rules", []):
+    for r in data.get("rules", []):
         if not isinstance(r, dict):
             continue
-        r_id = r.get("id")
+        r_id = r.get("_original_id") or r.get("id")
         if not r_id:
             raise ValueError("Every rule in USDM payload must have an 'id'")
 
@@ -222,6 +299,7 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
         # Check for extra/unmapped keys inside rule
         known_rule_keys = {
             "id",
+            "_original_id",
             "type",
             "condition",
             "action",
@@ -239,10 +317,9 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
 
     # Integrate any embedded activity-level rules
     for r in embedded_rules:
-        r_id = r.get("id")
+        r_id = r.get("_original_id") or r.get("id")
         if not r_id:
             continue
-        # Only add if not already added to avoid duplication, or overwrite
         if r_id not in rules_dict:
             rules_dict[r_id] = {
                 "id": r_id,
@@ -263,7 +340,6 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
         if not cond:
             raise ValueError(f"Rule '{r_id}' is missing required 'condition' field")
 
-        # Parse into ExpressionNode to validate the AST structure
         try:
             ExpressionNode(**cond)
         except Exception as e:
@@ -271,7 +347,6 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
                 f"Unsupported or malformed rule expression structure in rule '{r_id}': {str(e)}"
             )
 
-    # Detect explicitly unsupported circular skip-logic paths
     reconstructed_rules_list = list(rules_dict.values())
     cycles = detect_circular_dependencies(reconstructed_rules_list)
     if cycles:
@@ -279,7 +354,20 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
             f"Circular skip-logic dependency detected: {', '.join(cycles)}"
         )
 
-    # 4. Construct final study projection dictionary
+    # Reconstruct eligibility_criteria if present
+    eligibility_criteria_list = []
+    for crit in data.get("eligibility_criteria", []):
+        if isinstance(crit, dict):
+            elig_id = crit.get("id") or crit.get("criterion_id")
+            eligibility_criteria_list.append({
+                "id": elig_id,
+                "criterion_id": elig_id,
+                "criterion_type": crit.get("criterion_type") or crit.get("type"),
+                "description": crit.get("description") or crit.get("text"),
+                "dsl_source": crit.get("dsl_source") or crit.get("expression")
+            })
+
+    # 5. Construct final study projection dictionary
     study_projection = {
         "study_id": study_id,
         "title": title,
@@ -289,9 +377,9 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
     }
     if desc is not None:
         study_projection["desc"] = desc
+    if eligibility_criteria_list:
+        study_projection["eligibility_criteria"] = eligibility_criteria_list
 
-    # Exclude empty preservation dictionary if no unmapped elements exist,
-    # but include if any custom extensible elements exist to prevent silent dropping.
     if preservation_metadata["unmapped_fields"]:
         study_projection["preservation_metadata"] = preservation_metadata
 

@@ -14,10 +14,11 @@ from apps.etmf.models import DocumentQCTransition, DocumentStatus, TMFDocument
 ALLOWED_TRANSITIONS: Dict[str, Set[str]] = {
     DocumentStatus.DRAFT: {DocumentStatus.TECHNICAL_QC},
     DocumentStatus.TECHNICAL_QC: {DocumentStatus.CLINICAL_QC, DocumentStatus.REJECTED},
-    DocumentStatus.CLINICAL_QC: {DocumentStatus.APPROVED, DocumentStatus.REJECTED},
-    DocumentStatus.APPROVED: {DocumentStatus.ARCHIVED, DocumentStatus.REJECTED},
+    DocumentStatus.CLINICAL_QC: {DocumentStatus.APPROVED, DocumentStatus.REJECTED, DocumentStatus.SIGNED},
+    DocumentStatus.APPROVED: {DocumentStatus.ARCHIVED, DocumentStatus.REJECTED, DocumentStatus.SIGNED},
     DocumentStatus.REJECTED: {DocumentStatus.DRAFT},
     DocumentStatus.ARCHIVED: set(),
+    DocumentStatus.SIGNED: set(),
 }
 
 # Mapping target-stages to required roles using the lowercase eTMF role convention
@@ -28,6 +29,7 @@ STAGE_TO_REQUIRED_ROLES: Dict[str, list[str]] = {
     DocumentStatus.ARCHIVED: ["sponsor_dm", "admin"],
     DocumentStatus.REJECTED: ["sponsor_dm", "sponsor_clinical", "admin"],
     DocumentStatus.DRAFT: ["sponsor_dm", "sponsor_clinical", "admin"],
+    DocumentStatus.SIGNED: ["sponsor_dm", "sponsor_clinical", "admin"],
 }
 
 

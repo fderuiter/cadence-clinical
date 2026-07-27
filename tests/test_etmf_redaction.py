@@ -52,6 +52,7 @@ async def test_redaction_authorization_gates():
     Ensure only appropriate privileged roles can perform redaction and raw-original retrieval,
     and auditor/inspector roles are strictly blocked.
     """
+    # @req:PRD-TMF-005
     client = TestClient(app)
     admin_headers = get_auth_headers(
         roles="admin", change_reason="Ingesting initial protocol"
@@ -173,6 +174,7 @@ async def test_redaction_audit_trail_and_provenance():
     Ensure the REDACT audit entry contains only non-sensitive metadata,
     and that version history and unredacted source content are preserved and queryable.
     """
+    # @req:PRD-TMF-005
     client = TestClient(app)
     admin_headers = get_auth_headers(
         roles="admin,sponsor_dm", change_reason="Ingest protocol"
@@ -275,6 +277,7 @@ async def test_automated_redaction_basic():
     - Manifest is signed and valid.
     - Non-sensitive REDACT audit record is created.
     """
+    # @req:PRD-TMF-005
     client = TestClient(app)
     admin_headers = get_auth_headers(
         roles="admin", change_reason="Ingesting unredacted source"
@@ -362,6 +365,7 @@ async def test_automated_redaction_profile_scopes():
     Verify profile selection affects the active categories:
     EU_CTR profile should NOT detect IP/MAC/URLs but should detect Email/Dates.
     """
+    # @req:PRD-TMF-005
     client = TestClient(app)
     admin_headers = get_auth_headers(roles="admin", change_reason="Ingest")
 
@@ -409,6 +413,7 @@ async def test_automated_redaction_errors():
     - Missing X-Change-Reason (400)
     - Unauthorized caller (403)
     """
+    # @req:PRD-TMF-005
     client = TestClient(app)
 
     # 1. Absent Document -> 404
@@ -468,6 +473,7 @@ async def test_automated_redaction_trial_locked():
     """
     Test that trial lock blocks automated redactions (403)
     """
+    # @req:PRD-TMF-005
     client = TestClient(app)
     admin_headers = get_auth_headers(roles="admin", change_reason="Ingest")
 
@@ -512,6 +518,7 @@ async def test_manual_redaction_success():
     - Manifest and response never leak raw PII/PHI.
     - Immutable audit trail logs REDACT entry with non-sensitive details only.
     """
+    # @req:PRD-TMF-005
     client = TestClient(app)
     admin_headers = get_auth_headers(
         roles="admin", change_reason="Ingest unredacted protocol manual test"
@@ -621,6 +628,7 @@ async def test_manual_redaction_span_validation():
     - Overlapping/conflicting span inputs should be rejected.
     All should return HTTP 422.
     """
+    # @req:PRD-TMF-005
     client = TestClient(app)
     admin_headers = get_auth_headers(
         roles="admin", change_reason="Ingest unredacted manual check"
@@ -695,6 +703,7 @@ async def test_manual_redaction_literal_escaping():
     """
     Ensure literal term matching handles terms with special regex characters safely.
     """
+    # @req:PRD-TMF-005
     client = TestClient(app)
     admin_headers = get_auth_headers(
         roles="admin", change_reason="Ingest special chars"
@@ -738,6 +747,7 @@ async def test_manual_redaction_authorization_and_lock():
     Verify read-only roles are blocked from executing manual redaction,
     and a locked trial blocks manual redactions.
     """
+    # @req:PRD-TMF-005
     client = TestClient(app)
     admin_headers = get_auth_headers(roles="admin", change_reason="Ingest auth")
 
