@@ -6,8 +6,8 @@
 ## 1. Traceability Summary
 
 - **Total Documented Requirements:** 54
-- **Total Mapped to Automated Tests:** 27
-- **Traceability Coverage:** 50.0%
+- **Total Mapped to Automated Tests:** 31
+- **Traceability Coverage:** 57.4%
 - **SRS Requirements Mapped:** 7 of 10 (70.0%)
 
 ⚠️ **WARNING:** SRS coverage is below 100%. GxP validation requires 100% of functional requirements defined in the SRS to map to automated test cases.
@@ -22,8 +22,8 @@
 | PRD-CTMS-004 | PRD | **Standard GxP Site Audit trail** | `test_create_and_list_studies_rbac` (tests/test_ctms.py) 🟢<br>`test_get_audit_trail_rbac` (tests/test_ctms.py) 🟢<br>`test_recruitment_records_crud_and_audit` (tests/test_ctms.py) 🟢 | ✅ **Passed** |
 | PRD-EDC-001 | PRD | **Spreadsheet Ingestion Sheet Structure** | *None* | ❌ **Unmapped** |
 | PRD-EDC-002 | PRD | **Field-Level Ingestion Validations** | *None* | ❌ **Unmapped** |
-| PRD-EDC-003 | PRD | **Dynamic Skip Logic Evaluation** | *None* | ❌ **Unmapped** |
-| PRD-EDC-004 | PRD | **Cascading Dependent Nullification (Orphan Data Safeguard)** | *None* | ❌ **Unmapped** |
+| PRD-EDC-003 | PRD | **Dynamic Skip Logic Evaluation** | `test_scenario_skip_logic_and_cascading_nullification` (tests/test_edit_checks_scenarios.py) 🟢 | ✅ **Passed** |
+| PRD-EDC-004 | PRD | **Cascading Dependent Nullification (Orphan Data Safeguard)** | `test_scenario_skip_logic_and_cascading_nullification` (tests/test_edit_checks_scenarios.py) 🟢 | ✅ **Passed** |
 | PRD-EDC-005 | PRD | **Real-Time Row Ingestion and Index Tracking** | *None* | ❌ **Unmapped** |
 | PRD-EDC-006 | PRD | **Advanced Inputs (VAS and Interactive Body Maps)** | *None* | ❌ **Unmapped** |
 | PRD-EDC-007 | PRD | **Local IndexedDB Security & State Preservation** | *None* | ❌ **Unmapped** |
@@ -40,8 +40,8 @@
 | PRD-MDR-007 | PRD | **Logical Mapping of I/E Criteria to eCRF Fields** | *None* | ❌ **Unmapped** |
 | PRD-QRY-001 | PRD | **Query State Transitions and Constraints** | *None* | ❌ **Unmapped** |
 | PRD-QRY-002 | PRD | **Query Escalation Rules** | *None* | ❌ **Unmapped** |
-| PRD-QRY-003 | PRD | **Cross-Form Edit Check Execution** | *None* | ❌ **Unmapped** |
-| PRD-QRY-004 | PRD | **Longitudinal Validation and Repeat-Visit Logic** | *None* | ❌ **Unmapped** |
+| PRD-QRY-003 | PRD | **Cross-Form Edit Check Execution** | `test_scenario_cross_form_edit_checks_and_auto_resolve` (tests/test_edit_checks_scenarios.py) 🟢 | ✅ **Passed** |
+| PRD-QRY-004 | PRD | **Longitudinal Validation and Repeat-Visit Logic** | `test_scenario_longitudinal_predecessor_draft_and_complete` (tests/test_edit_checks_scenarios.py) 🟢 | ✅ **Passed** |
 | PRD-QRY-005 | PRD | **Field-Level SDV Flags and Audit Retention** | `test_sdv_signoff_endpoints_rbac_and_target_validation` (tests/test_sdv.py) 🟢<br>`test_clinical_observation_sdv_defaults` (tests/test_sdv_tsdv_persistence.py) 🟢<br>`test_sdv_automatic_verification_drop` (tests/test_sdv_tsdv_persistence.py) 🟢<br>`test_sdv_sign_off_persistence_and_audit` (tests/test_sdv_tsdv_persistence.py) 🟢<br>`test_sdv_signoff_endpoint_and_idempotency` (tests/test_sdv_tsdv_persistence.py) 🟢<br>`test_sdv_signoff_page_visit_scopes` (tests/test_sdv_tsdv_persistence.py) 🟢 | ✅ **Passed** |
 | PRD-QRY-006 | PRD | **Automatic Verification Drop upon Data Modification** | `test_sdv_automatic_verification_drop_compliance` (tests/test_sdv.py) 🟢<br>`test_sdv_automatic_verification_drop` (tests/test_sdv_tsdv_persistence.py) 🟢<br>`test_sdv_signoff_endpoint_and_idempotency` (tests/test_sdv_tsdv_persistence.py) 🟢<br>`test_sdv_signoff_page_visit_scopes` (tests/test_sdv_tsdv_persistence.py) 🟢 | ✅ **Passed** |
 | PRD-QRY-007 | PRD | **Targeted SDV (tSDV) Sampling Algorithm** | `test_clinical_observation_sdv_defaults` (tests/test_sdv_tsdv_persistence.py) 🟢<br>`test_tsdv_config_persistence` (tests/test_sdv_tsdv_persistence.py) 🟢<br>`test_api_tsdv_config_validation_rules` (tests/test_tsdv.py) 🟢<br>`test_api_tsdv_configuration_rbac` (tests/test_tsdv.py) 🟢<br>`test_api_tsdv_evaluation_integration_and_context_errors` (tests/test_tsdv.py) 🟢<br>`test_tsdv_pure_deterministic_sampling` (tests/test_tsdv.py) 🟢<br>`test_tsdv_pure_different_seeds_produce_different_values` (tests/test_tsdv.py) 🟢<br>`test_tsdv_pure_evaluation_sampling_models` (tests/test_tsdv.py) 🟢<br>`test_tsdv_pure_field_requirement_precedence` (tests/test_tsdv.py) 🟢<br>`test_tsdv_pure_first_n_selection` (tests/test_tsdv.py) 🟢<br>`test_tsdv_pure_percentage_boundaries` (tests/test_tsdv.py) 🟢<br>`test_api_tsdv_config_authorization_and_upsert` (tests/test_tsdv_logic.py) 🟢<br>`test_api_tsdv_config_validation` (tests/test_tsdv_logic.py) 🟢<br>`test_api_tsdv_evaluation_endpoint` (tests/test_tsdv_logic.py) 🟢<br>`test_tsdv_evaluation_models` (tests/test_tsdv_logic.py) 🟢<br>`test_tsdv_field_required_precedence` (tests/test_tsdv_logic.py) 🟢<br>`test_tsdv_subject_selection_boundaries` (tests/test_tsdv_logic.py) 🟢<br>`test_tsdv_subject_selection_deterministic` (tests/test_tsdv_logic.py) 🟢<br>`test_tsdv_subject_selection_first_n` (tests/test_tsdv_logic.py) 🟢 | ✅ **Passed** |
@@ -75,8 +75,6 @@
 
 - **PRD-EDC-001** (PRD): Spreadsheet Ingestion Sheet Structure
 - **PRD-EDC-002** (PRD): Field-Level Ingestion Validations
-- **PRD-EDC-003** (PRD): Dynamic Skip Logic Evaluation
-- **PRD-EDC-004** (PRD): Cascading Dependent Nullification (Orphan Data Safeguard)
 - **PRD-EDC-005** (PRD): Real-Time Row Ingestion and Index Tracking
 - **PRD-EDC-006** (PRD): Advanced Inputs (VAS and Interactive Body Maps)
 - **PRD-EDC-007** (PRD): Local IndexedDB Security & State Preservation
@@ -88,8 +86,6 @@
 - **PRD-MDR-007** (PRD): Logical Mapping of I/E Criteria to eCRF Fields
 - **PRD-QRY-001** (PRD): Query State Transitions and Constraints
 - **PRD-QRY-002** (PRD): Query Escalation Rules
-- **PRD-QRY-003** (PRD): Cross-Form Edit Check Execution
-- **PRD-QRY-004** (PRD): Longitudinal Validation and Repeat-Visit Logic
 - **PRD-SUB-002** (PRD): Partial Visit Query Capability on Withdrawn Subjects
 - **PRD-SUB-003** (PRD): Stratified Block Randomization
 - **PRD-SUB-004** (PRD): Dynamic Minimization Algorithm

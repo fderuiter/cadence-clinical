@@ -790,6 +790,11 @@ async def create_observation(
         res_obs = await session.execute(stmt_obs)
         obs_db = res_obs.scalar_one()
 
+        # Check for cascading dependent nullification first
+        from apps.execution.edit_checks import handle_cascading_nullification
+
+        await handle_cascading_nullification(session, obs_db)
+
         # Invoke synchronous field-level same-record edit checks directly in the active session
         await run_synchronous_edit_checks(session, obs_db)
         await session.commit()
@@ -3093,6 +3098,7 @@ async def create_form_submission(
 async def complete_form_submission(
     submission_id: str,
     request: Request,
+    background_tasks: BackgroundTasks,
     roles: list[str] = Depends(verify_not_auditor),
 ) -> FormSubmissionResponse:
     """Transition a FormSubmission from DRAFT to COMPLETED."""
@@ -3113,6 +3119,44 @@ async def complete_form_submission(
 
         sub.status = "COMPLETED"
         await session.commit()
+
+        # Query active observations in this form submission
+        # (subject_id, visit_id, and page_id == form_id)
+        stmt_obs = select(ClinicalObservation).where(
+            ClinicalObservation.subject_id == sub.subject_id,
+            ClinicalObservation.visit_id == sub.visit_id,
+            ClinicalObservation.page_id == sub.form_id,
+            ClinicalObservation.is_deleted.is_(False),
+        )
+        res_obs = await session.execute(stmt_obs)
+        form_obs = res_obs.scalars().all()
+
+        user_id = current_user_id.get() or "system"
+        change_reason = current_change_reason.get() or "Form Completion Edit Checks"
+
+        # Enqueue background edit checks for each observation in the form
+        for obs in form_obs:
+            background_tasks.add_task(
+                run_asynchronous_edit_checks,
+                db_manager.get_session_maker(),
+                obs.id,
+                user_id=user_id,
+                change_reason=change_reason,
+            )
+
+        # Also resume pending predecessor checks that were waiting for this visit/form to be completed
+        from apps.execution.edit_checks import (
+            resolve_pending_predecessor_checks_for_form,
+        )
+
+        background_tasks.add_task(
+            resolve_pending_predecessor_checks_for_form,
+            db_manager.get_session_maker(),
+            sub.subject_id,
+            sub.visit_id,
+            user_id=user_id,
+            change_reason=change_reason,
+        )
 
         # Query back
         stmt_ref = select(FormSubmission).where(FormSubmission.id == submission_id)

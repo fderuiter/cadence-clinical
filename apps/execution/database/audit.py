@@ -290,6 +290,15 @@ def receive_before_flush(session: Session, flush_context, instances):
                 obj.version += 1
                 new_values["version"] = obj.version
 
+            # FORCE change reason for auto-resolved edit check queries
+            obj_reason = reason
+            if (
+                obj.__tablename__ == "clinical_queries"
+                and obj.status == "CLOSED"
+                and obj.resolver == "SYSTEM"
+            ):
+                obj_reason = "Edit Check Auto-Resolution"
+
             kwargs = {
                 "table_name": obj.__tablename__,
                 "record_id": get_primary_key(obj),
@@ -299,7 +308,7 @@ def receive_before_flush(session: Session, flush_context, instances):
                 "old_values": old_values,
                 "new_values": new_values,
                 "version_index": getattr(obj, "version", 1),
-                "change_reason": reason,
+                "change_reason": obj_reason,
             }
             if timestamp is not None:
                 kwargs["timestamp"] = timestamp
