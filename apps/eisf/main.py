@@ -1,8 +1,7 @@
 import hashlib
 import os
-from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, Field, model_validator
@@ -11,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.eisf.database import db_manager
 from apps.eisf.models import Base, ISFAuditLog, ISFDocument
+from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.rbac import get_normalized_roles, verify_not_auditor
 
@@ -117,28 +117,14 @@ class BinderCompletenessResponse(BaseModel):
     sections: List[BinderSectionStatus]
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """
-    Lifespan context manager for the eISF FastAPI application.
-    Initializes database connections and creates SQLite tables on startup.
-    Disposes resources on shutdown.
-    """
-    db_manager.init_db(DATABASE_URL)
-
-    if DATABASE_URL.startswith("sqlite"):
-        async with db_manager.engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-
-    yield
-
-    await db_manager.close()
-
-
 app = FastAPI(
     title="Cadence Clinical - eISF Service",
     version="0.1.0",
-    lifespan=lifespan,
+    lifespan=get_relational_db_lifespan(
+        db_manager=db_manager,
+        database_url=DATABASE_URL,
+        base_metadata=Base.metadata,
+    ),
 )
 
 # Mount the shared GatewayAuthMiddleware
@@ -159,18 +145,7 @@ async def extract_site_claim_middleware(request: Request, call_next):
     return await call_next(request)
 
 
-async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
-    """
-    Dependency to yield an asynchronous database session.
-    """
-    session_maker = db_manager.get_session_maker()
-    async with session_maker() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
+get_db_session = DatabaseSessionDependency(db_manager)
 
 
 async def write_audit_log(
