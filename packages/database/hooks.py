@@ -44,6 +44,10 @@ def register_audit_hooks(
     """
     Configurable SQLAlchemy session hook factory.
     Automates mutation logging, change tracking, and prevents hard-deletes of clinical data.
+
+    This hook integrates with the gateway site-isolation and unblinded scope claims (PR #562)
+    to dynamically propagate current_site_id and current_unblinded_access contexts to the
+    underlying transactional audit logs for GxP/21 CFR Part 11 validation.
     """
     if skip_list is None:
         skip_list = []
