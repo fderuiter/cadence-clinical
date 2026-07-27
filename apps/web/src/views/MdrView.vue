@@ -578,7 +578,9 @@ const debouncedSearchArm = debounce(async (term) => {
     return;
   }
   try {
-    const roles = store.user.roles ? store.user.roles.join(",") : "investigator";
+    const roles = store.user.roles
+      ? store.user.roles.join(",")
+      : "investigator";
     const res = await terminologyClient.searchTerminology(term, {
       userId: store.user.username || "fderuiter",
       roles,
@@ -596,7 +598,9 @@ const debouncedSearchEnc = debounce(async (term) => {
     return;
   }
   try {
-    const roles = store.user.roles ? store.user.roles.join(",") : "investigator";
+    const roles = store.user.roles
+      ? store.user.roles.join(",")
+      : "investigator";
     const res = await terminologyClient.searchTerminology(term, {
       userId: store.user.username || "fderuiter",
       roles,
