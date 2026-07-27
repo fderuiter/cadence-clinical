@@ -928,12 +928,12 @@ function handleConceptCodeInput(field, val) {
           conceptCodeStatusMessage[field.id] =
             `Code is valid: "${response.decode}"`;
         } else if (response.state === "INVALID") {
-          conceptCodeStatusMessage[field.id] =
-            `Invalid code: "${val}"`;
+          conceptCodeStatusMessage[field.id] = `Invalid code: "${val}"`;
         } else if (response.state === "DEGRADED") {
           conceptCodeStatus[field.id] = "degraded";
           conceptCodeStatusMessage[field.id] =
-            response.error_message || "Terminology service degraded. Validation offline.";
+            response.error_message ||
+            "Terminology service degraded. Validation offline.";
         }
       }
     } catch {
