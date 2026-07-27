@@ -9,7 +9,7 @@
 
 ## 1. Context & Problem Statement
 
-To satisfy **FDA 21 CFR Part 11**, GAMP 5, and EU Annex 11 regulatory compliance guidelines, every clinical record modification must be captured in an immutable chronological audit trail. Physical record deletion is strictly forbidden. 
+To satisfy **FDA 21 CFR Part 11**, GAMP 5, and EU Annex 11 regulatory compliance guidelines, every clinical record modification must be captured in an immutable chronological audit trail. Physical record deletion is strictly forbidden.
 
 Previously, microservices like CTMS, eTMF, and Quality independently declared distinct audit attributes (`created_at`, `created_by`, `reason_for_change`, and `version_index`) on their models. This resulted in copy-pasted schema declarations across independent repositories, rising risk of schema drift, and up to 60% compliance-related boilerplate code in model declarations. Furthermore, there was no uniform mechanism to dynamically block physical (hard) deletes of clinical records and audit logs globally.
 
