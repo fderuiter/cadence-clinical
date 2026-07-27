@@ -13,6 +13,55 @@ from cryptography.hazmat.primitives.serialization import (
 )
 
 
+def generate_gateway_signature(
+    user_id: str,
+    roles: str,
+    timestamp: str,
+    secret: bytes,
+    change_reason: Optional[str] = None,
+    site_id: Optional[str] = None,
+    sponsor_id: Optional[str] = None,
+    unblinded_access: bool = False,
+) -> str:
+    """Generates an HMAC-SHA256 signature for API Gateway identity and scope headers."""
+    payload = {
+        "change_reason": change_reason if change_reason is not None else "",
+        "roles": roles,
+        "timestamp": timestamp,
+        "user_id": user_id,
+        "site_id": site_id if site_id is not None else "",
+        "sponsor_id": sponsor_id if sponsor_id is not None else "",
+        "unblinded_access": unblinded_access,
+    }
+    serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hmac.new(secret, serialized.encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+def verify_gateway_signature(
+    user_id: str,
+    roles: str,
+    timestamp: str,
+    signature: str,
+    secret: bytes,
+    change_reason: Optional[str] = None,
+    site_id: Optional[str] = None,
+    sponsor_id: Optional[str] = None,
+    unblinded_access: bool = False,
+) -> bool:
+    """Verifies an HMAC-SHA256 signature for API Gateway identity and scope headers."""
+    expected = generate_gateway_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        secret=secret,
+        change_reason=change_reason,
+        site_id=site_id,
+        sponsor_id=sponsor_id,
+        unblinded_access=unblinded_access,
+    )
+    return hmac.compare_digest(expected, signature)
+
+
 def canonical_serialize(payload: Dict[str, Any]) -> bytes:
     """Serializes a dictionary into a key-sorted, whitespace-stripped UTF-8 JSON byte string."""
     return json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
