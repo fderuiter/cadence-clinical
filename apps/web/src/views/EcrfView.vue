@@ -1068,12 +1068,18 @@
 </template>
 
 <script setup>
+/*
+ * Unification Summary: Resolved merge conflict in terminology Client import pathways and standardized debounce mechanisms.
+ * Harmonized the local and feature branch paths by importing the standard debounce utility from the shared "ui" package
+ * and using the ESM-aligned ".js" extension for the local terminology Client API wrapper.
+ */
 import { ref, reactive, watch, onMounted } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { soaClient } from "../api/soaClient";
 import { validateField } from "../../index";
 import { terminologyClient } from "../api/terminologyClient.js";
+import { debounce } from "ui";
 
 const store = useClinicalStore();
 const authStore = useAuthStore();
@@ -1166,18 +1172,7 @@ function getStatusIcon(status) {
   return "";
 }
 
-// Inline debounce helper
-function localDebounce(fn, delay) {
-  let timeoutId = null;
-  return function (...args) {
-    if (timeoutId) clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => {
-      fn(...args);
-    }, delay);
-  };
-}
-
-const debouncedValidate = localDebounce(async (fieldId, value) => {
+const debouncedValidate = debounce(async (fieldId, value) => {
   if (!value || !value.trim()) {
     conceptStatuses[fieldId] = "none";
     conceptMessages[fieldId] = "";
@@ -1247,6 +1242,12 @@ watch(
 
 onMounted(() => {
   store.evaluateRules();
+  // Initialize lookup validation for any pre-populated concept_code fields on mount
+  store.ecrfFields.forEach((field) => {
+    if (field.type === "concept_code" && store.formValues[field.id]) {
+      handleConceptInput(field, store.formValues[field.id]);
+    }
+  });
 });
 
 // Lookup Status States

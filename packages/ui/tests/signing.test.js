@@ -5,6 +5,7 @@ import {
   verifyCanonicalSignature,
   generateGatewaySignature,
   verifyGatewaySignature,
+  sha256,
 } from "../index.js";
 
 describe("canonicalSerialize", () => {
@@ -181,5 +182,21 @@ describe("generateGatewaySignature and verifyGatewaySignature", () => {
       secret
     );
     expect(isValid).toBe(false);
+  });
+});
+
+describe("sha256", () => {
+  it("computes a correct SHA-256 hex digest for empty string", async () => {
+    const hash = await sha256("");
+    expect(hash).toBe(
+      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    );
+  });
+
+  it("computes a correct SHA-256 hex digest for a known test message", async () => {
+    const hash = await sha256("Cadence Clinical Platform");
+    expect(hash).toBe(
+      "5789dd8ff2e10b9b13b3365112bf8b66027e43c59ae06110150617571c12f9a2"
+    );
   });
 });

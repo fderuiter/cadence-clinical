@@ -1,5 +1,6 @@
 import {
   generateGatewaySignature,
+  createClinicalRadioGrid,
   sha256,
   validateField,
 } from "ui";
@@ -40,31 +41,67 @@ const MOCK_ASSIGNMENTS = [
     end_date: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
     status: "COMPLETED",
     submitted_at: new Date(Date.now() - 47 * 3600 * 1000).toISOString(),
-  }
+  },
 ];
 
 const MOCK_INSTRUMENTS = {
   inst_daily_diary: {
     id: "inst_daily_diary",
     name: "Daily Health & Vital Diary",
-    description: "Please record your systolic/diastolic blood pressure, pulse, and current symptoms.",
+    description:
+      "Please record your systolic/diastolic blood pressure, pulse, and current symptoms.",
     items: {
-      vssbp: { label: "Systolic Blood Pressure (mmHg)", type: "numeric", required: true, min: 50, max: 250 },
-      vsdpb: { label: "Diastolic Blood Pressure (mmHg)", type: "numeric", required: true, min: 30, max: 150 },
-      vshr: { label: "Pulse Rate (bpm)", type: "numeric", required: true, min: 30, max: 200 },
-      has_symptoms: { label: "Are you experiencing any new physical symptoms today?", type: "choice_single", options: ["Yes", "No"] },
-    }
+      vssbp: {
+        label: "Systolic Blood Pressure (mmHg)",
+        type: "numeric",
+        required: true,
+        min: 50,
+        max: 250,
+      },
+      vsdpb: {
+        label: "Diastolic Blood Pressure (mmHg)",
+        type: "numeric",
+        required: true,
+        min: 30,
+        max: 150,
+      },
+      vshr: {
+        label: "Pulse Rate (bpm)",
+        type: "numeric",
+        required: true,
+        min: 30,
+        max: 200,
+      },
+      has_symptoms: {
+        label: "Are you experiencing any new physical symptoms today?",
+        type: "choice_single",
+        options: ["Yes", "No"],
+      },
+    },
   },
   inst_weekly_symptoms: {
     id: "inst_weekly_symptoms",
     name: "Weekly Symptoms & eCOA Checklist",
-    description: "Please complete this survey detailing any adverse clinical signs experienced during the week.",
+    description:
+      "Please complete this survey detailing any adverse clinical signs experienced during the week.",
     items: {
-      severity: { label: "Overall symptom severity this week", type: "choice_single", options: ["None", "Mild", "Moderate", "Severe"] },
-      restricted_activity: { label: "Did symptoms restrict your daily activities?", type: "choice_single", options: ["Yes", "No"] },
-      missed_doses: { label: "Did you miss any medication doses?", type: "choice_single", options: ["Yes", "No"] },
-    }
-  }
+      severity: {
+        label: "Overall symptom severity this week",
+        type: "choice_single",
+        options: ["None", "Mild", "Moderate", "Severe"],
+      },
+      restricted_activity: {
+        label: "Did symptoms restrict your daily activities?",
+        type: "choice_single",
+        options: ["Yes", "No"],
+      },
+      missed_doses: {
+        label: "Did you miss any medication doses?",
+        type: "choice_single",
+        options: ["Yes", "No"],
+      },
+    },
+  },
 };
 
 const MOCK_NOTIFICATIONS = [
@@ -81,11 +118,12 @@ const MOCK_NOTIFICATIONS = [
     id: "notif_02",
     subject_id: "subject_001",
     assignment_id: "assign_02",
-    message: "ALERT: Weekly Symptoms & eCOA Checklist is OVERDUE! Please complete immediately.",
+    message:
+      "ALERT: Weekly Symptoms & eCOA Checklist is OVERDUE! Please complete immediately.",
     due_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
     channel: "SMS",
     is_read: false,
-  }
+  },
 ];
 
 // App State Core
@@ -127,10 +165,12 @@ function showView(viewId) {
   }
 }
 
-
-
 // 21 CFR Part 11 Compliant Cryptographic Audit Ledger logging
-async function logAuditRecord(action, details, reason = "Patient action verified") {
+async function logAuditRecord(
+  action,
+  details,
+  reason = "Patient action verified"
+) {
   const timestamp = new Date().toISOString();
   const index = state.ledgerBlocks.length;
   const prevHash =
@@ -168,7 +208,8 @@ function renderLedger() {
   container.innerHTML = state.ledgerBlocks
     .slice()
     .reverse()
-    .map((block) => `
+    .map(
+      (block) => `
       <div class="ledger-item">
         <div class="ledger-item-header">
           <span><strong>BLOCK #${block.index} - ${block.action}</strong></span>
@@ -182,7 +223,9 @@ function renderLedger() {
           <span>hash: ${block.hash}</span>
         </div>
       </div>
-    `).join("");
+    `
+    )
+    .join("");
 }
 
 // API Call helper
@@ -234,7 +277,10 @@ async function dispatchApi(endpoint, options = {}) {
     }
     return await res.json();
   } catch (err) {
-    console.warn(`Gateway API call '${endpoint}' failed (running in sandbox/offline mode):`, err.message);
+    console.warn(
+      `Gateway API call '${endpoint}' failed (running in sandbox/offline mode):`,
+      err.message
+    );
     throw err;
   }
 }
@@ -246,7 +292,7 @@ function renderTasks() {
   const container = document.getElementById("tasks-list-container");
   if (!container) return;
 
-  const activeTasks = state.assignments.filter(a => a.status !== "COMPLETED");
+  const activeTasks = state.assignments.filter((a) => a.status !== "COMPLETED");
 
   if (activeTasks.length === 0) {
     container.innerHTML = `
@@ -260,7 +306,8 @@ function renderTasks() {
 
   container.innerHTML = activeTasks
     .map((task) => {
-      const isOverdue = task.status === "OVERDUE" || new Date(task.due_at) < new Date();
+      const isOverdue =
+        task.status === "OVERDUE" || new Date(task.due_at) < new Date();
       const statusClass = isOverdue ? "overdue" : "pending";
       const statusLabel = isOverdue ? "Overdue" : "Pending";
       const dueText = new Date(task.due_at).toLocaleString();
@@ -291,7 +338,7 @@ function renderTasks() {
 
 // 2. Questionnaire Completion
 function startQuestionnaire(assignmentId) {
-  const assignment = state.assignments.find(a => a.id === assignmentId);
+  const assignment = state.assignments.find((a) => a.id === assignmentId);
   if (!assignment) return;
 
   const instrument = MOCK_INSTRUMENTS[assignment.instrument_id];
@@ -308,7 +355,8 @@ function startQuestionnaire(assignmentId) {
 
   // Set HTML headers
   document.getElementById("questionnaire-title").textContent = instrument.name;
-  document.getElementById("questionnaire-desc").textContent = instrument.description;
+  document.getElementById("questionnaire-desc").textContent =
+    instrument.description;
 
   // Build questionnaire fields using raw HTML string widgets to remain compatible with packages/ui index.js primitives
   const formContainer = document.getElementById("questionnaire-form-container");
@@ -320,26 +368,14 @@ function startQuestionnaire(assignmentId) {
 
   Object.entries(instrument.items).forEach(([id, field]) => {
     if (field.type === "choice_single") {
-      // Create Clinical Radio Grid equivalent
-      const optionsHtml = field.options
-        .map((opt, idx) => `
-          <div class="radio-option">
-            <input type="radio" id="${id}_option_${idx}" name="${id}" value="${opt}" />
-            <label for="${id}_option_${idx}">${opt}</label>
-          </div>
-        `)
-        .join("");
-
-      formHtml += `
-        <fieldset class="clinical-radio-grid grid-span-12" style="grid-column: span 12;" id="field-container-${id}">
-          <legend>${field.label}</legend>
-          <div class="radio-options-wrapper">
-            <div class="radio-options">
-              ${optionsHtml}
-            </div>
-          </div>
-        </fieldset>
-      `;
+      formHtml += createClinicalRadioGrid(
+        id,
+        field.label,
+        field.options,
+        "",
+        null,
+        12
+      );
     } else {
       // Create Clinical Input equivalent
       formHtml += `
@@ -368,9 +404,10 @@ function validateActiveQuestionnaire() {
   const errors = [];
 
   Object.entries(instrument.items).forEach(([id, field]) => {
-    const val = field.type === "choice_single"
-      ? (document.querySelector(`input[name="${id}"]:checked`)?.value || "")
-      : (document.getElementById(id)?.value.trim() || "");
+    const val =
+      field.type === "choice_single"
+        ? document.querySelector(`input[name="${id}"]:checked`)?.value || ""
+        : document.getElementById(id)?.value.trim() || "";
 
     // Clean previous error markers
     const container = document.getElementById(`field-container-${id}`);
@@ -387,7 +424,7 @@ function validateActiveQuestionnaire() {
         required: field.required,
         min: field.type === "numeric" ? field.min : undefined,
         max: field.type === "numeric" ? field.max : undefined,
-      }
+      },
     };
 
     const res = validateField(fieldMeta, val);
@@ -423,7 +460,8 @@ function markFieldInvalid(fieldId, msg) {
 function openSignatureModal() {
   document.getElementById("sign-username").value = state.session.userId;
   document.getElementById("sign-password").value = "";
-  document.getElementById("sign-reason").value = "Initial Questionnaire Completion";
+  document.getElementById("sign-reason").value =
+    "Initial Questionnaire Completion";
   document.getElementById("sign-reason-custom").value = "";
   document.getElementById("portal-sign-modal").style.display = "flex";
 }
@@ -436,16 +474,19 @@ async function verifyAndSubmitSignature() {
   const username = document.getElementById("sign-username").value.trim();
   const password = document.getElementById("sign-password").value;
   const reasonSelect = document.getElementById("sign-reason").value;
-  const reasonCustom = document.getElementById("sign-reason-custom").value.trim();
+  const reasonCustom = document
+    .getElementById("sign-reason-custom")
+    .value.trim();
 
   if (!username || !password) {
     alert("Please enter both User ID and Security PIN/Password to sign.");
     return;
   }
 
-  const finalReason = reasonSelect === "Other" && reasonCustom
-    ? reasonCustom
-    : `${reasonSelect}${reasonCustom ? ": " + reasonCustom : ""}`;
+  const finalReason =
+    reasonSelect === "Other" && reasonCustom
+      ? reasonCustom
+      : `${reasonSelect}${reasonCustom ? ": " + reasonCustom : ""}`;
 
   closeSignatureModal();
 
@@ -461,7 +502,7 @@ async function verifyAndSubmitSignature() {
       assignment_id: active.assignment.id,
       answers: active.answers,
       change_reason: finalReason,
-      username: username
+      username: username,
     });
   } catch (err) {
     console.error("Failed to write to offline queue IndexedDB:", err);
@@ -482,7 +523,9 @@ async function verifyAndSubmitSignature() {
   );
 
   // Mark assignment complete
-  const foundAssign = state.assignments.find(a => a.id === active.assignment.id);
+  const foundAssign = state.assignments.find(
+    (a) => a.id === active.assignment.id
+  );
   if (foundAssign) {
     foundAssign.status = "COMPLETED";
     foundAssign.submitted_at = queuedItem.device_timestamp;
@@ -503,9 +546,15 @@ async function verifyAndSubmitSignature() {
 // 3. My Compliance
 function renderCompliance() {
   const total = state.assignments.length;
-  const completed = state.assignments.filter(a => a.status === "COMPLETED").length;
-  const overdue = state.assignments.filter(a => a.status === "OVERDUE").length;
-  const pending = state.assignments.filter(a => a.status === "PENDING").length;
+  const completed = state.assignments.filter(
+    (a) => a.status === "COMPLETED"
+  ).length;
+  const overdue = state.assignments.filter(
+    (a) => a.status === "OVERDUE"
+  ).length;
+  const pending = state.assignments.filter(
+    (a) => a.status === "PENDING"
+  ).length;
 
   const rate = total > 0 ? Math.round((completed / total) * 100) : 100;
 
@@ -530,7 +579,9 @@ function renderCompliance() {
   }
 
   // Sort assignments chronologically by due_at or end_date
-  const sorted = state.assignments.slice().sort((a, b) => new Date(b.due_at) - new Date(a.due_at));
+  const sorted = state.assignments
+    .slice()
+    .sort((a, b) => new Date(b.due_at) - new Date(a.due_at));
 
   tbody.innerHTML = sorted
     .map((item) => {
@@ -544,7 +595,10 @@ function renderCompliance() {
       if (item.status === "COMPLETED") {
         pillClass = "completed";
         statusLabel = "Completed";
-      } else if (item.status === "OVERDUE" || new Date(item.due_at) < new Date()) {
+      } else if (
+        item.status === "OVERDUE" ||
+        new Date(item.due_at) < new Date()
+      ) {
         pillClass = "overdue";
         statusLabel = "Overdue";
       }
@@ -566,7 +620,7 @@ function renderInbox() {
   const container = document.getElementById("inbox-container");
   if (!container) return;
 
-  const unread = state.notifications.filter(n => !n.is_read);
+  const unread = state.notifications.filter((n) => !n.is_read);
   const badge = document.getElementById("unread-count");
   if (badge) {
     badge.textContent = unread.length;
@@ -595,9 +649,10 @@ function renderInbox() {
             <span class="inbox-due">Due reminder timestamp: ${dueText} (Channel: ${notif.channel})</span>
           </div>
           <div class="inbox-actions">
-            ${isUnread
-              ? `<button type="button" class="btn btn-secondary btn-acknowledge" data-id="${notif.id}">Acknowledge & Read</button>`
-              : `<span class="status-pill completed">Read</span>`
+            ${
+              isUnread
+                ? `<button type="button" class="btn btn-secondary btn-acknowledge" data-id="${notif.id}">Acknowledge & Read</button>`
+                : `<span class="status-pill completed">Read</span>`
             }
           </div>
         </div>
@@ -615,7 +670,7 @@ function renderInbox() {
 }
 
 async function acknowledgeNotification(notificationId) {
-  const notif = state.notifications.find(n => n.id === notificationId);
+  const notif = state.notifications.find((n) => n.id === notificationId);
   if (!notif) return;
 
   // Acknowledgment requires a simple audit reason
@@ -676,18 +731,23 @@ async function renderSyncQueueList() {
         badgeClass = "pending";
         statusLabel = "QUEUED";
         statusDesc = "Waiting for network connection...";
-      } else if (item.status === "CREATED" || item.status === "UPDATED_CLIENT_WINS") {
+      } else if (
+        item.status === "CREATED" ||
+        item.status === "UPDATED_CLIENT_WINS"
+      ) {
         badgeClass = "completed";
         statusLabel = "SYNCED";
         statusDesc = "Successfully synchronized with clinical database.";
       } else if (item.status === "MERGED") {
         badgeClass = "completed";
         statusLabel = "MERGED";
-        statusDesc = "Conflict resolved: Local and server entries were combined.";
+        statusDesc =
+          "Conflict resolved: Local and server entries were combined.";
       } else if (item.status === "IGNORED_SERVER_WINS") {
         badgeClass = "overdue";
         statusLabel = "CONFLICT (Ignored)";
-        statusDesc = "Conflict resolved: Server data was preserved; local entry archived.";
+        statusDesc =
+          "Conflict resolved: Server data was preserved; local entry archived.";
       }
 
       let answersDetails = `<strong>Local Answers:</strong> <code style="background: rgba(0,0,0,0.2); padding: 2px 4px; border-radius: 4px;">${JSON.stringify(item.answers)}</code>`;
@@ -748,16 +808,16 @@ async function syncOfflineQueue() {
       offline_sync_markers: {
         sequence_number: item.sequence_number,
         client_id: item.client_id,
-        conflict_strategy: "CLIENT_WINS"
-      }
-    }))
+        conflict_strategy: "CLIENT_WINS",
+      },
+    })),
   };
 
   try {
     const response = await dispatchApi("epro/sync", {
       method: "POST",
       body: JSON.stringify(payload),
-      change_reason: "Reconcile offline submissions"
+      change_reason: "Reconcile offline submissions",
     });
 
     if (response && response.results) {
@@ -767,7 +827,7 @@ async function syncOfflineQueue() {
         if (res) {
           await updateSubmissionStatus(item.sequence_number, res.status, {
             resolved_answers: res.answers,
-            resolved_at: new Date().toISOString()
+            resolved_at: new Date().toISOString(),
           });
         }
       }
@@ -791,7 +851,8 @@ async function initializeApp() {
   // Graceful OIDC Keycloak setup
   if (typeof window !== "undefined" && !window.__MOCK_TEST_ENV__) {
     try {
-      const KeycloakClass = window.Keycloak || (await import("keycloak-js")).default;
+      const KeycloakClass =
+        window.Keycloak || (await import("keycloak-js")).default;
       if (KeycloakClass) {
         const keycloak = new KeycloakClass({
           url: "http://localhost:8080/",
@@ -808,11 +869,17 @@ async function initializeApp() {
           state.session.userId = keycloak.subject || "subject_001";
           state.session.token = keycloak.token;
           state.session.isOfflineMode = false;
-          console.log("OIDC Session Verified for subject:", state.session.userId);
+          console.log(
+            "OIDC Session Verified for subject:",
+            state.session.userId
+          );
         }
       }
     } catch (err) {
-      console.warn("Keycloak login failed or offline. Continuing in sandbox demo mode:", err.message);
+      console.warn(
+        "Keycloak login failed or offline. Continuing in sandbox demo mode:",
+        err.message
+      );
     }
   }
 
@@ -834,13 +901,16 @@ async function initializeApp() {
   // Query real endpoints to synchronize initially if online
   if (!state.session.isOfflineMode) {
     try {
-      const assignments = await dispatchApi(`assignments/subject/${state.session.userId}`);
+      const assignments = await dispatchApi(
+        `assignments/subject/${state.session.userId}`
+      );
       if (Array.isArray(assignments)) {
-        state.assignments = assignments.map(a => ({
+        state.assignments = assignments.map((a) => ({
           id: a.id,
           subject_id: a.subject_id,
           instrument_id: a.instrument_id,
-          instrument_name: MOCK_INSTRUMENTS[a.instrument_id]?.name || "Assigned Instrument",
+          instrument_name:
+            MOCK_INSTRUMENTS[a.instrument_id]?.name || "Assigned Instrument",
           due_at: a.due_at || a.end_date,
           end_date: a.end_date,
           status: a.version_index > 1 ? "COMPLETED" : "PENDING",
@@ -851,9 +921,11 @@ async function initializeApp() {
     }
 
     try {
-      const notifs = await dispatchApi(`subjects/${state.session.userId}/notifications`);
+      const notifs = await dispatchApi(
+        `subjects/${state.session.userId}/notifications`
+      );
       if (Array.isArray(notifs)) {
-        state.notifications = notifs.map(n => ({
+        state.notifications = notifs.map((n) => ({
           id: n.id,
           subject_id: n.subject_id,
           assignment_id: n.assignment_id,
@@ -874,7 +946,11 @@ async function initializeApp() {
   renderInbox();
 
   // Graceful Service Worker Registration
-  if (typeof navigator !== "undefined" && "serviceWorker" in navigator && !window.__MOCK_TEST_ENV__) {
+  if (
+    typeof navigator !== "undefined" &&
+    "serviceWorker" in navigator &&
+    !window.__MOCK_TEST_ENV__
+  ) {
     window.addEventListener("load", () => {
       navigator.serviceWorker
         .register("/subject-portal/sw.js")
@@ -911,37 +987,45 @@ async function initializeApp() {
   const btnCompliance = document.getElementById("tab-btn-compliance");
   const btnInbox = document.getElementById("tab-btn-inbox");
 
-  if (btnTasks) btnTasks.addEventListener("click", () => showView("view-tasks"));
-  if (btnCompliance) btnCompliance.addEventListener("click", () => showView("view-compliance"));
-  if (btnInbox) btnInbox.addEventListener("click", () => showView("view-inbox"));
+  if (btnTasks)
+    btnTasks.addEventListener("click", () => showView("view-tasks"));
+  if (btnCompliance)
+    btnCompliance.addEventListener("click", () => showView("view-compliance"));
+  if (btnInbox)
+    btnInbox.addEventListener("click", () => showView("view-inbox"));
 
   const btnBack = document.getElementById("btn-back-to-tasks");
-  if (btnBack) btnBack.addEventListener("click", () => {
-    state.activeQuestionnaire = null;
-    showView("view-tasks");
-  });
+  if (btnBack)
+    btnBack.addEventListener("click", () => {
+      state.activeQuestionnaire = null;
+      showView("view-tasks");
+    });
 
   const btnCancel = document.getElementById("btn-cancel-questionnaire");
-  if (btnCancel) btnCancel.addEventListener("click", () => {
-    state.activeQuestionnaire = null;
-    showView("view-tasks");
-  });
+  if (btnCancel)
+    btnCancel.addEventListener("click", () => {
+      state.activeQuestionnaire = null;
+      showView("view-tasks");
+    });
 
   const btnSubmit = document.getElementById("btn-submit-questionnaire");
-  if (btnSubmit) btnSubmit.addEventListener("click", () => {
-    if (validateActiveQuestionnaire()) {
-      openSignatureModal();
-    } else {
-      alert("Please fix all form errors before signing.");
-    }
-  });
+  if (btnSubmit)
+    btnSubmit.addEventListener("click", () => {
+      if (validateActiveQuestionnaire()) {
+        openSignatureModal();
+      } else {
+        alert("Please fix all form errors before signing.");
+      }
+    });
 
   // Modal actions
   const btnModalCancel = document.getElementById("btn-modal-cancel");
-  if (btnModalCancel) btnModalCancel.addEventListener("click", closeSignatureModal);
+  if (btnModalCancel)
+    btnModalCancel.addEventListener("click", closeSignatureModal);
 
   const btnModalSign = document.getElementById("btn-modal-sign");
-  if (btnModalSign) btnModalSign.addEventListener("click", verifyAndSubmitSignature);
+  if (btnModalSign)
+    btnModalSign.addEventListener("click", verifyAndSubmitSignature);
 }
 
 // Auto-run on load in DOM environments

@@ -1,5 +1,11 @@
 # Architectural Decision Records (ADRs) Index
 
+<!--
+Unification Summary: Integrated competing Architectural Decision Records indexes from concurrent development branches.
+Reconciled the chronological listing by including decision logs for both the VitePress Workspace documentation portals,
+the gateway legacy V2 signature fallback, and the standardized PR templates/centralized layouts.
+-->
+
 This document tracks all Architectural Decision Records for the Cadence Clinical platform in chronological order.
 
 ## Standard ADR Template
@@ -47,6 +53,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-26: CTMS Foundation, Database, Auditing, and RBAC Infrastructure](2026-07-26-ctms-foundation-infrastructure.md)
 - [2026-07-27: Quality & CAPA Foundation and Domain Models](2026-07-27-quality-capa-scaffold.md)
 - [2026-07-27: Standardize FastAPI Identity Dependency and Site Access Migration](2026-07-27-standardize-fastapi-identity-dependency.md)
+- [2026-07-27: Backward-Compatible Gateway Signature Verification](2026-07-27-backward-compatible-gateway-signature-verification.md)
 - [2026-07-28: SDV/TSDV Persistence Foundation and Migration Support](2026-07-28-sdv-tsdv-persistence-foundation.md)
 - [2026-07-29: TMF Reference Model Taxonomy Integration](2026-07-29-tmf-reference-model-taxonomy-integration.md)
 - [2026-07-30: Rule Authoring, Validation, and DDF Delivery](2026-07-30-rule-authoring-validation-and-ddf-delivery.md)
@@ -87,3 +94,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-27: Backward-Compatible Gateway Signature Verification](2026-07-27-backward-compatible-gateway-signature-verification.md)
 - [2026-08-11: VitePress Workspace Documentation Portal](2026-08-11-vitepress-workspace-documentation-portal.md)
 - [2026-08-11: Gateway Signature Legacy V2 Fallback](2026-08-11-gateway-signature-legacy-v2-fallback.md)
+- [2026-08-11: Standardize PR Templates and Centralize Shared Hashing & Radio Grid Layouts](2026-08-11-standardize-pr-templates-and-centralize-hashing-grid-layout.md)

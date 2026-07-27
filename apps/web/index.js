@@ -8,7 +8,7 @@ import {
   createRuleEditorContainer,
   generateGatewaySignature,
   createClinicalLookupInput,
-  sha256 as sharedSha256,
+  sha256,
   validateField as sharedValidateField,
 } from "ui";
 
@@ -149,15 +149,8 @@ export function validateField(fieldMeta, val, context = {}) {
   return sharedValidateField(fieldMeta, val, context, evaluateAST);
 }
 
-/**
- * Computes a standard SHA-256 hash using Web Crypto APIs.
- *
- * @param {string} message - The plaintext message to hash.
- * @returns {Promise<string>} The hexadecimal SHA-256 digest.
- */
-export async function sha256(message) {
-  return sharedSha256(message);
-}
+// Re-export sha256 from the shared ui library to prevent duplicate implementations
+export { sha256 };
 
 /**
  * Renders the clinical trial management system (CTMS) dashboard view.

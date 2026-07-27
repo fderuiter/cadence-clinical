@@ -562,31 +562,21 @@
 </template>
 
 <script setup>
+/*
+ * Unification Summary: Harmonized study builder autocomplete terminology parameters across branches.
+ * Standardized on using the unified "debounce" utility from the shared "ui" package, utilizing store.user credentials
+ * for role joining, and preserving custom semantic search context triggers ("Arm concept search" and "Encounter concept search").
+ */
 import { ref, computed, watch, reactive } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import { createClinicalVisitMatrix } from "ui";
 import { terminologyClient } from "../api/terminologyClient.js";
-import { useAuthStore } from "../stores/auth.js";
+import { debounce } from "ui";
 
 const store = useClinicalStore();
-const authStore = useAuthStore();
-
-const builderMode = ref(false);
-const usdmText = ref(JSON.stringify(store.currentUsdm, null, 2));
 
 const armSuggestions = ref([]);
 const encSuggestions = ref([]);
-
-// Debounce helper
-function debounce(fn, delay) {
-  let timeoutId = null;
-  return function (...args) {
-    if (timeoutId) clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => {
-      fn(...args);
-    }, delay);
-  };
-}
 
 const debouncedSearchArm = debounce(async (term) => {
   if (!term || !term.trim()) {
@@ -594,10 +584,13 @@ const debouncedSearchArm = debounce(async (term) => {
     return;
   }
   try {
+    const roles = store.user.roles
+      ? store.user.roles.join(",")
+      : "investigator";
     const res = await terminologyClient.searchTerminology(term, {
-      userId: authStore.identity?.username || "fderuiter",
-      roles: authStore.identity?.roles?.[0] || "investigator",
-      changeReason: "Search terminology",
+      userId: store.user.username || "fderuiter",
+      roles,
+      changeReason: "Arm concept search",
     });
     armSuggestions.value = res.results || [];
   } catch (err) {
@@ -611,10 +604,13 @@ const debouncedSearchEnc = debounce(async (term) => {
     return;
   }
   try {
+    const roles = store.user.roles
+      ? store.user.roles.join(",")
+      : "investigator";
     const res = await terminologyClient.searchTerminology(term, {
-      userId: authStore.identity?.username || "fderuiter",
-      roles: authStore.identity?.roles?.[0] || "investigator",
-      changeReason: "Search terminology",
+      userId: store.user.username || "fderuiter",
+      roles,
+      changeReason: "Encounter concept search",
     });
     encSuggestions.value = res.results || [];
   } catch (err) {
@@ -639,6 +635,9 @@ function selectEncConcept(sug) {
   newEnc.concept = sug.concept_code;
   encSuggestions.value = [];
 }
+
+const builderMode = ref(false);
+const usdmText = ref(JSON.stringify(store.currentUsdm, null, 2));
 
 // Creation Forms States
 const newArm = reactive({ id: "", name: "", concept: "" });
@@ -1009,6 +1008,7 @@ function handleAddEncounter() {
   newEnc.sequence = store.currentUsdm.encounters
     ? store.currentUsdm.encounters.length + 1
     : 1;
+  newEnc.concept_code = "";
 }
 
 function handleAddProcedure() {
