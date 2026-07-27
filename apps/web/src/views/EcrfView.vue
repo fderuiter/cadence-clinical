@@ -1078,6 +1078,81 @@ import { terminologyClient } from "../api/terminologyClient.js";
 const store = useClinicalStore();
 const authStore = useAuthStore();
 
+const conceptValidationStates = reactive({});
+const conceptRequestIds = reactive({});
+
+// eslint-disable-next-line no-unused-vars
+function handleConceptCodeInput(field, newValue) {
+  store.formValues[field.id] = newValue;
+
+  if (field._debounceTimer) {
+    clearTimeout(field._debounceTimer);
+  }
+
+  if (!newValue || !newValue.trim()) {
+    conceptValidationStates[field.id] = null;
+    return;
+  }
+
+  if (!conceptRequestIds[field.id]) {
+    conceptRequestIds[field.id] = 0;
+  }
+  const currentReqId = ++conceptRequestIds[field.id];
+
+  field._debounceTimer = setTimeout(async () => {
+    try {
+      const response = await terminologyClient.validateSingleCode(newValue, {
+        userId: authStore.identity?.username || "fderuiter",
+        roles: authStore.identity?.roles?.[0] || "Data Manager",
+      });
+
+      if (currentReqId !== conceptRequestIds[field.id]) {
+        return;
+      }
+
+      conceptValidationStates[field.id] = {
+        state: response.state,
+        decode: response.decode,
+        errorMessage: response.error_message,
+      };
+    } catch (err) {
+      if (currentReqId !== conceptRequestIds[field.id]) {
+        return;
+      }
+      conceptValidationStates[field.id] = {
+        state: "DEGRADED",
+        errorMessage: err.message || "Terminology service offline",
+      };
+    }
+  }, 300);
+}
+
+// eslint-disable-next-line no-unused-vars
+function getConceptStatusClass(fieldId) {
+  const stateObj = conceptValidationStates[fieldId];
+  if (!stateObj) return "";
+  if (stateObj.state === "VALID") return "lookup-valid";
+  if (stateObj.state === "INVALID") return "lookup-invalid";
+  if (stateObj.state === "DEGRADED") return "lookup-degraded";
+  return "";
+}
+
+// eslint-disable-next-line no-unused-vars
+function getConceptStatusText(fieldId) {
+  const stateObj = conceptValidationStates[fieldId];
+  if (!stateObj) return "";
+  if (stateObj.state === "VALID") {
+    return `Code is valid: "${stateObj.decode}"`;
+  }
+  if (stateObj.state === "INVALID") {
+    return `Invalid code: ${stateObj.errorMessage || ""}`;
+  }
+  if (stateObj.state === "DEGRADED") {
+    return `Terminology service degraded. ${stateObj.errorMessage || ""}`;
+  }
+  return "";
+}
+
 // Live validation states
 const requestCounters = reactive({});
 const conceptStatuses = reactive({});

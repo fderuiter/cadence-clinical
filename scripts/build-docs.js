@@ -4,6 +4,10 @@ const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..');
 
+/**
+ * Executes a shell command from the application directory.
+ * @param {string} command - The shell command to execute.
+ */
 function runCommand(command) {
   console.log(`Running: ${command}`);
   try {
