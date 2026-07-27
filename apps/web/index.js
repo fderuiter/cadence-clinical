@@ -7,6 +7,7 @@ import {
   createConditionRow,
   createRuleEditorContainer,
   generateGatewaySignature,
+  createClinicalLookupInput,
   sha256 as sharedSha256,
   validateField as sharedValidateField,
 } from "ui";
@@ -91,6 +92,22 @@ export function renderFormFromJSON(jsonPayload) {
         value,
         query,
         gridSpan
+      );
+    } else if (field.type === "concept_code") {
+      const status = field.status || "none";
+      const statusMessage = field.statusMessage || "";
+      const attrs = {};
+      if (field.cdash) {
+        attrs["data-cdash"] = field.cdash;
+      }
+      html += createClinicalLookupInput(
+        field.id,
+        field.label,
+        value,
+        status,
+        statusMessage,
+        gridSpan,
+        attrs
       );
     } else {
       const attrs = {};

@@ -1,7 +1,6 @@
 import os
-from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import AsyncGenerator, List, Optional
+from typing import List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
@@ -21,7 +20,7 @@ from apps.quality.models import (
     QualityAuditLog,
     RootCauseAnalysis,
 )
-from packages.database import DatabaseSessionDependency
+from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.rbac import get_normalized_roles
 
@@ -157,30 +156,14 @@ class CAPAResponse(BaseModel):
 DATABASE_URL = os.getenv("QUALITY_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """
-    Handle the lifespan events for the Quality & CAPA application.
-
-    Initializes the database session manager on startup and securely
-    cleans up connections on shutdown. Creates all tables if sqlite is used.
-    """
-    db_manager.init_db(DATABASE_URL)
-
-    # Automatically create tables for sqlite in-memory/file databases
-    if DATABASE_URL.startswith("sqlite"):
-        async with db_manager.engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-
-    yield
-
-    await db_manager.close()
-
-
 app = FastAPI(
     title="Cadence Clinical - Quality & CAPA",
     version="0.1.0",
-    lifespan=lifespan,
+    lifespan=get_relational_db_lifespan(
+        db_manager=db_manager,
+        database_url=DATABASE_URL,
+        base_metadata=Base.metadata,
+    ),
 )
 
 # Enforce secure gateway authentication middleware
@@ -322,9 +305,11 @@ def map_capa_to_response(capa: CAPARecord) -> CAPAResponse:
         action_plan=capa.action_plan,
         status=capa.status,
         preventive_measures=capa.preventive_measures,
-        target_completion_date=capa.target_completion_date.isoformat()
-        if capa.target_completion_date
-        else None,
+        target_completion_date=(
+            capa.target_completion_date.isoformat()
+            if capa.target_completion_date
+            else None
+        ),
         study_id=capa.study_id,
         site_id=capa.site_id,
         created_at=capa.created_at.isoformat(),
