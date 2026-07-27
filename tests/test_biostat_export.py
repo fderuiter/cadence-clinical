@@ -9,13 +9,24 @@ import hmac
 import json
 import os
 import time
-from datetime import datetime, date
+from datetime import datetime
 
 import httpx
 import pytest
 import pytest_asyncio
 from sqlalchemy import select
 
+from apps.execution.biostat.adae import derive_adae
+from apps.execution.biostat.advs import derive_advs
+from apps.execution.biostat.dates import (
+    impute_partial_date,
+    to_sas_date,
+)
+from apps.execution.biostat.extractors import (
+    extract_dm,
+    extract_vs,
+)
+from apps.execution.biostat.models import SUPPRecord
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import (
     Base,
@@ -26,14 +37,6 @@ from apps.execution.database.models import (
 from apps.execution.demographics import encrypt_demographics
 from apps.execution.main import app
 from apps.execution.trial_lock import TrialLockManager
-
-from apps.execution.biostat.dates import impute_partial_date, parse_partial_date, to_sas_date, to_date_obj
-from apps.execution.biostat.extractors import extract_dm, extract_ae, extract_vs, extract_lb, extract_mh
-from apps.execution.biostat.adae import derive_adae
-from apps.execution.biostat.adsl import derive_adsl
-from apps.execution.biostat.advs import derive_advs
-from apps.execution.biostat.models import SUPPRecord
-
 
 GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
 
@@ -185,6 +188,7 @@ async def populate_test_data():
 # PURE UNIT TESTS (Compliance Derivations)
 # ==============================================================================
 
+
 def test_sdtm_age_derivation():
     """
     @req: SDTM-DM-AGE-01
@@ -201,7 +205,7 @@ def test_sdtm_age_derivation():
                 "birthdate": "1990-05-15",
                 "gender": "male",
                 "race": "white",
-            }
+            },
         }
     ]
     obs = [
@@ -209,7 +213,7 @@ def test_sdtm_age_derivation():
             "subject_id": "S1",
             "domain": "EX",
             "test_code": "EXSTDTC",
-            "value_string": "2020-05-15"
+            "value_string": "2020-05-15",
         }
     ]
     dm = extract_dm(subj, obs)
@@ -221,7 +225,7 @@ def test_sdtm_age_derivation():
             "subject_id": "S1",
             "domain": "EX",
             "test_code": "EXSTDTC",
-            "value_string": "2020-05-14"
+            "value_string": "2020-05-14",
         }
     ]
     dm_before = extract_dm(subj, obs_before)
@@ -236,7 +240,7 @@ def test_sdtm_age_derivation():
                 "birthdate": "2000-02-29",
                 "gender": "female",
                 "race": "white",
-            }
+            },
         }
     ]
     obs_leap = [
@@ -244,7 +248,7 @@ def test_sdtm_age_derivation():
             "subject_id": "S2",
             "domain": "EX",
             "test_code": "EXSTDTC",
-            "value_string": "2021-02-28"
+            "value_string": "2021-02-28",
         }
     ]
     dm_leap = extract_dm(subj_leap, obs_leap)
@@ -259,7 +263,7 @@ def test_sdtm_age_derivation():
                 "birthdate": "1990-UN-UN",
                 "gender": "male",
                 "race": "white",
-            }
+            },
         }
     ]
     dm_partial = extract_dm(subj_partial, obs)
@@ -337,9 +341,29 @@ def test_sdtm_supplemental_qualifiers():
     assert supp.QEVAL == ""
 
     # Verify the converted row contains all fields in specified order
-    ordered_vars = ["STUDYID", "RDOMAIN", "USUBJID", "IDVAR", "IDVARVAL", "QNAM", "QLABEL", "QVAL", "QEVAL"]
+    ordered_vars = [
+        "STUDYID",
+        "RDOMAIN",
+        "USUBJID",
+        "IDVAR",
+        "IDVARVAL",
+        "QNAM",
+        "QLABEL",
+        "QVAL",
+        "QEVAL",
+    ]
     row = supp.to_row(ordered_vars)
-    assert row == ["STUDY-123", "AE", "STUDY-123-SITE-A-001", "AESEQ", "1", "AETREAT", "Treatment for AE", "Ibuprofen", ""]
+    assert row == [
+        "STUDY-123",
+        "AE",
+        "STUDY-123-SITE-A-001",
+        "AESEQ",
+        "1",
+        "AETREAT",
+        "Treatment for AE",
+        "Ibuprofen",
+        "",
+    ]
 
 
 def test_partial_date_imputation_detailed():
@@ -350,11 +374,21 @@ def test_partial_date_imputation_detailed():
     # Case 1: START direction - Year and Month known, Day missing
     assert impute_partial_date("2026-08-UN", direction="START") == "2026-08-01"
     # Case 2: START direction - Year and Month match Treatment Start Month -> Imputed to TRTSDT
-    assert impute_partial_date("2026-08-UN", direction="START", treatment_start_date="2026-08-15") == "2026-08-15"
+    assert (
+        impute_partial_date(
+            "2026-08-UN", direction="START", treatment_start_date="2026-08-15"
+        )
+        == "2026-08-15"
+    )
     # Case 3: START direction - Year only known
     assert impute_partial_date("2026-UN-UN", direction="START") == "2026-01-01"
     # Case 4: START direction - Year matches Treatment Start Year -> Imputed to TRTSDT
-    assert impute_partial_date("2026-UN-UN", direction="START", treatment_start_date="2026-08-15") == "2026-08-15"
+    assert (
+        impute_partial_date(
+            "2026-UN-UN", direction="START", treatment_start_date="2026-08-15"
+        )
+        == "2026-08-15"
+    )
 
     # Case 5: END direction - Year and Month known (non-leap year Feb) -> Feb 28
     assert impute_partial_date("2026-02-UN", direction="END") == "2026-02-28"
@@ -363,7 +397,12 @@ def test_partial_date_imputation_detailed():
     # Case 7: END direction - Year only known -> Dec 31
     assert impute_partial_date("2026-UN-UN", direction="END") == "2026-12-31"
     # Case 8: END direction - Capped by End of Study Date
-    assert impute_partial_date("2026-UN-UN", direction="END", end_of_study_date="2026-06-15") == "2026-06-15"
+    assert (
+        impute_partial_date(
+            "2026-UN-UN", direction="END", end_of_study_date="2026-06-15"
+        )
+        == "2026-06-15"
+    )
 
 
 def test_adae_trtemfl_logic():
@@ -433,7 +472,7 @@ def test_advs_chg_pchg_computations():
             "VISIT": "Week 1",
             "VISITNUM": 2.0,
             "VSSEQ": 2,
-        }
+        },
     ]
     advs_std = derive_advs(adsl_records, vs_records_std)
     rec_post = next(r for r in advs_std if r["VSSEQ"] == 2)
@@ -464,7 +503,7 @@ def test_advs_chg_pchg_computations():
             "VISIT": "Week 1",
             "VISITNUM": 2.0,
             "VSSEQ": 2,
-        }
+        },
     ]
     advs_zero = derive_advs(adsl_records, vs_records_zero)
     rec_post_zero = next(r for r in advs_zero if r["VSSEQ"] == 2)
@@ -494,7 +533,7 @@ def test_advs_chg_pchg_computations():
             "VISIT": "Week 1",
             "VISITNUM": 2.0,
             "VSSEQ": 2,
-        }
+        },
     ]
     advs_missing = derive_advs(adsl_records, vs_records_missing)
     rec_post_miss = next(r for r in advs_missing if r["VSSEQ"] == 2)
@@ -506,6 +545,7 @@ def test_advs_chg_pchg_computations():
 # ==============================================================================
 # INTEGRATION TESTS (API Endpoints, Authentication and Database Auditing)
 # ==============================================================================
+
 
 @pytest.mark.asyncio
 async def test_api_sdtm_export_success(populate_test_data) -> None:
@@ -573,9 +613,7 @@ async def test_api_unauthenticated_export_rejection() -> None:
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
-        res = await client.get(
-            "/api/v1/execution/biostat/sdtm/DM?study_id=STUDY-001"
-        )
+        res = await client.get("/api/v1/execution/biostat/sdtm/DM?study_id=STUDY-001")
         assert res.status_code == 401
         assert "Missing gateway authentication headers" in res.json()["detail"]
 
@@ -601,8 +639,7 @@ async def test_api_validation_failure_logging(populate_test_data) -> None:
         # Ensure database logged this as a failure
         async with db_manager.get_session_maker()() as session:
             stmt = select(BiostatExport).where(
-                BiostatExport.export_type == "SDTM",
-                BiostatExport.status == "FAILED"
+                BiostatExport.export_type == "SDTM", BiostatExport.status == "FAILED"
             )
             db_res = await session.execute(stmt)
             export_log = db_res.scalars().first()

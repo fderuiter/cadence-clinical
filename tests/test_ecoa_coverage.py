@@ -496,12 +496,9 @@ async def test_offline_submission_conflict_resolution_lifecycles():
 
     # Check final EPRO audit logs
     async with async_session() as session:
-        stmt = (
-            select(InteropAuditLog)
-            .where(
-                InteropAuditLog.action == "EPRO_RECONCILE",
-                InteropAuditLog.user_id == "subject_sync",
-            )
+        stmt = select(InteropAuditLog).where(
+            InteropAuditLog.action == "EPRO_RECONCILE",
+            InteropAuditLog.user_id == "subject_sync",
         )
         res = await session.execute(stmt)
         audits = res.scalars().all()
