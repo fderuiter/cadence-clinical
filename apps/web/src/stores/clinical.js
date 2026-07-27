@@ -242,6 +242,14 @@ export const useClinicalStore = defineStore("clinical", {
       },
       ecrfFields: [
         {
+          id: "concept_code",
+          label: "Concept Code Lookup (NCI Thesaurus)",
+          type: "concept_code",
+          gridSpan: 12,
+          cdash: "DM.CONCEPT_CODE",
+          value: "",
+        },
+        {
           id: "brthdt",
           label: "Date of Birth (YYYY-MM-DD)",
           type: "text",
@@ -378,8 +386,17 @@ export const useClinicalStore = defineStore("clinical", {
             ],
           },
         },
+        {
+          id: "concept_code",
+          label: "Controlled Terminology Concept Code",
+          type: "concept_code",
+          gridSpan: 12,
+          cdash: "DM.CONCEPT_CODE",
+          value: "",
+        },
       ],
       formValues: savedFormValues || {
+        concept_code: "",
         brthdt: "1980-05-12",
         sex: "F",
         vssbp: "120",

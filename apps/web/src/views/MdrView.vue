@@ -527,7 +527,7 @@
 import { ref, computed, watch, reactive } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import { createClinicalVisitMatrix } from "ui";
-import { terminologyClient } from "../api/terminologyClient.js";
+import { terminologyClient } from "../api/terminologyClient";
 
 const store = useClinicalStore();
 
