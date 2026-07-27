@@ -25,7 +25,7 @@
           <template v-for="field in store.ecrfFields" :key="field.id">
             <!-- Text input field -->
             <div
-              v-if="field.type !== 'radio'"
+              v-if="field.type !== 'radio' && field.type !== 'concept_code'"
               v-show="store.fieldVisibility[field.id] !== false"
               :id="`field-container-${field.id}`"
               class="clinical-input"
@@ -54,6 +54,230 @@
                 >
                   {{ getQueryStatus(field.id) === "NONE" ? "💬" : "⚠️" }}
                 </button>
+              </div>
+
+              <!-- Validation Error -->
+              <div
+                v-if="
+                  getValidationError(field) && store.formValues[field.id] !== ''
+                "
+                class="validation-error-msg"
+              >
+                {{ getValidationError(field) }}
+              </div>
+
+              <!-- Query Panel -->
+              <div
+                v-if="activeQueryPanels[field.id]"
+                :id="`query-panel-${field.id}`"
+                class="query-panel"
+                role="region"
+              >
+                <div class="query-panel-header">
+                  <span class="query-panel-title"
+                    >Query Manager - {{ field.id }}</span
+                  >
+                  <button
+                    type="button"
+                    class="btn-close-panel"
+                    @click="toggleQueryPanel(field.id)"
+                  >
+                    ×
+                  </button>
+                </div>
+                <div class="query-panel-body">
+                  <!-- No Query State -->
+                  <div
+                    v-if="getQueryStatus(field.id) === 'NONE'"
+                    class="query-create-section"
+                  >
+                    <p class="query-panel-instruction">
+                      Raise a query for this field:
+                    </p>
+                    <div class="form-group">
+                      <label :for="`query-message-${field.id}`"
+                        >Discrepancy Message</label
+                      >
+                      <textarea
+                        :id="`query-message-${field.id}`"
+                        v-model="queryInputs[field.id]"
+                        placeholder="Enter clinical discrepancy details..."
+                        required
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      class="btn-submit-query"
+                      @click="createQuery(field.id)"
+                    >
+                      Submit Query
+                    </button>
+                  </div>
+
+                  <!-- Open/Reopened Query State -->
+                  <div
+                    v-else-if="
+                      getQueryStatus(field.id) === 'OPEN' ||
+                      getQueryStatus(field.id) === 'REOPENED'
+                    "
+                    class="query-details"
+                  >
+                    <div
+                      class="query-status-badge"
+                      :class="`badge-${getQueryStatus(field.id).toLowerCase()}`"
+                    >
+                      Status: {{ getQueryStatus(field.id) }}
+                    </div>
+                    <p class="query-current-msg">
+                      <strong>Discrepancy:</strong>
+                      {{ store.formQueries[field.id].message }}
+                    </p>
+                    <p class="query-meta">
+                      Raised by:
+                      {{ store.formQueries[field.id].createdBy || "System" }} on
+                      {{ store.formQueries[field.id].createdAt }}
+                    </p>
+                    <div class="query-respond-section" style="margin-top: 12px">
+                      <div class="form-group">
+                        <label :for="`query-response-${field.id}`"
+                          >Your Response</label
+                        >
+                        <textarea
+                          :id="`query-response-${field.id}`"
+                          v-model="queryResponses[field.id]"
+                          placeholder="Enter clinical justification or resolution explanation..."
+                          required
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        class="btn-respond-query"
+                        @click="respondQuery(field.id)"
+                      >
+                        Submit Response
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Answered Query State -->
+                  <div
+                    v-else-if="getQueryStatus(field.id) === 'ANSWERED'"
+                    class="query-details"
+                  >
+                    <div class="query-status-badge badge-answered">
+                      Status: ANSWERED
+                    </div>
+                    <p class="query-current-msg">
+                      <strong>Discrepancy:</strong>
+                      {{ store.formQueries[field.id].message }}
+                    </p>
+                    <p class="query-response-msg">
+                      <strong>Response:</strong>
+                      {{ store.formQueries[field.id].response }}
+                    </p>
+                    <p class="query-meta">
+                      Responded by:
+                      {{ store.formQueries[field.id].respondedBy }} on
+                      {{ store.formQueries[field.id].respondedAt }}
+                    </p>
+                    <div
+                      class="query-actions-section"
+                      style="margin-top: 12px; display: flex; gap: 8px"
+                    >
+                      <button
+                        type="button"
+                        class="btn-close-query"
+                        @click="closeQuery(field.id)"
+                      >
+                        Close Query (Resolve)
+                      </button>
+                      <button
+                        type="button"
+                        class="btn-reopen-query"
+                        @click="reopenQuery(field.id)"
+                      >
+                        Reopen Query
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Closed Query State -->
+                  <div
+                    v-else-if="getQueryStatus(field.id) === 'CLOSED'"
+                    class="query-details"
+                  >
+                    <div class="query-status-badge badge-closed">
+                      Status: CLOSED
+                    </div>
+                    <p class="query-current-msg">
+                      <strong>Discrepancy:</strong>
+                      {{ store.formQueries[field.id].message }}
+                    </p>
+                    <p class="query-response-msg">
+                      <strong>Response:</strong>
+                      {{ store.formQueries[field.id].response }}
+                    </p>
+                    <p class="query-meta">
+                      Closed by: {{ store.formQueries[field.id].closedBy }} on
+                      {{ store.formQueries[field.id].closedAt }}
+                    </p>
+                    <p class="query-history-info">
+                      This query is permanently resolved and closed.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Concept code lookup field -->
+            <div
+              v-else-if="field.type === 'concept_code'"
+              v-show="store.fieldVisibility[field.id] !== false"
+              :id="`field-container-${field.id}`"
+              class="clinical-input clinical-lookup-container"
+              :class="{ 'has-error': getValidationError(field) }"
+              :style="`grid-column: span ${field.gridSpan || 12};`"
+            >
+              <label :for="field.id">{{ field.label }}</label>
+              <div class="input-wrapper">
+                <input
+                  :id="field.id"
+                  type="text"
+                  :name="field.id"
+                  :value="store.formValues[field.id]"
+                  @input="handleLookupInput(field, $event.target.value)"
+                  @change="
+                    handleFieldChange(field, $event.target.value, $event.target)
+                  "
+                />
+
+                <!-- Query Flag -->
+                <button
+                  :id="`query-flag-${field.id}`"
+                  class="query-flag"
+                  :class="`query-status-${getQueryStatus(field.id).toLowerCase()}`"
+                  type="button"
+                  @click="toggleQueryPanel(field.id)"
+                >
+                  {{ getQueryStatus(field.id) === "NONE" ? "💬" : "⚠️" }}
+                </button>
+              </div>
+
+              <!-- Lookup Status Indicator -->
+              <div
+                v-if="lookupStatuses[field.id]"
+                :id="`lookup-status-${field.id}`"
+                class="lookup-status-indicator"
+                :class="getLookupStatusClass(field.id)"
+                role="status"
+                aria-live="polite"
+              >
+                <span class="lookup-status-icon" aria-hidden="true">{{
+                  getLookupStatusIcon(field.id)
+                }}</span>
+                <span class="lookup-status-text">{{
+                  lookupStatuses[field.id].message
+                }}</span>
               </div>
 
               <!-- Validation Error -->
@@ -536,16 +760,32 @@
       </div>
 
       <!-- PI Sign-Off Worklist and Verification Card -->
-      <div class="card" style="display: flex; flex-direction: column; gap: 16px;">
+      <div
+        class="card"
+        style="display: flex; flex-direction: column; gap: 16px"
+      >
         <div class="card-title">PI Sign-Off Worklist & Verification</div>
         <p style="font-size: 0.85rem; color: #475569; margin-bottom: 4px">
-          Perform a 21 CFR Part 11 compliant electronic signature. This action requires re-authenticating the Principal Investigator credentials to obtain a secure single-use signature token.
+          Perform a 21 CFR Part 11 compliant electronic signature. This action
+          requires re-authenticating the Principal Investigator credentials to
+          obtain a secure single-use signature token.
         </p>
 
-        <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; flex-direction: column; gap: 12px">
           <div class="form-group">
-            <label for="signoff-target-type">Sign-Off Scope (Granularity)</label>
-            <select id="signoff-target-type" v-model="signoffTargetType" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;">
+            <label for="signoff-target-type"
+              >Sign-Off Scope (Granularity)</label
+            >
+            <select
+              id="signoff-target-type"
+              v-model="signoffTargetType"
+              style="
+                width: 100%;
+                padding: 8px;
+                border: 1px solid var(--border);
+                border-radius: 4px;
+              "
+            >
               <option value="FORM">FORM Level</option>
               <option value="VISIT">VISIT Level</option>
               <option value="SUBJECT">SUBJECT Level</option>
@@ -554,16 +794,43 @@
 
           <div class="form-group">
             <label for="signoff-target-id">Select Target ID</label>
-            <select id="signoff-target-id" v-model="signoffTargetId" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;">
+            <select
+              id="signoff-target-id"
+              v-model="signoffTargetId"
+              style="
+                width: 100%;
+                padding: 8px;
+                border: 1px solid var(--border);
+                border-radius: 4px;
+              "
+            >
               <option value="">-- Choose ID --</option>
               <template v-if="signoffTargetType === 'SUBJECT'">
-                <option v-for="sub in availableSubjects" :key="sub" :value="sub">{{ sub }}</option>
+                <option
+                  v-for="sub in availableSubjects"
+                  :key="sub"
+                  :value="sub"
+                >
+                  {{ sub }}
+                </option>
               </template>
               <template v-else-if="signoffTargetType === 'VISIT'">
-                <option v-for="visit in availableVisits" :key="visit" :value="visit">{{ visit }}</option>
+                <option
+                  v-for="visit in availableVisits"
+                  :key="visit"
+                  :value="visit"
+                >
+                  {{ visit }}
+                </option>
               </template>
               <template v-else-if="signoffTargetType === 'FORM'">
-                <option v-for="form in availableFormSubmissions" :key="form" :value="form">{{ form }}</option>
+                <option
+                  v-for="form in availableFormSubmissions"
+                  :key="form"
+                  :value="form"
+                >
+                  {{ form }}
+                </option>
               </template>
               <option value="custom">-- Enter Custom --</option>
             </select>
@@ -571,19 +838,50 @@
 
           <div v-if="signoffTargetId === 'custom'" class="form-group">
             <label for="signoff-custom-target-id">Custom Target ID Value</label>
-            <input id="signoff-custom-target-id" type="text" placeholder="Enter custom target ID..." style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;" @input="e => customTargetId = e.target.value" />
+            <input
+              id="signoff-custom-target-id"
+              type="text"
+              placeholder="Enter custom target ID..."
+              style="
+                width: 100%;
+                padding: 8px;
+                border: 1px solid var(--border);
+                border-radius: 4px;
+              "
+              @input="(e) => (customTargetId = e.target.value)"
+            />
           </div>
 
           <div class="form-group">
             <label for="signoff-reason">Signing Reason / Attestation</label>
-            <select id="signoff-reason" v-model="signoffReason" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;">
-              <option v-for="reason in validSigningReasons" :key="reason" :value="reason">{{ reason }}</option>
+            <select
+              id="signoff-reason"
+              v-model="signoffReason"
+              style="
+                width: 100%;
+                padding: 8px;
+                border: 1px solid var(--border);
+                border-radius: 4px;
+              "
+            >
+              <option
+                v-for="reason in validSigningReasons"
+                :key="reason"
+                :value="reason"
+              >
+                {{ reason }}
+              </option>
             </select>
           </div>
         </div>
 
-        <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
-          <button id="btn-pi-signoff" class="btn btn-primary" type="button" @click="handleSignOffSubmit">
+        <div style="display: flex; justify-content: flex-end; margin-top: 8px">
+          <button
+            id="btn-pi-signoff"
+            class="btn btn-primary"
+            type="button"
+            @click="handleSignOffSubmit"
+          >
             ✍️ Sign Off Target
           </button>
         </div>
@@ -665,7 +963,12 @@
               id="reauth-username"
               v-model="reauthUsername"
               type="text"
-              style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;"
+              style="
+                width: 100%;
+                padding: 8px;
+                border: 1px solid var(--border);
+                border-radius: 4px;
+              "
             />
           </div>
           <div class="form-group" style="margin-bottom: 12px">
@@ -676,7 +979,12 @@
               type="password"
               placeholder="Enter your password to confirm identity..."
               required
-              style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;"
+              style="
+                width: 100%;
+                padding: 8px;
+                border: 1px solid var(--border);
+                border-radius: 4px;
+              "
               @keyup.enter="confirmReauth"
             />
           </div>
@@ -687,7 +995,12 @@
               v-model="reauthTotp"
               type="text"
               placeholder="Enter 6-digit TOTP code..."
-              style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;"
+              style="
+                width: 100%;
+                padding: 8px;
+                border: 1px solid var(--border);
+                border-radius: 4px;
+              "
             />
           </div>
           <div
@@ -721,6 +1034,7 @@ import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { soaClient } from "../api/soaClient";
 import { validateField } from "../../index";
+import { terminologyClient } from "../api/terminologyClient";
 
 const store = useClinicalStore();
 const authStore = useAuthStore();
@@ -737,6 +1051,101 @@ watch(
 onMounted(() => {
   store.evaluateRules();
 });
+
+// Lookup Status States
+const lookupStatuses = ref({});
+const lastLookupRequestIds = {};
+const debounceTimers = {};
+
+async function performConceptCodeValidation(fieldId, value) {
+  if (!value || !value.trim()) {
+    lookupStatuses.value[fieldId] = null;
+    return;
+  }
+
+  if (lastLookupRequestIds[fieldId] === undefined) {
+    lastLookupRequestIds[fieldId] = 0;
+  }
+  lastLookupRequestIds[fieldId]++;
+  const requestId = lastLookupRequestIds[fieldId];
+
+  lookupStatuses.value[fieldId] = {
+    status: "loading",
+    message: "Searching terminology database...",
+  };
+
+  try {
+    const res = await terminologyClient.validateSingleCode(value, {
+      userId: "fderuiter",
+      roles: "investigator",
+      changeReason: "Validate code",
+    });
+
+    if (requestId !== lastLookupRequestIds[fieldId]) {
+      return;
+    }
+
+    if (res.state === "VALID") {
+      lookupStatuses.value[fieldId] = {
+        status: "valid",
+        message: `Code is valid: "${res.decode}"`,
+      };
+    } else if (res.state === "INVALID") {
+      lookupStatuses.value[fieldId] = {
+        status: "invalid",
+        message: `Invalid code "${value}". Not found in NCI Thesaurus.`,
+      };
+    } else if (res.state === "DEGRADED") {
+      lookupStatuses.value[fieldId] = {
+        status: "degraded",
+        message: "Terminology service degraded. Validation offline.",
+      };
+    }
+  } catch (error) {
+    if (requestId !== lastLookupRequestIds[fieldId]) {
+      return;
+    }
+    lookupStatuses.value[fieldId] = {
+      status: "degraded",
+      message:
+        error.message || "Terminology service degraded. Validation offline.",
+    };
+  }
+}
+
+function handleLookupInput(field, value) {
+  const fieldId = field.id;
+  store.formValues[fieldId] = value;
+
+  if (debounceTimers[fieldId]) {
+    clearTimeout(debounceTimers[fieldId]);
+  }
+
+  if (!value || !value.trim()) {
+    lookupStatuses.value[fieldId] = null;
+    return;
+  }
+
+  debounceTimers[fieldId] = setTimeout(() => {
+    performConceptCodeValidation(fieldId, value);
+  }, 300);
+}
+
+function getLookupStatusClass(fieldId) {
+  const item = lookupStatuses.value[fieldId];
+  if (!item) return "";
+  return `lookup-${item.status}`;
+}
+
+function getLookupStatusIcon(fieldId) {
+  const item = lookupStatuses.value[fieldId];
+  if (!item) return "";
+  if (item.status === "loading") return "⏳";
+  if (item.status === "valid") return "✅";
+  if (item.status === "invalid") return "❌";
+  if (item.status === "degraded") return "⚠️";
+  return "";
+}
 
 // UI States
 const activeQueryPanels = reactive({});
@@ -909,7 +1318,8 @@ function respondQuery(fieldId) {
 function closeQuery(fieldId) {
   pendingCloseQueryFieldId.value = fieldId;
   reauthAction.value = "CLOSE_QUERY";
-  reauthUsername.value = store.user.username || authStore.identity?.username || "fderuiter";
+  reauthUsername.value =
+    store.user.username || authStore.identity?.username || "fderuiter";
   reauthPassword.value = "";
   reauthTotp.value = "";
   reauthError.value = "";
@@ -917,13 +1327,17 @@ function closeQuery(fieldId) {
 }
 
 function handleSignOffSubmit() {
-  const targetId = signoffTargetId.value === "custom" ? customTargetId.value : signoffTargetId.value;
+  const targetId =
+    signoffTargetId.value === "custom"
+      ? customTargetId.value
+      : signoffTargetId.value;
   if (!targetId || !targetId.trim()) {
     alert("Please select or enter a valid Target ID first.");
     return;
   }
   reauthAction.value = "BATCH_SIGN_OFF";
-  reauthUsername.value = store.user.username || authStore.identity?.username || "fderuiter";
+  reauthUsername.value =
+    store.user.username || authStore.identity?.username || "fderuiter";
   reauthPassword.value = "";
   reauthTotp.value = "";
   reauthError.value = "";
@@ -985,34 +1399,46 @@ async function confirmReauth() {
 
     showReauthModal.value = false;
     reauthError.value = "";
-    alert("Identity verified. Query closed and logged to cryptographic ledger.");
+    alert(
+      "Identity verified. Query closed and logged to cryptographic ledger."
+    );
   } else if (action === "BATCH_SIGN_OFF") {
     try {
       reauthError.value = "";
 
       // 1. Obtain signature token
-      const reauthRes = await soaClient.verifySignature({
-        username,
-        password,
-        totp,
-        action: "/api/v1/execution/batch-sign-off"
-      }, authStore.accessToken);
+      const reauthRes = await soaClient.verifySignature(
+        {
+          username,
+          password,
+          totp,
+          action: "/api/v1/execution/batch-sign-off",
+        },
+        authStore.accessToken
+      );
 
       const sigToken = reauthRes.sig_token;
 
       // 2. Call batch sign-off
-      const targetId = signoffTargetId.value === "custom" ? customTargetId.value : signoffTargetId.value;
-      const signoffRes = await soaClient.batchSignOff({
-        studyId: store.currentUsdm.studyId || "STUDY-USDM-001",
-        targetType: signoffTargetType.value,
-        targetIds: [targetId],
-        signingReason: signoffReason.value,
-      }, {
-        userId: username,
-        roles: store.user.roles ? store.user.roles.join(",") : "investigator",
-        changeReason: signoffReason.value,
-        sigToken,
-      }, authStore.accessToken);
+      const targetId =
+        signoffTargetId.value === "custom"
+          ? customTargetId.value
+          : signoffTargetId.value;
+      const signoffRes = await soaClient.batchSignOff(
+        {
+          studyId: store.currentUsdm.studyId || "STUDY-USDM-001",
+          targetType: signoffTargetType.value,
+          targetIds: [targetId],
+          signingReason: signoffReason.value,
+        },
+        {
+          userId: username,
+          roles: store.user.roles ? store.user.roles.join(",") : "investigator",
+          changeReason: signoffReason.value,
+          sigToken,
+        },
+        authStore.accessToken
+      );
 
       // 3. Document in ledger
       await store.addLedgerBlock(
@@ -1029,14 +1455,17 @@ async function confirmReauth() {
       // Clean up variables & UI state
       showReauthModal.value = false;
       reauthTotp.value = "";
-      alert(`Signature Token obtained successfully.\nBatch sign-off completed for ${signoffTargetType.value} ${targetId}!`);
+      alert(
+        `Signature Token obtained successfully.\nBatch sign-off completed for ${signoffTargetType.value} ${targetId}!`
+      );
     } catch (err) {
       // Explicitly wipe credentials on failure
       reauthPassword.value = "";
       reauthTotp.value = "";
 
       if (err.message === "REAUTHENTICATION_REQUIRED" || err.status === 401) {
-        reauthError.value = "Identity verification expired or invalid. Please try again.";
+        reauthError.value =
+          "Identity verification expired or invalid. Please try again.";
         showReauthModal.value = true;
       } else {
         reauthError.value = err.message || "Failed to complete batch sign-off.";

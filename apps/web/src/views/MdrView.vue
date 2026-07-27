@@ -99,6 +99,41 @@
                 style="width: 100%; padding: 6px"
               />
             </div>
+            <div
+              class="form-group"
+              style="margin-bottom: 8px; position: relative"
+            >
+              <label for="new-arm-concept">Arm Concept Code</label>
+              <input
+                id="new-arm-concept"
+                :value="newArm.conceptCode"
+                type="text"
+                placeholder="e.g. C123"
+                style="width: 100%; padding: 6px"
+                @input="handleArmConceptInput"
+              />
+              <div
+                v-if="armSuggestions.length > 0"
+                class="autocomplete-dropdown"
+                style="
+                  position: absolute;
+                  background: white;
+                  border: 1px solid var(--border);
+                  width: 100%;
+                  z-index: 10;
+                "
+              >
+                <div
+                  v-for="s in armSuggestions"
+                  :key="s.concept_code"
+                  class="suggestion-item"
+                  @click="selectArmSuggestion(s)"
+                  style="padding: 6px; cursor: pointer"
+                >
+                  <strong>{{ s.concept_code }}</strong> - {{ s.preferred_name }}
+                </div>
+              </div>
+            </div>
             <button
               class="btn btn-primary"
               style="width: 100%"
@@ -228,6 +263,16 @@
                   {{ ep.epoch_name }}
                 </option>
               </select>
+            </div>
+            <div class="form-group" style="margin-bottom: 8px">
+              <label for="new-enc-concept">Encounter Concept Code</label>
+              <input
+                id="new-enc-concept"
+                v-model="newEnc.conceptCode"
+                type="text"
+                placeholder="e.g. C456"
+                style="width: 100%; padding: 6px"
+              />
             </div>
             <button
               class="btn btn-primary"
@@ -476,6 +521,7 @@
 import { ref, computed, watch, reactive } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import { createClinicalVisitMatrix } from "ui";
+import { terminologyClient } from "../api/terminologyClient";
 
 const store = useClinicalStore();
 
@@ -483,10 +529,52 @@ const builderMode = ref(false);
 const usdmText = ref(JSON.stringify(store.currentUsdm, null, 2));
 
 // Creation Forms States
-const newArm = reactive({ id: "", name: "" });
+const newArm = reactive({ id: "", name: "", conceptCode: "" });
 const newEpoch = reactive({ id: "", name: "", sequence: 1, arm_id: "" });
-const newEnc = reactive({ id: "", name: "", sequence: 1, epoch_id: "" });
+const newEnc = reactive({
+  id: "",
+  name: "",
+  sequence: 1,
+  epoch_id: "",
+  conceptCode: "",
+});
 const newProc = reactive({ id: "", name: "" });
+
+const armSuggestions = ref([]);
+let searchDebounceTimer = null;
+
+function handleArmConceptInput(event) {
+  const val = event.target.value;
+  newArm.conceptCode = val;
+
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer);
+  }
+
+  if (!val || !val.trim()) {
+    armSuggestions.value = [];
+    return;
+  }
+
+  searchDebounceTimer = setTimeout(async () => {
+    try {
+      const res = await terminologyClient.searchTerminology(val, {
+        userId: "fderuiter",
+        roles: "investigator",
+        changeReason: "Search terminology",
+      });
+      armSuggestions.value = res.results || [];
+    } catch (err) {
+      console.error("Search failed:", err);
+      armSuggestions.value = [];
+    }
+  }, 300);
+}
+
+function selectArmSuggestion(suggestion) {
+  newArm.conceptCode = suggestion.concept_code;
+  armSuggestions.value = [];
+}
 
 // Link Applicability States
 const linkPayload = reactive({ procedure_id: "", visit_id: "", timing: "" });
@@ -801,6 +889,7 @@ function handleAddArm() {
   });
   newArm.id = "";
   newArm.name = "";
+  newArm.conceptCode = "";
 }
 
 function handleAddEpoch() {
@@ -840,6 +929,7 @@ function handleAddEncounter() {
   });
   newEnc.id = "";
   newEnc.name = "";
+  newEnc.conceptCode = "";
   newEnc.sequence = store.currentUsdm.encounters
     ? store.currentUsdm.encounters.length + 1
     : 1;
