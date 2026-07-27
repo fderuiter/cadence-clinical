@@ -10,8 +10,10 @@ from apps.execution.database.models import (
     ClinicalObservation,
     ClinicalQuery,
     ClinicalVisit,
+    FormSubmission,
     PendingPredecessorCheck,
 )
+from apps.execution.evaluator import evaluate_ast
 
 logger = logging.getLogger(__name__)
 
@@ -67,50 +69,69 @@ class AEConsentTemporalCheckRule(EditCheckRule):
         # This rule evaluates if we have both AE onset and Informed Consent date
         subject_id = observation.subject_id
 
-        # Find AE onset observation and Informed Consent observation for this subject
-        # To be flexible, match both standard SDTM/CDASH and custom simplified test codes
-        ae_stmt = select(ClinicalObservation).where(
-            ClinicalObservation.subject_id == subject_id,
-            ClinicalObservation.test_code.in_(["AESTDTC", "AE_ONSET"]),
-            ClinicalObservation.is_deleted.is_(False),
+        # Find the latest AE onset observation and latest Informed Consent observation for this subject
+        ae_stmt = (
+            select(ClinicalObservation)
+            .where(
+                ClinicalObservation.subject_id == subject_id,
+                ClinicalObservation.test_code.in_(["AESTDTC", "AE_ONSET"]),
+                ClinicalObservation.is_deleted.is_(False),
+            )
+            .order_by(ClinicalObservation.observation_date.desc())
         )
-        consent_stmt = select(ClinicalObservation).where(
-            ClinicalObservation.subject_id == subject_id,
-            ClinicalObservation.test_code.in_(
-                ["DSSTDTC", "INFORMED_CONSENT", "INFORMED_CONSENT_DATE"]
-            ),
-            ClinicalObservation.is_deleted.is_(False),
+
+        consent_stmt = (
+            select(ClinicalObservation)
+            .where(
+                ClinicalObservation.subject_id == subject_id,
+                ClinicalObservation.test_code.in_(
+                    ["DSSTDTC", "INFORMED_CONSENT", "INFORMED_CONSENT_DATE"]
+                ),
+                ClinicalObservation.is_deleted.is_(False),
+            )
+            .order_by(ClinicalObservation.observation_date.desc())
         )
 
         ae_res = await session.execute(ae_stmt)
-        ae_obs_list = ae_res.scalars().all()
+        ae_obs = ae_res.scalars().first()
 
         consent_res = await session.execute(consent_stmt)
-        consent_obs_list = consent_res.scalars().all()
+        consent_obs = consent_res.scalars().first()
 
-        if not ae_obs_list or not consent_obs_list:
+        if not ae_obs or not consent_obs:
             return None
 
-        # Compare dates
-        # Use observation_date or value_string
-        for ae_obs in ae_obs_list:
-            ae_date = ae_obs.observation_date
-            if ae_obs.value_string:
-                try:
-                    ae_date = datetime.fromisoformat(ae_obs.value_string)
-                except ValueError:
-                    pass
+        # Compare dates using the AST evaluator
+        ae_date = ae_obs.observation_date
+        if ae_obs.value_string:
+            try:
+                ae_date = datetime.fromisoformat(ae_obs.value_string)
+            except ValueError:
+                pass
 
-            for consent_obs in consent_obs_list:
-                consent_date = consent_obs.observation_date
-                if consent_obs.value_string:
-                    try:
-                        consent_date = datetime.fromisoformat(consent_obs.value_string)
-                    except ValueError:
-                        pass
+        consent_date = consent_obs.observation_date
+        if consent_obs.value_string:
+            try:
+                consent_date = datetime.fromisoformat(consent_obs.value_string)
+            except ValueError:
+                pass
 
-                if ae_date < consent_date:
-                    return self.message
+        # Build context and AST for evaluate_ast
+        context = {
+            "AE_DATE": ae_date.isoformat(),
+            "CONSENT_DATE": consent_date.isoformat(),
+        }
+        node = {
+            "type": "comparison",
+            "operator": "<",
+            "operands": [
+                {"type": "field_ref", "field_ref": {"field_id": "AE_DATE"}},
+                {"type": "field_ref", "field_ref": {"field_id": "CONSENT_DATE"}},
+            ],
+        }
+
+        if evaluate_ast(node, context) is True:
+            return self.message
 
         return None
 
@@ -168,11 +189,27 @@ class WeightLossCheckRule(EditCheckRule):
             # Predecessor visit is unavailable/incomplete: return "PENDING_PREDECESSOR" signal
             return "PENDING_PREDECESSOR"
 
-        pred_obs_stmt = select(ClinicalObservation).where(
-            ClinicalObservation.subject_id == subject_id,
-            ClinicalObservation.visit_id == pred_visit.id,
-            ClinicalObservation.test_code == observation.test_code,
-            ClinicalObservation.is_deleted.is_(False),
+        # Check if the predecessor visit's FormSubmission is "DRAFT" (incomplete)
+        pred_sub_stmt = select(FormSubmission).where(
+            FormSubmission.subject_id == subject_id,
+            FormSubmission.visit_id == pred_visit.id,
+            FormSubmission.is_deleted.is_(False),
+        )
+        pred_sub_res = await session.execute(pred_sub_stmt)
+        pred_subs = pred_sub_res.scalars().all()
+        if pred_subs and any(sub.status == "DRAFT" for sub in pred_subs):
+            # Predecessor is Draft/incomplete: return "PENDING_PREDECESSOR"
+            return "PENDING_PREDECESSOR"
+
+        pred_obs_stmt = (
+            select(ClinicalObservation)
+            .where(
+                ClinicalObservation.subject_id == subject_id,
+                ClinicalObservation.visit_id == pred_visit.id,
+                ClinicalObservation.test_code == observation.test_code,
+                ClinicalObservation.is_deleted.is_(False),
+            )
+            .order_by(ClinicalObservation.observation_date.desc())
         )
         pred_obs_res = await session.execute(pred_obs_stmt)
         pred_obs = pred_obs_res.scalars().first()
@@ -181,14 +218,34 @@ class WeightLossCheckRule(EditCheckRule):
             # Predecessor weight observation is unavailable: return signal
             return "PENDING_PREDECESSOR"
 
-        # 3. Compare values
+        # 3. Compare values using evaluate_ast
         current_val = observation.value
         pred_val = pred_obs.value
         if pred_val <= 0:
             return None
 
+        context = {"CURRENT_WEIGHT": current_val, "PREDECESSOR_WEIGHT": pred_val}
+        node = {
+            "type": "comparison",
+            "operator": "<",
+            "operands": [
+                {"type": "field_ref", "field_ref": {"field_id": "CURRENT_WEIGHT"}},
+                {
+                    "type": "comparison",
+                    "operator": "*",
+                    "operands": [
+                        {"type": "constant", "value": 0.8},
+                        {
+                            "type": "field_ref",
+                            "field_ref": {"field_id": "PREDECESSOR_WEIGHT"},
+                        },
+                    ],
+                },
+            ],
+        }
+
         # If current weight is < 80% of predecessor weight, we have >20% weight loss
-        if current_val < 0.8 * pred_val:
+        if evaluate_ast(node, context) is True:
             return self.message
 
         return None
@@ -502,3 +559,156 @@ async def resolve_pending_predecessor_checks(
             # Soft-delete the pending predecessor check
             pending.is_deleted = True
             pending.version += 1
+
+
+async def resolve_pending_predecessor_checks_for_form(
+    session_factory: async_sessionmaker[AsyncSession],
+    subject_id: str,
+    visit_id: str,
+    user_id: Optional[str] = None,
+    change_reason: Optional[str] = None,
+) -> None:
+    """Background task to re-evaluate and resume any pending checks that were waiting for this visit to be completed."""
+    logger.info(
+        f"Checking for pending predecessor checks to resume for subject {subject_id} and visit {visit_id}"
+    )
+
+    with audit_context(user_id, change_reason):
+        async with session_factory() as session:
+            async with session.begin():
+                # Get the visit name of this newly completed visit
+                cv_stmt = select(ClinicalVisit).where(ClinicalVisit.id == visit_id)
+                cv_res = await session.execute(cv_stmt)
+                cv = cv_res.scalars().first()
+                if not cv:
+                    return
+
+                visit_name = cv.visit_name.upper()
+
+                # Find pending checks where the predecessor_visit_name matches this completed visit
+                stmt_pending = select(PendingPredecessorCheck).where(
+                    PendingPredecessorCheck.subject_id == subject_id,
+                    PendingPredecessorCheck.predecessor_visit_name.ilike(visit_name),
+                    PendingPredecessorCheck.is_deleted.is_(False),
+                )
+                res_pending = await session.execute(stmt_pending)
+                pending_checks = res_pending.scalars().all()
+
+                for pending in pending_checks:
+                    logger.info(
+                        f"Resuming pending predecessor check {pending.id} since predecessor visit {visit_name} was completed."
+                    )
+
+                    # Load the deferred observation
+                    stmt_obs = select(ClinicalObservation).where(
+                        ClinicalObservation.id == pending.observation_id,
+                        ClinicalObservation.is_deleted.is_(False),
+                    )
+                    res_obs = await session.execute(stmt_obs)
+                    deferred_obs = res_obs.scalars().first()
+
+                    if not deferred_obs:
+                        pending.is_deleted = True
+                        pending.version += 1
+                        continue
+
+                    # Find the rule
+                    rule = next(
+                        (
+                            r
+                            for r in CROSS_FORM_LONGITUDINAL_RULES
+                            if r.rule_id == pending.rule_id
+                        ),
+                        None,
+                    )
+                    if not rule:
+                        pending.is_deleted = True
+                        pending.version += 1
+                        continue
+
+                    # Re-evaluate
+                    eval_result = await rule.evaluate(session, deferred_obs)
+
+                    if eval_result != "PENDING_PREDECESSOR":
+                        # Success or fail, it's no longer pending!
+                        stmt_query = select(ClinicalQuery).where(
+                            ClinicalQuery.study_id == deferred_obs.study_id,
+                            ClinicalQuery.subject_id == deferred_obs.subject_id,
+                            ClinicalQuery.visit_id == deferred_obs.visit_id,
+                            ClinicalQuery.domain == deferred_obs.domain,
+                            ClinicalQuery.test_code == deferred_obs.test_code,
+                            ClinicalQuery.rule_id == rule.rule_id,
+                            ClinicalQuery.status.in_(["OPEN", "REOPENED", "ANSWERED"]),
+                            ClinicalQuery.is_deleted.is_(False),
+                        )
+                        res_query = await session.execute(stmt_query)
+                        existing_query = res_query.scalars().first()
+
+                        if eval_result:
+                            if not existing_query:
+                                new_query = ClinicalQuery(
+                                    study_id=deferred_obs.study_id,
+                                    subject_id=deferred_obs.subject_id,
+                                    visit_id=deferred_obs.visit_id,
+                                    domain=deferred_obs.domain,
+                                    test_code=deferred_obs.test_code,
+                                    observation_id=deferred_obs.id,
+                                    field_link=f"{deferred_obs.domain}.{deferred_obs.test_code}",
+                                    rule_id=rule.rule_id,
+                                    message=eval_result,
+                                    explanation=eval_result,
+                                    origin="SYSTEM",
+                                    created_by="SYSTEM",
+                                    status="OPEN",
+                                )
+                                session.add(new_query)
+                                logger.info(
+                                    f"Resumed pending check: created system clinical query for rule {rule.rule_id}"
+                                )
+                        else:
+                            if existing_query:
+                                existing_query.status = "CLOSED"
+                                existing_query.resolver = "SYSTEM"
+                                existing_query.resolved_at = datetime.utcnow()
+                                existing_query.response = f"Auto-resolved: data corrected and {rule.rule_id} check passes."
+                                existing_query.version += 1
+                                logger.info(
+                                    f"Resumed pending check: auto-resolved and closed clinical query for rule {rule.rule_id}"
+                                )
+
+                        pending.is_deleted = True
+                        pending.version += 1
+
+
+async def handle_cascading_nullification(
+    session: AsyncSession, observation: ClinicalObservation
+) -> None:
+    """Handles cascading dependent nullification (PRD-EDC-004).
+
+    If PREG_STATUS is set to NO, any dependent child field (like DUE_DATE)
+    is purged with the required system change reason.
+    """
+    if observation.test_code == "PREG_STATUS" and observation.value_string == "NO":
+        # Find any dependent child observation (e.g., DUE_DATE) for this subject/visit
+        stmt = select(ClinicalObservation).where(
+            ClinicalObservation.subject_id == observation.subject_id,
+            ClinicalObservation.visit_id == observation.visit_id,
+            ClinicalObservation.test_code == "DUE_DATE",
+            ClinicalObservation.is_deleted.is_(False),
+        )
+        res = await session.execute(stmt)
+        child_obs = res.scalars().first()
+        if child_obs and (
+            child_obs.value is not None or child_obs.value_string is not None
+        ):
+            # Nullify/purge the data in the child field
+            # Use audit_context to record the required system change reason
+            with audit_context(
+                user_id="SYSTEM",
+                change_reason="System-initiated purge of inactive child variable due to parent value mutation",
+            ):
+                child_obs.value = None
+                child_obs.value_string = None
+                # Mark as modified to trigger before_flush
+                session.add(child_obs)
+                await session.flush()
