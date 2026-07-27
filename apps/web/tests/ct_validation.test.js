@@ -56,7 +56,10 @@ describe("Controlled Terminology (CT) Live Validation Unit & UI Tests", () => {
       await vi.advanceTimersByTimeAsync(300);
 
       expect(terminologyClient.validateSingleCode).toHaveBeenCalledTimes(1);
-      expect(terminologyClient.validateSingleCode).toHaveBeenCalledWith("C4872", expect.any(Object));
+      expect(terminologyClient.validateSingleCode).toHaveBeenCalledWith(
+        "C4872",
+        expect.any(Object)
+      );
 
       // Check visual success feedback in DOM
       const indicator = wrapper.find("#lookup-status-concept_code");
@@ -69,7 +72,8 @@ describe("Controlled Terminology (CT) Live Validation Unit & UI Tests", () => {
       terminologyClient.validateSingleCode.mockResolvedValue({
         concept_code: "INVALID_CODE",
         state: "INVALID",
-        error_message: 'Invalid code "INVALID_CODE". Not found in NCI Thesaurus.',
+        error_message:
+          'Invalid code "INVALID_CODE". Not found in NCI Thesaurus.',
       });
 
       const wrapper = mount(EcrfView);
@@ -172,8 +176,8 @@ describe("Controlled Terminology (CT) Live Validation Unit & UI Tests", () => {
     it("triggers debounced search/autocomplete on typing in Arm Type concept code field", async () => {
       terminologyClient.searchTerminology.mockResolvedValue({
         results: [
-          { concept_code: "C123", preferred_name: "Active Arm Concept" }
-        ]
+          { concept_code: "C123", preferred_name: "Active Arm Concept" },
+        ],
       });
 
       const wrapper = mount(MdrView);
