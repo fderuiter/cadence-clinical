@@ -173,4 +173,82 @@ export const soaClient = {
     }
     return response.json();
   },
+
+  /**
+   * Verifies re-supplied credentials to obtain a short-lived signature token (sig_token).
+   */
+  async verifySignature({ username, password, totp = null, action }, token = null) {
+    const headers = {
+      "Content-Type": "application/json",
+    };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${GATEWAY_URL}/api/v1/auth/signature-verification`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        username,
+        password,
+        totp,
+        action,
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(
+        err.detail || `Signature verification failed: ${response.status}`
+      );
+    }
+    return response.json();
+  },
+
+  /**
+   * Performs PI atomic batch sign-off.
+   */
+  async batchSignOff(
+    { studyId, targetType, targetIds, signingReason },
+    { userId, roles, changeReason, sigToken },
+    token = null
+  ) {
+    const signedHeaders = await getSignedHeaders({ userId, roles, changeReason });
+    const headers = {
+      ...signedHeaders,
+      "X-Sig-Token": sigToken,
+    };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${GATEWAY_URL}/api/v1/execution/batch-sign-off`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        study_id: studyId,
+        target_type: targetType,
+        target_ids: targetIds,
+        signing_reason: signingReason,
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      if (
+        response.status === 401 ||
+        err.detail === "REAUTHENTICATION_REQUIRED" ||
+        err.error === "REAUTHENTICATION_REQUIRED"
+      ) {
+        const error = new Error("REAUTHENTICATION_REQUIRED");
+        error.status = response.status;
+        error.detail = err.detail || "REAUTHENTICATION_REQUIRED";
+        throw error;
+      }
+      throw new Error(
+        err.detail || `Batch sign-off failed: ${response.status}`
+      );
+    }
+    return response.json();
+  },
 };
