@@ -1,6 +1,3 @@
-import hashlib
-import hmac
-import json
 import time
 
 import httpx
@@ -21,6 +18,7 @@ def get_auth_headers(
 ):
     timestamp = str(time.time())
     from packages.security.signing import generate_gateway_signature
+
     signature = generate_gateway_signature(
         user_id=user_id,
         roles=roles,

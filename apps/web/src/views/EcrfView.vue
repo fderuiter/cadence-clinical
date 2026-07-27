@@ -25,7 +25,7 @@
           <template v-for="field in store.ecrfFields" :key="field.id">
             <!-- Text input field -->
             <div
-              v-if="field.type !== 'radio'"
+              v-if="field.type !== 'radio' && field.type !== 'concept_code'"
               v-show="store.fieldVisibility[field.id] !== false"
               :id="`field-container-${field.id}`"
               class="clinical-input"
@@ -229,9 +229,55 @@
               </div>
             </div>
 
+            <!-- Concept Code Lookup Field -->
+            <div
+              v-else-if="field.type === 'concept_code'"
+              v-show="store.fieldVisibility[field.id] !== false"
+              :id="`field-container-${field.id}`"
+              class="clinical-input clinical-lookup-container"
+              :class="{ 'has-error': getValidationError(field) }"
+              :style="`grid-column: span ${field.gridSpan || 12};`"
+            >
+              <label :for="field.id">{{ field.label }}</label>
+              <div class="input-wrapper">
+                <input
+                  :id="field.id"
+                  type="text"
+                  :name="field.id"
+                  :value="store.formValues[field.id]"
+                  autocomplete="off"
+                  @input="handleLookupInput(field, $event.target.value)"
+                  @change="
+                    handleFieldChange(field, $event.target.value, $event.target)
+                  "
+                />
+              </div>
+
+              <!-- Status Indicator -->
+              <div
+                v-if="lookupStates[field.id] && lookupStates[field.id].status !== 'none'"
+                :id="`lookup-status-${field.id}`"
+                class="lookup-status-indicator"
+                :class="getLookupStateClass(field.id)"
+                role="status"
+                aria-live="polite"
+              >
+                <span class="lookup-status-icon" aria-hidden="true">{{ getLookupStateIcon(field.id) }}</span>
+                <span class="lookup-status-text">{{ lookupStates[field.id].message }}</span>
+              </div>
+              <div
+                v-else
+                :id="`lookup-status-${field.id}`"
+                class="lookup-status-indicator"
+                role="status"
+                aria-live="polite"
+                style="display: none;"
+              ></div>
+            </div>
+
             <!-- Radio input field -->
             <fieldset
-              v-else
+              v-else-if="field.type === 'radio'"
               v-show="store.fieldVisibility[field.id] !== false"
               :id="`field-container-${field.id}`"
               class="clinical-radio-grid"
@@ -720,10 +766,96 @@ import { ref, reactive, watch, onMounted } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { soaClient } from "../api/soaClient";
-import { validateField } from "../../index";
+import { validateField, debounce } from "../../index";
+import { terminologyClient } from "../api/terminologyClient";
 
 const store = useClinicalStore();
 const authStore = useAuthStore();
+
+// Concept lookup states
+const lookupStates = reactive({});
+const lastRequestId = {};
+const debouncedValidators = {};
+
+function getLookupStateClass(fieldId) {
+  const state = lookupStates[fieldId];
+  if (!state) return "";
+  if (state.status === "loading") return "lookup-loading";
+  if (state.status === "valid") return "lookup-valid";
+  if (state.status === "invalid") return "lookup-invalid";
+  if (state.status === "degraded") return "lookup-degraded";
+  return "";
+}
+
+function getLookupStateIcon(fieldId) {
+  const state = lookupStates[fieldId];
+  if (!state) return "";
+  if (state.status === "loading") return "⏳";
+  if (state.status === "valid") return "✅";
+  if (state.status === "invalid") return "❌";
+  if (state.status === "degraded") return "⚠️";
+  return "";
+}
+
+function handleLookupInput(field, val) {
+  store.formValues[field.id] = val;
+
+  if (!val || !val.trim()) {
+    lookupStates[field.id] = { status: "none", message: "" };
+    return;
+  }
+
+  lookupStates[field.id] = {
+    status: "loading",
+    message: "Searching terminology database..."
+  };
+
+  if (!debouncedValidators[field.id]) {
+    debouncedValidators[field.id] = debounce(async (v) => {
+      lastRequestId[field.id] = (lastRequestId[field.id] || 0) + 1;
+      const currentId = lastRequestId[field.id];
+
+      try {
+        const res = await terminologyClient.validateSingleCode(v, {
+          userId: store.user?.username || authStore.identity?.username || "fderuiter",
+          roles: store.user?.roles ? store.user.roles.join(",") : "Monitor",
+          changeReason: "Validate concept code"
+        });
+
+        if (currentId !== lastRequestId[field.id]) {
+          return;
+        }
+
+        if (res.state === "VALID") {
+          lookupStates[field.id] = {
+            status: "valid",
+            message: `Code is valid: "${res.decode}"`
+          };
+        } else if (res.state === "INVALID") {
+          lookupStates[field.id] = {
+            status: "invalid",
+            message: res.error_message || "Invalid code."
+          };
+        } else if (res.state === "DEGRADED") {
+          lookupStates[field.id] = {
+            status: "degraded",
+            message: res.error_message || "Terminology service degraded."
+          };
+        }
+      } catch {
+        if (currentId !== lastRequestId[field.id]) {
+          return;
+        }
+        lookupStates[field.id] = {
+          status: "degraded",
+          message: "Terminology service degraded. Validation offline."
+        };
+      }
+    }, 300);
+  }
+
+  debouncedValidators[field.id](val);
+}
 
 // Deep watch formValues to evaluate rules debounced
 watch(
