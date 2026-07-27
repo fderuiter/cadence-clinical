@@ -673,3 +673,128 @@ def test_downstream_signature_gated_endpoint_replay_blocked() -> None:
     )
     assert response2.status_code == 401
     assert response2.json()["detail"] == "REAUTHENTICATION_REQUIRED"
+
+
+def test_verify_gateway_signature_scope_fallback_restrictions() -> None:
+    """
+    Test that legacy/no-scope signature fallback is only allowed when
+    no scope variables (site_id, sponsor_id, unblinded_access) are present.
+    """
+    from packages.security.signing import (
+        generate_gateway_signature,
+        verify_gateway_signature,
+    )
+
+    secret = b"test-secret-key-12345"
+    user_id = "user_001"
+    roles = "investigator"
+    timestamp = "1234567890"
+    change_reason = "gxp signoff"
+
+    # 1. Generate a legacy 4-key v2 signature (which does not sign scope parameters)
+    import hashlib
+    import hmac
+    import json
+
+    legacy_payload = {
+        "change_reason": change_reason,
+        "roles": roles,
+        "timestamp": timestamp,
+        "user_id": user_id,
+    }
+    legacy_serialized = json.dumps(
+        legacy_payload, sort_keys=True, separators=(",", ":")
+    )
+    legacy_sig = hmac.new(
+        secret, legacy_serialized.encode("utf-8"), hashlib.sha256
+    ).hexdigest()
+
+    # 2. Case A: Scopes are completely absent/falsy.
+    # Legacy fallback should be allowed.
+    assert (
+        verify_gateway_signature(
+            user_id=user_id,
+            roles=roles,
+            timestamp=timestamp,
+            signature=legacy_sig,
+            secret=secret,
+            change_reason=change_reason,
+            site_id=None,
+            sponsor_id=None,
+            unblinded_access=False,
+        )
+        is True
+    )
+
+    # 3. Case B: A scope is present in the request.
+    # Legacy fallback should be strictly rejected.
+    assert (
+        verify_gateway_signature(
+            user_id=user_id,
+            roles=roles,
+            timestamp=timestamp,
+            signature=legacy_sig,
+            secret=secret,
+            change_reason=change_reason,
+            site_id="site_active_01",
+            sponsor_id=None,
+            unblinded_access=False,
+        )
+        is False
+    )
+
+    assert (
+        verify_gateway_signature(
+            user_id=user_id,
+            roles=roles,
+            timestamp=timestamp,
+            signature=legacy_sig,
+            secret=secret,
+            change_reason=change_reason,
+            site_id=None,
+            sponsor_id="sponsor_active_01",
+            unblinded_access=False,
+        )
+        is False
+    )
+
+    assert (
+        verify_gateway_signature(
+            user_id=user_id,
+            roles=roles,
+            timestamp=timestamp,
+            signature=legacy_sig,
+            secret=secret,
+            change_reason=change_reason,
+            site_id=None,
+            sponsor_id=None,
+            unblinded_access=True,
+        )
+        is False
+    )
+
+    # 4. Case C: A correct 7-field scope-signed signature passes verification.
+    scope_sig = generate_gateway_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        secret=secret,
+        change_reason=change_reason,
+        site_id="site_active_01",
+        sponsor_id="sponsor_active_01",
+        unblinded_access=True,
+    )
+    assert (
+        verify_gateway_signature(
+            user_id=user_id,
+            roles=roles,
+            timestamp=timestamp,
+            signature=scope_sig,
+            secret=secret,
+            change_reason=change_reason,
+            site_id="site_active_01",
+            sponsor_id="sponsor_active_01",
+            unblinded_access=True,
+        )
+        is True
+    )
