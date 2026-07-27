@@ -94,3 +94,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-12: Deterministic GxP Report Generation and Signature Verification Rectification](2026-08-12-deterministic-gxp-report-generation-and-signature-verification.md)
 - [2026-08-11: Bidirectional Field Parity and RFC 7807 Validation Schemas](2026-08-11-bidirectional-field-parity-and-rfc7807-validation-schemas.md)
 - [2026-08-12: Secure Unblinding Signature Fallback Restriction](2026-08-12-secure-unblinding-signature-fallback-restriction.md)
+- [2026-08-13: Standalone In-Application Ticketing Service and Platform Integration](2026-08-13-tickets-service-scaffold-and-gateway-integration.md)
