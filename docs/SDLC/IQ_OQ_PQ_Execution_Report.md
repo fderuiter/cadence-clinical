@@ -126,7 +126,7 @@ rapidfuzz               3.14.5
 requests                2.34.2
 rich                    15.0.0
 rsa                     4.9.1
-ruff                    0.16.0
+ruff                    0.15.22
 six                     1.17.0
 sortedcontainers        2.4.0
 soupsieve               2.9.1
@@ -992,7 +992,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_translation_validation_failure` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_site_and_visit_locks` | `tests.test_trial_lock` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_subject_and_form_locks` | `tests.test_trial_lock` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_trial_lock_freeze` | `tests.test_trial_lock` | PRD-SYS-003, Trace-3 | 🟢 PASSED | < 1s |
+| `test_trial_lock_freeze` | `tests.test_trial_lock` | Trace-3, PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_api_tsdv_config_authorization_and_upsert` | `tests.test_tsdv_logic` | PRD-QRY-007 | 🟢 PASSED | < 1s |
 | `test_api_tsdv_config_validation` | `tests.test_tsdv_logic` | PRD-QRY-007 | 🟢 PASSED | < 1s |
 | `test_api_tsdv_evaluation_endpoint` | `tests.test_tsdv_logic` | PRD-QRY-007 | 🟢 PASSED | < 1s |

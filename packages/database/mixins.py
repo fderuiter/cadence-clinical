@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from sqlalchemy import DateTime, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -8,6 +9,7 @@ class AuditMixin:
     SQLAlchemy 2.0 mixin providing standard GxP audit columns
     for clinical database models.
     """
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), nullable=False
     )

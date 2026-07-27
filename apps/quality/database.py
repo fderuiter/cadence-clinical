@@ -1,3 +1,4 @@
+from apps.quality.models import QualityAuditLog
 from packages.database import RelationalDatabaseManager, register_audit_hooks
 
 
@@ -12,7 +13,6 @@ class QualityDatabaseManager(RelationalDatabaseManager):
 
 db_manager = QualityDatabaseManager()
 
-from apps.quality.models import QualityAuditLog
 
 # Register automated audit hooks with optional skip-list bypass
 register_audit_hooks(db_manager, QualityAuditLog, skip_list=[])

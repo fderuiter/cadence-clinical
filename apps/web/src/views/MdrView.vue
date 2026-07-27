@@ -99,6 +99,47 @@
                 style="width: 100%; padding: 6px"
               />
             </div>
+            <div
+              class="form-group"
+              style="margin-bottom: 8px; position: relative"
+            >
+              <label for="new-arm-concept">Arm Concept Code</label>
+              <input
+                id="new-arm-concept"
+                v-model="newArm.concept"
+                type="text"
+                placeholder="e.g. C123"
+                style="width: 100%; padding: 6px"
+                @input="handleArmConceptInput"
+              />
+              <div
+                v-if="showArmDropdown && armSearchSuggestions.length > 0"
+                class="autocomplete-dropdown"
+                style="
+                  border: 1px solid var(--border);
+                  max-height: 150px;
+                  overflow-y: auto;
+                  background: white;
+                  position: absolute;
+                  z-index: 1000;
+                  width: 100%;
+                "
+              >
+                <div
+                  v-for="sug in armSearchSuggestions"
+                  :key="sug.concept_code"
+                  style="
+                    padding: 6px;
+                    cursor: pointer;
+                    border-bottom: 1px solid var(--border);
+                  "
+                  @click="selectArmConcept(sug)"
+                >
+                  <strong>{{ sug.concept_code }}</strong> -
+                  {{ sug.preferred_name }}
+                </div>
+              </div>
+            </div>
             <button
               class="btn btn-primary"
               style="width: 100%"
@@ -200,6 +241,16 @@
                 v-model="newEnc.name"
                 type="text"
                 placeholder="e.g. Week 6"
+                style="width: 100%; padding: 6px"
+              />
+            </div>
+            <div class="form-group" style="margin-bottom: 8px">
+              <label for="new-enc-concept">Encounter Concept Code</label>
+              <input
+                id="new-enc-concept"
+                v-model="newEnc.concept"
+                type="text"
+                placeholder="e.g. C456"
                 style="width: 100%; padding: 6px"
               />
             </div>
@@ -476,6 +527,7 @@
 import { ref, computed, watch, reactive } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import { createClinicalVisitMatrix } from "ui";
+import { terminologyClient } from "../api/terminologyClient.js";
 
 const store = useClinicalStore();
 
@@ -483,9 +535,15 @@ const builderMode = ref(false);
 const usdmText = ref(JSON.stringify(store.currentUsdm, null, 2));
 
 // Creation Forms States
-const newArm = reactive({ id: "", name: "" });
+const newArm = reactive({ id: "", name: "", concept: "" });
 const newEpoch = reactive({ id: "", name: "", sequence: 1, arm_id: "" });
-const newEnc = reactive({ id: "", name: "", sequence: 1, epoch_id: "" });
+const newEnc = reactive({
+  id: "",
+  name: "",
+  sequence: 1,
+  epoch_id: "",
+  concept: "",
+});
 const newProc = reactive({ id: "", name: "" });
 
 // Link Applicability States
@@ -496,6 +554,41 @@ const showReasonModal = ref(false);
 const changeReason = ref("Initial Entry");
 const customChangeReason = ref("");
 const pendingMutation = ref(null);
+
+const showArmDropdown = ref(false);
+const armSearchSuggestions = ref([]);
+let armConceptDebounceTimer = null;
+
+function handleArmConceptInput() {
+  if (armConceptDebounceTimer) {
+    clearTimeout(armConceptDebounceTimer);
+  }
+  armConceptDebounceTimer = setTimeout(async () => {
+    if (!newArm.concept || !newArm.concept.trim()) {
+      showArmDropdown.value = false;
+      armSearchSuggestions.value = [];
+      return;
+    }
+    try {
+      const res = await terminologyClient.searchTerminology(newArm.concept);
+      if (res && res.results) {
+        armSearchSuggestions.value = res.results;
+        showArmDropdown.value = true;
+      } else {
+        armSearchSuggestions.value = [];
+        showArmDropdown.value = false;
+      }
+    } catch {
+      armSearchSuggestions.value = [];
+      showArmDropdown.value = false;
+    }
+  }, 300);
+}
+
+function selectArmConcept(sug) {
+  newArm.concept = sug.concept_code;
+  showArmDropdown.value = false;
+}
 
 watch(
   () => store.currentUsdm,

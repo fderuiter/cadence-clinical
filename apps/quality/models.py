@@ -1,11 +1,12 @@
-from packages.database import AuditMixin
 import uuid
 from datetime import datetime
 from enum import Enum
 from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+from packages.database import AuditMixin
 
 
 class Base(DeclarativeBase):
@@ -101,7 +102,6 @@ class RootCauseAnalysis(AuditMixin, Base):
     investigation_details: Mapped[str] = mapped_column(String, nullable=False)
     root_cause_summary: Mapped[str] = mapped_column(String, nullable=False)
 
-    
     study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     site_id: Mapped[Optional[str]] = mapped_column(
         String(255), nullable=True, index=True
@@ -148,7 +148,6 @@ class CAPARecord(AuditMixin, Base):
         DateTime, nullable=True
     )
 
-    
     study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     site_id: Mapped[Optional[str]] = mapped_column(
         String(255), nullable=True, index=True

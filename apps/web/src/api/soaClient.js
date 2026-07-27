@@ -177,7 +177,10 @@ export const soaClient = {
   /**
    * Verifies re-supplied credentials to obtain a short-lived signature token (sig_token).
    */
-  async verifySignature({ username, password, totp = null, action }, token = null) {
+  async verifySignature(
+    { username, password, totp = null, action },
+    token = null
+  ) {
     const headers = {
       "Content-Type": "application/json",
     };
@@ -185,16 +188,19 @@ export const soaClient = {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${GATEWAY_URL}/api/v1/auth/signature-verification`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        username,
-        password,
-        totp,
-        action,
-      }),
-    });
+    const response = await fetch(
+      `${GATEWAY_URL}/api/v1/auth/signature-verification`,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          username,
+          password,
+          totp,
+          action,
+        }),
+      }
+    );
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
@@ -213,7 +219,11 @@ export const soaClient = {
     { userId, roles, changeReason, sigToken },
     token = null
   ) {
-    const signedHeaders = await getSignedHeaders({ userId, roles, changeReason });
+    const signedHeaders = await getSignedHeaders({
+      userId,
+      roles,
+      changeReason,
+    });
     const headers = {
       ...signedHeaders,
       "X-Sig-Token": sigToken,
@@ -222,16 +232,19 @@ export const soaClient = {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${GATEWAY_URL}/api/v1/execution/batch-sign-off`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        study_id: studyId,
-        target_type: targetType,
-        target_ids: targetIds,
-        signing_reason: signingReason,
-      }),
-    });
+    const response = await fetch(
+      `${GATEWAY_URL}/api/v1/execution/batch-sign-off`,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          study_id: studyId,
+          target_type: targetType,
+          target_ids: targetIds,
+          signing_reason: signingReason,
+        }),
+      }
+    );
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));

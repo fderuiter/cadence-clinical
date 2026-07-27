@@ -1,4 +1,3 @@
-from packages.database import AuditMixin
 import uuid
 from datetime import datetime
 from typing import Optional
@@ -6,6 +5,8 @@ from typing import Optional
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+from packages.database import AuditMixin
 
 
 class Base(DeclarativeBase):

@@ -1,3 +1,4 @@
+from apps.etmf.models import TMFAuditLog
 from packages.database import RelationalDatabaseManager, register_audit_hooks
 
 
@@ -12,7 +13,6 @@ class ETMFDatabaseManager(RelationalDatabaseManager):
 
 db_manager = ETMFDatabaseManager()
 
-from apps.etmf.models import TMFAuditLog
 
 # Register automated audit hooks with optional skip-list bypass
 register_audit_hooks(db_manager, TMFAuditLog, skip_list=[])
