@@ -220,6 +220,7 @@ def main() -> None:
                                     "apps/ctms/main.py",
                                     "apps/etmf/main.py",
                                     "apps/org/main.py",
+                                    "apps/tickets/main.py",
                                 },
                                 {
                                     "apps/web/src/api/terminologyClient.js",
