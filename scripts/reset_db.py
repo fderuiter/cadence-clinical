@@ -120,7 +120,7 @@ def validate_local_only(name: str, url: Optional[str]) -> None:
                 local_hosts = {
                     "localhost",
                     "127.0.0.1",
-                    "0.0.0.0",
+                    "0.0.0.0",  # nosec B104
                     "postgres",
                     "neo4j",
                     "db",
