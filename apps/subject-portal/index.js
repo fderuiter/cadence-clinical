@@ -1,5 +1,7 @@
 import {
   generateGatewaySignature,
+  sha256,
+  validateField,
 } from "ui";
 import {
   queueSubmission,
@@ -125,13 +127,7 @@ function showView(viewId) {
   }
 }
 
-// SHA-256 Hash helper
-async function sha256(message) {
-  const msgBuffer = new TextEncoder().encode(message);
-  const hashBuffer = await globalThis.crypto.subtle.digest("SHA-256", msgBuffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-}
+
 
 // 21 CFR Part 11 Compliant Cryptographic Audit Ledger logging
 async function logAuditRecord(action, details, reason = "Patient action verified") {
@@ -384,28 +380,22 @@ function validateActiveQuestionnaire() {
       if (oldErr) oldErr.remove();
     }
 
-    if (field.required && !val) {
-      allValid = false;
-      errors.push(`${field.label} is required.`);
-      markFieldInvalid(id, "This field is required.");
-    } else if (val && field.type === "numeric") {
-      const num = parseFloat(val);
-      if (isNaN(num)) {
-        allValid = false;
-        errors.push(`${field.label} must be a valid number.`);
-        markFieldInvalid(id, "Value must be a number.");
-      } else {
-        if (field.min !== undefined && num < field.min) {
-          allValid = false;
-          errors.push(`${field.label} is below minimum of ${field.min}.`);
-          markFieldInvalid(id, `Minimum value is ${field.min}.`);
-        }
-        if (field.max !== undefined && num > field.max) {
-          allValid = false;
-          errors.push(`${field.label} exceeds maximum of ${field.max}.`);
-          markFieldInvalid(id, `Maximum value is ${field.max}.`);
-        }
+    const fieldMeta = {
+      id: id,
+      label: field.label,
+      validation: {
+        required: field.required,
+        min: field.type === "numeric" ? field.min : undefined,
+        max: field.type === "numeric" ? field.max : undefined,
       }
+    };
+
+    const res = validateField(fieldMeta, val);
+    if (!res.valid) {
+      allValid = false;
+      const errorMsg = res.message;
+      errors.push(`${field.label}: ${errorMsg}`);
+      markFieldInvalid(id, errorMsg);
     }
 
     state.activeQuestionnaire.answers[id] = val;

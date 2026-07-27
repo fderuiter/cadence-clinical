@@ -458,7 +458,9 @@ async def test_impact_analysis_meddra_and_whodrug_lifecycle():
 
             # Verify ledger records historical and current coding meanings
             m1_ledger = next(
-                ledger for ledger in ledgers if ledger.assignment_id == "A-M1"
+                ledger_item
+                for ledger_item in ledgers
+                if ledger_item.assignment_id == "A-M1"
             )
             assert m1_ledger.old_dictionary_version == "25.0"
             assert m1_ledger.new_dictionary_version == "26.0"
@@ -467,7 +469,9 @@ async def test_impact_analysis_meddra_and_whodrug_lifecycle():
             assert m1_ledger.recoding_status == RecodingState.NONE
 
             m2_ledger = next(
-                ledger for ledger in ledgers if ledger.assignment_id == "A-M2"
+                ledger_item
+                for ledger_item in ledgers
+                if ledger_item.assignment_id == "A-M2"
             )
             assert m2_ledger.old_dictionary_version == "25.0"
             assert m2_ledger.new_dictionary_version == "26.0"
@@ -481,7 +485,9 @@ async def test_impact_analysis_meddra_and_whodrug_lifecycle():
             assert m2_ledger.new_hierarchy["hierarchies"][0]["hlt_code"] == "H2_NEW"
 
             m3_ledger = next(
-                ledger for ledger in ledgers if ledger.assignment_id == "A-M3"
+                ledger_item
+                for ledger_item in ledgers
+                if ledger_item.assignment_id == "A-M3"
             )
             assert m3_ledger.old_dictionary_version == "25.0"
             assert m3_ledger.new_dictionary_version == "26.0"
