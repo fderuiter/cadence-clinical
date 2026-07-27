@@ -1,4 +1,9 @@
-import { generateGatewaySignature, createClinicalRadioGrid, sha256 } from "ui";
+import {
+  generateGatewaySignature,
+  createClinicalRadioGrid,
+  sha256,
+  validateField,
+} from "ui";
 import {
   queueSubmission,
   getQueuedSubmissions,
@@ -412,28 +417,22 @@ function validateActiveQuestionnaire() {
       if (oldErr) oldErr.remove();
     }
 
-    if (field.required && !val) {
+    const fieldMeta = {
+      id: id,
+      label: field.label,
+      validation: {
+        required: field.required,
+        min: field.type === "numeric" ? field.min : undefined,
+        max: field.type === "numeric" ? field.max : undefined,
+      },
+    };
+
+    const res = validateField(fieldMeta, val);
+    if (!res.valid) {
       allValid = false;
-      errors.push(`${field.label} is required.`);
-      markFieldInvalid(id, "This field is required.");
-    } else if (val && field.type === "numeric") {
-      const num = parseFloat(val);
-      if (isNaN(num)) {
-        allValid = false;
-        errors.push(`${field.label} must be a valid number.`);
-        markFieldInvalid(id, "Value must be a number.");
-      } else {
-        if (field.min !== undefined && num < field.min) {
-          allValid = false;
-          errors.push(`${field.label} is below minimum of ${field.min}.`);
-          markFieldInvalid(id, `Minimum value is ${field.min}.`);
-        }
-        if (field.max !== undefined && num > field.max) {
-          allValid = false;
-          errors.push(`${field.label} exceeds maximum of ${field.max}.`);
-          markFieldInvalid(id, `Maximum value is ${field.max}.`);
-        }
-      }
+      const errorMsg = res.message;
+      errors.push(`${field.label}: ${errorMsg}`);
+      markFieldInvalid(id, errorMsg);
     }
 
     state.activeQuestionnaire.answers[id] = val;

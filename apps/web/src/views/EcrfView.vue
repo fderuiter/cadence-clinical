@@ -23,61 +23,9 @@
           @submit.prevent
         >
           <template v-for="field in store.ecrfFields" :key="field.id">
-            <!-- Concept code / lookup field -->
-            <div
-              v-if="field.type === 'concept_code'"
-              v-show="store.fieldVisibility[field.id] !== false"
-              :id="`field-container-${field.id}`"
-              class="clinical-input clinical-lookup-container"
-              :class="{ 'has-error': getValidationError(field) }"
-              :style="`grid-column: span ${field.gridSpan || 12};`"
-            >
-              <label :for="field.id">{{ field.label }}</label>
-              <div class="input-wrapper">
-                <input
-                  :id="field.id"
-                  type="text"
-                  :name="field.id"
-                  autocomplete="off"
-                  v-model="store.formValues[field.id]"
-                />
-              </div>
-
-              <!-- Status Indicator -->
-              <div
-                v-if="lookupStatus !== 'none'"
-                :id="`lookup-status-${field.id}`"
-                class="lookup-status-indicator"
-                :class="`lookup-${lookupStatus}`"
-                role="status"
-                aria-live="polite"
-              >
-                <span class="lookup-status-icon" aria-hidden="true">
-                  {{
-                    lookupStatus === "loading"
-                      ? "⏳"
-                      : lookupStatus === "valid"
-                        ? "✅"
-                        : lookupStatus === "invalid"
-                          ? "❌"
-                          : "⚠️"
-                  }}
-                </span>
-                <span class="lookup-status-text">{{ lookupMessage }}</span>
-              </div>
-              <div
-                v-else
-                :id="`lookup-status-${field.id}`"
-                class="lookup-status-indicator"
-                role="status"
-                aria-live="polite"
-                style="display: none"
-              ></div>
-            </div>
-
             <!-- Text input field -->
             <div
-              v-if="field.type !== 'radio' && field.type !== 'concept_code'"
+              v-if="field.type !== 'radio'"
               v-show="store.fieldVisibility[field.id] !== false"
               :id="`field-container-${field.id}`"
               class="clinical-input"
@@ -901,69 +849,83 @@ import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { soaClient } from "../api/soaClient";
 import { validateField } from "../../index";
-import { terminologyClient } from "../api/terminologyClient.js";
+import { terminologyClient } from "../api/terminologyClient";
 import { debounce } from "ui";
 
 const store = useClinicalStore();
 const authStore = useAuthStore();
 
-const lookupStatus = ref("none"); // "none", "loading", "valid", "invalid", "degraded"
-const lookupMessage = ref("");
-let latestRequestValue = "";
+// Live validation states
+const requestCounters = reactive({});
+const conceptStatuses = reactive({});
+const conceptMessages = reactive({});
 
-const debouncedValidate = debounce(async (val) => {
-  if (!val || !val.trim()) {
-    lookupStatus.value = "none";
-    lookupMessage.value = "";
+function getStatusIcon(status) {
+  if (status === "loading") return "⏳";
+  if (status === "valid") return "✅";
+  if (status === "invalid") return "❌";
+  if (status === "degraded") return "⚠️";
+  return "";
+}
+
+const debouncedValidate = debounce(async (fieldId, value) => {
+  if (!value || !value.trim()) {
+    conceptStatuses[fieldId] = "none";
+    conceptMessages[fieldId] = "";
     return;
   }
 
-  const reqValue = val;
-  latestRequestValue = val;
-  lookupStatus.value = "loading";
-  lookupMessage.value = "Searching terminology database...";
+  requestCounters[fieldId] = (requestCounters[fieldId] || 0) + 1;
+  const currentReqId = requestCounters[fieldId];
 
   try {
-    const roles = store.user.roles.join(",");
-    const result = await terminologyClient.validateSingleCode(val, {
-      userId: store.user.username,
-      roles,
-      changeReason: "Live eCRF lookup",
+    const res = await terminologyClient.validateSingleCode(value, {
+      userId: store.user.username || "fderuiter",
+      roles: store.user.roles ? store.user.roles.join(",") : "investigator",
+      changeReason: "Validate code",
     });
 
-    if (reqValue !== latestRequestValue) {
+    if (requestCounters[fieldId] !== currentReqId) {
       return; // Discard stale response
     }
 
-    if (result.state === "VALID") {
-      lookupStatus.value = "valid";
-      lookupMessage.value = `Code is valid: "${result.decode}"`;
-    } else if (result.state === "INVALID") {
-      lookupStatus.value = "invalid";
-      lookupMessage.value = result.error_message || `Invalid code "${val}".`;
-    } else if (result.state === "DEGRADED") {
-      lookupStatus.value = "degraded";
-      lookupMessage.value =
-        result.error_message || "Terminology service degraded.";
-    } else {
-      lookupStatus.value = "none";
-      lookupMessage.value = "";
+    if (res.state === "VALID") {
+      conceptStatuses[fieldId] = "valid";
+      conceptMessages[fieldId] = `Code is valid: "${res.decode}"`;
+    } else if (res.state === "INVALID") {
+      conceptStatuses[fieldId] = "invalid";
+      conceptMessages[fieldId] = `Invalid code: "${value}"`;
+    } else if (res.state === "DEGRADED") {
+      conceptStatuses[fieldId] = "degraded";
+      conceptMessages[fieldId] =
+        res.error_message ||
+        "Terminology service degraded. Validation offline.";
     }
   } catch {
-    if (reqValue !== latestRequestValue) {
+    if (requestCounters[fieldId] !== currentReqId) {
       return;
     }
-    lookupStatus.value = "degraded";
-    lookupMessage.value = "Terminology service degraded. Validation offline.";
+    conceptStatuses[fieldId] = "degraded";
+    conceptMessages[fieldId] =
+      "Terminology service degraded. Validation offline.";
   }
 }, 300);
 
-watch(
-  () => store.formValues.concept_code,
-  (newVal) => {
-    debouncedValidate(newVal);
+function handleConceptInput(field, value) {
+  const fieldId = field.id;
+  store.formValues[fieldId] = value;
+
+  if (!value || !value.trim()) {
+    conceptStatuses[fieldId] = "none";
+    conceptMessages[fieldId] = "";
+    return;
   }
-);
+
+  conceptStatuses[fieldId] = "loading";
+  conceptMessages[fieldId] = "Searching terminology database...";
+
+  debouncedValidate(fieldId, value);
+}
 
 // Deep watch formValues to evaluate rules debounced
 watch(

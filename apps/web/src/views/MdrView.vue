@@ -564,7 +564,7 @@
 import { ref, computed, watch, reactive } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import { createClinicalVisitMatrix } from "ui";
-import { terminologyClient } from "../api/terminologyClient.js";
+import { terminologyClient } from "../api/terminologyClient";
 import { debounce } from "ui";
 
 const store = useClinicalStore();
@@ -578,7 +578,9 @@ const debouncedSearchArm = debounce(async (term) => {
     return;
   }
   try {
-    const roles = store.user.roles ? store.user.roles.join(",") : "investigator";
+    const roles = store.user.roles
+      ? store.user.roles.join(",")
+      : "investigator";
     const res = await terminologyClient.searchTerminology(term, {
       userId: store.user.username || "fderuiter",
       roles,
@@ -596,7 +598,9 @@ const debouncedSearchEnc = debounce(async (term) => {
     return;
   }
   try {
-    const roles = store.user.roles ? store.user.roles.join(",") : "investigator";
+    const roles = store.user.roles
+      ? store.user.roles.join(",")
+      : "investigator";
     const res = await terminologyClient.searchTerminology(term, {
       userId: store.user.username || "fderuiter",
       roles,
