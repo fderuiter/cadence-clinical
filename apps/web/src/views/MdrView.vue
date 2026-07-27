@@ -101,30 +101,31 @@
             </div>
             <div
               class="form-group"
-              style="position: relative; margin-bottom: 8px"
+              style="margin-bottom: 8px; position: relative"
             >
-              <label for="new-arm-concept">Arm Concept Code</label>
+              <label for="new-arm-concept">Arm Type Concept Code</label>
               <input
                 id="new-arm-concept"
                 v-model="newArm.concept"
                 type="text"
-                placeholder="e.g. C123"
+                placeholder="Search Arm Type CT..."
                 style="width: 100%; padding: 6px"
-                @input="handleArmConceptInput($event.target.value)"
+                @input="searchArmTerminology($event.target.value)"
               />
+              <!-- Autocomplete Suggestion Dropdown -->
               <div
                 v-if="armSuggestions.length > 0"
                 class="autocomplete-dropdown"
                 style="
                   position: absolute;
-                  top: 100%;
-                  left: 0;
-                  right: 0;
                   background: white;
                   border: 1px solid var(--border);
-                  z-index: 1000;
+                  border-radius: 4px;
+                  width: 100%;
+                  z-index: 100;
                   max-height: 150px;
                   overflow-y: auto;
+                  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
                 "
               >
                 <div
@@ -133,9 +134,9 @@
                   style="
                     padding: 6px;
                     cursor: pointer;
-                    border-bottom: 1px solid var(--border);
+                    border-bottom: 1px solid #f1f5f9;
                   "
-                  @click="selectArmSuggestion(sug)"
+                  @click="selectArmConcept(sug)"
                 >
                   <strong>{{ sug.concept_code }}</strong> -
                   {{ sug.preferred_name }}
@@ -274,16 +275,47 @@
             </div>
             <div
               class="form-group"
-              style="position: relative; margin-bottom: 8px"
+              style="margin-bottom: 8px; position: relative"
             >
-              <label for="new-enc-concept">Encounter Concept Code</label>
+              <label for="new-enc-concept">Visit Type Concept Code</label>
               <input
                 id="new-enc-concept"
                 v-model="newEnc.concept"
                 type="text"
-                placeholder="e.g. C456"
+                placeholder="Search Visit Type CT..."
                 style="width: 100%; padding: 6px"
+                @input="searchEncTerminology($event.target.value)"
               />
+              <!-- Autocomplete Suggestion Dropdown -->
+              <div
+                v-if="encSuggestions.length > 0"
+                class="autocomplete-dropdown"
+                style="
+                  position: absolute;
+                  background: white;
+                  border: 1px solid var(--border);
+                  border-radius: 4px;
+                  width: 100%;
+                  z-index: 100;
+                  max-height: 150px;
+                  overflow-y: auto;
+                  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                "
+              >
+                <div
+                  v-for="sug in encSuggestions"
+                  :key="sug.concept_code"
+                  style="
+                    padding: 6px;
+                    cursor: pointer;
+                    border-bottom: 1px solid #f1f5f9;
+                  "
+                  @click="selectEncConcept(sug)"
+                >
+                  <strong>{{ sug.concept_code }}</strong> -
+                  {{ sug.preferred_name }}
+                </div>
+              </div>
             </div>
             <button
               class="btn btn-primary"
@@ -540,6 +572,61 @@ const store = useClinicalStore();
 const builderMode = ref(false);
 const usdmText = ref(JSON.stringify(store.currentUsdm, null, 2));
 
+const armSuggestions = ref([]);
+const encSuggestions = ref([]);
+
+const debouncedSearchArm = debounce(async (term) => {
+  if (!term || !term.trim()) {
+    armSuggestions.value = [];
+    return;
+  }
+  try {
+    const res = await terminologyClient.searchTerminology(term, {
+      userId: "fderuiter",
+      roles: "investigator",
+      changeReason: "Search terminology",
+    });
+    armSuggestions.value = res.results || [];
+  } catch (err) {
+    console.warn("Failed to search arm terminology:", err);
+  }
+}, 300);
+
+const debouncedSearchEnc = debounce(async (term) => {
+  if (!term || !term.trim()) {
+    encSuggestions.value = [];
+    return;
+  }
+  try {
+    const res = await terminologyClient.searchTerminology(term, {
+      userId: "fderuiter",
+      roles: "investigator",
+      changeReason: "Search terminology",
+    });
+    encSuggestions.value = res.results || [];
+  } catch (err) {
+    console.warn("Failed to search encounter/visit terminology:", err);
+  }
+}, 300);
+
+function searchArmTerminology(term) {
+  debouncedSearchArm(term);
+}
+
+function searchEncTerminology(term) {
+  debouncedSearchEnc(term);
+}
+
+function selectArmConcept(sug) {
+  newArm.concept = sug.concept_code;
+  armSuggestions.value = [];
+}
+
+function selectEncConcept(sug) {
+  newEnc.concept = sug.concept_code;
+  encSuggestions.value = [];
+}
+
 // Creation Forms States
 const newArm = reactive({ id: "", name: "", concept: "" });
 const newEpoch = reactive({ id: "", name: "", sequence: 1, arm_id: "" });
@@ -551,36 +638,6 @@ const newEnc = reactive({
   concept: "",
 });
 const newProc = reactive({ id: "", name: "" });
-
-// Autocomplete States
-const armSuggestions = ref([]);
-
-const debouncedArmSearch = debounce(async (v) => {
-  if (!v || !v.trim()) {
-    armSuggestions.value = [];
-    return;
-  }
-  try {
-    const res = await terminologyClient.searchTerminology(v, {
-      userId: store.user?.username || "fderuiter",
-      roles: store.user?.roles ? store.user.roles.join(",") : "Monitor",
-      changeReason: "Search Arm Concepts",
-    });
-    armSuggestions.value = res.results || [];
-  } catch (err) {
-    console.warn("Terminology search failed:", err);
-    armSuggestions.value = [];
-  }
-}, 300);
-
-function handleArmConceptInput(val) {
-  debouncedArmSearch(val);
-}
-
-function selectArmSuggestion(sug) {
-  newArm.concept = sug.concept_code;
-  armSuggestions.value = [];
-}
 
 // Link Applicability States
 const linkPayload = reactive({ procedure_id: "", visit_id: "", timing: "" });
@@ -895,6 +952,7 @@ function handleAddArm() {
   });
   newArm.id = "";
   newArm.name = "";
+  newArm.concept = "";
 }
 
 function handleAddEpoch() {
@@ -934,6 +992,7 @@ function handleAddEncounter() {
   });
   newEnc.id = "";
   newEnc.name = "";
+  newEnc.concept = "";
   newEnc.sequence = store.currentUsdm.encounters
     ? store.currentUsdm.encounters.length + 1
     : 1;

@@ -29,7 +29,10 @@
               v-show="store.fieldVisibility[field.id] !== false"
               :id="`field-container-${field.id}`"
               class="clinical-input"
-              :class="{ 'has-error': getValidationError(field) }"
+              :class="{
+                'has-error': getValidationError(field),
+                'clinical-lookup-container': field.type === 'concept_code',
+              }"
               :style="`grid-column: span ${field.gridSpan || 12};`"
             >
               <label :for="field.id">{{ field.label }}</label>
@@ -39,6 +42,12 @@
                   type="text"
                   :name="field.id"
                   :value="store.formValues[field.id]"
+                  autocomplete="off"
+                  @input="
+                    field.type === 'concept_code'
+                      ? handleConceptInput(field, $event.target.value)
+                      : null
+                  "
                   @change="
                     handleFieldChange(field, $event.target.value, $event.target)
                   "
@@ -55,6 +64,36 @@
                   {{ getQueryStatus(field.id) === "NONE" ? "💬" : "⚠️" }}
                 </button>
               </div>
+
+              <!-- Live lookup status indicator -->
+              <template v-if="field.type === 'concept_code'">
+                <div
+                  v-if="
+                    conceptStatuses[field.id] &&
+                    conceptStatuses[field.id] !== 'none'
+                  "
+                  :id="`lookup-status-${field.id}`"
+                  class="lookup-status-indicator"
+                  :class="`lookup-${conceptStatuses[field.id]}`"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <span class="lookup-status-icon" aria-hidden="true">
+                    {{ getStatusIcon(conceptStatuses[field.id]) }}
+                  </span>
+                  <span class="lookup-status-text">
+                    {{ conceptMessages[field.id] }}
+                  </span>
+                </div>
+                <div
+                  v-else
+                  :id="`lookup-status-${field.id}`"
+                  class="lookup-status-indicator"
+                  role="status"
+                  aria-live="polite"
+                  style="display: none"
+                ></div>
+              </template>
 
               <!-- Validation Error -->
               <div
