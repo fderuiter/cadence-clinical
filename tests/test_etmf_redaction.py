@@ -518,7 +518,9 @@ async def test_manual_redaction_success():
     )
 
     # 1. Ingest original unredacted document
-    content = "We must protect Bob Jones whose telephone is 555-4321 and born on 1990-05-12."
+    content = (
+        "We must protect Bob Jones whose telephone is 555-4321 and born on 1990-05-12."
+    )
     payload = {
         "study_id": "study_007",
         "artifact_type": "Clinical Trial Protocol",
@@ -538,11 +540,9 @@ async def test_manual_redaction_success():
         roles="admin", change_reason="Executing manual redaction justification"
     )
     redact_payload = {
-        "spans": [
-            {"start": 16, "end": 25, "label": "manual_name"}
-        ],
+        "spans": [{"start": 16, "end": 25, "label": "manual_name"}],
         "terms": ["555-4321"],
-        "redacted_filename": "manual_redacted.txt"
+        "redacted_filename": "manual_redacted.txt",
     }
 
     resp_redact = client.post(
@@ -595,12 +595,14 @@ async def test_manual_redaction_success():
         assert red_doc.redaction_source_id == source_id
         assert red_doc.version_index == 2
         assert "change_reason" in red_doc.metadata_json
-        assert red_doc.metadata_json["change_reason"] == "Executing manual redaction justification"
+        assert (
+            red_doc.metadata_json["change_reason"]
+            == "Executing manual redaction justification"
+        )
 
         # Check audit trail has REDACT action with no leak of raw values
         stmt_audit = select(TMFAuditLog).where(
-            TMFAuditLog.document_id == redacted_id,
-            TMFAuditLog.action == "REDACT"
+            TMFAuditLog.document_id == redacted_id, TMFAuditLog.action == "REDACT"
         )
         res_audit = await session.execute(stmt_audit)
         audit_log = res_audit.scalars().first()
@@ -668,12 +670,7 @@ async def test_manual_redaction_span_validation():
     assert "Invalid span offsets" in resp_err.json()["detail"]
 
     # 4. Test overlapping/conflicting spans passed in input
-    payload_err = {
-        "spans": [
-            {"start": 0, "end": 10},
-            {"start": 5, "end": 15}
-        ]
-    }
+    payload_err = {"spans": [{"start": 0, "end": 10}, {"start": 5, "end": 15}]}
     resp_err = client.post(
         f"/api/v1/etmf/documents/{source_id}/manual-redact",
         json=payload_err,
@@ -683,12 +680,7 @@ async def test_manual_redaction_span_validation():
     assert "Overlapping or conflicting span inputs" in resp_err.json()["detail"]
 
     # 5. Test nested overlapping spans
-    payload_err = {
-        "spans": [
-            {"start": 5, "end": 20},
-            {"start": 10, "end": 15}
-        ]
-    }
+    payload_err = {"spans": [{"start": 5, "end": 20}, {"start": 10, "end": 15}]}
     resp_err = client.post(
         f"/api/v1/etmf/documents/{source_id}/manual-redact",
         json=payload_err,
@@ -704,7 +696,9 @@ async def test_manual_redaction_literal_escaping():
     Ensure literal term matching handles terms with special regex characters safely.
     """
     client = TestClient(app)
-    admin_headers = get_auth_headers(roles="admin", change_reason="Ingest special chars")
+    admin_headers = get_auth_headers(
+        roles="admin", change_reason="Ingest special chars"
+    )
 
     payload = {
         "study_id": "study_009",
@@ -718,9 +712,7 @@ async def test_manual_redaction_literal_escaping():
     source_id = resp.json()["document_id"]
 
     # Redact using special regex character terms
-    redact_payload = {
-        "terms": ["$100", "special+char"]
-    }
+    redact_payload = {"terms": ["$100", "special+char"]}
     resp_redact = client.post(
         f"/api/v1/etmf/documents/{source_id}/manual-redact",
         json=redact_payload,
@@ -770,7 +762,9 @@ async def test_manual_redaction_authorization_and_lock():
     assert resp_aud.status_code == 403
 
     # 2. Inspector trying manual redact -> should fail with 403
-    inspector_headers = get_auth_headers(roles="regulatory_inspector", change_reason="Inspector hack")
+    inspector_headers = get_auth_headers(
+        roles="regulatory_inspector", change_reason="Inspector hack"
+    )
     resp_ins = client.post(
         f"/api/v1/etmf/documents/{source_id}/manual-redact",
         json={"terms": ["Bob Smith"]},
@@ -780,12 +774,15 @@ async def test_manual_redaction_authorization_and_lock():
 
     # 3. Locked trial trying manual redact -> should fail with 403
     from apps.execution.trial_lock import TrialLockManager
+
     TrialLockManager.lock_trial()
     try:
         resp_locked = client.post(
             f"/api/v1/etmf/documents/{source_id}/manual-redact",
             json={"terms": ["Bob Smith"]},
-            headers=get_auth_headers(roles="admin", change_reason="Admin manual redact locked"),
+            headers=get_auth_headers(
+                roles="admin", change_reason="Admin manual redact locked"
+            ),
         )
         assert resp_locked.status_code == 403
         assert "Trial is currently locked" in resp_locked.json()["detail"]

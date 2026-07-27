@@ -332,9 +332,7 @@ class ManualRedactResponse(BaseModel):
     Crucially, it never exposes raw matched PII/PHI identifiers.
     """
 
-    status: str = Field(
-        "success", description="Outcome status of the manual redaction"
-    )
+    status: str = Field("success", description="Outcome status of the manual redaction")
     document_id: str = Field(
         ..., description="ID of the newly created redacted document version"
     )
@@ -1916,6 +1914,7 @@ async def manual_redact_document_endpoint(
     # 4. Safe literal term matching following shared safe escaping/match policy
     if payload.terms:
         import re
+
         valid_terms = [t for t in payload.terms if t and t.strip()]
         if valid_terms:
             # Sort descending to match longer strings first
