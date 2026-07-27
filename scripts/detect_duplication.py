@@ -215,6 +215,11 @@ def main() -> None:
                                     "apps/notifications/main.py",
                                     "apps/econsent/main.py",
                                     "apps/eisf/main.py",
+                                    "apps/quality/main.py",
+                                    "apps/safety/main.py",
+                                    "apps/ctms/main.py",
+                                    "apps/etmf/main.py",
+                                    "apps/org/main.py",
                                 },
                                 {
                                     "apps/web/src/api/terminologyClient.js",
