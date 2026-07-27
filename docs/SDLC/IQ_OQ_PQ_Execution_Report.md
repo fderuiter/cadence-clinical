@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 867
-- **Passed:** 867 🟢
+- **Total Automated Test Cases Run:** 877
+- **Passed:** 877 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -126,7 +126,7 @@ rapidfuzz               3.14.5
 requests                2.34.2
 rich                    15.0.0
 rsa                     4.9.1
-ruff                    0.16.0
+ruff                    0.15.22
 six                     1.17.0
 sortedcontainers        2.4.0
 soupsieve               2.9.1
@@ -585,8 +585,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_ledger_sealing_and_validation` | `tests.test_ledger_and_triggers` | PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_out_of_band_update_triggers_audit_entry` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_prevent_audit_ledger_seals_mutation` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_prevent_audit_log_mutation` | `tests.test_ledger_and_triggers` | Trace-1, PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_prevent_hard_delete_on_audited_model` | `tests.test_ledger_and_triggers` | Trace-1, PRD-SYS-002 | 🟢 PASSED | < 1s |
+| `test_prevent_audit_log_mutation` | `tests.test_ledger_and_triggers` | PRD-SYS-001, Trace-1 | 🟢 PASSED | < 1s |
+| `test_prevent_hard_delete_on_audited_model` | `tests.test_ledger_and_triggers` | PRD-SYS-002, Trace-1 | 🟢 PASSED | < 1s |
 | `test_designer_gateway_auth_expired_timestamp` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_designer_gateway_auth_invalid_signature` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_designer_gateway_auth_invalid_timestamp` | `tests.test_main` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -811,7 +811,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_map_to_sdtm_orchestrator` | `tests.test_sdtm_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_map_vs` | `tests.test_sdtm_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_to_dtc` | `tests.test_sdtm_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_clinical_observation_sdv_defaults` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-007, PRD-QRY-005 | 🟢 PASSED | < 1s |
+| `test_clinical_observation_sdv_defaults` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005, PRD-QRY-007 | 🟢 PASSED | < 1s |
 | `test_sdv_automatic_verification_drop` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005, PRD-QRY-006 | 🟢 PASSED | < 1s |
 | `test_sdv_sign_off_persistence_and_audit` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005 | 🟢 PASSED | < 1s |
 | `test_sdv_signoff_endpoint_and_idempotency` | `tests.test_sdv_tsdv_persistence` | PRD-QRY-005, PRD-QRY-006 | 🟢 PASSED | < 1s |
@@ -983,7 +983,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_translation_validation_failure` | `tests.test_translator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_site_and_visit_locks` | `tests.test_trial_lock` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_subject_and_form_locks` | `tests.test_trial_lock` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_trial_lock_freeze` | `tests.test_trial_lock` | PRD-SYS-003, Trace-3 | 🟢 PASSED | < 1s |
+| `test_trial_lock_freeze` | `tests.test_trial_lock` | Trace-3, PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_api_tsdv_config_authorization_and_upsert` | `tests.test_tsdv_logic` | PRD-QRY-007 | 🟢 PASSED | < 1s |
 | `test_api_tsdv_config_validation` | `tests.test_tsdv_logic` | PRD-QRY-007 | 🟢 PASSED | < 1s |
 | `test_api_tsdv_evaluation_endpoint` | `tests.test_tsdv_logic` | PRD-QRY-007 | 🟢 PASSED | < 1s |
