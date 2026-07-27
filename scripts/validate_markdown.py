@@ -545,6 +545,7 @@ def process_markdown_file(file_path, repo_root, root_dirs, root_files):
 
 
 def main():
+    # Compute repository root dynamically relative to the script's location to be environment-agnostic
     repo_root = Path(__file__).resolve().parent.parent
 
     # Dynamically build current root level directories and files
