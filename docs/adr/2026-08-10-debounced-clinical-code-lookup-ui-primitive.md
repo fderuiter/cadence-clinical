@@ -50,8 +50,8 @@ To enforce data standards, such as NCI Thesaurus Controlled Terminology (CT), cl
 
 ## 6. Implementation & Verification
 * **Affected Repositories / Services:**
-  * `packages/ui`: Modified `index.js` and `tests/index.test.js` to implement and test `createClinicalLookupInput` and `debounce`.
-  * `apps/web`: Modified `src/style.css` to add CSS rules for lookups.
+  * `packages/ui`: Modified `index.js` and `packages/ui/tests/index.test.js` to implement and test `createClinicalLookupInput` and `debounce`.
+  * `apps/web`: Modified `apps/web/src/style.css` to add CSS rules for lookups.
 * **Verification Plan:**
   * Unit tests in `packages/ui/tests/index.test.js` run via Vitest.
   * Playwright visual test script inside `verification/verify_lookup.py` captures rendered visual states against all four lookup states.
