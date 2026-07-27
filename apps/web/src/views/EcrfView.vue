@@ -534,6 +534,60 @@
           </p>
         </div>
       </div>
+
+      <!-- PI Sign-Off Worklist and Verification Card -->
+      <div class="card" style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="card-title">PI Sign-Off Worklist & Verification</div>
+        <p style="font-size: 0.85rem; color: #475569; margin-bottom: 4px">
+          Perform a 21 CFR Part 11 compliant electronic signature. This action requires re-authenticating the Principal Investigator credentials to obtain a secure single-use signature token.
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div class="form-group">
+            <label for="signoff-target-type">Sign-Off Scope (Granularity)</label>
+            <select id="signoff-target-type" v-model="signoffTargetType" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;">
+              <option value="FORM">FORM Level</option>
+              <option value="VISIT">VISIT Level</option>
+              <option value="SUBJECT">SUBJECT Level</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="signoff-target-id">Select Target ID</label>
+            <select id="signoff-target-id" v-model="signoffTargetId" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;">
+              <option value="">-- Choose ID --</option>
+              <template v-if="signoffTargetType === 'SUBJECT'">
+                <option v-for="sub in availableSubjects" :key="sub" :value="sub">{{ sub }}</option>
+              </template>
+              <template v-else-if="signoffTargetType === 'VISIT'">
+                <option v-for="visit in availableVisits" :key="visit" :value="visit">{{ visit }}</option>
+              </template>
+              <template v-else-if="signoffTargetType === 'FORM'">
+                <option v-for="form in availableFormSubmissions" :key="form" :value="form">{{ form }}</option>
+              </template>
+              <option value="custom">-- Enter Custom --</option>
+            </select>
+          </div>
+
+          <div v-if="signoffTargetId === 'custom'" class="form-group">
+            <label for="signoff-custom-target-id">Custom Target ID Value</label>
+            <input id="signoff-custom-target-id" type="text" placeholder="Enter custom target ID..." style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;" @input="e => customTargetId = e.target.value" />
+          </div>
+
+          <div class="form-group">
+            <label for="signoff-reason">Signing Reason / Attestation</label>
+            <select id="signoff-reason" v-model="signoffReason" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;">
+              <option v-for="reason in validSigningReasons" :key="reason" :value="reason">{{ reason }}</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
+          <button id="btn-pi-signoff" class="btn btn-primary" type="button" @click="handleSignOffSubmit">
+            ✍️ Sign Off Target
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Reason for Change Modal Dialog -->
@@ -611,11 +665,10 @@
               id="reauth-username"
               v-model="reauthUsername"
               type="text"
-              readonly
-              style="background-color: #f1f5f9"
+              style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;"
             />
           </div>
-          <div class="form-group">
+          <div class="form-group" style="margin-bottom: 12px">
             <label for="reauth-password">Password</label>
             <input
               id="reauth-password"
@@ -623,7 +676,18 @@
               type="password"
               placeholder="Enter your password to confirm identity..."
               required
+              style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;"
               @keyup.enter="confirmReauth"
+            />
+          </div>
+          <div class="form-group" style="margin-bottom: 12px">
+            <label for="reauth-totp">MFA/TOTP Token (Optional)</label>
+            <input
+              id="reauth-totp"
+              v-model="reauthTotp"
+              type="text"
+              placeholder="Enter 6-digit TOTP code..."
+              style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;"
             />
           </div>
           <div
@@ -654,9 +718,12 @@
 <script setup>
 import { ref, reactive, watch, onMounted } from "vue";
 import { useClinicalStore } from "../stores/clinical";
+import { useAuthStore } from "../stores/auth";
+import { soaClient } from "../api/soaClient";
 import { validateField } from "../../index";
 
 const store = useClinicalStore();
+const authStore = useAuthStore();
 
 // Deep watch formValues to evaluate rules debounced
 watch(
@@ -686,8 +753,31 @@ const pendingValueChange = ref(null);
 const showReauthModal = ref(false);
 const reauthUsername = ref(store.user.username);
 const reauthPassword = ref("");
+const reauthTotp = ref("");
 const reauthError = ref("");
+const reauthAction = ref(""); // "CLOSE_QUERY" or "BATCH_SIGN_OFF"
 const pendingCloseQueryFieldId = ref(null);
+
+// PI Sign-Off Worklist States
+const signoffTargetType = ref("FORM"); // "FORM", "VISIT", "SUBJECT"
+const signoffTargetId = ref("");
+const customTargetId = ref("");
+const signoffReason = ref("PI approval and sign-off.");
+
+const availableSubjects = ref(["SUBJ-001", "SUBJ-002", "SUBJ-003"]);
+const availableVisits = ref(["V-SCR", "V-TRT-A1", "V-TRT-A2", "V-TRT-B1"]);
+const availableFormSubmissions = ref(["FSUB-001", "FSUB-002", "FSUB-003"]);
+
+const validSigningReasons = [
+  "I attest that this data is accurate and complete.",
+  "PI approval and sign-off.",
+  "Review and confirmation.",
+  "DATA_RECORDING",
+  "DATA_ENTRY_COMPLETED",
+  "PI_REVIEW",
+  "PI_SIGN_OFF",
+  "COMPLIANCE_ATTESTATION",
+];
 
 function getQueryStatus(fieldId) {
   const query = store.formQueries[fieldId];
@@ -818,56 +908,141 @@ function respondQuery(fieldId) {
 
 function closeQuery(fieldId) {
   pendingCloseQueryFieldId.value = fieldId;
+  reauthAction.value = "CLOSE_QUERY";
+  reauthUsername.value = store.user.username || authStore.identity?.username || "fderuiter";
+  reauthPassword.value = "";
+  reauthTotp.value = "";
+  reauthError.value = "";
+  showReauthModal.value = true;
+}
+
+function handleSignOffSubmit() {
+  const targetId = signoffTargetId.value === "custom" ? customTargetId.value : signoffTargetId.value;
+  if (!targetId || !targetId.trim()) {
+    alert("Please select or enter a valid Target ID first.");
+    return;
+  }
+  reauthAction.value = "BATCH_SIGN_OFF";
+  reauthUsername.value = store.user.username || authStore.identity?.username || "fderuiter";
+  reauthPassword.value = "";
+  reauthTotp.value = "";
+  reauthError.value = "";
   showReauthModal.value = true;
 }
 
 function cancelReauth() {
   showReauthModal.value = false;
   reauthPassword.value = "";
+  reauthTotp.value = "";
   reauthError.value = "";
   pendingCloseQueryFieldId.value = null;
+  reauthAction.value = "";
 }
 
-function confirmReauth() {
+async function confirmReauth() {
   if (!reauthPassword.value) {
     reauthError.value = "Password is required.";
     return;
   }
 
-  const fieldId = pendingCloseQueryFieldId.value;
-  if (fieldId) {
-    const queryObj = store.formQueries[fieldId];
-    queryObj.status = "CLOSED";
-    queryObj.closedBy = `${store.user.username} (Offline Client)`;
-    queryObj.closedAt = new Date().toISOString().slice(0, 10);
+  const username = reauthUsername.value;
+  const password = reauthPassword.value;
+  const totp = reauthTotp.value || null;
+  const action = reauthAction.value;
 
-    const fieldMeta = store.ecrfFields.find((f) => f.id === fieldId);
-    const cdash = fieldMeta ? fieldMeta.cdash : "";
-    const [domain, testCode] = cdash
-      ? cdash.split(".")
-      : ["VS", fieldId.toUpperCase()];
-
-    store.addLedgerBlock(
-      "QUERY_CLOSE",
-      {
-        fieldId,
-        studyId: store.currentUsdm.studyId || "STUDY-USDM-001",
-        subjectId: "SUBJ-001",
-        visitId: "Screening",
-        domain,
-        testCode,
-        query: queryObj,
-      },
-      "Discrepancy resolved and closed permanently."
-    );
-    pendingCloseQueryFieldId.value = null;
-  }
-
-  showReauthModal.value = false;
+  // Immediately clear password to ensure GxP compliance & no state leak
   reauthPassword.value = "";
-  reauthError.value = "";
 
-  alert("Identity verified. Query closed and logged to cryptographic ledger.");
+  if (action === "CLOSE_QUERY") {
+    const fieldId = pendingCloseQueryFieldId.value;
+    if (fieldId) {
+      const queryObj = store.formQueries[fieldId];
+      queryObj.status = "CLOSED";
+      queryObj.closedBy = `${username} (Offline Client)`;
+      queryObj.closedAt = new Date().toISOString().slice(0, 10);
+
+      const fieldMeta = store.ecrfFields.find((f) => f.id === fieldId);
+      const cdash = fieldMeta ? fieldMeta.cdash : "";
+      const [domain, testCode] = cdash
+        ? cdash.split(".")
+        : ["VS", fieldId.toUpperCase()];
+
+      store.addLedgerBlock(
+        "QUERY_CLOSE",
+        {
+          fieldId,
+          studyId: store.currentUsdm.studyId || "STUDY-USDM-001",
+          subjectId: "SUBJ-001",
+          visitId: "Screening",
+          domain,
+          testCode,
+          query: queryObj,
+        },
+        "Discrepancy resolved and closed permanently."
+      );
+      pendingCloseQueryFieldId.value = null;
+    }
+
+    showReauthModal.value = false;
+    reauthError.value = "";
+    alert("Identity verified. Query closed and logged to cryptographic ledger.");
+  } else if (action === "BATCH_SIGN_OFF") {
+    try {
+      reauthError.value = "";
+
+      // 1. Obtain signature token
+      const reauthRes = await soaClient.verifySignature({
+        username,
+        password,
+        totp,
+        action: "/api/v1/execution/batch-sign-off"
+      }, authStore.accessToken);
+
+      const sigToken = reauthRes.sig_token;
+
+      // 2. Call batch sign-off
+      const targetId = signoffTargetId.value === "custom" ? customTargetId.value : signoffTargetId.value;
+      const signoffRes = await soaClient.batchSignOff({
+        studyId: store.currentUsdm.studyId || "STUDY-USDM-001",
+        targetType: signoffTargetType.value,
+        targetIds: [targetId],
+        signingReason: signoffReason.value,
+      }, {
+        userId: username,
+        roles: store.user.roles ? store.user.roles.join(",") : "investigator",
+        changeReason: signoffReason.value,
+        sigToken,
+      }, authStore.accessToken);
+
+      // 3. Document in ledger
+      await store.addLedgerBlock(
+        "BATCH_SIGN_OFF_SUCCESS",
+        {
+          targetType: signoffTargetType.value,
+          targetIds: [targetId],
+          signingReason: signoffReason.value,
+          result: signoffRes,
+        },
+        `PI electronic sign-off approved: ${signoffReason.value}`
+      );
+
+      // Clean up variables & UI state
+      showReauthModal.value = false;
+      reauthTotp.value = "";
+      alert(`Signature Token obtained successfully.\nBatch sign-off completed for ${signoffTargetType.value} ${targetId}!`);
+    } catch (err) {
+      // Explicitly wipe credentials on failure
+      reauthPassword.value = "";
+      reauthTotp.value = "";
+
+      if (err.message === "REAUTHENTICATION_REQUIRED" || err.status === 401) {
+        reauthError.value = "Identity verification expired or invalid. Please try again.";
+        showReauthModal.value = true;
+      } else {
+        reauthError.value = err.message || "Failed to complete batch sign-off.";
+      }
+    }
+  }
 }
 
 function reopenQuery(fieldId) {
