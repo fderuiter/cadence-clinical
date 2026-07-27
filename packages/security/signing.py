@@ -49,6 +49,7 @@ def verify_gateway_signature(
     unblinded_access: bool = False,
 ) -> bool:
     """Verifies an HMAC-SHA256 signature for API Gateway identity and scope headers."""
+    # 1. Verify with the full 7-field scope-aware payload
     expected = generate_gateway_signature(
         user_id=user_id,
         roles=roles,
@@ -59,7 +60,21 @@ def verify_gateway_signature(
         sponsor_id=sponsor_id,
         unblinded_access=unblinded_access,
     )
-    return hmac.compare_digest(expected, signature)
+    if hmac.compare_digest(expected, signature):
+        return True
+
+    # 2. Fallback to verify with the legacy 4-field payload for backward-compatibility
+    legacy_payload = {
+        "change_reason": change_reason if change_reason is not None else "",
+        "roles": roles,
+        "timestamp": timestamp,
+        "user_id": user_id,
+    }
+    serialized_legacy = json.dumps(legacy_payload, sort_keys=True, separators=(",", ":"))
+    expected_legacy = hmac.new(
+        secret, serialized_legacy.encode("utf-8"), hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(expected_legacy, signature)
 
 
 def canonical_serialize(payload: Dict[str, Any]) -> bytes:
