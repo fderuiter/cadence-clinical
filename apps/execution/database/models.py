@@ -678,6 +678,11 @@ class ClinicalCodingLedger(AuditedModel):
     recoding_reason: Mapped[str] = mapped_column(String(1000), nullable=True)
     decision_by: Mapped[str] = mapped_column(String(255), nullable=True)
     decision_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    old_hierarchy: Mapped[dict] = mapped_column(JSON, nullable=True)
+    new_hierarchy: Mapped[dict] = mapped_column(JSON, nullable=True)
+    recoding_status: Mapped[RecodingState] = mapped_column(
+        Enum(RecodingState, name="recoding_state_ledger_enum"), nullable=True
+    )
 
 
 class LabReferenceRange(AuditedModel):
