@@ -1,17 +1,19 @@
 import logging
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Any, Dict
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from apps.execution.database.context import audit_context
+from apps.execution.database.context import audit_context, current_change_reason
 from apps.execution.database.models import (
     ClinicalObservation,
     ClinicalQuery,
     ClinicalVisit,
     PendingPredecessorCheck,
+    FormSubmission,
 )
+from apps.execution.evaluator import evaluate_ast
 
 logger = logging.getLogger(__name__)
 
@@ -168,6 +170,18 @@ class WeightLossCheckRule(EditCheckRule):
             # Predecessor visit is unavailable/incomplete: return "PENDING_PREDECESSOR" signal
             return "PENDING_PREDECESSOR"
 
+        # Check if predecessor visit is Draft
+        pred_submissions_stmt = select(FormSubmission).where(
+            FormSubmission.visit_id == pred_visit.id,
+            FormSubmission.subject_id == subject_id,
+            FormSubmission.is_deleted.is_(False),
+        )
+        pred_submissions_res = await session.execute(pred_submissions_stmt)
+        pred_subs = pred_submissions_res.scalars().all()
+
+        if pred_subs and any(sub.status == "DRAFT" for sub in pred_subs):
+            return "PENDING_PREDECESSOR"
+
         pred_obs_stmt = select(ClinicalObservation).where(
             ClinicalObservation.subject_id == subject_id,
             ClinicalObservation.visit_id == pred_visit.id,
@@ -193,6 +207,194 @@ class WeightLossCheckRule(EditCheckRule):
 
         return None
 
+
+# Helper functions for dynamic AST-based edit checks
+def extract_fields_from_ast(node: Any) -> List[str]:
+    fields = []
+    if not node or not isinstance(node, dict):
+        return fields
+    node_type = node.get("type") or node.get("node_type")
+    if node_type == "field_ref" or node_type == "XPATH":
+        field_ref = node.get("field_ref")
+        if isinstance(field_ref, dict):
+            f_id = field_ref.get("field_id")
+            if f_id:
+                fields.append(f_id.upper())
+        elif isinstance(node.get("value"), str):
+            val = node["value"]
+            bare = val.split("/")[-1]
+            fields.append(bare.upper())
+
+    for key in ["operands", "children"]:
+        if key in node and isinstance(node[key], list):
+            for child in node[key]:
+                fields.extend(extract_fields_from_ast(child))
+    return fields
+
+
+def preprocess_ast_for_longitudinal(node: Any) -> Any:
+    if isinstance(node, dict):
+        node_copy = dict(node)
+        node_type = node_copy.get("type") or node_copy.get("node_type")
+        if node_type == "field_ref" or node_type == "XPATH":
+            field_ref = node_copy.get("field_ref")
+            if isinstance(field_ref, dict):
+                ref_copy = dict(field_ref)
+                if ref_copy.get("visit_relative") == "previous":
+                    ref_copy["field_id"] = f"PREV_{ref_copy['field_id']}"
+                    node_copy["field_ref"] = ref_copy
+                elif ref_copy.get("visit_relative") == "current":
+                    ref_copy["field_id"] = f"CURR_{ref_copy['field_id']}"
+                    node_copy["field_ref"] = ref_copy
+            elif isinstance(node_copy.get("value"), str):
+                val = node_copy["value"]
+                if "previous" in val:
+                    bare = val.split("/")[-1]
+                    node_copy["value"] = f"PREV_{bare}"
+            return node_copy
+
+        for key in ["operands", "children"]:
+            if key in node_copy and isinstance(node_copy[key], list):
+                node_copy[key] = [preprocess_ast_for_longitudinal(child) for child in node_copy[key]]
+        return node_copy
+    return node
+
+
+class DynamicASTEditCheckRule(EditCheckRule):
+    def __init__(self, rule_id: str, rule_type: str, condition: dict, message: str):
+        self.rule_id = rule_id
+        self.rule_type = rule_type
+        self.condition = condition
+        self.message = message
+
+    async def evaluate(
+        self, session: AsyncSession, observation: ClinicalObservation
+    ) -> Optional[str]:
+        # 1. Extract referenced fields and check relevance
+        ref_fields = extract_fields_from_ast(self.condition)
+        if observation.test_code.upper() not in ref_fields:
+            return None
+
+        # 2. Check if there's a predecessor visit requirement (longitudinal)
+        is_longitudinal = False
+        def check_longitudinal(node: Any) -> bool:
+            if not node or not isinstance(node, dict):
+                return False
+            node_type = node.get("type") or node.get("node_type")
+            if node_type == "field_ref":
+                field_ref = node.get("field_ref")
+                if isinstance(field_ref, dict) and field_ref.get("visit_relative") == "previous":
+                    return True
+            for key in ["operands", "children"]:
+                if key in node and isinstance(node[key], list):
+                    if any(check_longitudinal(child) for child in node[key]):
+                        return True
+            return False
+
+        is_longitudinal = check_longitudinal(self.condition)
+
+        # 3. Build evaluation context
+        subject_id = observation.subject_id
+        study_id = observation.study_id
+
+        pred_visit = None
+        if is_longitudinal:
+            if not observation.visit_id:
+                return None
+
+            current_visit_stmt = select(ClinicalVisit).where(
+                ClinicalVisit.id == observation.visit_id
+            )
+            current_visit_res = await session.execute(current_visit_stmt)
+            current_visit = current_visit_res.scalars().first()
+            if not current_visit:
+                return None
+
+            current_visit_name = current_visit.visit_name.upper()
+            if current_visit_name not in VISIT_SEQUENCE:
+                return None
+
+            idx = VISIT_SEQUENCE.index(current_visit_name)
+            if idx == 0:
+                # First visit, no predecessor visit exists
+                return None
+
+            predecessor_visit_name = VISIT_SEQUENCE[idx - 1]
+
+            # Get predecessor visit and verify if complete/Draft
+            pred_visit_stmt = select(ClinicalVisit).where(
+                ClinicalVisit.subject_id == subject_id,
+                ClinicalVisit.visit_name.ilike(predecessor_visit_name),
+                ClinicalVisit.study_id == study_id,
+            )
+            pred_visit_res = await session.execute(pred_visit_stmt)
+            pred_visit = pred_visit_res.scalars().first()
+
+            if not pred_visit:
+                return "PENDING_PREDECESSOR"
+
+            pred_submissions_stmt = select(FormSubmission).where(
+                FormSubmission.visit_id == pred_visit.id,
+                FormSubmission.subject_id == subject_id,
+                FormSubmission.is_deleted.is_(False),
+            )
+            pred_submissions_res = await session.execute(pred_submissions_stmt)
+            pred_subs = pred_submissions_res.scalars().all()
+
+            if pred_subs and any(sub.status == "DRAFT" for sub in pred_subs):
+                return "PENDING_PREDECESSOR"
+
+        # Construct context
+        context = {}
+
+        # Load current visit observations
+        current_obs_stmt = select(ClinicalObservation).where(
+            ClinicalObservation.subject_id == subject_id,
+            ClinicalObservation.visit_id == observation.visit_id,
+            ClinicalObservation.is_deleted.is_(False),
+        )
+        current_obs_res = await session.execute(current_obs_stmt)
+        current_obs = current_obs_res.scalars().all()
+        for o in current_obs:
+            val = o.normalized_value if o.normalized_value is not None else o.value if o.value is not None else o.value_string
+            context[o.test_code] = val
+            context[o.test_code.upper()] = val
+            context[f"CURR_{o.test_code}"] = val
+            context[f"CURR_{o.test_code.upper()}"] = val
+            context[f"/clinical_data/{o.test_code}"] = val
+            context[f"/clinical_data/{o.test_code.upper()}"] = val
+
+        # Load predecessor visit observations if longitudinal
+        if pred_visit:
+            pred_obs_stmt = select(ClinicalObservation).where(
+                ClinicalObservation.subject_id == subject_id,
+                ClinicalObservation.visit_id == pred_visit.id,
+                ClinicalObservation.is_deleted.is_(False),
+            )
+            pred_obs_res = await session.execute(pred_obs_stmt)
+            pred_obs = pred_obs_res.scalars().all()
+            for o in pred_obs:
+                val = o.normalized_value if o.normalized_value is not None else o.value if o.value is not None else o.value_string
+                context[f"PREV_{o.test_code}"] = val
+                context[f"PREV_{o.test_code.upper()}"] = val
+                context[f"previous/{o.test_code}"] = val
+                context[f"previous/{o.test_code.upper()}"] = val
+                context[f"/clinical_data/previous/{o.test_code}"] = val
+                context[f"/clinical_data/previous/{o.test_code.upper()}"] = val
+
+        # 4. Preprocess AST condition for longitudinal mapping
+        preprocessed_condition = preprocess_ast_for_longitudinal(self.condition)
+
+        # 5. Evaluate AST
+        res = evaluate_ast(preprocessed_condition, context)
+
+        if res is True:
+            return self.message
+        return None
+
+
+# Registry of published dynamic AST study rules (study_id -> List[DynamicASTEditCheckRule])
+PUBLISHED_STUDY_RULES: Dict[str, List[DynamicASTEditCheckRule]] = {}
 
 # Rule Registries
 FIELD_LEVEL_RULES: List[EditCheckRule] = [
@@ -253,16 +455,21 @@ async def run_synchronous_edit_checks(
         else:
             # Check passed! Auto-close any matching active query
             if existing_query:
-                existing_query.status = "CLOSED"
-                existing_query.resolver = "SYSTEM"
-                existing_query.resolved_at = datetime.utcnow()
-                existing_query.response = (
-                    f"Auto-resolved: data corrected and {rule.rule_id} check passes."
-                )
-                existing_query.version += 1
-                logger.info(
-                    f"Auto-resolved and closed clinical query for rule {rule.rule_id}"
-                )
+                token = current_change_reason.set("Edit Check Auto-Resolution")
+                try:
+                    existing_query.status = "CLOSED"
+                    existing_query.resolver = "SYSTEM"
+                    existing_query.resolved_at = datetime.utcnow()
+                    existing_query.response = (
+                        f"Auto-resolved: data corrected and {rule.rule_id} check passes."
+                    )
+                    existing_query.version += 1
+                    await session.flush()
+                    logger.info(
+                        f"Auto-resolved and closed clinical query for rule {rule.rule_id}"
+                    )
+                finally:
+                    current_change_reason.reset(token)
 
 
 async def run_asynchronous_edit_checks(
@@ -293,8 +500,12 @@ async def run_asynchronous_edit_checks(
                 # 2. Check if this newly added observation can resolve any pending predecessor dependencies
                 await resolve_pending_predecessor_checks(session, observation)
 
-                # 3. Evaluate each cross-form and longitudinal rule
-                for rule in CROSS_FORM_LONGITUDINAL_RULES:
+                # 3. Evaluate each cross-form and longitudinal rule (both hardcoded and dynamic)
+                applicable_rules = list(CROSS_FORM_LONGITUDINAL_RULES)
+                if observation.study_id in PUBLISHED_STUDY_RULES:
+                    applicable_rules.extend(PUBLISHED_STUDY_RULES[observation.study_id])
+
+                for rule in applicable_rules:
                     eval_result = await rule.evaluate(session, observation)
 
                     if eval_result == "PENDING_PREDECESSOR":
@@ -384,14 +595,19 @@ async def run_asynchronous_edit_checks(
                     else:
                         # Rule passed: close matching system query
                         if existing_query:
-                            existing_query.status = "CLOSED"
-                            existing_query.resolver = "SYSTEM"
-                            existing_query.resolved_at = datetime.utcnow()
-                            existing_query.response = f"Auto-resolved: data corrected and {rule.rule_id} check passes."
-                            existing_query.version += 1
-                            logger.info(
-                                f"Auto-resolved and closed clinical query in background for rule {rule.rule_id}"
-                            )
+                            token = current_change_reason.set("Edit Check Auto-Resolution")
+                            try:
+                                existing_query.status = "CLOSED"
+                                existing_query.resolver = "SYSTEM"
+                                existing_query.resolved_at = datetime.utcnow()
+                                existing_query.response = f"Auto-resolved: data corrected and {rule.rule_id} check passes."
+                                existing_query.version += 1
+                                await session.flush()
+                                logger.info(
+                                    f"Auto-resolved and closed clinical query in background for rule {rule.rule_id}"
+                                )
+                            finally:
+                                current_change_reason.reset(token)
 
 
 async def resolve_pending_predecessor_checks(
@@ -439,11 +655,17 @@ async def resolve_pending_predecessor_checks(
             pending.version += 1
             continue
 
-        # Find the rule
+        # Find the rule (hardcoded or dynamic)
         rule = next(
             (r for r in CROSS_FORM_LONGITUDINAL_RULES if r.rule_id == pending.rule_id),
             None,
         )
+        if not rule and deferred_obs.study_id in PUBLISHED_STUDY_RULES:
+            rule = next(
+                (r for r in PUBLISHED_STUDY_RULES[deferred_obs.study_id] if r.rule_id == pending.rule_id),
+                None,
+            )
+
         if not rule:
             pending.is_deleted = True
             pending.version += 1
@@ -490,14 +712,19 @@ async def resolve_pending_predecessor_checks(
                     )
             else:
                 if existing_query:
-                    existing_query.status = "CLOSED"
-                    existing_query.resolver = "SYSTEM"
-                    existing_query.resolved_at = datetime.utcnow()
-                    existing_query.response = f"Auto-resolved: data corrected and {rule.rule_id} check passes."
-                    existing_query.version += 1
-                    logger.info(
-                        f"Resolved pending check: auto-resolved and closed clinical query for rule {rule.rule_id}"
-                    )
+                    token = current_change_reason.set("Edit Check Auto-Resolution")
+                    try:
+                        existing_query.status = "CLOSED"
+                        existing_query.resolver = "SYSTEM"
+                        existing_query.resolved_at = datetime.utcnow()
+                        existing_query.response = f"Auto-resolved: data corrected and {rule.rule_id} check passes."
+                        existing_query.version += 1
+                        await session.flush()
+                        logger.info(
+                            f"Resolved pending check: auto-resolved and closed clinical query for rule {rule.rule_id}"
+                        )
+                    finally:
+                        current_change_reason.reset(token)
 
             # Soft-delete the pending predecessor check
             pending.is_deleted = True

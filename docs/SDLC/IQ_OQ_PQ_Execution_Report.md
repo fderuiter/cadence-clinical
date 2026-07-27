@@ -9,11 +9,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1012
-- **Passed:** 1012 🟢
-- **Failed/Errors:** 0 🔴
+- **Total Automated Test Cases Run:** 1036
+- **Passed:** 1031 🟢
+- **Failed/Errors:** 5 🔴
 - **Skipped:** 0 ⚪
-- **Overall Operational Pass Rate:** 99.51%
+- **Overall Operational Pass Rate:** 99.52%
 
 ## 2. Installation Qualification (IQ)
 
@@ -444,6 +444,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_uninitialized_database_manager_econsent` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cross_form_temporal_consistency_and_context_propagation` | `tests.test_edit_checks` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_deferred_predecessor_checks` | `tests.test_edit_checks` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_dynamic_ast_edit_check_auto_resolve` | `tests.test_edit_checks` | PRD-EDC-003, PRD-QRY-003 | 🟢 PASSED | < 1s |
+| `test_dynamic_ast_edit_check_pause_resume_on_form_complete` | `tests.test_edit_checks` | PRD-EDC-004, PRD-QRY-004 | 🟢 PASSED | < 1s |
 | `test_same_record_failure_outlier_and_auto_close` | `tests.test_edit_checks` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_classify_incoming_document_changed_dict` | `tests.test_eisf_adapter` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_classify_incoming_document_changed_object` | `tests.test_eisf_adapter` | *Regression/Helper* | 🟢 PASSED | < 1s |

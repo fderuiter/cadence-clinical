@@ -159,6 +159,143 @@ class ProblemDetails(BaseModel):
     invalid_params: Optional[List[InvalidParam]] = None
 
 
+async def resume_pending_predecessor_checks_task(
+    session_factory: Any,
+    subject_id: str,
+    visit_id: str,
+    user_id: Optional[str] = None,
+    change_reason: Optional[str] = None,
+) -> None:
+    """Background task to resume and re-evaluate pending predecessor checks when a predecessor visit becomes Complete."""
+    from apps.execution.edit_checks import (
+        PUBLISHED_STUDY_RULES,
+        CROSS_FORM_LONGITUDINAL_RULES,
+    )
+    from apps.execution.database.models import (
+        ClinicalVisit,
+        FormSubmission,
+        PendingPredecessorCheck,
+        ClinicalObservation,
+        ClinicalQuery,
+    )
+    from apps.execution.database.context import audit_context, current_change_reason
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"Resuming pending predecessor checks for subject {subject_id}, visit {visit_id}")
+
+    with audit_context(user_id, change_reason):
+        async with session_factory() as session:
+            async with session.begin():
+                # 1. Resolve visit_name of visit_id
+                cv_stmt = select(ClinicalVisit).where(ClinicalVisit.id == visit_id)
+                cv_res = await session.execute(cv_stmt)
+                cv = cv_res.scalars().first()
+                if not cv:
+                    return
+                visit_name = cv.visit_name.upper()
+
+                # 2. Check if there are still any DRAFT form submissions for this visit
+                draft_subs_stmt = select(FormSubmission).where(
+                    FormSubmission.visit_id == visit_id,
+                    FormSubmission.subject_id == subject_id,
+                    FormSubmission.status == "DRAFT",
+                    FormSubmission.is_deleted.is_(False),
+                )
+                draft_subs_res = await session.execute(draft_subs_stmt)
+                if draft_subs_res.scalars().first():
+                    logger.info(f"Visit {visit_name} is still Draft because some form submissions are still DRAFT.")
+                    return
+
+                # 3. Find any PendingPredecessorCheck where predecessor_visit_name matches visit_name
+                stmt_pending = select(PendingPredecessorCheck).where(
+                    PendingPredecessorCheck.subject_id == subject_id,
+                    PendingPredecessorCheck.predecessor_visit_name.ilike(visit_name),
+                    PendingPredecessorCheck.is_deleted.is_(False),
+                )
+                res_pending = await session.execute(stmt_pending)
+                pending_checks = res_pending.scalars().all()
+
+                for pending in pending_checks:
+                    # Resolve this pending check!
+                    obs_stmt = select(ClinicalObservation).where(
+                        ClinicalObservation.id == pending.observation_id,
+                        ClinicalObservation.is_deleted.is_(False),
+                    )
+                    obs_res = await session.execute(obs_stmt)
+                    deferred_obs = obs_res.scalars().first()
+                    if not deferred_obs:
+                        pending.is_deleted = True
+                        pending.version += 1
+                        continue
+
+                    # Evaluate rules!
+                    rule = next((r for r in CROSS_FORM_LONGITUDINAL_RULES if r.rule_id == pending.rule_id), None)
+                    if not rule and deferred_obs.study_id in PUBLISHED_STUDY_RULES:
+                        rule = next((r for r in PUBLISHED_STUDY_RULES[deferred_obs.study_id] if r.rule_id == pending.rule_id), None)
+
+                    if not rule:
+                        pending.is_deleted = True
+                        pending.version += 1
+                        continue
+
+                    # Re-evaluate
+                    eval_result = await rule.evaluate(session, deferred_obs)
+
+                    if eval_result == "PENDING_PREDECESSOR":
+                        continue
+
+                    stmt_query = select(ClinicalQuery).where(
+                        ClinicalQuery.study_id == deferred_obs.study_id,
+                        ClinicalQuery.subject_id == deferred_obs.subject_id,
+                        ClinicalQuery.visit_id == deferred_obs.visit_id,
+                        ClinicalQuery.domain == deferred_obs.domain,
+                        ClinicalQuery.test_code == deferred_obs.test_code,
+                        ClinicalQuery.rule_id == rule.rule_id,
+                        ClinicalQuery.status.in_(["OPEN", "REOPENED", "ANSWERED"]),
+                        ClinicalQuery.is_deleted.is_(False),
+                    )
+                    res_query = await session.execute(stmt_query)
+                    existing_query = res_query.scalars().first()
+
+                    if eval_result:
+                        if not existing_query:
+                            new_query = ClinicalQuery(
+                                study_id=deferred_obs.study_id,
+                                subject_id=deferred_obs.subject_id,
+                                visit_id=deferred_obs.visit_id,
+                                domain=deferred_obs.domain,
+                                test_code=deferred_obs.test_code,
+                                observation_id=deferred_obs.id,
+                                field_link=f"{deferred_obs.domain}.{deferred_obs.test_code}",
+                                rule_id=rule.rule_id,
+                                message=eval_result,
+                                explanation=eval_result,
+                                origin="SYSTEM",
+                                created_by="SYSTEM",
+                                status="OPEN",
+                            )
+                            session.add(new_query)
+                            logger.info(f"Pending check resolved: opened system query for rule {rule.rule_id}")
+                    else:
+                        if existing_query:
+                            token = current_change_reason.set("Edit Check Auto-Resolution")
+                            try:
+                                existing_query.status = "CLOSED"
+                                existing_query.resolver = "SYSTEM"
+                                existing_query.resolved_at = datetime.utcnow()
+                                existing_query.response = f"Auto-resolved: data corrected and {rule.rule_id} check passes."
+                                existing_query.version += 1
+                                session.add(existing_query)
+                                await session.flush()
+                                logger.info(f"Pending check resolved: closed query for rule {rule.rule_id}")
+                            finally:
+                                current_change_reason.reset(token)
+
+                    # Soft delete the pending check
+                    pending.is_deleted = True
+                    pending.version += 1
+
+
 app = FastAPI(
     title="Cadence Clinical - EDC Execution Engine", version="0.1.0", lifespan=lifespan
 )
@@ -234,6 +371,36 @@ async def study_published(
     user_id = current_user_id.get()
     change_reason = current_change_reason.get()
     job_id = str(uuid.uuid4())
+
+    # Populate dynamic AST rules registry from payload
+    from apps.execution.edit_checks import PUBLISHED_STUDY_RULES, DynamicASTEditCheckRule
+
+    rules_list = event.payload.get("rules") or []
+    if not rules_list and "protocol" in event.payload:
+        rules_list = event.payload["protocol"].get("rules") or []
+    if not rules_list and "study" in event.payload:
+        rules_list = event.payload["study"].get("rules") or []
+
+    study_rules = []
+    for r in rules_list:
+        if r.get("is_deleted", False):
+            continue
+        r_type = r.get("type")
+        if r_type in ("constraint", "cross_form_check", "skip_logic"):
+            rule_id = r.get("id")
+            condition = r.get("condition")
+            message = r.get("query_message") or r.get("message") or "Edit check failure"
+
+            dynamic_rule = DynamicASTEditCheckRule(
+                rule_id=rule_id,
+                rule_type=r_type,
+                condition=condition,
+                message=message,
+            )
+            study_rules.append(dynamic_rule)
+
+    PUBLISHED_STUDY_RULES[event.study_id] = study_rules
+
     background_tasks.add_task(
         process_translation,
         event.study_id,
@@ -3093,6 +3260,7 @@ async def create_form_submission(
 async def complete_form_submission(
     submission_id: str,
     request: Request,
+    background_tasks: BackgroundTasks,
     roles: list[str] = Depends(verify_not_auditor),
 ) -> FormSubmissionResponse:
     """Transition a FormSubmission from DRAFT to COMPLETED."""
@@ -3113,6 +3281,18 @@ async def complete_form_submission(
 
         sub.status = "COMPLETED"
         await session.commit()
+
+        if sub.visit_id:
+            user_id = current_user_id.get()
+            change_reason = current_change_reason.get()
+            background_tasks.add_task(
+                resume_pending_predecessor_checks_task,
+                db_manager.get_session_maker(),
+                sub.subject_id,
+                sub.visit_id,
+                user_id,
+                change_reason,
+            )
 
         # Query back
         stmt_ref = select(FormSubmission).where(FormSubmission.id == submission_id)
@@ -3141,6 +3321,7 @@ async def approve_form_submission(
     submission_id: str,
     request: Request,
     payload: FormSubmissionApprove,
+    background_tasks: BackgroundTasks,
     roles: list[str] = Depends(require_roles(ROLE_SITE_INVESTIGATOR)),
 ) -> FormSubmissionResponse:
     """PI Approve/Sign-off a completed FormSubmission."""
@@ -3177,6 +3358,18 @@ async def approve_form_submission(
         sub.signature_manifest = payload.signature_manifest
         await session.commit()
 
+        if sub.visit_id:
+            user_id = current_user_id.get()
+            change_reason = current_change_reason.get()
+            background_tasks.add_task(
+                resume_pending_predecessor_checks_task,
+                db_manager.get_session_maker(),
+                sub.subject_id,
+                sub.visit_id,
+                user_id,
+                change_reason,
+            )
+
         # Query back
         stmt_ref = select(FormSubmission).where(FormSubmission.id == submission_id)
         res_ref = await session.execute(stmt_ref)
@@ -3203,6 +3396,7 @@ async def approve_form_submission(
 async def post_batch_sign_off(
     request: Request,
     payload: BatchSignOffRequest,
+    background_tasks: BackgroundTasks,
     roles: list[str] = Depends(
         require_roles(
             ROLE_SITE_INVESTIGATOR,
@@ -3314,6 +3508,18 @@ async def post_batch_sign_off(
                     sub.signature_manifest = manifest
                     session.add(sub)
                     approved_submission_ids.append(sub.id)
+
+                    if sub.visit_id:
+                        user_id = current_user_id.get()
+                        change_reason = current_change_reason.get()
+                        background_tasks.add_task(
+                            resume_pending_predecessor_checks_task,
+                            db_manager.get_session_maker(),
+                            sub.subject_id,
+                            sub.visit_id,
+                            user_id,
+                            change_reason,
+                        )
                 else:
                     skipped_submission_ids.append(sub.id)
 
