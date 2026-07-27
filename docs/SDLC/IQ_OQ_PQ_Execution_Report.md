@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1011
-- **Passed:** 1011 🟢
+- **Total Automated Test Cases Run:** 1063
+- **Passed:** 1063 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -38,128 +38,128 @@ The Installation Qualification verifies that the software execution environment,
 ```
 Package                 Version     Editable project location
 ----------------------- ----------- -------------------------
-aiosmtplib               5.1.2
-aiosqlite                0.22.1
-annotated-doc            0.0.4
-annotated-types          0.7.0
-anyio                    4.14.2
-asyncpg                  0.31.0
-bandit                   1.9.4
-beautifulsoup4           4.15.0
-boolean-py               5.0
-brotli                   1.2.0
-brotlicffi               1.2.0.1
-cachecontrol             0.14.4
+aiosmtplib               5.1.2      
+aiosqlite                0.22.1     
+annotated-doc            0.0.4      
+annotated-types          0.7.0      
+anyio                    4.14.2     
+asyncpg                  0.31.0     
+bandit                   1.9.4      
+beautifulsoup4           4.15.0     
+boolean-py               5.0        
+brotli                   1.2.0      
+brotlicffi               1.2.0.1    
+cachecontrol             0.14.4     
 cadence-clinical         0.1.0       /app
-certifi                  2026.7.22
-cffi                     2.1.0
-cfgv                     3.5.0
-charset-normalizer       3.4.9
-click                    8.4.2
-colorama                 0.4.6
-coverage                 7.15.2
-cryptography             49.0.0
-cssselect2               0.9.0
-cyclonedx-python-lib     11.11.0
-defusedxml               0.7.1
-detect-secrets           1.5.0
-distlib                  0.4.3
-docraptor                3.1.0
-ecdsa                    0.19.2
-et-xmlfile               2.0.0
-fastapi                  0.139.2
-fhir-core                1.1.9
-fhir-resources           8.3.0
-filelock                 3.32.0
-fonttools                4.63.0
-greenlet                 3.5.4
-h11                      0.16.0
-httpcore                 1.0.9
-httptools                0.8.0
-httpx                    0.28.1
-identify                 2.6.19
-idna                     3.18
-iniconfig                2.3.0
-jinja2                   3.1.6
-license-expression       30.4.4
-lxml                     6.1.1
-markdown-it-py           4.2.0
-markupsafe               3.0.3
-mdurl                    0.1.2
-msgpack                  1.2.1
-neo4j                    6.2.0
-nodeenv                  1.10.0
-numpy                    2.4.6
-numpy                    2.5.1
-openpyxl                 3.1.5
-packageurl-python        0.17.6
-packaging                26.2
-pandas                   3.0.3
-pillow                   12.3.0
-pip                      26.1.2
-pip-api                  0.0.34
-pip-audit                2.10.1
-pip-requirements-parser  32.0.1
-platformdirs             4.11.0
-playwright               1.61.0
-pluggy                   1.6.0
-pre-commit               4.6.1
-py-serializable          2.1.0
-pyasn1                   0.6.4
-pycparser                3.0
-pydantic                 2.13.4
-pydantic-core            2.46.4
-pydyf                    0.12.1
-pyee                     13.0.1
-pygments                 2.20.0
-pyparsing                3.3.2
-pyphen                   0.17.2
-pytest                   9.1.1
-pytest-asyncio           1.4.0
-pytest-base-url          2.1.0
-pytest-cov               7.1.0
-pytest-playwright        0.8.0
+certifi                  2026.7.22  
+cffi                     2.1.0      
+cfgv                     3.5.0      
+charset-normalizer       3.4.9      
+click                    8.4.2      
+colorama                 0.4.6      
+coverage                 7.15.2     
+cryptography             49.0.0     
+cssselect2               0.9.0      
+cyclonedx-python-lib     11.11.0    
+defusedxml               0.7.1      
+detect-secrets           1.5.0      
+distlib                  0.4.3      
+docraptor                3.1.0      
+ecdsa                    0.19.2     
+et-xmlfile               2.0.0      
+fastapi                  0.139.2    
+fhir-core                1.1.9      
+fhir-resources           8.3.0      
+filelock                 3.32.0     
+fonttools                4.63.0     
+greenlet                 3.5.4      
+h11                      0.16.0     
+httpcore                 1.0.9      
+httptools                0.8.0      
+httpx                    0.28.1     
+identify                 2.6.19     
+idna                     3.18       
+iniconfig                2.3.0      
+jinja2                   3.1.6      
+license-expression       30.4.4     
+lxml                     6.1.1      
+markdown-it-py           4.2.0      
+markupsafe               3.0.3      
+mdurl                    0.1.2      
+msgpack                  1.2.1      
+neo4j                    6.2.0      
+nodeenv                  1.10.0     
+numpy                    2.4.6      
+numpy                    2.5.1      
+openpyxl                 3.1.5      
+packageurl-python        0.17.6     
+packaging                26.2       
+pandas                   3.0.3      
+pillow                   12.3.0     
+pip                      26.1.2     
+pip-api                  0.0.34     
+pip-audit                2.10.1     
+pip-requirements-parser  32.0.1     
+platformdirs             4.11.0     
+playwright               1.61.0     
+pluggy                   1.6.0      
+pre-commit               4.6.1      
+py-serializable          2.1.0      
+pyasn1                   0.6.4      
+pycparser                3.0        
+pydantic                 2.13.4     
+pydantic-core            2.46.4     
+pydyf                    0.12.1     
+pyee                     13.0.1     
+pygments                 2.20.0     
+pyparsing                3.3.2      
+pyphen                   0.17.2     
+pytest                   9.1.1      
+pytest-asyncio           1.4.0      
+pytest-base-url          2.1.0      
+pytest-cov               7.1.0      
+pytest-playwright        0.8.0      
 python-dateutil          2.9.0.post0
-python-discovery         1.5.0
-python-docx              1.2.0
-python-dotenv            1.2.2
-python-jose              3.5.0
-python-multipart         0.0.32
-python-slugify           8.0.4
-pytz                     2026.2
-pyyaml                   6.0.3
-rapidfuzz                3.14.5
-requests                 2.34.2
-rich                     15.0.0
-rsa                      4.9.1
-ruff                     0.15.22
-six                      1.17.0
-sortedcontainers         2.4.0
-soupsieve                2.9.1
-sqlalchemy               2.0.51
-starlette                1.3.1
-stevedore                5.9.0
-stringcase               1.2.0
-text-unidecode           1.3
-tinycss2                 1.5.1
-tinyhtml5                2.1.0
-tomli                    2.4.1
-tomli-w                  1.2.0
-typing-extensions        4.16.0
-typing-inspection        0.4.2
-tzdata                   2026.3
-urllib3                  2.7.0
-usdm                     0.66.0
-usdm                     0.67.0
-uvicorn                  0.51.0
-uvloop                   0.22.1
-virtualenv               21.7.0
-watchfiles               1.2.0
-weasyprint               69.0
-webencodings             0.5.1
-websockets               16.1.1
-yattag                   1.16.1
-zopfli                   0.4.3
+python-discovery         1.5.0      
+python-docx              1.2.0      
+python-dotenv            1.2.2      
+python-jose              3.5.0      
+python-multipart         0.0.32     
+python-slugify           8.0.4      
+pytz                     2026.2     
+pyyaml                   6.0.3      
+rapidfuzz                3.14.5     
+requests                 2.34.2     
+rich                     15.0.0     
+rsa                      4.9.1      
+ruff                     0.15.22    
+six                      1.17.0     
+sortedcontainers         2.4.0      
+soupsieve                2.9.1      
+sqlalchemy               2.0.51     
+starlette                1.3.1      
+stevedore                5.9.0      
+stringcase               1.2.0      
+text-unidecode           1.3        
+tinycss2                 1.5.1      
+tinyhtml5                2.1.0      
+tomli                    2.4.1      
+tomli-w                  1.2.0      
+typing-extensions        4.16.0     
+typing-inspection        0.4.2      
+tzdata                   2026.3     
+urllib3                  2.7.0      
+usdm                     0.66.0     
+usdm                     0.67.0     
+uvicorn                  0.51.0     
+uvloop                   0.22.1     
+virtualenv               21.7.0     
+watchfiles               1.2.0      
+weasyprint               69.0       
+webencodings             0.5.1      
+websockets               16.1.1     
+yattag                   1.16.1     
+zopfli                   0.4.3      
 ```
 
 ## 3. Operational Qualification (OQ)
@@ -366,9 +366,42 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_create_study_root` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_study_differences` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_update_study_properties` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_age_derivation_boundary_dates` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_age_derivation_boundary_dates[2000-05-14-2020-05-15-20]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_age_derivation_boundary_dates[2000-05-15-2020-05-15-20]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_age_derivation_boundary_dates[2000-05-15-None-None]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_age_derivation_boundary_dates[2000-05-15-invalid-observation-date-None]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_age_derivation_boundary_dates[2000-05-15T00:00:00Z-2020-05-15T12:00:00Z-20]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_age_derivation_boundary_dates[2000-05-16-2020-05-15-19]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_age_derivation_boundary_dates[2021-05-15-2020-05-15-None]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_age_derivation_boundary_dates[None-2020-05-15-None]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_age_derivation_boundary_dates[birthdate0-observation_date0-20]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_age_derivation_boundary_dates[birthdate14-observation_date14-None]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_age_derivation_boundary_dates[birthdate3-observation_date3-20]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_age_derivation_boundary_dates[birthdate5-observation_date5-19]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_age_derivation_boundary_dates[birthdate7-observation_date7-20]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_age_derivation_boundary_dates[birthdate8-observation_date8-21]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_age_derivation_boundary_dates[birthdate9-observation_date9-20]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_age_derivation_boundary_dates[invalid-date-string-2020-05-15-None]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_demographics_encryption_decryption_roundtrip` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_gender_normalization` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gender_normalization[  female  -F]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gender_normalization[  male  -M]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gender_normalization[-U]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gender_normalization[Alien/Unidentified-U]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gender_normalization[F-F]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gender_normalization[FEMALE-F]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gender_normalization[Female-F]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gender_normalization[M-M]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gender_normalization[MALE-M]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gender_normalization[Male-M]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gender_normalization[None-U]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gender_normalization[Other-U]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gender_normalization[U-U]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gender_normalization[Unknown-U]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gender_normalization[boy-M]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gender_normalization[girl-F]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gender_normalization[man-M]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gender_normalization[unspecified-U]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gender_normalization[woman-F]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_safe_demographics_failures_fail_safely` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_safe_demographics_valid_decryption` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_study_differences_missing_version` | `tests.test_designer_differences` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -663,7 +696,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_multiple_colons` | `tests.test_mapping_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_valid_csv` | `tests.test_mapping_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_clean_token` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_func` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_is_potential_path_ref` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_json_block_validation` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_process_markdown_file_e2e` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -724,9 +756,21 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_cache_ttl_configuration` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cache_unavailability_graceful_degradation` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_meddra_matching_integration` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_normalize_term` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_normalize_term[Clinical history of hepatitises-clinic hepatitis]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_normalize_term[Mild headache-headache]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_normalize_term[Onset of acute gastritis-gastritis]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_normalize_term[Severe recurring pain, chronic-pain]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_similarity_computations` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_stem_word` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_stem_word[allergies-allergy]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_stem_word[clinical-clinic]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_stem_word[headaches-headache]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_stem_word[hepatitises-hepatitis]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_stem_word[infected-infect]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_stem_word[meningitis-meningitis]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_stem_word[pain-pain]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_stem_word[severely-severe]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_stem_word[ss-ss]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_stem_word[vomiting-vomit]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_token_cosine_similarity_empty` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_whodrug_matching_integration` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_main_cli` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -753,7 +797,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_personnel_and_sitestaff_alias` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_personnel_crud_api` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_site_crud_api` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_audit_fields_change_reason_validation` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_audit_fields_change_reason_validation[   ]` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_audit_fields_change_reason_validation[\n]` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_audit_fields_change_reason_validation[\t]` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_audit_fields_change_reason_validation[]` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_fields_instantiation` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_fields_reusability` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_clinical_staff_role_values` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -772,7 +819,12 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_rendered_protocol_document_with_usdm_study` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_soa_matrix_view` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_synopsis_view_parsing` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_protocol_version_ref_accepted_statuses` | `tests.test_protocol_version_ref` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_protocol_version_ref_accepted_statuses[ACTIVE]` | `tests.test_protocol_version_ref` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_protocol_version_ref_accepted_statuses[ARCHIVED]` | `tests.test_protocol_version_ref` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_protocol_version_ref_accepted_statuses[DRAFT]` | `tests.test_protocol_version_ref` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_protocol_version_ref_accepted_statuses[FROZEN]` | `tests.test_protocol_version_ref` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_protocol_version_ref_accepted_statuses[LOCKED]` | `tests.test_protocol_version_ref` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_protocol_version_ref_accepted_statuses[PUBLISHED]` | `tests.test_protocol_version_ref` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_protocol_version_ref_serialization` | `tests.test_protocol_version_ref` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_protocol_version_ref_valid_payload` | `tests.test_protocol_version_ref` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_protocol_version_ref_validation_blank_fields` | `tests.test_protocol_version_ref` | *Regression/Helper* | 🟢 PASSED | < 1s |
