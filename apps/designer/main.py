@@ -80,6 +80,9 @@ from apps.designer.rules import (
     detect_circular_dependencies,
     detect_unknown_fields,
 )
+from apps.designer.usdm_ingestion import (
+    validate_usdm_payload,
+)
 from apps.designer.validator import (
     CodeValidationState,
     ConceptValidationReport,
@@ -883,6 +886,50 @@ async def upload_mapping_csv(file: UploadFile = File(...)):
         raise HTTPException(status_code=422, detail=f"Validation Error: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Processing Error: {str(e)}")
+
+
+@app.post(
+    "/api/v1/designer/usdm/validate",
+    status_code=status.HTTP_200_OK,
+)
+async def validate_usdm_endpoint(
+    request: Request,
+    override: Optional[str] = Query(
+        None, description="Optional explicit version override ('v2' or 'v3')"
+    ),
+):
+    """
+    Validates a USDM JSON or YAML payload, normalizes shape differences, and returns a detailed validation report.
+    If the payload is invalid, raises a structured HTTP 422 ProblemDetails response.
+    """
+    body_bytes = await request.body()
+    body_text = body_bytes.decode("utf-8")
+
+    report = validate_usdm_payload(body_text, override=override)
+
+    if not report.validity:
+        invalid_params = []
+        for err in report.errors:
+            invalid_params.append(
+                InvalidParam(
+                    field=err.field or "payload", reason=err.reason, value=err.value
+                )
+            )
+        problem = ProblemDetails(
+            type="https://api.cadence-clinical.com/errors/usdm-validation-failed",
+            title="USDM Ingestion Validation Failed",
+            status=422,
+            detail=f"The provided {report.format} payload failed USDM {report.version} validation.",
+            instance=request.url.path,
+            code="USDM_VALIDATION_ERROR",
+            invalid_params=invalid_params,
+        )
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content=problem.model_dump(exclude_none=True),
+        )
+
+    return report
 
 
 # ==========================================

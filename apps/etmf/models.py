@@ -53,6 +53,7 @@ class DocumentStatus:
     APPROVED = "APPROVED"
     ARCHIVED = "ARCHIVED"
     REJECTED = "REJECTED"
+    SIGNED = "SIGNED"
 
 
 class TMFDocument(Base):

@@ -144,6 +144,10 @@ Every ingested document successfully validated against the selected catalog vers
 
 Completeness audits and expected document list seeding must dynamically query mandatory artifacts per milestone directly from the catalog's public APIs (e.g., `get_mandatory_artifacts`), matching exact canonical `artifact_code` identities across study and site scopes. For custom or site-specific expectations that cannot be resolved in the standard catalog, the completeness check falls back to case-insensitive name matching.
 
+#### PRD-TMF-005: Automated and Manual Document Redaction & Integrity Verification
+
+The system must support server-side automated and manual redaction of personally identifiable information (PII) and protected health information (PHI) within clinical documents. It must apply de-identification profiles (e.g. HIPAA, GDPR, EU_CTR) and custom terms to redact and shift dates/ages deterministically without changing the original source document. A signed, tamper-evident manifest must be generated for each redaction operation, and signature validation must fail upon any manifest modification. Raw matched values must never be returned or stored in manifest summaries, and unauthorized/read-only roles (such as inspectors and auditors) must be blocked from performing redaction or accessing unredacted original files.
+
 ---
 
 ## 4. Study Design & Clinical Metadata Repository (MDR)
