@@ -156,12 +156,14 @@ class CAPAResponse(BaseModel):
 async def quality_startup() -> None:
     """Startup hook to start background Quality sealer."""
     from apps.quality.sealer import start_background_quality_sealer
+
     await start_background_quality_sealer(db_manager.get_session_maker())
 
 
 async def quality_shutdown() -> None:
     """Shutdown hook to stop background Quality sealer."""
     from apps.quality.sealer import stop_background_quality_sealer
+
     await stop_background_quality_sealer()
 
 

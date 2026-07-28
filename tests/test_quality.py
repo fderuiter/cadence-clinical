@@ -218,6 +218,7 @@ async def test_deviation_rca_capa_relationships_and_cascading():
     # Verify cascading deletes (on deleting Deviation, RCA and CAPAs are deleted)
     # Under GxP and FDA 21 CFR Part 11, hard deletion is blocked at the database level.
     from sqlalchemy.exc import DatabaseError
+
     async with db_manager.get_session_maker()() as session:
         stmt = select(Deviation).where(Deviation.study_id == "study_999")
         result = await session.execute(stmt)

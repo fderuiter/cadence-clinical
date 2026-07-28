@@ -1,28 +1,27 @@
-import asyncio
-import hashlib
-import json
 import pytest
 import pytest_asyncio
-from datetime import datetime
 from sqlalchemy import select, text
 from sqlalchemy.exc import DatabaseError
 
 from apps.ctms.database import db_manager as ctms_db_manager
-from apps.ctms.models import Base as CTMSBase, CTMSStudy, CTMSAuditLog, CTMSAuditLedgerSeal
-from apps.ctms.sealer import (
-    execute_ctms_audit_sealing_cycle,
-    validate_ctms_ledger_integrity,
-)
-
+from apps.ctms.models import Base as CTMSBase
+from apps.ctms.models import CTMSAuditLog, CTMSStudy
+from apps.execution.trial_lock import TrialLockManager
 from apps.quality.database import db_manager as quality_db_manager
-from apps.quality.models import Base as QualityBase, Deviation, QualityAuditLog, QualityAuditLedgerSeal, DeviationSeverity, DeviationType, DeviationStatus
+from apps.quality.models import Base as QualityBase
+from apps.quality.models import (
+    Deviation,
+    DeviationSeverity,
+    DeviationStatus,
+    DeviationType,
+    QualityAuditLedgerSeal,
+    QualityAuditLog,
+)
 from apps.quality.sealer import (
     execute_quality_audit_sealing_cycle,
     validate_quality_ledger_integrity,
 )
-
 from packages.security.context import audit_context
-from apps.execution.trial_lock import TrialLockManager
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -101,7 +100,9 @@ async def test_automatic_gxp_audit_logging_and_validation():
         updated_study = result.scalar_one()
         assert updated_study.version_index == 2
 
-        result_logs = await session.execute(select(CTMSAuditLog).order_by(CTMSAuditLog.timestamp.asc()))
+        result_logs = await session.execute(
+            select(CTMSAuditLog).order_by(CTMSAuditLog.timestamp.asc())
+        )
         logs = result_logs.scalars().all()
         assert len(logs) == 2
         assert logs[1].action == "UPDATE"
@@ -119,7 +120,9 @@ async def test_automatic_gxp_audit_logging_and_validation():
                 reason_for_change="",
             )
             session.add(study2)
-            with pytest.raises(ValueError, match="A valid change justification is required"):
+            with pytest.raises(
+                ValueError, match="A valid change justification is required"
+            ):
                 await session.commit()
 
 
@@ -151,7 +154,10 @@ async def test_hard_delete_prevention():
         retrieved_dev = res.scalar_one()
 
         await session.delete(retrieved_dev)
-        with pytest.raises(DatabaseError, match="Hard deletion of clinical model Deviation is forbidden"):
+        with pytest.raises(
+            DatabaseError,
+            match="Hard deletion of clinical model Deviation is forbidden",
+        ):
             await session.commit()
 
 
@@ -227,7 +233,9 @@ async def test_cryptographic_sealing_and_tamper_detection():
     async with quality_db_manager.get_session_maker()() as session:
         # Simulate out-of-band direct database edit bypassing app validation
         await session.execute(
-            text("UPDATE quality_audit_logs SET details = 'Tampered details' WHERE action = 'INSERT' LIMIT 1;")
+            text(
+                "UPDATE quality_audit_logs SET details = 'Tampered details' WHERE action = 'INSERT' LIMIT 1;"
+            )
         )
         await session.commit()
 

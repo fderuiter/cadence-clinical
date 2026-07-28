@@ -28,15 +28,18 @@ from apps.ctms.rendering import render_confirmation_letter, render_follow_up_let
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
 
+
 async def ctms_startup() -> None:
     """Startup hook to start background CTMS sealer."""
     from apps.ctms.sealer import start_background_ctms_sealer
+
     await start_background_ctms_sealer(db_manager.get_session_maker())
 
 
 async def ctms_shutdown() -> None:
     """Shutdown hook to stop background CTMS sealer."""
     from apps.ctms.sealer import stop_background_ctms_sealer
+
     await stop_background_ctms_sealer()
 
 

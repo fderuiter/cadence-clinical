@@ -255,3 +255,186 @@ def compute_block_hash(previous_hash: str, merkle_root: str) -> str:
     """
     block_input = (previous_hash + merkle_root).encode("utf-8")
     return hashlib.sha256(block_input).hexdigest()
+
+
+async def generic_execute_audit_sealing_cycle(
+    db: Any,
+    seals_table: str,
+    logs_table: str,
+    log_columns: list[str],
+    payload_builder: Any,
+    current_block_hash_col: str = "current_block_hash",
+    limit: int = 100,
+) -> Optional[str]:
+    """
+    Generic logic to compile chronological batches of unsealed audit logs
+    and hash them using SHA-256 with sequential block-level chaining to create cryptographic seals.
+    """
+    from datetime import datetime, timezone
+
+    from sqlalchemy import text
+
+    # 1. Fetch the last valid block hash
+    query_str = f"SELECT {current_block_hash_col} FROM {seals_table} ORDER BY block_index DESC LIMIT 1;"
+    last_block_query = await db.execute(text(query_str))
+    result = last_block_query.fetchone()
+    previous_hash = result[0] if result else "0" * 64
+
+    # 2. Fetch all unsealed audit records
+    cols_str = ", ".join(log_columns)
+    unsealed_query = await db.execute(
+        text(
+            f"SELECT {cols_str} FROM {logs_table} WHERE cryptographic_seal IS NULL ORDER BY timestamp ASC, id ASC LIMIT :limit;"
+        ),
+        {"limit": limit},
+    )
+    records = unsealed_query.fetchall()
+    if not records:
+        return None  # No new logs to seal
+
+    record_hashes = []
+    record_ids = []
+
+    for rec in records:
+        record_payload = payload_builder(rec)
+        serialized = json.dumps(record_payload, sort_keys=True).encode("utf-8")
+        rec_hash = hashlib.sha256(serialized).hexdigest()
+        record_hashes.append(rec_hash)
+        record_ids.append(rec[0])
+
+    # 3. Calculate Merkle Root of records
+    merkle_root = compute_merkle_root(record_hashes)
+
+    # 4. Calculate Block Hash
+    current_block_hash = compute_block_hash(previous_hash, merkle_root)
+
+    # 5. Insert Ledger Seal Record
+    insert_str = (
+        f"INSERT INTO {seals_table} (previous_block_hash, current_block_hash, timestamp, sealed_record_count, merkle_root_hash) "
+        "VALUES (:prev, :curr, :timestamp, :count, :merkle);"
+    )
+    await db.execute(
+        text(insert_str),
+        {
+            "prev": previous_hash,
+            "curr": current_block_hash,
+            "timestamp": datetime.now(timezone.utc).replace(tzinfo=None),
+            "count": len(records),
+            "merkle": merkle_root,
+        },
+    )
+
+    # 6. Apply cryptographic seal to audited records in database
+    update_str = f"UPDATE {logs_table} SET cryptographic_seal = :seal WHERE id = :id;"
+    for rec_id in record_ids:
+        await db.execute(
+            text(update_str),
+            {"seal": current_block_hash, "id": rec_id},
+        )
+
+    await db.commit()
+    return current_block_hash
+
+
+async def generic_validate_ledger_integrity(
+    db: Any,
+    seals_table: str,
+    logs_table: str,
+    log_columns: list[str],
+    payload_builder: Any,
+    trial_lock_reason_prefix: str,
+) -> bool:
+    """
+    Generic logic to validate the entire cryptographic ledger chain, rebuilding hashes sequentially.
+    """
+    from sqlalchemy import text
+
+    from apps.execution.trial_lock import TrialLockManager
+
+    try:
+        # Fetch all seals in order of block_index
+        seals_query = await db.execute(
+            text(
+                f"SELECT block_index, previous_block_hash, current_block_hash, sealed_record_count, merkle_root_hash "
+                f"FROM {seals_table} ORDER BY block_index ASC;"
+            )
+        )
+        seals = seals_query.fetchall()
+
+        expected_prev_hash = "0" * 64
+
+        cols_str = ", ".join(log_columns)
+        select_logs_str = f"SELECT {cols_str} FROM {logs_table} WHERE cryptographic_seal = :seal ORDER BY timestamp ASC, id ASC;"
+
+        for seal in seals:
+            block_idx = seal.block_index
+            prev_hash_in_db = seal.previous_block_hash
+            curr_hash_in_db = seal.current_block_hash
+            record_count_in_db = seal.sealed_record_count
+            merkle_root_in_db = seal.merkle_root_hash
+
+            # 1. Chain validation
+            if prev_hash_in_db != expected_prev_hash:
+                raise ValueError(
+                    f"Chain broken at block {block_idx}: expected previous hash '{expected_prev_hash}', got '{prev_hash_in_db}'."
+                )
+
+            # 2. Fetch all records associated with this seal
+            records_query = await db.execute(
+                text(select_logs_str),
+                {"seal": curr_hash_in_db},
+            )
+            records = records_query.fetchall()
+
+            # Verify record count
+            if len(records) != record_count_in_db:
+                raise ValueError(
+                    f"Integrity violation at block {block_idx}: DB has {len(records)} records for seal, but seal expects {record_count_in_db}."
+                )
+
+            record_hashes = []
+            for rec in records:
+                record_payload = payload_builder(rec)
+                serialized = json.dumps(record_payload, sort_keys=True).encode("utf-8")
+                rec_hash = hashlib.sha256(serialized).hexdigest()
+                record_hashes.append(rec_hash)
+
+            # Recompute Merkle root
+            computed_merkle_root = compute_merkle_root(record_hashes)
+
+            if computed_merkle_root != merkle_root_in_db:
+                raise ValueError(
+                    f"Integrity violation at block {block_idx}: Recomputed Merkle root '{computed_merkle_root}' "
+                    f"does not match stored Merkle root '{merkle_root_in_db}'."
+                )
+
+            # Recompute Block Hash
+            computed_block_hash = compute_block_hash(
+                expected_prev_hash, computed_merkle_root
+            )
+
+            if computed_block_hash != curr_hash_in_db:
+                raise ValueError(
+                    f"Integrity violation at block {block_idx}: Recomputed block hash '{computed_block_hash}' "
+                    f"does not match stored current block hash '{curr_hash_in_db}'."
+                )
+
+            expected_prev_hash = curr_hash_in_db
+
+        # Verify no orphan seals exist on logs
+        all_seals_in_db = {s.current_block_hash for s in seals}
+        sealed_records_query = await db.execute(
+            text(
+                f"SELECT DISTINCT cryptographic_seal FROM {logs_table} WHERE cryptographic_seal IS NOT NULL;"
+            )
+        )
+        distinct_seals_on_records = {r[0] for r in sealed_records_query.fetchall()}
+
+        orphan_seals = distinct_seals_on_records - all_seals_in_db
+        if orphan_seals:
+            raise ValueError(f"Found orphan seals on audit logs: {orphan_seals}")
+
+        return True
+    except Exception as e:
+        TrialLockManager.lock_trial(reason=f"{trial_lock_reason_prefix}: {str(e)}")
+        raise ValueError(f"{trial_lock_reason_prefix}: {str(e)}") from e

@@ -3,7 +3,9 @@ from typing import Any, AsyncGenerator, Optional
 
 from fastapi import FastAPI
 from sqlalchemy import event
+from sqlalchemy.exc import DatabaseError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import Session
 
 
 class RelationalDatabaseManager:
@@ -114,6 +116,7 @@ def get_relational_db_lifespan(
 def get_primary_key(obj):
     try:
         from sqlalchemy import inspect
+
         mapper = inspect(obj).mapper
         pk_cols = mapper.primary_key
         if not pk_cols:
@@ -122,9 +125,6 @@ def get_primary_key(obj):
     except Exception:
         return "unknown"
 
-
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import DatabaseError
 
 @event.listens_for(Session, "before_flush")
 def centralized_before_flush(session: Session, flush_context, instances):
@@ -148,15 +148,13 @@ def centralized_before_flush(session: Session, flush_context, instances):
         QualityAuditLog = None
 
     from packages.security.context import (
+        current_change_reason,
         current_user_id,
         current_user_roles,
-        current_ip_address,
-        current_change_reason,
     )
 
     user_id = current_user_id.get()
     user_roles = current_user_roles.get()
-    ip_address = current_ip_address.get()
     change_reason = current_change_reason.get()
 
     audit_logs_to_add = []
@@ -166,20 +164,50 @@ def centralized_before_flush(session: Session, flush_context, instances):
         if not hasattr(obj, "__tablename__"):
             continue
         tbl = obj.__tablename__
-        if tbl in ("ctms_audit_logs", "tmf_audit_logs", "quality_audit_logs", "ctms_audit_ledger_seals", "tmf_audit_ledger_seals", "quality_audit_ledger_seals"):
-            raise DatabaseError("Deletion of AuditLog or LedgerSeal is strictly forbidden to comply with 21 CFR Part 11.", None, None)
-        elif (tbl.startswith("ctms_") or tbl.startswith("tmf_") or tbl.startswith("quality_")):
-            raise DatabaseError(f"Hard deletion of clinical model {obj.__class__.__name__} is forbidden. Use soft deletions.", None, None)
+        if tbl in (
+            "ctms_audit_logs",
+            "tmf_audit_logs",
+            "quality_audit_logs",
+            "ctms_audit_ledger_seals",
+            "tmf_audit_ledger_seals",
+            "quality_audit_ledger_seals",
+        ):
+            raise DatabaseError(
+                "Deletion of AuditLog or LedgerSeal is strictly forbidden to comply with 21 CFR Part 11.",
+                None,
+                None,
+            )
+        elif (
+            tbl.startswith("ctms_")
+            or tbl.startswith("tmf_")
+            or tbl.startswith("quality_")
+        ):
+            raise DatabaseError(
+                f"Hard deletion of clinical model {obj.__class__.__name__} is forbidden. Use soft deletions.",
+                None,
+                None,
+            )
 
     # 2. Audit insertions
     for obj in session.new:
         if not hasattr(obj, "__tablename__"):
             continue
         tbl = obj.__tablename__
-        if tbl in ("ctms_audit_logs", "tmf_audit_logs", "quality_audit_logs", "ctms_audit_ledger_seals", "tmf_audit_ledger_seals", "quality_audit_ledger_seals"):
+        if tbl in (
+            "ctms_audit_logs",
+            "tmf_audit_logs",
+            "quality_audit_logs",
+            "ctms_audit_ledger_seals",
+            "tmf_audit_ledger_seals",
+            "quality_audit_ledger_seals",
+        ):
             continue
 
-        if tbl.startswith("ctms_") or tbl.startswith("tmf_") or tbl.startswith("quality_"):
+        if (
+            tbl.startswith("ctms_")
+            or tbl.startswith("tmf_")
+            or tbl.startswith("quality_")
+        ):
             # Enforce user context and change justification
             obj_user_id = user_id
             if not obj_user_id or obj_user_id == "system":
@@ -187,14 +215,28 @@ def centralized_before_flush(session: Session, flush_context, instances):
                     obj_user_id = getattr(obj, "created_by")
 
             obj_change_reason = change_reason
-            if not obj_change_reason or obj_change_reason in ("system_operation", "default_reason", ""):
-                if hasattr(obj, "reason_for_change") and getattr(obj, "reason_for_change"):
+            if not obj_change_reason or obj_change_reason in (
+                "system_operation",
+                "default_reason",
+                "",
+            ):
+                if hasattr(obj, "reason_for_change") and getattr(
+                    obj, "reason_for_change"
+                ):
                     obj_change_reason = getattr(obj, "reason_for_change")
 
             if not obj_user_id:
-                raise ValueError("A valid user context is required to modify clinical trial models.")
-            if not obj_change_reason or obj_change_reason in ("system_operation", "default_reason", ""):
-                raise ValueError("A valid change justification is required to modify clinical trial models.")
+                raise ValueError(
+                    "A valid user context is required to modify clinical trial models."
+                )
+            if not obj_change_reason or obj_change_reason in (
+                "system_operation",
+                "default_reason",
+                "",
+            ):
+                raise ValueError(
+                    "A valid change justification is required to modify clinical trial models."
+                )
 
             pk = get_primary_key(obj)
             action = "INSERT"
@@ -237,11 +279,19 @@ def centralized_before_flush(session: Session, flush_context, instances):
         if not hasattr(obj, "__tablename__"):
             continue
         tbl = obj.__tablename__
-        if tbl in ("ctms_audit_logs", "tmf_audit_logs", "quality_audit_logs", "ctms_audit_ledger_seals", "tmf_audit_ledger_seals", "quality_audit_ledger_seals"):
+        if tbl in (
+            "ctms_audit_logs",
+            "tmf_audit_logs",
+            "quality_audit_logs",
+            "ctms_audit_ledger_seals",
+            "tmf_audit_ledger_seals",
+            "quality_audit_ledger_seals",
+        ):
             continue
 
         # If it's not actually modified, skip
         from sqlalchemy import inspect
+
         try:
             is_mod = session.is_modified(obj, include_collections=False)
         except Exception:
@@ -249,7 +299,11 @@ def centralized_before_flush(session: Session, flush_context, instances):
         if not is_mod:
             continue
 
-        if tbl.startswith("ctms_") or tbl.startswith("tmf_") or tbl.startswith("quality_"):
+        if (
+            tbl.startswith("ctms_")
+            or tbl.startswith("tmf_")
+            or tbl.startswith("quality_")
+        ):
             # Enforce user context and change justification
             obj_user_id = user_id
             if not obj_user_id or obj_user_id == "system":
@@ -257,18 +311,33 @@ def centralized_before_flush(session: Session, flush_context, instances):
                     obj_user_id = getattr(obj, "created_by")
 
             obj_change_reason = change_reason
-            if not obj_change_reason or obj_change_reason in ("system_operation", "default_reason", ""):
-                if hasattr(obj, "reason_for_change") and getattr(obj, "reason_for_change"):
+            if not obj_change_reason or obj_change_reason in (
+                "system_operation",
+                "default_reason",
+                "",
+            ):
+                if hasattr(obj, "reason_for_change") and getattr(
+                    obj, "reason_for_change"
+                ):
                     obj_change_reason = getattr(obj, "reason_for_change")
 
             if not obj_user_id:
-                raise ValueError("A valid user context is required to modify clinical trial models.")
-            if not obj_change_reason or obj_change_reason in ("system_operation", "default_reason", ""):
-                raise ValueError("A valid change justification is required to modify clinical trial models.")
+                raise ValueError(
+                    "A valid user context is required to modify clinical trial models."
+                )
+            if not obj_change_reason or obj_change_reason in (
+                "system_operation",
+                "default_reason",
+                "",
+            ):
+                raise ValueError(
+                    "A valid change justification is required to modify clinical trial models."
+                )
 
             # Increment version index automatically
             if hasattr(obj, "version_index"):
                 from sqlalchemy.orm.attributes import get_history
+
                 history_version = get_history(obj, "version_index")
                 if not history_version.has_changes():
                     obj.version_index += 1
@@ -283,13 +352,18 @@ def centralized_before_flush(session: Session, flush_context, instances):
             # Inspect modified columns
             changed_attrs = []
             from sqlalchemy.orm.attributes import get_history
+
             try:
                 insp = inspect(obj)
                 for attr in insp.mapper.column_attrs:
                     history = get_history(obj, attr.key)
                     if history.has_changes():
                         old_val = history.deleted[0] if history.deleted else None
-                        new_val = history.added[0] if history.added else getattr(obj, attr.key)
+                        new_val = (
+                            history.added[0]
+                            if history.added
+                            else getattr(obj, attr.key)
+                        )
                         if old_val != new_val:
                             changed_attrs.append(f"{attr.key}: {old_val} -> {new_val}")
             except Exception:
