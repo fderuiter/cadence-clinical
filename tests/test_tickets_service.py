@@ -489,7 +489,9 @@ async def test_tickets_rbac_auditor_cannot_mutate_but_can_read():
     client = TestClient(app)
 
     # 1. Auditor tries to create a ticket -> Expect 403 Forbidden
-    auditor_headers = get_auth_headers(roles="auditor", change_reason="Creating as auditor")
+    auditor_headers = get_auth_headers(
+        roles="auditor", change_reason="Creating as auditor"
+    )
     payload = {
         "title": "Auditor ticket",
         "description": "Should fail",
@@ -497,10 +499,15 @@ async def test_tickets_rbac_auditor_cannot_mutate_but_can_read():
     }
     res_create = client.post("/api/v1/tickets", json=payload, headers=auditor_headers)
     assert res_create.status_code == 403
-    assert "Auditor personas are restricted to read-only access" in res_create.json()["detail"]
+    assert (
+        "Auditor personas are restricted to read-only access"
+        in res_create.json()["detail"]
+    )
 
     # 2. Setup a ticket using admin role first
-    admin_headers = get_auth_headers(roles="admin", change_reason="Setting up for auditor read")
+    admin_headers = get_auth_headers(
+        roles="admin", change_reason="Setting up for auditor read"
+    )
     res_setup = client.post("/api/v1/tickets", json=payload, headers=admin_headers)
     assert res_setup.status_code == 201
     ticket_id = res_setup.json()["id"]
@@ -557,7 +564,10 @@ async def test_tickets_terminal_state_rejection():
         headers=headers,
     )
     assert res_fail_closed.status_code == 400
-    assert "Cannot update ticket because it is in terminal state" in res_fail_closed.json()["detail"]
+    assert (
+        "Cannot update ticket because it is in terminal state"
+        in res_fail_closed.json()["detail"]
+    )
 
 
 @pytest.mark.asyncio
@@ -571,7 +581,11 @@ async def test_tickets_get_by_reference():
     # 1. Create ticket
     res_create = client.post(
         "/api/v1/tickets",
-        json={"title": "Lookup by ref", "description": "Lookup description", "priority": "MEDIUM"},
+        json={
+            "title": "Lookup by ref",
+            "description": "Lookup description",
+            "priority": "MEDIUM",
+        },
         headers=headers,
     )
     assert res_create.status_code == 201
@@ -593,7 +607,9 @@ async def test_tickets_scope_aware_filtering():
     client = TestClient(app)
 
     # 1. Create tickets with different site scopes
-    admin_headers = get_auth_headers(roles="admin", change_reason="Create scope tickets")
+    admin_headers = get_auth_headers(
+        roles="admin", change_reason="Create scope tickets"
+    )
 
     # Ticket at Site A
     res_a = client.post(
@@ -618,7 +634,12 @@ async def test_tickets_scope_aware_filtering():
     timestamp = str(time.time())
     change_reason = "Querying CRC A"
     sig = generate_signature(
-        "crc_user", "crc", timestamp, version="2", change_reason=change_reason, site_id="SITE-A"
+        "crc_user",
+        "crc",
+        timestamp,
+        version="2",
+        change_reason=change_reason,
+        site_id="SITE-A",
     )
     crc_headers = {
         "X-User-Id": "crc_user",

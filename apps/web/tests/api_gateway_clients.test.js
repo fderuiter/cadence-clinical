@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { useAuthStore } from "../src/stores/auth";
-import { apiClient, ApiError } from "../src/api/apiClient";
+import { apiClient } from "../src/api/apiClient";
 import { designerService } from "../src/api/designer";
 import { executionService } from "../src/api/execution";
 import { etmfService } from "../src/api/etmf";
@@ -61,7 +61,8 @@ describe("Gateway API Clients and Service Modules Unit Tests", () => {
 
     it("should honor custom base URL from VITE_API_BASE_URL", async () => {
       if (import.meta.env) {
-        import.meta.env.VITE_API_BASE_URL = "https://my-secure-gateway.internal.com";
+        import.meta.env.VITE_API_BASE_URL =
+          "https://my-secure-gateway.internal.com";
       }
 
       mockFetch.mockResolvedValueOnce({
@@ -92,7 +93,9 @@ describe("Gateway API Clients and Service Modules Unit Tests", () => {
       await apiClient.get("/me");
 
       const [, options] = mockFetch.mock.calls[0];
-      expect(options.headers["Authorization"]).toBe("Bearer mock-keycloak-jwt-token");
+      expect(options.headers["Authorization"]).toBe(
+        "Bearer mock-keycloak-jwt-token"
+      );
     });
 
     it("should append X-Change-Reason for mutations when changeReason option is specified", async () => {
@@ -102,7 +105,11 @@ describe("Gateway API Clients and Service Modules Unit Tests", () => {
         json: async () => ({ id: "123" }),
       });
 
-      await apiClient.post("/api/v1/mutations", { name: "test" }, { changeReason: "Updating record" });
+      await apiClient.post(
+        "/api/v1/mutations",
+        { name: "test" },
+        { changeReason: "Updating record" }
+      );
 
       const [, options] = mockFetch.mock.calls[0];
       expect(options.headers["X-Change-Reason"]).toBe("Updating record");
@@ -112,7 +119,7 @@ describe("Gateway API Clients and Service Modules Unit Tests", () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => ([]),
+        json: async () => [],
       });
 
       await apiClient.get("/api/v1/data", { changeReason: "Get data" });
@@ -129,7 +136,9 @@ describe("Gateway API Clients and Service Modules Unit Tests", () => {
         json: async () => ({ detail: "IMMUTABILITY_VIOLATION" }),
       });
 
-      await expect(apiClient.post("/api/v1/mutate", {})).rejects.toThrow("IMMUTABILITY_VIOLATION");
+      await expect(apiClient.post("/api/v1/mutate", {})).rejects.toThrow(
+        "IMMUTABILITY_VIOLATION"
+      );
     });
   });
 
@@ -150,7 +159,10 @@ describe("Gateway API Clients and Service Modules Unit Tests", () => {
       await designerService.createStudyVersion("STUDY-01", { version: "v1" });
       expect(mockFetch).toHaveBeenLastCalledWith(
         "http://localhost:8000/api/v1/studies/STUDY-01/versions",
-        expect.objectContaining({ method: "POST", body: JSON.stringify({ version: "v1" }) })
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ version: "v1" }),
+        })
       );
 
       await designerService.getRules("STUDY-01");
@@ -181,7 +193,9 @@ describe("Gateway API Clients and Service Modules Unit Tests", () => {
         expect.objectContaining({ method: "POST" })
       );
 
-      await executionService.consentSubject("SUB-01", { protocol_version: "1.0" });
+      await executionService.consentSubject("SUB-01", {
+        protocol_version: "1.0",
+      });
       expect(mockFetch).toHaveBeenLastCalledWith(
         "http://localhost:8000/api/v1/execution/subjects/SUB-01/consent",
         expect.objectContaining({ method: "POST" })

@@ -1,5 +1,6 @@
 import os
 from typing import Optional
+
 import httpx
 
 
@@ -8,9 +9,15 @@ class SafetyDatabaseAdapter:
     Adapter for communicating with external Safety databases / Pharmacovigilance gateways.
     Highly configurable and mockable for clean GxP testability.
     """
-    def __init__(self, endpoint_url: Optional[str] = None, client: Optional[httpx.AsyncClient] = None):
+
+    def __init__(
+        self,
+        endpoint_url: Optional[str] = None,
+        client: Optional[httpx.AsyncClient] = None,
+    ):
         self.endpoint_url = endpoint_url or os.getenv(
-            "SAFETY_DB_TRANSMISSION_ENDPOINT", "http://localhost:8006/api/v1/safety/transmit-mock"
+            "SAFETY_DB_TRANSMISSION_ENDPOINT",
+            "http://localhost:8006/api/v1/safety/transmit-mock",
         )
         self.client = client
 
