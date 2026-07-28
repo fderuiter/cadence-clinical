@@ -6,8 +6,8 @@
 ## 1. Traceability Summary
 
 - **Total Documented Requirements:** 56
-- **Total Mapped to Automated Tests:** 33
-- **Traceability Coverage:** 58.9%
+- **Total Mapped to Automated Tests:** 34
+- **Traceability Coverage:** 60.7%
 - **SRS Requirements Mapped:** 8 of 11 (72.7%)
 
 ⚠️ **WARNING:** SRS coverage is below 100%. GxP validation requires 100% of functional requirements defined in the SRS to map to automated test cases.
