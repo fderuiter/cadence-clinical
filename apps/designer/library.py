@@ -28,9 +28,21 @@ class LibraryStatus(str, Enum):
     """Standard status levels for Global Library objects."""
 
     DRAFT = "DRAFT"
+    IN_REVIEW = "IN_REVIEW"
     APPROVED = "APPROVED"
+    PUBLISHED = "PUBLISHED"
     ARCHIVED = "ARCHIVED"
     REJECTED = "REJECTED"
+
+
+# GxP governance allowed status transition map
+ALLOWED_LIBRARY_TRANSITIONS = {
+    LibraryStatus.DRAFT: {LibraryStatus.IN_REVIEW},
+    LibraryStatus.IN_REVIEW: {LibraryStatus.APPROVED, LibraryStatus.REJECTED},
+    LibraryStatus.APPROVED: {LibraryStatus.PUBLISHED},
+    LibraryStatus.PUBLISHED: {LibraryStatus.ARCHIVED},
+    LibraryStatus.REJECTED: {LibraryStatus.DRAFT},
+}
 
 
 # ==========================================
@@ -257,6 +269,22 @@ UpdateLibraryObjectRequest = Annotated[
 ]
 
 
+class LibraryObjectTransitionRequest(BaseModel):
+    """Request model for transitioning library object lifecycle status."""
+
+    status: LibraryStatus = Field(
+        ..., description="Target status level for transition."
+    )
+    change_reason: str = Field(
+        ..., description="Mandatory reason for change / audit trail justification."
+    )
+
+    @field_validator("change_reason")
+    @classmethod
+    def validate_change_reason_non_empty(cls, v: str) -> str:
+        return validate_non_empty_string(v)
+
+
 # ==========================================
 # Response / Output Models
 # ==========================================
@@ -280,6 +308,9 @@ class LibraryObjectBase(BaseModel):
     updated_by: Optional[str] = Field(None, description="User ID of last updater.")
     reason_for_change: Optional[str] = Field(
         None, description="Detailed explanation of changes applied."
+    )
+    prior_status: Optional[str] = Field(
+        None, description="Previous status before transition."
     )
 
 

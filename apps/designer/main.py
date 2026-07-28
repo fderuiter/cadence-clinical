@@ -68,8 +68,11 @@ from apps.designer.delta import (
 )
 from apps.designer.evs_client import NCIEVSClient
 from apps.designer.library import (
+    ALLOWED_LIBRARY_TRANSITIONS,
     CreateLibraryObjectRequest,
     LibraryObjectDetail,
+    LibraryObjectTransitionRequest,
+    LibraryStatus,
     ObjectType,
     UpdateLibraryObjectRequest,
 )
@@ -93,6 +96,7 @@ from apps.designer.validator import (
     validate_study_terminology,
 )
 from apps.designer.xml_mapping import validate_mapping_csv
+from packages.security import get_normalized_roles, ROLE_ALIASES
 from packages.security.middleware import GatewayAuthMiddleware
 
 
@@ -1114,6 +1118,7 @@ def map_db_to_library_detail(record: Dict[str, Any]) -> LibraryObjectDetail:
         "reason_for_change": reason,
         "object_type": record.get("object_type"),
         "payload": record.get("payload"),
+        "prior_status": record.get("prior_status"),
     }
 
     return TypeAdapter(LibraryObjectDetail).validate_python(model_data)
@@ -1595,7 +1600,7 @@ async def amend_library_object_endpoint(
 
     try:
         record = await create_library_object_version(
-            driver, id, properties, is_amendment=True
+            driver, id, properties, is_amendment=True, bypass_immutability=True
         )
         return map_db_to_library_detail(record)
     except ImmutabilityViolationError:
@@ -1641,6 +1646,125 @@ async def get_library_object_history_endpoint(
         )
 
     return [map_db_to_library_detail(r) for r in records]
+
+
+@app.post(
+    "/api/v1/mdr/library/{id}/transition",
+    response_model=LibraryObjectDetail,
+)
+async def transition_library_object_endpoint(
+    id: str,
+    payload: LibraryObjectTransitionRequest,
+    request: Request,
+) -> LibraryObjectDetail:
+    """
+    Transitions the lifecycle status of a global library object.
+    Enforces a strict role-gated ALLOWED_LIBRARY_TRANSITIONS map.
+    """
+    driver = await get_neo4j_driver(request)
+
+    # 1. Extract identity and sponsor scope
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = payload.change_reason
+
+    if not change_reason or not change_reason.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing change justification reason",
+        )
+
+    sponsor_id = getattr(request.state, "sponsor_id", None) or request.headers.get(
+        "X-Sponsor-Id"
+    )
+    if not sponsor_id or not isinstance(sponsor_id, str) or not sponsor_id.strip():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Missing authenticated sponsor scope",
+        )
+    sponsor_id = sponsor_id.strip()
+
+    # 2. Verify object exists and is owned by the sponsor
+    latest = await get_latest_library_object(driver, id, sponsor_id)
+    if not latest:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Library object {id} not found under sponsor {sponsor_id}.",
+        )
+
+    current_status_str = latest.get("status") or "DRAFT"
+    try:
+        current_status = LibraryStatus(current_status_str)
+    except ValueError:
+        current_status = LibraryStatus.DRAFT
+
+    target_status = payload.status
+    allowed_next = ALLOWED_LIBRARY_TRANSITIONS.get(current_status, set())
+    if target_status not in allowed_next:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid transition from {current_status.value} to {target_status.value}.",
+        )
+
+    # 3. Check role requirements per transition using normalized roles
+    raw_roles = get_normalized_roles(request)
+    roles = []
+    for r in raw_roles:
+        norm_r = r.strip().lower()
+        if norm_r in ("sponsor admin", "sponsor_admin"):
+            roles.append("sponsor_admin")
+        else:
+            roles.append(ROLE_ALIASES.get(norm_r, norm_r))
+
+    if not roles:
+        raise HTTPException(status_code=403, detail="Missing role credentials.")
+
+    # Rules for each target transition status:
+    required_roles_map = {
+        LibraryStatus.IN_REVIEW: {"sponsor_designer", "sponsor_dm", "sponsor_admin", "sysadmin"},
+        LibraryStatus.APPROVED: {"sponsor_dm", "sponsor_admin", "sysadmin"},
+        LibraryStatus.REJECTED: {"sponsor_dm", "sponsor_admin", "sysadmin"},
+        LibraryStatus.PUBLISHED: {"sponsor_dm", "sponsor_admin", "sysadmin"},
+        LibraryStatus.ARCHIVED: {"sponsor_admin", "sysadmin"},
+        LibraryStatus.DRAFT: {"sponsor_designer", "sponsor_dm", "sponsor_admin", "sysadmin"},
+    }
+
+    allowed_roles = required_roles_map.get(target_status, set())
+    if not any(role in allowed_roles for role in roles):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User role is not authorized for this action.",
+        )
+
+    # 4. Save new version capturing transition metadata
+    properties = {
+        "object_type": latest.get("object_type"),
+        "sponsor_id": sponsor_id,
+        "tenant_id": latest.get("tenant_id", "tenant_default"),
+        "status": target_status.value,
+        "prior_status": current_status.value,
+        "created_at": latest.get("created_at") or datetime.now().isoformat(),
+        "created_by": latest.get("created_by") or user_id,
+        "updated_at": datetime.now().isoformat(),
+        "updated_by": user_id,
+        "reason_for_change": change_reason,
+        "payload": latest.get("payload") or {},
+    }
+
+    try:
+        record = await create_library_object_version(
+            driver, id, properties, is_amendment=True
+        )
+        return map_db_to_library_detail(record)
+    except ImmutabilityViolationError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="IMMUTABILITY_VIOLATION",
+        )
+    except ConcurrentLockingError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="CONCURRENT_LOCKING_CONFLICT",
+        )
 
 
 # ==========================================

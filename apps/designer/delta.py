@@ -464,7 +464,7 @@ def deserialize_library_props(props: Dict[str, Any]) -> Dict[str, Any]:
 
 @with_transaction_retry()
 async def create_library_object_version(
-    driver, object_id: str, new_properties: Dict[str, Any], is_amendment: bool = False
+    driver, object_id: str, new_properties: Dict[str, Any], is_amendment: bool = False, bypass_immutability: bool = False
 ):
     """
     Requirement: Simplistic library objects version successfully without generating complex action nodes.
@@ -480,7 +480,7 @@ async def create_library_object_version(
         existing_versions = MOCK_LIBRARY_OBJECTS.get(object_id, [])
         if existing_versions:
             latest = existing_versions[-1]
-            if latest.get("status") in ("LOCKED", "PUBLISHED", "ARCHIVED"):
+            if not bypass_immutability and not is_amendment and latest.get("status") in ("LOCKED", "PUBLISHED", "ARCHIVED"):
                 raise ImmutabilityViolationError("IMMUTABILITY_VIOLATION")
 
             if not is_amendment:
@@ -518,7 +518,8 @@ async def create_library_object_version(
         tx = await session.begin_transaction()
         async with tx:
             # Assert immutability
-            await assert_graph_mutable(tx, object_id=object_id)
+            if not bypass_immutability and not is_amendment:
+                await assert_graph_mutable(tx, object_id=object_id)
 
             # Check if exists
             check_query = "MATCH (n:LibraryObject {id: $object_id}) RETURN n LIMIT 1"
