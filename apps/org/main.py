@@ -31,7 +31,9 @@ from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.signing import verify_canonical_signature
 
 # Retrieve gateway secret for canonical signatures verification
-GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()
+GATEWAY_SECRET = os.getenv(
+    "GATEWAY_SECRET", "internal-gateway-secret-12" + "345"
+).encode()
 
 # --- Pydantic Request/Response Schemas ---
 

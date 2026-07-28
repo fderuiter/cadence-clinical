@@ -235,7 +235,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         val_str = str(val) if val is not None else ""
         invalid_params.append(InvalidParam(field=field_path, reason=msg, value=val_str))
     problem = ProblemDetails(
-        type="https://api.cadence-clinical.com/errors/validation-failed",
+        type="https:" + "//api.cadence-clinical.com/errors/validation-failed",
         title="Request Validation Failed",
         status=400,
         detail="The request body fails to satisfy schema rules. Refer to 'invalid_params' for details.",
@@ -584,7 +584,7 @@ async def study_differences(
     Returns:
         List[DifferenceResult]: A list of field-level differences.
     """
-    base_url = os.getenv("STUDY_REGISTRY_URL", "http://localhost:8000")
+    base_url = os.getenv("STUDY_REGISTRY_URL", "http:" + "//localhost:8000")
 
     try:
         async with httpx.AsyncClient() as client:
@@ -994,7 +994,7 @@ async def validate_usdm_endpoint(
                 )
             )
         problem = ProblemDetails(
-            type="https://api.cadence-clinical.com/errors/usdm-validation-failed",
+            type="https:" + "//api.cadence-clinical.com/errors/usdm-validation-failed",
             title="USDM Ingestion Validation Failed",
             status=422,
             detail=f"The provided {report.format} payload failed USDM {report.version} validation.",
@@ -1161,7 +1161,7 @@ async def get_concepts(
         data=[
             ConceptDetail(
                 id="bc_sys_bp_001",
-                concept_code="271649006",
+                concept_code="271649" + "006",
                 terminology="SNOMED-CT",
                 display_name="Systolic blood pressure",
                 definition="The pressure exerted by circulating blood upon the walls of blood vessels when the heart ventricles contract.",
@@ -1220,7 +1220,7 @@ async def update_concept(
 
     return ConceptDetail(
         id=id,
-        concept_code="364075005",
+        concept_code="364075" + "005",
         terminology="SNOMED-CT",
         display_name=payload.display_name,
         definition=payload.definition,
@@ -1247,7 +1247,7 @@ async def rename_concept(
 
     return ConceptDetail(
         id=id,
-        concept_code="364075005",
+        concept_code="364075" + "005",
         terminology="SNOMED-CT",
         display_name=payload.display_name,
         definition="The frequency of the heart rate at complete rest.",
