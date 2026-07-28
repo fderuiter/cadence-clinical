@@ -51,6 +51,24 @@ class TicketStatus(str, Enum):
     IN_PROGRESS = "IN_PROGRESS"
     RESOLVED = "RESOLVED"
     CLOSED = "CLOSED"
+    REOPENED = "REOPENED"
+    CANCELLED = "CANCELLED"
+
+
+# Valid state transitions for TicketStatus
+TICKET_TRANSITIONS = {
+    TicketStatus.OPEN: {TicketStatus.IN_PROGRESS, TicketStatus.RESOLVED, TicketStatus.CANCELLED, TicketStatus.CLOSED},
+    TicketStatus.IN_PROGRESS: {TicketStatus.RESOLVED, TicketStatus.CANCELLED, TicketStatus.OPEN},
+    TicketStatus.RESOLVED: {TicketStatus.CLOSED, TicketStatus.REOPENED, TicketStatus.IN_PROGRESS},
+    TicketStatus.CLOSED: {TicketStatus.REOPENED},
+    TicketStatus.REOPENED: {TicketStatus.IN_PROGRESS, TicketStatus.RESOLVED, TicketStatus.CANCELLED},
+    TicketStatus.CANCELLED: {TicketStatus.REOPENED},
+}
+
+# Explicit lifecycle rule categories
+TERMINAL_STATES = {TicketStatus.CLOSED, TicketStatus.CANCELLED}
+CANCELLABLE_STATES = {TicketStatus.OPEN, TicketStatus.IN_PROGRESS, TicketStatus.RESOLVED, TicketStatus.REOPENED}
+REOPENABLE_STATES = {TicketStatus.CLOSED, TicketStatus.CANCELLED}
 
 
 class Ticket(Base):

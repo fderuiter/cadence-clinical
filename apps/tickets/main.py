@@ -21,6 +21,10 @@ from apps.tickets.models import (
     TicketComment,
     TicketPriority,
     TicketStatus,
+    TICKET_TRANSITIONS,
+    TERMINAL_STATES,
+    CANCELLABLE_STATES,
+    REOPENABLE_STATES,
 )
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
@@ -79,6 +83,26 @@ class TicketUpdate(BaseModel):
     )
     due_date: Optional[datetime] = Field(None, description="Updated due date")
     is_deleted: Optional[bool] = Field(None, description="Soft delete state")
+    version_index: Optional[int] = Field(None, description="Expected version index for optimistic locking")
+
+
+class TicketAssignPayload(BaseModel):
+    """
+    Pydantic schema for assigning a support ticket.
+    """
+
+    assignee_user: Optional[str] = Field(None, description="Username of the assignee")
+    assignee_role: Optional[str] = Field(None, description="Role-based routing target")
+    version_index: int = Field(..., description="Expected version index for optimistic locking")
+
+
+class TicketTransitionPayload(BaseModel):
+    """
+    Pydantic schema for transitioning support ticket lifecycle status.
+    """
+
+    status: TicketStatus = Field(..., description="Target status for the lifecycle transition")
+    version_index: int = Field(..., description="Expected version index for optimistic locking")
 
 
 class TicketResponse(BaseModel):
@@ -272,6 +296,39 @@ async def get_next_ticket_reference(session: AsyncSession) -> str:
 
 # Global lock to serialize reference generation and ticket insertion safely under concurrent creates.
 TICKET_CREATION_LOCK = asyncio.Lock()
+
+
+def check_optimistic_locking(ticket: Ticket, payload_version: Optional[int], request: Request) -> None:
+    """
+    Verifies that the requested mutation specifies a matching expected version index.
+    Raises HTTP 409 Conflict if missing or mismatched.
+    """
+    expected_version = payload_version
+    if expected_version is None:
+        q_val = request.query_params.get("version_index") or request.query_params.get("expected_version")
+        if q_val:
+            try:
+                expected_version = int(q_val)
+            except ValueError:
+                pass
+    if expected_version is None:
+        h_val = request.headers.get("If-Match") or request.headers.get("X-Expected-Version")
+        if h_val:
+            try:
+                expected_version = int(h_val)
+            except ValueError:
+                pass
+
+    if expected_version is None:
+        raise HTTPException(
+            status_code=409,
+            detail="Missing expected version index for optimistic locking.",
+        )
+    if ticket.version_index != expected_version:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Stale version index. Expected {expected_version}, but database version is {ticket.version_index}.",
+        )
 
 
 # Tickets Endpoints
@@ -516,7 +573,7 @@ async def update_ticket(
     session: AsyncSession = Depends(get_db_session),
 ) -> TicketResponse:
     """
-    Update a specific ticket record by its ID or reference.
+    Update a specific ticket record by its ID or reference with optimistic locking and transitions.
     """
     user_id = principal.user_id
     change_reason = principal.change_reason
@@ -526,7 +583,7 @@ async def update_ticket(
             status_code=403, detail="Missing change justification reason"
         )
 
-    stmt = select(Ticket).where((Ticket.id == id) | (Ticket.reference == id))
+    stmt = select(Ticket).where((Ticket.id == id) | (Ticket.reference == id)).with_for_update()
     result = await session.execute(stmt)
     ticket = result.scalars().first()
 
@@ -542,15 +599,49 @@ async def update_ticket(
             detail="Forbidden: Insufficient scope access for this site.",
         )
 
-    # Reject updates to terminal tickets and return stable API error responses
-    if ticket.status == TicketStatus.CLOSED:
+    # Check optimistic locking
+    check_optimistic_locking(ticket, payload.version_index, request)
+
+    # Reject updates to terminal tickets unless explicitly transitioning to REOPENED
+    is_reopening = (payload.status == TicketStatus.REOPENED)
+    if ticket.status in TERMINAL_STATES and not is_reopening:
         raise HTTPException(
             status_code=400,
-            detail=f"Cannot update ticket because it is in terminal state '{ticket.status}'.",
+            detail=f"Cannot update ticket because it is in terminal state '{ticket.status}'. Only reopening is allowed.",
         )
 
-    # Apply updates for explicitly defined fields in TicketUpdate payload
+    # Validate status transition if provided
+    current_status = ticket.status
+    target_status = payload.status if payload.status is not None else ticket.status
+    if current_status != target_status:
+        if target_status not in TICKET_TRANSITIONS.get(current_status, set()):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid transition from {current_status} to {target_status}.",
+            )
+
+    # Track audit details
+    assignment_changes = []
+    if payload.assignee_user is not None and payload.assignee_user != ticket.assignee_user:
+        assignment_changes.append(f"assignee_user: '{ticket.assignee_user}' -> '{payload.assignee_user}'")
+    if payload.assignee_role is not None and payload.assignee_role != ticket.assignee_role:
+        assignment_changes.append(f"assignee_role: '{ticket.assignee_role}' -> '{payload.assignee_role}'")
+
+    assignment_str = "; ".join(assignment_changes) if assignment_changes else "No assignment changes"
+    actor_roles = ", ".join(principal.roles)
+    audit_details = (
+        f"Actor: {user_id}, Roles: [{actor_roles}]. "
+        f"Source State: '{current_status.value if hasattr(current_status, 'value') else current_status}', "
+        f"Target State: '{target_status.value if hasattr(target_status, 'value') else target_status}'. "
+        f"Assignment Changes: '{assignment_str}'. "
+        f"Reason: {change_reason}."
+    )
+
+    # Apply updates for explicitly defined fields in TicketUpdate payload (excluding version_index)
     update_data = payload.model_dump(exclude_unset=True)
+    if "version_index" in update_data:
+        del update_data["version_index"]
+
     for key, val in update_data.items():
         setattr(ticket, key, val)
 
@@ -560,11 +651,185 @@ async def update_ticket(
 
     await session.flush()
 
+    # Log update in TicketAuditLog
     await write_ticket_audit_log(
         session=session,
         user_id=user_id,
         action="TICKET_UPDATE",
-        details=f"Updated ticket ID/reference: {id}. Version index incremented to {ticket.version_index}.",
+        details=audit_details,
+        record_id=ticket.id,
+        ticket_id=ticket.id,
+        change_reason=change_reason,
+        version_index=ticket.version_index,
+    )
+
+    return map_ticket_to_response(ticket)
+
+
+@app.post("/api/v1/tickets/{id}/transition", response_model=TicketResponse)
+async def transition_ticket(
+    request: Request,
+    id: str,
+    payload: TicketTransitionPayload,
+    principal: Principal = Depends(get_principal),
+    _not_auditor=Depends(verify_not_auditor),
+    session: AsyncSession = Depends(get_db_session),
+) -> TicketResponse:
+    """
+    Transition a ticket's status explicitly with optimistic locking and transitions check.
+    """
+    user_id = principal.user_id
+    change_reason = principal.change_reason
+
+    if not change_reason:
+        raise HTTPException(
+            status_code=403, detail="Missing change justification reason"
+        )
+
+    stmt = select(Ticket).where((Ticket.id == id) | (Ticket.reference == id)).with_for_update()
+    result = await session.execute(stmt)
+    ticket = result.scalars().first()
+
+    if not ticket:
+        raise HTTPException(
+            status_code=404, detail=f"Ticket with ID/reference '{id}' not found."
+        )
+
+    # Validate scope access before making edits
+    if ticket.site_id and not can_access_site(principal, ticket.site_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Insufficient scope access for this site.",
+        )
+
+    # Check optimistic locking
+    check_optimistic_locking(ticket, payload.version_index, request)
+
+    # Check transition validity
+    current_status = ticket.status
+    target_status = payload.status
+
+    if current_status != target_status:
+        if target_status not in TICKET_TRANSITIONS.get(current_status, set()):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid transition from {current_status} to {target_status}.",
+            )
+
+    # Record details for auditing before we modify the model
+    actor_roles = ", ".join(principal.roles)
+    audit_details = (
+        f"Actor: {user_id}, Roles: [{actor_roles}]. "
+        f"Source State: '{current_status.value if hasattr(current_status, 'value') else current_status}', "
+        f"Target State: '{target_status.value if hasattr(target_status, 'value') else target_status}'. "
+        f"Assignment Changes: 'No assignment changes'. "
+        f"Reason: {change_reason}."
+    )
+
+    # Apply transition
+    ticket.status = target_status
+    ticket.version_index += 1
+    ticket.reason_for_change = change_reason
+    ticket.created_by = user_id
+
+    await session.flush()
+
+    # Log transition in TicketAuditLog
+    await write_ticket_audit_log(
+        session=session,
+        user_id=user_id,
+        action="TICKET_TRANSITION",
+        details=audit_details,
+        record_id=ticket.id,
+        ticket_id=ticket.id,
+        change_reason=change_reason,
+        version_index=ticket.version_index,
+    )
+
+    return map_ticket_to_response(ticket)
+
+
+@app.post("/api/v1/tickets/{id}/assign", response_model=TicketResponse)
+async def assign_ticket(
+    request: Request,
+    id: str,
+    payload: TicketAssignPayload,
+    principal: Principal = Depends(get_principal),
+    _not_auditor=Depends(verify_not_auditor),
+    session: AsyncSession = Depends(get_db_session),
+) -> TicketResponse:
+    """
+    Assign a support ticket to an individual user and/or role-based routing target explicitly.
+    """
+    user_id = principal.user_id
+    change_reason = principal.change_reason
+
+    if not change_reason:
+        raise HTTPException(
+            status_code=403, detail="Missing change justification reason"
+        )
+
+    stmt = select(Ticket).where((Ticket.id == id) | (Ticket.reference == id)).with_for_update()
+    result = await session.execute(stmt)
+    ticket = result.scalars().first()
+
+    if not ticket:
+        raise HTTPException(
+            status_code=404, detail=f"Ticket with ID/reference '{id}' not found."
+        )
+
+    # Validate scope access before making edits
+    if ticket.site_id and not can_access_site(principal, ticket.site_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Insufficient scope access for this site.",
+        )
+
+    # Check optimistic locking
+    check_optimistic_locking(ticket, payload.version_index, request)
+
+    # Reject updates to terminal tickets unless reopening
+    if ticket.status in TERMINAL_STATES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot update ticket because it is in terminal state '{ticket.status}'.",
+        )
+
+    # Record details for auditing before we modify the model
+    assignment_changes = []
+    if payload.assignee_user is not None and payload.assignee_user != ticket.assignee_user:
+        assignment_changes.append(f"assignee_user: '{ticket.assignee_user}' -> '{payload.assignee_user}'")
+    if payload.assignee_role is not None and payload.assignee_role != ticket.assignee_role:
+        assignment_changes.append(f"assignee_role: '{ticket.assignee_role}' -> '{payload.assignee_role}'")
+
+    assignment_str = "; ".join(assignment_changes) if assignment_changes else "No assignment changes"
+    actor_roles = ", ".join(principal.roles)
+    status_val = ticket.status.value if hasattr(ticket.status, "value") else ticket.status
+    audit_details = (
+        f"Actor: {user_id}, Roles: [{actor_roles}]. "
+        f"Source State: '{status_val}', Target State: '{status_val}'. "
+        f"Assignment Changes: '{assignment_str}'. "
+        f"Reason: {change_reason}."
+    )
+
+    # Apply assignment
+    if payload.assignee_user is not None:
+        ticket.assignee_user = payload.assignee_user
+    if payload.assignee_role is not None:
+        ticket.assignee_role = payload.assignee_role
+
+    ticket.version_index += 1
+    ticket.reason_for_change = change_reason
+    ticket.created_by = user_id
+
+    await session.flush()
+
+    # Log assignment in TicketAuditLog
+    await write_ticket_audit_log(
+        session=session,
+        user_id=user_id,
+        action="TICKET_ASSIGN",
+        details=audit_details,
         record_id=ticket.id,
         ticket_id=ticket.id,
         change_reason=change_reason,
