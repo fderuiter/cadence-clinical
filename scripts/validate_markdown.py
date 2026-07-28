@@ -252,7 +252,7 @@ def resolve_path(path_str, md_file_path, repo_root, root_dirs, root_files):
                 "/proc/",
                 "/sys/",
                 "/var/",
-                "/tmp/",
+                "/tmp/",  # nosec B108
             )
         ):
             if path_str.startswith("/app/"):
