@@ -27,3 +27,5 @@ Downstream services will use lightweight middleware to quickly verify the HMAC s
 - **Positive:** Security is enhanced as centralized edge protection prevents unauthorized access. The HMAC signature prevents spoofing of identity headers even if an attacker manages to route directly to a downstream service.
 - **Negative:** Both the gateway and all downstream services must securely share and manage the `GATEWAY_SECRET`.
 - **Negative:** Any changes to the header propagation format (`X-User-Id`, `X-User-Roles`) must be synchronized across the gateway and all consuming microservices.
+
+This decision implements requirements under Trace-8.

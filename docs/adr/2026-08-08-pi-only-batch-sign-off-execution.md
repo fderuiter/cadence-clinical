@@ -10,6 +10,8 @@
 ## 1. Context & Problem Statement
 In clinical trials, the Principal Investigator (PI) needs a deliberate, single re-authentication and signature action to approve eligible, completed form submissions in bulk. However, to comply with 21 CFR Part 11, each approved form submission must maintain its own independent, distinct signature manifest containing unique record binding and version hashes.
 
+This decision implements requirements under Trace-7.
+
 ## 2. Decision Drivers & Constraints
 * **GxP/21 CFR Part 11 Compliance:** Immutable per-record electronic signatures, user identity verification, and re-authentication token validation.
 * **Database Consistency & Atomicity:** Guaranteeing that the entire batch sign-off succeeds or rolls back in its entirety (no partial approvals on error).

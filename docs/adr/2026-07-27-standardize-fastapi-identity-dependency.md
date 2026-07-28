@@ -10,6 +10,8 @@
 ## 1. Context & Problem Statement
 Inconsistent user identity extraction and role synonym normalization across the clinical microservices introduced security verification gaps and bypassed auditing compliance (21 CFR Part 11). For site-scoped clinical users, there was also a risk of cross-site access attempts violating tenant-isolation policies.
 
+This decision implements requirements under Trace-8.
+
 ## 2. Decision Drivers & Constraints
 * **Driver 1:** 21 CFR Part 11 auditing compliance requires a traceable audit log for write operations.
 * **Driver 2:** Strict site-isolation tenancy model.

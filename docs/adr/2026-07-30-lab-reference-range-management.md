@@ -11,6 +11,8 @@
 
 Clinical trials require rigorous tracking and verification of laboratory test results against predefined reference ranges. To support this requirement, the Cadence Clinical platform needs a durable and audited data persistence model for lab reference ranges, alongside safe and deployable schema evolution for existing clinical databases.
 
+This decision implements requirements under Trace-1.
+
 ## 2. Decision Drivers & Constraints
 
 * **Driver 1 (Compliance & Traceability):** GxP standards and FDA 21 CFR Part 11 require full audit logs and version index tracking for all mutations on clinical trial parameter structures.

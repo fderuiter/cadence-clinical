@@ -10,6 +10,8 @@
 ## 1. Context & Problem Statement
 Historically, clinical data captured during clinical trials has been manually mapped to CDISC SDTM (Study Data Tabulation Model) formats near database lock. This introduces significant delays and human error. To automate this pipeline, the Cadence Clinical platform implements an automated EDC-to-SDTM mapper and structural validator. These components require a shared, strongly-typed foundation defining CDISC SDTM domains, variables, controlled terminology, and GxP compliant audit metadata.
 
+This decision implements requirements under PRD-MDR-001.
+
 ## 2. Decision Drivers & Constraints
 * **Driver 1:** Enforce type safety, structure, and validation rules for core SDTM domains (DM, AE, VS, LB, CM) and supplemental qualifiers (SUPPQUAL) using Pydantic v2.
 * **Driver 2:** Strict compliance with GxP and FDA 21 CFR Part 11 auditing requirements. All data mutations must carry explicit audit fields: `created_at`, `created_by`, `reason_for_change`, and `version_index`.

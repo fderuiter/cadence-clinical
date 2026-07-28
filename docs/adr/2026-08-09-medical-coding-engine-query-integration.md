@@ -14,6 +14,8 @@ When matching uncodable verbatim clinical terms (e.g. adverse events, concomitan
 3. Manual coding actions (like accept or override) must resolve and close the original system coding queries.
 4. Conversely, resolving or cancelling a system query from the EDC side must return the coding assignment back to the coding review loop.
 
+This decision implements requirements under PRD-QRY-001.
+
 ## 2. Decision Drivers & Constraints
 * **GxP & 21 CFR Part 11 Compliance:** All mutations must be captured in the audit history.
 * **Security & Privacy (HIPAA/GDPR):** Query content must identify the uncodable field and verbatim context without leaking subject demographics or PII.

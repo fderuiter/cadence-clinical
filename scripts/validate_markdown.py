@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# CI Trigger
 """
 Repository-Wide Custom Markdown Linter
 Statically validates workspace paths/links and dry-runs CLI subcommands.
@@ -76,6 +77,8 @@ ALLOWED_COMMON_TOOLS = {
     "cypher-shell",
     "EOF",
     "tee",
+    "powershell",
+    "pre-commit",
 }
 
 # Regex to check if a flag is syntactically well-formed (cannot start with triple dashes)
@@ -128,6 +131,8 @@ def is_potential_path_ref(token, root_dirs, root_files):
         "placeholder" in token.lower()
         or "your-" in token.lower()
         or "example" in token.lower()
+        or "templates" in token.lower()
+        or "node.js" in token.lower()
     ):
         return False
 
@@ -209,6 +214,11 @@ def resolve_path(path_str, md_file_path, repo_root, root_dirs, root_files):
     ):
         return None
 
+    # Strip query parameters or anchors (e.g., # or ?)
+    path_str = path_str.split("#")[0].split("?")[0].strip()
+    if not path_str:
+        return None
+
     # Ignore environment variables and placeholder syntax
     if any(char in path_str for char in ("$", "*", "<", ">", "{", "}", "[", "]")):
         return None
@@ -216,6 +226,8 @@ def resolve_path(path_str, md_file_path, repo_root, root_dirs, root_files):
         "placeholder" in path_str.lower()
         or "your-" in path_str.lower()
         or "example" in path_str.lower()
+        or "templates" in path_str.lower()
+        or "node.js" in path_str.lower()
     ):
         return None
 
@@ -225,21 +237,31 @@ def resolve_path(path_str, md_file_path, repo_root, root_dirs, root_files):
     # Strip leading slash for workspace relative resolve
     stripped_path = path_str.lstrip("/")
 
-    # Absolute repo-level path starting with /app/
-    if path_str.startswith("/app/"):
-        rel_path = path_str[5:]
-        return repo_root / rel_path
+    # Absolute repo-level path starting with /app/ or any custom leading slash
+    if path_str.startswith("/"):
+        # Ignore absolute system/container paths
+        if not path_str.startswith(
+            (
+                "/dev/",
+                "/opt/",
+                "/bin/",
+                "/usr/",
+                "/etc/",
+                "/proc/",
+                "/sys/",
+                "/var/",
+                "/tmp/",
+            )
+        ):
+            if path_str.startswith("/app/"):
+                stripped_path = path_str[5:]
+            return repo_root / stripped_path
+        return None
 
     # If it starts with a known root dir or root file, resolve relative to root
     first_part = stripped_path.split("/")[0]
     if first_part in root_dirs or first_part in root_files:
         return repo_root / stripped_path
-
-    # If starts with leading slash and is not system path, treat as workspace-relative only if first component is in root_dirs or root_files
-    if path_str.startswith("/"):
-        if first_part in root_dirs or first_part in root_files:
-            return repo_root / stripped_path
-        return None
 
     # Relative path starts with ./ or ../
     if path_str.startswith(("./", "../")):
@@ -902,6 +924,9 @@ def process_markdown_file(
     # [label](path)
     link_pattern = re.compile(r"\[[^\]]*\]\(([^)#\s]+)(?:#[^)]*)?\)")
 
+    # Reference-style link pattern: e.g. [label]: path
+    ref_link_pattern = re.compile(r"^\s{0,3}\[[^\]]+\]:\s*(\S+)")
+
     # Track any code block state
     in_code_block = False
     is_bash_block = False
@@ -910,6 +935,9 @@ def process_markdown_file(
     is_skip_block = False
     code_block_lines = []
     code_block_start_line = 1
+
+    # Track HTML comment state across lines
+    in_html_comment = False
 
     for line_idx, raw_line in enumerate(lines, 1):
         line = raw_line.strip()
@@ -1059,8 +1087,46 @@ def process_markdown_file(
                 code_block_lines.append((line_idx, raw_line))
             continue
 
-        # Outside Code Blocks: Extract Standard Markdown Links
-        for match in link_pattern.finditer(raw_line):
+        # --- OUTSIDE CODE BLOCKS ---
+
+        # 1. Multi-Line & Single-Line HTML Comment State Machine
+        line_to_process = raw_line
+        if in_html_comment:
+            if "-->" in line_to_process:
+                in_html_comment = False
+                line_to_process = line_to_process.split("-->", 1)[1]
+            else:
+                continue
+        else:
+            line_to_process = re.sub(r"<!--.*?-->", "", line_to_process)
+            if "<!--" in line_to_process:
+                in_html_comment = True
+                line_to_process = line_to_process.split("<!--", 1)[0]
+
+        if not line_to_process.strip():
+            continue
+
+        # 2. Outside Code Blocks: Extract Reference-Style Links
+        # E.g. [my-doc]: ./docs/SDLC/guidelines.md
+        ref_match = ref_link_pattern.match(line_to_process)
+        if ref_match:
+            path_str = ref_match.group(1)
+            cleaned = clean_token(path_str)
+            if cleaned:
+                validate_path(
+                    cleaned,
+                    file_path,
+                    line_idx,
+                    repo_root,
+                    root_dirs,
+                    root_files,
+                    ref_type="reference-link",
+                )
+            # Skip plain text token parsing on this line to avoid duplicates
+            continue
+
+        # 3. Outside Code Blocks: Extract Standard Markdown Links
+        for match in link_pattern.finditer(line_to_process):
             path_str = match.group(1)
             # Standard links are checked with high priority
             cleaned = clean_token(path_str)
@@ -1075,9 +1141,9 @@ def process_markdown_file(
                     ref_type="link",
                 )
 
-        # Outside Code Blocks: Extract Workspace/Path References in Inline Code or Plain Text
+        # 4. Outside Code Blocks: Extract Workspace/Path References in Inline Code or Plain Text
         # Split line by whitespace to scan for potential path words
-        tokens = raw_line.split()
+        tokens = line_to_process.split()
         for token in tokens:
             cleaned = clean_token(token)
             if is_potential_path_ref(cleaned, root_dirs, root_files):

@@ -421,3 +421,77 @@ class TestModel(BaseModel):
     vm.process_markdown_file(md_file, repo_root, set(), set(), codebase_map)
     # Both skipped, so 0 errors!
     assert len(vm.errors) == 0
+
+
+def test_html_comment_filtering(tmp_path):
+    """Verifies that links and paths inside single-line and multi-line HTML comments are ignored."""
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+
+    docs_dir = repo_root / "docs"
+    docs_dir.mkdir()
+
+    (docs_dir / "valid-doc.md").touch()
+
+    root_dirs = {"docs"}
+    root_files = set()
+
+    md_content = """# Doc with Comments
+
+This is a valid link [Valid](./valid-doc.md).
+
+<!-- This is a commented-out broken link [Broken](./does-not-exist.md) -->
+
+And some text outside the single-line comment.
+
+<!--
+This is a multi-line HTML comment.
+[Broken Multi](./also-does-not-exist.md)
+-->
+
+This is a plain text path reference to a non-existent file in a comment <!-- docs/non-existent.md --> but outside <!-- comment --> we should not have errors.
+"""
+    md_file = docs_dir / "comment_test.md"
+    md_file.write_text(md_content, encoding="utf-8")
+
+    vm.process_markdown_file(md_file, repo_root, root_dirs, root_files)
+    assert len(vm.errors) == 0
+
+
+def test_reference_style_link_validation(tmp_path):
+    """Verifies reference-style links are parsed, resolved relative to correct dir, and validated."""
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+
+    docs_dir = repo_root / "docs"
+    docs_dir.mkdir()
+
+    (docs_dir / "valid-ref.md").touch()
+
+    root_dirs = {"docs"}
+    root_files = set()
+
+    # We test:
+    # 1. A valid reference-style link relative to current directory
+    # 2. An invalid reference-style link
+    # 3. Reference link with query/anchor
+    # 4. Reference link starting with / resolved relative to repo root
+    md_content = """# Reference Links
+
+See [my document][ref1] and also [broken doc][ref2].
+
+[ref1]: ./valid-ref.md
+[ref2]: ./nonexistent-ref.md
+[ref3]: /docs/valid-ref.md#anchor?query=1
+"""
+    md_file = docs_dir / "ref_test.md"
+    md_file.write_text(md_content, encoding="utf-8")
+
+    vm.process_markdown_file(md_file, repo_root, root_dirs, root_files)
+
+    # We expect 1 error from ref2: ./nonexistent-ref.md
+    assert len(vm.errors) == 1
+    assert (
+        "Referenced reference-link './nonexistent-ref.md' does not exist."
+        in vm.errors[0]["message"]
+    )

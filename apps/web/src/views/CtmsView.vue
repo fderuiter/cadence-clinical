@@ -1,5 +1,8 @@
 <template>
-  <div id="section-ctms" class="dashboard-section active">
+  <div
+    id="section-ctms"
+    class="dashboard-section active"
+  >
     <div class="section-header">
       <h2>Clinical Trial Management System (CTMS)</h2>
       <p>
@@ -11,8 +14,13 @@
     <div class="grid-2">
       <!-- Site Milestones Card -->
       <div class="card">
-        <div class="card-title">Site Operational Milestones</div>
-        <div id="ctms-milestones-container" v-html="milestonesHtml" />
+        <div class="card-title">
+          Site Operational Milestones
+        </div>
+        <div
+          id="ctms-milestones-container"
+          v-html="milestonesHtml"
+        />
         <div style="margin-top: 12px; display: flex; gap: 8px">
           <button
             id="btn-achieve-milestone"
@@ -26,8 +34,13 @@
 
       <!-- Monitoring Visits Card -->
       <div class="card">
-        <div class="card-title">CRA Site Monitoring Visits (MVR)</div>
-        <div id="ctms-visits-container" v-html="visitsHtml" />
+        <div class="card-title">
+          CRA Site Monitoring Visits (MVR)
+        </div>
+        <div
+          id="ctms-visits-container"
+          v-html="visitsHtml"
+        />
         <div style="margin-top: 12px; display: flex; gap: 8px">
           <button
             id="btn-schedule-visit"
@@ -36,29 +49,49 @@
           >
             Schedule New Visit
           </button>
-          <button id="btn-complete-visit" class="btn" @click="completeVisit">
+          <button
+            id="btn-complete-visit"
+            class="btn"
+            @click="completeVisit"
+          >
             Complete Current Visit
           </button>
         </div>
       </div>
     </div>
 
-    <div class="grid-2" style="margin-top: 24px">
+    <div
+      class="grid-2"
+      style="margin-top: 24px"
+    >
       <!-- CRA Allocations & Workload Card -->
       <div class="card">
-        <div class="card-title">CRA Allocation & Workload Summaries</div>
+        <div class="card-title">
+          CRA Allocation & Workload Summaries
+        </div>
         <div id="ctms-workload-container">
           <table class="clinical-visit-matrix">
             <thead>
               <tr>
-                <th scope="col">CRA</th>
-                <th scope="col">Active Allocations</th>
-                <th scope="col">Allocated Sites</th>
-                <th scope="col">Allocated Studies</th>
+                <th scope="col">
+                  CRA
+                </th>
+                <th scope="col">
+                  Active Allocations
+                </th>
+                <th scope="col">
+                  Allocated Sites
+                </th>
+                <th scope="col">
+                  Allocated Studies
+                </th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="a in store.currentCtmsData.allocations" :key="a.cra">
+              <tr
+                v-for="a in store.currentCtmsData.allocations"
+                :key="a.cra"
+              >
                 <td>
                   <strong>{{ a.cra }}</strong>
                 </td>
@@ -82,16 +115,28 @@
 
       <!-- Site Recruitment metrics Card -->
       <div class="card">
-        <div class="card-title">Site Recruitment Metrics</div>
+        <div class="card-title">
+          Site Recruitment Metrics
+        </div>
         <div id="ctms-recruitment-container">
           <table class="clinical-visit-matrix">
             <thead>
               <tr>
-                <th scope="col">Site ID</th>
-                <th scope="col">Screened</th>
-                <th scope="col">Enrolled</th>
-                <th scope="col">Target</th>
-                <th scope="col">Progress</th>
+                <th scope="col">
+                  Site ID
+                </th>
+                <th scope="col">
+                  Screened
+                </th>
+                <th scope="col">
+                  Enrolled
+                </th>
+                <th scope="col">
+                  Target
+                </th>
+                <th scope="col">
+                  Progress
+                </th>
               </tr>
             </thead>
             <tbody>

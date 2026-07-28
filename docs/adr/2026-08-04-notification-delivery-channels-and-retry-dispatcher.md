@@ -10,6 +10,8 @@
 ## 1. Context & Problem Statement
 The Cadence Clinical platform requires reliable asynchronous delivery of notifications across multiple independent channels: in-app, email, and webhooks. Storing notifications without processing delivery state blocks integration and visibility. Additionally, failed deliveries should be retried following a bounded exponential backoff policy without blocking other notifications, while maintaining full GxP-compliant audit trails and diagnostic tracking.
 
+This decision implements requirements under Trace-8.
+
 ## 2. Decision Drivers & Constraints
 * **Driver 1:** Reliability and fault isolation across different delivery channels (in-app, email, and webhooks).
 * **Driver 2:** Bounded exponential backoff and diagnostics tracking for transient failure recovery.

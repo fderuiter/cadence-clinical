@@ -10,6 +10,8 @@ import {
   createClinicalLookupInput,
   sha256 as sharedSha256,
   validateField as sharedValidateField,
+  buildLedgerBlock,
+  debounce as sharedDebounce,
 } from "ui";
 
 /**
@@ -140,10 +142,10 @@ import {
   evaluateAST,
   compilerCache,
   getCompiledExpression,
-  debounce,
 } from "./src/evaluator.js";
 
-export { evaluateAST, compilerCache, getCompiledExpression, debounce };
+export { evaluateAST, compilerCache, getCompiledExpression };
+export { sharedDebounce as debounce };
 
 export function validateField(fieldMeta, val, context = {}) {
   return sharedValidateField(fieldMeta, val, context, evaluateAST);
@@ -455,18 +457,14 @@ if (typeof document !== "undefined") {
           ? "0000000000000000000000000000000000000000000000000000000000000000"
           : ledgerBlocks[index - 1].hash;
 
-      const payloadString = `${index}|${timestamp}|${action}|${JSON.stringify(details)}|${reason}|${prevHash}`;
-      const hash = await sha256(payloadString);
-
-      const block = {
+      const block = await buildLedgerBlock(
         index,
         timestamp,
         action,
         details,
         reason,
-        prevHash,
-        hash,
-      };
+        prevHash
+      );
 
       ledgerBlocks.push(block);
       renderLedger();

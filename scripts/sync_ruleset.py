@@ -66,22 +66,38 @@ def get_repository() -> str:
 
 
 def sync_ruleset():
-    """Sync the declarative branch ruleset configuration to the repository."""
-    # Resolve the absolute path of the configuration file relative to the script's root
+    """Sync the declarative branch ruleset configurations to the repository."""
+    # Resolve the absolute path of the configuration files relative to the script's root
     base_dir = Path(__file__).resolve().parent.parent
-    config_file_path = base_dir / CONFIG_PATH
+    rulesets_dir = base_dir / ".github" / "rulesets"
 
-    if not config_file_path.exists():
-        print(f"Error: Configuration file not found at {config_file_path}")
+    if not rulesets_dir.exists() or not rulesets_dir.is_dir():
+        print(f"Error: Rulesets directory not found at {rulesets_dir}")
         sys.exit(1)
 
-    print(f"Loading ruleset configuration from {config_file_path}...")
-    try:
-        with open(config_file_path, "r") as f:
-            _ = json.load(f)
-    except Exception as e:
-        print(f"Error parsing JSON from {config_file_path}: {e}")
+    # Scanning strictly designated configurations folder
+    config_files = sorted(list(rulesets_dir.glob("*.json")))
+    if not config_files:
+        print(f"Error: No JSON ruleset configurations found in {rulesets_dir}")
         sys.exit(1)
+
+    configs_to_sync = []
+    for config_file_path in config_files:
+        print(f"Loading ruleset configuration from {config_file_path}...")
+        try:
+            with open(config_file_path, "r") as f:
+                config_data = json.load(f)
+        except Exception as e:
+            print(f"Error parsing JSON from {config_file_path}: {e}")
+            sys.exit(1)
+
+        ruleset_name = config_data.get("name")
+        if not ruleset_name:
+            print(
+                f"Error: Ruleset configuration {config_file_path} is missing 'name' property."
+            )
+            sys.exit(1)
+        configs_to_sync.append((config_file_path, ruleset_name))
 
     repo = get_repository()
     print(f"Target repository: {repo}")
@@ -118,65 +134,66 @@ def sync_ruleset():
         print(f"Error parsing rulesets JSON from API: {e}. Output was: {stdout}")
         sys.exit(1)
 
-    existing_ruleset_id = None
-    for ruleset in rulesets:
-        if ruleset.get("name") == RULESET_NAME:
-            existing_ruleset_id = ruleset.get("id")
-            break
+    for config_file_path, ruleset_name in configs_to_sync:
+        existing_ruleset_id = None
+        for ruleset in rulesets:
+            if ruleset.get("name") == ruleset_name:
+                existing_ruleset_id = ruleset.get("id")
+                break
 
-    try:
-        if existing_ruleset_id:
-            print(
-                f"Found existing ruleset '{RULESET_NAME}' with ID {existing_ruleset_id}. Updating..."
-            )
-            update_url = f"repos/{repo}/rulesets/{existing_ruleset_id}"
-            stdout, stderr = run_command(
-                [
-                    "gh",
-                    "api",
-                    "--method",
-                    "PUT",
-                    update_url,
-                    "--input",
-                    str(config_file_path),
-                ],
-                check=True,
-            )
-            print("Ruleset updated successfully!")
-        else:
-            print(f"Ruleset '{RULESET_NAME}' not found. Creating new ruleset...")
-            create_url = f"repos/{repo}/rulesets"
-            stdout, stderr = run_command(
-                [
-                    "gh",
-                    "api",
-                    "--method",
-                    "POST",
-                    create_url,
-                    "--input",
-                    str(config_file_path),
-                ],
-                check=True,
-            )
-            print("Ruleset created successfully!")
-    except subprocess.CalledProcessError as e:
-        stderr_msg = e.stderr or ""
-        stdout_msg = e.stdout or ""
-        combined_output = f"{stderr_msg}\n{stdout_msg}"
-        if (
-            "Resource not accessible by integration" in combined_output
-            or "403" in combined_output
-        ):
-            print(
-                "Error: Permission denied (HTTP 403) during ruleset administration.\n"
-                "Ruleset administration requires a token with 'Administration: write' permissions. "
-                "Please verify that the GITHUB_TOKEN has the required permissions or that a dedicated admin-capable PAT is supplied."
-            )
-        else:
-            print(
-                f"Error: Command failed with exit code {e.returncode}.\nStderr: {stderr_msg}\nStdout: {stdout_msg}"
-            )
-        sys.exit(1)
+        try:
+            if existing_ruleset_id:
+                print(
+                    f"Found existing ruleset '{ruleset_name}' with ID {existing_ruleset_id}. Updating..."
+                )
+                update_url = f"repos/{repo}/rulesets/{existing_ruleset_id}"
+                stdout, stderr = run_command(
+                    [
+                        "gh",
+                        "api",
+                        "--method",
+                        "PUT",
+                        update_url,
+                        "--input",
+                        str(config_file_path),
+                    ],
+                    check=True,
+                )
+                print(f"Ruleset '{ruleset_name}' updated successfully!")
+            else:
+                print(f"Ruleset '{ruleset_name}' not found. Creating new ruleset...")
+                create_url = f"repos/{repo}/rulesets"
+                stdout, stderr = run_command(
+                    [
+                        "gh",
+                        "api",
+                        "--method",
+                        "POST",
+                        create_url,
+                        "--input",
+                        str(config_file_path),
+                    ],
+                    check=True,
+                )
+                print(f"Ruleset '{ruleset_name}' created successfully!")
+        except subprocess.CalledProcessError as e:
+            stderr_msg = e.stderr or ""
+            stdout_msg = e.stdout or ""
+            combined_output = f"{stderr_msg}\n{stdout_msg}"
+            if (
+                "Resource not accessible by integration" in combined_output
+                or "403" in combined_output
+            ):
+                print(
+                    "Error: Permission denied (HTTP 403) during ruleset administration.\n"
+                    "Ruleset administration requires a token with 'Administration: write' permissions. "
+                    "Please verify that the GITHUB_TOKEN has the required permissions or that a dedicated admin-capable PAT is supplied."
+                )
+            else:
+                print(
+                    f"Error: Command failed with exit code {e.returncode}.\nStderr: {stderr_msg}\nStdout: {stdout_msg}"
+                )
+            sys.exit(1)
 
 
 if __name__ == "__main__":
