@@ -446,6 +446,8 @@ def test_main_with_arguments(monkeypatch):
     assert "README.md" in processed_files
     assert len(processed_files) == 1
     assert exit_codes == [0]
+
+
 def test_html_comment_filtering(tmp_path):
     """Verifies that links and paths inside single-line and multi-line HTML comments are ignored."""
     repo_root = tmp_path / "repo"
