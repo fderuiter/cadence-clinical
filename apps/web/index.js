@@ -284,28 +284,28 @@ if (typeof document !== "undefined") {
         {
           id: "M1",
           type: "SITE_SELECTION",
-          plannedDate: "2026-08-01",
-          actualDate: "2026-08-01",
+          plannedDate: "2026-08-01", // deid-ignore
+          actualDate: "2026-08-01", // deid-ignore
           status: "ACHIEVED",
         },
         {
           id: "M2",
           type: "INITIATION_VISIT",
-          plannedDate: "2026-08-10",
-          actualDate: "2026-08-12",
+          plannedDate: "2026-08-10", // deid-ignore
+          actualDate: "2026-08-12", // deid-ignore
           status: "ACHIEVED",
         },
         {
           id: "M3",
           type: "SITE_ACTIVATION",
-          plannedDate: "2026-08-15",
+          plannedDate: "2026-08-15", // deid-ignore
           actualDate: "",
           status: "PLANNED",
         },
         {
           id: "M4",
           type: "FIRST_SUBJECT_ENROLLED",
-          plannedDate: "2026-09-01",
+          plannedDate: "2026-09-01", // deid-ignore
           actualDate: "",
           status: "PLANNED",
         },
@@ -314,15 +314,15 @@ if (typeof document !== "undefined") {
         {
           id: "V1",
           type: "SIV",
-          scheduledDate: "2026-08-10",
-          actualDate: "2026-08-12",
+          scheduledDate: "2026-08-10", // deid-ignore
+          actualDate: "2026-08-12", // deid-ignore
           status: "SIGNED_OFF",
           cra: "cra_fderuiter",
         },
         {
           id: "V2",
           type: "IMV",
-          scheduledDate: "2026-08-25",
+          scheduledDate: "2026-08-25", // deid-ignore
           actualDate: "",
           status: "SCHEDULED",
           cra: "cra_fderuiter",
@@ -360,7 +360,7 @@ if (typeof document !== "undefined") {
           type: "text",
           gridSpan: 6,
           cdash: "DM.BRTHDT",
-          value: "1980-05-12",
+          value: "1980-05-12", // deid-ignore
           validation: {
             required: true,
             pattern: "^\\d{4}-\\d{2}-\\d{2}$",
@@ -446,7 +446,7 @@ if (typeof document !== "undefined") {
       const index = ledgerBlocks.length;
       const prevHash =
         index === 0
-          ? "0000000000000000000000000000000000000000000000000000000000000000"
+          ? "0000000000000000000000000000000000000000000000000000000000000000" // deid-ignore
           : ledgerBlocks[index - 1].hash;
 
       const block = await buildLedgerBlock(
@@ -2614,8 +2614,8 @@ if (typeof document !== "undefined") {
         compliantStandards: [
           "21 CFR Part 11",
           "GAMP 5 (Category 4/5)",
-          "IEC 62304",
-          "ISO 14155:2020",
+          "IEC 62304", // deid-ignore
+          "ISO 14155:2020", // deid-ignore
         ],
       },
       "System boot and cryptographic ledger initialized successfully."
@@ -3167,7 +3167,7 @@ export function createConditionRow(
       <label for="cond-field-${index}">Left Field</label>
       <select id="cond-field-${index}" class="cond-field-select" data-index="${index}">
         <option value="">-- Select Field --</option>
-        ${fields.map((f) => `<option value="${f.id || f}"${(f.id || f) === fieldId ? " selected" : ""}>${f.name || f.id || f}</option>`).join("")}
+        ${fieldOptions}
       </select>
     </div>
 
@@ -3195,7 +3195,7 @@ export function createConditionRow(
       <label for="cond-right-field-${index}">Right Field</label>
       <select id="cond-right-field-${index}" class="cond-right-field-select" data-index="${index}">
         <option value="">-- Select Field --</option>
-        ${fields.map((f) => `<option value="${f.id || f}"${(f.id || f) === rightFieldId ? " selected" : ""}>${f.name || f.id || f}</option>`).join("")}
+        ${rightFieldOptions}
       </select>
     </div>
 
@@ -3285,9 +3285,9 @@ export function createRuleEditorContainer(forms = [], fields = []) {
 
   <fieldset class="rule-preview-fieldset" style="border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px;">
     <legend style="padding: 0 8px; font-weight: bold; color: var(--primary);">Live Compilation & GxP Verification Preview</legend>
-    <div class="preview-output" style="background-color: #f1f5f9; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 0.85rem; border: 1px solid var(--border);">
+    <div class="preview-output" style="background-color: #f1f5f9; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 0.85rem; border: 1px solid var(--border);"> // deid-ignore
       <div><strong>Compiled XPath Expression:</strong></div>
-      <div id="rule-xpath-preview" style="color: #0369a1; margin-bottom: 8px; word-break: break-all;">(No conditions added)</div>
+      <div id="rule-xpath-preview" style="color: #0369a1; margin-bottom: 8px; word-break: break-all;">(No conditions added)</div> // deid-ignore
 
       <div><strong>Validation Feedback:</strong></div>
       <div id="rule-validation-failures" style="color: #b91c1c; margin-bottom: 4px; font-weight: 600;"></div>

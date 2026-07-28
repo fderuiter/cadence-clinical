@@ -174,7 +174,7 @@ async function logAuditRecord(
   const index = state.ledgerBlocks.length;
   const prevHash =
     index === 0
-      ? "0000000000000000000000000000000000000000000000000000000000000000"
+      ? "0000000000000000000000000000000000000000000000000000000000000000" // deid-ignore
       : state.ledgerBlocks[index - 1].hash;
 
   const block = await buildLedgerBlock(

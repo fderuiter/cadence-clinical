@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
 import ClinicalInput from "../src/components/clinical/ClinicalInput.vue";
 import ClinicalRadioGroup from "../src/components/clinical/ClinicalRadioGroup.vue";
