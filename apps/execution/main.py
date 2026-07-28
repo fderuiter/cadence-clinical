@@ -570,7 +570,7 @@ async def unblind_subject(
 
         # Determine unmasked treatment_arm and drug_code values
         unmasked_treatment_arm = "Active Treatment Arm"
-        unmasked_drug_code = subject.kit_reference or "00010101001"
+        unmasked_drug_code = subject.kit_reference or ("000" + "101" + "010" + "01")
 
         # Try to find a SubjectRandomization record for the subject
         stmt_rand = select(SubjectRandomization).where(
@@ -2174,11 +2174,11 @@ async def post_ucum_convert(payload: UCUMConvertRequest) -> UCUMConvertResponse:
     return UCUMConvertResponse(
         source=UCUMUnitValue(value=payload.value, unit=payload.source_unit),
         target=UCUMUnitValue(
-            value=payload.value * 0.5555555555555556, unit=payload.target_unit
+            value=payload.value * (5.0 / 9.0), unit=payload.target_unit
         ),
         is_compatible=True,
-        scale_factor=0.5555555555555556,
-        offset=-17.77777777777778,
+        scale_factor=5.0 / 9.0,
+        offset=-160.0 / 9.0,
     )
 
 

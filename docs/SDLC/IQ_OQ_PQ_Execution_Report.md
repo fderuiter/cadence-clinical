@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 22
-- **Passed:** 22 🟢
+- **Total Automated Test Cases Run:** 32
+- **Passed:** 32 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -174,6 +174,16 @@ The Operational Qualification verifies that individual clinical operations, stat
 ### 3.1 Traceability Mappings Verification
 | Test Case Name | Classname / Suite | Target Req | Status | Duration |
 | :--- | :--- | :--- | :--- | :--- |
+| `test_api_parameters_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_paths_and_methods_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_request_bodies_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_responses_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_extra_response_properties_pass_validation` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_markdown_spec_extract_and_parse` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_markdown_spec_syntax_checks_malformed_yaml` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_undocumented_parameter_fails_parity_check` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_undocumented_route_fails_parity_check` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_validation_fails_on_route_path_mismatch` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_adae_trtemfl_logic` | `tests.test_biostat_export` | ADAM-ADAE-TRTEMFL-01 | 🟢 PASSED | < 1s |
 | `test_advs_chg_pchg_computations` | `tests.test_biostat_export` | ADAM-ADVS-CHG-01 | 🟢 PASSED | < 1s |
 | `test_api_adam_export_success` | `tests.test_biostat_export` | API-ADAM-EXPORT-01 | 🟢 PASSED | < 1s |
