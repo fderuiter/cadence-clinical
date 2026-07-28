@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   style:
-    name: Style and Lint Verification
+    name: Frontend Verification & Style Linting
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -29,8 +29,6 @@ jobs:
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -41,10 +39,10 @@ jobs:
       - name: Install Node dependencies
         run: pnpm install
 
-      - name: Run frontend style and lint
+      - name: Run frontend verification with Turborepo
         id: run_frontend
         if: always()
-        run: pnpm -r format && pnpm -r lint
+        run: pnpm turbo run lint format test build
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v3
@@ -146,7 +144,7 @@ jobs:
           uv run pre-commit run detect-secrets --all-files
 
   unit-tests:
-    name: Frontend & Backend Unit Tests
+    name: Backend Unit Tests
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -172,23 +170,6 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-
-      - name: Install Node dependencies
-        run: pnpm install
-
-      - name: Run frontend unit tests
-        run: pnpm -r test
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v3

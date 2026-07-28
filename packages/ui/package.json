@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build": "echo 'No build needed for ui'",
     "test": "vitest run",
     "lint": "eslint .",
     "format": "prettier --write ."
