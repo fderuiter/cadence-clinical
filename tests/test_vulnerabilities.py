@@ -8,6 +8,7 @@ import json
 from unittest.mock import patch
 
 from scripts.validate_vulnerabilities import (
+    extract_active_frontend_vulnerabilities,
     extract_active_vulnerabilities,
     load_and_validate_ledger,
     scan_for_inline_bypasses,
@@ -285,3 +286,89 @@ def test_extract_active_vulnerabilities_valid():
     assert len(vulns) == 1
     assert vulns[0]["vulnerability_id"] == "PYSEC-123"
     assert vulns[0]["package_name"] == "ecdsa"
+
+
+def test_extract_active_frontend_vulnerabilities_invalid():
+    """Verify extract_active_frontend_vulnerabilities handles empty or invalid output correctly."""
+    vulns, err = extract_active_frontend_vulnerabilities("")
+    assert len(vulns) == 0
+    assert "No stdout returned" in err
+
+    vulns, err = extract_active_frontend_vulnerabilities("{invalid_json")
+    assert len(vulns) == 0
+    assert "Failed to parse JSON" in err
+
+
+def test_extract_active_frontend_vulnerabilities_valid():
+    """Verify extract_active_frontend_vulnerabilities extracts all findings correctly."""
+    sample_audit = {
+        "advisories": {
+            "1102341": {
+                "id": 1102341,
+                "title": "esbuild issue",
+                "module_name": "esbuild",
+                "github_advisory_id": "GHSA-67mh-4wv8-2f99",
+                "patched_versions": ">=0.24.3",
+                "findings": [{"version": "0.21.5"}],
+            }
+        }
+    }
+    vulns, err = extract_active_frontend_vulnerabilities(json.dumps(sample_audit))
+    assert not err
+    assert len(vulns) == 1
+    assert vulns[0]["vulnerability_id"] == "GHSA-67mh-4wv8-2f99"
+    assert vulns[0]["package_name"] == "esbuild"
+    assert vulns[0]["version"] == "0.21.5"
+
+
+def test_load_and_validate_ledger_frontend_invalid_justification(tmp_path):
+    """Verify load_and_validate_ledger fails for frontend exceptions with justifications of exactly 10 characters or less."""
+    ledger = tmp_path / "ledger.json"
+    ledger.write_text(
+        json.dumps(
+            [
+                {
+                    "vulnerability_id": "GHSA-67mh-4wv8-2f99",
+                    "package_name": "esbuild",
+                    "severity": 2,
+                    "occurrence": 2,
+                    "detectability": 2,
+                    "rpn": 8,
+                    "justification": "1234567890",  # 10 chars (not exceeding 10)
+                    "status": "active",
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    entries, errors = load_and_validate_ledger(str(ledger))
+    assert len(entries) == 0
+    assert "missing a robust GxP compliance justification" in errors[0]
+    assert "exceeding 10" in errors[0]
+
+
+def test_load_and_validate_ledger_frontend_invalid_rpn(tmp_path):
+    """Verify load_and_validate_ledger fails for frontend exceptions with incorrect RPN."""
+    ledger = tmp_path / "ledger.json"
+    ledger.write_text(
+        json.dumps(
+            [
+                {
+                    "vulnerability_id": "GHSA-67mh-4wv8-2f99",
+                    "package_name": "esbuild",
+                    "severity": 2,
+                    "occurrence": 2,
+                    "detectability": 2,
+                    "rpn": 10,  # Invalid (expected 8)
+                    "justification": "Robust and long justification for GxP",
+                    "status": "active",
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    entries, errors = load_and_validate_ledger(str(ledger))
+    assert len(entries) == 0
+    assert "invalid pre-calculated FMEA Risk Priority Number" in errors[0]

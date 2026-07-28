@@ -14,6 +14,8 @@ With the introduction of the electronic Clinical Outcome Assessment (eCOA) and p
 3. Strict **regulatory security boundaries** must be established to ensure that trial participants (under the `Subject` role) are authorized only to access designated ePRO submission and sync routes, preventing access to sponsor/investigator resources or raw clinical databases.
 4. **Lightweight patient notifications and compliance reminders** need to be calculated based on the subject's eCOA assignment schedule, without introducing heavyweight polling overhead.
 
+This decision implements requirements under Trace-8.
+
 ## 2. Decision Drivers & Constraints
 * **Driver 1 (Regulatory Security & Role Boundaries):** Under FDA 21 CFR Part 11 and GCP guidelines, patient identities must be strictly isolated. Users with the `Subject` role should have zero visibility into other subjects' records or staff-scoped clinical operations.
 * **Driver 2 (Offline Resilience & PWA Support):** Patients must be able to log diary entries offline (e.g., in flight or in remote clinics). These entries must be queued locally and reconciled reliably upon reconnection without silent data discarding.

@@ -28,3 +28,5 @@ We decided to:
   - Clear and testable offline synchronization conflict resolution behavior.
 - **Negative:**
   - Introduces a new microservice in the Monorepo stack requiring gateway routing updates.
+
+This decision implements requirements under Trace-8.

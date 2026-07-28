@@ -12,6 +12,8 @@ The platform manages global library metadata templates (such as reusable Forms, 
 
 Crucially, this copy must remain linked to its source for provenance and traceability, while ensuring the original source object remains unmodified. Standard GCP/GxP boundaries require strict tenant/sponsor isolation: a study or library object owned by Sponsor A must not be accessible or instantiable by Sponsor B.
 
+This decision implements requirements under Trace-3.
+
 ## 2. Decision Drivers & Constraints
 * **Compliance & Traceability (21 CFR Part 11 & GxP):** Every instantiation must maintain a clear, durable trace link to the exact source library object ID and version used.
 * **Sponsor Isolation & Security:** Access and mutation controls must strictly prevent cross-sponsor authorization leaks.

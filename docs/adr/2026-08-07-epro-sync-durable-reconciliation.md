@@ -15,6 +15,8 @@ This decision addresses the need to:
 2. Formally detect edits targeting missing/deleted target records as structural synchronization conflicts, reject direct updates to the primary tables, and turn them into auditable clinical queries.
 3. Keep the Interop microservice self-contained and auditable without side effects on general execution GxP audit handlers.
 
+This decision implements requirements under Trace-9.
+
 ## 2. Decision Drivers & Constraints
 * **Driver 1:** FDA 21 CFR Part 11 and GxP compliance regarding immutable data logs and absolute prevention of silent data loss.
 * **Driver 2:** Traceability of all synchronization conflicts, allowing investigators and clinical monitors to review discarded or merged values.

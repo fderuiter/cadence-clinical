@@ -11,6 +11,8 @@
 
 The electronic Investigator Site File (eISF) service required robust browse, view, download, role-based access control (RBAC), and completeness workflows. Additionally, background database model files within the execution microservice required minor formatting alignment to pass automated Ruff compliance checks in the CI/CD pipeline.
 
+This decision implements requirements under Trace-7.
+
 ## 2. Decision Drivers & Constraints
 
 - **Compliance & Auditing:** 21 CFR Part 11 compliant audit trail logging for all listing, viewing, downloading, and completeness check actions.

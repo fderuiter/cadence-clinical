@@ -289,20 +289,3 @@ export function getCompiledExpression(node) {
 
   return compiled;
 }
-
-/**
- * Simple debounce function with trailing execution.
- *
- * @param {Function} func
- * @param {number} wait
- * @returns {Function}
- */
-export function debounce(func, wait = 50) {
-  let timeout;
-  return function (...args) {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => {
-      func.apply(this, args);
-    }, wait);
-  };
-}

@@ -10,6 +10,8 @@
 ## 1. Context & Problem Statement
 The execution engine lacks the clinical schemas, unit conversion handlers, and statistical tools required to act as a compliant Clinical Metadata Repository. We need to introduce relational observation schemas and pure-Python processing utilities to deliver compliant CDISC exports and reliable outlier flagging without adding complex database configurations or heavy scientific libraries.
 
+This decision implements requirements under PRD-QRY-001.
+
 ## 2. Decision Drivers & Constraints
 * **Driver 1:** No third-party scientific or data analysis libraries (such as NumPy, SciPy, or Pandas) may be added to the project dependencies.
 * **Driver 2:** Pure-Python outlier routines must correctly flag observations that fall outside of three standard deviations from the dataset mean.

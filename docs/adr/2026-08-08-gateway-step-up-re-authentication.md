@@ -11,6 +11,8 @@
 Pursuant to FDA 21 CFR Part 11 and EU Annex 11, executing critical clinical mutations requires explicit, double-keying re-authentication immediately before signature application.
 Downstream microservices require a high-assurance, short-lived, verifiable signature token instead of direct handling of user credentials/passwords.
 
+This decision implements requirements under Trace-8.
+
 ## 2. Decision Drivers & Constraints
 * **Part 11 GxP Compliance:** Absolute assurance of active signer re-authentication via credentials.
 * **Symmetric Cryptography:** Leverage `GATEWAY_SECRET` with HS256 to sign and verify signature tokens across the gateway and microservices.

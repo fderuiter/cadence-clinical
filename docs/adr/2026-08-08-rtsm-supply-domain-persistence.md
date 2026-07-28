@@ -12,6 +12,8 @@ The platform requires minimal audited supply-domain persistence to handle blinde
 
 Crucially, to preserve the study's double-blind status, treatment allocation or drug-code details must not be stored in ordinary blinded supply records. Instead, they must reference blinded kit identifiers, leaving drug-code resolution confined to authorized unblinded layers.
 
+This decision implements requirements under Trace-1.
+
 ## 2. Decision Drivers & Constraints
 * **Compliance (21 CFR Part 11 & GxP):** Every supply transaction (adding kits, updating inventory levels, dispensing kits, requesting resupply) must generate automated audit trail entries. Hard deletes must be strictly prevented.
 * **Double-Blinding Integrity:** The schema must store only blinded kit identifiers (e.g., kit number or kit type) without exposing treatment groups.

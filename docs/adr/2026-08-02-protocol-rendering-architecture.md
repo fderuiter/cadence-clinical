@@ -17,6 +17,8 @@ To solve this, we must establish a clear architectural boundary defining:
 3. The threading boundaries for CPU-bound rendering tasks in asynchronous frameworks.
 4. A standard, layout-agnostic, render-oriented data contract (presentation-centric view models) in `core-models` that cleanly bridges raw USDM data structures and presentation templates.
 
+This decision implements requirements under Trace-7.
+
 ## 2. Decision Drivers & Constraints
 * **Driver 1 (Compliance and 21 CFR Part 11 Auditability):** Exported protocol documents are regulatory records. Every export metadata record must enforce GxP-compliant fields: creator identity, UTC timestamp, change reason, and a sequential version index.
 * **Driver 2 (Separation of Concerns):** Templates and document assembly logic must not be coupled directly to raw Neo4j graph schemas or the standard CDISC USDM schema. They must receive flat, pre-ordered presentation-centric data models.
