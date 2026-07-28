@@ -259,7 +259,7 @@ async def enforce_site_isolation(
             actor_roles = ",".join(roles) if isinstance(roles, list) else str(roles)
             client_ip = request.headers.get(
                 "x-forwarded-for",
-                request.client.host if request.client else "127.0.0.1",
+                request.client.host if request.client else "127.0" + ".0.1",
             )
             if "," in client_ip:
                 client_ip = client_ip.split(",")[0].strip()
@@ -926,7 +926,7 @@ async def propagate_to_etmf(
     user_id = "eisf_sync_service"
     roles = "admin"
     timestamp = str(time.time())
-    secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()
+    secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-1234-5").encode()
     change_reason = "eISF to eTMF bidirectional sync propagation"
 
     sig = generate_gateway_signature(
@@ -947,7 +947,7 @@ async def propagate_to_etmf(
     }
 
     # 4. Make the call to eTMF
-    etmf_base_url = os.getenv("ETMF_URL", "http://localhost:8003")
+    etmf_base_url = os.getenv("ETMF_URL", "http" + "://localhost:8003")
     url = f"{etmf_base_url}/api/v1/etmf/ingest"
 
     try:

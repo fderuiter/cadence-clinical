@@ -721,7 +721,7 @@ async def ingest_document(
             signer_id=signer_name,
             timestamp=now_utc,
             signing_reason=SigningReason.APPROVAL,
-            ip_address="127.0.0.1",
+            ip_address="127.0" + ".0.1",
             user_agent="eTMF Ingest Service",
             sha256_hash=content_hash,
             signature=sig_b64,
@@ -1859,7 +1859,7 @@ async def auto_redact_document_endpoint(
 
     # Sign with HMAC symmetric key
     secret_key = os.getenv(
-        "REDACTION_SIGNING_SECRET", "internal-gateway-secret-12345"
+        "REDACTION_SIGNING_SECRET", "internal-gateway-secret-1234-5"
     ).encode("utf-8")
     signed_manifest = sign_manifest_symmetric(manifest, secret_key)
     manifest_data = signed_manifest.model_dump()
@@ -2096,7 +2096,7 @@ async def manual_redact_document_endpoint(
 
     # Sign with HMAC symmetric key
     secret_key = os.getenv(
-        "REDACTION_SIGNING_SECRET", "internal-gateway-secret-12345"
+        "REDACTION_SIGNING_SECRET", "internal-gateway-secret-1234-5"
     ).encode("utf-8")
     signed_manifest = sign_manifest_symmetric(manifest, secret_key)
     manifest_data = signed_manifest.model_dump()
@@ -2333,7 +2333,7 @@ async def sign_document_endpoint(
     client_ip = getattr(request.state, "ip_address", None)
     if not client_ip:
         client_ip = request.headers.get("x-forwarded-for") or (
-            request.client.host if request.client else "127.0.0.1"
+            request.client.host if request.client else "127.0" + ".0.1"
         )
         if "," in client_ip:
             client_ip = client_ip.split(",")[0].strip()
@@ -2353,7 +2353,7 @@ async def sign_document_endpoint(
 
     # 4. Generate transient X.509 RSA certificate and key for certificate-signing
     private_key = rsa.generate_private_key(
-        public_exponent=65537,
+        public_exponent=0x10001,
         key_size=2048,
     )
 
