@@ -10,8 +10,10 @@
 ## 1. Context & Problem Statement
 The Cadence Clinical platform consists of multiple web applications and portals, such as `apps/web` (clinical execution dashboard) and `apps/subject-portal` (patient-facing eCOA questionnaire platform). Over time, separate applications implemented parallel utility functions (such as cryptographic block hashing for 21 CFR Part 11 compliant audit ledgers and debounce wrappers for input validation) and redundant layout/style sheets (such as CSS Grid-based clinical form layouts). This divergence increases maintenance overhead, risks validation gaps under GxP audits, and compromises visual consistency across portals.
 
+This decision implements requirements under Trace-11.
+
 ## 2. Decision Drivers & Constraints
-* **Driver 1:** 21 CFR Part 11 and GxP compliance requires cryptographic consistency for signature and ledger block creation across all portals.
+* **Driver 1:** 21 CFR Part 11 and GxP compliance requires cryptographic consistency for signature and ledger block creation across all portals (PRD-SYS-003) as well as standardized audit trail compliance (PRD-SYS-001).
 * **Driver 2:** Code reusability and reducing duplication to simplify system verification.
 * **Driver 3:** Maintenance of uniform frontend design standards, particularly around grid-based clinical forms and debounced asynchronous field validations.
 

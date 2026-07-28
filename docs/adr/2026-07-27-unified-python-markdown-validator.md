@@ -10,10 +10,12 @@
 ## 1. Context & Problem Statement
 Our documentation validation pipeline was previously fragmented across two separate environments: a Node.js tool (`check-links.js`) and a Python tool (`validate_markdown.py`). This fragmentation led to inconsistent parsing behaviors, high maintenance overhead, and frequent false-positive build failures. Specifically, developers experienced pipeline blockers when using dummy file paths in code examples or placeholder links within commented-out sections, as the legacy tools lacked the context-aware parsing necessary to ignore them.
 
+This decision implements requirements under Trace-1.
+
 ## 2. Decision Drivers & Constraints
 * **Driver 1:** Eliminate false positives: Code blocks and multi-line HTML comments are parsed out and bypassed during path validation.
 * **Driver 2:** Increase velocity: Pre-flight checks and pipeline runs execute entirely offline and complete in under 5 seconds, providing immediate feedback during local development.
-* **Driver 3:** Simplify maintenance: Retiring the duplicate Node.js script cuts down on project dependencies and unifies our validation rules.
+* **Driver 3:** Simplify maintenance: Retiring the duplicate Node.js script cuts down on project dependencies and unifies our validation rules under GxP documentation practices (PRD-SYS-001).
 
 ## 3. Options Considered
 ### Option 1: Fragmented Node.js and Python Validators

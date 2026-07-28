@@ -10,8 +10,10 @@
 ## 1. Context & Problem Statement
 The Cadence Clinical platform spans multiple services (such as eTMF, CTMS, and Quality) that require strict access controls to remain GxP-compliant and align with CDISC standards. Previously, authorization was handled using decentralized local role checks and hardcoded split roles. This caused maintenance friction, security review overhead, and made dynamic role mappings impossible to enforce systematically.
 
+This decision implements requirements under Trace-7.
+
 ## 2. Decision Drivers & Constraints
-* **GxP Auditing & Compliance:** All document states and quality transactions must have clear, centrally defined authorization constraints.
+* **GxP Auditing & Compliance:** All document states and quality transactions must have clear, centrally defined authorization constraints in line with audit log logging rules (PRD-SYS-001).
 * **Maintainability & DRY:** Authorization logic should not be duplicated across microservices.
 * **Dynamic Role Support:** Roles (including sponsor roles and admins) should resolve dynamically using a centralized RBAC mechanism.
 

@@ -50,7 +50,7 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v3
         with:
-          enable-cache: false
+          enable-cache: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -127,7 +127,7 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v3
         with:
-          enable-cache: false
+          enable-cache: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -136,6 +136,14 @@ jobs:
 
       - name: Install dependencies
         run: uv sync --locked --all-extras
+
+      - name: Cache pre-commit
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+          restore-keys: |
+            pre-commit-${{ runner.os }}-
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -234,7 +242,7 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v3
         with:
-          enable-cache: false
+          enable-cache: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -249,7 +257,7 @@ jobs:
         if: always()
         env:
           TEST_DATABASE_URL: "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"
-        run: uv run pytest --ignore=tests/test_layout_validator.py --ignore=tests/validation --junitxml=report-unit.xml
+        run: uv run pytest -n auto --cov=apps --cov=packages --cov-fail-under=80 --ignore=tests/test_layout_validator.py --junitxml=report-unit.xml
 
       - name: Upload unit test report
         if: always()
@@ -289,7 +297,7 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v3
         with:
-          enable-cache: false
+          enable-cache: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -298,6 +306,15 @@ jobs:
 
       - name: Install dependencies
         run: uv sync --locked --all-extras
+
+      - name: Cache Playwright Browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
 
       - name: Install Playwright Browsers
         run: |
@@ -313,7 +330,7 @@ jobs:
         if: always()
         env:
           TEST_DATABASE_URL: "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"
-        run: uv run pytest tests/test_layout_validator.py --no-cov --junitxml=report-integration.xml
+        run: uv run pytest -n auto tests/test_layout_validator.py --no-cov --junitxml=report-integration.xml
 
       - name: Upload integration test report
         if: always()
@@ -327,6 +344,20 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: cadence
+          POSTGRES_PASSWORD: cadence_password
+          POSTGRES_DB: cadence_edc
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     outputs:
       test_outcome: ${{ steps.run_tests.outcome }}
     steps:
@@ -378,7 +409,7 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v3
         with:
-          enable-cache: false
+          enable-cache: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -538,7 +569,7 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v3
         with:
-          enable-cache: false
+          enable-cache: true
 
       - name: Set up Python
         uses: actions/setup-python@v5

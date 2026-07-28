@@ -10,6 +10,8 @@
 ## 1. Context & Problem Statement
 The documentation portal for Cadence Clinical relies heavily on visual aids, including architecture flowcharts and sequence diagrams. Historically, these system diagrams were displayed either as raw static ASCII art (which overflows viewports and is difficult to read on smaller screens) or as raw text-based Mermaid code blocks without compilation. To ensure a seamless onboarding experience and robust readability for clinical systems engineers and technical reviewers across all device sizes, we need an automated, interactive rendering engine built directly into the static documentation site.
 
+This decision implements requirements under Trace-1.
+
 ## 2. Decision Drivers & Constraints
 * **Accessibility & Responsiveness:** Diagrams must scale responsively down to mobile viewports without causing page-level horizontal overflow or rendering unreadable text.
 * **Performance & SEO:** Diagrams should render static assets or compile at build-time to avoid client-side rendering lag and maintain search indexing speed, rather than loading large third-party runtime bundles on the fly.
@@ -37,7 +39,7 @@ The documentation portal for Cadence Clinical relies heavily on visual aids, inc
 
 ## 4. Decision Outcome
 * **Chosen Option:** Option 2
-* **Justification:** Choosing Option 2 provides a fully responsive, interactive, and maintainable diagram solution that aligns perfectly with our developer workflows and documentation quality standards. All diagrams are authored directly in Markdown, compiled at build-time, and enhanced with interactive zoom/pan controls to optimize the reading experience on any screen.
+* **Justification:** Choosing Option 2 provides a fully responsive, interactive, and maintainable diagram solution that aligns perfectly with our developer workflows, documentation quality standards, and GxP requirements for standard system tracking and audit capabilities (PRD-SYS-001). All diagrams are authored directly in Markdown, compiled at build-time, and enhanced with interactive zoom/pan controls to optimize the reading experience on any screen.
 
 ## 5. Consequences & Trade-offs
 * **Positive Impact:** Documentation maintains a clean, modern aesthetic with highly readable diagrams that auto-scale. Developers can edit architecture specifications using text blocks directly in Git.
