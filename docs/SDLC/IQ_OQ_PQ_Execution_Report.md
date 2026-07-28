@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1038
-- **Passed:** 1038 🟢
+- **Total Automated Test Cases Run:** 1086
+- **Passed:** 1086 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -486,6 +486,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_signature_extraction_formats` | `tests.test_etmf_compliance` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_requirement_rules` | `tests.test_etmf_compliance` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_tampering_detection_and_lockout_propagation` | `tests.test_etmf_compliance` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_trigger_global_trial_lock` | `tests.test_etmf_lock_integration` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_verify_trial_lock_status_error` | `tests.test_etmf_lock_integration` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_verify_trial_lock_status_locked` | `tests.test_etmf_lock_integration` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_verify_trial_lock_status_unlocked` | `tests.test_etmf_lock_integration` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_append_only_transition_history` | `tests.test_etmf_qc` | PRD-QC-005 | 🟢 PASSED | < 1s |
 | `test_invalid_status_transition_raises_error` | `tests.test_etmf_qc` | PRD-QC-002 | 🟢 PASSED | < 1s |
 | `test_new_document_defaults_to_draft` | `tests.test_etmf_qc` | PRD-QC-001 | 🟢 PASSED | < 1s |
@@ -1168,6 +1172,13 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_get_changed_files_from_txt` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_is_architectural_file` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validate_existing_adrs_valid_case` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_check_file_imports_cross_service_violation` | `tests.test_validate_imports` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_check_file_imports_invalid_syntax` | `tests.test_validate_imports` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_check_file_imports_relative_cross_service` | `tests.test_validate_imports` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_check_file_imports_relative_same_service` | `tests.test_validate_imports` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_check_file_imports_same_service` | `tests.test_validate_imports` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_check_file_imports_shared_packages` | `tests.test_validate_imports` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_get_service_name` | `tests.test_validate_imports` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_designer_validation_error_rfc7807` | `tests.test_validation_problem_details` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_execution_validation_error_rfc7807` | `tests.test_validation_problem_details` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_generate_alignment_report` | `tests.test_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |

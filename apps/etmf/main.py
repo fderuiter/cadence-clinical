@@ -537,9 +537,9 @@ async def ingest_document(
         )
 
     # Restrict affected trial to read-only state if trial is locked
-    from apps.execution.trial_lock import TrialLockManager
+    from apps.etmf.lock_client import verify_trial_lock_status
 
-    if TrialLockManager.is_locked():
+    if await verify_trial_lock_status():
         raise HTTPException(
             status_code=403,
             detail="Forbidden: Trial is currently locked in a read-only state due to a security violation.",
@@ -1198,9 +1198,9 @@ async def create_expectation(
             detail="Forbidden: Inspectors are restricted to read-only access.",
         )
 
-    from apps.execution.trial_lock import TrialLockManager
+    from apps.etmf.lock_client import verify_trial_lock_status
 
-    if TrialLockManager.is_locked():
+    if await verify_trial_lock_status():
         raise HTTPException(
             status_code=403,
             detail="Forbidden: Trial is currently locked in a read-only state due to a security violation.",
@@ -1270,9 +1270,9 @@ async def update_expectation(
             detail="Forbidden: Inspectors are restricted to read-only access.",
         )
 
-    from apps.execution.trial_lock import TrialLockManager
+    from apps.etmf.lock_client import verify_trial_lock_status
 
-    if TrialLockManager.is_locked():
+    if await verify_trial_lock_status():
         raise HTTPException(
             status_code=403,
             detail="Forbidden: Trial is currently locked in a read-only state due to a security violation.",
@@ -1505,9 +1505,9 @@ async def redact_document_endpoint(
         )
 
     # Restrict affected trial to read-only state if trial is locked
-    from apps.execution.trial_lock import TrialLockManager
+    from apps.etmf.lock_client import verify_trial_lock_status
 
-    if TrialLockManager.is_locked():
+    if await verify_trial_lock_status():
         raise HTTPException(
             status_code=403,
             detail="Forbidden: Trial is currently locked in a read-only state due to a security violation.",
@@ -1670,9 +1670,9 @@ async def auto_redact_document_endpoint(
         )
 
     # Restrict affected trial to read-only state if trial is locked
-    from apps.execution.trial_lock import TrialLockManager
+    from apps.etmf.lock_client import verify_trial_lock_status
 
-    if TrialLockManager.is_locked():
+    if await verify_trial_lock_status():
         raise HTTPException(
             status_code=403,
             detail="Forbidden: Trial is currently locked in a read-only state due to a security violation.",
@@ -1861,9 +1861,9 @@ async def manual_redact_document_endpoint(
         )
 
     # Restrict affected trial to read-only state if trial is locked
-    from apps.execution.trial_lock import TrialLockManager
+    from apps.etmf.lock_client import verify_trial_lock_status
 
-    if TrialLockManager.is_locked():
+    if await verify_trial_lock_status():
         raise HTTPException(
             status_code=403,
             detail="Forbidden: Trial is currently locked in a read-only state due to a security violation.",
@@ -2184,9 +2184,9 @@ async def sign_document_endpoint(
         )
 
     # Restrict affected trial to read-only state if trial is locked
-    from apps.execution.trial_lock import TrialLockManager
+    from apps.etmf.lock_client import verify_trial_lock_status
 
-    if TrialLockManager.is_locked():
+    if await verify_trial_lock_status():
         raise HTTPException(
             status_code=403,
             detail="Forbidden: Trial is currently locked in a read-only state due to a security violation.",
