@@ -22,7 +22,7 @@ from apps.quality.models import (
 )
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
-from packages.security.rbac import get_normalized_roles
+from packages.security.rbac import get_normalized_roles, Principal, get_principal, has_permission
 
 
 # Pydantic Schemas for Request/Response Validation
@@ -198,44 +198,28 @@ async def write_audit_log(
     await session.flush()
 
 
-def get_request_roles(request: Request) -> list[str]:
-    return get_normalized_roles(request)
-
-
-def authorize_quality_write(request: Request) -> list[str]:
-    roles = get_request_roles(request)
-    read_only_roles = {
-        "auditor",
-        "inspector",
-        "regulatory_inspector",
-        "viewer",
-        "read_only",
-    }
-    if not roles or any(r in read_only_roles for r in roles):
+def authorize_quality_write(principal: Principal) -> list[str]:
+    if not has_permission(principal, "quality_event:create"):
         raise HTTPException(
             status_code=403,
             detail="Forbidden: Read-only roles are restricted to read-only access.",
         )
-    return roles
+    return principal.roles
 
 
-def authorize_quality_oversight(request: Request) -> list[str]:
-    roles = authorize_quality_write(request)
-    oversight_roles = {"quality_manager", "qa_lead", "quality_oversight", "admin"}
-    if not any(r in oversight_roles for r in roles):
+def authorize_quality_oversight(principal: Principal) -> list[str]:
+    if not has_permission(principal, "quality_event:investigate"):
         raise HTTPException(
             status_code=403,
             detail="Forbidden: Quality oversight role required for CAPA approval or closure.",
         )
-    return roles
+    return principal.roles
 
 
-def get_user_context(request: Request):
-    user_id = getattr(request.state, "user_id", "system")
-    user_role = request.headers.get("X-User-Roles", "system")
-    change_reason = getattr(
-        request.state, "change_reason", None
-    ) or request.headers.get("X-Change-Reason")
+def get_user_context(principal: Principal):
+    user_id = principal.user_id
+    user_role = ",".join(principal.raw_roles) if principal.raw_roles else "system"
+    change_reason = principal.change_reason
     return user_id, user_role, change_reason
 
 
@@ -322,16 +306,15 @@ def map_capa_to_response(capa: CAPARecord) -> CAPAResponse:
 @app.post(
     "/api/v1/quality/deviations", response_model=DeviationResponse, status_code=201
 )
-async def create_deviation(
-    request: Request,
+async def create_deviation(request: Request,
     payload: DeviationCreate,
     session: AsyncSession = Depends(get_db_session),
-) -> DeviationResponse:
+    principal: Principal = Depends(get_principal)):
     """
     Create a new clinical protocol deviation or quality deviation event.
     """
-    authorize_quality_write(request)
-    user_id, user_role, change_reason = get_user_context(request)
+    authorize_quality_write(principal)
+    user_id, user_role, change_reason = get_user_context(principal)
     if not change_reason:
         raise HTTPException(
             status_code=403, detail="Missing change justification reason"
@@ -367,17 +350,16 @@ async def create_deviation(
 
 
 @app.get("/api/v1/quality/deviations", response_model=List[DeviationResponse])
-async def list_deviations(
-    request: Request,
+async def list_deviations(request: Request,
     study_id: Optional[str] = Query(None, description="Filter by study ID"),
     site_id: Optional[str] = Query(None, description="Filter by site ID"),
     status: Optional[DeviationStatus] = Query(None, description="Filter by status"),
     session: AsyncSession = Depends(get_db_session),
-) -> List[DeviationResponse]:
+    principal: Principal = Depends(get_principal)):
     """
     Retrieve clinical deviation records with optional filtering.
     """
-    user_id, user_role, change_reason = get_user_context(request)
+    user_id, user_role, change_reason = get_user_context(principal)
 
     stmt = select(Deviation)
     if study_id:
@@ -404,15 +386,14 @@ async def list_deviations(
 
 
 @app.get("/api/v1/quality/deviations/{id}", response_model=DeviationResponse)
-async def view_deviation(
-    request: Request,
+async def view_deviation(request: Request,
     id: str,
     session: AsyncSession = Depends(get_db_session),
-) -> DeviationResponse:
+    principal: Principal = Depends(get_principal)):
     """
     Retrieve a specific clinical deviation by ID.
     """
-    user_id, user_role, change_reason = get_user_context(request)
+    user_id, user_role, change_reason = get_user_context(principal)
 
     stmt = select(Deviation).where(Deviation.id == id)
     result = await session.execute(stmt)
@@ -435,18 +416,17 @@ async def view_deviation(
 
 @app.post("/api/v1/quality/deviations/{id}/rca", response_model=RCAResponse)
 @app.put("/api/v1/quality/deviations/{id}/rca", response_model=RCAResponse)
-async def create_or_update_rca(
-    request: Request,
+async def create_or_update_rca(request: Request,
     id: str,
     payload: RCACreateOrUpdate,
     session: AsyncSession = Depends(get_db_session),
-) -> RCAResponse:
+    principal: Principal = Depends(get_principal)):
     """
     Create or update Root Cause Analysis (RCA) linked to a specific deviation.
     Transitions the deviation status to RCA_COMPLETE.
     """
-    authorize_quality_write(request)
-    user_id, user_role, change_reason = get_user_context(request)
+    authorize_quality_write(principal)
+    user_id, user_role, change_reason = get_user_context(principal)
     if not change_reason:
         raise HTTPException(
             status_code=403, detail="Missing change justification reason"
@@ -527,16 +507,15 @@ async def create_or_update_rca(
 
 
 @app.post("/api/v1/quality/capas", response_model=CAPAResponse, status_code=201)
-async def create_capa(
-    request: Request,
+async def create_capa(request: Request,
     payload: CAPACreate,
     session: AsyncSession = Depends(get_db_session),
-) -> CAPAResponse:
+    principal: Principal = Depends(get_principal)):
     """
     Create a new Corrective and Preventive Action (CAPA) record linked to a deviation.
     """
-    authorize_quality_write(request)
-    user_id, user_role, change_reason = get_user_context(request)
+    authorize_quality_write(principal)
+    user_id, user_role, change_reason = get_user_context(principal)
     if not change_reason:
         raise HTTPException(
             status_code=403, detail="Missing change justification reason"
@@ -628,21 +607,20 @@ async def create_capa(
 
 
 @app.post("/api/v1/quality/capas/{id}/transition", response_model=CAPAResponse)
-async def transition_capa(
-    request: Request,
+async def transition_capa(request: Request,
     id: str,
     payload: CAPATransitionRequest,
     session: AsyncSession = Depends(get_db_session),
-) -> CAPAResponse:
+    principal: Principal = Depends(get_principal)):
     """
     Perform a secure, 21 CFR Part 11 compliant status transition on a CAPA record.
     """
     if payload.to_status in (CAPAStatus.CLOSED, CAPAStatus.CANCELLED):
-        authorize_quality_oversight(request)
+        authorize_quality_oversight(principal)
     else:
-        authorize_quality_write(request)
+        authorize_quality_write(principal)
 
-    user_id, user_role, change_reason = get_user_context(request)
+    user_id, user_role, change_reason = get_user_context(principal)
     if not change_reason:
         raise HTTPException(
             status_code=403, detail="Missing change justification reason"
@@ -731,17 +709,16 @@ async def transition_capa(
 
 
 @app.put("/api/v1/quality/capas/{id}", response_model=CAPAResponse)
-async def update_capa(
-    request: Request,
+async def update_capa(request: Request,
     id: str,
     payload: CAPAUpdate,
     session: AsyncSession = Depends(get_db_session),
-) -> CAPAResponse:
+    principal: Principal = Depends(get_principal)):
     """
     Update non-status attributes of a CAPA record. Disallowed once terminal (CLOSED/CANCELLED).
     """
-    authorize_quality_write(request)
-    user_id, user_role, change_reason = get_user_context(request)
+    authorize_quality_write(principal)
+    user_id, user_role, change_reason = get_user_context(principal)
     if not change_reason:
         raise HTTPException(
             status_code=403, detail="Missing change justification reason"
@@ -813,14 +790,13 @@ class AuditLogResponse(BaseModel):
 
 
 @app.get("/api/v1/quality/audit-logs", response_model=List[AuditLogResponse])
-async def list_audit_logs(
-    request: Request,
+async def list_audit_logs(request: Request,
     session: AsyncSession = Depends(get_db_session),
-) -> List[AuditLogResponse]:
+    principal: Principal = Depends(get_principal)):
     """
     Retrieve quality audit logs in descending chronological order.
     """
-    user_id, user_role, change_reason = get_user_context(request)
+    user_id, user_role, change_reason = get_user_context(principal)
 
     stmt = select(QualityAuditLog).order_by(QualityAuditLog.timestamp.desc())
     result = await session.execute(stmt)

@@ -10,6 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.etmf.models import DocumentQCTransition, DocumentStatus, TMFDocument
 
+from packages.security.rbac import normalize_role
+
 # Defined allowed forward and rejection transitions
 ALLOWED_TRANSITIONS: Dict[str, Set[str]] = {
     DocumentStatus.DRAFT: {DocumentStatus.TECHNICAL_QC},
@@ -49,11 +51,12 @@ def has_required_role(actor_role: str | list[str], target_status: str) -> bool:
     if not required_roles:
         return True
 
-    # Normalize roles to lowercase list
+    # Normalize roles to lowercase list using centralized normalize_role
     if isinstance(actor_role, str):
-        actor_roles = [r.strip().lower() for r in actor_role.split(",")]
+        raw_roles = [r.strip() for r in actor_role.split(",")]
     else:
-        actor_roles = [str(r).strip().lower() for r in actor_role]
+        raw_roles = [str(r).strip() for r in actor_role]
+    actor_roles = [normalize_role(r) for r in raw_roles]
     return any(role in required_roles for role in actor_roles)
 
 
