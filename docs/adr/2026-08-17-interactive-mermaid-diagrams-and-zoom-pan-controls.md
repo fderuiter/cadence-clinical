@@ -15,6 +15,7 @@ The documentation portal for Cadence Clinical relies heavily on visual aids, inc
 * **Performance & SEO:** Diagrams should render static assets or compile at build-time to avoid client-side rendering lag and maintain search indexing speed, rather than loading large third-party runtime bundles on the fly.
 * **Usability & Interaction:** Large-scale workflows and sequence flows must support panning, zooming, and resetting controls to allow detailed examination of granular clinical execution steps.
 * **Theme Integration:** Rendered diagram colors must automatically synchronize with the user's selected global theme (light/dark reading modes) to preserve readability and design consistency.
+* **Compliance Requirements:** This decision implements requirements under Trace-8.
 
 ## 3. Options Considered
 ### Option 1: Static Image Exports (PNG/SVG) from External Design Tools

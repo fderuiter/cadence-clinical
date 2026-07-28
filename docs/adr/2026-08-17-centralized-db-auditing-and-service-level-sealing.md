@@ -15,6 +15,7 @@ Clinical trial systems must enforce strict compliance with regulatory frameworks
 * **Integrity Enforcement:** Guard against physical database tampering, hard deletions, and unsigned modifications.
 * **Architectural Boundaries:** Respect database isolation constraints per service (e.g., SQLite files remain service-local) without cross-schema dependencies.
 * **Maintainability & DRY:** Centralize audit interception, cryptographic signing, and verification utilities to prevent duplicate logic.
+* **Compliance Requirements:** This decision implements requirements under Trace-1.
 
 ## 3. Options Considered
 ### Option 1: Manual Route-Level / Service-Level Auditing

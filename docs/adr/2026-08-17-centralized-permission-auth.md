@@ -14,6 +14,7 @@ The Cadence Clinical platform spans multiple services (such as eTMF, CTMS, and Q
 * **GxP Auditing & Compliance:** All document states and quality transactions must have clear, centrally defined authorization constraints.
 * **Maintainability & DRY:** Authorization logic should not be duplicated across microservices.
 * **Dynamic Role Support:** Roles (including sponsor roles and admins) should resolve dynamically using a centralized RBAC mechanism.
+* **Compliance Requirements:** This decision implements requirements under Trace-6, Trace-7, and Trace-8.
 
 ## 3. Options Considered
 ### Option 1: Decentralized authorization in each service

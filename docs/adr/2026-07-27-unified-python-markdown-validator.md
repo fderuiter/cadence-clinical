@@ -14,6 +14,7 @@ Our documentation validation pipeline was previously fragmented across two separ
 * **Driver 1:** Eliminate false positives: Code blocks and multi-line HTML comments are parsed out and bypassed during path validation.
 * **Driver 2:** Increase velocity: Pre-flight checks and pipeline runs execute entirely offline and complete in under 5 seconds, providing immediate feedback during local development.
 * **Driver 3:** Simplify maintenance: Retiring the duplicate Node.js script cuts down on project dependencies and unifies our validation rules.
+* **Compliance Requirements:** This decision implements requirements under Trace-7.
 
 ## 3. Options Considered
 ### Option 1: Fragmented Node.js and Python Validators

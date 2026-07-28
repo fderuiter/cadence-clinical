@@ -14,6 +14,7 @@ The Cadence Clinical platform consists of multiple web applications and portals,
 * **Driver 1:** 21 CFR Part 11 and GxP compliance requires cryptographic consistency for signature and ledger block creation across all portals.
 * **Driver 2:** Code reusability and reducing duplication to simplify system verification.
 * **Driver 3:** Maintenance of uniform frontend design standards, particularly around grid-based clinical forms and debounced asynchronous field validations.
+* **Compliance Requirements:** This decision implements requirements under Trace-8 and Trace-9.
 
 ## 3. Options Considered
 ### Option 1: Fragmented/Bespoke Utility Implementations
