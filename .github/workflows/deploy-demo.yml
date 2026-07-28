@@ -41,8 +41,21 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: uv sync --all-extras
+
       - name: Build Web Application
-        run: pnpm --filter web build
+        run: uv run pnpm --filter web build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

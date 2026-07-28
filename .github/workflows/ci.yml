@@ -44,11 +44,6 @@ jobs:
       - name: Install Node dependencies
         run: pnpm install
 
-      - name: Run frontend verification with Turborepo
-        id: run_frontend
-        if: always()
-        run: pnpm turbo run lint format test build
-
       - name: Set up uv
         uses: astral-sh/setup-uv@v3
         with:
@@ -61,6 +56,11 @@ jobs:
 
       - name: Install dependencies
         run: uv sync --all-extras
+
+      - name: Run frontend verification with Turborepo
+        id: run_frontend
+        if: always()
+        run: uv run pnpm turbo run lint format test build
 
       - name: Run markdown link verification
         id: run_link_check
@@ -77,7 +77,7 @@ jobs:
       - name: Run ADR validation
         id: run_adr
         if: always()
-        run: python3 scripts/validate_adrs.py
+        run: uv run python3 scripts/validate_adrs.py
 
       - name: Run code duplication verification
         id: run_duplication
