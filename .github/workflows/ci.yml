@@ -116,6 +116,7 @@ jobs:
       audit_outcome: ${{ steps.run_audit.outcome }}
       static_outcome: ${{ steps.run_static.outcome }}
       secrets_outcome: ${{ steps.run_secrets.outcome }}
+      deid_outcome: ${{ steps.run_deid_scan.outcome }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -174,6 +175,24 @@ jobs:
         run: |
           git add .secrets.baseline
           uv run pre-commit run detect-secrets --all-files
+
+      - name: Run DEID compliance scan
+        id: run_deid_scan
+        if: always()
+        run: |
+          git fetch origin main --depth=1 || true
+          CHANGED_FILES=""
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            CHANGED_FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null | grep -E '\.(py|js|ts|tsx|jsx|json|md|log|txt)$' || true)
+          else
+            CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD 2>/dev/null | grep -E '\.(py|js|ts|tsx|jsx|json|md|log|txt)$' || true)
+          fi
+          if [ -n "$CHANGED_FILES" ]; then
+            echo "Scanning changed files: $CHANGED_FILES"
+            uv run python -m packages.deid.cli $CHANGED_FILES
+          else
+            echo "No changed files to scan."
+          fi
 
   unit-tests:
     name: Frontend & Backend Unit Tests
@@ -467,6 +486,7 @@ jobs:
           AUDIT_OUTCOME: ${{ needs.security.outputs.audit_outcome }}
           STATIC_OUTCOME: ${{ needs.security.outputs.static_outcome }}
           SECRETS_OUTCOME: ${{ needs.security.outputs.secrets_outcome }}
+          DEID_OUTCOME: ${{ needs.security.outputs.deid_outcome }}
           DUPLICATION_OUTCOME: ${{ needs.style.outputs.duplication_outcome }}
         run: python3 scripts/post_pr_comment.py
   classify:

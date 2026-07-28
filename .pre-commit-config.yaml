@@ -46,3 +46,10 @@ repos:
         language: system
         files: \.(py|js|vue|css)$
         pass_filenames: true
+
+      - id: deid-compliance-scan
+        name: DEID Compliance Scan
+        entry: uv run python -m packages.deid.cli
+        language: system
+        files: \.(py|js|ts|tsx|jsx|json|md|log|txt)$
+        pass_filenames: true
