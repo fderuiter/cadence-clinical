@@ -197,12 +197,19 @@ async def test_view_download_audit_logging():
     assert view_resp.status_code == 200
     assert view_resp.json()["filename"] == "define.xml"
 
-    # Perform Download content
+    # Perform Download content as admin (not auditor)
     download_resp = client.get(
-        f"/api/v1/etmf/documents/{doc_id}/download", headers=inspector_headers
+        f"/api/v1/etmf/documents/{doc_id}/download", headers=admin_headers
     )
     assert download_resp.status_code == 200
     assert download_resp.text == "SDTM standard data specification structure."
+
+    # Perform Download content as inspector (auditor)
+    download_resp_aud = client.get(
+        f"/api/v1/etmf/documents/{doc_id}/download", headers=inspector_headers
+    )
+    assert download_resp_aud.status_code == 200
+    assert "CONFIDENTIAL — Auditor Copy" in download_resp_aud.text
 
     # Retrieve all audit logs
     audit_resp = client.get("/api/v1/etmf/audit-logs", headers=inspector_headers)
@@ -210,16 +217,17 @@ async def test_view_download_audit_logging():
     logs = audit_resp.json()["items"]
 
     # The latest logs should be in descending order (newest first)
-    # We expect: AUDIT_VIEW, DOWNLOAD, VIEW, LIST, INGEST
+    # We expect: AUDIT_VIEW, WATERMARKED_DOWNLOAD, DOWNLOAD, VIEW, LIST, INGEST
     actions = [log["action"] for log in logs]
     assert "AUDIT_VIEW" in actions
+    assert "WATERMARKED_DOWNLOAD" in actions
     assert "DOWNLOAD" in actions
     assert "VIEW" in actions
     assert "LIST" in actions
     assert "INGEST" in actions
 
     # Verify correct document association in logs
-    download_log = next(log for log in logs if log["action"] == "DOWNLOAD")
+    download_log = next(log for log in logs if log["action"] == "WATERMARKED_DOWNLOAD")
     assert download_log["document_id"] == doc_id
     assert download_log["user_role"] == "regulatory_inspector"
 
@@ -1393,3 +1401,148 @@ async def test_etmf_audit_logs_filtering_and_pagination():
         assert paginated_data["next_cursor"] == "1"
         assert "offset=1" in paginated_data["next_page"]
         assert "limit=1" in paginated_data["next_page"]
+
+
+@pytest.mark.asyncio
+async def test_watermarked_document_viewing_and_download():
+    """
+    Verify watermarked eTMF document access controls, content generation,
+    database non-modification, and WATERMARKED_DOWNLOAD audit trailing.
+    """
+    import json
+    client = TestClient(app)
+    admin_headers = get_auth_headers(roles="admin", change_reason="Ingest documents for watermarking")
+    auditor_headers = get_auth_headers(roles="regulatory_inspector")
+    cra_headers = get_auth_headers(roles="cra", change_reason="CRA download attempt")
+
+    # 1. Ingest documents of different formats (plain text, JSON, XML, CSV)
+    payload_txt = {
+        "study_id": "study_watermark",
+        "artifact_type": "Clinical Trial Protocol",
+        "filename": "protocol.txt",
+        "content": "This is raw protocol text.",
+        "mime_type": "text/plain",
+    }
+    resp = client.post("/api/v1/etmf/ingest", json=payload_txt, headers=admin_headers)
+    assert resp.status_code == 201
+    txt_doc_id = resp.json()["document_id"]
+
+    payload_json = {
+        "study_id": "study_watermark",
+        "artifact_type": "Define-XML Specifications",
+        "filename": "spec.json",
+        "content": json.dumps({"key": "original_value"}),
+        "mime_type": "application/json",
+    }
+    resp = client.post("/api/v1/etmf/ingest", json=payload_json, headers=admin_headers)
+    assert resp.status_code == 201
+    json_doc_id = resp.json()["document_id"]
+
+    payload_xml = {
+        "study_id": "study_watermark",
+        "artifact_type": "Blank CRF",
+        "filename": "form.xml",
+        "content": "<form><field id='1'/></form>",
+        "mime_type": "application/xml",
+    }
+    resp = client.post("/api/v1/etmf/ingest", json=payload_xml, headers=admin_headers)
+    assert resp.status_code == 201
+    xml_doc_id = resp.json()["document_id"]
+
+    payload_csv = {
+        "study_id": "study_watermark",
+        "artifact_type": "Data Lock Certificate",
+        "filename": "records.csv",
+        "content": "id,name\n1,subject_1",
+        "mime_type": "text/csv",
+    }
+    resp = client.post("/api/v1/etmf/ingest", json=payload_csv, headers=admin_headers)
+    assert resp.status_code == 201
+    csv_doc_id = resp.json()["document_id"]
+
+    # 2. Test authorization gates
+    # A non-auditor (e.g. cra) attempting to use explicit watermark parameter -> 403
+    resp_cra_query = client.get(
+        f"/api/v1/etmf/documents/{txt_doc_id}/download?watermark=true",
+        headers=cra_headers,
+    )
+    assert resp_cra_query.status_code == 403
+    assert "restricted to authorized auditor" in resp_cra_query.json()["detail"]
+
+    # A non-auditor attempting to use dedicated watermark endpoint -> 403
+    resp_cra_endpoint = client.get(
+        f"/api/v1/etmf/documents/{txt_doc_id}/watermark",
+        headers=cra_headers,
+    )
+    assert resp_cra_endpoint.status_code == 403
+    assert "restricted to authorized auditor" in resp_cra_endpoint.json()["detail"]
+
+    # 3. Test normal downloads for non-auditors (must NOT contain watermark content)
+    resp_cra_normal = client.get(
+        f"/api/v1/etmf/documents/{txt_doc_id}/download",
+        headers=cra_headers,
+    )
+    assert resp_cra_normal.status_code == 200
+    assert "CONFIDENTIAL — Auditor Copy" not in resp_cra_normal.text
+    assert resp_cra_normal.text == "This is raw protocol text."
+
+    # 4. Test watermarking for auditors (under different MIME types)
+    # 4.1 Plain text format
+    resp_aud_txt = client.get(
+        f"/api/v1/etmf/documents/{txt_doc_id}/download",
+        headers=auditor_headers,
+    )
+    assert resp_aud_txt.status_code == 200
+    assert "CONFIDENTIAL — Auditor Copy" in resp_aud_txt.text
+    assert "Access by:" in resp_aud_txt.text or "Accessed by:" in resp_aud_txt.text
+    assert "regulatory_inspector" in resp_aud_txt.text
+    assert "UTC" in resp_aud_txt.text
+
+    # 4.2 JSON format (dedicated watermark endpoint check)
+    resp_aud_json = client.get(
+        f"/api/v1/etmf/documents/{json_doc_id}/watermark",
+        headers=auditor_headers,
+    )
+    assert resp_aud_json.status_code == 200
+    parsed_json = resp_aud_json.json()
+    assert "_watermark" in parsed_json
+    assert parsed_json["_watermark"]["marker"] == "CONFIDENTIAL — Auditor Copy"
+    assert parsed_json["_watermark"]["accessed_by"] == "test_user"
+    assert "regulatory_inspector" in parsed_json["_watermark"]["role"]
+
+    # 4.3 XML format (comment insertion check)
+    resp_aud_xml = client.get(
+        f"/api/v1/etmf/documents/{xml_doc_id}/download",
+        headers=auditor_headers,
+    )
+    assert resp_aud_xml.status_code == 200
+    assert "<!-- CONFIDENTIAL — Auditor Copy" in resp_aud_xml.text
+
+    # 4.4 CSV format (row insertion check)
+    resp_aud_csv = client.get(
+        f"/api/v1/etmf/documents/{csv_doc_id}/download",
+        headers=auditor_headers,
+    )
+    assert resp_aud_csv.status_code == 200
+    assert "# CONFIDENTIAL — Auditor Copy" in resp_aud_csv.text
+
+    # 5. Verify the original stored document content remains completely unchanged
+    resp_cra_unaffected = client.get(
+        f"/api/v1/etmf/documents/{json_doc_id}/download",
+        headers=cra_headers,
+    )
+    assert resp_cra_unaffected.status_code == 200
+    assert "_watermark" not in resp_cra_unaffected.json()
+    assert resp_cra_unaffected.json()["key"] == "original_value"
+
+    # 6. Verify that accessing a watermarked copy generates WATERMARKED_DOWNLOAD audit log
+    audit_resp = client.get("/api/v1/etmf/audit-logs?action=WATERMARKED_DOWNLOAD", headers=auditor_headers)
+    assert audit_resp.status_code == 200
+    logs = audit_resp.json()["items"]
+    # We performed watermarked downloads on multiple formats, so there should be multiple logs
+    assert len(logs) >= 4
+    for log in logs:
+        assert log["action"] == "WATERMARKED_DOWNLOAD"
+        assert log["user_id"] == "test_user"
+        assert log["user_role"] == "regulatory_inspector"
+        assert "Downloaded watermarked content" in log["details"]
