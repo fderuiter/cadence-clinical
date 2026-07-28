@@ -956,6 +956,7 @@ async def view_document(
 async def download_document(
     request: Request,
     document_id: str,
+    watermark: bool = Query(False, description="Request watermarked document"),
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
 ) -> Response:
@@ -965,6 +966,19 @@ async def download_document(
     """
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
+
+    is_auditor = "auditor" in principal.roles or any(
+        r in {"auditor", "inspector", "regulatory_inspector"}
+        for r in principal.raw_roles
+    )
+
+    if watermark and not is_auditor:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Access is restricted to authorized auditor/inspection roles.",
+        )
+
+    should_watermark = watermark or is_auditor
 
     stmt = select(TMFDocument).where(TMFDocument.id == document_id)
     result = await session.execute(stmt)
@@ -986,18 +1000,97 @@ async def download_document(
                     detail="Forbidden: Raw-original retrieval is restricted to privileged roles.",
                 )
 
+    if should_watermark:
+        from apps.etmf.watermark import apply_watermark
+
+        final_content = apply_watermark(doc.content, doc.mime_type, user_id, user_roles)
+        action_name = "WATERMARKED_DOWNLOAD"
+        details_msg = f"Downloaded watermarked content for eTMF document '{doc.filename}' (ID: {doc.id})."
+    else:
+        final_content = doc.content
+        action_name = "DOWNLOAD"
+        details_msg = f"Downloaded content for eTMF document '{doc.filename}' (ID: {doc.id})."
+
     # Log action to immutable audit trail
     await write_audit_log(
         session=session,
         user_id=user_id,
         user_role=user_roles,
-        action="DOWNLOAD",
+        action=action_name,
         document_id=doc.id,
-        details=f"Downloaded content for eTMF document '{doc.filename}' (ID: {doc.id}).",
+        details=details_msg,
     )
 
     return Response(
-        content=doc.content,
+        content=final_content,
+        media_type=doc.mime_type,
+        headers={"Content-Disposition": f"attachment; filename={doc.filename}"},
+    )
+
+
+@app.get("/api/v1/etmf/documents/{document_id}/watermark")
+async def download_watermarked_document(
+    request: Request,
+    document_id: str,
+    session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
+) -> Response:
+    """
+    Dedicated watermarked view/download path for external auditors.
+    Access is strictly auditor-role-gated.
+    """
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
+
+    is_auditor = "auditor" in principal.roles or any(
+        r in {"auditor", "inspector", "regulatory_inspector"}
+        for r in principal.raw_roles
+    )
+
+    if not is_auditor:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Access is restricted to authorized auditor/inspection roles.",
+        )
+
+    stmt = select(TMFDocument).where(TMFDocument.id == document_id)
+    result = await session.execute(stmt)
+    doc = result.scalars().first()
+
+    if not doc:
+        raise HTTPException(status_code=404, detail="eTMF Document not found")
+
+    # Enforce raw-original authorization controls
+    if not doc.is_redacted:
+        stmt_redacted = select(TMFDocument).where(
+            TMFDocument.redaction_source_id == doc.id
+        )
+        res_redacted = await session.execute(stmt_redacted)
+        if res_redacted.scalars().first() is not None:
+            if not has_permission(principal, "etmf_document:read_raw"):
+                raise HTTPException(
+                    status_code=403,
+                    detail="Forbidden: Raw-original retrieval is restricted to privileged roles.",
+                )
+
+    from apps.etmf.watermark import apply_watermark
+
+    watermarked_content = apply_watermark(
+        doc.content, doc.mime_type, user_id, user_roles
+    )
+
+    # Log action to immutable audit trail
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="WATERMARKED_DOWNLOAD",
+        document_id=doc.id,
+        details=f"Downloaded watermarked content for eTMF document '{doc.filename}' (ID: {doc.id}).",
+    )
+
+    return Response(
+        content=watermarked_content,
         media_type=doc.mime_type,
         headers={"Content-Disposition": f"attachment; filename={doc.filename}"},
     )
