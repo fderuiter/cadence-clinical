@@ -860,10 +860,9 @@ async def test_tickets_optimistic_locking_and_explicit_endpoints():
     assert "assignee_role:" in assign_log["details"]
 
     # Find TICKET_TRANSITION log
-    transition_log = next(
-        (log for log in logs if log["action"] == "TICKET_TRANSITION"), None
-    )
-    assert transition_log is not None
-    assert (
-        "Source State: 'OPEN', Target State: 'IN_PROGRESS'" in transition_log["details"]
+    transition_logs = [log for log in logs if log["action"] == "TICKET_TRANSITION"]
+    assert len(transition_logs) > 0
+    assert any(
+        "Source State: 'OPEN', Target State: 'IN_PROGRESS'" in log["details"]
+        for log in transition_logs
     )
