@@ -669,6 +669,88 @@ async def study_differences(
 
 
 # ==========================================
+# Protocol Export / Rendering Endpoints
+# ==========================================
+
+from fastapi import Response
+from fastapi.concurrency import run_in_threadpool
+import usdm_model
+from apps.designer.rendering import render_protocol_to_pdf, render_protocol_to_docx
+from apps.designer.content_assembly import assemble_rendered_protocol_document
+
+
+@app.get("/api/v1/studies/{study_id}/export")
+async def export_protocol(
+    study_id: str,
+    format: Literal["pdf", "docx"] = Query("pdf"),
+    request: Request = None,
+):
+    """
+    Assembles a study version's data, maps it to a canonical USDM content model,
+    and renders the resulting clinical protocol document as a structurally valid
+    PDF or DOCX document using shared layout templates.
+    """
+    study_data = get_study_projection(study_id)
+    if not study_data:
+        raise HTTPException(status_code=404, detail="Study not found")
+
+    user_id = getattr(request.state, "user_id", "system") if request else "system"
+    change_reason = getattr(request.state, "change_reason", "system_operation") if request else "system_operation"
+    version_index = 1
+    # Try to parse current version as integer if possible
+    try:
+        raw_version = study_data.get("current_version", "1")
+        # Strip alpha characters if any
+        version_num = "".join(filter(str.isdigit, str(raw_version)))
+        version_index = int(version_num) if version_num else 1
+    except Exception:
+        version_index = 1
+
+    # Map internal projection to USDM payload
+    try:
+        usdm_dict = map_study_to_usdm(study_data)
+        from apps.designer.mapper import to_uuid
+        usdm_dict["id"] = to_uuid(usdm_dict["id"], "study")
+        study_obj = usdm_model.Study.model_validate(usdm_dict)
+    except Exception as e:
+        raise HTTPException(
+            status_code=422, detail=f"Validation Error mapping USDM: {str(e)}"
+        )
+
+    # Assemble the content model (presentation-centric view models)
+    try:
+        doc_view = assemble_rendered_protocol_document(
+            study=study_obj,
+            creator=user_id,
+            change_reason=change_reason,
+            version_index=max(1, version_index),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=400, detail=f"Assembly Error: {str(e)}"
+        )
+
+    # Render off the async request event loop to protect performance
+    if format == "pdf":
+        result = await run_in_threadpool(render_protocol_to_pdf, doc_view)
+    elif format == "docx":
+        result = await run_in_threadpool(render_protocol_to_docx, doc_view)
+    else:
+        raise HTTPException(
+            status_code=400, detail=f"Unsupported format: {format}"
+        )
+
+    headers = {
+        "Content-Disposition": f'attachment; filename="{result.filename}"'
+    }
+    return Response(
+        content=result.content,
+        media_type=result.media_type,
+        headers=headers,
+    )
+
+
+# ==========================================
 # Eligibility Criteria API Models and Routes
 # ==========================================
 

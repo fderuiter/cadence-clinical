@@ -67,6 +67,8 @@ dependencies = [
     "aiosmtplib>=3.0.1",
     "rapidfuzz>=3.14.5",
     "pyyaml>=6.0.1",
+    "docxtpl>=0.20.2",
+    "docxcompose>=2.2.0",
 ]
 
 [project.scripts]

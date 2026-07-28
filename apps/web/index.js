@@ -483,6 +483,8 @@ if (typeof document !== "undefined") {
     const secCtms = document.getElementById("section-ctms");
     const secRules = document.getElementById("section-rules");
     const secAudit = document.getElementById("section-audit");
+    const tabLibrary = document.getElementById("tab-btn-library");
+    const secLibrary = document.getElementById("section-library");
 
     const usdmTextarea = document.getElementById("usdm-json");
     const btnResetUsdm = document.getElementById("btn-reset-usdm");
@@ -506,10 +508,10 @@ if (typeof document !== "undefined") {
 
     // --- 6. TAB NAVIGATION ---
     function switchTab(activeTab, activeSec) {
-      [tabMdr, tabEcrf, tabCtms, tabRules, tabAudit].forEach((t) => {
+      [tabMdr, tabEcrf, tabCtms, tabRules, tabAudit, tabLibrary].forEach((t) => {
         if (t) t.classList.remove("active");
       });
-      [secMdr, secEcrf, secCtms, secRules, secAudit].forEach((s) => {
+      [secMdr, secEcrf, secCtms, secRules, secAudit, secLibrary].forEach((s) => {
         if (s) s.classList.remove("active");
       });
 
@@ -531,6 +533,12 @@ if (typeof document !== "undefined") {
     }
     if (tabAudit && secAudit) {
       tabAudit.addEventListener("click", () => switchTab(tabAudit, secAudit));
+    }
+    if (tabLibrary && secLibrary) {
+      tabLibrary.addEventListener("click", () => {
+        switchTab(tabLibrary, secLibrary);
+        renderLibrary();
+      });
     }
 
     // --- 7. MDR VISUALIZER FUNCTIONS ---
@@ -1777,6 +1785,648 @@ if (typeof document !== "undefined") {
       btnNewRule.addEventListener("click", () => {
         openRuleEditor();
       });
+    }
+
+    // --- 9.7 GLOBAL LIBRARY MANAGEMENT SYSTEM (VANILLA-JS SANDBOX) ---
+    let mockLibraryObjects = [
+      {
+        id: "lib-form-demographics",
+        object_type: "FORM",
+        version: "1.0.0",
+        status: "PUBLISHED",
+        sponsor_id: "SPONSOR-A",
+        created_at: "2026-08-01T12:00:00Z",
+        created_by: "usr_dm_fderuiter",
+        reason_for_change: "Initial publication of core Demographics CDASH form template.",
+        payload: {
+          items: [
+            { item_id: "brthdt", name: "DM.BRTHDT", question_text: "Date of Birth", data_type: "date", required: true },
+            { item_id: "sex", name: "DM.SEX", question_text: "Sex at Birth", data_type: "choice", required: true }
+          ]
+        },
+        history: [
+          { version: "1.0.0", status: "PUBLISHED", change_reason: "Initial publication of core Demographics CDASH form template.", updated_by: "usr_dm_fderuiter", updated_at: "2026-08-01T12:00:00Z" },
+          { version: "0.9.0", status: "IN_REVIEW", change_reason: "Sent for DM review.", updated_by: "usr_designer_alice", updated_at: "2026-07-28T10:00:00Z" },
+          { version: "0.1.0", status: "DRAFT", change_reason: "Initial draft.", updated_by: "usr_designer_alice", updated_at: "2026-07-25T09:00:00Z" }
+        ]
+      },
+      {
+        id: "lib-elem-sbp",
+        object_type: "DATA_ELEMENT",
+        version: "1.1.0",
+        status: "APPROVED",
+        sponsor_id: "SPONSOR-A",
+        created_at: "2026-08-02T14:30:00Z",
+        created_by: "usr_dm_fderuiter",
+        reason_for_change: "Added support for mmHg UCUM code verification.",
+        payload: {
+          data_type: "numeric",
+          allowable_units: ["mm[Hg]"],
+          default_unit: "mm[Hg]"
+        },
+        history: [
+          { version: "1.1.0", status: "APPROVED", change_reason: "Added support for mmHg UCUM code verification.", updated_by: "usr_dm_fderuiter", updated_at: "2026-08-02T14:30:00Z" },
+          { version: "1.0.0", status: "DRAFT", change_reason: "Initial baseline element definition.", updated_by: "usr_designer_alice", updated_at: "2026-07-26T15:00:00Z" }
+        ]
+      },
+      {
+        id: "lib-arm-placebo",
+        object_type: "ARM",
+        version: "1.0.0",
+        status: "DRAFT",
+        sponsor_id: "SPONSOR-A",
+        created_at: "2026-08-03T11:00:00Z",
+        created_by: "usr_designer_alice",
+        reason_for_change: "Draft version for Placebo treatment arm metadata.",
+        payload: {
+          attributes: {
+            arm_type: "PLACEBO",
+            target_sample_size: 50,
+            randomization_ratio: "1:1"
+          }
+        },
+        history: [
+          { version: "1.0.0", status: "DRAFT", change_reason: "Draft version for Placebo treatment arm metadata.", updated_by: "usr_designer_alice", updated_at: "2026-08-03T11:00:00Z" }
+        ]
+      },
+      {
+        id: "lib-visit-screening",
+        object_type: "VISIT",
+        version: "1.0.0",
+        status: "PUBLISHED",
+        sponsor_id: "SPONSOR-A",
+        created_at: "2026-08-04T09:15:00Z",
+        created_by: "usr_dm_fderuiter",
+        reason_for_change: "Published standard screening visit metadata config.",
+        payload: {
+          attributes: {
+            visit_type: "SCREENING",
+            planned_day: -7,
+            window_days: 2
+          }
+        },
+        history: [
+          { version: "1.0.0", status: "PUBLISHED", change_reason: "Published standard screening visit metadata config.", updated_by: "usr_dm_fderuiter", updated_at: "2026-08-04T09:15:00Z" },
+          { version: "0.1.0", status: "DRAFT", change_reason: "Initial screening visit skeleton.", updated_by: "usr_designer_alice", updated_at: "2026-08-01T14:00:00Z" }
+        ]
+      }
+    ];
+
+    const ALLOWED_LIBRARY_TRANSITIONS = {
+      DRAFT: ["IN_REVIEW"],
+      IN_REVIEW: ["APPROVED", "REJECTED"],
+      APPROVED: ["PUBLISHED"],
+      PUBLISHED: ["ARCHIVED"],
+      REJECTED: ["DRAFT"],
+      ARCHIVED: []
+    };
+
+    const TRANSITION_ROLES_MAP = {
+      IN_REVIEW: ["sponsor_designer", "sponsor_dm", "sponsor_admin", "sysadmin"],
+      APPROVED: ["sponsor_dm", "sponsor_admin", "sysadmin"],
+      REJECTED: ["sponsor_dm", "sponsor_admin", "sysadmin"],
+      PUBLISHED: ["sponsor_dm", "sponsor_admin", "sysadmin"],
+      ARCHIVED: ["sponsor_admin", "sysadmin"],
+      DRAFT: ["sponsor_designer", "sponsor_dm", "sponsor_admin", "sysadmin"]
+    };
+
+    let selectedLibraryObjectId = null;
+    let pendingLibraryAction = null; // { type: 'transition'/'instantiate', id, targetStatus, targetStudyId }
+
+    // API triggers
+    async function apiTransitionLibraryObject(id, targetStatus, changeReason, role) {
+      const userId = "usr_9921a88b2c410";
+      const timestamp = new Date().toISOString();
+      const secret = "internal-gateway-secret-12345"; // pragma: allowlist secret
+
+      const signature = await generateGatewaySignature(userId, role, timestamp, "2", changeReason, secret);
+      const headers = {
+        "X-User-Id": userId,
+        "X-User-Roles": role,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": signature,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": changeReason,
+        "X-Sponsor-Id": "SPONSOR-A"
+      };
+
+      const response = await fetch(`http://localhost:8000/api/v1/mdr/library/${id}/transition`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...headers },
+        body: JSON.stringify({ status: targetStatus, change_reason: changeReason })
+      });
+      if (!response.ok) {
+        let errData = null;
+        try { errData = await response.json(); } catch {}
+        throw new Error(errData?.detail || `API error ${response.status}`);
+      }
+      return await response.json();
+    }
+
+    async function apiInstantiateLibraryObject(studyId, libraryObjectId, changeReason, role) {
+      const userId = "usr_9921a88b2c410";
+      const timestamp = new Date().toISOString();
+      const secret = "internal-gateway-secret-12345"; // pragma: allowlist secret
+
+      const signature = await generateGatewaySignature(userId, role, timestamp, "2", changeReason, secret);
+      const headers = {
+        "X-User-Id": userId,
+        "X-User-Roles": role,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": signature,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": changeReason,
+        "X-Sponsor-Id": "SPONSOR-A"
+      };
+
+      const response = await fetch(`http://localhost:8000/api/v1/studies/${studyId}/library-instances`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...headers },
+        body: JSON.stringify({ library_object_id: libraryObjectId })
+      });
+      if (!response.ok) {
+        let errData = null;
+        try { errData = await response.json(); } catch {}
+        throw new Error(errData?.detail || `API error ${response.status}`);
+      }
+      return await response.json();
+    }
+
+    // UI render helpers
+    function displayLibraryError(msg) {
+      const banner = document.getElementById("library-error-banner");
+      if (banner) {
+        banner.textContent = msg;
+        banner.style.display = "block";
+        if (banner.scrollIntoView) {
+          banner.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+      } else {
+        alert(msg);
+      }
+    }
+
+    function clearLibraryError() {
+      const banner = document.getElementById("library-error-banner");
+      if (banner) {
+        banner.style.display = "none";
+        banner.textContent = "";
+      }
+    }
+
+    function getPayloadHTML(obj) {
+      if (!obj || !obj.payload) return "";
+      const type = obj.object_type;
+      const payload = obj.payload;
+
+      let html = `<div class="library-payload-box" style="background-color: var(--neutral-light); border: 1px solid var(--border); border-radius: 6px; padding: 12px; margin-top: 8px;">`;
+      html += `<h4 style="font-weight: 700; font-size: 0.85rem; text-transform: uppercase; color: var(--neutral-dark); margin-bottom: 8px;">Payload Definition Schema</h4>`;
+
+      if (type === "FORM") {
+        html += `<p style="font-size: 0.85rem; margin-bottom: 6px;"><strong>Questions / Fields (${payload.items?.length || 0}):</strong></p>`;
+        html += `<ul style="font-size: 0.85rem; padding-left: 20px; line-height: 1.4;">`;
+        (payload.items || []).forEach(item => {
+          html += `<li><code>${item.name}</code> (${item.data_type}${item.required ? ", required" : ""}): <em>"${item.question_text}"</em></li>`;
+        });
+        html += `</ul>`;
+      } else if (type === "DATA_ELEMENT") {
+        html += `<p style="font-size: 0.85rem;"><strong>Data Type:</strong> <code>${payload.data_type || "N/A"}</code></p>`;
+        html += `<p style="font-size: 0.85rem;"><strong>Allowable Units:</strong> ${(payload.allowable_units || []).map(u => `<code>${u}</code>`).join(", ") || "None"}</p>`;
+        html += `<p style="font-size: 0.85rem;"><strong>Default Unit:</strong> <code>${payload.default_unit || "None"}</code></p>`;
+      } else if (type === "ARM") {
+        const attr = payload.attributes || {};
+        html += `<p style="font-size: 0.85rem;"><strong>Arm Type:</strong> <code>${attr.arm_type || "N/A"}</code></p>`;
+        html += `<p style="font-size: 0.85rem;"><strong>Target Sample Size:</strong> <code>${attr.target_sample_size || "N/A"}</code></p>`;
+        html += `<p style="font-size: 0.85rem;"><strong>Allocation Ratio:</strong> <code>${attr.randomization_ratio || "N/A"}</code></p>`;
+      } else if (type === "VISIT") {
+        const attr = payload.attributes || {};
+        html += `<p style="font-size: 0.85rem;"><strong>Visit Type:</strong> <code>${attr.visit_type || "N/A"}</code></p>`;
+        html += `<p style="font-size: 0.85rem;"><strong>Planned Day:</strong> <code>${attr.planned_day !== undefined ? attr.planned_day : "N/A"}</code></p>`;
+        html += `<p style="font-size: 0.85rem;"><strong>Window Days:</strong> <code>±${attr.window_days !== undefined ? attr.window_days : "N/A"} days</code></p>`;
+      }
+
+      html += `</div>`;
+      return html;
+    }
+
+    function getHistoryHTML(obj) {
+      if (!obj || !obj.history || obj.history.length === 0) return "";
+      let rows = obj.history.map(hist => {
+        const badgeClass = `status-${hist.status.toLowerCase().replace(/[^a-z0-9]/g, "-")}`;
+        return `
+          <tr>
+            <td><strong>v${hist.version}</strong></td>
+            <td><span class="badge ${badgeClass}">${hist.status}</span></td>
+            <td>${hist.updated_by || "system"}</td>
+            <td style="font-size: 0.8rem; color: #64748b;">${hist.updated_at ? new Date(hist.updated_at).toLocaleString() : "N/A"}</td>
+            <td style="font-size: 0.8rem; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${hist.change_reason || ""}">
+              ${hist.change_reason || "No comment."}
+            </td>
+          </tr>
+        `;
+      }).join("");
+
+      return `
+        <div style="margin-top: 16px;">
+          <h4 style="font-weight: 700; font-size: 0.85rem; text-transform: uppercase; color: var(--neutral-dark); margin-bottom: 8px;">Version History & Audit Trail</h4>
+          <table class="clinical-visit-matrix" style="font-size: 0.85rem; border: 1px solid var(--border);">
+            <thead>
+              <tr style="background-color: var(--neutral-light);">
+                <th>Ver</th>
+                <th>Status</th>
+                <th>Author</th>
+                <th>Timestamp</th>
+                <th>Change Reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function getGovernanceHTML(obj) {
+      const allowedNext = ALLOWED_LIBRARY_TRANSITIONS[obj.status] || [];
+      let html = `<div style="display: flex; flex-direction: column; gap: 12px; border-top: 1px solid var(--border); padding-top: 16px; margin-top: 16px;">`;
+      html += `<h4 style="font-weight: 700; font-size: 0.85rem; text-transform: uppercase; color: var(--neutral-dark);">Governance Actions</h4>`;
+
+      html += `<div style="display: flex; gap: 8px; flex-wrap: wrap;">`;
+      if (allowedNext.length === 0) {
+        html += `<span style="font-size: 0.85rem; color: #64748b; font-style: italic;">No further status transitions allowed in this state.</span>`;
+      } else {
+        allowedNext.forEach(nextState => {
+          html += `
+            <button class="btn btn-secondary btn-library-transition" data-id="${obj.id}" data-target-status="${nextState}" style="padding: 6px 12px; font-size: 0.8rem;">
+              Transition to ${nextState.replace("_", " ")}
+            </button>
+          `;
+        });
+      }
+      html += `</div>`;
+
+      html += `
+        <div style="border-top: 1px dashed var(--border); padding-top: 12px; margin-top: 12px; display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap;">
+          <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom: 0;">
+            <label for="library-instantiate-study-select" style="font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Target Study ID</label>
+            <input type="text" id="library-instantiate-study-select" value="${currentUsdm.studyId}" placeholder="Enter target study..." style="width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.85rem;" />
+          </div>
+          <button class="btn btn-primary" id="btn-library-instantiate" data-id="${obj.id}" style="padding: 8px 16px; font-size: 0.85rem;">
+            ⚡ Instantiate into Study
+          </button>
+        </div>
+      `;
+
+      html += `</div>`;
+      return html;
+    }
+
+    function renderLibrary() {
+      const typeFilter = document.getElementById("library-filter-type")?.value || "";
+      const statusFilter = document.getElementById("library-filter-status")?.value || "";
+
+      const container = document.getElementById("library-objects-list");
+      if (!container) return;
+
+      const filtered = mockLibraryObjects.filter(obj => {
+        if (typeFilter && obj.object_type !== typeFilter) return false;
+        if (statusFilter && obj.status !== statusFilter) return false;
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div style="text-align: center; padding: 24px; color: #64748b; font-style: italic;">No matching library objects found.</div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(obj => {
+        const isSelected = obj.id === selectedLibraryObjectId ? "border-color: var(--accent); background-color: var(--accent-bg);" : "border-color: var(--border);";
+        const badgeClass = `status-${obj.status.toLowerCase().replace(/[^a-z0-9]/g, "-")}`;
+
+        return `
+          <div class="library-item-card" data-id="${obj.id}" style="border: 2px solid; border-radius: 8px; padding: 12px; cursor: pointer; transition: all 0.2s; ${isSelected}">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+              <strong style="color: var(--primary); font-size: 0.95rem;">${obj.id}</strong>
+              <span class="badge ${badgeClass}">${obj.status}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #64748b;">
+              <span>Type: <strong>${obj.object_type}</strong></span>
+              <span>Version: <strong>v${obj.version}</strong></span>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      container.querySelectorAll(".library-item-card").forEach(card => {
+        card.addEventListener("click", () => {
+          selectedLibraryObjectId = card.getAttribute("data-id");
+          renderLibrary();
+          renderLibraryDetails();
+        });
+      });
+
+      const typeSel = document.getElementById("library-filter-type");
+      if (typeSel && !typeSel.hasAttribute("data-listener-bound")) {
+        typeSel.setAttribute("data-listener-bound", "true");
+        typeSel.addEventListener("change", () => {
+          renderLibrary();
+        });
+      }
+      const statusSel = document.getElementById("library-filter-status");
+      if (statusSel && !statusSel.hasAttribute("data-listener-bound")) {
+        statusSel.setAttribute("data-listener-bound", "true");
+        statusSel.addEventListener("change", () => {
+          renderLibrary();
+        });
+      }
+    }
+
+    function renderLibraryDetails() {
+      const container = document.getElementById("library-details-content");
+      if (!container) return;
+
+      if (!selectedLibraryObjectId) {
+        container.innerHTML = `<p style="color: #64748b; font-style: italic;">Select a library object from the catalog to inspect attributes, view audit trail, transition its lifecycle, or instantiate it into the active study version.</p>`;
+        return;
+      }
+
+      const obj = mockLibraryObjects.find(o => o.id === selectedLibraryObjectId);
+      if (!obj) {
+        container.innerHTML = `<p style="color: var(--error); font-style: italic;">Selected object not found.</p>`;
+        return;
+      }
+
+      const badgeClass = `status-${obj.status.toLowerCase().replace(/[^a-z0-9]/g, "-")}`;
+
+      let html = `
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
+            <h3 style="font-weight: 700; font-size: 1.1rem; color: var(--primary);">${obj.id}</h3>
+            <span class="badge ${badgeClass}" style="font-size: 0.8rem; padding: 4px 10px;">${obj.status}</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; font-size: 0.85rem;">
+            <div><span class="ledger-lbl">Object Type:</span> <strong style="color: var(--accent);">${obj.object_type}</strong></div>
+            <div><span class="ledger-lbl">Version:</span> <strong>v${obj.version}</strong></div>
+            <div><span class="ledger-lbl">Sponsor:</span> <code>${obj.sponsor_id}</code></div>
+            <div><span class="ledger-lbl">Author:</span> <code>${obj.created_by}</code></div>
+            <div style="grid-column: span 2;"><span class="ledger-lbl">Created At:</span> <code>${new Date(obj.created_at).toLocaleString()}</code></div>
+          </div>
+      `;
+
+      html += getPayloadHTML(obj);
+      html += getGovernanceHTML(obj);
+      html += getHistoryHTML(obj);
+      html += `</div>`;
+      container.innerHTML = html;
+
+      container.querySelectorAll(".btn-library-transition").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const targetStatus = btn.getAttribute("data-target-status");
+          openLibraryReasonModal({
+            type: "transition",
+            id: obj.id,
+            targetStatus
+          });
+        });
+      });
+
+      const instBtn = document.getElementById("btn-library-instantiate");
+      if (instBtn) {
+        instBtn.addEventListener("click", () => {
+          const studyInput = document.getElementById("library-instantiate-study-select");
+          const targetStudyId = studyInput ? studyInput.value.trim() : currentUsdm.studyId;
+
+          if (!targetStudyId) {
+            displayLibraryError("Validation Failure: Please enter a target Study ID.");
+            return;
+          }
+
+          openLibraryReasonModal({
+            type: "instantiate",
+            id: obj.id,
+            targetStudyId
+          });
+        });
+      }
+    }
+
+    async function handleTransitionLibraryConfirm(id, targetStatus, reason, role) {
+      const allowedRoles = TRANSITION_ROLES_MAP[targetStatus] || [];
+      if (!allowedRoles.includes(role)) {
+        displayLibraryError(`Authorization Failure: Role '${role}' is not authorized to transition object to '${targetStatus}'. Allowed roles: ${allowedRoles.join(", ")}`);
+        return;
+      }
+
+      try {
+        await apiTransitionLibraryObject(id, targetStatus, reason, role);
+      } catch (err) {
+        console.warn("API transition failed, continuing with sandbox-offline mock fallback:", err.message);
+      }
+
+      const obj = mockLibraryObjects.find(o => o.id === id);
+      if (obj) {
+        const priorStatus = obj.status;
+        obj.status = targetStatus;
+
+        let currentVer = obj.version.split(".").map(Number);
+        if (targetStatus === "PUBLISHED") {
+          currentVer[0]++;
+          currentVer[1] = 0;
+          currentVer[2] = 0;
+        } else if (targetStatus === "APPROVED") {
+          currentVer[1]++;
+          currentVer[2] = 0;
+        } else {
+          currentVer[2]++;
+        }
+        const nextVer = currentVer.join(".");
+        obj.version = nextVer;
+
+        obj.history.unshift({
+          version: nextVer,
+          status: targetStatus,
+          change_reason: reason,
+          updated_by: `usr_${role}_signed`,
+          updated_at: new Date().toISOString()
+        });
+
+        clearLibraryError();
+        renderLibrary();
+        renderLibraryDetails();
+
+        await addLedgerBlock(
+          "LIBRARY_TRANSITION",
+          {
+            objectId: id,
+            priorStatus,
+            targetStatus,
+            newVersion: nextVer,
+            reason,
+            roleSigned: role
+          },
+          reason
+        );
+        alert(`Successfully transitioned ${id} to ${targetStatus}!`);
+      }
+    }
+
+    async function handleInstantiateLibraryConfirm(id, targetStudyId, reason, role) {
+      try {
+        await apiInstantiateLibraryObject(targetStudyId, id, reason, role);
+      } catch (err) {
+        console.warn("API instantiation failed, continuing with sandbox-offline mock fallback:", err.message);
+      }
+
+      const obj = mockLibraryObjects.find(o => o.id === id);
+      if (!obj) {
+        displayLibraryError(`Error: Object with ID ${id} not found.`);
+        return;
+      }
+
+      if (targetStudyId !== currentUsdm.studyId) {
+        displayLibraryError(`Validation Error: Target study '${targetStudyId}' does not match active sandbox study '${currentUsdm.studyId}'.`);
+        return;
+      }
+
+      const type = obj.object_type;
+      const payload = obj.payload;
+
+      if (type === "FORM") {
+        if (!currentUsdm.forms) currentUsdm.forms = [];
+        if (currentUsdm.forms.some(f => f.name === obj.id)) {
+          displayLibraryError(`Governance Error: Form '${obj.id}' is already instantiated in study '${targetStudyId}'.`);
+          return;
+        }
+        currentUsdm.forms.push({
+          name: obj.id,
+          statuses: currentUsdm.visits ? currentUsdm.visits.map(() => "Pending") : ["Pending"]
+        });
+      } else if (type === "ARM") {
+        if (!currentUsdm.arms) currentUsdm.arms = [];
+        if (currentUsdm.arms.some(a => a.arm_id === obj.id)) {
+          displayLibraryError(`Governance Error: Arm '${obj.id}' is already instantiated in study '${targetStudyId}'.`);
+          return;
+        }
+        currentUsdm.arms.push({
+          arm_id: obj.id,
+          arm_name: `Arm: ${obj.id} (${payload.attributes?.arm_type || "TREATMENT"})`
+        });
+      } else if (type === "VISIT") {
+        if (!currentUsdm.encounters) currentUsdm.encounters = [];
+        if (currentUsdm.encounters.some(e => e.encounter_id === obj.id)) {
+          displayLibraryError(`Governance Error: Visit/Encounter '${obj.id}' is already instantiated in study '${targetStudyId}'.`);
+          return;
+        }
+        currentUsdm.encounters.push({
+          encounter_id: obj.id,
+          encounter_name: `Visit ${obj.id}`,
+          epoch_id: currentUsdm.epochs && currentUsdm.epochs[0] ? currentUsdm.epochs[0].epoch_id : "EP-SCR",
+          sequence: currentUsdm.encounters.length + 1
+        });
+
+        if (currentUsdm.visits) {
+          currentUsdm.visits.push(`Visit ${obj.id}`);
+          (currentUsdm.forms || []).forEach(f => {
+            f.statuses.push("Pending");
+          });
+        }
+      }
+
+      renderMdr();
+      clearLibraryError();
+      renderLibrary();
+      renderLibraryDetails();
+
+      await addLedgerBlock(
+        "LIBRARY_INSTANTIATE",
+        {
+          objectId: id,
+          objectType: type,
+          targetStudyId,
+          version: obj.version,
+          reason,
+          roleSigned: role
+        },
+        reason
+      );
+
+      alert(`Successfully instantiated library object '${id}' into study '${targetStudyId}'!`);
+    }
+
+    const libReasonModal = document.getElementById("library-reason-modal");
+    const libReasonText = document.getElementById("library-change-reason");
+    const libUserRole = document.getElementById("library-user-role");
+
+    function openLibraryReasonModal(action) {
+      pendingLibraryAction = action;
+      if (libReasonText) libReasonText.value = "";
+      if (libUserRole) libUserRole.value = "sponsor_dm";
+
+      const modalTitle = document.getElementById("library-reason-modal-title");
+      if (modalTitle) {
+        if (action.type === "transition") {
+          modalTitle.innerText = `Sign governed transition to ${action.targetStatus}`;
+        } else {
+          modalTitle.innerText = `Sign instantiation into study ${action.targetStudyId}`;
+        }
+      }
+
+      if (libReasonModal) libReasonModal.style.display = "flex";
+    }
+
+    function closeLibraryReasonModal() {
+      if (libReasonModal) libReasonModal.style.display = "none";
+      pendingLibraryAction = null;
+    }
+
+    const btnLibCancel = document.getElementById("btn-library-cancel-action");
+    if (btnLibCancel) {
+      btnLibCancel.addEventListener("click", () => {
+        closeLibraryReasonModal();
+      });
+    }
+
+    const btnLibConfirm = document.getElementById("btn-library-confirm-action");
+    if (btnLibConfirm) {
+      btnLibConfirm.addEventListener("click", () => {
+        const reason = libReasonText ? libReasonText.value.trim() : "";
+        const role = libUserRole ? libUserRole.value : "sponsor_dm";
+
+        if (!reason) {
+          alert("A valid justification / Change Reason is required under 21 CFR Part 11!");
+          return;
+        }
+
+        if (!pendingLibraryAction) return;
+
+        const action = pendingLibraryAction;
+        closeLibraryReasonModal();
+
+        if (action.type === "transition") {
+          handleTransitionLibraryConfirm(action.id, action.targetStatus, reason, role);
+        } else if (action.type === "instantiate") {
+          handleInstantiateLibraryConfirm(action.id, action.targetStudyId, reason, role);
+        }
+      });
+    }
+
+    // Export sandbox hooks to window for unified testability
+    if (typeof window !== "undefined") {
+      window.GlobalLibrarySandbox = {
+        mockLibraryObjects,
+        ALLOWED_LIBRARY_TRANSITIONS,
+        TRANSITION_ROLES_MAP,
+        renderLibrary,
+        renderLibraryDetails,
+        handleTransitionLibraryConfirm,
+        handleInstantiateLibraryConfirm,
+        displayLibraryError,
+        clearLibraryError,
+        getSelectedLibraryObjectId: () => selectedLibraryObjectId,
+        setSelectedLibraryObjectId: (id) => { selectedLibraryObjectId = id; }
+      };
     }
 
     // --- 10. INITIALIZATION BOOTSTRAP ---
