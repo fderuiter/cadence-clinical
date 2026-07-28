@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 32
-- **Passed:** 32 🟢
+- **Total Automated Test Cases Run:** 47
+- **Passed:** 47 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -206,6 +206,21 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_validator_missing_required_variables` | `tests.test_dataset_json` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validator_null_flavor_and_stat_reasnd_consistency` | `tests.test_dataset_json` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validator_supp_dataset_linkage_and_structure` | `tests.test_dataset_json` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_approved_content_retrieval_and_cache` | `tests.test_econsent_translations` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_language_code_validation` | `tests.test_econsent_translations` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_translation_crud_and_validation` | `tests.test_econsent_translations` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_translation_status_workflow_and_rbac` | `tests.test_econsent_translations` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_auth_and_malformed_requests` | `tests.test_global_library_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_create_and_retrieve_library_objects` | `tests.test_global_library_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_global_library_governance_lifecycle_transitions` | `tests.test_global_library_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_instantiate_library_object_cross_sponsor_rejected` | `tests.test_global_library_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_instantiate_library_object_inaccessible_study` | `tests.test_global_library_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_instantiate_library_object_success` | `tests.test_global_library_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_library_instance_updates_and_inheritance_diffs` | `tests.test_global_library_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_library_object_in_use_and_amendments` | `tests.test_global_library_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_sponsor_security_boundaries` | `tests.test_global_library_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_stripe_style_pagination_and_filtering` | `tests.test_global_library_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_update_and_history_versioning` | `tests.test_global_library_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
 
 ## 4. Performance Qualification (PQ) & Scenario Validation
 
