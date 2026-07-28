@@ -89,7 +89,7 @@ async def test_automated_ingestion_and_version_indexing():
     assert data["zone"] == 1
     assert data["section"] == "01.01"
     assert data["version_index"] == 1
-    assert data["taxonomy_version"] == "v3.2.0"
+    assert data["taxonomy_version"] == "v3.2.0-complete"
     assert data["artifact_code"] == "01.01.01"
 
     # Ingest Version 2 (Same study_id and artifact_type)

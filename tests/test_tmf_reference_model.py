@@ -17,10 +17,11 @@ def test_active_version_selection():
     # @req:PRD-TMF-001
     active_catalog = get_active_catalog()
     assert active_catalog is not None
-    assert active_catalog.version == "v3.2.0"
+    assert active_catalog.version == "v3.2.0-complete"
 
     registered = get_registered_versions()
     assert "v3.2.0" in registered
+    assert "v3.2.0-complete" in registered
 
 
 def test_explicit_version_selection():
@@ -417,3 +418,96 @@ def test_get_mandatory_artifacts_failures():
         match="Mandatory artifact code '01.01.01' for milestone 'INITIATION' not found",
     ):
         get_mandatory_artifacts("INITIATION", "v_minimal_missing")
+
+
+def test_complete_catalog_manifest_and_uniqueness():
+    """
+    Verify that the complete catalog "v3.2.0-complete" contains standard TMF reference elements
+    and all artifact codes are unique.
+    """
+    # @req:PRD-TMF-001
+    catalog = get_catalog("v3.2.0-complete")
+    assert catalog.version == "v3.2.0-complete"
+
+    # All 11 zones must be present in v3.2.0-complete
+    assert len(catalog.zones) == 11
+
+    # Check for uniqueness of artifact codes
+    codes = [art.code for zone in catalog.zones for sec in zone.sections for art in sec.artifacts]
+    assert len(codes) == len(set(codes)), "Artifact codes must be unique in v3.2.0-complete"
+
+    # Standard check for restored artifacts
+    cv_art = catalog.get_artifact("05.02.03")
+    assert cv_art is not None
+    assert cv_art.name == "Investigator CV"
+    assert cv_art.is_extension is False
+
+    doa_art = catalog.get_artifact("05.02.04")
+    assert doa_art is not None
+    assert doa_art.name == "Delegation of Authority Log"
+    assert doa_art.is_extension is False
+
+
+def test_hierarchy_integrity_v3_2_0_complete():
+    """
+    Verify hierarchy integrity in the complete catalog.
+    """
+    # @req:PRD-TMF-001
+    catalog = get_catalog("v3.2.0-complete")
+    for zone in catalog.zones:
+        for sec in zone.sections:
+            assert sec.zone_code == zone.code
+            for art in sec.artifacts:
+                assert art.zone_code == zone.code
+                assert art.section_code == sec.code
+
+
+def test_reproducibility_and_version_isolation():
+    """
+    Verify that old "v3.2.0" looks unchanged and remains isolated from "v3.2.0-complete".
+    """
+    # @req:PRD-TMF-001
+    legacy_catalog = get_catalog("v3.2.0")
+    complete_catalog = get_catalog("v3.2.0-complete")
+
+    # The legacy catalog has representative elements (18 artifacts)
+    legacy_arts = [art.code for zone in legacy_catalog.zones for sec in zone.sections for art in sec.artifacts]
+    assert len(legacy_arts) == 18
+
+    # The legacy catalog should NOT contain Investigator CV 05.02.03 or DOA Log 05.02.04
+    assert "05.02.03" not in legacy_arts
+    assert "05.02.04" not in legacy_arts
+
+    # The complete catalog must contain them
+    complete_arts = [art.code for zone in complete_catalog.zones for sec in zone.sections for art in sec.artifacts]
+    assert len(complete_arts) > len(legacy_arts)
+    assert "05.02.03" in complete_arts
+    assert "05.02.04" in complete_arts
+
+
+def test_standard_versus_extension_policy():
+    """
+    Verify standard versus extension policy:
+    - Standard artifacts in v3.2.0-complete have is_extension=False.
+    - Custom extensions in v3.2.0-extended have is_extension=True.
+    - Extensions reside in separate catalog but share same base zones/sections.
+    """
+    # @req:PRD-TMF-001
+    complete_catalog = get_catalog("v3.2.0-complete")
+    extended_catalog = get_catalog("v3.2.0-extended")
+
+    # Standard artifact in both should have is_extension=False
+    art_standard_c = complete_catalog.get_artifact("05.02.01")
+    art_standard_e = extended_catalog.get_artifact("05.02.01")
+    assert art_standard_c.is_extension is False
+    assert art_standard_e.is_extension is False
+
+    # Custom extension should only be in extended_catalog with is_extension=True
+    assert complete_catalog.get_artifact("05.02.99") is None
+
+    art_extension = extended_catalog.get_artifact("05.02.99")
+    assert art_extension is not None
+    assert art_extension.name == "Cadence Investigator Portal Training Certificate"
+    assert art_extension.is_extension is True
+    assert art_extension.section_code == "05.02"
+    assert art_extension.zone_code == 5
