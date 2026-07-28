@@ -26,6 +26,9 @@ async def setup_notifications_db():
     """
     Setup in-memory Notifications database for unit and integration testing.
     """
+    from apps.notifications.main import active_deliveries
+
+    active_deliveries.clear()
     db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -33,6 +36,7 @@ async def setup_notifications_db():
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
     await db_manager.close()
+    active_deliveries.clear()
 
 
 def get_auth_headers(

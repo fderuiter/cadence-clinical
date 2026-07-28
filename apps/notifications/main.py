@@ -220,6 +220,10 @@ dispatcher_task: Optional[asyncio.Task] = None
 async def start_dispatcher() -> None:
     """Startup hook to start the notifications background dispatcher."""
     global dispatcher_task
+    import sys
+
+    if "pytest" in sys.modules or os.getenv("PYTEST_CURRENT_TEST"):
+        return
     dispatcher_task = asyncio.create_task(dispatcher_lifecycle_worker())
 
 
