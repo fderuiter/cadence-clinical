@@ -52,6 +52,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-27: CI Schema Introspection and Gateway Aggregation Resilience](2026-07-27-ci-schema-introspection-and-gateway-aggregation.md)
 - [2026-07-27: API Gateway Startup Environment Assertions to Prevent Production Auth Bypasses](2026-07-27-gateway-startup-environment-assertions.md)
 - [2026-07-28: SDV/TSDV Persistence Foundation and Migration Support](2026-07-28-sdv-tsdv-persistence-foundation.md)
+- [2026-07-28: Integrate Turborepo and Consolidate Frontend CI Verification](2026-07-28-turborepo-frontend-ci-consolidation.md)
 - [2026-07-29: TMF Reference Model Taxonomy Integration](2026-07-29-tmf-reference-model-taxonomy-integration.md)
 - [2026-07-30: Rule Authoring, Validation, and DDF Delivery](2026-07-30-rule-authoring-validation-and-ddf-delivery.md)
 - [2026-07-30: Lab Reference Range Management](2026-07-30-lab-reference-range-management.md)
