@@ -226,12 +226,14 @@ async def upgrade_existing_tables(conn):
         "lab_site_id": "VARCHAR(255) NULL",
         "lab_indicator": "VARCHAR(50) NULL",
         "lab_out_of_range": "BOOLEAN DEFAULT FALSE",
-        "matched_normal_bounds": "TEXT NULL"
+        "matched_normal_bounds": "TEXT NULL",
     }
 
     for col, ddl_type in added_cols.items():
         if col not in existing_cols:
-            await conn.execute(text(f"ALTER TABLE clinical_observations ADD COLUMN {col} {ddl_type};"))
+            await conn.execute(
+                text(f"ALTER TABLE clinical_observations ADD COLUMN {col} {ddl_type};")
+            )
 ```
 
 ### 7.2 Post-Migration Verification
