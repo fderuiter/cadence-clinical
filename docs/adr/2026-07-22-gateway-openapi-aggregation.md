@@ -23,3 +23,5 @@ When a client accesses `/openapi.json`, the gateway dynamically:
 - **Positive:** Developers have immediate access to updated, unified API documentation at runtime via `/docs`.
 - **Positive:** No static configuration or external dependencies are required.
 - **Negative:** The gateway incurs a slight performance penalty when dynamically fetching and rewriting JSON schemas on `/openapi.json` requests, though this is mitigated by concurrent fetching and only affects documentation rendering, not operational traffic.
+
+This decision implements requirements under Trace-8.

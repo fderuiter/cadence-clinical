@@ -11,6 +11,8 @@
 
 To establish a secure, compliant, first-class Subject (patient) identity boundary within the eCOA (electronic Clinical Outcome Assessment) diary submission portal, the Cadence Clinical platform requires rigorous authorization controls. Patients must be restricted from accessing staff-only endpoints, and they must only be permitted to view or submit records associated with their own authenticated subject identifier.
 
+This decision implements requirements under Trace-8.
+
 ## 2. Decision Drivers & Constraints
 
 * **Driver 1 (Diary-Only Permissions):** Compliance policies and security specifications demand a diary-only patient boundary. Subjects must not have access to any clinical metadata management, eTMF, CTMS, or staff-scoped interop routes.

@@ -13,6 +13,8 @@ Under pharmacovigilance and GCP compliance regulations, Individual Case Safety R
 2. Validate the structural correctness of the generated XML locally without relying on heavy external dependencies (such as `lxml` or `xmlschema`) or making remote network calls to external schema repositories.
 3. Handle missing mandatory blocks and malformed XML safely, returning structured, actionable errors to prevent non-compliant submissions.
 
+This decision implements requirements under Trace-8.
+
 ## 2. Decision Drivers & Constraints
 * **Driver 1 (Compliance and GxP Integrity):** The generated XML must strictly adhere to the structural conventions of the ICH E2B(R3) specification to prevent rejection by gateway receivers.
 * **Driver 2 (Vulnerability and Dependency Minimization):** Standard XML parsers are vulnerable to XML External Entity (XXE) and entity expansion attacks. We must utilize safe, defused parsing mechanisms to prevent these vulnerabilities without introducing complex third-party system libraries like `lxml`.

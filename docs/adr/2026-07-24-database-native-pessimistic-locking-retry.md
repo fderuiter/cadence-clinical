@@ -11,6 +11,8 @@
 In clinical study management, multiple clinical designers or external automated integration scripts may attempt to save study metadata configurations, amend protocols, or publish library objects simultaneously.
 Without strict write serialization, concurrent update transactions on the same root clinical study or library objects can bypass standard transaction boundaries. This concurrency hazard causes parallel version history branches, duplicate action entries, corrupted/non-linear audit trails, and version indices colliding or duplicating. To maintain absolute regulatory compliance (e.g., 21 CFR Part 11 and EU Annex 11), study configuration histories must remain a perfectly straight, linear timeline of events, and library object templates must increment versions deterministically.
 
+This decision implements requirements under Trace-3.
+
 ## 2. Decision Drivers & Constraints
 * **Absolute Audit Linearity:** The history of study saves must represent a linear, serial sequence of events without branches or orphaned nodes.
 * **No Client Payload Impact:** The database concurrency safety must be completely internal and operate strictly behind existing service interfaces, with no REST application paths, payload signatures, or JSON schemas changing.

@@ -30,6 +30,12 @@ const routes = [
     component: () => import("./views/AuditView.vue"),
     meta: { requiresAuth: true },
   },
+  {
+    path: "/rules",
+    name: "rules",
+    component: () => import("./views/RulesView.vue"),
+    meta: { requiresAuth: true },
+  },
 ];
 
 export const router = createRouter({

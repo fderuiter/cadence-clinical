@@ -10,6 +10,8 @@
 ## 1. Context & Problem Statement
 With the introduction of scope-level claims (such as `site_id`, `sponsor_id`, and `unblinded_access`) into standard V2 gateway authentication signatures, state-changing endpoints expect these claims to be canonically serialized. However, standard testing suites and legacy mock endpoints generate V2 signatures that do not serialize scope-level variables in their request headers. This mismatch leads to widespread `403 Forbidden` errors across integration tests and restricts backward compatibility.
 
+This decision implements requirements under Trace-8.
+
 ## 2. Decision Drivers & Constraints
 * **Backward Compatibility:** Preserving existing testing signatures and third-party API consumers.
 * **Security & Compliance:** Guaranteeing that fallbacks do not weaken authentication guarantees.

@@ -30,3 +30,5 @@ Specifically:
 - **Positive:** Eliminates downstream downgrade attacks by completely rejecting legacy Version 1 signature formats.
 - **Positive:** Protects downstream databases from malicious inputs with fail-fast character length limits.
 - **Negative:** Increased message complexity due to JSON serialization compared to simple string concatenation.
+
+This decision implements requirements under Trace-8.

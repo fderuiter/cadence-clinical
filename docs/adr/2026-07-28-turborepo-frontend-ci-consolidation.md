@@ -14,6 +14,8 @@ To improve developer velocity and keep Pull Request feedback loops under three m
 
 To keep the pipeline architecture simple, clean, and easy to maintain, we decided to avoid remote caching overhead and keep CI runs within a single sequential workflow step, consolidating all frontend checks into a unified command execution.
 
+This decision implements requirements under Trace-1.
+
 ## 2. Decision Drivers & Constraints
 * **Developer Velocity:** PR feedback loops must stay under three minutes.
 * **Pipeline Simplicity:** Avoid remote caching overhead and keep CI runs within a single step.
