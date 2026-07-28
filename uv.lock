@@ -114,6 +114,15 @@ wheels = [
 ]
 
 [[package]]
+name = "babel"
+version = "2.18.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/7d/b2/51899539b6ceeeb420d40ed3cd4b7a40519404f9baf3d4ac99dc413a834b/babel-2.18.0.tar.gz", hash = "sha256:b80b99a14bd085fcacfa15c9165f651fbb3406e66cc603abf11c5750937c992d", size = 9959554, upload-time = "2026-02-01T12:30:56.078Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/77/f5/21d2de20e8b8b0408f0681956ca2c69f1320a3848ac50e6e7f39c6159675/babel-2.18.0-py3-none-any.whl", hash = "sha256:e2b422b277c2b9a9630c1d7903c2a00d0830c409c59ac8cae9081c92f1aeba35", size = 10196845, upload-time = "2026-02-01T12:30:53.445Z" },
+]
+
+[[package]]
 name = "bandit"
 version = "1.9.4"
 source = { registry = "https://pypi.org/simple" }
@@ -249,6 +258,8 @@ dependencies = [
     { name = "aiosmtplib" },
     { name = "asyncpg" },
     { name = "defusedxml" },
+    { name = "docxcompose" },
+    { name = "docxtpl" },
     { name = "fastapi" },
     { name = "httpx" },
     { name = "jinja2" },
@@ -291,6 +302,8 @@ requires-dist = [
     { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.9.4" },
     { name = "defusedxml", specifier = ">=0.7.1,<0.8.0" },
     { name = "detect-secrets", marker = "extra == 'dev'", specifier = ">=1.5.0" },
+    { name = "docxcompose", specifier = ">=2.2.0" },
+    { name = "docxtpl", specifier = ">=0.20.2" },
     { name = "ecdsa", marker = "extra == 'dev'", specifier = ">=0.19.2" },
     { name = "fastapi", specifier = ">=0.139.2,<0.140.0" },
     { name = "httpx", specifier = ">=0.27.0" },
@@ -746,6 +759,34 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/0e/97/b78a0527b3e93709f4cd7df614856e894a2e50d349437acb5b2256095c66/docraptor-3.1.0.tar.gz", hash = "sha256:ba6f0e8c6f1cb7eaf5c7987be4d51d09a35f95f21222d709300ddefc8dc6fa3c", size = 30076, upload-time = "2023-09-27T20:50:58.117Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c9/d3/dc74192c6de2fc41120064e21d1c26e8309d10e8327776155e7c4c219ca6/docraptor-3.1.0-py3-none-any.whl", hash = "sha256:044cef59c44546c15106668973168c540eefb5344532bb782540beaa6828901b", size = 89297, upload-time = "2023-09-27T20:50:56.21Z" },
+]
+
+[[package]]
+name = "docxcompose"
+version = "2.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "babel" },
+    { name = "lxml" },
+    { name = "python-docx" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0d/10/d0941047b177c0b6eb95138b15949ca59a8ddb1d7266d10dc384d0dba681/docxcompose-2.2.0.tar.gz", hash = "sha256:e2c69703a2fefad4471aad82861a1c5d7b3f4a669510de504bb36f41f66f6d3e", size = 22036, upload-time = "2026-06-02T12:18:11.083Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e4/70/121090145cb543e48da7421e64036e6484bfbbc40fc619d73599dc22eb2e/docxcompose-2.2.0-py3-none-any.whl", hash = "sha256:fcfec8b0ba7d341bd3280cb92b571ed2f9e868bbd0d6750ea9539e0ab0bb49a1", size = 25738, upload-time = "2026-06-02T12:18:09.963Z" },
+]
+
+[[package]]
+name = "docxtpl"
+version = "0.20.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "jinja2" },
+    { name = "lxml" },
+    { name = "python-docx" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b2/b4/4435f3fcb1357ec441079c4af1dda3ea926fad6dcead4aed2d93b369944e/docxtpl-0.20.2.tar.gz", hash = "sha256:eddf3350d70b4d123208e801d585bcb313d21044a377a14f75a66d0965841de1", size = 17890, upload-time = "2025-11-13T12:47:15.943Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a4/ad/e07939d8e020e513d3860400413ba1e0e06102c469639b440d921337efef/docxtpl-0.20.2-py3-none-any.whl", hash = "sha256:626d5c570a46a62b2ca73b4d08f1c240fa031a5bc45371e1466a4fe184923d10", size = 17881, upload-time = "2025-11-13T12:47:13.704Z" },
 ]
 
 [[package]]
