@@ -5,7 +5,7 @@ from typing import Optional
 
 from audit import AuditFields
 from fastapi import Depends, FastAPI, HTTPException, Request
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,7 +16,10 @@ from apps.econsent.models import (
     ConsentClause,
     ConsentDocument,
     ConsentTemplate,
+    ConsentTranslation,
 )
+from localization import validate_language_code
+from apps.econsent.cache import ApprovedTranslationCache, get_approved_template_translation
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.rbac import verify_not_auditor
@@ -194,6 +197,94 @@ class ComposedTemplateResponse(BaseModel):
     reason_for_change: str
 
 
+# Pydantic Schemas for ConsentTranslation
+class ConsentTranslationCreate(AuditFields):
+    """
+    Schema for creating/ingesting a new consent translation.
+    """
+    translation_id: Optional[str] = Field(
+        None,
+        description="Unique translation identifier across versions. Generated if not provided.",
+    )
+    source_id: str = Field(..., description="Unique source clause_id or template_id being translated")
+    source_type: str = Field(..., description="The type of the source: 'clause' or 'template'")
+    source_version_index: int = Field(..., description="The version of the source being translated")
+    language_code: str = Field(..., description="Validated ISO 639-1 language code")
+    translated_title: str = Field(..., max_length=255, description="Translated title of the clause/template")
+    translated_text: str = Field(..., description="Translated text/content")
+
+    @field_validator("language_code")
+    @classmethod
+    def check_lang_code(cls, v: str) -> str:
+        return validate_language_code(v)
+
+    @field_validator("source_type")
+    @classmethod
+    def check_source_type(cls, v: str) -> str:
+        v_clean = v.strip().lower()
+        if v_clean not in ("clause", "template"):
+            raise ValueError("source_type must be either 'clause' or 'template'")
+        return v_clean
+
+
+class ConsentTranslationResponse(AuditFields):
+    """
+    Schema for retrieving an eConsent translation version.
+    """
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str = Field(..., description="Unique generated UUID of this translation version")
+    translation_id: str = Field(..., description="Unique translation identifier across versions")
+    source_id: str = Field(..., description="Unique source clause_id or template_id being translated")
+    source_type: str = Field(..., description="The type of the source: 'clause' or 'template'")
+    source_version_index: int = Field(..., description="The version of the source being translated")
+    language_code: str = Field(..., description="Validated ISO 639-1 language code")
+    translated_title: str = Field(..., description="Translated title of the clause/template")
+    translated_text: str = Field(..., description="Translated text/content")
+    status: str = Field(..., description="The status of the translation (DRAFT, IN_REVIEW, APPROVED)")
+
+
+class ConsentTranslationUpdate(AuditFields):
+    """
+    Schema for updating/versioning an existing eConsent translation.
+    """
+    source_id: str = Field(..., description="Unique source clause_id or template_id being translated")
+    source_type: str = Field(..., description="The type of the source: 'clause' or 'template'")
+    source_version_index: int = Field(..., description="The version of the source being translated")
+    language_code: str = Field(..., description="Validated ISO 639-1 language code")
+    translated_title: str = Field(..., max_length=255, description="Translated title of the clause/template")
+    translated_text: str = Field(..., description="Translated text/content")
+
+    @field_validator("language_code")
+    @classmethod
+    def check_lang_code(cls, v: str) -> str:
+        return validate_language_code(v)
+
+    @field_validator("source_type")
+    @classmethod
+    def check_source_type(cls, v: str) -> str:
+        v_clean = v.strip().lower()
+        if v_clean not in ("clause", "template"):
+            raise ValueError("source_type must be either 'clause' or 'template'")
+        return v_clean
+
+
+class TranslationTransitionRequest(BaseModel):
+    """
+    Request payload to transition translation status.
+    """
+    status: str = Field(..., description="Target status: 'DRAFT', 'IN_REVIEW', or 'APPROVED'")
+    reason_for_change: str = Field(..., description="Explanation of transition")
+
+    @field_validator("status")
+    @classmethod
+    def check_status(cls, v: str) -> str:
+        v_clean = v.strip().upper()
+        if v_clean not in ("DRAFT", "IN_REVIEW", "APPROVED"):
+            raise ValueError("status must be either 'DRAFT', 'IN_REVIEW', or 'APPROVED'")
+        return v_clean
+
+
 DATABASE_URL = os.getenv("ECONSENT_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 
@@ -212,6 +303,9 @@ app.add_middleware(GatewayAuthMiddleware)
 
 
 get_db_session = DatabaseSessionDependency(db_manager)
+
+
+approved_translation_cache = ApprovedTranslationCache()
 
 
 async def write_audit_log(
@@ -602,6 +696,517 @@ async def create_consent_template(
     )
 
     return template
+
+
+# --- Translation Management Endpoints ---
+
+@app.post(
+    "/api/v1/econsent/translations",
+    response_model=ConsentTranslationResponse,
+    status_code=201,
+)
+async def create_consent_translation(
+    request: Request,
+    payload: ConsentTranslationCreate,
+    _auth=Depends(verify_not_auditor),
+    session: AsyncSession = Depends(get_db_session),
+) -> ConsentTranslationResponse:
+    """
+    Create/ingest a new translation draft (starts at version_index = 1, status = DRAFT).
+    Validates that the source clause or template exists.
+    """
+    user_id = getattr(request.state, "user_id", "system")
+    user_role = getattr(request.state, "roles", "system")
+    change_reason = getattr(request.state, "change_reason", payload.reason_for_change)
+
+    # Validate source exists
+    if payload.source_type == "clause":
+        stmt = select(ConsentClause).where(
+            ConsentClause.clause_id == payload.source_id,
+            ConsentClause.version_index == payload.source_version_index,
+        )
+        res = await session.execute(stmt)
+        if not res.scalars().first():
+            raise HTTPException(
+                status_code=400,
+                detail=f"Source clause '{payload.source_id}' version {payload.source_version_index} not found.",
+            )
+    elif payload.source_type == "template":
+        stmt = select(ConsentTemplate).where(
+            ConsentTemplate.template_id == payload.source_id,
+            ConsentTemplate.version_index == payload.source_version_index,
+        )
+        res = await session.execute(stmt)
+        if not res.scalars().first():
+            raise HTTPException(
+                status_code=400,
+                detail=f"Source template '{payload.source_id}' version {payload.source_version_index} not found.",
+            )
+
+    translation_id = payload.translation_id or str(uuid.uuid4())
+
+    translation = ConsentTranslation(
+        translation_id=translation_id,
+        source_id=payload.source_id,
+        source_type=payload.source_type,
+        source_version_index=payload.source_version_index,
+        language_code=payload.language_code,
+        translated_title=payload.translated_title,
+        translated_text=payload.translated_text,
+        status="DRAFT",
+        version_index=1,
+        created_by=user_id,
+        reason_for_change=change_reason,
+    )
+    session.add(translation)
+    await session.flush()
+
+    await write_audit_log(
+        session=session,
+        actor_id=user_id,
+        actor_role=str(user_role),
+        action="CREATE_TRANSLATION",
+        document_id=translation.id,
+        details=f"Created translation '{translation_id}' draft version 1 for {payload.source_type} '{payload.source_id}' in '{payload.language_code}'.",
+        reason_for_change=change_reason,
+    )
+
+    return translation
+
+
+@app.put(
+    "/api/v1/econsent/translations/{translation_id}",
+    response_model=ConsentTranslationResponse,
+)
+async def update_consent_translation(
+    request: Request,
+    translation_id: str,
+    payload: ConsentTranslationUpdate,
+    _auth=Depends(verify_not_auditor),
+    session: AsyncSession = Depends(get_db_session),
+) -> ConsentTranslationResponse:
+    """
+    Create a new version of an existing translation with incremented version_index.
+    """
+    user_id = getattr(request.state, "user_id", "system")
+    user_role = getattr(request.state, "roles", "system")
+    change_reason = getattr(request.state, "change_reason", payload.reason_for_change)
+
+    # Check existing translation
+    stmt = (
+        select(ConsentTranslation)
+        .where(ConsentTranslation.translation_id == translation_id)
+        .order_by(desc(ConsentTranslation.version_index))
+    )
+    result = await session.execute(stmt)
+    existing = result.scalars().all()
+
+    if not existing:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Translation with ID '{translation_id}' not found.",
+        )
+
+    next_version = existing[0].version_index + 1
+
+    translation = ConsentTranslation(
+        translation_id=translation_id,
+        source_id=payload.source_id,
+        source_type=payload.source_type,
+        source_version_index=payload.source_version_index,
+        language_code=payload.language_code,
+        translated_title=payload.translated_title,
+        translated_text=payload.translated_text,
+        status="DRAFT",  # New versions reset to DRAFT
+        version_index=next_version,
+        created_by=user_id,
+        reason_for_change=change_reason,
+    )
+    session.add(translation)
+    await session.flush()
+
+    await write_audit_log(
+        session=session,
+        actor_id=user_id,
+        actor_role=str(user_role),
+        action="UPDATE_TRANSLATION",
+        document_id=translation.id,
+        details=f"Updated translation '{translation_id}' to version {next_version} for {payload.source_type} '{payload.source_id}' in '{payload.language_code}'.",
+        reason_for_change=change_reason,
+    )
+
+    return translation
+
+
+@app.get(
+    "/api/v1/econsent/translations",
+    response_model=list[ConsentTranslationResponse],
+)
+async def list_consent_translations(
+    request: Request,
+    source_id: Optional[str] = None,
+    source_type: Optional[str] = None,
+    language_code: Optional[str] = None,
+    status: Optional[str] = None,
+    all_versions: bool = False,
+    session: AsyncSession = Depends(get_db_session),
+) -> list[ConsentTranslationResponse]:
+    """
+    List translations, optionally filtering by source_id, source_type, language_code, and/or status.
+    By default, returns only the latest version of each unique translation.
+    """
+    user_id = getattr(request.state, "user_id", "system")
+    user_role = getattr(request.state, "roles", "system")
+    change_reason = getattr(request.state, "change_reason", "List translations")
+
+    stmt = select(ConsentTranslation)
+    if source_id:
+        stmt = stmt.where(ConsentTranslation.source_id == source_id)
+    if source_type:
+        stmt = stmt.where(ConsentTranslation.source_type == source_type)
+    if language_code:
+        stmt = stmt.where(ConsentTranslation.language_code == language_code)
+    if status:
+        stmt = stmt.where(ConsentTranslation.status == status)
+
+    stmt = stmt.order_by(ConsentTranslation.translation_id, desc(ConsentTranslation.version_index))
+
+    result = await session.execute(stmt)
+    translations_list = result.scalars().all()
+
+    if not all_versions:
+        # Filter in-memory to keep only the latest version of each translation_id
+        seen = set()
+        latest_translations = []
+        for t in translations_list:
+            if t.translation_id not in seen:
+                seen.add(t.translation_id)
+                latest_translations.append(t)
+        translations_list = latest_translations
+
+    await write_audit_log(
+        session=session,
+        actor_id=user_id,
+        actor_role=str(user_role),
+        action="LIST_TRANSLATIONS",
+        document_id=None,
+        details=f"Listed translations (source_id: {source_id}, language_code: {language_code}, all_versions: {all_versions}).",
+        reason_for_change=change_reason,
+    )
+
+    return translations_list
+
+
+@app.get(
+    "/api/v1/econsent/translations/{translation_id}",
+    response_model=ConsentTranslationResponse,
+)
+async def get_consent_translation(
+    request: Request,
+    translation_id: str,
+    version_index: Optional[int] = None,
+    session: AsyncSession = Depends(get_db_session),
+) -> ConsentTranslationResponse:
+    """
+    Retrieve a single translation by translation_id. Returns the latest version by default
+    unless version_index is specified.
+    """
+    user_id = getattr(request.state, "user_id", "system")
+    user_role = getattr(request.state, "roles", "system")
+    change_reason = getattr(request.state, "change_reason", "Retrieve translation")
+
+    stmt = select(ConsentTranslation).where(ConsentTranslation.translation_id == translation_id)
+    if version_index is not None:
+        stmt = stmt.where(ConsentTranslation.version_index == version_index)
+    else:
+        stmt = stmt.order_by(desc(ConsentTranslation.version_index))
+
+    result = await session.execute(stmt)
+    translation = result.scalars().first()
+
+    if not translation:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Translation '{translation_id}' not found.",
+        )
+
+    await write_audit_log(
+        session=session,
+        actor_id=user_id,
+        actor_role=str(user_role),
+        action="VIEW_TRANSLATION",
+        document_id=translation.id,
+        details=f"Viewed translation '{translation_id}' version {translation.version_index}.",
+        reason_for_change=change_reason,
+    )
+
+    return translation
+
+
+@app.post(
+    "/api/v1/econsent/translations/{translation_id}/transition",
+    response_model=ConsentTranslationResponse,
+)
+async def transition_consent_translation(
+    request: Request,
+    translation_id: str,
+    payload: TranslationTransitionRequest,
+    _auth=Depends(verify_not_auditor),
+    session: AsyncSession = Depends(get_db_session),
+) -> ConsentTranslationResponse:
+    """
+    Transition translation status: DRAFT -> IN_REVIEW -> APPROVED.
+    Invalid transitions are rejected with HTTP 400.
+    """
+    user_id = getattr(request.state, "user_id", "system")
+    user_role = getattr(request.state, "roles", "system")
+    change_reason = getattr(request.state, "change_reason", payload.reason_for_change)
+
+    # Fetch latest version
+    stmt = (
+        select(ConsentTranslation)
+        .where(ConsentTranslation.translation_id == translation_id)
+        .order_by(desc(ConsentTranslation.version_index))
+    )
+    result = await session.execute(stmt)
+    translation = result.scalars().first()
+
+    if not translation:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Translation '{translation_id}' not found.",
+        )
+
+    current_status = translation.status
+    target_status = payload.status
+
+    if current_status == target_status:
+        return translation
+
+    # Allowed transitions:
+    # DRAFT -> IN_REVIEW
+    # IN_REVIEW -> APPROVED
+    # IN_REVIEW -> DRAFT
+    allowed = False
+    if current_status == "DRAFT" and target_status == "IN_REVIEW":
+        allowed = True
+    elif current_status == "IN_REVIEW" and target_status in ("APPROVED", "DRAFT"):
+        allowed = True
+
+    if not allowed:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid translation status transition from '{current_status}' to '{target_status}'.",
+        )
+
+    # Perform transition
+    translation.status = target_status
+    translation.reason_for_change = change_reason
+    translation.created_by = user_id
+    session.add(translation)
+    await session.flush()
+
+    await write_audit_log(
+        session=session,
+        actor_id=user_id,
+        actor_role=str(user_role),
+        action="TRANSITION_TRANSLATION",
+        document_id=translation.id,
+        details=f"Transitioned translation '{translation_id}' from '{current_status}' to '{target_status}'.",
+        reason_for_change=change_reason,
+    )
+
+    # Invalidate cache if APPROVED or updated
+    if target_status == "APPROVED":
+        if translation.source_type == "template":
+            approved_translation_cache.invalidate(translation.source_id, translation.source_version_index, translation.language_code)
+        elif translation.source_type == "clause":
+            # For simplicity and absolute correctness, invalidate all cached entries
+            approved_translation_cache.clear()
+
+    return translation
+
+
+# --- Patient-Facing Approved Content Retrieval ---
+
+async def fetch_composed_translation_from_db(
+    template_id: str,
+    version_index: int,
+    language_code: str,
+    session: AsyncSession,
+) -> dict:
+    """
+    Retrieves and composes fully resolved template translation content from database.
+    Only returns approved translations.
+    """
+    # 1. Fetch template by template_id and version_index
+    stmt = select(ConsentTemplate).where(
+        ConsentTemplate.template_id == template_id,
+        ConsentTemplate.version_index == version_index,
+    )
+    result = await session.execute(stmt)
+    template = result.scalars().first()
+    if not template:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Consent template '{template_id}' version {version_index} not found.",
+        )
+
+    # 2. Fetch approved translation for the template
+    tpl_trans_stmt = select(ConsentTranslation).where(
+        ConsentTranslation.source_id == template_id,
+        ConsentTranslation.source_type == "template",
+        ConsentTranslation.source_version_index == version_index,
+        ConsentTranslation.language_code == language_code,
+        ConsentTranslation.status == "APPROVED",
+    ).order_by(desc(ConsentTranslation.version_index))
+    tpl_trans_res = await session.execute(tpl_trans_stmt)
+    tpl_translation = tpl_trans_res.scalars().first()
+
+    if not tpl_translation:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Approved template translation for '{template_id}' (version {version_index}) in '{language_code}' not found.",
+        )
+
+    # 3. For each clause referenced by the template, fetch its approved translation in that language
+    composed_clauses = []
+    for clause_id in template.clauses:
+        # Find latest clause version under the template study context
+        clause_stmt = (
+            select(ConsentClause)
+            .where(
+                ConsentClause.clause_id == clause_id,
+                ConsentClause.study_id == template.study_id,
+            )
+            .order_by(desc(ConsentClause.version_index))
+        )
+        clause_res = await session.execute(clause_stmt)
+        clause = clause_res.scalars().first()
+
+        if not clause:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Referenced clause '{clause_id}' not found.",
+            )
+
+        # Find approved translation for this specific clause version
+        clause_trans_stmt = select(ConsentTranslation).where(
+            ConsentTranslation.source_id == clause_id,
+            ConsentTranslation.source_type == "clause",
+            ConsentTranslation.source_version_index == clause.version_index,
+            ConsentTranslation.language_code == language_code,
+            ConsentTranslation.status == "APPROVED",
+        ).order_by(desc(ConsentTranslation.version_index))
+        clause_trans_res = await session.execute(clause_trans_stmt)
+        clause_translation = clause_trans_res.scalars().first()
+
+        if not clause_translation:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Approved clause translation for '{clause_id}' (version {clause.version_index}) in '{language_code}' not found.",
+            )
+
+        composed_clauses.append({
+            "clause_id": clause.clause_id,
+            "title": clause_translation.translated_title,
+            "text": clause_translation.translated_text,
+            "version_index": clause.version_index,
+        })
+
+    return {
+        "id": template.id,
+        "template_id": template.template_id,
+        "study_id": template.study_id,
+        "template_name": tpl_translation.translated_title,
+        "protocol_version": template.protocol_version,
+        "language_code": language_code,
+        "is_published": template.is_published,
+        "requires_reconsent": template.requires_reconsent,
+        "version_index": template.version_index,
+        "clauses": composed_clauses,
+        "workflow_steps": template.workflow_steps,
+    }
+
+
+@app.get(
+    "/api/v1/econsent/templates/{template_id}/approved-content",
+)
+async def get_approved_composed_template(
+    request: Request,
+    template_id: str,
+    language_code: str,
+    version_index: Optional[int] = None,
+    session: AsyncSession = Depends(get_db_session),
+) -> dict:
+    """
+    Patient-facing endpoint to retrieve composed approved template content in a specific language.
+    Uses the thread-safe read-through cache with TTL and stale-on-error behavior.
+    """
+    # 1. Resolve version_index if not provided
+    if version_index is None:
+        stmt = (
+            select(ConsentTemplate)
+            .where(ConsentTemplate.template_id == template_id)
+            .order_by(desc(ConsentTemplate.version_index))
+        )
+        res = await session.execute(stmt)
+        templates = res.scalars().all()
+        if not templates:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Template '{template_id}' not found.",
+            )
+        # Prioritize published version
+        published_tpls = [t for t in templates if t.is_published]
+        if published_tpls:
+            version_index = published_tpls[0].version_index
+        else:
+            version_index = templates[0].version_index
+
+    # Validate language code
+    try:
+        language_code = validate_language_code(language_code)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=str(e),
+        )
+
+    # 2. Call read-through cache
+    async def fetch_db_fn(tid: str, vidx: int, lang: str) -> dict:
+        return await fetch_composed_translation_from_db(tid, vidx, lang, session)
+
+    try:
+        composed_data = await get_approved_template_translation(
+            approved_translation_cache,
+            template_id,
+            version_index,
+            language_code,
+            fetch_db_fn,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database retrieval error: {str(e)}",
+        )
+
+    # Write audit log for access
+    user_id = getattr(request.state, "user_id", "patient")
+    user_role = getattr(request.state, "roles", "patient")
+    await write_audit_log(
+        session=session,
+        actor_id=user_id,
+        actor_role=str(user_role),
+        action="VIEW_APPROVED_TRANSLATION",
+        document_id=composed_data.get("id"),
+        details=f"Viewed approved composed template translation for '{template_id}' version {version_index} in '{language_code}'.",
+        reason_for_change="Standard translation retrieval",
+    )
+
+    return composed_data
 
 
 @app.put(

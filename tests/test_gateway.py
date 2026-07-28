@@ -106,11 +106,13 @@ async def test_get_openapi_json(monkeypatch: pytest.MonkeyPatch) -> None:
         assert "/ctms/test" in data["paths"]
         assert "/quality/test" in data["paths"]
         assert "/notifications/test" in data["paths"]
+        assert "/safety/test" in data["paths"]
         assert "Designer_TestModel" in data["components"]["schemas"]
         assert "Execution_TestModel" in data["components"]["schemas"]
         assert "Ctms_TestModel" in data["components"]["schemas"]
         assert "Quality_TestModel" in data["components"]["schemas"]
         assert "Notifications_TestModel" in data["components"]["schemas"]
+        assert "Safety_TestModel" in data["components"]["schemas"]
 
 
 def test_get_openapi_json_error(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -233,6 +235,23 @@ def test_proxy_requests_paths(monkeypatch: pytest.MonkeyPatch) -> None:
         assert (
             str(mock_send.call_args.args[0].url)
             == "http://localhost:8006/api/v1/notifications/test"
+        )
+
+        # Test safety prefix
+        res = client.get(
+            "/safety/test", headers={"Authorization": f"Bearer {token}"}
+        )
+        assert res.status_code == 200
+        assert str(mock_send.call_args.args[0].url) == "http://localhost:8008/test"
+
+        # Test api/v1/safety
+        res = client.get(
+            "/api/v1/safety/test", headers={"Authorization": f"Bearer {token}"}
+        )
+        assert res.status_code == 200
+        assert (
+            str(mock_send.call_args.args[0].url)
+            == "http://localhost:8008/api/v1/safety/test"
         )
 
         # Test default route

@@ -16,6 +16,7 @@ from tmf_reference_model import (
 )
 
 from apps.etmf.database import db_manager
+from apps.etmf.export import generate_binder_zip
 from apps.etmf.lifecycle import validate_and_transition_document_status
 from apps.etmf.models import (
     Base,
@@ -2508,6 +2509,62 @@ async def get_document_transition_history(
         )
         for t in transitions
     ]
+
+
+@app.get("/api/v1/etmf/studies/{study_id}/binder")
+async def export_regulatory_binder(
+    study_id: str,
+    include_history: bool = Query(
+        False, description="Include full version history of documents"
+    ),
+    session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
+) -> Response:
+    """
+    Generate an inspection-ready ZIP binder for an eTMF study.
+    Restricted to authorized auditor roles.
+    """
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
+
+    # Restrict access to authorized auditor roles
+    is_auditor = "auditor" in principal.roles or any(
+        r in {"auditor", "inspector", "regulatory_inspector"}
+        for r in principal.raw_roles
+    )
+
+    if not is_auditor:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Access is restricted to authorized auditor/inspection roles.",
+        )
+
+    # Log binder export action
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="BINDER_EXPORT",
+        document_id=None,
+        details=f"Exported regulatory binder for study '{study_id}' (include_history={include_history}).",
+    )
+    await session.commit()
+
+    # Generate the ZIP binder content
+    zip_bytes = await generate_binder_zip(
+        session=session,
+        study_id=study_id,
+        include_history=include_history,
+        requester_id=user_id,
+        requester_role=user_roles,
+    )
+
+    filename = f"study_{study_id}_binder.zip"
+    return Response(
+        content=zip_bytes,
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
 
 
 @app.get(

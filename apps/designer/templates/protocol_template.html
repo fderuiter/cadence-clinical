@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{{ synopsis.protocol_title }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 20mm;
+            @top-center {
+                content: "Clinical Study Protocol";
+                font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                font-size: 8pt;
+                color: #777;
+                border-bottom: 0.5px solid #ccc;
+                padding-bottom: 3px;
+                margin-bottom: 10px;
+            }
+            @bottom-right {
+                content: "Page " counter(page) " of " counter(pages);
+                font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                font-size: 8pt;
+                color: #777;
+            }
+            @bottom-left {
+                content: "{{ synopsis.sponsor_name or 'Sponsor Confidential' }} - {{ synopsis.protocol_number or '' }}";
+                font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                font-size: 8pt;
+                color: #777;
+            }
+        }
+
+        @page landscape_page {
+            size: A4 landscape;
+            margin: 15mm;
+            @top-center {
+                content: "Clinical Study Protocol - Schedule of Activities (SoA)";
+            }
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #333;
+            line-height: 1.5;
+            font-size: 10pt;
+        }
+
+        /* Front Page Styling */
+        .title-page {
+            page-break-after: always;
+            text-align: center;
+            padding-top: 40mm;
+        }
+        .title-page h1 {
+            font-size: 24pt;
+            margin-bottom: 20px;
+            color: #1a365d;
+        }
+        .title-page .metadata {
+            margin-top: 30mm;
+            font-size: 11pt;
+            color: #4a5568;
+        }
+        .title-page .metadata table {
+            margin: 0 auto;
+            text-align: left;
+            border-collapse: collapse;
+        }
+        .title-page .metadata td {
+            padding: 5px 15px;
+        }
+
+        h1, h2, h3, h4 {
+            color: #1a365d;
+            page-break-after: avoid;
+        }
+
+        h1 {
+            font-size: 18pt;
+            border-bottom: 1px solid #2b6cb0;
+            padding-bottom: 5px;
+            margin-top: 30px;
+            page-break-before: always;
+        }
+        h2 {
+            font-size: 14pt;
+            margin-top: 20px;
+        }
+        h3 {
+            font-size: 12pt;
+            margin-top: 15px;
+        }
+
+        /* Synopsis Table Styling */
+        .synopsis-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        .synopsis-table th, .synopsis-table td {
+            border: 1px solid #cbd5e0;
+            padding: 10px;
+            text-align: left;
+            vertical-align: top;
+        }
+        .synopsis-table th {
+            background-color: #ebf8ff;
+            color: #2b6cb0;
+            width: 30%;
+        }
+
+        /* Narrative Items Styling */
+        .narrative-item {
+            margin-bottom: 12px;
+            text-align: justify;
+        }
+
+        /* SoA Table Page Configuration */
+        .soa-section {
+            page: landscape_page;
+            page-break-before: always;
+        }
+
+        .soa-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 8pt;
+            margin-top: 15px;
+        }
+        .soa-table th, .soa-table td {
+            border: 1px solid #a0aec0;
+            padding: 6px 4px;
+            text-align: center;
+        }
+        .soa-table th {
+            background-color: #f7fafc;
+            color: #2d3748;
+            font-weight: bold;
+        }
+        .soa-table td.activity-name-col {
+            text-align: left;
+            font-weight: bold;
+            background-color: #f7fafc;
+            width: 20%;
+        }
+        .soa-table td.applicable {
+            background-color: #ebf8ff;
+            color: #2b6cb0;
+            font-weight: bold;
+        }
+        .soa-table .cell-details {
+            display: block;
+            font-size: 7pt;
+            color: #718096;
+            font-weight: normal;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Title Page -->
+    <div class="title-page">
+        <h1>CLINICAL STUDY PROTOCOL</h1>
+        <h2>{{ synopsis.protocol_title }}</h2>
+
+        <div class="metadata">
+            <table>
+                <tr>
+                    <td><strong>Sponsor:</strong></td>
+                    <td>{{ synopsis.sponsor_name or 'N/A' }}</td>
+                </tr>
+                <tr>
+                    <td><strong>Protocol Number:</strong></td>
+                    <td>{{ synopsis.protocol_number or 'N/A' }}</td>
+                </tr>
+                <tr>
+                    <td><strong>Study Phase:</strong></td>
+                    <td>{{ synopsis.phase or 'N/A' }}</td>
+                </tr>
+                <tr>
+                    <td><strong>Document Version:</strong></td>
+                    <td>Version {{ metadata.version_index }}</td>
+                </tr>
+                <tr>
+                    <td><strong>Date Generated:</strong></td>
+                    <td>{{ metadata.timestamp.strftime('%Y-%m-%d %H:%M:%S UTC') }}</td>
+                </tr>
+                <tr>
+                    <td><strong>Author/Creator:</strong></td>
+                    <td>{{ metadata.creator }}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- Section 1: Synopsis -->
+    <h1>1. PROTOCOL SYNOPSIS</h1>
+    <table class="synopsis-table">
+        <tr>
+            <th>Protocol Title</th>
+            <td>{{ synopsis.protocol_title }}</td>
+        </tr>
+        <tr>
+            <th>Sponsor</th>
+            <td>{{ synopsis.sponsor_name or 'N/A' }}</td>
+        </tr>
+        <tr>
+            <th>Protocol Number</th>
+            <td>{{ synopsis.protocol_number or 'N/A' }}</td>
+        </tr>
+        <tr>
+            <th>Study Phase</th>
+            <td>{{ synopsis.phase or 'N/A' }}</td>
+        </tr>
+        <tr>
+            <th>Study Design Type</th>
+            <td>{{ synopsis.study_design_type or 'N/A' }}</td>
+        </tr>
+        <tr>
+            <th>Objectives</th>
+            <td>
+                {% if synopsis.objectives %}
+                <ul>
+                    {% for obj in synopsis.objectives %}
+                    <li>{{ obj }}</li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                N/A
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <th>Target Population</th>
+            <td>{{ synopsis.population or 'N/A' }}</td>
+        </tr>
+        <tr>
+            <th>Planned Sample Size</th>
+            <td>{{ synopsis.sample_size or 'N/A' }}</td>
+        </tr>
+        <tr>
+            <th>Planned Duration</th>
+            <td>{{ synopsis.duration or 'N/A' }}</td>
+        </tr>
+        <tr>
+            <th>Interventions</th>
+            <td>
+                {% if synopsis.interventions %}
+                <ul>
+                    {% for inter in synopsis.interventions %}
+                    <li>{{ inter }}</li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                N/A
+                {% endif %}
+            </td>
+        </tr>
+    </table>
+
+    <!-- Section 2: Narrative Sections -->
+    <h1>2. STUDY NARRATIVE & RATIONALE</h1>
+
+    {% macro render_section(sec, level=1) %}
+        {% if level == 1 %}
+            <h2>{{ sec.section_number }} {{ sec.title }}</h2>
+        {% elif level == 2 %}
+            <h3>{{ sec.section_number }} {{ sec.title }}</h3>
+        {% else %}
+            <h4>{{ sec.section_number }} {{ sec.title }}</h4>
+        {% endif %}
+
+        {% for item in sec.items %}
+            <div class="narrative-item">{{ item.text }}</div>
+        {% endfor %}
+
+        {% for sub in sec.subsections %}
+            {{ render_section(sub, level + 1) }}
+        {% endfor %}
+    {% endmacro %}
+
+    {% if narrative_sections %}
+        {% for sec in narrative_sections %}
+            {{ render_section(sec, 1) }}
+        {% endfor %}
+    {% else %}
+        <p>No narrative content available for this protocol version.</p>
+    {% endif %}
+
+    <!-- Section 3: Schedule of Activities (SoA) -->
+    <div class="soa-section">
+        <h1>3. SCHEDULE OF ACTIVITIES (SoA)</h1>
+
+        {% if soa_matrix and soa_matrix.encounters %}
+        <table class="soa-table">
+            <thead>
+                <tr>
+                    <th rowspan="2">Activity / Procedure</th>
+                    {% for epoch in soa_matrix.epochs %}
+                        {% set epoch_enc_count = soa_matrix.encounters | selectattr("epoch_id", "equalto", epoch.epoch_id) | list | length %}
+                        {% if epoch_enc_count > 0 %}
+                            <th colspan="{{ epoch_enc_count }}">{{ epoch.epoch_name }}</th>
+                        {% endif %}
+                    {% endfor %}
+                </tr>
+                <tr>
+                    {% for enc in soa_matrix.encounters %}
+                        <th>{{ enc.encounter_name }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in soa_matrix.rows %}
+                <tr>
+                    <td class="activity-name-col">{{ row.activity_name }}</td>
+                    {% for cell in row.cells %}
+                        {% if cell.is_applicable %}
+                            <td class="applicable">
+                                X
+                                {% if cell.details %}
+                                    <span class="cell-details">{{ cell.details }}</span>
+                                {% endif %}
+                            </td>
+                        {% else %}
+                            <td>-</td>
+                        {% endif %}
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No Schedule of Activities (SoA) defined for this study.</p>
+        {% endif %}
+    </div>
+
+</body>
+</html>

@@ -173,6 +173,23 @@ services:
       postgres:
         condition: service_healthy
 
+  safety:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: cadence-safety
+    command: ["uvicorn", "apps.safety.main:app", "--host", "0.0.0.0", "--port", "8008", "--reload"]
+    volumes:
+      - ..:/app
+    environment:
+      - SAFETY_DATABASE_URL=sqlite+aiosqlite:////app/safety.db
+      - SAFETY_SALT=internal-safety-salt-12345
+    ports:
+      - "8008:8008"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   notifications:
     build:
       context: ..
@@ -229,6 +246,7 @@ services:
       - INTEROP_URL=http://interop:8004
       - TICKETS_URL=http://tickets:8009
       - NOTIFICATIONS_URL=http://notifications:8006
+      - SAFETY_URL=http://safety:8008
     ports:
       - "8000:8000"
     depends_on:
@@ -247,6 +265,8 @@ services:
       tickets:
         condition: service_started
       notifications:
+        condition: service_started
+      safety:
         condition: service_started
       keycloak:
         condition: service_healthy
