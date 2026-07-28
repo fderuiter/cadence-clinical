@@ -77,10 +77,21 @@ def scan_tests(tests_dir):
     for root, dirs, files in os.walk(tests_dir):
         dirs.sort()  # In-place sort directories to guarantee deterministic traversal order
         for file in sorted(files):  # Sort files alphabetically
-            if file.endswith(".py") and file.startswith("test_"):
+            if (
+                file.endswith(".py")
+                and not file.startswith("__")
+                and file != "conftest.py"
+            ):
                 filepath = os.path.join(root, file)
                 rel_filepath = os.path.relpath(filepath, start=os.getcwd())
-                classname = f"tests.{os.path.splitext(file)[0]}"
+
+                # Dynamic classname resolution based on subdirectory structure
+                rel_root = os.path.relpath(
+                    os.path.abspath(root),
+                    start=os.path.dirname(os.path.abspath(tests_dir)),
+                )
+                parts = rel_root.split(os.sep) + [os.path.splitext(file)[0]]
+                classname = ".".join(p for p in parts if p and p != ".")
 
                 with open(filepath, "r", encoding="utf-8") as f:
                     lines = f.readlines()
