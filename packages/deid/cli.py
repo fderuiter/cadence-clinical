@@ -296,7 +296,7 @@ def main():
             for v in violations:
                 rel_path = os.path.relpath(v["file"], root_dir)
                 print(
-                    f"{rel_path}:{v['line']}:{v['col']}: [VIOLATION] Category: '{v['category']}', Matched: '{v['value']}'"
+                    f"{rel_path}:{v['line']}:{v['col']}: [VIOLATION] Category: '{v['category']}'"
                 )
                 total_violations += 1
 
