@@ -43,4 +43,11 @@ export const executionService = {
   submitForm(body, options = {}) {
     return apiClient.post(`/api/v1/execution/form-submissions`, body, options);
   },
+
+  /**
+   * Syncs clinical query ledger blocks.
+   */
+  syncQueries(blocks, options = {}) {
+    return apiClient.post(`/api/v1/execution/queries/sync`, { blocks }, options);
+  },
 };
