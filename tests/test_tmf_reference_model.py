@@ -433,8 +433,15 @@ def test_complete_catalog_manifest_and_uniqueness():
     assert len(catalog.zones) == 11
 
     # Check for uniqueness of artifact codes
-    codes = [art.code for zone in catalog.zones for sec in zone.sections for art in sec.artifacts]
-    assert len(codes) == len(set(codes)), "Artifact codes must be unique in v3.2.0-complete"
+    codes = [
+        art.code
+        for zone in catalog.zones
+        for sec in zone.sections
+        for art in sec.artifacts
+    ]
+    assert len(codes) == len(set(codes)), (
+        "Artifact codes must be unique in v3.2.0-complete"
+    )
 
     # Standard check for restored artifacts
     cv_art = catalog.get_artifact("05.02.03")
@@ -471,7 +478,12 @@ def test_reproducibility_and_version_isolation():
     complete_catalog = get_catalog("v3.2.0-complete")
 
     # The legacy catalog has representative elements (18 artifacts)
-    legacy_arts = [art.code for zone in legacy_catalog.zones for sec in zone.sections for art in sec.artifacts]
+    legacy_arts = [
+        art.code
+        for zone in legacy_catalog.zones
+        for sec in zone.sections
+        for art in sec.artifacts
+    ]
     assert len(legacy_arts) == 18
 
     # The legacy catalog should NOT contain Investigator CV 05.02.03 or DOA Log 05.02.04
@@ -479,7 +491,12 @@ def test_reproducibility_and_version_isolation():
     assert "05.02.04" not in legacy_arts
 
     # The complete catalog must contain them
-    complete_arts = [art.code for zone in complete_catalog.zones for sec in zone.sections for art in sec.artifacts]
+    complete_arts = [
+        art.code
+        for zone in complete_catalog.zones
+        for sec in zone.sections
+        for art in sec.artifacts
+    ]
     assert len(complete_arts) > len(legacy_arts)
     assert "05.02.03" in complete_arts
     assert "05.02.04" in complete_arts
