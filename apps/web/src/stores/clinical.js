@@ -5,6 +5,7 @@ import {
 } from "ui";
 import { useAuthStore } from "./auth.js";
 import { soaClient } from "../api/soaClient.js";
+import { executionService } from "../api/execution.js";
 import { evaluateAST } from "../evaluator.js";
 import { apiClient } from "../api/apiClient.js";
 
@@ -547,7 +548,7 @@ export const useClinicalStore = defineStore("clinical", {
         await this.syncUnsyncedBlocks();
       }, 10000); // deid-ignore
     },
-    async syncUnsyncedBlocks() {
+    async syncUnsyncedBlocks(sigToken = null) {
       const unsynced = this.ledgerBlocks.filter(
         (b) =>
           !b.synced &&
@@ -570,6 +571,16 @@ export const useClinicalStore = defineStore("clinical", {
           { blocks: unsynced },
           { changeReason: "Background sync of clinical query ledger blocks" }
         );
+        const options = {
+          changeReason: "Background sync of clinical query ledger blocks",
+        };
+        if (sigToken) {
+          options.headers = {
+            "X-Sig-Token": sigToken,
+          };
+        }
+
+        await executionService.syncQueries(unsynced, options);
 
         // Successfully synced! Update local blocks
         unsynced.forEach((b) => {
@@ -586,6 +597,7 @@ export const useClinicalStore = defineStore("clinical", {
         console.log("Background sync: Successfully synchronized query blocks.");
       } catch (err) {
         console.warn("Background sync failed (retrying automatically):", err);
+        throw err;
       }
     },
 

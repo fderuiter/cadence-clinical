@@ -212,6 +212,15 @@ describe("Gateway API Clients and Service Modules Unit Tests", () => {
         "http://localhost:8000/api/v1/execution/form-submissions",
         expect.objectContaining({ method: "POST" })
       );
+
+      await executionService.syncQueries([{ blockIndex: 0 }]);
+      expect(mockFetch).toHaveBeenLastCalledWith(
+        "http://localhost:8000/api/v1/execution/queries/sync",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ blocks: [{ blockIndex: 0 }] }),
+        })
+      );
     });
   });
 

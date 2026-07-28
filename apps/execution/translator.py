@@ -190,10 +190,20 @@ def compile_condition_to_xpath(node: Any) -> str:
         )
         if not operator or not operands:
             return ""
-        if operator == "is_empty":
+        if operator in ("is_empty", "empty"):
+            if len(operands) != 1:
+                raise ValueError(f"Function '{operator}' requires exactly 1 operand")
             return f"empty({compile_condition_to_xpath(operands[0])})"
         elif operator == "is_not_empty":
+            if len(operands) != 1:
+                raise ValueError(f"Function '{operator}' requires exactly 1 operand")
             return f"not(empty({compile_condition_to_xpath(operands[0])}))"
+        elif operator == "indexed-repeat":
+            if len(operands) != 3:
+                raise ValueError(f"Function '{operator}' requires exactly 3 operands")
+            compiled_ops = [compile_condition_to_xpath(op) for op in operands]
+            return f"indexed-repeat({', '.join(compiled_ops)})"
+
         compiled_ops = [compile_condition_to_xpath(op) for op in operands]
         return f"{operator}({', '.join(compiled_ops)})"
 

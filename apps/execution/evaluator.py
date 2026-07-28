@@ -196,8 +196,8 @@ def evaluate_ast(
         func_name = func_val.lower()
 
         if func_name in ("is_empty", "empty"):
-            if not operands:
-                return True
+            if len(operands) != 1:
+                return None
             child_val = evaluate_ast(operands[0], context, current_indices)
             if child_val is None:
                 return True
@@ -206,8 +206,8 @@ def evaluate_ast(
             return False
 
         if func_name == "is_not_empty":
-            if not operands:
-                return False
+            if len(operands) != 1:
+                return None
             child_val = evaluate_ast(operands[0], context, current_indices)
             if child_val is None:
                 return False
@@ -216,7 +216,7 @@ def evaluate_ast(
             return True
 
         if func_name == "indexed-repeat":
-            if len(operands) < 3:
+            if len(operands) != 3:
                 return None
             target_field_node = operands[0]
             repeat_group_node = operands[1]
