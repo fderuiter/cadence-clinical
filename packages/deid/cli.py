@@ -210,7 +210,10 @@ def scan_file(
         line, col = get_line_and_col(content, res.start)
         if 1 <= line <= len(lines):
             line_content = lines[line - 1]
-            if "deid: ignore" in line_content.lower() or "pragma: allowlist" in line_content.lower():
+            if (
+                "deid: ignore" in line_content.lower()
+                or "pragma: allowlist" in line_content.lower()
+            ):
                 continue
         violations.append(
             {
