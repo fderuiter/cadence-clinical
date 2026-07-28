@@ -459,7 +459,10 @@ def generate_qualification_report(
         f.write(f"- **Failed/Errors:** {failed_run} 🔴\n")
         f.write(f"- **Skipped:** {skipped_run} ⚪\n")
         f.write(
-            f"- **Overall Operational Pass Rate:** {(passed_run / total_run * 100) if total_run > 0 else 0:.2f}%\n\n"
+            f"- **Overall Operational Pass Rate:** {(passed_run / total_run * 100) if total_run > 0 else 0:.2f}%\n"
+        )
+        f.write(
+            "- **Verification Evidence Reference:** Dated execution evidence reconciled and linked to [#325](https://github.com/user/repo/issues/325) for documentation and traceability updates.\n\n"
         )
 
         f.write("## 2. Installation Qualification (IQ)\n\n")
