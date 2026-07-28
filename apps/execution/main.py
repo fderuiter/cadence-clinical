@@ -224,15 +224,7 @@ class StudyEvent(BaseModel):
 async def study_published(
     event: StudyEvent, background_tasks: BackgroundTasks
 ) -> dict[str, str]:
-    """Ingest study publication events and trigger layout generation asynchronously.
-
-    Args:
-        event (StudyEvent): The incoming study event payload.
-        background_tasks (BackgroundTasks): FastAPI background task manager.
-
-    Returns:
-        dict[str, str]: A status message confirming job acceptance.
-    """
+    """Ingest study publication events and trigger layout generation asynchronously."""
     user_id = current_user_id.get()
     change_reason = current_change_reason.get()
     job_id = str(uuid.uuid4())

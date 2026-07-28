@@ -63,7 +63,7 @@ async def process_dictionary_import(
     Ensures that any parser/persistence failures roll back the entire transaction so that
     no partially committed batches are left inconsistent.
     """
-    with audit_context(user_id, change_reason):
+    with audit_context(user_id=user_id, change_reason=change_reason):
         # 1. Transition job to PROCESSING (RUNNING)
         await update_job_progress(
             job_id=job_id,

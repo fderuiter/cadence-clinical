@@ -222,7 +222,7 @@ async def process_translation(
         None
     """
     token = None
-    with audit_context(user_id, change_reason):
+    with audit_context(user_id=user_id, change_reason=change_reason):
         try:
             async with session_factory() as session:
                 token = current_session.set(session)

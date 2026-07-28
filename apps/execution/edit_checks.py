@@ -331,7 +331,7 @@ async def run_asynchronous_edit_checks(
     """Asynchronous background task runner for cross-form and longitudinal check evaluations."""
     logger.info(f"Background edit checks started for observation {observation_id}")
 
-    with audit_context(user_id, change_reason):
+    with audit_context(user_id=user_id, change_reason=change_reason):
         async with session_factory() as session:
             async with session.begin():
                 # 1. Retrieve the target observation
@@ -573,7 +573,7 @@ async def resolve_pending_predecessor_checks_for_form(
         f"Checking for pending predecessor checks to resume for subject {subject_id} and visit {visit_id}"
     )
 
-    with audit_context(user_id, change_reason):
+    with audit_context(user_id=user_id, change_reason=change_reason):
         async with session_factory() as session:
             async with session.begin():
                 # Get the visit name of this newly completed visit
