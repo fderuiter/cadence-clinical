@@ -14,6 +14,8 @@ To maintain blinding, the treatment assignments and allocation sequences must be
 
 This decision record establishes the governing RTSM architecture and the audited relational database schemas for randomization configuration, per-stratum state, and subject assignments.
 
+This decision implements requirements under Trace-1.
+
 ## 2. Decision Drivers & Constraints
 * **Compliance (21 CFR Part 11 & GxP):** All changes to randomization setup or assignments must produce immutable, versioned audit trail records. Hard deletes must be strictly prohibited.
 * **Blinding & Security:** Treatment sequences, block designs, and subject allocations must be cryptographically protected at rest to prevent unblinding by unauthorized personnel or direct database queries.

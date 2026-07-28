@@ -44,5 +44,5 @@ repos:
         name: Detect Code Duplication
         entry: python3 scripts/detect_duplication.py
         language: system
-        files: \.(py|js|vue)$
+        files: \.(py|js|vue|css)$
         pass_filenames: true

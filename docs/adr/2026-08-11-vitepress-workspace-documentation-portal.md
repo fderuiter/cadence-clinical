@@ -10,6 +10,8 @@
 ## 1. Context & Problem Statement
 Developers and compliance auditors are currently required to read raw, uncompiled markdown documentation files directly in the Git repository because the system lacks a unified web interface or a client-side search portal. This causes friction in onboarding developers and slows down the process of regulatory compliance auditing. We need a centralized, searchable documentation portal integrated directly into the workspace build pipeline.
 
+This decision implements requirements under Trace-8.
+
 ## 2. Decision Drivers & Constraints
 * **Driver 1:** Compile 100% of architectural decision records (ADRs) and SDLC compliance guidelines into clean web pages.
 * **Driver 2:** Support instant client-side search without introducing external database or backend search runtimes.

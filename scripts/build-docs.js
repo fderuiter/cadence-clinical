@@ -60,7 +60,7 @@ function rewriteLinks(content) {
     ) {
       return match;
     }
-    
+
     // If the relative link starts with docs/, strip 'docs/' prefix
     if (cleanUrl.startsWith('docs/')) {
       cleanUrl = cleanUrl.substring(5); // strip 'docs/'
@@ -68,7 +68,7 @@ function rewriteLinks(content) {
       // If it points to LICENSE, change it to LICENSE.md
       cleanUrl = 'LICENSE.md';
     }
-    
+
     return `${prefix}${cleanUrl}${suffix}`;
   });
 
@@ -83,13 +83,13 @@ function rewriteLinks(content) {
     ) {
       return match;
     }
-    
+
     if (cleanUrl.startsWith('docs/')) {
       cleanUrl = cleanUrl.substring(5);
     } else if (cleanUrl === 'LICENSE') {
       cleanUrl = 'LICENSE.md';
     }
-    
+
     return `${prefix}${cleanUrl}`;
   });
 

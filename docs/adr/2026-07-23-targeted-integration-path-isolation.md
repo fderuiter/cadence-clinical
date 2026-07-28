@@ -16,3 +16,5 @@ We implement path isolation for targeted integration steps.
 ## Trade-offs
 - Positive: Complete isolation and safe execution.
 - Negative: Duplicate configuration overhead.
+
+This decision implements requirements under PRD-MDR-001.
