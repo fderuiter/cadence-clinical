@@ -24,18 +24,25 @@ class DocumentClassification(str, Enum):
 # Bidirectional mapping definitions for supported eISF required binder artifacts
 # Format: (eisf_binder_classification, eisf_artifact_type) -> (etmf_zone, etmf_section, etmf_artifact_type, etmf_artifact_code)
 # Inputs are normalized to lowercase and stripped during lookup.
+#
+# Compliance & Reconciliation:
+# Under the Standard-versus-Extension Policy, all mappings registered here correspond to
+# standard DIA artifacts mapped in the active complete catalog ("v3.2.0-complete").
+# This includes "05.02.03" (Investigator CV) and "05.02.04" (Delegation of Authority Log),
+# which are standard DIA artifacts restored to standard status in the complete catalog.
+# Any custom extensions must be registered using the explicit extension mechanism.
 FORWARD_MAPPING: Dict[Tuple[str, str], Tuple[int, str, str, str]] = {
     ("investigator & staff", "investigator cv"): (
         5,
         "05.02",
         "Investigator CV",
-        "05.02.03",  # Custom/Extended DIA Reference Model Code for CV under Investigator Qualification
+        "05.02.03",  # Standard DIA Reference Model Code for CV under Investigator Qualification
     ),
     ("investigator & staff", "delegation of authority log"): (
         5,
         "05.02",
         "Delegation of Authority Log",
-        "05.02.04",  # Custom/Extended DIA Reference Model Code for DOA log
+        "05.02.04",  # Standard DIA Reference Model Code for DOA log
     ),
     ("protocols & amendments", "approved protocol"): (
         1,

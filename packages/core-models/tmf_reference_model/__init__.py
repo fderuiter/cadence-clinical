@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from tmf_reference_model.models import Artifact, Section, TaxonomyCatalog, Zone
 
@@ -122,10 +122,248 @@ DIA_V3_2_0_RAW = {
     ),
 }
 
+# Authoritative, complete DIA TMF Reference Model v3.2.0 dataset
+DIA_V3_2_0_COMPLETE_RAW = {
+    1: (
+        "Trial Management",
+        {
+            "01.01": (
+                "Trial Design",
+                [
+                    ("01.01.01", "Clinical Trial Protocol"),
+                    ("01.01.02", "Clinical Trial Protocol Amendment"),
+                    ("01.01.03", "Protocol Sign-off"),
+                ],
+            ),
+            "01.02": (
+                "Trial Oversight",
+                [
+                    ("01.02.01", "Trial Oversight Committee Charter"),
+                ],
+            ),
+            "01.03": (
+                "Trial Monitoring",
+                [
+                    ("01.03.01", "Trial Monitoring Plan"),
+                ],
+            ),
+            "01.04": (
+                "Trial Close-out",
+                [
+                    ("01.04.01", "Trial Close-out Report"),
+                ],
+            ),
+        },
+    ),
+    2: (
+        "Central Trial Documents",
+        {
+            "02.01": (
+                "Product Information",
+                [
+                    ("02.01.01", "Investigator's Brochure"),
+                ],
+            ),
+            "02.02": (
+                "Clinical Trial Materials",
+                [
+                    ("02.02.01", "Clinical Trial Material Specifications"),
+                ],
+            ),
+        },
+    ),
+    3: (
+        "Regulatory",
+        {
+            "03.01": (
+                "Regulatory Submissions",
+                [
+                    ("03.01.01", "Regulatory Authority Submission"),
+                ],
+            ),
+            "03.02": (
+                "Regulatory Approvals",
+                [
+                    ("03.02.01", "Regulatory Authority Approval"),
+                ],
+            ),
+        },
+    ),
+    4: (
+        "IRB/IEC & other Approvals",
+        {
+            "04.01": (
+                "IRB/IEC Submissions",
+                [
+                    ("04.01.01", "IRB/IEC Approval"),
+                ],
+            ),
+            "04.02": (
+                "IRB/IEC Approvals",
+                [
+                    ("04.02.01", "IRB/IEC Approval Notification"),
+                ],
+            ),
+        },
+    ),
+    5: (
+        "Site Management",
+        {
+            "05.01": (
+                "Site Selection",
+                [
+                    ("05.01.01", "Site Feasibility Survey"),
+                ],
+            ),
+            "05.02": (
+                "Investigator Qualification",
+                [
+                    ("05.02.01", "FDA Form 1572"),
+                    ("05.02.02", "Financial Disclosure"),
+                    ("05.02.03", "Investigator CV"),
+                    ("05.02.04", "Delegation of Authority Log"),
+                ],
+            ),
+            "05.03": (
+                "Site Training",
+                [
+                    ("05.03.01", "Site Training Records"),
+                ],
+            ),
+            "05.04": (
+                "Site Communication",
+                [
+                    ("05.04.01", "Site Communication Log"),
+                ],
+            ),
+        },
+    ),
+    6: (
+        "IP & Trial Supplies",
+        {
+            "06.01": (
+                "IP Documentation",
+                [
+                    ("06.01.01", "Investigational Product Records"),
+                ],
+            ),
+            "06.02": (
+                "IP Logistics",
+                [
+                    ("06.02.01", "IP Shipping Records"),
+                ],
+            ),
+        },
+    ),
+    7: (
+        "Safety Reporting",
+        {
+            "07.01": (
+                "Safety Notifications",
+                [
+                    ("07.01.01", "Serious Adverse Event Report"),
+                ],
+            ),
+            "07.02": (
+                "Safety Operations",
+                [
+                    ("07.02.01", "Safety Management Plan"),
+                ],
+            ),
+        },
+    ),
+    8: (
+        "Centralized & Local Testing",
+        {
+            "08.01": (
+                "Lab Documentation",
+                [
+                    ("08.01.01", "Central Laboratory Certificate"),
+                ],
+            ),
+            "08.02": (
+                "Lab Operations",
+                [
+                    ("08.02.01", "Laboratory Reference Ranges"),
+                ],
+            ),
+        },
+    ),
+    9: (
+        "Third Parties",
+        {
+            "09.01": (
+                "Vendor Management",
+                [
+                    ("09.01.01", "Vendor Service Agreement"),
+                ],
+            ),
+            "09.02": (
+                "Vendor Operations",
+                [
+                    ("09.02.01", "Vendor Audit Report"),
+                ],
+            ),
+        },
+    ),
+    10: (
+        "Data Management",
+        {
+            "10.01": (
+                "Data Management Specifications",
+                [
+                    ("10.01.01", "Data Management Plan"),
+                    ("10.01.02", "Define-XML Specifications"),
+                ],
+            ),
+            "10.02": (
+                "Case Report Forms",
+                [
+                    ("10.02.01", "Blank CRF"),
+                ],
+            ),
+            "10.03": (
+                "Data Operations",
+                [
+                    ("10.03.01", "Data Review Guidelines"),
+                ],
+            ),
+        },
+    ),
+    11: (
+        "Statistics",
+        {
+            "11.01": (
+                "Statistical Analysis",
+                [
+                    ("11.01.01", "Statistical Analysis Plan"),
+                    ("11.01.02", "Data Lock Certificate"),
+                ],
+            ),
+            "11.02": (
+                "Data Analysis and Reports",
+                [
+                    ("11.02.01", "Clinical Study Report"),
+                ],
+            ),
+        },
+    ),
+}
 
-def build_catalog(version: str, raw_data: dict) -> TaxonomyCatalog:
+# Cadence-specific custom extensions
+CADENCE_EXTENSIONS_RAW = {
+    "05.02.99": ("Cadence Investigator Portal Training Certificate", "05.02", 5),
+    "10.01.99": ("Cadence Custom Data Integrity Log", "10.01", 10),
+}
+
+
+def build_catalog(
+    version: str,
+    raw_data: dict,
+    extensions: Optional[Dict[str, Tuple[str, str, int]]] = None,
+) -> TaxonomyCatalog:
     """
-    Build a TaxonomyCatalog from structured raw dictionary data.
+    Build a TaxonomyCatalog from structured raw dictionary data and optional extensions.
     """
     zones = []
     for zone_code, (zone_name, sections_dict) in raw_data.items():
@@ -139,8 +377,24 @@ def build_catalog(version: str, raw_data: dict) -> TaxonomyCatalog:
                         name=art_name,
                         section_code=sec_code,
                         zone_code=zone_code,
+                        is_extension=False,
                     )
                 )
+
+            # Append any extensions registered for this section/zone
+            if extensions:
+                for ext_code, (ext_name, ext_sec, ext_zone) in extensions.items():
+                    if ext_sec == sec_code and ext_zone == zone_code:
+                        artifacts.append(
+                            Artifact(
+                                code=ext_code,
+                                name=ext_name,
+                                section_code=ext_sec,
+                                zone_code=ext_zone,
+                                is_extension=True,
+                            )
+                        )
+
             sections.append(
                 Section(
                     code=sec_code,
@@ -208,10 +462,22 @@ class TaxonomyRegistry:
 # Singleton registry instance for global use
 _registry = TaxonomyRegistry()
 
-# Initialize registry with the default v3.2.0 DIA TMF Reference Model
+# Initialize registry with the default v3.2.0 DIA TMF Reference Model (legacy representative)
 _v3_2_0_catalog = build_catalog("v3.2.0", DIA_V3_2_0_RAW)
 _registry.register_catalog(_v3_2_0_catalog)
-_registry.set_active_version("v3.2.0")
+
+# Build and register the complete standard DIA TMF Reference Model catalog
+_v3_2_0_complete_catalog = build_catalog("v3.2.0-complete", DIA_V3_2_0_COMPLETE_RAW)
+_registry.register_catalog(_v3_2_0_complete_catalog)
+
+# Build and register the Cadence-extended version of the catalog
+_v3_2_0_extended_catalog = build_catalog(
+    "v3.2.0-extended", DIA_V3_2_0_COMPLETE_RAW, CADENCE_EXTENSIONS_RAW
+)
+_registry.register_catalog(_v3_2_0_extended_catalog)
+
+# Set the complete standard version as the default active catalog (cutover decision)
+_registry.set_active_version("v3.2.0-complete")
 
 
 # Public API wrapper functions

@@ -245,3 +245,57 @@ def test_classify_incoming_document_changed_object():
     assert classification == DocumentClassification.CHANGED
     # Should resolve to the max version (version_index 4)
     assert latest_doc == existing_docs[1]
+
+
+def test_eisf_mappings_resolve_through_active_catalog():
+    """
+    Verify that all forward mappings defined in the eISF adapter successfully
+    resolve to standard, valid artifacts, sections, and zones in the active complete catalog.
+    """
+    from tmf_reference_model import get_active_catalog, resolve_artifact
+    from apps.eisf.adapter import FORWARD_MAPPING
+
+    active_catalog = get_active_catalog()
+    assert active_catalog.version == "v3.2.0-complete"
+
+    for (binder_sec, art_type), (zone, section, etmf_art_type, etmf_code) in FORWARD_MAPPING.items():
+        # Resolve artifact dynamically through the taxonomy catalog
+        resolved = resolve_artifact(active_catalog.version, code=etmf_code)
+
+        # Verify correctness of the resolution
+        artifact = resolved["artifact"]
+        parent_section = resolved["section"]
+        parent_zone = resolved["zone"]
+
+        assert artifact.code == etmf_code
+        assert artifact.section_code == section
+        assert artifact.zone_code == zone
+        assert parent_section.code == section
+        assert parent_zone.code == zone
+
+
+def test_eisf_reverse_mappings_resolve_through_active_catalog():
+    """
+    Verify that all reverse mappings defined in the eISF adapter successfully
+    resolve to standard, valid artifacts, sections, and zones in the active complete catalog.
+    """
+    from tmf_reference_model import get_active_catalog, resolve_artifact
+    from apps.eisf.adapter import REVERSE_MAPPING
+
+    active_catalog = get_active_catalog()
+    assert active_catalog.version == "v3.2.0-complete"
+
+    for (zone, section, etmf_art_type, etmf_code), (binder_sec, art_type) in REVERSE_MAPPING.items():
+        # Resolve artifact dynamically through the taxonomy catalog
+        resolved = resolve_artifact(active_catalog.version, code=etmf_code)
+
+        # Verify correctness of the resolution
+        artifact = resolved["artifact"]
+        parent_section = resolved["section"]
+        parent_zone = resolved["zone"]
+
+        assert artifact.code == etmf_code
+        assert artifact.section_code == section
+        assert artifact.zone_code == zone
+        assert parent_section.code == section
+        assert parent_zone.code == zone
