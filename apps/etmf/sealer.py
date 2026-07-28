@@ -228,7 +228,9 @@ async def validate_etmf_ledger_integrity(db: AsyncSession) -> bool:
 
         return True
     except Exception as e:
-        await trigger_global_trial_lock(reason=f"eTMF GxP Data Integrity Breach: {str(e)}")
+        await trigger_global_trial_lock(
+            reason=f"eTMF GxP Data Integrity Breach: {str(e)}"
+        )
         raise ValueError(f"eTMF GxP Data Integrity Breach: {str(e)}") from e
 
 

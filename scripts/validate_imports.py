@@ -7,6 +7,7 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).resolve().parent.parent
 APPS_DIR = ROOT_DIR / "apps"
 
+
 def get_service_name(file_path: Path) -> str:
     """
     Extracts the service name (first directory name under apps/) from the file path.
@@ -17,6 +18,7 @@ def get_service_name(file_path: Path) -> str:
         return relative.parts[0]
     except ValueError:
         return ""
+
 
 def check_file_imports(file_path: Path) -> list[str]:
     """
@@ -64,10 +66,12 @@ def check_file_imports(file_path: Path) -> list[str]:
                 # If level is 3 (grandparent package), we drop 2 levels -> ['apps']
                 drop_levels = node.level - 1
                 if len(rel_parts) >= drop_levels:
-                    base_parts = rel_parts[:-drop_levels] if drop_levels > 0 else rel_parts
+                    base_parts = (
+                        rel_parts[:-drop_levels] if drop_levels > 0 else rel_parts
+                    )
                 else:
                     base_parts = []
-                
+
                 if node.module:
                     resolved_parts = base_parts + node.module.split(".")
                 else:
@@ -81,13 +85,18 @@ def check_file_imports(file_path: Path) -> list[str]:
             if len(resolved_parts) >= 2 and resolved_parts[0] == "apps":
                 imported_service = resolved_parts[1]
                 if imported_service != service_name:
-                    import_str = f"from {node.module or ''} import ..." if node.module else f"from {'.' * node.level} import ..."
+                    import_str = (
+                        f"from {node.module or ''} import ..."
+                        if node.module
+                        else f"from {'.' * node.level} import ..."
+                    )
                     violations.append(
                         f"Line {node.lineno}: Direct import of service '{imported_service}' "
                         f"via '{import_str}' is prohibited from within service '{service_name}'."
                     )
 
     return violations
+
 
 def main():
     print("--- Starting AST Cross-Service Import Validator ---")
@@ -113,8 +122,11 @@ def main():
         print("\nBuild check failed due to cross-service import violations.")
         sys.exit(1)
 
-    print(f"\n[SUCCESS] No cross-service import violations found across {total_files_checked} files.")
+    print(
+        f"\n[SUCCESS] No cross-service import violations found across {total_files_checked} files."
+    )
     sys.exit(0)
+
 
 if __name__ == "__main__":
     main()
