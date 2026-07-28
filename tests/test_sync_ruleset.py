@@ -12,12 +12,14 @@ from scripts.sync_ruleset import RULESET_NAME, get_repository, sync_ruleset
 
 
 def test_get_repository_from_env():
+    """Verify that the repository name is retrieved correctly from GITHUB_REPOSITORY environment variable."""
     with patch.dict(os.environ, {"GITHUB_REPOSITORY": "testowner/testrepo"}):
         repo = get_repository()
         assert repo == "testowner/testrepo"
 
 
 def test_get_repository_from_git_https():
+    """Verify repository identifier parsing from git remote config with an HTTPS URL format."""
     with patch.dict(os.environ, {}, clear=True):
         mock_run = MagicMock()
         mock_run.return_value.stdout = "https://github.com/someowner/somerepo.git\n"
@@ -30,6 +32,7 @@ def test_get_repository_from_git_https():
 
 
 def test_get_repository_from_git_ssh():
+    """Verify repository identifier parsing from git remote config with an SSH URL format."""
     with patch.dict(os.environ, {}, clear=True):
         mock_run = MagicMock()
         mock_run.return_value.stdout = "git@github.com:sshowner/sshrepo.git\n"
@@ -42,6 +45,7 @@ def test_get_repository_from_git_ssh():
 
 
 def test_get_repository_fallback():
+    """Verify that the default fallback repository is returned if GITHUB_REPOSITORY is missing and git command fails."""
     with patch.dict(os.environ, {}, clear=True):
         mock_run = MagicMock(side_effect=Exception("git command failed"))
 
@@ -51,6 +55,7 @@ def test_get_repository_fallback():
 
 
 def test_sync_ruleset_dry_run():
+    """Verify that sync_ruleset runs in dry-run mode and exits early when GITHUB_TOKEN is not provided."""
     with patch.dict(os.environ, {"TESTING_RULES_SYNC": "true"}, clear=True):
         with patch("pathlib.Path.exists", return_value=True):
             with patch(
@@ -65,6 +70,7 @@ def test_sync_ruleset_dry_run():
 
 
 def test_sync_ruleset_create_new():
+    """Verify that a new ruleset is created via a POST API call when it does not already exist on GitHub."""
     with patch.dict(
         os.environ, {"GITHUB_REPOSITORY": "owner/repo", "GITHUB_TOKEN": "token"}
     ):
@@ -96,6 +102,7 @@ def test_sync_ruleset_create_new():
 
 
 def test_sync_ruleset_update_existing():
+    """Verify that an existing ruleset is updated via a PUT API call matching its resolved ruleset ID."""
     with patch.dict(
         os.environ, {"GITHUB_REPOSITORY": "owner/repo", "GITHUB_TOKEN": "token"}
     ):
@@ -131,6 +138,7 @@ def test_sync_ruleset_update_existing():
 
 
 def test_sync_ruleset_permission_denied_403():
+    """Verify that a permission denied (HTTP 403) from the GitHub API raises SystemExit with code 1."""
     import subprocess
 
     with patch.dict(
