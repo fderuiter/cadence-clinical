@@ -1098,3 +1098,157 @@ async def test_sponsor_security_boundaries():
             headers=other_headers,
         )
         assert res_cross_history.status_code in (403, 404)
+
+
+@pytest.mark.asyncio
+async def test_global_library_governance_lifecycle_transitions():
+    """
+    Verifies roles, allowed, and representative forbidden transitions.
+    Transitions: DRAFT -> IN_REVIEW -> APPROVED -> PUBLISHED -> ARCHIVED.
+    Also covers:
+    - Invalid status values and invalid transitions (e.g. DRAFT -> APPROVED).
+    - Callers without required roles (e.g. sponsor_designer trying to approve).
+    - Empty/whitespace change reasons.
+    - Capturing transition actor, time, reason, and prior status in the history.
+    """
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # 1. Setup - Create a DRAFT library object owned by spon_pharma
+        designer_headers = get_auth_headers(roles="sponsor_designer", sponsor_id="spon_pharma")
+        form_payload = {
+            "id": "lib_gov_form",
+            "version": "1.0.0",
+            "status": "DRAFT",
+            "sponsor_id": "spon_pharma",
+            "change_reason": "Setup governance test form",
+            "object_type": "FORM",
+            "payload": {"items": []},
+        }
+        res_create = await client.post(
+            "/api/v1/mdr/library",
+            json=form_payload,
+            headers=designer_headers,
+        )
+        assert res_create.status_code == 201
+
+        # 2. Test forbidden transition directly (DRAFT -> APPROVED)
+        # Attempt directly to approve from DRAFT state -> should return 400 Bad Request
+        dm_headers = get_auth_headers(roles="sponsor_dm", sponsor_id="spon_pharma")
+        res_bad_transition = await client.post(
+            "/api/v1/mdr/library/lib_gov_form/transition",
+            json={"status": "APPROVED", "change_reason": "Approved from DRAFT directly"},
+            headers=dm_headers,
+        )
+        assert res_bad_transition.status_code == 400
+        assert "Invalid transition" in res_bad_transition.json()["detail"]
+
+        # 3. Test missing/whitespace change reason -> should return 400
+        res_no_reason = await client.post(
+            "/api/v1/mdr/library/lib_gov_form/transition",
+            json={"status": "IN_REVIEW", "change_reason": "   "},
+            headers=designer_headers,
+        )
+        assert res_no_reason.status_code == 400
+
+        # 4. Allowed transition: DRAFT -> IN_REVIEW (can be done by sponsor_designer)
+        res_to_review = await client.post(
+            "/api/v1/mdr/library/lib_gov_form/transition",
+            json={"status": "IN_REVIEW", "change_reason": "Transitioning to review state"},
+            headers=designer_headers,
+        )
+        assert res_to_review.status_code == 200
+        data_review = res_to_review.json()
+        assert data_review["status"] == "IN_REVIEW"
+        assert data_review["prior_status"] == "DRAFT"
+        assert data_review["reason_for_change"] == "Transitioning to review state"
+
+        # 5. Role restrictions: Try to approve using sponsor_designer -> should return 403 Forbidden
+        res_designer_approve = await client.post(
+            "/api/v1/mdr/library/lib_gov_form/transition",
+            json={"status": "APPROVED", "change_reason": "Designer attempting approval"},
+            headers=designer_headers,
+        )
+        assert res_designer_approve.status_code == 403
+        assert "User role is not authorized" in res_designer_approve.json()["detail"]
+
+        # 6. Allowed transition: IN_REVIEW -> APPROVED (can be done by sponsor_dm)
+        res_to_approve = await client.post(
+            "/api/v1/mdr/library/lib_gov_form/transition",
+            json={"status": "APPROVED", "change_reason": "Approved by DM"},
+            headers=dm_headers,
+        )
+        assert res_to_approve.status_code == 200
+        data_approve = res_to_approve.json()
+        assert data_approve["status"] == "APPROVED"
+        assert data_approve["prior_status"] == "IN_REVIEW"
+
+        # 7. Allowed transition: APPROVED -> PUBLISHED (can be done by sponsor_dm)
+        res_to_publish = await client.post(
+            "/api/v1/mdr/library/lib_gov_form/transition",
+            json={"status": "PUBLISHED", "change_reason": "Published for public use"},
+            headers=dm_headers,
+        )
+        assert res_to_publish.status_code == 200
+        data_publish = res_to_publish.json()
+        assert data_publish["status"] == "PUBLISHED"
+        assert data_publish["prior_status"] == "APPROVED"
+
+        # 8. Role restrictions: Try to archive using sponsor_dm (only sponsor_admin/sysadmin can archive) -> 403
+        res_dm_archive = await client.post(
+            "/api/v1/mdr/library/lib_gov_form/transition",
+            json={"status": "ARCHIVED", "change_reason": "DM attempting to archive"},
+            headers=dm_headers,
+        )
+        assert res_dm_archive.status_code == 403
+
+        # 9. Allowed transition: PUBLISHED -> ARCHIVED (can be done by sponsor_admin)
+        admin_headers = get_auth_headers(roles="sponsor_admin", sponsor_id="spon_pharma")
+        res_to_archive = await client.post(
+            "/api/v1/mdr/library/lib_gov_form/transition",
+            json={"status": "ARCHIVED", "change_reason": "Archived by Admin"},
+            headers=admin_headers,
+        )
+        assert res_to_archive.status_code == 200
+        data_archive = res_to_archive.json()
+        assert data_archive["status"] == "ARCHIVED"
+        assert data_archive["prior_status"] == "PUBLISHED"
+
+        # 10. Immutability checks: Direct PUT updates are blocked on PUBLISHED or ARCHIVED
+        # Put on ARCHIVED should fail with 403 Forbidden
+        update_payload = {
+            "object_type": "FORM",
+            "reason_for_change": "Direct update on ARCHIVED attempt",
+            "payload": {"items": []},
+        }
+        res_put_blocked = await client.put(
+            "/api/v1/mdr/library/lib_gov_form",
+            json=update_payload,
+            headers=designer_headers,
+        )
+        assert res_put_blocked.status_code == 403
+        assert "IMMUTABILITY_VIOLATION" in res_put_blocked.json()["detail"]
+
+        # 11. Traceability in History: Get the history of the object and confirm the audit details are recorded
+        res_history = await client.get(
+            "/api/v1/mdr/library/lib_gov_form/history",
+            headers=designer_headers,
+        )
+        assert res_history.status_code == 200
+        history_list = res_history.json()
+
+        # We expect a creation step plus 4 transitions = 5 version/history events in total
+        assert len(history_list) == 5
+        assert history_list[0]["status"] == "DRAFT"
+
+        # Transition 1: DRAFT -> IN_REVIEW
+        assert history_list[1]["status"] == "IN_REVIEW"
+        assert history_list[1]["prior_status"] == "DRAFT"
+        assert history_list[1]["reason_for_change"] == "Transitioning to review state"
+        assert history_list[1]["updated_by"] == "test_designer"
+
+        # Transition 4: PUBLISHED -> ARCHIVED
+        assert history_list[4]["status"] == "ARCHIVED"
+        assert history_list[4]["prior_status"] == "PUBLISHED"
+        assert history_list[4]["reason_for_change"] == "Archived by Admin"
+        assert history_list[4]["updated_by"] == "test_designer"  # user_id of admin token

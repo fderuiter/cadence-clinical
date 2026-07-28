@@ -5,10 +5,10 @@
 
 ## 1. Traceability Summary
 
-- **Total Documented Requirements:** 56
+- **Total Documented Requirements:** 57
 - **Total Mapped to Automated Tests:** 34
-- **Traceability Coverage:** 60.7%
-- **SRS Requirements Mapped:** 8 of 11 (72.7%)
+- **Traceability Coverage:** 59.6%
+- **SRS Requirements Mapped:** 8 of 12 (66.7%)
 
 ⚠️ **WARNING:** SRS coverage is below 100%. GxP validation requires 100% of functional requirements defined in the SRS to map to automated test cases.
 
@@ -64,6 +64,7 @@
 | Trace-1 | SRS | **Shadow Schema Retention**<br>*Database-level hard deletes are programmatically blocked by the application layer. Deletion attempts against `AuditLog` or `AuditedModel` raise uncatchable exceptions via the SQLAlchemy listener module located in `apps/execution/database/audit.py`, ensuring a permanent shadow ledger of all system transactions.* | `test_hard_delete_is_prevented` (tests/test_audit.py) 🟢<br>`test_prevent_audit_log_mutation` (tests/test_ledger_and_triggers.py) 🟢<br>`test_prevent_hard_delete_on_audited_model` (tests/test_ledger_and_triggers.py) 🟢 | ✅ **Passed** |
 | Trace-10 | SRS | **Simulated Multi-Channel Notification Dispatcher**<br>*The interop scheduler computes subject-specific compliance reminders on demand via `POST /api/v1/interop/reminders/compute` by checking outstanding `SubjectAssignment` due windows against registered `EPROSubmission` timestamps. It creates `SubjectNotification` entries and dispatches asynchronous background simulation tasks across four parallel channels (`EMAIL`, `SMS`, `WEBHOOK`, `IN_APP`), logged transactionally in `InteropAuditLog`, as verified in `tests/test_interop.py`.* | *None* | ❌ **Unmapped** |
 | Trace-11 | SRS | **Native Vue 3 Rules Designer and GxP Ledger Sync**<br>*Clinical study rule configuration and logical expression tree authoring is fully integrated within the Vue 3 client-side router (`apps/web/src/router.js`). Navigation access is secured via a Keycloak role guard restricting access to `STUDY_DESIGNER`. All rule saving and soft deletions capture a mandatory GxP reason-for-change justification, which is cryptographically signed and synchronously appended to the clinical audit ledger, as verified in `tests/test_designer_rules.py` and `apps/web/tests/smoke.test.js`.* | `test_rules_crud_endpoints` (tests/test_designer_rules.py) 🟢 | ✅ **Passed** |
+| Trace-12 | SRS | **eTMF Document Redaction & Regulatory Privacy Controls**<br>*The eTMF microservice (`apps/etmf`) provides automated and manual de-identification pipelines under `/api/v1/etmf/documents/{document_id}/auto-redact` and `/manual-redact`. Guided by active regulatory compliance profiles (HIPAA, GDPR, EU CTR), the engine processes document text with regex-based scanners and literal terms, applying sanitizing transforms (masking, pseudonymization, age capping, and a default 365-day date-shifting window). To satisfy GxP trace demands and maintain data integrity, a cryptographic `RedactionManifest` is built, signed symmetrically using HMAC-SHA256, and recorded transactionally in the immutable `TMFAuditLog` (retaining non-sensitive redacted derivative indices while strictly omitting raw matched identifiers from all logs). Unauthorized role personas (e.g., auditors or inspectors) are locked into the redacted view and blocked from accessing raw originals, verified in `tests/test_etmf_redaction.py` and `tests/test_deidentification.py`.* | *None* | ❌ **Unmapped** |
 | Trace-2 | SRS | **Cryptographic Key Multi-Sharing & Rotation**<br>*The system utilizes mathematical polynomial splitting (Shamir's Secret Sharing pattern) to split treatment allocation blinding keys, alongside an automatic 365-day rotation scheme for encryption keys. These operations are explicitly enforced by `AllocationKeyManager` in `apps/execution/cryptography.py`.* | `test_encryption_decryption_with_rotation` (tests/test_cryptography.py) 🟢<br>`test_key_splitting` (tests/test_cryptography.py) 🟢 | ✅ **Passed** |
 | Trace-3 | SRS | **Read-Only Trial Locks & Alert Routing**<br>*Upon detecting any data compromise, the system immediately freezes clinical transactions by throwing `PermissionError` for write operations (in `audit.py`) while permitting authorized `SELECT` queries. Concurrently, high-priority notifications are dispatched to designated contacts (Email, SMS, Webhook) via the `TrialLockManager` module in `apps/execution/trial_lock.py` within one minute.* | `test_trial_lock_freeze` (tests/test_trial_lock.py) 🟢 | ✅ **Passed** |
 | Trace-4 | SRS | **Data-Driven Expected Document Lists (EDLs)**<br>*The system implements a data-driven Expected Document List reference data model and site-aware completeness tracking APIs under `/api/v1/etmf/edl` and `/api/v1/etmf/completeness` using the `ExpectedDocument` model to replace hardcoded validation logic with a dynamic backbone.* | `test_edl_definitions_and_crud` (tests/test_etmf.py) 🟢<br>`test_site_aware_completeness` (tests/test_etmf.py) 🟢 | ✅ **Passed** |
@@ -95,5 +96,6 @@
 - **PRD-SUB-006** (PRD): Immediate Unblinding State Mutation & System Actions
 - **PRD-SUB-007** (PRD): Re-Consent Gating on Visits
 - **Trace-10** (SRS): Simulated Multi-Channel Notification Dispatcher
+- **Trace-12** (SRS): eTMF Document Redaction & Regulatory Privacy Controls
 - **Trace-8** (SRS): eCOA Subject Identity & Gateway Boundary
 - **Trace-9** (SRS): ePRO Offline Sync & Part 11 Reconciliation

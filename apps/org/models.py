@@ -184,6 +184,17 @@ class DelegationOfAuthority(Base):
     end_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
+    # Cryptographic & Signatures metadata
+    signature: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    signed_payload: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    signed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    signed_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+
+    # Revocation metadata
+    revoked_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    revoked_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    revocation_reason: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
+
     # 21 CFR Part 11 Compliance Auditing Metadata
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), nullable=False
