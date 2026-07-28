@@ -6,13 +6,18 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import copy
 from apps.safety.database import db_manager
 from apps.safety.models import Base, SafetyAuditLog, SafetyCaseICSR, SafetyExportJob
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
+from sae_icsr import IndividualCaseSafetyReport
 
 
 # Pydantic Schemas for Request/Response Validation
+class ICSRDataExportRequest(BaseModel):
+    job_name: str = Field(..., description="The descriptive name of the export job")
+    icsr: IndividualCaseSafetyReport = Field(..., description="The E2B ICSR report data")
 class SafetyCaseICSRCreate(BaseModel):
     worldwide_unique_case_id: str = Field(
         ..., description="Worldwide unique identifier for this safety case"
@@ -402,3 +407,111 @@ async def list_safety_audit_logs(
         )
         for log in logs
     ]
+
+
+@app.post(
+    "/api/v1/safety/export",
+    response_model=SafetyExportJobResponse,
+    status_code=201,
+)
+async def export_safety_case(
+    request: Request,
+    payload: ICSRDataExportRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> SafetyExportJobResponse:
+    """
+    Expose validated E2B export and outbound safety/PV transmission.
+    Accepts SAE/ICSR data, renders and validates E2B XML, pseudonymizes patient PII
+    following the HMAC approach, transmits to configured safety gateway,
+    persists a SafetyExportJob, and writes GxP-compliant audit events.
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+    if not change_reason:
+        raise HTTPException(
+            status_code=403, detail="Missing change justification reason"
+        )
+
+    # 1. Render initial raw XML to validate structural correctness
+    from apps.safety.renderer import render_icsr_to_xml
+    from apps.safety.validator import validate_icsr_xml
+
+    try:
+        raw_xml = render_icsr_to_xml(payload.icsr)
+    except Exception as e:
+        raise HTTPException(
+            status_code=422,
+            detail=f"XML rendering failed: {str(e)}",
+        )
+
+    is_valid, msg = validate_icsr_xml(raw_xml)
+    if not is_valid:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Structural validation failure: {msg}",
+        )
+
+    # 2. Persist the export job as PENDING first
+    job = SafetyExportJob(
+        job_name=payload.job_name,
+        status="PENDING",
+        created_by=user_id,
+        reason_for_change=change_reason,
+        version_index=1,
+    )
+    session.add(job)
+    await session.flush()
+
+    # 3. Pseudonymize and remove direct patient PII following the HMAC approach
+    from packages.deid.transforms import pseudonymize_value
+
+    salt = os.getenv("SAFETY_SALT", "internal-safety-salt-12345")
+    icsr_copy = copy.deepcopy(payload.icsr)
+
+    raw_patient_id = icsr_copy.patient.patient_id
+    pseudonymized_patient_id = pseudonymize_value(raw_patient_id, salt)
+
+    icsr_copy.patient.patient_id = pseudonymized_patient_id
+    icsr_copy.patient.birth_date = None  # Remove direct DOB
+
+    # Render pseudonymized XML
+    pseudonymized_xml = render_icsr_to_xml(icsr_copy)
+
+    # 4. Transmit the pseudonymized XML payload using the SafetyDatabaseAdapter
+    from apps.safety.adapter import SafetyDatabaseAdapter
+
+    # Allow custom client state injection for testing
+    client = getattr(request.app.state, "test_httpx_client", None)
+    adapter = SafetyDatabaseAdapter(client=client)
+
+    try:
+        response = await adapter.transmit(pseudonymized_xml)
+        if 200 <= response.status_code < 300:
+            job.status = "COMPLETED"
+        else:
+            job.status = "FAILED"
+            job.error_message = f"Transmission failed with status {response.status_code}: {response.text}"
+    except Exception as e:
+        job.status = "FAILED"
+        job.error_message = f"Transmission exception: {str(e)}"
+
+    await session.flush()
+
+    # 5. Write audit event to SafetyAuditLog, ensuring raw patient PII is absent
+    audit_action = "SAFETY_EXPORT_JOB_COMPLETE" if job.status == "COMPLETED" else "SAFETY_EXPORT_JOB_FAIL"
+    audit_details = (
+        f"Export job '{payload.job_name}' completed. Patient pseudonymized: {pseudonymized_patient_id}."
+        if job.status == "COMPLETED"
+        else f"Export job '{payload.job_name}' failed. Patient pseudonymized: {pseudonymized_patient_id}. Error: {job.error_message}"
+    )
+
+    await write_safety_audit_log(
+        session=session,
+        user_id=user_id,
+        action=audit_action,
+        details=audit_details,
+        record_id=job.id,
+        change_reason=change_reason,
+        version_index=1,
+    )
+
+    return map_job_to_response(job)
