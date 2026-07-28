@@ -421,7 +421,10 @@ def pytest_sessionfinish(session, exitstatus):
     Requirements Traceability Matrix (RTM) and GxP Qualification Report,
     and to drop worker-isolated databases.
     """
-    # Clean up worker-isolated databases at the end of the session
+    # Clean up worker-isolated databases at the end of the session.
+    # We bypass this teardown if called from a mock session (e.g., inside tests
+    # like test_rtm_generation_conftest_hook_detection in test_cli_etmf_archival.py)
+    # to prevent early database dropping of active parallel worker databases.
     if databases_pre_created and session.__class__.__name__ != "MockSession":
         worker_id = os.environ.get("PYTEST_XDIST_WORKER")
         worker_suffix = f"_{worker_id}" if worker_id else "_test"
