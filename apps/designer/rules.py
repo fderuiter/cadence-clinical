@@ -50,25 +50,26 @@ class ExpressionNode(BaseModel):
                     f"Comparison operator '{self.operator}' requires exactly 2 operands"
                 )
         elif self.type == "function":
-            valid_funcs = (
-                "is_empty",
-                "is_not_empty",
-                "sum",
-                "avg",
-                "min",
-                "max",
-                "count",
-            )
+            valid_funcs = {
+                "is_empty": 1,
+                "empty": 1,
+                "is_not_empty": 1,
+                "indexed-repeat": 3,
+                "sum": -1,
+                "avg": -1,
+                "min": -1,
+                "max": -1,
+                "count": -1,
+            }
             if self.operator not in valid_funcs:
                 raise ValueError(f"Invalid function operator: '{self.operator}'")
             if not self.operands:
                 raise ValueError(f"Function node '{self.operator}' requires operands")
-            if (
-                self.operator in ("is_empty", "is_not_empty")
-                and len(self.operands) != 1
-            ):
+            expected_arity = valid_funcs[self.operator]
+            if expected_arity != -1 and len(self.operands) != expected_arity:
+                suffix = "operand" if expected_arity == 1 else "operands"
                 raise ValueError(
-                    f"Function '{self.operator}' requires exactly 1 operand"
+                    f"Function '{self.operator}' requires exactly {expected_arity} {suffix}"
                 )
         return self
 
@@ -208,10 +209,22 @@ def compile_to_xpath(node: ExpressionNode) -> str:
         return f"({left} {op_symbol} {right})"
 
     elif node.type == "function":
-        if node.operator == "is_empty":
+        if node.operator in ("is_empty", "empty"):
+            if len(node.operands) != 1:
+                raise ValueError(f"Function '{node.operator}' requires exactly 1 operand")
             return f"empty({compile_to_xpath(node.operands[0])})"
         elif node.operator == "is_not_empty":
+            if len(node.operands) != 1:
+                raise ValueError(f"Function '{node.operator}' requires exactly 1 operand")
             return f"not(empty({compile_to_xpath(node.operands[0])}))"
+        elif node.operator == "indexed-repeat":
+            if len(node.operands) != 3:
+                raise ValueError(f"Function '{node.operator}' requires exactly 3 operands")
+            compiled_ops = [compile_to_xpath(op) for op in node.operands]
+            return f"indexed-repeat({', '.join(compiled_ops)})"
+
+        if not node.operands:
+            raise ValueError(f"Function '{node.operator}' requires operands")
         compiled_ops = [compile_to_xpath(op) for op in node.operands]
         return f"{node.operator}({', '.join(compiled_ops)})"
 

@@ -221,6 +221,7 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
     ).toLowerCase();
 
     if (funcName === "is_empty" || funcName === "empty") {
+      if (rawChildren.length !== 1) return null;
       const childVal = evaluateAST(rawChildren[0], context, currentIndices);
       return (
         childVal === null ||
@@ -230,6 +231,7 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
     }
 
     if (funcName === "is_not_empty") {
+      if (rawChildren.length !== 1) return null;
       const childVal = evaluateAST(rawChildren[0], context, currentIndices);
       return (
         childVal !== null &&
@@ -239,7 +241,7 @@ export function evaluateAST(node, context = {}, currentIndices = {}) {
     }
 
     if (funcName === "indexed-repeat") {
-      if (rawChildren.length < 3) return null;
+      if (rawChildren.length !== 3) return null;
       const targetFieldNode = rawChildren[0];
       const repeatGroupNode = rawChildren[1];
       const indexNode = rawChildren[2];
