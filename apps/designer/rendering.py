@@ -1,15 +1,13 @@
 import io
 import os
 import re
-from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any
 
 from docx import Document
 from docxtpl import DocxTemplate
 from jinja2 import Environment, FileSystemLoader, select_autoescape
-from weasyprint import HTML
-
 from protocol_render import RenderedProtocolDocument, SoAMatrixView
+from weasyprint import HTML
 
 # Initialize Jinja2 environment
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "templates")

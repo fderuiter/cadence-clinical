@@ -1,16 +1,20 @@
-import re
-import os
-import pytest
-import base64
-import time
-import hmac
 import hashlib
+import hmac
 import json
+import os
+import re
+import time
+
+import pytest
 from fastapi.testclient import TestClient
 
-from apps.designer.main import app as designer_app
-from apps.designer.rendering import sanitize_filename, get_safe_filename, ensure_docx_template_exists
 from apps.designer.db import MOCK_DESIGNER_AUDIT_LOGS
+from apps.designer.main import app as designer_app
+from apps.designer.rendering import (
+    ensure_docx_template_exists,
+    get_safe_filename,
+    sanitize_filename,
+)
 
 
 def get_custom_auth_headers(change_reason="system_operation"):

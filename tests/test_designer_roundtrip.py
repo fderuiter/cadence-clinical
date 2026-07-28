@@ -1,8 +1,8 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from apps.designer.comparison import compare_payloads, flatten_dict
 from apps.designer.main import app as designer_app
-from apps.designer.comparison import flatten_dict, compare_payloads
 from apps.designer.orchestration import execute_round_trip
 
 

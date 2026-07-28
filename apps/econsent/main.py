@@ -5,10 +5,15 @@ from typing import Optional
 
 from audit import AuditFields
 from fastapi import Depends, FastAPI, HTTPException, Request
+from localization import validate_language_code
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.econsent.cache import (
+    ApprovedTranslationCache,
+    get_approved_template_translation,
+)
 from apps.econsent.database import db_manager
 from apps.econsent.models import (
     Base,
@@ -18,8 +23,6 @@ from apps.econsent.models import (
     ConsentTemplate,
     ConsentTranslation,
 )
-from localization import validate_language_code
-from apps.econsent.cache import ApprovedTranslationCache, get_approved_template_translation
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.rbac import verify_not_auditor

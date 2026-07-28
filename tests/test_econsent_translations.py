@@ -1,17 +1,14 @@
-import os
 import time
-import asyncio
+from unittest.mock import patch
+
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
-from pydantic import ValidationError
-from sqlalchemy import select
-from unittest.mock import patch
+from localization import validate_language_code
 
 from apps.econsent.database import db_manager
 from apps.econsent.main import app, approved_translation_cache
-from apps.econsent.models import Base, ConsentAuditLog, ConsentClause, ConsentTemplate, ConsentTranslation
-from localization import validate_language_code
+from apps.econsent.models import Base
 from apps.gateway.main import generate_signature
 
 
@@ -354,7 +351,7 @@ async def test_approved_content_retrieval_and_cache():
         "reason_for_change": "Update clause translation",
         "created_by": "translator"
     }, headers=headers)
-    new_c_trans_version_id = res.json()["id"]
+    _ = res.json()["id"]
 
     # Transition the new version of clause translation to APPROVED
     # Draft is already created. Let's transition it.

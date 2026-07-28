@@ -7,8 +7,17 @@ Provides conformance and referential validation for CDISC Dataset-JSON exports.
 from typing import Any, Dict, List, Optional, Union
 
 from apps.execution.biostat.models import DatasetJSON, DatasetJSONItemGroup
+
 try:
-    from sdtm.enums import Sex, Race, AESeverity, AESeriousness, AERelationship, AEOutcome, NullFlavor
+    from sdtm.enums import (
+        AEOutcome,
+        AERelationship,
+        AESeriousness,
+        AESeverity,
+        NullFlavor,
+        Race,
+        Sex,
+    )
 except ImportError:
     # Fallbacks in case environment lacks packages during isolated testing
     from enum import Enum

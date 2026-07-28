@@ -4876,8 +4876,8 @@ async def run_sdtm_extraction(session, study_id: str, domain: str) -> List[dict]
     elif dom_upper == "MH":
         records, _ = extract_mh(subjects, observations)
     elif dom_upper == "CM":
-        from apps.execution.sdtm_mapper import map_cm
         from apps.execution.database.models import ClinicalVisit
+        from apps.execution.sdtm_mapper import map_cm
         stmt_visit = select(ClinicalVisit).where(
             ClinicalVisit.study_id == study_id,
             ClinicalVisit.is_deleted.is_(False),

@@ -24,6 +24,10 @@ export default [
       "no-unused-vars": "error",
       "no-undef": "off",
       "vue/multi-word-component-names": "off",
+      "vuejs-accessibility/label-has-for": "warn",
+      "vuejs-accessibility/click-events-have-key-events": "warn",
+      "vuejs-accessibility/no-static-element-interactions": "warn",
+      "vuejs-accessibility/form-control-has-label": "warn",
     },
     files: ["apps/**/*.js", "packages/**/*.js", "apps/**/*.vue"],
   }

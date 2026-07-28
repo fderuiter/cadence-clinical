@@ -56,6 +56,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-28: Dynamic Local Branch Point Detection and Offline ADR Validation](2026-07-28-dynamic-local-branch-point-detection-and-offline-validation.md)
 - [2026-07-27: API-driven Lock Sync and AST Import Validator for eTMF](2026-07-27-api-driven-lock-sync-and-ast-validator.md)
 - [2026-07-28: SDV/TSDV Persistence Foundation and Migration Support](2026-07-28-sdv-tsdv-persistence-foundation.md)
+- [2026-07-28: Hybrid ESLint and In-Memory Accessibility Auditing](2026-07-28-hybrid-eslint-and-in-memory-accessibility-auditing.md)
 - [2026-07-29: TMF Reference Model Taxonomy Integration](2026-07-29-tmf-reference-model-taxonomy-integration.md)
 - [2026-07-30: Rule Authoring, Validation, and DDF Delivery](2026-07-30-rule-authoring-validation-and-ddf-delivery.md)
 - [2026-07-30: Lab Reference Range Management](2026-07-30-lab-reference-range-management.md)

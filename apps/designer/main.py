@@ -1,3 +1,4 @@
+# ruff: noqa: E402
 import os
 import time
 from datetime import datetime
@@ -672,12 +673,14 @@ async def study_differences(
 # Protocol Export / Rendering Endpoints
 # ==========================================
 
-from fastapi import Response, BackgroundTasks
-from fastapi.concurrency import run_in_threadpool
 import usdm_model
-from apps.designer.rendering import render_protocol_to_pdf, render_protocol_to_docx
+from fastapi import Response
+from fastapi.concurrency import run_in_threadpool
+
 from apps.designer.content_assembly import assemble_rendered_protocol_document
 from apps.designer.db import MOCK_DESIGNER_AUDIT_LOGS
+from apps.designer.rendering import render_protocol_to_docx, render_protocol_to_pdf
+
 
 async def forward_to_etmf(
     study_id: str,
@@ -689,10 +692,12 @@ async def forward_to_etmf(
     roles: str,
     change_reason: str,
 ):
-    import os
     import base64
+    import os
     import time
+
     import httpx
+
     from packages.security.signing import generate_gateway_signature
 
     etmf_base_url = os.getenv("ETMF_URL", "http://localhost:8003")

@@ -3,6 +3,7 @@ import threading
 import time
 from typing import Any, Dict, Optional, Tuple
 
+
 class ApprovedTranslationCache:
     """
     Thread-safe in-memory cache for composed approved consent template translations.

@@ -1,5 +1,6 @@
 import re
-from typing import Any, Dict, List, Tuple, Set
+from typing import Any, Dict, List, Set, Tuple
+
 
 def flatten_dict(d: Any, parent_key: str = "", sep: str = ".") -> Dict[str, Any]:
     """

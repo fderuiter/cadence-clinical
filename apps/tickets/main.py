@@ -14,6 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.tickets.database import db_manager
 from apps.tickets.models import (
+    TERMINAL_STATES,
+    TICKET_TRANSITIONS,
     Base,
     Ticket,
     TicketAuditLog,
@@ -21,10 +23,6 @@ from apps.tickets.models import (
     TicketComment,
     TicketPriority,
     TicketStatus,
-    TICKET_TRANSITIONS,
-    TERMINAL_STATES,
-    CANCELLABLE_STATES,
-    REOPENABLE_STATES,
 )
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware

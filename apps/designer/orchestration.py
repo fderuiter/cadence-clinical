@@ -1,9 +1,9 @@
 import copy
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
-from apps.designer.mapper import map_study_to_usdm
-from apps.designer.inverse_mapper import map_usdm_to_study
 from apps.designer.comparison import compare_payloads, flatten_dict
+from apps.designer.inverse_mapper import map_usdm_to_study
+from apps.designer.mapper import map_study_to_usdm
 from apps.designer.rules import detect_circular_dependencies
 
 

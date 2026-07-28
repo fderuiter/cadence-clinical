@@ -10,6 +10,8 @@
 ## 1. Context & Problem Statement
 Manual compliance checklists are prone to human error, allowing visual inconsistencies, missing ARIA tags, and keyboard navigation issues to pass undetected into production. We need to eliminate manual accessibility regression audits before code changes are merged into production without adding browser testing overhead.
 
+This decision implements requirements under Trace-1.
+
 ## 2. Decision Drivers & Constraints
 * **Driver 1:** Catch accessibility violations during development automatically.
 * **Driver 2:** Run entirely in-memory without starting a headless browser or complex browser automation pipeline.
