@@ -6,8 +6,8 @@
 ## 1. Traceability Summary
 
 - **Total Documented Requirements:** 55
-- **Total Mapped to Automated Tests:** 32
-- **Traceability Coverage:** 58.2%
+- **Total Mapped to Automated Tests:** 33
+- **Traceability Coverage:** 60.0%
 - **SRS Requirements Mapped:** 7 of 10 (70.0%)
 
 ⚠️ **WARNING:** SRS coverage is below 100%. GxP validation requires 100% of functional requirements defined in the SRS to map to automated test cases.
@@ -31,7 +31,7 @@
 | PRD-EDC-009 | PRD | **Visual Analog Scale (VAS) Slider Specifications** | *None* | ❌ **Unmapped** |
 | PRD-EDC-010 | PRD | **Interactive Body Map Coordinates and Schema Mapping** | *None* | ❌ **Unmapped** |
 | PRD-EDL-001 | PRD | **Data-Driven Expected Document Lists (EDLs) & Completeness Tracking** | `test_edl_definitions_and_crud` (tests/test_etmf.py) 🟢<br>`test_site_aware_completeness` (tests/test_etmf.py) 🟢 | ✅ **Passed** |
-| PRD-MDR-001 | PRD | **Value-Level Metadata Constraint Propagation** | `test_invalid_data_element_default_unit_fails` (tests/test_global_library.py) 🟢<br>`test_invalid_mismatched_type_payload_fails` (tests/test_global_library.py) 🟢<br>`test_mutation_creation_requires_non_empty_change_reason` (tests/test_global_library.py) 🟢<br>`test_mutation_update_requires_non_empty_reason_for_change` (tests/test_global_library.py) 🟢<br>`test_valid_arm_detail_validation` (tests/test_global_library.py) 🟢<br>`test_valid_data_element_detail_validation` (tests/test_global_library.py) 🟢<br>`test_valid_form_detail_validation` (tests/test_global_library.py) 🟢<br>`test_valid_visit_detail_validation` (tests/test_global_library.py) 🟢<br>`test_terminology_cache_prevents_db_queries` (tests/test_transformers.py) 🟢<br>`test_usdm_validation_error_on_invalid_data` (tests/test_transformers.py) 🟢 | ✅ **Passed** |
+| PRD-MDR-001 | PRD | **Value-Level Metadata Constraint Propagation** | `test_invalid_data_element_default_unit_fails` (tests/test_global_library.py) 🟢<br>`test_invalid_mismatched_type_payload_fails` (tests/test_global_library.py) 🟢<br>`test_mutation_creation_requires_non_empty_change_reason` (tests/test_global_library.py) 🟢<br>`test_mutation_update_requires_non_empty_reason_for_change` (tests/test_global_library.py) 🟢<br>`test_valid_arm_detail_validation` (tests/test_global_library.py) 🟢<br>`test_valid_data_element_detail_validation` (tests/test_global_library.py) 🟢<br>`test_valid_form_detail_validation` (tests/test_global_library.py) 🟢<br>`test_valid_visit_detail_validation` (tests/test_global_library.py) 🟢<br>`test_terminology_cache_prevents_db_queries` (tests/test_transformers.py) 🟢<br>`test_usdm_validation_error_on_invalid_data` (tests/test_transformers.py) 🟢<br>`test_cdisc_xml_structure_validation` (tests/validation/environment_integrity_tests.py) 🟢 | ✅ **Passed** |
 | PRD-MDR-002 | PRD | **Biomedical Concept Lock State during Active Studies** | *None* | ❌ **Unmapped** |
 | PRD-MDR-003 | PRD | **Dynamic Cohort Opening & Closing Rules** | `test_usdm_endpoint_returns_nested_schema_and_fast` (tests/test_transformers.py) 🟢 | ✅ **Passed** |
 | PRD-MDR-004 | PRD | **Crossover Timeline Mapping & Arm Interventions** | `test_usdm_endpoint_returns_nested_schema_and_fast` (tests/test_transformers.py) 🟢 | ✅ **Passed** |
@@ -52,10 +52,10 @@
 | PRD-SUB-005 | PRD | **Triggering and Authorizing Emergency Unblinding** | *None* | ❌ **Unmapped** |
 | PRD-SUB-006 | PRD | **Immediate Unblinding State Mutation & System Actions** | *None* | ❌ **Unmapped** |
 | PRD-SUB-007 | PRD | **Re-Consent Gating on Visits** | *None* | ❌ **Unmapped** |
-| PRD-SYS-001 | PRD | **Standard Audit Logging (21 CFR Part 11 § 11.10(e))** | `test_insert_generates_audit_log` (tests/test_audit.py) 🟢<br>`test_update_generates_audit_log` (tests/test_audit.py) 🟢<br>`test_prevent_audit_log_mutation` (tests/test_ledger_and_triggers.py) 🟢<br>`test_create_and_list_deviations` (tests/test_quality_workflow.py) 🟢<br>`test_create_and_update_rca` (tests/test_quality_workflow.py) 🟢 | ✅ **Passed** |
+| PRD-SYS-001 | PRD | **Standard Audit Logging (21 CFR Part 11 § 11.10(e))** | `test_insert_generates_audit_log` (tests/test_audit.py) 🟢<br>`test_update_generates_audit_log` (tests/test_audit.py) 🟢<br>`test_prevent_audit_log_mutation` (tests/test_ledger_and_triggers.py) 🟢<br>`test_create_and_list_deviations` (tests/test_quality_workflow.py) 🟢<br>`test_create_and_update_rca` (tests/test_quality_workflow.py) 🟢<br>`test_gxp_compliance_drifts_identified` (tests/validation/gxp_compliance_suite.py) 🟢 | ✅ **Passed** |
 | PRD-SYS-002 | PRD | **Soft-Delete Enforcement and Shadow Schema Preservation** | `test_soft_delete_generates_audit_log` (tests/test_audit.py) 🟢<br>`test_prevent_hard_delete_on_audited_model` (tests/test_ledger_and_triggers.py) 🟢 | ✅ **Passed** |
-| PRD-SYS-003 | PRD | **Cryptographic Ledger Hashing & Chain Validation** | `test_ledger_sealing_and_validation` (tests/test_ledger_and_triggers.py) 🟢<br>`test_trial_lock_freeze` (tests/test_trial_lock.py) 🟢 | ✅ **Passed** |
-| PRD-SYS-004 | PRD | **Universal Site Isolation Constraint** | *None* | ❌ **Unmapped** |
+| PRD-SYS-003 | PRD | **Cryptographic Ledger Hashing & Chain Validation** | `test_ledger_sealing_and_validation` (tests/test_ledger_and_triggers.py) 🟢<br>`test_trial_lock_freeze` (tests/test_trial_lock.py) 🟢<br>`test_cryptographic_tamper_evident_safeguards` (tests/validation/environment_integrity_tests.py) 🟢 | ✅ **Passed** |
+| PRD-SYS-004 | PRD | **Universal Site Isolation Constraint** | `test_site_level_data_isolation` (tests/validation/environment_integrity_tests.py) 🟢 | ✅ **Passed** |
 | PRD-TMF-001 | PRD | **TMF Taxonomy Catalog Hierarchy and Version Selection** | `test_active_version_selection` (tests/test_tmf_reference_model.py) 🟢<br>`test_artifact_parent_identification` (tests/test_tmf_reference_model.py) 🟢<br>`test_canonical_11_zones` (tests/test_tmf_reference_model.py) 🟢<br>`test_explicit_version_selection` (tests/test_tmf_reference_model.py) 🟢<br>`test_immutability_properties` (tests/test_tmf_reference_model.py) 🟢<br>`test_no_database_dependencies` (tests/test_tmf_reference_model.py) 🟢<br>`test_resolve_artifact_failures` (tests/test_tmf_reference_model.py) 🟢<br>`test_resolve_artifact_success` (tests/test_tmf_reference_model.py) 🟢<br>`test_version_isolation` (tests/test_tmf_reference_model.py) 🟢 | ✅ **Passed** |
 | PRD-TMF-002 | PRD | **Strict Taxonomy Validation and Ingestion Rejection** | `test_canonical_catalog_ingestion_validations` (tests/test_etmf.py) 🟢<br>`test_validate_hierarchy_failures` (tests/test_tmf_reference_model.py) 🟢<br>`test_validate_hierarchy_success` (tests/test_tmf_reference_model.py) 🟢 | ✅ **Passed** |
 | PRD-TMF-003 | PRD | **Taxonomy Version and Artifact Persistence** | `test_canonical_catalog_ingestion_validations` (tests/test_etmf.py) 🟢 | ✅ **Passed** |
@@ -93,7 +93,6 @@
 - **PRD-SUB-005** (PRD): Triggering and Authorizing Emergency Unblinding
 - **PRD-SUB-006** (PRD): Immediate Unblinding State Mutation & System Actions
 - **PRD-SUB-007** (PRD): Re-Consent Gating on Visits
-- **PRD-SYS-004** (PRD): Universal Site Isolation Constraint
 - **Trace-10** (SRS): Simulated Multi-Channel Notification Dispatcher
 - **Trace-8** (SRS): eCOA Subject Identity & Gateway Boundary
 - **Trace-9** (SRS): ePRO Offline Sync & Part 11 Reconciliation
