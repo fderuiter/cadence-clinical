@@ -10,10 +10,10 @@ Based on the executed automated verification suite, the platform meets all prede
 
 ### Validation Result Summary
 - **Total Automated Test Cases Run:** 1163
-- **Passed:** 1163 🟢
-- **Failed/Errors:** 0 🔴
+- **Passed:** 1157 🟢
+- **Failed/Errors:** 6 🔴
 - **Skipped:** 0 ⚪
-- **Overall Operational Pass Rate:** 100.00%
+- **Overall Operational Pass Rate:** 99.48%
 
 ## 2. Installation Qualification (IQ)
 
@@ -485,6 +485,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_classify_incoming_document_new` | `tests.test_eisf_adapter` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_derive_correlation_key` | `tests.test_eisf_adapter` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_deterministic_bidirectional_mapping_success` | `tests.test_eisf_adapter` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_eisf_mappings_resolve_through_active_catalog` | `tests.test_eisf_adapter` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_mapping_failures` | `tests.test_eisf_adapter` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_mapping_normalization` | `tests.test_eisf_adapter` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_auditor_write_forbidden` | `tests.test_eisf_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -530,7 +531,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_unblind_success_authorized_access` | `tests.test_emergency_unblinding` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_unblind_success_masked_access` | `tests.test_emergency_unblinding` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_unblind_withdrawn_status_error` | `tests.test_emergency_unblinding` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_automated_ingestion_and_version_indexing` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_automated_ingestion_and_version_indexing` | `tests.test_etmf` | *Regression/Helper* | 🔴 FAILED | < 1s |
 | `test_canonical_catalog_ingestion_validations` | `tests.test_etmf` | PRD-TMF-002, PRD-TMF-003, Trace-5 | 🟢 PASSED | < 1s |
 | `test_completeness_checking_transitions` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_completeness_from_catalog` | `tests.test_etmf` | PRD-TMF-004 | 🟢 PASSED | < 1s |
@@ -722,11 +723,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_lab_reference_range_audit_and_triggers` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_lab_reference_range_crud_and_precision` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_schema_evolution_migration_upgrade` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
-| `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_scrambled_sequence` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_valid` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | 🔴 FAILED | < 1s |
+| `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | 🔴 FAILED | < 1s |
+| `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | 🔴 FAILED | < 1s |
+| `test_layout_validation_scrambled_sequence` | `tests.test_layout_validator` | *Regression/Helper* | 🔴 FAILED | < 1s |
+| `test_layout_validation_valid` | `tests.test_layout_validator` | *Regression/Helper* | 🔴 FAILED | < 1s |
 | `test_ledger_sealing_and_validation` | `tests.test_ledger_and_triggers` | PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_out_of_band_update_triggers_audit_entry` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_prevent_audit_ledger_seals_mutation` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1198,13 +1199,17 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_active_version_selection` | `tests.test_tmf_reference_model` | PRD-TMF-001 | 🟢 PASSED | < 1s |
 | `test_artifact_parent_identification` | `tests.test_tmf_reference_model` | PRD-TMF-001 | 🟢 PASSED | < 1s |
 | `test_canonical_11_zones` | `tests.test_tmf_reference_model` | PRD-TMF-001 | 🟢 PASSED | < 1s |
+| `test_complete_catalog_manifest_and_uniqueness` | `tests.test_tmf_reference_model` | PRD-TMF-001 | 🟢 PASSED | < 1s |
 | `test_explicit_version_selection` | `tests.test_tmf_reference_model` | PRD-TMF-001 | 🟢 PASSED | < 1s |
 | `test_get_mandatory_artifacts_failures` | `tests.test_tmf_reference_model` | PRD-TMF-004 | 🟢 PASSED | < 1s |
 | `test_get_mandatory_artifacts_success` | `tests.test_tmf_reference_model` | PRD-TMF-004 | 🟢 PASSED | < 1s |
+| `test_hierarchy_integrity_v3_2_0_complete` | `tests.test_tmf_reference_model` | PRD-TMF-001 | 🟢 PASSED | < 1s |
 | `test_immutability_properties` | `tests.test_tmf_reference_model` | PRD-TMF-001 | 🟢 PASSED | < 1s |
 | `test_no_database_dependencies` | `tests.test_tmf_reference_model` | PRD-TMF-001 | 🟢 PASSED | < 1s |
+| `test_reproducibility_and_version_isolation` | `tests.test_tmf_reference_model` | PRD-TMF-001 | 🟢 PASSED | < 1s |
 | `test_resolve_artifact_failures` | `tests.test_tmf_reference_model` | PRD-TMF-001 | 🟢 PASSED | < 1s |
 | `test_resolve_artifact_success` | `tests.test_tmf_reference_model` | PRD-TMF-001 | 🟢 PASSED | < 1s |
+| `test_standard_versus_extension_policy` | `tests.test_tmf_reference_model` | PRD-TMF-001 | 🟢 PASSED | < 1s |
 | `test_validate_hierarchy_failures` | `tests.test_tmf_reference_model` | PRD-TMF-002 | 🟢 PASSED | < 1s |
 | `test_validate_hierarchy_success` | `tests.test_tmf_reference_model` | PRD-TMF-002 | 🟢 PASSED | < 1s |
 | `test_version_isolation` | `tests.test_tmf_reference_model` | PRD-TMF-001 | 🟢 PASSED | < 1s |
@@ -1332,11 +1337,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_public_entry_point_whodrug` | `tests.test_whodrug_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_strict_referential_validation_triggers` | `tests.test_whodrug_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_whodrug_parser_init_validation` | `tests.test_whodrug_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_cdisc_xml_structure_validation` | `tests.validation.environment_integrity_tests` | PRD-MDR-001 | 🟢 PASSED | < 1s |
-| `test_cryptographic_tamper_evident_safeguards` | `tests.validation.environment_integrity_tests` | PRD-SYS-003 | 🟢 PASSED | < 1s |
-| `test_environment_integrity` | `tests.validation.environment_integrity_tests` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_site_level_data_isolation` | `tests.validation.environment_integrity_tests` | PRD-SYS-004 | 🟢 PASSED | < 1s |
-| `test_gxp_compliance_drifts_identified` | `tests.validation.gxp_compliance_suite` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 
 ## 4. Performance Qualification (PQ) & Scenario Validation
 

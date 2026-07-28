@@ -16,6 +16,10 @@ class Artifact(BaseModel):
     name: str = Field(..., description="Canonical display name of the artifact")
     section_code: str = Field(..., description="Stable code of the parent section")
     zone_code: int = Field(..., description="Stable code of the parent zone")
+    is_extension: bool = Field(
+        default=False,
+        description="Whether this artifact is a Cadence-specific extension",
+    )
 
 
 class Section(BaseModel):
