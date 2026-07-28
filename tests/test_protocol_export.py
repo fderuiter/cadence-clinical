@@ -17,7 +17,7 @@ def get_custom_auth_headers(change_reason="system_operation"):
     timestamp = str(time.time())
     user_id = "123"
     roles = "admin"
-    secret = "internal-gateway-secret-12345"
+    secret = "internal-gateway-secret-12345"  # pragma: allowlist secret
     payload = {
         "change_reason": change_reason,
         "roles": roles,
