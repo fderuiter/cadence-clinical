@@ -378,6 +378,8 @@ class VisitResponse(BaseModel):
     visit_name: str
     visit_date: datetime
     study_id: str
+    protocol_version_tag: Optional[str] = None
+    protocol_version_index: Optional[int] = None
 
 
 class ObservationCreate(BaseModel):
@@ -419,6 +421,8 @@ class ObservationResponse(BaseModel):
     lab_indicator: Optional[str] = None
     lab_out_of_range: Optional[bool] = None
     matched_normal_bounds: Optional[str] = None
+    protocol_version_tag: Optional[str] = None
+    protocol_version_index: Optional[int] = None
 
 
 @app.post("/api/v1/execution/subjects", response_model=SubjectResponse)
@@ -619,12 +623,25 @@ async def create_visit(
 ) -> VisitResponse:
     """Create a new clinical visit."""
     async with db_manager.get_session_maker()() as session:
+        # Fetch active consented version for subject
+        stmt_consent = select(SubjectConsent).where(
+            SubjectConsent.subject_id == payload.subject_id,
+            SubjectConsent.icf_signed.is_(True)
+        ).order_by(SubjectConsent.version_index.desc()).limit(1)
+        res_consent = await session.execute(stmt_consent)
+        consent = res_consent.scalars().first()
+
+        v_tag = consent.version_tag if consent else None
+        v_idx = consent.version_index if consent else None
+
         vdate = payload.visit_date or datetime.now()
         visit = ClinicalVisit(
             subject_id=payload.subject_id,
             visit_name=payload.visit_name,
             visit_date=vdate,
             study_id=payload.study_id,
+            protocol_version_tag=v_tag,
+            protocol_version_index=v_idx,
         )
         session.add(visit)
         await session.commit()
@@ -637,6 +654,8 @@ async def create_visit(
             visit_name=visit_db.visit_name,
             visit_date=visit_db.visit_date,
             study_id=visit_db.study_id,
+            protocol_version_tag=visit_db.protocol_version_tag,
+            protocol_version_index=visit_db.protocol_version_index,
         )
 
 
@@ -704,6 +723,17 @@ async def create_observation(
             norm_val, matched_range
         )
 
+        # Fetch active consented version for subject
+        stmt_consent = select(SubjectConsent).where(
+            SubjectConsent.subject_id == payload.subject_id,
+            SubjectConsent.icf_signed.is_(True)
+        ).order_by(SubjectConsent.version_index.desc()).limit(1)
+        res_consent = await session.execute(stmt_consent)
+        consent = res_consent.scalars().first()
+
+        v_tag = consent.version_tag if consent else None
+        v_idx = consent.version_index if consent else None
+
         obs = ClinicalObservation(
             subject_id=payload.subject_id,
             study_id=study_id,
@@ -723,6 +753,8 @@ async def create_observation(
             lab_indicator=indicator,
             lab_out_of_range=out_of_range,
             matched_normal_bounds=matched_bounds,
+            protocol_version_tag=v_tag,
+            protocol_version_index=v_idx,
         )
         session.add(obs)
 
@@ -925,6 +957,8 @@ async def create_observation(
             lab_indicator=obs_db.lab_indicator,
             lab_out_of_range=obs_db.lab_out_of_range,
             matched_normal_bounds=obs_db.matched_normal_bounds,
+            protocol_version_tag=obs_db.protocol_version_tag,
+            protocol_version_index=obs_db.protocol_version_index,
         )
 
 
@@ -1638,8 +1672,14 @@ async def generate_cdisc_export_xml(study_id: str) -> str:
                 detail=f"No active observations found for study {study_id}",
             )
 
+        # Reconcile observations here to target the latest protocol version
+        observations = [r[0] for r in rows]
+        from apps.execution.migration_rules import reconcile_observations
+        reconciled = await reconcile_observations(session, study_id, observations)
+
         subjects = {}
-        for obs, visit_name in rows:
+        for idx, (original_obs, visit_name) in enumerate(rows):
+            obs = reconciled[idx]
             subj_key = obs.subject_id
             vname = visit_name or "Baseline"
             if subj_key not in subjects:
@@ -4863,18 +4903,22 @@ async def run_sdtm_extraction(session, study_id: str, domain: str) -> List[dict]
     res_obs = await session.execute(stmt_obs)
     observations = res_obs.scalars().all()
 
+    # Reconcile here to map older version observations to target latest version
+    from apps.execution.migration_rules import reconcile_observations
+    reconciled_observations = await reconcile_observations(session, study_id, observations)
+
     dom_upper = domain.strip().upper()
     records = []
     if dom_upper == "DM":
-        records = extract_dm(subjects, observations)
+        records = extract_dm(subjects, reconciled_observations)
     elif dom_upper == "AE":
-        records, _ = extract_ae(subjects, observations)
+        records, _ = extract_ae(subjects, reconciled_observations)
     elif dom_upper == "VS":
-        records, _ = extract_vs(subjects, observations)
+        records, _ = extract_vs(subjects, reconciled_observations)
     elif dom_upper == "LB":
-        records, _ = extract_lb(subjects, observations)
+        records, _ = extract_lb(subjects, reconciled_observations)
     elif dom_upper == "MH":
-        records, _ = extract_mh(subjects, observations)
+        records, _ = extract_mh(subjects, reconciled_observations)
     else:
         raise ValueError(f"Unsupported SDTM domain: {domain}")
 
@@ -4900,20 +4944,24 @@ async def run_adam_derivation(session, study_id: str, dataset: str) -> List[dict
     res_obs = await session.execute(stmt_obs)
     observations = res_obs.scalars().all()
 
+    # Reconcile here to map older version observations to target latest version
+    from apps.execution.migration_rules import reconcile_observations
+    reconciled_observations = await reconcile_observations(session, study_id, observations)
+
     ds_upper = dataset.strip().upper()
     if ds_upper == "ADSL":
-        return derive_adsl(subjects, observations)
+        return derive_adsl(subjects, reconciled_observations)
     elif ds_upper == "ADAE":
-        adsl_recs = derive_adsl(subjects, observations)
-        ae_recs, _ = extract_ae(subjects, observations)
+        adsl_recs = derive_adsl(subjects, reconciled_observations)
+        ae_recs, _ = extract_ae(subjects, reconciled_observations)
         records = derive_adae(adsl_recs, ae_recs)
         for r in records:
             if "AEDECOD" not in r or r["AEDECOD"] is None:
                 r["AEDECOD"] = r.get("AETERM", "")
         return records
     elif ds_upper == "ADVS":
-        adsl_recs = derive_adsl(subjects, observations)
-        vs_recs, _ = extract_vs(subjects, observations)
+        adsl_recs = derive_adsl(subjects, reconciled_observations)
+        vs_recs, _ = extract_vs(subjects, reconciled_observations)
         return derive_advs(adsl_recs, vs_recs)
     else:
         raise ValueError(f"Unsupported ADaM dataset: {dataset}")
@@ -4988,6 +5036,179 @@ async def export_sdtm_domain(
             raise HTTPException(
                 status_code=500, detail=f"Export execution failed: {str(e)}"
             )
+
+
+# ==========================================
+# Protocol Amendment & Reconciled Observations API
+# ==========================================
+
+
+class MigrationRuleCreate(BaseModel):
+    study_id: str
+    source_version_index: int
+    target_version_index: int
+    rules: dict
+
+
+class MigrationRuleResponse(BaseModel):
+    id: str
+    study_id: str
+    source_version_index: int
+    target_version_index: int
+    rules: dict
+    version: int
+    is_deleted: bool
+
+
+@app.post(
+    "/api/v1/execution/migration-rules",
+    response_model=MigrationRuleResponse,
+    status_code=201,
+)
+async def create_migration_rule_endpoint(
+    payload: MigrationRuleCreate,
+    roles: list[str] = Depends(verify_not_auditor),
+) -> MigrationRuleResponse:
+    """Registers or updates a protocol version transition migration rule for a study."""
+    from apps.execution.migration_rules import register_migration_rule
+
+    async with db_manager.get_session_maker()() as session:
+        rule_db = await register_migration_rule(
+            session=session,
+            study_id=payload.study_id,
+            source_version_index=payload.source_version_index,
+            target_version_index=payload.target_version_index,
+            rules=payload.rules,
+        )
+        await session.commit()
+        await session.refresh(rule_db)
+
+        return MigrationRuleResponse(
+            id=rule_db.id,
+            study_id=rule_db.study_id,
+            source_version_index=rule_db.source_version_index,
+            target_version_index=rule_db.target_version_index,
+            rules=rule_db.rules,
+            version=rule_db.version,
+            is_deleted=rule_db.is_deleted,
+        )
+
+
+@app.get(
+    "/api/v1/execution/migration-rules",
+    response_model=List[MigrationRuleResponse],
+)
+async def list_migration_rules_endpoint(
+    study_id: str,
+    roles: list[str] = Depends(get_normalized_roles),
+) -> List[MigrationRuleResponse]:
+    """Retrieves all active migration rules registered for a specific study."""
+    from apps.execution.database.models import MigrationRule
+
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(MigrationRule).where(
+            MigrationRule.study_id == study_id,
+            MigrationRule.is_deleted.is_(False),
+        )
+        res = await session.execute(stmt)
+        rules = res.scalars().all()
+
+        return [
+            MigrationRuleResponse(
+                id=r.id,
+                study_id=r.study_id,
+                source_version_index=r.source_version_index,
+                target_version_index=r.target_version_index,
+                rules=r.rules,
+                version=r.version,
+                is_deleted=r.is_deleted,
+            )
+            for r in rules
+        ]
+
+
+class ReconciledObservationResponse(BaseModel):
+    id: str
+    subject_id: str
+    study_id: str
+    visit_id: Optional[str] = None
+    domain: str
+    observation_date: datetime
+    test_code: str
+    test_name: str
+    value: Optional[float] = None
+    value_string: Optional[str] = None
+    unit: Optional[str] = None
+    normalized_value: Optional[float] = None
+    normalized_unit: Optional[str] = None
+    is_outlier: bool
+    lab_source: Optional[str] = None
+    lab_site_id: Optional[str] = None
+    lab_indicator: Optional[str] = None
+    lab_out_of_range: Optional[bool] = None
+    matched_normal_bounds: Optional[str] = None
+    protocol_version_tag: Optional[str] = None
+    protocol_version_index: Optional[int] = None
+    provenance: dict
+
+
+@app.get(
+    "/api/v1/execution/subjects/{subject_id}/observations",
+    response_model=List[ReconciledObservationResponse],
+)
+async def get_reconciled_observations_endpoint(
+    subject_id: str,
+    target_version_index: Optional[int] = Query(
+        None, description="Reconcile observations up to this protocol version index."
+    ),
+    roles: list[str] = Depends(get_normalized_roles),
+) -> List[ReconciledObservationResponse]:
+    """Retrieves all clinical observations for a subject, recursively reconciled to the target protocol version."""
+    from apps.execution.migration_rules import reconcile_observations
+
+    async with db_manager.get_session_maker()() as session:
+        # Check if subject exists
+        stmt_subj = select(ClinicalSubject).where(
+            ClinicalSubject.subject_id == subject_id
+        )
+        res_subj = await session.execute(stmt_subj)
+        subj = res_subj.scalars().first()
+        if not subj:
+            raise HTTPException(status_code=404, detail="Subject not found.")
+
+        study_id = subj.study_id
+
+        # If no target version index is specified, look up the highest consented version
+        if target_version_index is None:
+            stmt_consent = (
+                select(SubjectConsent)
+                .where(
+                    SubjectConsent.subject_id == subject_id,
+                    SubjectConsent.icf_signed.is_(True),
+                )
+                .order_by(SubjectConsent.version_index.desc())
+                .limit(1)
+            )
+            res_consent = await session.execute(stmt_consent)
+            consent = res_consent.scalars().first()
+            if consent:
+                target_version_index = consent.version_index
+
+        stmt_obs = select(ClinicalObservation).where(
+            ClinicalObservation.subject_id == subject_id,
+            ClinicalObservation.is_deleted.is_(False),
+        )
+        res_obs = await session.execute(stmt_obs)
+        observations = res_obs.scalars().all()
+
+        reconciled = await reconcile_observations(
+            session=session,
+            study_id=study_id,
+            observations=observations,
+            target_version_index=target_version_index,
+        )
+
+        return [ReconciledObservationResponse(**r.dict()) for r in reconciled]
 
 
 @app.get("/api/v1/execution/biostat/adam/{dataset}")

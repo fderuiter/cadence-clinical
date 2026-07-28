@@ -29,6 +29,7 @@ from apps.execution.database.models import (  # noqa: F401
     WHODrugDrugIngredient,
     WHODrugIngredient,
     WHODrugRecord,
+    MigrationRule,
 )
 
 # Design Guideline:
@@ -358,6 +359,16 @@ async def upgrade_existing_tables(conn) -> None:
             return []
         return [col["name"] for col in insp.get_columns(table_name)]
 
+    # Ensure migration_rules table exists
+    has_migration_rules = await conn.run_sync(
+        lambda sc: inspect(sc).has_table("migration_rules")
+    )
+    if not has_migration_rules:
+        print("Creating missing migration_rules table...")
+        await conn.run_sync(
+            lambda sc: Base.metadata.tables["migration_rules"].create(sc)
+        )
+
     # 1. Update clinical_observations with lab reference snapshot columns and site_id
     obs_cols = await conn.run_sync(
         lambda sc: get_table_columns(sc, "clinical_observations")
@@ -380,6 +391,35 @@ async def upgrade_existing_tables(conn) -> None:
                     text(
                         f"ALTER TABLE clinical_observations ADD COLUMN {col_name} {col_type};"
                     )
+                )
+
+    # Add protocol_version snapshot columns to clinical_observations
+    if obs_cols:
+        new_pv_cols = [
+            ("protocol_version_tag", "VARCHAR(50)"),
+            ("protocol_version_index", "INTEGER"),
+        ]
+        for col_name, col_type in new_pv_cols:
+            if col_name not in obs_cols:
+                print(f"Adding missing column {col_name} to clinical_observations table...")
+                await conn.execute(
+                    text(f"ALTER TABLE clinical_observations ADD COLUMN {col_name} {col_type};")
+                )
+
+    # Add protocol_version snapshot columns to clinical_visits
+    visit_cols = await conn.run_sync(
+        lambda sc: get_table_columns(sc, "clinical_visits")
+    )
+    if visit_cols:
+        new_pv_cols = [
+            ("protocol_version_tag", "VARCHAR(50)"),
+            ("protocol_version_index", "INTEGER"),
+        ]
+        for col_name, col_type in new_pv_cols:
+            if col_name not in visit_cols:
+                print(f"Adding missing column {col_name} to clinical_visits table...")
+                await conn.execute(
+                    text(f"ALTER TABLE clinical_visits ADD COLUMN {col_name} {col_type};")
                 )
 
     # Upgrade clinical_coding_ledger with new columns

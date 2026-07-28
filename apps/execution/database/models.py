@@ -272,6 +272,8 @@ class ClinicalVisit(AuditedModel):
     visit_date: Mapped[datetime] = mapped_column(DateTime, default=func.now())
     study_id: Mapped[str] = mapped_column(String(255), nullable=False)
     site_id: Mapped[str] = mapped_column(String(255), nullable=True)
+    protocol_version_tag: Mapped[str] = mapped_column(String(50), nullable=True)
+    protocol_version_index: Mapped[int] = mapped_column(Integer, nullable=True)
 
 
 class ClinicalObservation(AuditedModel):
@@ -328,6 +330,8 @@ class ClinicalObservation(AuditedModel):
     lab_indicator: Mapped[str] = mapped_column(String(50), nullable=True)
     lab_out_of_range: Mapped[bool] = mapped_column(Boolean, nullable=True)
     matched_normal_bounds: Mapped[str] = mapped_column(String(255), nullable=True)
+    protocol_version_tag: Mapped[str] = mapped_column(String(50), nullable=True)
+    protocol_version_index: Mapped[int] = mapped_column(Integer, nullable=True)
 
 
 class ClinicalQuery(AuditedModel):
@@ -989,3 +993,20 @@ class BiostatExport(AuditedModel):
     )  # "SUCCESS", "FAILED"
     error_message: Mapped[str] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+
+
+class MigrationRule(AuditedModel):
+    """Represents protocol amendment field-level migration rules from a Designer form diff.
+
+    Tracks renames, additions, and removals between specific study protocol version transitions.
+    """
+
+    __tablename__ = "migration_rules"
+    __table_args__ = (
+        Index("idx_migration_rules_coords", "study_id", "source_version_index", "target_version_index"),
+    )
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    source_version_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    target_version_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    rules: Mapped[dict] = mapped_column(JSON, nullable=False)  # stores renames, additions, removals
