@@ -422,7 +422,7 @@ def pytest_sessionfinish(session, exitstatus):
     and to drop worker-isolated databases.
     """
     # Clean up worker-isolated databases at the end of the session
-    if databases_pre_created:
+    if databases_pre_created and session.__class__.__name__ != "MockSession":
         worker_id = os.environ.get("PYTEST_XDIST_WORKER")
         worker_suffix = f"_{worker_id}" if worker_id else "_test"
         try:
