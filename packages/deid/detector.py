@@ -133,6 +133,23 @@ def redact_text(
     return "".join(parts)
 
 
+def is_part_of_identifier(text: str, start: int, end: int) -> bool:
+    """Checks if a match is part of a larger code/file path/URL identifier.
+
+    Determines if the matched text is immediately preceded or followed by
+    alphanumeric characters, hyphens, or underscores.
+    """
+    if start > 0:
+        prev_char = text[start - 1]
+        if prev_char.isalnum() or prev_char in {"-", "_"}:
+            return True
+    if end < len(text):
+        next_char = text[end]
+        if next_char.isalnum() or next_char in {"-", "_"}:
+            return True
+    return False
+
+
 class DeidDetector:
     """
     Pure-Python detection layer for structured PII/PHI matching in clinical document text.
@@ -178,6 +195,8 @@ class DeidDetector:
 
         if DetectorCategory.TELEPHONE_FAX in active_categories:
             for m in PHONE_FAX_REGEX.finditer(text):
+                if is_part_of_identifier(text, m.start(), m.end()):
+                    continue
                 candidates.append(
                     DetectionResult(
                         category=DetectorCategory.TELEPHONE_FAX,
@@ -189,6 +208,8 @@ class DeidDetector:
 
         if DetectorCategory.SSN_NATIONAL_ID in active_categories:
             for m in SSN_NATIONAL_ID_REGEX.finditer(text):
+                if is_part_of_identifier(text, m.start(), m.end()):
+                    continue
                 candidates.append(
                     DetectionResult(
                         category=DetectorCategory.SSN_NATIONAL_ID,
@@ -201,6 +222,8 @@ class DeidDetector:
         if DetectorCategory.DATES in active_categories:
             for pattern in DATE_PATTERNS:
                 for m in pattern.finditer(text):
+                    if is_part_of_identifier(text, m.start(), m.end()):
+                        continue
                     candidates.append(
                         DetectionResult(
                             category=DetectorCategory.DATES,
@@ -212,6 +235,8 @@ class DeidDetector:
 
         if DetectorCategory.ZIP_GEOGRAPHIC in active_categories:
             for m in ZIP_GEOGRAPHIC_REGEX.finditer(text):
+                if is_part_of_identifier(text, m.start(), m.end()):
+                    continue
                 candidates.append(
                     DetectionResult(
                         category=DetectorCategory.ZIP_GEOGRAPHIC,
@@ -223,12 +248,15 @@ class DeidDetector:
 
         if DetectorCategory.URLS in active_categories:
             for m in URLS_REGEX.finditer(text):
+                val = m.group()
+                if "localhost" in val.lower() or "127.0.0.1" in val:
+                    continue
                 candidates.append(
                     DetectionResult(
                         category=DetectorCategory.URLS,
                         start=m.start(),
                         end=m.end(),
-                        value=m.group(),
+                        value=val,
                     )
                 )
 

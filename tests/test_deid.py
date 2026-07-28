@@ -376,3 +376,32 @@ def test_cli_main_violation(tmp_path, monkeypatch):
 
     main()
     assert exit_code == 1
+
+
+def test_is_part_of_identifier_filtering():
+    from packages.deid.detector import DeidDetector
+    detector = DeidDetector()
+
+    # 1. 000000000000 inside SHA256 string should be ignored as part of an identifier
+    text_with_hash = "const hash = '0000000000000000000000000000000000000000000000000000000000000000';"
+    results = detector.detect(text_with_hash, ComplianceProfile.HIPAA)
+    assert len([r for r in results if r.category == DetectorCategory.TELEPHONE_FAX]) == 0
+
+    # 2. Localhost URL should be ignored
+    text_with_localhost = "url = 'http://localhost:8000/api/v1/interop/'"
+    results_localhost = detector.detect(text_with_localhost, ComplianceProfile.HIPAA)
+    assert len([r for r in results_localhost if r.category == DetectorCategory.URLS]) == 0
+
+    # 3. Zip code inside a secret key / identifier should be ignored
+    text_with_secret = "secret = 'internal-gateway-secret-12345'"  # pragma: allowlist secret
+    results_secret = detector.detect(text_with_secret, ComplianceProfile.HIPAA)
+    assert len([r for r in results_secret if r.category == DetectorCategory.ZIP_GEOGRAPHIC]) == 0
+
+    # 4. Standard phone numbers, zip codes, URLs should still be detected correctly
+    clean_text = "Call us at 555-4321, our office is located at 02111. Check www.google.com."
+    results_clean = detector.detect(clean_text, ComplianceProfile.HIPAA)
+    categories = {r.category for r in results_clean}
+    assert DetectorCategory.TELEPHONE_FAX in categories
+    assert DetectorCategory.ZIP_GEOGRAPHIC in categories
+    assert DetectorCategory.URLS in categories
+
