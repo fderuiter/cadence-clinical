@@ -289,7 +289,7 @@ jobs:
         if: always()
         env:
           TEST_DATABASE_URL: "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"
-        run: uv run pytest tests/test_layout_validator.py --no-cov --junitxml=report-integration.xml
+        run: uv run pytest -n auto tests/test_layout_validator.py --no-cov --junitxml=report-integration.xml
 
       - name: Upload integration test report
         if: always()
