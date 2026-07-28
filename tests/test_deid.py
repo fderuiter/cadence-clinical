@@ -376,3 +376,34 @@ def test_cli_main_violation(tmp_path, monkeypatch):
 
     main()
     assert exit_code == 1
+
+
+def test_cli_main_bypass_comments_and_false_positives(tmp_path, monkeypatch):
+    import os
+    import sys
+
+    from packages.deid.cli import main
+
+    test_file = tmp_path / "bypass.txt"
+    content = (
+        "This line has patient@hospital.org but with deid: ignore comment\n"
+        "This is localhost http://localhost:8000 and 127.0.0.1 which are false positives\n"
+        "This has a mock key designer-amendment-secure-key-12345 in it\n"
+        "This has a SNOMED concept code 271649006 and exponent 65537 which are safe"
+    )
+    test_file.write_text(content, encoding="utf-8")
+
+    monkeypatch.setattr(sys, "argv", ["deid-scan", str(test_file)])
+
+    exit_code = None
+
+    def mock_exit(code):
+        nonlocal exit_code
+        exit_code = code
+
+    monkeypatch.setattr(sys, "exit", mock_exit)
+
+    monkeypatch.setattr(os, "getcwd", lambda: str(tmp_path))
+
+    main()
+    assert exit_code == 0
