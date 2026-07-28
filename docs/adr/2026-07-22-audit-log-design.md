@@ -16,3 +16,5 @@ We design a unified audit log specification mapping both gateway and database mu
 ## Trade-offs
 - Positive: Single source of truth for all forensic tracing.
 - Negative: Increased complexity in audit log serialization.
+
+This decision implements requirements under Trace-1.

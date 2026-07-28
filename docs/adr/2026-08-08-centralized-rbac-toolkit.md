@@ -11,6 +11,8 @@
 The Cadence Clinical platform consists of multiple services (eTMF, Execution, Interop, Metadata Designer, etc.) that need to validate user privileges, restrict access based on trial site assignments, and obfuscate sensitive fields to enforce clinical trial blinding plans.
 Previously, role verification was handled locally by individual services, leading to duplicated code, inconsistent role mappings, and high risk of audit compliance failures. We need a centralized, authoritative, and declarative role-based access control (RBAC) and data-masking framework under `packages/security` that all services can seamlessly consume.
 
+This decision implements requirements under Trace-2.
+
 ## 2. Decision Drivers & Constraints
 * **Separation of duties (FDA 21 CFR Part 11 / GxP):** Strictly enforce separation between clinical and administrative personas.
 * **Blinding Plan Integrity (ICH E6(R2) / GCP):** Automatically obfuscate sensitive/unblinded data for blinded roles.

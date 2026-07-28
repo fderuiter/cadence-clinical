@@ -33,3 +33,5 @@ Greater GxP compliance, zero bypass of quality gates, and automated merging of s
 
 ### Negative Impact / Technical Debt
 Requires a `GH_TOKEN` or `GITHUB_TOKEN` with write-access to repository rulesets in GitHub Actions.
+
+This decision implements requirements under Trace-7.

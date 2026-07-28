@@ -11,6 +11,8 @@
 ## 1. Context & Problem Statement
 To establish monitoring, site operations, financial, and recruitment workflows, the Cadence Clinical platform requires an isolated, independently deployable Clinical Trial Management System (CTMS) bounded context. This context must be secured via our gateway, integrated with Keycloak OIDC authentication, auditable to comply with 21 CFR Part 11 requirements, and accessible via precise Role-Based Access Controls (RBAC).
 
+This decision implements requirements under Trace-6.
+
 ## 2. Decision Drivers & Constraints
 * **Compliance:** Strict alignment with FDA 21 CFR Part 11, GAMP 5, and EU Annex 11 standards requires mandatory audit fields (created_at, created_by, reason_for_change, version_index) and immutable append-only audit trails.
 * **Separation of Concerns:** Keep the CTMS metadata, site, and recruitment operations decoupled from metadata graph modeling and EDC runtime execution.

@@ -16,3 +16,5 @@ We decided to enforce repository-wide linting and code style formatting using `r
 ## Trade-offs
 - **Positive:** Standardized clean codebase with 100% ruff compliance and improved readability.
 - **Negative:** Minor line diffs in database files that trigger architectural check rules, which are resolved by documenting this decision.
+
+This decision implements requirements under Trace-7.

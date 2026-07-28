@@ -10,6 +10,8 @@
 ## 1. Context & Problem Statement
 The platform requires a validated, authenticated mechanism within the execution-service to query clinical source rows and export them as conformant CDISC Dataset-JSON 1.0.0 format documents for biostatistical analysis. This covers SDTM domains (DM, AE, VS, LB, MH), ADaM datasets (ADSL, ADAE, ADVS), and full study-wide multi-dataset bundles.
 
+This decision implements requirements under Trace-8.
+
 ## 2. Decision Drivers & Constraints
 * **GxP Compliance & 21 CFR Part 11 Traceability:** Every export execution must participate in existing audit context conventions, and every export transaction must be logged.
 * **CDISC Dataset-JSON 1.0.0 Validation:** Schema, keys, and relational/demographic cross-dataset consistency must be validated before returning any payload.

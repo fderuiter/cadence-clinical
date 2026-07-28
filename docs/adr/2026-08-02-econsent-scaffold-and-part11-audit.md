@@ -10,6 +10,8 @@
 ## 1. Context & Problem Statement
 The Cadence Clinical platform is introducing Electronic Consent (eConsent) features to support modern digitized, clinical trial recruitment and compliance. In order to comply with FDA 21 CFR Part 11 auditing regulations, avoid database schema leakage across bounds, and provide a unified foundation for all services handling audited metadata, we need to create a dedicated FastAPI microservice package (`apps/econsent/`) with its own database persistence layer, register gateway authentication middleware, and centralize Pydantic v2 reusable audit fields within the core models library (`packages/core-models/`).
 
+This decision implements requirements under Trace-6.
+
 ## 2. Decision Drivers & Constraints
 * **Driver 1 (Compliance):** FDA 21 CFR Part 11 requires strict, immutable audit trails. All mutations must require a non-empty change justification, track the creating identity, record chronological timestamps, and track version increments.
 * **Driver 2 (Database Decoupling):** eConsent schemas and database connections must be isolated from execution and CTMS databases to guarantee high cohesion and prevent security/schema leaking.

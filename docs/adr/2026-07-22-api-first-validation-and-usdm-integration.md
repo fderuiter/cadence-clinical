@@ -20,3 +20,5 @@ We are transitioning to a decoupled, API-first validation approach and integrati
 ## Trade-offs
 - **Positive**: 100% schema validation without direct database queries, elimination of data truncation errors, cleaner architecture, and improved reliability.
 - **Negative**: Adds a network dependency on the external registry's HTTP endpoints for validation, meaning validation is subject to potential latency or network errors.
+
+This decision implements requirements under PRD-MDR-001.

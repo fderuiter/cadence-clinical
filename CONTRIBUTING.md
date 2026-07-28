@@ -62,7 +62,7 @@ Every module, class, function, and public API endpoint must be thoroughly docume
 ### Gate 2: Architecture Decision Records (ADRs)
 We enforce a strict **"Code + Context"** policy. If your PR introduces significant architectural drift, you must document it with an Architecture Decision Record (ADR):
 * **When required:** Introducing a new library/database, modifying inter-service REST contracts, adding a new service, or altering global database schemas.
-* **Format:** Create a new markdown document inside `docs/adr/` using the format `YYYY-MM-DD-short-title.md` (e.g., `docs/adr/2026-07-27-dynamic-ecrf-templates.md`).
+* **Format:** Create a new markdown document inside `docs/adr/` using the format `YYYY-MM-DD-short-title.md` (e.g., `docs/adr/2026-07-27-example-dynamic-ecrf-templates.md`).
 * ADRs must follow the template structure provided in `docs/adr/` and are validated on pre-commit and push gates.
 
 ### Gate 3: Mandatory Test Coverage & Verification Passes
