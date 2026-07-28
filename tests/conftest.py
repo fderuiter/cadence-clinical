@@ -159,14 +159,21 @@ def patch_init_db():
     RelationalDatabaseManager.init_db = patched_rel_init_db
 
 
-# Override the env var so any standard fallback uses isolated DB too
-os.environ["TEST_DATABASE_URL"] = (
-    f"{get_postgres_base_config()}cadence_edc{worker_suffix}"
-)
+databases_pre_created = False
 
-# Create worker isolated databases and perform patching
-run_sync(create_databases_async(worker_suffix))
-patch_init_db()
+# Create worker isolated databases and perform patching if PostgreSQL is available
+try:
+    run_sync(create_databases_async(worker_suffix))
+    # Override the env var so any standard fallback uses isolated DB too
+    os.environ["TEST_DATABASE_URL"] = (
+        f"{get_postgres_base_config()}cadence_edc{worker_suffix}"
+    )
+    patch_init_db()
+    databases_pre_created = True
+except Exception as e:
+    print(
+        f"[conftest] Warning: PostgreSQL database is not available ({e}). Skipping worker-isolated DB setup and patching. Tests will fall back to SQLite or mocked states."
+    )
 
 # Ensure packages path injection is run before tests start
 import packages  # noqa: F401, E402
@@ -411,12 +418,13 @@ def pytest_sessionfinish(session, exitstatus):
     and to drop worker-isolated databases.
     """
     # Clean up worker-isolated databases at the end of the session
-    worker_id = os.environ.get("PYTEST_XDIST_WORKER")
-    worker_suffix = f"_{worker_id}" if worker_id else "_test"
-    try:
-        run_sync(drop_databases_async(worker_suffix))
-    except Exception as e:
-        print(f"[conftest] Error tearing down databases: {e}")
+    if databases_pre_created:
+        worker_id = os.environ.get("PYTEST_XDIST_WORKER")
+        worker_suffix = f"_{worker_id}" if worker_id else "_test"
+        try:
+            run_sync(drop_databases_async(worker_suffix))
+        except Exception as e:
+            print(f"[conftest] Error tearing down databases: {e}")
 
     # Skip report generation if inside a pytest-xdist worker process
     config = getattr(session, "config", None)
