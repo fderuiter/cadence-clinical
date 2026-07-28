@@ -1,5 +1,6 @@
 import js from "@eslint/js";
 import vuePlugin from "eslint-plugin-vue";
+import vuejsAccessibility from "eslint-plugin-vuejs-accessibility";
 
 export default [
   {
@@ -13,6 +14,7 @@ export default [
   },
   js.configs.recommended,
   ...vuePlugin.configs["flat/recommended"],
+  ...vuejsAccessibility.configs["flat/recommended"],
   {
     languageOptions: {
       ecmaVersion: 2022,
