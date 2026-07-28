@@ -12,6 +12,8 @@ The Cadence Clinical platform requires an authenticated web API client under `ap
 
 Additionally, this change aligns standard GxP formatting and style standardizations across database entities, including `apps/execution/database/models.py`.
 
+This decision implements requirements under Trace-8.
+
 ## 2. Decision Drivers & Constraints
 * **Compliance (FDA 21 CFR Part 11):** All API operations must utilize signed gateway headers to guarantee auditable identity propagation down to microservices.
 * **Separation of Concerns:** Client errors, invalid terminology states (`VALID`, `INVALID`, `DEGRADED`), and transport failures must be cleanly isolated and handled.

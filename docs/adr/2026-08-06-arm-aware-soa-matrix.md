@@ -11,6 +11,8 @@
 The Cadence Clinical platform allows clinical designers to author and visualize study schedules. To support complex multi-arm clinical trials (in accordance with CDISC USDM and GxP standards), a centralized system is needed to represent grouped Arm → Epoch → Visit/Encounter hierarchies.
 Previously, the shared visit matrix only supported a flat 2D layout of visits and forms, lacking support for multi-arm groupings, timing windows, and conditional status indications within matrix cells.
 
+This decision implements requirements under Trace-6.
+
 ## 2. Decision Drivers & Constraints
 * **Backwards Compatibility:** Must keep existing single-arm clinical visit matrices functioning without regression.
 * **CDISC USDM Grouping Compatibility:** Support hierarchical structures from the CDISC USDM standards.

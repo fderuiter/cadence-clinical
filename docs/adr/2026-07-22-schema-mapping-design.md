@@ -16,3 +16,5 @@ We enforce a bidirectional unified schema mapping protocol for clinical data con
 ## Trade-offs
 - Positive: Guaranteed lossless round-trips.
 - Negative: High initial configuration complexity.
+
+This decision implements requirements under PRD-SYS-001.

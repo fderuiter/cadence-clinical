@@ -10,6 +10,8 @@
 ## 1. Context & Problem Statement
 Previously, the API validation suite only checked if documented endpoints existed in the codebase (unidirectional validation). This allowed active, undocumented routes and mismatched parameters to bypass API specification checks, risking silent contract drift. To bridge this gap, we need bidirectional enforcement to guarantee that all exposed APIs are accurately reflected in the Markdown API specification (`docs/SDLC/03_API_Integration_Specification.md`).
 
+This decision implements requirements under PRD-MDR-001.
+
 ## 2. Decision Drivers & Constraints
 * **Compliance & Drift Prevention:** Avoid API contract drift to maintain consistent system expectations for consumers.
 * **Developer Velocity:** Enable active feature development on legacy endpoints that are not yet fully documented.

@@ -20,3 +20,5 @@ We have decided to introduce a **pnpm workspace** at the repository root to mana
 ## Trade-offs
 - **Positive:** UI developers can now rapidly build, test, and import shared components without complex rebuilds. Frontend quality is enforced automatically in CI.
 - **Negative:** Requires Python developers to install Node.js and pnpm locally if they want to run the full end-to-end `pnpm check` command, though CI will handle verification automatically.
+
+This decision implements requirements under Trace-8.

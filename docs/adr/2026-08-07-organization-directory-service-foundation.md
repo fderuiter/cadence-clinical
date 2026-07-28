@@ -11,6 +11,8 @@
 To support clinical trial operations, the Cadence Clinical platform requires a centralized, secure, and GxP-compliant Organization Directory service. This service must manage organizations (sponsors, CROs, central laboratories, sites), clinical sites, personnel/staff mappings (linked with Keycloak user IDs), and delegation of authority (DOA) records detailing significant delegated trial duties.
 Additionally, to satisfy FDA 21 CFR Part 11 requirements, all mutations must be fully auditable through a secure, append-only audit trail and chronological row-versioning fields.
 
+This decision implements requirements under Trace-7.
+
 ## 2. Decision Drivers & Constraints
 * **Compliance (FDA 21 CFR Part 11 / GxP):** Must implement non-nullable audit fields (`created_at`, `created_by`, `reason_for_change`, `version_index`) and an append-only audit log.
 * **Security & Site Isolation:** Sites must be isolated. Site-scoped entities must include `site_id` to integrate seamlessly with existing `TrialLockManager` checks.

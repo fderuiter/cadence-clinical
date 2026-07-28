@@ -12,6 +12,8 @@ The current frontend architecture of the Cadence Clinical platform utilizes a st
 
 Furthermore, we must establish and document explicit security, authentication, and cryptographic boundaries. The platform must implement secure OpenID Connect (OIDC) authentication with Keycloak, define robust role-based access control (RBAC) route guards within the SPA, and outline clear rules regarding cryptographic operations. Specifically, trusted identity headers and request signing must remain gateway/server-side; the browser code must not contain shared signing secrets or perform core server-side digital signature transformations.
 
+This decision implements requirements under Trace-8.
+
 ## 2. Decision Drivers & Constraints
 * **Driver 1 (User Experience & Reactivity):** Clinical users (e.g., Clinical Research Associates, Investigators, and Monitors) require highly interactive, reactive, and localized interfaces that support fast route transitions without page reloads.
 * **Driver 2 (Compliance & Security Boundaries):** In accordance with FDA 21 CFR Part 11 and GxP standards, the client application must prevent unauthorized users from viewing or interacting with protected routes. However, client-side route guards are purely for user experience; actual security enforcement must be done at the API gateway and backend services.
