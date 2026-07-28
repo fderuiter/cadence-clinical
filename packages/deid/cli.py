@@ -254,6 +254,7 @@ def is_excluded_path(path: str, root_dir: str) -> bool:
             "scripts",
             "docker",
             "verification",
+            "subject-portal",
         }:
             return True
 
@@ -273,6 +274,7 @@ def is_excluded_path(path: str, root_dir: str) -> bool:
             "pnpm-lock.yaml",
             "uv.lock",
             "readme.md",
+            "contributing.md",
             "agents.md",
             "license",
             "architecture.md",
