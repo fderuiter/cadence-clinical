@@ -302,3 +302,145 @@ def test_nonexistent_resources_return_404():
     )
     assert res_job.status_code == 404
     assert "Safety export job with ID" in res_job.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_successful_export_and_transmission():
+    """
+    Verify that:
+    1) Valid ICSR data is successfully exported and transmitted.
+    2) The patient_id is pseudonymized, and birth_date is removed from transmission payload.
+    3) No raw patient PII exists in the audit trail log details.
+    """
+    import httpx
+
+    class MockAsyncClient:
+        def __init__(self):
+            self.posts = []
+        async def post(self, url, content, headers=None):
+            self.posts.append({"url": url, "content": content, "headers": headers})
+            return httpx.Response(status_code=200, content=b"OK")
+
+    mock_client = MockAsyncClient()
+    app.state.test_httpx_client = mock_client
+
+    client = TestClient(app)
+    headers = get_auth_headers(
+        roles="admin", change_reason="Exporting valid SAE to PV database"
+    )
+
+    from tests.test_safety_e2b import get_valid_icsr
+    icsr = get_valid_icsr()
+    icsr.patient.birth_date = "1981-01-15"
+    raw_patient_id = icsr.patient.patient_id
+
+    payload = {
+        "job_name": "SAE-EXPORT-001",
+        "icsr": icsr.model_dump()
+    }
+
+    res = client.post("/api/v1/safety/export", json=payload, headers=headers)
+    assert res.status_code == 201
+    data = res.json()
+    assert data["status"] == "COMPLETED"
+    assert data["job_name"] == "SAE-EXPORT-001"
+
+    # Verify transmission occurred and the XML content is pseudonymized
+    assert len(mock_client.posts) == 1
+    transmitted_xml = mock_client.posts[0]["content"]
+    assert isinstance(transmitted_xml, str) or isinstance(transmitted_xml, bytes)
+    if isinstance(transmitted_xml, bytes):
+        transmitted_xml = transmitted_xml.decode("utf-8")
+
+    # Raw patient_id and DOB should NOT be in the transmitted XML
+    assert raw_patient_id not in transmitted_xml
+    assert "1981-01-15" not in transmitted_xml
+    assert "<birth_date>" not in transmitted_xml
+
+    # Check for pseudonymized patient_id
+    from packages.deid.transforms import pseudonymize_value
+    import os
+    salt = os.getenv("SAFETY_SALT", "internal-safety-salt-12345")
+    expected_pseudo_id = pseudonymize_value(raw_patient_id, salt)
+    assert expected_pseudo_id in transmitted_xml
+
+    # Verify audit logs: PII is absent from audit details
+    res_audit = client.get("/api/v1/safety/audit-logs", headers=headers)
+    assert res_audit.status_code == 200
+    audit_logs = res_audit.json()
+
+    # Let's check the log matching our job id
+    export_job_id = data["id"]
+    relevant_logs = [log for log in audit_logs if log["record_id"] == export_job_id]
+    assert len(relevant_logs) > 0
+
+    for log in relevant_logs:
+        assert raw_patient_id not in log["details"]
+        assert expected_pseudo_id in log["details"]
+
+
+@pytest.mark.asyncio
+async def test_invalid_xml_validation_fails():
+    """
+    Verify that structurally invalid XML produces a 422 Client Error and is not transmitted.
+    """
+    import httpx
+
+    class MockAsyncClient:
+        def __init__(self):
+            self.posts = []
+        async def post(self, url, content, headers=None):
+            self.posts.append({"url": url, "content": content, "headers": headers})
+            return httpx.Response(status_code=200, content=b"OK")
+
+    mock_client = MockAsyncClient()
+    app.state.test_httpx_client = mock_client
+
+    client = TestClient(app)
+    headers = get_auth_headers(
+        roles="admin", change_reason="Exporting invalid SAE"
+    )
+
+    from tests.test_safety_e2b import get_valid_icsr
+    icsr = get_valid_icsr()
+    icsr.patient.patient_id = "   "
+
+    payload = {
+        "job_name": "SAE-INVALID-EXPORT",
+        "icsr": icsr.model_dump()
+    }
+
+    res = client.post("/api/v1/safety/export", json=payload, headers=headers)
+    assert res.status_code == 422
+    assert "Structural validation failure" in res.json()["detail"]
+
+    # No transmission should have happened
+    assert len(mock_client.posts) == 0
+
+
+@pytest.mark.asyncio
+async def test_missing_v2_headers_or_change_reason_fails():
+    """
+    Verify that POST /api/v1/safety/export requires:
+    1) V2 signed headers
+    2) Non-empty change reason (returns 403)
+    """
+    client = TestClient(app)
+
+    from tests.test_safety_e2b import get_valid_icsr
+    icsr = get_valid_icsr()
+    payload = {
+        "job_name": "SAE-EXPORT-UNAUTHORIZED",
+        "icsr": icsr.model_dump()
+    }
+
+    # Case 1: Missing all gateway headers -> 403 (for mutations)
+    res = client.post("/api/v1/safety/export", json=payload)
+    assert res.status_code == 403
+    assert "Missing gateway authentication headers" in res.json()["detail"]
+
+    # Case 2: Missing change reason -> 403
+    headers = get_auth_headers(roles="admin")  # Missing change_reason
+    res = client.post("/api/v1/safety/export", json=payload, headers=headers)
+    assert res.status_code == 403
+    assert "Missing change justification reason" in res.json()["detail"]

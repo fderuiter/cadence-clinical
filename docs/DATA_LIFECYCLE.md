@@ -152,3 +152,88 @@ The Medical Coding Engine translates raw, unstructured clinical verbatim descrip
   - **MedDRA**: Stream parses standard ASCII files including `llt.asc`, `pt.asc`, `hlt.asc`, `hlgt.asc`, `soc.asc`, and `mdhier.asc`.
   - **WHODrug**: Fixed-width format files (e.g., standard B3 DD.txt, ING.txt, ATC.txt, DADA.txt, DI.txt) or delimited (CSV, PSV) text formats using custom mappings and header configurations.
 - **Licensed Content Note**: In-repo storage of licensed MedDRA or WHODrug terminology distributions is strictly forbidden. All testing environments must run using small, synthetic, in-memory fixtures.
+
+---
+
+# Data Lifecycle Specification: eTMF Document Redaction Lifecycle
+
+## 1. Overview
+The eTMF Document Redaction Lifecycle defines the security boundaries, operational flows, and regulatory data-handling logic for removing Personally Identifiable Information (PII) and Protected Health Information (PHI) from clinical documents before external distribution, auditor review, or public disclosure. This lifecycle fulfills the traceability and verification requirements of **PRD-TMF-005** and **Trace-12**.
+
+---
+
+## 2. Redaction Architecture & System Boundaries
+
+```mermaid
+graph TD
+    A[Raw Unredacted Document] -->|Retained for GxP Trace Auditing| B[(Secure eTMF Storage)]
+    A -->|POST /auto-redact or /manual-redact| C[De-identification Engine]
+    C -->|Regex Scanners & Literal Terms| D[PII/PHI Detection & Overlap Resolution]
+    D -->|Apply Transforms| E[Redacted Successor Version]
+    D -->|Build Manifest| F[Redaction Manifest]
+    F -->|HMAC-SHA256 Signature| G[Signed Cryptographic Manifest]
+    E -->|Linked back to Source| H[(Secure eTMF Storage)]
+    G --> I[TMFAuditLog REDACT Entry]
+
+    style A fill:#fdd,stroke:#f66,stroke-width:2px
+    style E fill:#dfd,stroke:#6b6,stroke-width:2px
+    style B fill:#eef,stroke:#99b,stroke-width:2px
+    style H fill:#eef,stroke:#99b,stroke-width:2px
+```
+
+The redaction engine is split into two layers:
+1. **Shared Detection Layer (`packages/deid`)**: A pure-Python detection and sanitization package implementing regex-based scans, literal word scans, overlap resolution, transformation strategy application, and cryptographic signature generation.
+2. **Service Gateway Layer (`apps/etmf`)**: Exposes `/api/v1/etmf/documents/{document_id}/auto-redact` and `/manual-redact` endpoints. It resolves versions, validates and logs Part 11 justifications, writes non-sensitive audit events, and restricts access to raw unredacted original files.
+
+---
+
+## 3. Compliance Profiles & Regulatory Disclosure Contexts
+
+The de-identification engine implements three discrete, standardized compliance profiles that govern active PII/PHI categories and operational intents:
+
+### HIPAA (US Health Insurance Portability and Accountability Act)
+- **Operational Intent**: Satisfies the US "Safe Harbor" de-identification standard for sanitizing documents to be shared with sponsors, research partners, or US regulatory agencies (FDA).
+- **Active Categories**: Direct and indirect identifiers (Emails, Phone/Fax Numbers, Social Security / National IDs, IP/MAC Addresses, URLs, ZIP/Geographic codes, Dates, Medical Record/Account Numbers, Age above 89, and custom terms).
+
+### GDPR (EU General Data Protection Regulation)
+- **Operational Intent**: Satisfies strict personal data handling rules for clinical subjects and trial coordinators residing in the EU. Focuses on removing direct and indirect identifiers that could lead to identity reconstruction.
+- **Active Categories**: Direct and indirect identifiers (Emails, Phone/Fax Numbers, Social Security / National IDs, IP/MAC Addresses, URLs, ZIP/Geographic codes, Dates, Medical Record/Account Numbers, Age above 89, and custom terms).
+
+### EU CTR (European Union Clinical Trials Regulation)
+- **Operational Intent**: Focuses on the public-disclosure framing mandated by the EU Clinical Trials Registry (under Regulation EU No 536/2014). Ensures clinical study documents can be published transparently to the public database without revealing any patient identities, while maintaining geographic granularity (ZIP codes and IP addresses) which are relevant to clinical execution and are thus preserved.
+- **Active Categories**: Focuses strictly on patient anonymity and direct clinical trial patient identifiers (Emails, Phone/Fax Numbers, Social Security / National IDs, Dates, Medical Record/Account Numbers, Age above 89, and custom terms).
+
+---
+
+## 4. De-identification Transforms & Default Date-Shifting
+
+The engine applies distinct, GxP-compliant transform strategies to the detected matches:
+1. **Masking (`mask`)**: Replaces the sensitive value with a standard placeholder (e.g., `[EMAIL]`, `[SSN_NATIONAL_ID]`).
+2. **Deterministic Pseudonymization (`pseudonymize`)**: Generates a cryptographically strong, non-reversible, deterministic hash of the verbatim value using HMAC-SHA256 and the workspace `REDACTION_SIGNING_SECRET` / `"internal-gateway-secret-12345"`.
+3. **Age Capping (`age_cap`)**: Generalizes age values that exceed a set limit. Standard policy generalizes any age above 89 to `89+`.
+4. **Configurable Date-Shifting (`date_shift`)**:
+   - **Default Date-Shift Policy**: By default, dates are shifted forward by exactly **365 days** (1 year) to preserve longitudinal intervals (e.g., matching subsequent visits, adverse event spans, or dosing times) while destroying original calendar values.
+   - **Configurability**: The date shifting offset is fully configurable via the `shift_days` parameter on the transform execution to handle study-specific anonymization schedules.
+
+---
+
+## 5. Document Version Preservation & Access Boundaries
+
+To satisfy 21 CFR Part 11 electronic records tracing and GxP compliance:
+- **Non-Destructive Version Preservation**: Original, unredacted documents are never overwritten. A redaction event increments the document's `version_index` and creates a redacted successor document version linked back to the source version using the `redaction_source_id` reference column.
+- **Auditor & Inspector Lock state**: Read-only roles (`auditor`, `inspector`, `regulatory_inspector`) are strictly blocked from accessing the raw, unredacted source documents (returning HTTP 403 Forbidden) once a redacted successor exists. Only write-privileged roles (e.g., Sponsor DM) can view raw originals.
+- **Trial Lock Safeguards**: If the clinical study or trial is locked, any subsequent ingestion, manual/automated redaction, or transition attempts are blocked, returning HTTP 403 `IMMUTABILITY_VIOLATION`.
+
+---
+
+## 6. Manifest Signing, Audit Trails & Sensitive Data Restrictions
+
+Every redaction operation creates a highly detailed, immutable cryptographic paper trail:
+1. **Signed Redaction Manifest**:
+   - A structured Pydantic-based `RedactionManifest` records redaction counts per category, operator identity, change reason justification, source version, target version, and character span metadata.
+   - It is signed symmetrically using HMAC-SHA256 with the secret `REDACTION_SIGNING_SECRET`.
+   - The signed manifest data is saved permanently inside the redacted document's `redaction_manifest_json` column.
+2. **Sensitive-Data Restrictions (PII/PHI Exclusion)**:
+   - To maintain blinding and comply with GDPR/HIPAA standards, **raw matched PII/PHI values are strictly excluded from all audit trails, logging records, and manifest files**. Only the category, strategy, and replacement values are preserved.
+3. **Immutable Audit Trail Logging**:
+   - The system logs a non-sensitive `REDACT` action to the immutable database-backed `TMFAuditLog`, containing the actor ID, roles, source/redacted version indices, and the cryptographic manifest signature to ensure tamper-evident non-repudiation.
