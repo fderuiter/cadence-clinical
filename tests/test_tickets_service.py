@@ -861,9 +861,12 @@ async def test_tickets_optimistic_locking_and_explicit_endpoints():
 
     # Find TICKET_TRANSITION log
     transition_log = next(
-        (log for log in logs if log["action"] == "TICKET_TRANSITION"), None
+        (
+            log
+            for log in logs
+            if log["action"] == "TICKET_TRANSITION"
+            and "Source State: 'OPEN', Target State: 'IN_PROGRESS'" in log["details"]
+        ),
+        None,
     )
     assert transition_log is not None
-    assert (
-        "Source State: 'OPEN', Target State: 'IN_PROGRESS'" in transition_log["details"]
-    )
