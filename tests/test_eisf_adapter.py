@@ -253,12 +253,18 @@ def test_eisf_mappings_resolve_through_active_catalog():
     resolve to standard, valid artifacts, sections, and zones in the active complete catalog.
     """
     from tmf_reference_model import get_active_catalog, resolve_artifact
+
     from apps.eisf.adapter import FORWARD_MAPPING
 
     active_catalog = get_active_catalog()
     assert active_catalog.version == "v3.2.0-complete"
 
-    for (binder_sec, art_type), (zone, section, etmf_art_type, etmf_code) in FORWARD_MAPPING.items():
+    for (binder_sec, art_type), (
+        zone,
+        section,
+        etmf_art_type,
+        etmf_code,
+    ) in FORWARD_MAPPING.items():
         # Resolve artifact dynamically through the taxonomy catalog
         resolved = resolve_artifact(active_catalog.version, code=etmf_code)
 
@@ -280,12 +286,16 @@ def test_eisf_reverse_mappings_resolve_through_active_catalog():
     resolve to standard, valid artifacts, sections, and zones in the active complete catalog.
     """
     from tmf_reference_model import get_active_catalog, resolve_artifact
+
     from apps.eisf.adapter import REVERSE_MAPPING
 
     active_catalog = get_active_catalog()
     assert active_catalog.version == "v3.2.0-complete"
 
-    for (zone, section, etmf_art_type, etmf_code), (binder_sec, art_type) in REVERSE_MAPPING.items():
+    for (zone, section, etmf_art_type, etmf_code), (
+        binder_sec,
+        art_type,
+    ) in REVERSE_MAPPING.items():
         # Resolve artifact dynamically through the taxonomy catalog
         resolved = resolve_artifact(active_catalog.version, code=etmf_code)
 
