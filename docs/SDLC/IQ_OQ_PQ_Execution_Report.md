@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1079
-- **Passed:** 1079 🟢
+- **Total Automated Test Cases Run:** 1086
+- **Passed:** 1086 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -703,6 +703,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_clean_token` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_is_potential_path_ref` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_json_block_validation` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_main_with_arguments` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_process_markdown_file_e2e` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_python_block_validation` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_resolve_path` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1211,6 +1212,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_get_changed_files_from_txt` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_is_architectural_file` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validate_existing_adrs_valid_case` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_validate_existing_adrs_with_targets_outside_folder` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_validate_existing_adrs_with_targets_valid` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_designer_validation_error_rfc7807` | `tests.test_validation_problem_details` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_execution_validation_error_rfc7807` | `tests.test_validation_problem_details` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_generate_alignment_report` | `tests.test_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
