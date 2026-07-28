@@ -8,9 +8,8 @@ import json
 from unittest.mock import patch
 
 from scripts.validate_vulnerabilities import (
-    extract_active_vulnerabilities,
     extract_active_frontend_vulnerabilities,
-    execute_pnpm_audit,
+    extract_active_vulnerabilities,
     load_and_validate_ledger,
     scan_for_inline_bypasses,
 )
@@ -310,11 +309,7 @@ def test_extract_active_frontend_vulnerabilities_valid():
                 "module_name": "esbuild",
                 "github_advisory_id": "GHSA-67mh-4wv8-2f99",
                 "patched_versions": ">=0.24.3",
-                "findings": [
-                    {
-                        "version": "0.21.5"
-                    }
-                ]
+                "findings": [{"version": "0.21.5"}],
             }
         }
     }
@@ -377,4 +372,3 @@ def test_load_and_validate_ledger_frontend_invalid_rpn(tmp_path):
     entries, errors = load_and_validate_ledger(str(ledger))
     assert len(entries) == 0
     assert "invalid pre-calculated FMEA Risk Priority Number" in errors[0]
-

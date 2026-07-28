@@ -230,7 +230,9 @@ def execute_pnpm_audit() -> Tuple[str, str, int]:
         return "", str(e), -1
 
 
-def extract_active_frontend_vulnerabilities(audit_json: str) -> Tuple[List[Dict[str, Any]], str]:
+def extract_active_frontend_vulnerabilities(
+    audit_json: str,
+) -> Tuple[List[Dict[str, Any]], str]:
     """Parse pnpm audit output and extract individual vulnerability findings.
 
     Args:
@@ -331,7 +333,9 @@ def main() -> None:
         )
     elif p_code == 1:
         print("Frontend dependency audit completed. Active vulnerabilities found.")
-        active_frontend_vulnerabilities, frontend_audit_error = extract_active_frontend_vulnerabilities(p_stdout)
+        active_frontend_vulnerabilities, frontend_audit_error = (
+            extract_active_frontend_vulnerabilities(p_stdout)
+        )
         if frontend_audit_error:
             print(f"[!] Error parsing frontend audit results: {frontend_audit_error}")
     else:
@@ -346,9 +350,7 @@ def main() -> None:
 
     ledger_map = {entry["vulnerability_id"]: entry for entry in ledger_entries}
 
-    all_vulnerabilities = [
-        (v, "Python") for v in active_vulnerabilities
-    ] + [
+    all_vulnerabilities = [(v, "Python") for v in active_vulnerabilities] + [
         (v, "Frontend") for v in active_frontend_vulnerabilities
     ]
 
