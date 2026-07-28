@@ -1,7 +1,6 @@
 import os
+import sys
 from pathlib import Path
-
-import scripts.validate_markdown as vm
 
 
 def test_gxp_compliance_drifts_identified():
@@ -11,6 +10,12 @@ def test_gxp_compliance_drifts_identified():
     and identifies the 7 critical architectural and electronic signature signature/schema drifts.
     @req:PRD-SYS-001
     """
+    # Save sys.path to prevent pollution from validate_markdown imports
+    _orig_sys_path = list(sys.path)
+    import scripts.validate_markdown as vm
+
+    sys.path[:] = _orig_sys_path
+
     vm.errors.clear()
 
     # Run the linter across the entire repository

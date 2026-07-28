@@ -24,6 +24,12 @@ addopts = "--cov=apps --cov=packages --cov-fail-under=80"
 testpaths = [
     "tests",
 ]
+python_files = [
+    "test_*.py",
+    "*_test.py",
+    "*_tests.py",
+    "*_suite.py",
+]
 asyncio_mode = "auto"
 
 [tool.coverage.run]
