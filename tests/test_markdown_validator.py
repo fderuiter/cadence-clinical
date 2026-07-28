@@ -426,21 +426,23 @@ class TestModel(BaseModel):
 def test_main_with_arguments(monkeypatch):
     """Verifies that main() processes only the markdown files specified in sys.argv."""
     import sys
+
     monkeypatch.setattr(sys, "argv", ["validate_markdown.py", "README.md"])
-    
+
     processed_files = []
     original_process = vm.process_markdown_file
+
     def mock_process(file_path, repo_root_arg, root_dirs, root_files, codebase_map):
         processed_files.append(Path(file_path).name)
         original_process(file_path, repo_root_arg, root_dirs, root_files, codebase_map)
-        
+
     monkeypatch.setattr(vm, "process_markdown_file", mock_process)
-    
+
     exit_codes = []
     monkeypatch.setattr(sys, "exit", exit_codes.append)
-    
+
     vm.main()
-    
+
     assert "README.md" in processed_files
     assert len(processed_files) == 1
     assert exit_codes == [0]

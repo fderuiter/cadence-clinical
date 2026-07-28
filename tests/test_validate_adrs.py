@@ -110,7 +110,7 @@ def test_validate_existing_adrs_with_targets_valid():
     # Let's mock a valid index list and check a valid target
     targets = ["docs/adr/2026-07-24-test-new-dependency.md"]
     mock_content = "# ADR-[NUMBER]: Test Dependency\n## 1. Context & Problem Statement\n## 2. Decision Drivers & Constraints\n## 3. Options Considered\n## 4. Decision Outcome\n## 5. Consequences & Trade-offs\n## 6. Implementation & Verification\n"
-    
+
     def make_mock_file(content):
         m = MagicMock()
         m.__enter__.return_value = m
@@ -118,7 +118,9 @@ def test_validate_existing_adrs_with_targets_valid():
         m.read.return_value = content
         return m
 
-    mock_file_index = make_mock_file("- [ADR-[NUMBER]: Test Dependency](2026-07-24-test-new-dependency.md)")
+    mock_file_index = make_mock_file(
+        "- [ADR-[NUMBER]: Test Dependency](2026-07-24-test-new-dependency.md)"
+    )
     mock_file_target = make_mock_file(mock_content)
 
     with (
@@ -128,7 +130,7 @@ def test_validate_existing_adrs_with_targets_valid():
         mock_open.side_effect = lambda filepath, mode="r", *args, **kwargs: (
             mock_file_index if "index.md" in filepath else mock_file_target
         )
-        
+
         assert validate_existing_adrs(targets) is True
 
 
@@ -142,6 +144,5 @@ def test_validate_existing_adrs_with_targets_outside_folder():
         mock_file_index = MagicMock()
         mock_file_index.read.return_value = ""
         mock_open.return_value = mock_file_index
-        
-        assert validate_existing_adrs(targets) is False
 
+        assert validate_existing_adrs(targets) is False
