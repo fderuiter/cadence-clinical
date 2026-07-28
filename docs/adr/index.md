@@ -50,6 +50,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-27: Standardize FastAPI Identity Dependency and Site Access Migration](2026-07-27-standardize-fastapi-identity-dependency.md)
 - [2026-07-27: Backward-Compatible Gateway Signature Verification](2026-07-27-backward-compatible-gateway-signature-verification.md)
 - [2026-07-27: CI Schema Introspection and Gateway Aggregation Resilience](2026-07-27-ci-schema-introspection-and-gateway-aggregation.md)
+- [2026-07-27: API Gateway Startup Environment Assertions to Prevent Production Auth Bypasses](2026-07-27-gateway-startup-environment-assertions.md)
 - [2026-07-28: SDV/TSDV Persistence Foundation and Migration Support](2026-07-28-sdv-tsdv-persistence-foundation.md)
 - [2026-07-29: TMF Reference Model Taxonomy Integration](2026-07-29-tmf-reference-model-taxonomy-integration.md)
 - [2026-07-30: Rule Authoring, Validation, and DDF Delivery](2026-07-30-rule-authoring-validation-and-ddf-delivery.md)
