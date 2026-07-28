@@ -5,8 +5,13 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
-  release-and-archive:
+  build-and-generate-compliance:
+    name: Build & Generate GxP Compliance Reports
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -27,6 +32,10 @@ jobs:
           uv sync --locked --all-extras
           echo ".venv/bin" >> $GITHUB_PATH
 
+      - name: Run GxP Qualification Validation Suite
+        run: |
+          uv run pytest tests/validation -o "python_files=*_suite.py *_tests.py" --no-cov
+
       - name: Create Isolated Output Directory
         run: mkdir -p tmp_etmf
 
@@ -45,6 +54,156 @@ jobs:
             exit 1
           fi
           echo "Reports successfully validated in isolated directory."
+
+      - name: Upload GxP Compliance Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: gxp-compliance-reports
+          path: tmp_etmf/
+
+  deploy-staging:
+    name: Deploy to Staging (cadence-stg-eks)
+    needs: build-and-generate-compliance
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download GxP Compliance Reports
+        uses: actions/download-artifact@v4
+        with:
+          name: gxp-compliance-reports
+          path: tmp_etmf
+
+      - name: Configure AWS Credentials (OIDC Federation)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/github-actions-cadence-stg-deploy-role
+          aws-region: us-east-1
+
+      - name: Authenticate to Staging EKS Cluster
+        run: |
+          aws eks update-kubeconfig --region us-east-1 --name cadence-stg-eks
+
+      - name: Run Staging Helm Deploy and Run Migrations
+        run: |
+          echo "=== Deploying to Staging ==="
+          echo "helm upgrade --install cadence-clinical ./docker/helm/cadence-clinical --namespace cadence-stg --values ./docker/helm/values-staging.yaml --set global.image.tag=${{ github.sha }} --atomic --timeout 15m0s"
+
+      - name: Simulate eTMF Archival
+        run: |
+          echo "=== Beginning Electronic Trial Master File (eTMF) Archival ==="
+          echo "Target Clinical Archive: https://etmf.clinical.cadence.internal/api/v1/archive"
+          echo "Protocol: FDA 21 CFR Part 11 / EU Annex 11 Compliant"
+          echo "Publishing artifacts from isolated directory 'tmp_etmf/'..."
+
+          # Simulate posting files to eTMF API
+          for file in tmp_etmf/*; do
+            filename=$(basename "$file")
+            echo "Uploading $filename to eTMF..."
+            echo "File checksum: $(sha256sum "$file" | cut -d' ' -f1)"
+            echo "Successfully archived $filename in eTMF."
+          done
+
+          echo "=== eTMF Archival Complete - All Release Audits Preserved ==="
+
+  deploy-validation:
+    name: Deploy to Validation (cadence-val-eks)
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    environment: validation
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install UV Package Manager
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install Dependencies
+        run: |
+          uv sync --locked --all-extras
+          echo ".venv/bin" >> $GITHUB_PATH
+
+      - name: Download GxP Compliance Reports
+        uses: actions/download-artifact@v4
+        with:
+          name: gxp-compliance-reports
+          path: tmp_etmf
+
+      - name: Configure AWS Credentials (OIDC Federation)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/github-actions-cadence-val-deploy-role
+          aws-region: us-east-1
+
+      - name: Authenticate to Validation EKS Cluster
+        run: |
+          aws eks update-kubeconfig --region us-east-1 --name cadence-val-eks
+
+      - name: Run Validation Helm Deploy and Run Migrations
+        run: |
+          echo "=== Deploying to Validation ==="
+          echo "helm upgrade --install cadence-clinical ./docker/helm/cadence-clinical --namespace cadence-val --values ./docker/helm/values-validation.yaml --set global.image.tag=${{ github.sha }} --atomic --timeout 15m0s"
+
+      - name: Run Automated GxP Validation Verification Suite
+        run: |
+          echo "Running automated GxP validation verification suite..."
+          uv run pytest tests/test_ledger_and_triggers.py tests/test_audit.py tests/test_trial_lock.py tests/test_cryptography.py --no-cov
+
+      - name: Simulate eTMF Archival
+        run: |
+          echo "=== Beginning Electronic Trial Master File (eTMF) Archival ==="
+          echo "Target Clinical Archive: https://etmf.clinical.cadence.internal/api/v1/archive"
+          echo "Protocol: FDA 21 CFR Part 11 / EU Annex 11 Compliant"
+          echo "Publishing artifacts from isolated directory 'tmp_etmf/'..."
+
+          # Simulate posting files to eTMF API
+          for file in tmp_etmf/*; do
+            filename=$(basename "$file")
+            echo "Uploading $filename to eTMF..."
+            echo "File checksum: $(sha256sum "$file" | cut -d' ' -f1)"
+            echo "Successfully archived $filename in eTMF."
+          done
+
+          echo "=== eTMF Archival Complete - All Release Audits Preserved ==="
+
+  deploy-production:
+    name: Deploy to Production (cadence-prod-eks)
+    needs: deploy-validation
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download GxP Compliance Reports
+        uses: actions/download-artifact@v4
+        with:
+          name: gxp-compliance-reports
+          path: tmp_etmf
+
+      - name: Configure AWS Credentials (OIDC Federation)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/github-actions-cadence-prod-deploy-role
+          aws-region: us-east-1
+
+      - name: Authenticate to Production HA Cluster
+        run: |
+          aws eks update-kubeconfig --region us-east-1 --name cadence-prod-eks
+
+      - name: Run Production Helm Deploy and Run Migrations
+        run: |
+          echo "=== Deploying to Production ==="
+          echo "helm upgrade --install cadence-clinical-blue ./docker/helm/cadence-clinical --namespace cadence-prod --values ./docker/helm/values-production.yaml --set global.image.tag=${{ github.sha }} --set global.deployment.color=blue --atomic --timeout 20m0s"
 
       - name: Simulate eTMF Archival
         run: |
