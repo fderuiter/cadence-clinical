@@ -2,16 +2,11 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { useClinicalStore } from "../src/stores/clinical.js";
 
-// Mock global fetch
-const mockFetch = vi.fn();
-globalThis.fetch = mockFetch;
-
 describe("FDA 21 CFR Part 11 Sync Ledger Store", () => {
   beforeEach(() => {
     const pinia = createPinia();
     setActivePinia(pinia);
     window.localStorage.clear();
-    mockFetch.mockReset();
   });
 
   it("persists locally added ledger blocks, form values, and queries into localStorage", async () => {
@@ -79,10 +74,13 @@ describe("FDA 21 CFR Part 11 Sync Ledger Store", () => {
   });
 
   it("background sync worker successfully transmits unsynced blocks to execution sync gateway", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ status: "success", processed_blocks: 1 }),
-    });
+    const { mswServer, http, HttpResponse } = globalThis;
+    const syncHandler = vi.fn().mockImplementation(() =>
+      HttpResponse.json({ status: "success", processed_blocks: 1 })
+    );
+    mswServer.use(
+      http.post("**/api/v1/execution/queries/sync", syncHandler)
+    );
 
     const store = useClinicalStore();
 
@@ -102,13 +100,13 @@ describe("FDA 21 CFR Part 11 Sync Ledger Store", () => {
     await store.syncUnsyncedBlocks();
 
     // Verify fetch was called with Gateway v2 signature and re-authentication tokens
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-    const [url, options] = mockFetch.mock.calls[0];
-    expect(url).toContain("/api/v1/execution/queries/sync");
-    expect(options.method).toBe("POST");
-    expect(options.headers["X-Signature-Version"]).toBe("2");
-    expect(options.headers["X-Sig-Token"]).toBeDefined();
-    expect(options.headers["X-Gateway-Signature"]).toBeDefined();
+    expect(syncHandler).toHaveBeenCalledTimes(1);
+    const { request } = syncHandler.mock.calls[0][0];
+    expect(request.url).toContain("/api/v1/execution/queries/sync");
+    expect(request.method).toBe("POST");
+    expect(request.headers.get("X-Signature-Version")).toBe("2");
+    expect(request.headers.get("X-Sig-Token")).toBeDefined();
+    expect(request.headers.get("X-Gateway-Signature")).toBeDefined();
 
     // Verify local block synced flag is set to true
     expect(store.ledgerBlocks[0].synced).toBe(true);
@@ -119,7 +117,12 @@ describe("FDA 21 CFR Part 11 Sync Ledger Store", () => {
   });
 
   it("handles fetch network failure gracefully without dropping unsynced transactions", async () => {
-    mockFetch.mockRejectedValueOnce(new Error("Network disconnect"));
+    const { mswServer, http, HttpResponse } = globalThis;
+    mswServer.use(
+      http.post("**/api/v1/execution/queries/sync", () =>
+        HttpResponse.error()
+      )
+    );
 
     const store = useClinicalStore();
 

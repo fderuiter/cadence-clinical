@@ -98,11 +98,12 @@ beforeEach(async () => {
   `;
 
   // Mock global fetch to prevent actual calls in unit tests
-  globalThis.fetch = vi.fn().mockImplementation(() =>
-    Promise.resolve({
-      ok: true,
-      json: () => Promise.resolve({ status: "success" }),
-    })
+  const { mswServer, http, HttpResponse } = globalThis;
+  const defaultHandler = vi.fn().mockImplementation(() =>
+    HttpResponse.json({ status: "success" })
+  );
+  mswServer.use(
+    http.all('*', defaultHandler)
   );
 });
 
@@ -369,33 +370,33 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       // Clear mock fetch calls
       vi.clearAllMocks();
 
-      // Setup success response from bulk sync endpoint
-      globalThis.fetch = vi.fn().mockImplementation(() =>
-        Promise.resolve({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              status: "success",
-              processed_count: 2,
-              created_count: 2,
-              updated_count: 0,
-              ignored_count: 0,
-              results: [
-                {
-                  status: "CREATED",
-                  id: "sub1",
-                  diary_id: "inst_daily_diary",
-                  answers: { vssbp: "118" },
-                },
-                {
-                  status: "UPDATED_CLIENT_WINS",
-                  id: "sub2",
-                  diary_id: "inst_weekly_symptoms",
-                  answers: { severity: "None" },
-                },
-              ],
-            }),
-        })
+      const { mswServer, http, HttpResponse } = globalThis;
+      const syncHandler = vi.fn().mockImplementation(async ({ request }) => {
+        return HttpResponse.json({
+          status: "success",
+          processed_count: 2,
+          created_count: 2,
+          updated_count: 0,
+          ignored_count: 0,
+          results: [
+            {
+              status: "CREATED",
+              id: "sub1",
+              diary_id: "inst_daily_diary",
+              answers: { vssbp: "118" },
+            },
+            {
+              status: "UPDATED_CLIENT_WINS",
+              id: "sub2",
+              diary_id: "inst_weekly_symptoms",
+              answers: { severity: "None" },
+            },
+          ],
+        });
+      });
+
+      mswServer.use(
+        http.post('**/epro/sync', syncHandler)
       );
 
       // Put online & trigger sync
@@ -403,11 +404,11 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       await portal.syncOfflineQueue();
 
       // Ensure fetch was called exactly once for bulk sync
-      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+      expect(syncHandler).toHaveBeenCalledTimes(1);
 
       // Verify the bulk request payload structure and sequential sorting
-      const lastCallArg = globalThis.fetch.mock.calls[0];
-      const requestBody = JSON.parse(lastCallArg[1].body);
+      const lastCallArg = syncHandler.mock.calls[0][0];
+      const requestBody = await lastCallArg.request.json();
       expect(requestBody.submissions).toHaveLength(2);
       expect(
         requestBody.submissions[0].offline_sync_markers.sequence_number
@@ -442,11 +443,12 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       await portal.verifyAndSubmitSignature();
 
       // Mock fetch failure
-      globalThis.fetch = vi
-        .fn()
-        .mockImplementation(() =>
-          Promise.reject(new TypeError("Failed to fetch"))
-        );
+      const { mswServer, http, HttpResponse } = globalThis;
+      mswServer.use(
+        http.post('**/epro/sync', () => {
+          return HttpResponse.error();
+        })
+      );
 
       // Attempt sync while online
       portal.state.session.isOfflineMode = false;
@@ -483,36 +485,35 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       await portal.verifyAndSubmitSignature();
 
       // Mock conflict resolution responses from server
-      globalThis.fetch = vi.fn().mockImplementation(() =>
-        Promise.resolve({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              status: "success",
-              processed_count: 2,
-              created_count: 0,
-              updated_count: 1,
-              ignored_count: 1,
-              results: [
-                {
-                  status: "MERGED",
-                  id: "sub1",
-                  diary_id: "inst_daily_diary",
-                  answers: {
-                    vssbp: "120",
-                    vsdpb: "80",
-                    vshr: "72",
-                    has_symptoms: "Yes",
-                  },
+      const { mswServer, http, HttpResponse } = globalThis;
+      mswServer.use(
+        http.post('**/epro/sync', () => {
+          return HttpResponse.json({
+            status: "success",
+            processed_count: 2,
+            created_count: 0,
+            updated_count: 1,
+            ignored_count: 1,
+            results: [
+              {
+                status: "MERGED",
+                id: "sub1",
+                diary_id: "inst_daily_diary",
+                answers: {
+                  vssbp: "120",
+                  vsdpb: "80",
+                  vshr: "72",
+                  has_symptoms: "Yes",
                 },
-                {
-                  status: "IGNORED_SERVER_WINS",
-                  id: "sub2",
-                  diary_id: "inst_weekly_symptoms",
-                  answers: { severity: "None" },
-                },
-              ],
-            }),
+              },
+              {
+                status: "IGNORED_SERVER_WINS",
+                id: "sub2",
+                diary_id: "inst_weekly_symptoms",
+                answers: { severity: "None" },
+              },
+            ],
+          });
         })
       );
 

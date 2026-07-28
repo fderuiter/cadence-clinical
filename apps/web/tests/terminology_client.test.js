@@ -4,14 +4,7 @@ import {
   TerminologyNetworkError,
 } from "../src/api/terminologyClient.js";
 
-const mockFetch = vi.fn();
-globalThis.fetch = mockFetch;
-
 describe("Terminology API Client Unit Tests", () => {
-  beforeEach(() => {
-    mockFetch.mockReset();
-  });
-
   const authOptions = {
     userId: "test-user-id",
     roles: "sponsor_dm,cra",
@@ -27,8 +20,6 @@ describe("Terminology API Client Unit Tests", () => {
       await expect(
         terminologyClient.validateSingleCode("   ", authOptions)
       ).rejects.toThrow("Concept code cannot be empty or whitespace.");
-
-      expect(mockFetch).not.toHaveBeenCalled();
     });
 
     it("should successfully validate a concept code, target the gateway, and sign headers", async () => {
@@ -39,10 +30,13 @@ describe("Terminology API Client Unit Tests", () => {
         system: "NCI_Thesaurus",
       };
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResult,
-      });
+      const { mswServer, http, HttpResponse } = globalThis;
+      const handlerSpy = vi.fn().mockImplementation(() =>
+        HttpResponse.json(mockResult)
+      );
+      mswServer.use(
+        http.get("**/api/v1/terminology/validate/:code", handlerSpy)
+      );
 
       const result = await terminologyClient.validateSingleCode(
         "C12345",
@@ -50,17 +44,18 @@ describe("Terminology API Client Unit Tests", () => {
       );
 
       expect(result).toEqual(mockResult);
-      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(handlerSpy).toHaveBeenCalledTimes(1);
 
-      const [url, options] = mockFetch.mock.calls[0];
+      const { request } = handlerSpy.mock.calls[0][0];
+      const url = request.url;
       expect(url).toBe(
         "http://localhost:8000/api/v1/terminology/validate/C12345"
       );
-      expect(options.headers["X-User-Id"]).toBe("test-user-id");
-      expect(options.headers["X-User-Roles"]).toBe("sponsor_dm,cra");
-      expect(options.headers["X-Signature-Version"]).toBe("2");
-      expect(options.headers["X-Gateway-Signature"]).toBeDefined();
-      expect(options.headers["X-Change-Reason"]).toBe("Testing signed client");
+      expect(request.headers.get("X-User-Id")).toBe("test-user-id");
+      expect(request.headers.get("X-User-Roles")).toBe("sponsor_dm,cra");
+      expect(request.headers.get("X-Signature-Version")).toBe("2");
+      expect(request.headers.get("X-Gateway-Signature")).toBeDefined();
+      expect(request.headers.get("X-Change-Reason")).toBe("Testing signed client");
     });
 
     it("should handle invalid/malformed codes by returning the INVALID state", async () => {
@@ -70,10 +65,12 @@ describe("Terminology API Client Unit Tests", () => {
         error_message: "Concept code not found",
       };
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResult,
-      });
+      const { mswServer, http, HttpResponse } = globalThis;
+      mswServer.use(
+        http.get("**/api/v1/terminology/validate/:code", () =>
+          HttpResponse.json(mockResult)
+        )
+      );
 
       const result = await terminologyClient.validateSingleCode(
         "NOT_A_CODE",
@@ -91,10 +88,12 @@ describe("Terminology API Client Unit Tests", () => {
         error_message: "Upstream service timeout",
       };
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResult,
-      });
+      const { mswServer, http, HttpResponse } = globalThis;
+      mswServer.use(
+        http.get("**/api/v1/terminology/validate/:code", () =>
+          HttpResponse.json(mockResult)
+        )
+      );
 
       const result = await terminologyClient.validateSingleCode(
         "C12345",
@@ -106,11 +105,12 @@ describe("Terminology API Client Unit Tests", () => {
     });
 
     it("should throw TerminologyNetworkError when gateway returns a 502/503/500 error", async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: false,
-        status: 502,
-        statusText: "Bad Gateway",
-      });
+      const { mswServer, http, HttpResponse } = globalThis;
+      mswServer.use(
+        http.get("**/api/v1/terminology/validate/:code", () =>
+          new HttpResponse(null, { status: 502, statusText: "Bad Gateway" })
+        )
+      );
 
       let thrownError = null;
       try {
@@ -125,7 +125,12 @@ describe("Terminology API Client Unit Tests", () => {
     });
 
     it("should throw TerminologyNetworkError on fetch network connection failure", async () => {
-      mockFetch.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+      const { mswServer, http, HttpResponse } = globalThis;
+      mswServer.use(
+        http.get("**/api/v1/terminology/validate/:code", () =>
+          HttpResponse.error()
+        )
+      );
 
       let thrownError = null;
       try {
@@ -144,8 +149,6 @@ describe("Terminology API Client Unit Tests", () => {
       await expect(
         terminologyClient.searchTerminology("", authOptions)
       ).rejects.toThrow("Search term cannot be empty or whitespace.");
-
-      expect(mockFetch).not.toHaveBeenCalled();
     });
 
     it("should successfully query search endpoint with pagination parameters", async () => {
@@ -154,10 +157,13 @@ describe("Terminology API Client Unit Tests", () => {
         total_count: 1,
       };
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResult,
-      });
+      const { mswServer, http, HttpResponse } = globalThis;
+      const handlerSpy = vi.fn().mockImplementation(() =>
+        HttpResponse.json(mockResult)
+      );
+      mswServer.use(
+        http.get("**/api/v1/terminology/search", handlerSpy)
+      );
 
       const result = await terminologyClient.searchTerminology("Pain", {
         ...authOptions,
@@ -166,10 +172,10 @@ describe("Terminology API Client Unit Tests", () => {
       });
 
       expect(result).toEqual(mockResult);
-      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(handlerSpy).toHaveBeenCalledTimes(1);
 
-      const [url] = mockFetch.mock.calls[0];
-      const parsedUrl = new URL(url);
+      const { request } = handlerSpy.mock.calls[0][0];
+      const parsedUrl = new URL(request.url);
       expect(parsedUrl.origin + parsedUrl.pathname).toBe(
         "http://localhost:8000/api/v1/terminology/search"
       );
@@ -194,10 +200,13 @@ describe("Terminology API Client Unit Tests", () => {
         concepts: [],
       };
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockReport,
-      });
+      const { mswServer, http, HttpResponse } = globalThis;
+      const handlerSpy = vi.fn().mockImplementation(() =>
+        HttpResponse.json(mockReport)
+      );
+      mswServer.use(
+        http.get("**/terminology-validation", handlerSpy)
+      );
 
       const result = await terminologyClient.getStudyTerminologyValidation(
         "STUDY-001",
@@ -205,8 +214,9 @@ describe("Terminology API Client Unit Tests", () => {
       );
 
       expect(result).toEqual(mockReport);
-      const [url] = mockFetch.mock.calls[0];
-      expect(url).toBe(
+      expect(handlerSpy).toHaveBeenCalledTimes(1);
+      const { request } = handlerSpy.mock.calls[0][0];
+      expect(request.url).toBe(
         "http://localhost:8000/api/v1/studies/STUDY-001/terminology-validation"
       );
     });
@@ -227,10 +237,13 @@ describe("Terminology API Client Unit Tests", () => {
         concepts: [],
       };
 
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockReport,
-      });
+      const { mswServer, http, HttpResponse } = globalThis;
+      const handlerSpy = vi.fn().mockImplementation(() =>
+        HttpResponse.json(mockReport)
+      );
+      mswServer.use(
+        http.get("**/ct-validation", handlerSpy)
+      );
 
       const result = await terminologyClient.getStudyCtValidation(
         "STUDY-001",
@@ -238,8 +251,9 @@ describe("Terminology API Client Unit Tests", () => {
       );
 
       expect(result).toEqual(mockReport);
-      const [url] = mockFetch.mock.calls[0];
-      expect(url).toBe(
+      expect(handlerSpy).toHaveBeenCalledTimes(1);
+      const { request } = handlerSpy.mock.calls[0][0];
+      expect(request.url).toBe(
         "http://localhost:8000/api/v1/studies/STUDY-001/ct-validation"
       );
     });

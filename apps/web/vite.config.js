@@ -25,5 +25,6 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
+    setupFiles: [path.resolve(__dirname, "../../tests/setup-msw.js")],
   },
 });

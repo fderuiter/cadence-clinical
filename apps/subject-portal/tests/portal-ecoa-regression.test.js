@@ -98,11 +98,12 @@ beforeEach(async () => {
   `;
 
   // Mock global fetch to prevent actual calls in unit tests
-  globalThis.fetch = vi.fn().mockImplementation(() =>
-    Promise.resolve({
-      ok: true,
-      json: () => Promise.resolve({ status: "success" }),
-    })
+  const { mswServer, http, HttpResponse } = globalThis;
+  const defaultHandler = vi.fn().mockImplementation(() =>
+    HttpResponse.json({ status: "success" })
+  );
+  mswServer.use(
+    http.all('*', defaultHandler)
   );
 });
 
@@ -240,26 +241,27 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
 
     // Mock successful sync payload
     vi.clearAllMocks();
-    globalThis.fetch = vi.fn().mockImplementation(() =>
-      Promise.resolve({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            status: "success",
-            processed_count: 1,
-            created_count: 1,
-            updated_count: 0,
-            ignored_count: 0,
-            results: [
-              {
-                status: "CREATED",
-                id: "sub_new_01",
-                diary_id: "inst_daily_diary",
-                answers: { vssbp: "115" },
-              },
-            ],
-          }),
-      })
+    const { mswServer, http, HttpResponse } = globalThis;
+    const syncHandler = vi.fn().mockImplementation(async ({ request }) => {
+      return HttpResponse.json({
+        status: "success",
+        processed_count: 1,
+        created_count: 1,
+        updated_count: 0,
+        ignored_count: 0,
+        results: [
+          {
+            status: "CREATED",
+            id: "sub_new_01",
+            diary_id: "inst_daily_diary",
+            answers: { vssbp: "115" },
+          },
+        ],
+      });
+    });
+
+    mswServer.use(
+      http.post('**/epro/sync', syncHandler)
     );
 
     // Transition online and sync
@@ -267,9 +269,9 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
     await portal.syncOfflineQueue();
 
     // Check fetch occurred correctly
-    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
-    const lastCall = globalThis.fetch.mock.calls[0];
-    const body = JSON.parse(lastCall[1].body);
+    expect(syncHandler).toHaveBeenCalledTimes(1);
+    const lastCallArg = syncHandler.mock.calls[0][0];
+    const body = await lastCallArg.request.json();
     expect(body.submissions).toHaveLength(1);
     expect(body.submissions[0].offline_sync_markers.sequence_number).toBe(1);
 
@@ -296,11 +298,12 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
     await portal.verifyAndSubmitSignature();
 
     // Sync fails with network error
-    globalThis.fetch = vi
-      .fn()
-      .mockImplementation(() =>
-        Promise.reject(new Error("Network connection dropped"))
-      );
+    const { mswServer, http, HttpResponse } = globalThis;
+    mswServer.use(
+      http.post('**/epro/sync', () => {
+        return HttpResponse.error();
+      })
+    );
 
     // Put online and try sync
     portal.state.session.isOfflineMode = false;
@@ -330,25 +333,24 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
     await portal.verifyAndSubmitSignature();
 
     // Mock conflict responses: one MERGED and one IGNORED_SERVER_WINS
-    globalThis.fetch = vi.fn().mockImplementation(() =>
-      Promise.resolve({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            status: "success",
-            processed_count: 1,
-            created_count: 0,
-            updated_count: 1,
-            ignored_count: 0,
-            results: [
-              {
-                status: "MERGED",
-                id: "merged_sub",
-                diary_id: "inst_daily_diary",
-                answers: { vssbp: "120", vsdpb: "80" },
-              },
-            ],
-          }),
+    const { mswServer, http, HttpResponse } = globalThis;
+    mswServer.use(
+      http.post('**/epro/sync', () => {
+        return HttpResponse.json({
+          status: "success",
+          processed_count: 1,
+          created_count: 0,
+          updated_count: 1,
+          ignored_count: 0,
+          results: [
+            {
+              status: "MERGED",
+              id: "merged_sub",
+              diary_id: "inst_daily_diary",
+              answers: { vssbp: "120", vsdpb: "80" },
+            },
+          ],
+        });
       })
     );
 

@@ -4,16 +4,12 @@ import { useClinicalStore } from "../src/stores/clinical.js";
 import { soaClient } from "../src/api/soaClient.js";
 import { createClinicalSoAMatrix } from "ui";
 
-const mockFetch = vi.fn();
-globalThis.fetch = mockFetch;
-
 beforeEach(() => {
   const pinia = createPinia();
   setActivePinia(pinia);
   if (typeof window !== "undefined" && window.localStorage) {
     window.localStorage.clear();
   }
-  mockFetch.mockReset();
 });
 
 describe("SoA Matrix Pure Function Unit Tests", () => {
@@ -128,10 +124,13 @@ describe("SoA Matrix Pure Function Unit Tests", () => {
 
 describe("SoA Request Construction & Serialization Unit Tests", () => {
   it("constructs GxP compliant signed requests with expected header contract", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ status: "success" }),
-    });
+    const { mswServer, http, HttpResponse } = globalThis;
+    const saveArmSpy = vi.fn().mockImplementation(() =>
+      HttpResponse.json({ status: "success" })
+    );
+    mswServer.use(
+      http.post("**/api/v1/studies/:studyId/versions/:versionId/arms", saveArmSpy)
+    );
 
     const options = {
       userId: "test-user",
@@ -147,21 +146,21 @@ describe("SoA Request Construction & Serialization Unit Tests", () => {
       options
     );
 
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-    const [url, requestOpts] = mockFetch.mock.calls[0];
+    expect(saveArmSpy).toHaveBeenCalledTimes(1);
+    const { request } = saveArmSpy.mock.calls[0][0];
 
-    expect(url).toContain("/api/v1/studies/STUDY-01/versions/v_draft_01/arms");
-    expect(requestOpts.method).toBe("POST");
-    expect(requestOpts.headers["X-User-Id"]).toBe("test-user");
-    expect(requestOpts.headers["X-User-Roles"]).toBe("sponsor_admin");
-    expect(requestOpts.headers["X-Signature-Version"]).toBe("2");
-    expect(requestOpts.headers["X-Gateway-Signature"]).toBeDefined();
-    expect(requestOpts.headers["X-Gateway-Timestamp"]).toBeDefined();
-    expect(requestOpts.headers["X-Change-Reason"]).toBe(
+    expect(request.url).toContain("/api/v1/studies/STUDY-01/versions/v_draft_01/arms");
+    expect(request.method).toBe("POST");
+    expect(request.headers.get("X-User-Id")).toBe("test-user");
+    expect(request.headers.get("X-User-Roles")).toBe("sponsor_admin");
+    expect(request.headers.get("X-Signature-Version")).toBe("2");
+    expect(request.headers.get("X-Gateway-Signature")).toBeDefined();
+    expect(request.headers.get("X-Gateway-Timestamp")).toBeDefined();
+    expect(request.headers.get("X-Change-Reason")).toBe(
       "Testing signed headers"
     );
 
-    const body = JSON.parse(requestOpts.body);
+    const body = await request.json();
     expect(body).toEqual({
       id: "ARM-Z",
       properties: { name: "Arm Z" },
@@ -169,10 +168,13 @@ describe("SoA Request Construction & Serialization Unit Tests", () => {
   });
 
   it("serializes nested mutations correctly for PUT requests", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ status: "success" }),
-    });
+    const { mswServer, http, HttpResponse } = globalThis;
+    const mutateSpy = vi.fn().mockImplementation(() =>
+      HttpResponse.json({ status: "success" })
+    );
+    mswServer.use(
+      http.put("**/api/v1/studies/:studyId/versions/:versionId/arms/:armId", mutateSpy)
+    );
 
     const options = {
       userId: "test-user",
@@ -190,14 +192,14 @@ describe("SoA Request Construction & Serialization Unit Tests", () => {
       options
     );
 
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-    const [url, requestOpts] = mockFetch.mock.calls[0];
+    expect(mutateSpy).toHaveBeenCalledTimes(1);
+    const { request } = mutateSpy.mock.calls[0][0];
 
-    expect(url).toContain(
+    expect(request.url).toContain(
       "/api/v1/studies/STUDY-01/versions/v_draft_01/arms/ARM-Z"
     );
-    expect(requestOpts.method).toBe("PUT");
-    const body = JSON.parse(requestOpts.body);
+    expect(request.method).toBe("PUT");
+    const body = await request.json();
     expect(body).toEqual({
       properties: { name: "Arm Z Modified" },
     });
@@ -206,22 +208,24 @@ describe("SoA Request Construction & Serialization Unit Tests", () => {
 
 describe("SoA Builder Signed API Client & Store Integration", () => {
   it("generates correct GxP version 2 signed headers for mutations", async () => {
-    // 1st fetch: Arm Mutation save
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ status: "success", id: "ARM-A" }),
-    });
-    // 2nd fetch: fetchSoAProjection load
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
+    const { mswServer, http, HttpResponse } = globalThis;
+    const armMutationSpy = vi.fn().mockImplementation(() =>
+      HttpResponse.json({ status: "success", id: "ARM-A" })
+    );
+    const soaProjectionSpy = vi.fn().mockImplementation(() =>
+      HttpResponse.json({
         epochs: [{ epoch_id: "EP-1", epoch_name: "Epoch 1" }],
         encounters: [
           { encounter_id: "E1", encounter_name: "Visit 1", epoch_id: "EP-1" },
         ],
         rows: [{ activity_id: "ACT1", activity_name: "Vitals", cells: [] }],
-      }),
-    });
+      })
+    );
+
+    mswServer.use(
+      http.post("**/api/v1/studies/:studyId/versions/:versionId/arms", armMutationSpy),
+      http.get("**/api/v1/studies/:studyId/versions/:versionId/soa-projection", soaProjectionSpy)
+    );
 
     const store = useClinicalStore();
 
@@ -232,18 +236,20 @@ describe("SoA Builder Signed API Client & Store Integration", () => {
       "Configure arm"
     );
 
-    expect(mockFetch).toHaveBeenCalledTimes(2);
-    const [url, options] = mockFetch.mock.calls[0];
+    expect(armMutationSpy).toHaveBeenCalledTimes(1);
+    expect(soaProjectionSpy).toHaveBeenCalledTimes(1);
 
-    expect(url).toContain(
+    const { request } = armMutationSpy.mock.calls[0][0];
+
+    expect(request.url).toContain(
       "/api/v1/studies/STUDY-USDM-001/versions/v_draft_01/arms"
     );
-    expect(options.method).toBe("POST");
-    expect(options.headers["X-User-Id"]).toBe("fderuiter");
-    expect(options.headers["X-User-Roles"]).toBe("STUDY_DESIGNER");
-    expect(options.headers["X-Signature-Version"]).toBe("2");
-    expect(options.headers["X-Gateway-Signature"]).toBeDefined();
-    expect(options.headers["X-Change-Reason"]).toBe("Configure arm");
+    expect(request.method).toBe("POST");
+    expect(request.headers.get("X-User-Id")).toBe("fderuiter");
+    expect(request.headers.get("X-User-Roles")).toBe("STUDY_DESIGNER");
+    expect(request.headers.get("X-Signature-Version")).toBe("2");
+    expect(request.headers.get("X-Gateway-Signature")).toBeDefined();
+    expect(request.headers.get("X-Change-Reason")).toBe("Configure arm");
 
     // Verify local USDM state updated via fetchSoAProjection trigger
     expect(store.currentUsdm.epochs).toHaveLength(1);
@@ -252,16 +258,18 @@ describe("SoA Builder Signed API Client & Store Integration", () => {
   });
 
   it("handles link creation API calls correctly with signed headers", async () => {
-    // 1st fetch: Create Link
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ status: "success", message: "Link established" }),
-    });
-    // 2nd fetch: fetchSoAProjection load
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ epochs: [], encounters: [], rows: [] }),
-    });
+    const { mswServer, http, HttpResponse } = globalThis;
+    const linkSpy = vi.fn().mockImplementation(() =>
+      HttpResponse.json({ status: "success", message: "Link established" })
+    );
+    const soaProjectionSpy = vi.fn().mockImplementation(() =>
+      HttpResponse.json({ epochs: [], encounters: [], rows: [] })
+    );
+
+    mswServer.use(
+      http.post("**/api/v1/studies/:studyId/versions/:versionId/links/visit-procedure", linkSpy),
+      http.get("**/api/v1/studies/:studyId/versions/:versionId/soa-projection", soaProjectionSpy)
+    );
 
     const store = useClinicalStore();
 
@@ -272,19 +280,24 @@ describe("SoA Builder Signed API Client & Store Integration", () => {
     };
     await store.pushSoALink("visit-procedure", payload, "Link VS to Screening");
 
-    expect(mockFetch).toHaveBeenCalledTimes(2);
-    const [url, options] = mockFetch.mock.calls[0];
+    expect(linkSpy).toHaveBeenCalledTimes(1);
+    const { request } = linkSpy.mock.calls[0][0];
 
-    expect(url).toContain(
+    expect(request.url).toContain(
       "/api/v1/studies/STUDY-USDM-001/versions/v_draft_01/links/visit-procedure"
     );
-    expect(options.method).toBe("POST");
-    expect(JSON.parse(options.body)).toEqual(payload);
-    expect(options.headers["X-Change-Reason"]).toBe("Link VS to Screening");
+    expect(request.method).toBe("POST");
+    expect(await request.json()).toEqual(payload);
+    expect(request.headers.get("X-Change-Reason")).toBe("Link VS to Screening");
   });
 
   it("gracefully falls back to local browser state and records offline blocks on sync failure", async () => {
-    mockFetch.mockRejectedValueOnce(new Error("Network unserviceable"));
+    const { mswServer, http, HttpResponse } = globalThis;
+    mswServer.use(
+      http.post("**/api/v1/studies/:studyId/versions/:versionId/arms", () =>
+        HttpResponse.error()
+      )
+    );
 
     const store = useClinicalStore();
 
@@ -297,7 +310,7 @@ describe("SoA Builder Signed API Client & Store Integration", () => {
         "Fork protocol for high dose cohort"
       );
 
-    await expect(triggerMutation()).rejects.toThrow("Network unserviceable");
+    await expect(triggerMutation()).rejects.toThrow("Failed to fetch");
 
     // Local ledger still retains offline mutation log
     const ledger = store.ledgerBlocks;
@@ -305,19 +318,21 @@ describe("SoA Builder Signed API Client & Store Integration", () => {
     expect(ledger[0].action).toBe("SOA_MUTATION_OFFLINE_ARMS");
     expect(ledger[0].reason).toBe("Fork protocol for high dose cohort");
     expect(ledger[0].details.id).toBe("ARM-C");
-    expect(ledger[0].details.error).toBe("Network unserviceable");
+    expect(ledger[0].details.error).toBe("Failed to fetch");
   });
 });
 
 describe("SoA Authoring Failure & Immutability Guards", () => {
   it("handles locked version immutability failure (HTTP 403 / IMMUTABILITY_VIOLATION)", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 403,
-      json: async () => ({
-        detail: "IMMUTABILITY_VIOLATION: Locked Version cannot be modified",
-      }),
-    });
+    const { mswServer, http, HttpResponse } = globalThis;
+    mswServer.use(
+      http.post("**/api/v1/studies/:studyId/versions/:versionId/arms", () =>
+        HttpResponse.json(
+          { detail: "IMMUTABILITY_VIOLATION: Locked Version cannot be modified" },
+          { status: 403 }
+        )
+      )
+    );
 
     const store = useClinicalStore();
 
@@ -344,13 +359,15 @@ describe("SoA Authoring Failure & Immutability Guards", () => {
   });
 
   it("handles invalid input request failure (HTTP 400 Validation Failures)", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 400,
-      json: async () => ({
-        detail: "Missing mandatory fields properties.name",
-      }),
-    });
+    const { mswServer, http, HttpResponse } = globalThis;
+    mswServer.use(
+      http.post("**/api/v1/studies/:studyId/versions/:versionId/arms", () =>
+        HttpResponse.json(
+          { detail: "Missing mandatory fields properties.name" },
+          { status: 400 }
+        )
+      )
+    );
 
     const store = useClinicalStore();
 
@@ -367,11 +384,15 @@ describe("SoA Authoring Failure & Immutability Guards", () => {
   });
 
   it("handles missing/invalid gateway signatures failure (HTTP 401)", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 401,
-      json: async () => ({ detail: "INVALID_OR_MISSING_SIGNATURE" }),
-    });
+    const { mswServer, http, HttpResponse } = globalThis;
+    mswServer.use(
+      http.post("**/api/v1/studies/:studyId/versions/:versionId/arms", () =>
+        HttpResponse.json(
+          { detail: "INVALID_OR_MISSING_SIGNATURE" },
+          { status: 401 }
+        )
+      )
+    );
 
     const store = useClinicalStore();
 
@@ -390,11 +411,15 @@ describe("SoA Authoring Failure & Immutability Guards", () => {
   });
 
   it("handles batch sign-off failures and re-authentication requirements", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 401,
-      json: async () => ({ detail: "REAUTHENTICATION_REQUIRED" }),
-    });
+    const { mswServer, http, HttpResponse } = globalThis;
+    mswServer.use(
+      http.post("**/api/v1/execution/batch-sign-off", () =>
+        HttpResponse.json(
+          { detail: "REAUTHENTICATION_REQUIRED" },
+          { status: 401 }
+        )
+      )
+    );
 
     const triggerBatch = () =>
       soaClient.batchSignOff(
