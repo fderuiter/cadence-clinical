@@ -2,4 +2,4 @@
 # Establishes strict security boundaries and ensures any workflow file modifications
 # require designated platform and security owner sign-off.
 
-.github/workflows/ @fderuiter @jules
+.github/workflows/ @fderuiter
