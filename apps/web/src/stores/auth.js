@@ -79,27 +79,30 @@ export const useAuthStore = defineStore("auth", {
       }
     },
     async login(options = {}) {
-      if (window.keycloakInstance) {
+      if (window.keycloakInstance && !this.isDemoMode) {
         await window.keycloakInstance.login(options);
       } else {
-        console.warn("Keycloak not initialized. Logging in with offline mock.");
+        console.warn("Keycloak not initialized or running in demo mode. Logging in with offline mock.");
         this.isAuthenticated = true;
         this.isDemoMode = true;
+        // Seed default roles so the offline UI is functional
+        this.rawRoles = ["Sponsor Admin", "CRA", "Data Manager", "Site Investigator", "Auditor"];
       }
     },
     async logout(options = {}) {
-      if (window.keycloakInstance) {
+      if (window.keycloakInstance && !this.isDemoMode) {
         await window.keycloakInstance.logout(options);
       } else {
         console.warn(
-          "Keycloak not initialized. Logging out from offline mock."
+          "Keycloak not initialized or running in demo mode. Logging out from offline mock."
         );
         this.isAuthenticated = false;
         this.isDemoMode = true;
+        this.rawRoles = [];
       }
     },
     async refresh(minValidity = 30) {
-      if (window.keycloakInstance) {
+      if (window.keycloakInstance && !this.isDemoMode) {
         try {
           const refreshed =
             await window.keycloakInstance.updateToken(minValidity);
