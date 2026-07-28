@@ -30,6 +30,14 @@ TEXT_EXTENSIONS = {
 
 
 def load_gitignore_patterns(root_dir: str) -> List[Tuple[bool, str]]:
+    """Loads and parses gitignore patterns from the repository's .gitignore file.
+
+    Args:
+        root_dir (str): The root directory where .gitignore is located.
+
+    Returns:
+        List[Tuple[bool, str]]: A list of tuples containing (is_negated, pattern).
+    """
     patterns = []
     gitignore_path = os.path.join(root_dir, ".gitignore")
     if not os.path.exists(gitignore_path):
@@ -54,6 +62,16 @@ def load_gitignore_patterns(root_dir: str) -> List[Tuple[bool, str]]:
 def is_locally_ignored(
     path: str, patterns: List[Tuple[bool, str]], root_dir: str
 ) -> bool:
+    """Checks if a given path matches gitignore patterns using a local fallback engine.
+
+    Args:
+        path (str): The absolute or relative path to check.
+        patterns (List[Tuple[bool, str]]): List of parsed gitignore patterns.
+        root_dir (str): The repository root directory.
+
+    Returns:
+        bool: True if the path is ignored, False otherwise.
+    """
     try:
         rel_path = os.path.relpath(path, root_dir)
     except ValueError:
@@ -86,6 +104,15 @@ def is_locally_ignored(
 
 
 def filter_git_ignored_files(files: List[str], cwd: str) -> List[str]:
+    """Filters a list of file paths by querying 'git check-ignore' if git is available.
+
+    Args:
+        files (List[str]): List of absolute file paths to filter.
+        cwd (str): The working directory for running the git command.
+
+    Returns:
+        List[str]: List of file paths that are not ignored by git.
+    """
     if not files:
         return []
     if not shutil.which("git"):
@@ -108,6 +135,14 @@ def filter_git_ignored_files(files: List[str], cwd: str) -> List[str]:
 
 
 def should_scan_file(file_path: str) -> bool:
+    """Determines whether a file should be scanned based on its extension or content.
+
+    Args:
+        file_path (str): The path of the file to examine.
+
+    Returns:
+        bool: True if the file should be scanned, False otherwise.
+    """
     name = os.path.basename(file_path)
     if name in {
         "Dockerfile",
@@ -133,6 +168,15 @@ def should_scan_file(file_path: str) -> bool:
 
 
 def get_line_and_col(content: str, offset: int) -> Tuple[int, int]:
+    """Computes the 1-based line number and column index for a given character offset.
+
+    Args:
+        content (str): The full content of the file.
+        offset (int): The 0-based character offset of the match.
+
+    Returns:
+        Tuple[int, int]: A tuple containing (line_number, column_index).
+    """
     line_idx = content.count("\n", 0, offset) + 1
     line_start = content.rfind("\n", 0, offset) + 1
     col_idx = offset - line_start + 1
@@ -142,6 +186,16 @@ def get_line_and_col(content: str, offset: int) -> Tuple[int, int]:
 def scan_file(
     file_path: str, detector: DeidDetector, profile: ComplianceProfile
 ) -> List[dict]:
+    """Scans a single file for compliance violations using the specified detector.
+
+    Args:
+        file_path (str): The path to the file to scan.
+        detector (DeidDetector): The detector instance to use.
+        profile (ComplianceProfile): The compliance profile active for the scan.
+
+    Returns:
+        List[dict]: A list of violation dictionaries detailing findings.
+    """
     try:
         with open(file_path, "r", encoding="utf-8", errors="replace") as f:
             content = f.read()
@@ -166,6 +220,15 @@ def scan_file(
 
 
 def is_excluded_path(path: str, root_dir: str) -> bool:
+    """Checks if a file path belongs to directories or names explicitly excluded from scanning.
+
+    Args:
+        path (str): The file path to evaluate.
+        root_dir (str): The repository root directory.
+
+    Returns:
+        bool: True if the path is excluded, False otherwise.
+    """
     try:
         rel_path = os.path.relpath(path, root_dir).replace(os.sep, "/")
     except ValueError:
@@ -222,6 +285,15 @@ def is_excluded_path(path: str, root_dir: str) -> bool:
 
 
 def get_files_to_scan(paths: List[str], root_dir: str) -> List[str]:
+    """Resolves and filters all candidate files to scan from input paths and root.
+
+    Args:
+        paths (List[str]): A list of file or directory paths to discover.
+        root_dir (str): The repository root directory.
+
+    Returns:
+        List[str]: A list of file paths that are eligible for scanning.
+    """
     gitignore_patterns = load_gitignore_patterns(root_dir)
     raw_files = []
 
@@ -257,6 +329,13 @@ def get_files_to_scan(paths: List[str], root_dir: str) -> List[str]:
 
 
 def main():
+    """Main entry point for the Unified CLI Compliance & DEID Scan Tool.
+
+    Parses command-line arguments, walks target directories, filters paths based
+    on exclusions and gitignore patterns, runs the de-identification scanner on
+    discovered candidate files, and returns appropriate exit codes based on
+    detected violations.
+    """
     parser = argparse.ArgumentParser(
         description="Unified CLI Compliance & DEID Scan Tool"
     )
