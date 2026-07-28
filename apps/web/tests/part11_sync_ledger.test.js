@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { useClinicalStore } from "../src/stores/clinical.js";
+import { useAuthStore } from "../src/stores/auth.js";
 
 // Mock global fetch
 const mockFetch = vi.fn();
@@ -10,6 +11,10 @@ describe("FDA 21 CFR Part 11 Sync Ledger Store", () => {
   beforeEach(() => {
     const pinia = createPinia();
     setActivePinia(pinia);
+    const authStore = useAuthStore();
+    authStore.accessToken = "mock-keycloak-jwt-token";
+    authStore.isAuthenticated = true;
+    authStore.isDemoMode = false;
     window.localStorage.clear();
     mockFetch.mockReset();
   });
@@ -101,14 +106,15 @@ describe("FDA 21 CFR Part 11 Sync Ledger Store", () => {
     // Run sync
     await store.syncUnsyncedBlocks();
 
-    // Verify fetch was called with Gateway v2 signature and re-authentication tokens
+    // Verify fetch was called with standard Bearer authorization and change-reason headers
     expect(mockFetch).toHaveBeenCalledTimes(1);
     const [url, options] = mockFetch.mock.calls[0];
     expect(url).toContain("/api/v1/execution/queries/sync");
     expect(options.method).toBe("POST");
-    expect(options.headers["X-Signature-Version"]).toBe("2");
-    expect(options.headers["X-Sig-Token"]).toBeDefined();
-    expect(options.headers["X-Gateway-Signature"]).toBeDefined();
+    expect(options.headers["Authorization"]).toBe("Bearer mock-keycloak-jwt-token");
+    expect(options.headers["X-Change-Reason"]).toBe("Background sync of clinical query ledger blocks");
+    expect(options.headers["X-Signature-Version"]).toBeUndefined();
+    expect(options.headers["X-Gateway-Signature"]).toBeUndefined();
 
     // Verify local block synced flag is set to true
     expect(store.ledgerBlocks[0].synced).toBe(true);

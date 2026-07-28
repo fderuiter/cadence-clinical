@@ -1,13 +1,12 @@
 import { defineStore } from "pinia";
 import {
-  generateGatewaySignature,
-  generateJwtHS256,
   buildLedgerBlock,
   debounce,
 } from "ui";
 import { useAuthStore } from "./auth.js";
 import { soaClient } from "../api/soaClient.js";
 import { evaluateAST } from "../evaluator.js";
+import { apiClient } from "../api/apiClient.js";
 
 export const useClinicalStore = defineStore("clinical", {
   state: () => {
@@ -566,61 +565,11 @@ export const useClinicalStore = defineStore("clinical", {
       );
 
       try {
-        const authStore = useAuthStore();
-        const userId =
-          authStore.isAuthenticated && !authStore.isDemoMode
-            ? authStore.identity?.username || "unknown"
-            : "fderuiter";
-        const roles =
-          authStore.isAuthenticated && !authStore.isDemoMode
-            ? authStore.rawRoles.join(",")
-            : "CRA,Data Manager"; // Grant sync role privilege map
-        const timestamp = String(Date.now() / 1000);
-        const secret = "internal-gateway-secret-12345"; // pragma: allowlist secret
-
-        // Generate Gateway signature for the HTTP headers
-        const gatewaySignature = await generateGatewaySignature(
-          userId,
-          roles,
-          timestamp,
-          "2",
-          "Background sync of clinical query ledger blocks",
-          secret
+        await apiClient.post(
+          "/api/v1/execution/queries/sync",
+          { blocks: unsynced },
+          { changeReason: "Background sync of clinical query ledger blocks" }
         );
-
-        // Generate X-Sig-Token (JWT) for signature gating
-        const sigToken = await generateJwtHS256(
-          {
-            sub: userId,
-            action: "/api/v1/execution/queries/sync",
-            exp: Math.floor(Date.now() / 1000) + 300,
-          },
-          secret
-        );
-
-        // Send fetch request
-        const response = await fetch(
-          "http://localhost:8000/api/v1/execution/queries/sync",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-User-Id": userId,
-              "X-User-Roles": roles,
-              "X-Gateway-Timestamp": timestamp,
-              "X-Gateway-Signature": gatewaySignature,
-              "X-Signature-Version": "2",
-              "X-Change-Reason":
-                "Background sync of clinical query ledger blocks",
-              "X-Sig-Token": sigToken,
-            },
-            body: JSON.stringify({ blocks: unsynced }),
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(`HTTP sync error! status: ${response.status}`);
-        }
 
         // Successfully synced! Update local blocks
         unsynced.forEach((b) => {

@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { createPinia, setActivePinia } from "pinia";
+import { useAuthStore } from "../src/stores/auth.js";
 import {
   terminologyClient,
   TerminologyNetworkError,
@@ -9,6 +11,12 @@ globalThis.fetch = mockFetch;
 
 describe("Terminology API Client Unit Tests", () => {
   beforeEach(() => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const authStore = useAuthStore();
+    authStore.accessToken = "mock-keycloak-jwt-token";
+    authStore.isAuthenticated = true;
+    authStore.isDemoMode = false;
     mockFetch.mockReset();
   });
 
@@ -56,11 +64,10 @@ describe("Terminology API Client Unit Tests", () => {
       expect(url).toBe(
         "http://localhost:8000/api/v1/terminology/validate/C12345"
       );
-      expect(options.headers["X-User-Id"]).toBe("test-user-id");
-      expect(options.headers["X-User-Roles"]).toBe("sponsor_dm,cra");
-      expect(options.headers["X-Signature-Version"]).toBe("2");
-      expect(options.headers["X-Gateway-Signature"]).toBeDefined();
-      expect(options.headers["X-Change-Reason"]).toBe("Testing signed client");
+      expect(options.headers["Authorization"]).toBe("Bearer mock-keycloak-jwt-token");
+      expect(options.headers["X-Change-Reason"]).toBeUndefined();
+      expect(options.headers["X-User-Id"]).toBeUndefined();
+      expect(options.headers["X-Gateway-Signature"]).toBeUndefined();
     });
 
     it("should handle invalid/malformed codes by returning the INVALID state", async () => {
