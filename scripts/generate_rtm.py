@@ -266,9 +266,9 @@ def get_installed_packages():
     for pkg_name, pkg_version in packages:
         # Check if it's the current project itself (editable install)
         if pkg_name == "cadence-clinical":
-            lines.append(f"{pkg_name:<24} {pkg_version:<11} /app")
+            lines.append(f"{pkg_name:<24} {pkg_version:<11} /app".rstrip())
         else:
-            lines.append(f"{pkg_name:<24} {pkg_version:<11}")
+            lines.append(f"{pkg_name:<24} {pkg_version:<11}".rstrip())
     return "\n".join(lines) + "\n"
 
 
