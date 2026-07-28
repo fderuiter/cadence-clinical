@@ -7,7 +7,7 @@ import os
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,6 +24,12 @@ from apps.tickets.models import (
 )
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
+from packages.security.rbac import (
+    Principal,
+    can_access_site,
+    get_principal,
+    verify_not_auditor,
+)
 
 
 class TicketCreate(BaseModel):
@@ -273,12 +279,16 @@ TICKET_CREATION_LOCK = asyncio.Lock()
 async def create_ticket(
     request: Request,
     payload: TicketCreate,
+    principal: Principal = Depends(get_principal),
+    _not_auditor=Depends(verify_not_auditor),
     session: AsyncSession = Depends(get_db_session),
 ) -> TicketResponse:
     """
     Create and persist a new Ticket record.
     """
-    user_id, user_role, change_reason = get_user_context(request)
+    reporter = principal.user_id
+    change_reason = principal.change_reason
+
     if not change_reason:
         raise HTTPException(
             status_code=403, detail="Missing change justification reason"
@@ -292,7 +302,8 @@ async def create_ticket(
             description=payload.description,
             category=payload.category,
             priority=payload.priority,
-            reporter=payload.reporter or user_id,
+            status=TicketStatus.OPEN,  # Always default to OPEN
+            reporter=reporter,  # Obtained from authenticated principal; never trust request-supplied payload.reporter
             assignee_user=payload.assignee_user,
             assignee_role=payload.assignee_role,
             org_id=payload.org_id,
@@ -301,7 +312,7 @@ async def create_ticket(
             related_entity_type=payload.related_entity_type,
             related_entity_id=payload.related_entity_id,
             due_date=payload.due_date,
-            created_by=user_id,
+            created_by=reporter,
             reason_for_change=change_reason,
             version_index=1,
         )
@@ -310,7 +321,7 @@ async def create_ticket(
 
     await write_ticket_audit_log(
         session=session,
-        user_id=user_id,
+        user_id=reporter,
         action="TICKET_CREATE",
         details=f"Created ticket '{payload.title}' with priority '{payload.priority}'. Reference: '{ticket.reference}'",
         record_id=ticket.id,
@@ -325,20 +336,69 @@ async def create_ticket(
 @app.get("/api/v1/tickets", response_model=List[TicketResponse])
 async def list_tickets(
     request: Request,
-    status: Optional[str] = None,
+    status: Optional[TicketStatus] = None,
+    category: Optional[TicketCategory] = None,
+    priority: Optional[TicketPriority] = None,
+    reporter: Optional[str] = None,
+    assignee: Optional[str] = None,
+    org_id: Optional[str] = None,
+    site_id: Optional[str] = None,
+    study_id: Optional[str] = None,
     include_deleted: bool = False,
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    principal: Principal = Depends(get_principal),
     session: AsyncSession = Depends(get_db_session),
 ) -> List[TicketResponse]:
     """
-    List all tickets, optionally filtered by status.
+    List and filter tickets with pagination and scope-awareness.
     """
-    user_id, user_role, change_reason = get_user_context(request)
+    user_id = principal.user_id
+    change_reason = principal.change_reason
 
     stmt = select(Ticket)
     if not include_deleted:
         stmt = stmt.where(Ticket.is_deleted.is_(False))
+
+    # Scope-awareness
+    site_scoped_roles = {"investigator", "crc", "cra"}
+    is_site_scoped = any(role in site_scoped_roles for role in principal.roles)
+
+    if is_site_scoped or principal.assigned_sites:
+        if principal.assigned_sites:
+            stmt = stmt.where(Ticket.site_id.in_(principal.assigned_sites))
+        else:
+            stmt = stmt.where(1 == 0)
+
+    # For other/any users, if site_id filter is supplied, verify access against assigned_sites if restricted
+    if site_id:
+        if principal.assigned_sites and site_id not in principal.assigned_sites:
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: Insufficient scope access for this site.",
+            )
+        stmt = stmt.where(Ticket.site_id == site_id)
+
+    # Composable filters
     if status:
         stmt = stmt.where(Ticket.status == status)
+    if category:
+        stmt = stmt.where(Ticket.category == category)
+    if priority:
+        stmt = stmt.where(Ticket.priority == priority)
+    if reporter:
+        stmt = stmt.where(Ticket.reporter == reporter)
+    if assignee:
+        stmt = stmt.where(
+            (Ticket.assignee_user == assignee) | (Ticket.assignee_role == assignee)
+        )
+    if org_id:
+        stmt = stmt.where(Ticket.org_id == org_id)
+    if study_id:
+        stmt = stmt.where(Ticket.study_id == study_id)
+
+    # Pagination
+    stmt = stmt.limit(limit).offset(offset)
 
     result = await session.execute(stmt)
     tickets = result.scalars().all()
@@ -348,7 +408,7 @@ async def list_tickets(
         session=session,
         user_id=user_id,
         action="TICKET_LIST",
-        details=f"Listed tickets (status filter: {status}, include_deleted: {include_deleted}).",
+        details=f"Listed tickets (status: {status}, category: {category}, priority: {priority}, limit: {limit}, offset: {offset}).",
         change_reason=change_reason,
         version_index=1,
     )
@@ -407,27 +467,38 @@ async def list_ticket_audit_logs(
 async def get_ticket(
     request: Request,
     id: str,
+    principal: Principal = Depends(get_principal),
     session: AsyncSession = Depends(get_db_session),
 ) -> TicketResponse:
     """
-    Retrieve a specific ticket record by its ID.
+    Retrieve a specific ticket record by its ID or sequential reference.
     """
-    user_id, user_role, change_reason = get_user_context(request)
+    user_id = principal.user_id
+    change_reason = principal.change_reason
 
-    stmt = select(Ticket).where(Ticket.id == id)
+    stmt = select(Ticket).where((Ticket.id == id) | (Ticket.reference == id))
     result = await session.execute(stmt)
     ticket = result.scalars().first()
 
     if not ticket:
-        raise HTTPException(status_code=404, detail=f"Ticket with ID '{id}' not found.")
+        raise HTTPException(
+            status_code=404, detail=f"Ticket with ID/reference '{id}' not found."
+        )
+
+    # Validate scope access
+    if ticket.site_id and not can_access_site(principal, ticket.site_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Insufficient scope access for this site.",
+        )
 
     await write_ticket_audit_log(
         session=session,
         user_id=user_id,
         action="TICKET_VIEW",
-        details=f"Viewed ticket ID: {id}.",
-        record_id=id,
-        ticket_id=id,
+        details=f"Viewed ticket reference/ID: {id}.",
+        record_id=ticket.id,
+        ticket_id=ticket.id,
         change_reason=change_reason,
         version_index=ticket.version_index,
     )
@@ -440,53 +511,48 @@ async def update_ticket(
     request: Request,
     id: str,
     payload: TicketUpdate,
+    principal: Principal = Depends(get_principal),
+    _not_auditor=Depends(verify_not_auditor),
     session: AsyncSession = Depends(get_db_session),
 ) -> TicketResponse:
     """
-    Update a specific ticket record by its ID.
+    Update a specific ticket record by its ID or reference.
     """
-    user_id, user_role, change_reason = get_user_context(request)
+    user_id = principal.user_id
+    change_reason = principal.change_reason
+
     if not change_reason:
         raise HTTPException(
             status_code=403, detail="Missing change justification reason"
         )
 
-    stmt = select(Ticket).where(Ticket.id == id)
+    stmt = select(Ticket).where((Ticket.id == id) | (Ticket.reference == id))
     result = await session.execute(stmt)
     ticket = result.scalars().first()
 
     if not ticket:
-        raise HTTPException(status_code=404, detail=f"Ticket with ID '{id}' not found.")
+        raise HTTPException(
+            status_code=404, detail=f"Ticket with ID/reference '{id}' not found."
+        )
 
-    # Apply updates
-    if payload.title is not None:
-        ticket.title = payload.title
-    if payload.description is not None:
-        ticket.description = payload.description
-    if payload.category is not None:
-        ticket.category = payload.category
-    if payload.priority is not None:
-        ticket.priority = payload.priority
-    if payload.status is not None:
-        ticket.status = payload.status
-    if payload.assignee_user is not None:
-        ticket.assignee_user = payload.assignee_user
-    if payload.assignee_role is not None:
-        ticket.assignee_role = payload.assignee_role
-    if payload.org_id is not None:
-        ticket.org_id = payload.org_id
-    if payload.site_id is not None:
-        ticket.site_id = payload.site_id
-    if payload.study_id is not None:
-        ticket.study_id = payload.study_id
-    if payload.related_entity_type is not None:
-        ticket.related_entity_type = payload.related_entity_type
-    if payload.related_entity_id is not None:
-        ticket.related_entity_id = payload.related_entity_id
-    if payload.due_date is not None:
-        ticket.due_date = payload.due_date
-    if payload.is_deleted is not None:
-        ticket.is_deleted = payload.is_deleted
+    # Validate scope access before making edits
+    if ticket.site_id and not can_access_site(principal, ticket.site_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Insufficient scope access for this site.",
+        )
+
+    # Reject updates to terminal tickets and return stable API error responses
+    if ticket.status == TicketStatus.CLOSED:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot update ticket because it is in terminal state '{ticket.status}'.",
+        )
+
+    # Apply updates for explicitly defined fields in TicketUpdate payload
+    update_data = payload.model_dump(exclude_unset=True)
+    for key, val in update_data.items():
+        setattr(ticket, key, val)
 
     ticket.version_index += 1
     ticket.reason_for_change = change_reason
@@ -498,9 +564,9 @@ async def update_ticket(
         session=session,
         user_id=user_id,
         action="TICKET_UPDATE",
-        details=f"Updated ticket ID: {id}. Version index incremented to {ticket.version_index}.",
-        record_id=id,
-        ticket_id=id,
+        details=f"Updated ticket ID/reference: {id}. Version index incremented to {ticket.version_index}.",
+        record_id=ticket.id,
+        ticket_id=ticket.id,
         change_reason=change_reason,
         version_index=ticket.version_index,
     )

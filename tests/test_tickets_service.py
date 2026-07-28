@@ -479,3 +479,186 @@ async def test_ticket_concurrent_reference_generation():
         assert len(set(references)) == 10
         for ref in references:
             assert ref.startswith("TKT-")
+
+
+@pytest.mark.asyncio
+async def test_tickets_rbac_auditor_cannot_mutate_but_can_read():
+    """
+    Verify that auditor/inspector roles cannot create or update tickets but can read them.
+    """
+    client = TestClient(app)
+
+    # 1. Auditor tries to create a ticket -> Expect 403 Forbidden
+    auditor_headers = get_auth_headers(roles="auditor", change_reason="Creating as auditor")
+    payload = {
+        "title": "Auditor ticket",
+        "description": "Should fail",
+        "priority": "LOW",
+    }
+    res_create = client.post("/api/v1/tickets", json=payload, headers=auditor_headers)
+    assert res_create.status_code == 403
+    assert "Auditor personas are restricted to read-only access" in res_create.json()["detail"]
+
+    # 2. Setup a ticket using admin role first
+    admin_headers = get_auth_headers(roles="admin", change_reason="Setting up for auditor read")
+    res_setup = client.post("/api/v1/tickets", json=payload, headers=admin_headers)
+    assert res_setup.status_code == 201
+    ticket_id = res_setup.json()["id"]
+
+    # 3. Auditor tries to update the ticket -> Expect 403 Forbidden
+    res_update = client.put(
+        f"/api/v1/tickets/{ticket_id}",
+        json={"title": "Auditor update"},
+        headers=auditor_headers,
+    )
+    assert res_update.status_code == 403
+
+    # 4. Auditor lists tickets -> Expect 200 OK and able to read
+    res_list = client.get("/api/v1/tickets", headers=auditor_headers)
+    assert res_list.status_code == 200
+    assert len(res_list.json()) >= 1
+
+    # 5. Auditor gets specific ticket -> Expect 200 OK and able to read
+    res_get = client.get(f"/api/v1/tickets/{ticket_id}", headers=auditor_headers)
+    assert res_get.status_code == 200
+    assert res_get.json()["id"] == ticket_id
+
+
+@pytest.mark.asyncio
+async def test_tickets_terminal_state_rejection():
+    """
+    Verify that updates to terminal tickets (CLOSED) are rejected.
+    """
+    client = TestClient(app)
+    headers = get_auth_headers(roles="admin", change_reason="Terminal state test")
+
+    # 1. Create ticket
+    res_create = client.post(
+        "/api/v1/tickets",
+        json={"title": "Test Terminal", "description": "Desc", "priority": "LOW"},
+        headers=headers,
+    )
+    assert res_create.status_code == 201
+    ticket_id = res_create.json()["id"]
+
+    # 2. Update to CLOSED (terminal status)
+    res_closed = client.put(
+        f"/api/v1/tickets/{ticket_id}",
+        json={"status": "CLOSED"},
+        headers=headers,
+    )
+    assert res_closed.status_code == 200
+    assert res_closed.json()["status"] == "CLOSED"
+
+    # 3. Try to update a closed/terminal ticket -> Expect 400 Bad Request
+    res_fail_closed = client.put(
+        f"/api/v1/tickets/{ticket_id}",
+        json={"description": "Updated closed desc"},
+        headers=headers,
+    )
+    assert res_fail_closed.status_code == 400
+    assert "Cannot update ticket because it is in terminal state" in res_fail_closed.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_tickets_get_by_reference():
+    """
+    Verify that ticket detail retrieval works by sequential reference as well as ID.
+    """
+    client = TestClient(app)
+    headers = get_auth_headers(roles="admin", change_reason="Reference retrieval test")
+
+    # 1. Create ticket
+    res_create = client.post(
+        "/api/v1/tickets",
+        json={"title": "Lookup by ref", "description": "Lookup description", "priority": "MEDIUM"},
+        headers=headers,
+    )
+    assert res_create.status_code == 201
+    ticket_id = res_create.json()["id"]
+    ticket_ref = res_create.json()["reference"]
+
+    # 2. Get by reference
+    res_get_ref = client.get(f"/api/v1/tickets/{ticket_ref}", headers=headers)
+    assert res_get_ref.status_code == 200
+    assert res_get_ref.json()["id"] == ticket_id
+    assert res_get_ref.json()["reference"] == ticket_ref
+
+
+@pytest.mark.asyncio
+async def test_tickets_scope_aware_filtering():
+    """
+    Verify scope-aware filtering and access enforcement for site-scoped users.
+    """
+    client = TestClient(app)
+
+    # 1. Create tickets with different site scopes
+    admin_headers = get_auth_headers(roles="admin", change_reason="Create scope tickets")
+
+    # Ticket at Site A
+    res_a = client.post(
+        "/api/v1/tickets",
+        json={"title": "Site A Ticket", "description": "A", "site_id": "SITE-A"},
+        headers=admin_headers,
+    )
+    assert res_a.status_code == 201
+    ticket_a_id = res_a.json()["id"]
+
+    # Ticket at Site B
+    res_b = client.post(
+        "/api/v1/tickets",
+        json={"title": "Site B Ticket", "description": "B", "site_id": "SITE-B"},
+        headers=admin_headers,
+    )
+    assert res_b.status_code == 201
+    ticket_b_id = res_b.json()["id"]
+
+    # 2. Query as a site-scoped user restricted to Site A (e.g. CRC at Site A)
+    # Generate signature with site restriction matching only SITE-A
+    timestamp = str(time.time())
+    change_reason = "Querying CRC A"
+    sig = generate_signature(
+        "crc_user", "crc", timestamp, version="2", change_reason=change_reason, site_id="SITE-A"
+    )
+    crc_headers = {
+        "X-User-Id": "crc_user",
+        "X-User-Roles": "crc",
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": sig,
+        "X-Signature-Version": "2",
+        "X-Site-Id": "SITE-A",
+        "X-Change-Reason": change_reason,
+    }
+
+    # CRC A lists tickets -> Expect only Site A ticket to be returned
+    res_list = client.get("/api/v1/tickets", headers=crc_headers)
+    assert res_list.status_code == 200
+    tickets = res_list.json()
+    assert len(tickets) == 1
+    assert tickets[0]["id"] == ticket_a_id
+
+    # CRC A requests Ticket B directly -> Expect 403 Forbidden
+    res_get_b = client.get(f"/api/v1/tickets/{ticket_b_id}", headers=crc_headers)
+    assert res_get_b.status_code == 403
+    assert "Insufficient scope access" in res_get_b.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_tickets_validation_invalid_enums():
+    """
+    Verify that invalid enum parameters or body payloads are rejected with 422 Unprocessable Entity.
+    """
+    client = TestClient(app)
+    headers = get_auth_headers(roles="admin", change_reason="Validation test")
+
+    # 1. Invalid priority in body on creation
+    res_create = client.post(
+        "/api/v1/tickets",
+        json={"title": "Bad enum", "description": "d", "priority": "EXTREME"},
+        headers=headers,
+    )
+    assert res_create.status_code == 422
+
+    # 2. Invalid status in query parameter on listing
+    res_list = client.get("/api/v1/tickets?status=SUPER_OPEN", headers=headers)
+    assert res_list.status_code == 422
