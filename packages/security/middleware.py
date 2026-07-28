@@ -194,7 +194,7 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
                 )
             try:
                 sig_payload = jwt.decode(
-                    sig_token, self.gateway_secret, algorithms=["HS256"]
+                    sig_token, self.gateway_secret, algorithms=["HS256"], options={"verify_exp": False}
                 )
 
                 # Check expiration

@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import os
 import time
+from unittest.mock import patch
 
 import httpx
 import pytest
@@ -9,7 +10,7 @@ import pytest_asyncio
 from sqlalchemy import select
 
 from apps.execution.database.core import db_manager
-from apps.execution.database.models import Base, FormSubmission
+from apps.execution.database.models import Base, FormSubmission, AuditLog
 from apps.execution.main import app
 from apps.execution.trial_lock import TrialLockManager
 
@@ -82,7 +83,10 @@ async def setup_test_db():
 
 @pytest.mark.asyncio
 async def test_batch_sign_off_happy_path_form() -> None:
-    """Test successful batch sign-off using FORM target resolution."""
+    """Test successful batch sign-off using FORM target resolution.
+
+    @req:PRD-SYS-001
+    """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
@@ -159,7 +163,10 @@ async def test_batch_sign_off_happy_path_form() -> None:
 
 @pytest.mark.asyncio
 async def test_batch_sign_off_visit_resolution() -> None:
-    """Test successful batch sign-off using VISIT target resolution."""
+    """Test successful batch sign-off using VISIT target resolution.
+
+    @req:PRD-SYS-001
+    """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
@@ -228,7 +235,10 @@ async def test_batch_sign_off_visit_resolution() -> None:
 
 @pytest.mark.asyncio
 async def test_batch_sign_off_subject_resolution() -> None:
-    """Test successful batch sign-off using SUBJECT target resolution."""
+    """Test successful batch sign-off using SUBJECT target resolution.
+
+    @req:PRD-SYS-001
+    """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
@@ -276,7 +286,10 @@ async def test_batch_sign_off_subject_resolution() -> None:
 
 @pytest.mark.asyncio
 async def test_batch_sign_off_pi_only() -> None:
-    """Test that unauthorized non-PI roles are rejected with HTTP 403."""
+    """Test that unauthorized non-PI roles are rejected with HTTP 403.
+
+    @req:PRD-SYS-003
+    """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
@@ -301,7 +314,10 @@ async def test_batch_sign_off_pi_only() -> None:
 
 @pytest.mark.asyncio
 async def test_batch_sign_off_token_replay() -> None:
-    """Test that signature token can be used exactly once and replay returns HTTP 401."""
+    """Test that signature token can be used exactly once and replay returns HTTP 401.
+
+    @req:PRD-SYS-003
+    """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
@@ -341,7 +357,10 @@ async def test_batch_sign_off_token_replay() -> None:
 
 @pytest.mark.asyncio
 async def test_batch_sign_off_locks_and_atomic_rollback() -> None:
-    """Test that site/visit locks reject sign-off write and roll back everything atomically (no partial approvals)."""
+    """Test that site/visit locks reject sign-off write and roll back everything atomically (no partial approvals).
+
+    @req:PRD-SYS-003
+    """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
@@ -388,6 +407,373 @@ async def test_batch_sign_off_locks_and_atomic_rollback() -> None:
             )
 
         # Verify that sub1 was NOT approved (proper rollback occurred!)
+        async with db_manager.get_session_maker()() as session:
+            stmt = select(FormSubmission).where(FormSubmission.id.in_([id1, id2]))
+            res_db = await session.execute(stmt)
+            subs = {s.id: s for s in res_db.scalars().all()}
+            assert subs[id1].status == "COMPLETED"
+            assert subs[id2].status == "COMPLETED"
+
+
+@pytest.mark.asyncio
+async def test_batch_sign_off_audit_log_capture() -> None:
+    """Verify that batch sign-off correctly registers in AuditLog with all required attributes.
+
+    @req:PRD-SYS-001
+    """
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # 1. Pre-populate completed form submission
+        async with db_manager.get_session_maker()() as session:
+            sub = FormSubmission(
+                study_id="STUDY-001",
+                site_id="SITE-001",
+                subject_id="SUBJ-001",
+                visit_id="VISIT-001",
+                form_id="FORM-001",
+                status="COMPLETED",
+            )
+            session.add(sub)
+            await session.commit()
+            sub_id = sub.id
+
+        action_path = "/api/v1/execution/batch-sign-off"
+
+        # 2. Call batch sign-off
+        payload = {
+            "study_id": "STUDY-001",
+            "target_type": "FORM",
+            "target_ids": [sub_id],
+            "signing_reason": "PI approval and sign-off.",
+        }
+
+        res = await client.post(
+            action_path,
+            json=payload,
+            headers=get_auth_headers(
+                user_id="pi_user_audit_test",
+                roles="pi",
+                change_reason="Batch electronic signing",
+                action=action_path,
+            ),
+        )
+        assert res.status_code == 200
+
+        # 3. Query the AuditLog table to ensure standard 21 CFR Part 11 attributes are logged
+        async with db_manager.get_session_maker()() as session:
+            # We filter for UPDATE on form_submissions table
+            stmt = select(AuditLog).where(
+                AuditLog.table_name == "form_submissions",
+                AuditLog.action == "UPDATE",
+                AuditLog.record_id == sub_id,
+            )
+            audit_res = await session.execute(stmt)
+            audit_logs = audit_res.scalars().all()
+
+            assert len(audit_logs) >= 1
+            log_entry = audit_logs[-1]
+
+            # Assert GxP audit parameters
+            assert log_entry.user_id == "pi_user_audit_test"
+            assert log_entry.change_reason == "Batch electronic signing"
+            assert log_entry.version_index == 2
+
+            # Assert that status change is registered in new_values
+            assert log_entry.new_values.get("status") == "APPROVED"
+            assert "signature_manifest" in log_entry.new_values
+
+
+@pytest.mark.asyncio
+async def test_batch_sign_off_all_lock_scopes_and_rollback() -> None:
+    """Verify that every possible lock scope (trial, site, visit, subject, form) is strictly respected.
+
+    In each scenario, a lock must abort the entire batch sign-off and roll back atomic state.
+
+    @req:PRD-SYS-003
+    @req:Trace-3
+    """
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        action_path = "/api/v1/execution/batch-sign-off"
+
+        # Define a helper to reset database and locks
+        async def reset_db_and_get_submissions():
+            TrialLockManager.reset()
+            async with db_manager.get_session_maker()() as s:
+                await s.execute(Base.metadata.tables["form_submissions"].delete())
+                s1 = FormSubmission(
+                    study_id="STUDY-001",
+                    site_id="SITE-LOCKTEST",
+                    subject_id="SUBJ-LOCKTEST",
+                    visit_id="VISIT-LOCKTEST",
+                    form_id="FORM-LOCKTEST",
+                    status="COMPLETED",
+                )
+                s2 = FormSubmission(
+                    study_id="STUDY-001",
+                    site_id="SITE-OTHER",
+                    subject_id="SUBJ-OTHER",
+                    visit_id="VISIT-OTHER",
+                    form_id="FORM-OTHER",
+                    status="COMPLETED",
+                )
+                s.add_all([s1, s2])
+                await s.commit()
+                return s1.id, s2.id
+
+        # Lock Case 1: Trial Lock
+        id1, id2 = await reset_db_and_get_submissions()
+        TrialLockManager.lock_trial("Security violation simulated")
+        payload = {
+            "study_id": "STUDY-001",
+            "target_type": "FORM",
+            "target_ids": [id1, id2],
+            "signing_reason": "PI approval and sign-off.",
+        }
+        with pytest.raises(PermissionError, match="Trial is currently locked"):
+            await client.post(
+                action_path,
+                json=payload,
+                headers=get_auth_headers(roles="pi", action=action_path),
+            )
+        # Ensure rollback
+        async with db_manager.get_session_maker()() as s:
+            stmt = select(FormSubmission).where(FormSubmission.id.in_([id1, id2]))
+            db_subs = (await s.execute(stmt)).scalars().all()
+            assert len(db_subs) == 2
+            assert all(ds.status == "COMPLETED" for ds in db_subs)
+
+        # Lock Case 2: Site Lock
+        id1, id2 = await reset_db_and_get_submissions()
+        TrialLockManager.lock_site("SITE-LOCKTEST")
+        payload = {
+            "study_id": "STUDY-001",
+            "target_type": "FORM",
+            "target_ids": [id1, id2],
+            "signing_reason": "PI approval and sign-off.",
+        }
+        with pytest.raises(PermissionError, match="SITE-LOCKTEST is currently locked"):
+            await client.post(
+                action_path,
+                json=payload,
+                headers=get_auth_headers(roles="pi", action=action_path),
+            )
+        # Ensure rollback
+        async with db_manager.get_session_maker()() as s:
+            stmt = select(FormSubmission).where(FormSubmission.id.in_([id1, id2]))
+            db_subs = (await s.execute(stmt)).scalars().all()
+            assert all(ds.status == "COMPLETED" for ds in db_subs)
+
+        # Lock Case 3: Visit Lock
+        id1, id2 = await reset_db_and_get_submissions()
+        TrialLockManager.lock_visit("VISIT-LOCKTEST")
+        payload = {
+            "study_id": "STUDY-001",
+            "target_type": "FORM",
+            "target_ids": [id1, id2],
+            "signing_reason": "PI approval and sign-off.",
+        }
+        with pytest.raises(PermissionError, match="VISIT-LOCKTEST is currently locked"):
+            await client.post(
+                action_path,
+                json=payload,
+                headers=get_auth_headers(roles="pi", action=action_path),
+            )
+        # Ensure rollback
+        async with db_manager.get_session_maker()() as s:
+            stmt = select(FormSubmission).where(FormSubmission.id.in_([id1, id2]))
+            db_subs = (await s.execute(stmt)).scalars().all()
+            assert all(ds.status == "COMPLETED" for ds in db_subs)
+
+        # Lock Case 4: Subject Lock
+        id1, id2 = await reset_db_and_get_submissions()
+        TrialLockManager.lock_subject("SUBJ-LOCKTEST")
+        payload = {
+            "study_id": "STUDY-001",
+            "target_type": "FORM",
+            "target_ids": [id1, id2],
+            "signing_reason": "PI approval and sign-off.",
+        }
+        with pytest.raises(PermissionError, match="SUBJ-LOCKTEST is currently locked"):
+            await client.post(
+                action_path,
+                json=payload,
+                headers=get_auth_headers(roles="pi", action=action_path),
+            )
+        # Ensure rollback
+        async with db_manager.get_session_maker()() as s:
+            stmt = select(FormSubmission).where(FormSubmission.id.in_([id1, id2]))
+            db_subs = (await s.execute(stmt)).scalars().all()
+            assert all(ds.status == "COMPLETED" for ds in db_subs)
+
+        # Lock Case 5: Form Lock
+        id1, id2 = await reset_db_and_get_submissions()
+        TrialLockManager.lock_form("FORM-LOCKTEST")
+        payload = {
+            "study_id": "STUDY-001",
+            "target_type": "FORM",
+            "target_ids": [id1, id2],
+            "signing_reason": "PI approval and sign-off.",
+        }
+        with pytest.raises(PermissionError, match="FORM-LOCKTEST is currently locked"):
+            await client.post(
+                action_path,
+                json=payload,
+                headers=get_auth_headers(roles="pi", action=action_path),
+            )
+        # Ensure rollback
+        async with db_manager.get_session_maker()() as s:
+            stmt = select(FormSubmission).where(FormSubmission.id.in_([id1, id2]))
+            db_subs = (await s.execute(stmt)).scalars().all()
+            assert all(ds.status == "COMPLETED" for ds in db_subs)
+
+
+@pytest.mark.asyncio
+async def test_batch_sign_off_token_binding_mismatches() -> None:
+    """Verify electronic-signature security re-authentication mismatch rejections.
+
+    Tests negative-path signature token validations: user ID mismatch, action mismatch, expiration, and missing token.
+
+    @req:PRD-SYS-003
+    """
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        action_path = "/api/v1/execution/batch-sign-off"
+        payload = {
+            "study_id": "STUDY-001",
+            "target_type": "FORM",
+            "target_ids": [],
+            "signing_reason": "PI approval and sign-off.",
+        }
+
+        # Case 1: Signature token user mismatch
+        from jose import jwt
+
+        sig_payload = {
+            "sub": "another_user_id",  # Mismatch with X-User-Id
+            "username": "another_user",
+            "action": action_path,
+            "roles": ["pi"],
+            "iat": time.time(),
+            "exp": time.time() + 300.0,
+        }
+        sig_token = jwt.encode(sig_payload, GATEWAY_SECRET, algorithm="HS256")
+        headers = get_auth_headers(
+            user_id="test_user", roles="pi", sig_token_custom=sig_token
+        )
+
+        res = await client.post(action_path, json=payload, headers=headers)
+        assert res.status_code == 401
+        assert "user mismatch" in res.json()["message"].lower()
+
+        # Case 2: Signature token action mismatch
+        sig_payload = {
+            "sub": "test_user",
+            "username": "test_user",
+            "action": "/api/v1/some-other-endpoint",  # Mismatch with batch sign-off
+            "roles": ["pi"],
+            "iat": time.time(),
+            "exp": time.time() + 300.0,
+        }
+        sig_token = jwt.encode(sig_payload, GATEWAY_SECRET, algorithm="HS256")
+        headers = get_auth_headers(
+            user_id="test_user", roles="pi", sig_token_custom=sig_token
+        )
+
+        res = await client.post(action_path, json=payload, headers=headers)
+        assert res.status_code == 401
+        assert "action mismatch" in res.json()["message"].lower()
+
+        # Case 3: Signature token expired
+        sig_payload = {
+            "sub": "test_user",
+            "username": "test_user",
+            "action": action_path,
+            "roles": ["pi"],
+            "iat": time.time() - 600.0,
+            "exp": time.time() - 300.0,  # Expired
+        }
+        sig_token = jwt.encode(sig_payload, GATEWAY_SECRET, algorithm="HS256")
+        headers = get_auth_headers(
+            user_id="test_user", roles="pi", sig_token_custom=sig_token
+        )
+
+        res = await client.post(action_path, json=payload, headers=headers)
+        assert res.status_code == 401
+        assert "expired" in res.json()["message"].lower()
+
+        # Case 4: Missing token header entirely
+        headers = get_auth_headers(user_id="test_user", roles="pi")
+        headers.pop("X-Sig-Token", None)
+
+        res = await client.post(action_path, json=payload, headers=headers)
+        assert res.status_code == 401
+        assert "reauthentication_required" in res.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_batch_sign_off_unexpected_db_failure_rollback() -> None:
+    """Verify that any unexpected database flush or commit failure triggers complete atomic rollback.
+
+    If an unexpected error happens during the database write, no partial approvals may be saved.
+
+    @req:PRD-SYS-003
+    """
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # 1. Pre-populate completed form submissions
+        async with db_manager.get_session_maker()() as session:
+            sub1 = FormSubmission(
+                study_id="STUDY-001",
+                site_id="SITE-001",
+                subject_id="SUBJ-001",
+                visit_id="VISIT-001",
+                form_id="FORM-001",
+                status="COMPLETED",
+            )
+            sub2 = FormSubmission(
+                study_id="STUDY-001",
+                site_id="SITE-001",
+                subject_id="SUBJ-001",
+                visit_id="VISIT-001",
+                form_id="FORM-002",
+                status="COMPLETED",
+            )
+            session.add_all([sub1, sub2])
+            await session.commit()
+            id1, id2 = sub1.id, sub2.id
+
+        action_path = "/api/v1/execution/batch-sign-off"
+        payload = {
+            "study_id": "STUDY-001",
+            "target_type": "FORM",
+            "target_ids": [id1, id2],
+            "signing_reason": "PI approval and sign-off.",
+        }
+
+        # 2. Mock a session flush exception to simulate database/network/operational failure
+        from sqlalchemy.exc import OperationalError
+
+        with patch(
+            "sqlalchemy.orm.session.Session.flush",
+            side_effect=OperationalError("Simulated DB lock/failure", {}, None),
+        ):
+            # The FastAPI endpoint handles this or propagates. If it raises or catches, we must guarantee
+            # that BOTH submissions are restored to COMPLETED status (atomic rollback).
+            try:
+                await client.post(
+                    action_path,
+                    json=payload,
+                    headers=get_auth_headers(roles="pi", action=action_path),
+                )
+            except Exception:
+                pass
+
+        # 3. Verify database state. Neither must have transitioned to APPROVED!
         async with db_manager.get_session_maker()() as session:
             stmt = select(FormSubmission).where(FormSubmission.id.in_([id1, id2]))
             res_db = await session.execute(stmt)
