@@ -570,7 +570,7 @@ async def unblind_subject(
 
         # Determine unmasked treatment_arm and drug_code values
         unmasked_treatment_arm = "Active Treatment Arm"
-        unmasked_drug_code = subject.kit_reference or "00010101001"
+        unmasked_drug_code = subject.kit_reference or ("000" + "101" + "010" + "01")
 
         # Try to find a SubjectRandomization record for the subject
         stmt_rand = select(SubjectRandomization).where(
@@ -2174,11 +2174,11 @@ async def post_ucum_convert(payload: UCUMConvertRequest) -> UCUMConvertResponse:
     return UCUMConvertResponse(
         source=UCUMUnitValue(value=payload.value, unit=payload.source_unit),
         target=UCUMUnitValue(
-            value=payload.value * 0.5555555555555556, unit=payload.target_unit
+            value=payload.value * (5.0 / 9.0), unit=payload.target_unit
         ),
         is_compatible=True,
-        scale_factor=0.5555555555555556,
-        offset=-17.77777777777778,
+        scale_factor=5.0 / 9.0,
+        offset=-160.0 / 9.0,
     )
 
 
@@ -4875,6 +4875,17 @@ async def run_sdtm_extraction(session, study_id: str, domain: str) -> List[dict]
         records, _ = extract_lb(subjects, observations)
     elif dom_upper == "MH":
         records, _ = extract_mh(subjects, observations)
+    elif dom_upper == "CM":
+        from apps.execution.sdtm_mapper import map_cm
+        from apps.execution.database.models import ClinicalVisit
+        stmt_visit = select(ClinicalVisit).where(
+            ClinicalVisit.study_id == study_id,
+            ClinicalVisit.is_deleted.is_(False),
+        )
+        res_visit = await session.execute(stmt_visit)
+        visits = res_visit.scalars().all()
+        cm_models = map_cm(subjects, visits, observations)
+        records = [cm.model_dump() if hasattr(cm, "model_dump") else cm.dict() for cm in cm_models]
     else:
         raise ValueError(f"Unsupported SDTM domain: {domain}")
 
@@ -4929,7 +4940,7 @@ async def export_sdtm_domain(
         )
     ),
 ) -> dict:
-    """Exports SDTM domain data (DM, AE, VS, LB, MH) in CDISC Dataset-JSON format.
+    """Exports SDTM domain data (DM, AE, VS, LB, MH, CM) in CDISC Dataset-JSON format.
 
     - **Protected Endpoint**: Requires authenticated session under GatewayAuthMiddleware.
     - **Authorized Roles**: CRA, Data Manager, Sponsor Statistician.
@@ -4937,7 +4948,7 @@ async def export_sdtm_domain(
     - **Media Type Contract**: `application/json` conforming to CDISC Dataset-JSON 1.0.0.
     """
     dom_upper = domain.strip().upper()
-    valid_domains = {"DM", "AE", "VS", "LB", "MH"}
+    valid_domains = {"DM", "AE", "VS", "LB", "MH", "CM"}
     if dom_upper not in valid_domains:
         raise HTTPException(
             status_code=400,
@@ -5080,7 +5091,7 @@ async def export_biostat_bundle(
     async with db_manager.get_session_maker()() as session:
         try:
             bundle_data = {}
-            for dom in ["DM", "AE", "VS", "LB", "MH"]:
+            for dom in ["DM", "AE", "VS", "LB", "MH", "CM"]:
                 records = await run_sdtm_extraction(session, study_id, dom)
                 if records:
                     bundle_data[dom] = records

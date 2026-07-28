@@ -1,15 +1,53 @@
 import re
+import os
 import pytest
+import base64
+import time
+import hmac
+import hashlib
+import json
 from fastapi.testclient import TestClient
 
 from apps.designer.main import app as designer_app
 from apps.designer.rendering import sanitize_filename, get_safe_filename, ensure_docx_template_exists
-from tests.test_designer_differences import get_auth_headers
+from apps.designer.db import MOCK_DESIGNER_AUDIT_LOGS
+
+
+def get_custom_auth_headers(change_reason="system_operation"):
+    timestamp = str(time.time())
+    user_id = "123"
+    roles = "admin"
+    secret = "internal-gateway-secret-12345"
+    payload = {
+        "change_reason": change_reason,
+        "roles": roles,
+        "timestamp": timestamp,
+        "user_id": user_id,
+    }
+    serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    signature = hmac.new(
+        secret.encode(), serialized.encode(), hashlib.sha256
+    ).hexdigest()
+    return {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": signature,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": change_reason,
+    }
 
 
 @pytest.fixture
 def client():
     return TestClient(designer_app)
+
+
+@pytest.fixture(autouse=True)
+def clear_audit_logs():
+    MOCK_DESIGNER_AUDIT_LOGS.clear()
+    yield
+    MOCK_DESIGNER_AUDIT_LOGS.clear()
 
 
 def test_sanitize_filename():
@@ -38,7 +76,6 @@ def test_ensure_docx_template_exists():
     Ensure the version-controlled docxtpl base template exists or is generated correctly.
     """
     path = ensure_docx_template_exists()
-    import os
     assert os.path.exists(path)
     assert path.endswith(".docx")
 
@@ -50,7 +87,7 @@ def test_export_protocol_as_pdf_success(client):
     """
     response = client.get(
         "/api/v1/studies/study_1/export?format=pdf",
-        headers=get_auth_headers(),
+        headers=get_custom_auth_headers(),
     )
     if response.status_code != 200:
         print("ERROR RESPONSE DETAIL:", response.text)
@@ -75,7 +112,7 @@ def test_export_protocol_as_docx_success(client):
     """
     response = client.get(
         "/api/v1/studies/study_1/export?format=docx",
-        headers=get_auth_headers(),
+        headers=get_custom_auth_headers(),
     )
     if response.status_code != 200:
         print("ERROR RESPONSE DETAIL:", response.text)
@@ -102,7 +139,7 @@ def test_export_protocol_not_found(client):
     """
     response = client.get(
         "/api/v1/studies/invalid_study_id_999/export?format=pdf",
-        headers=get_auth_headers(),
+        headers=get_custom_auth_headers(),
     )
     assert response.status_code == 404
     assert "Study not found" in response.json()["detail"]
@@ -110,11 +147,105 @@ def test_export_protocol_not_found(client):
 
 def test_export_protocol_unsupported_format(client):
     """
-    Verify GET /api/v1/studies/{study_id}/export with unsupported format returns HTTP 400.
+    Verify GET /api/v1/studies/{study_id}/export with unsupported format returns HTTP 422.
     """
     response = client.get(
         "/api/v1/studies/study_1/export?format=txt",
-        headers=get_auth_headers(),
+        headers=get_custom_auth_headers(),
     )
-    assert response.status_code == 400
-    assert "Unsupported format" in response.json()["detail"] or "validation-failed" in response.text
+    assert response.status_code == 422
+    assert "Invalid format" in response.json()["detail"]
+
+
+def test_export_protocol_invalid_output(client):
+    """
+    Verify GET /api/v1/studies/{study_id}/export with unsupported output returns HTTP 422.
+    """
+    response = client.get(
+        "/api/v1/studies/study_1/export?output=invalid_section",
+        headers=get_custom_auth_headers(),
+    )
+    assert response.status_code == 422
+    assert "Invalid output" in response.json()["detail"]
+
+
+def test_export_protocol_outputs_rendering(client):
+    """
+    Verify that all supported output sections (narrative, synopsis, soa) render successfully in PDF and DOCX.
+    """
+    for out in ("narrative", "synopsis", "soa", "combined"):
+        for fmt in ("pdf", "docx"):
+            response = client.get(
+                f"/api/v1/studies/study_1/export?format={fmt}&output={out}",
+                headers=get_custom_auth_headers(),
+            )
+            assert response.status_code == 200
+            expected_mime = (
+                "application/pdf" if fmt == "pdf"
+                else "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
+            assert response.headers["content-type"] == expected_mime
+
+
+def test_export_protocol_generation_auditing(client):
+    """
+    Verify that successful exports are tracked in the Part 11 compliant audit trail,
+    capturing caller identity, change reason, and output selection.
+    """
+    headers = get_custom_auth_headers(change_reason="Regulatory submission export")
+
+    response = client.get(
+        "/api/v1/studies/study_1/export?format=pdf&output=synopsis",
+        headers=headers,
+    )
+    assert response.status_code == 200
+
+    # Assert that one audit log event was successfully appended
+    assert len(MOCK_DESIGNER_AUDIT_LOGS) == 1
+    event = MOCK_DESIGNER_AUDIT_LOGS[0]
+    assert event["actor"] == "123"  # matches get_custom_auth_headers user_id
+    assert event["change_reason"] == "Regulatory submission export"
+    assert event["study_id"] == "study_1"
+    assert event["format"] == "pdf"
+    assert event["output"] == "synopsis"
+    assert event["type"] == "PROTOCOL_EXPORT"
+    assert "timestamp" in event
+    assert "id" in event
+
+
+def test_export_protocol_etmf_forwarding_best_effort(client, monkeypatch):
+    """
+    Verify that when ETMF_STRICT_ARCHIVAL is false (default), forwarding failures do NOT block
+    or invalidate a successful real-time document export.
+    """
+    # Force best-effort archival configuration
+    monkeypatch.setenv("ETMF_FORWARDING_ENABLED", "true")
+    monkeypatch.setenv("ETMF_STRICT_ARCHIVAL", "false")
+    monkeypatch.setenv("ETMF_URL", "http://invalid-non-existent-etmf-url:9999")
+
+    # The export should succeed normally even with non-existent ETMF URL (warnings logged)
+    response = client.get(
+        "/api/v1/studies/study_1/export?format=pdf",
+        headers=get_custom_auth_headers(),
+    )
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/pdf"
+
+
+def test_export_protocol_etmf_forwarding_strict_failure(client, monkeypatch):
+    """
+    Verify that when ETMF_STRICT_ARCHIVAL is true, forwarding failures explicitly
+    propagate and invalidate the export transaction.
+    """
+    # Force strict archival configuration
+    monkeypatch.setenv("ETMF_FORWARDING_ENABLED", "true")
+    monkeypatch.setenv("ETMF_STRICT_ARCHIVAL", "true")
+    monkeypatch.setenv("ETMF_URL", "http://invalid-non-existent-etmf-url:9999")
+
+    # The export should raise HTTP 500 on strict archival failure
+    response = client.get(
+        "/api/v1/studies/study_1/export?format=pdf",
+        headers=get_custom_auth_headers(),
+    )
+    assert response.status_code == 500
+    assert "Strict Archival Failure" in response.json()["detail"]
