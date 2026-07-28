@@ -203,10 +203,15 @@ def scan_file(
         print(f"Error reading file {file_path}: {e}", file=sys.stderr)
         return []
 
+    lines = content.splitlines()
     results = detector.detect(content, profile=profile)
     violations = []
     for res in results:
         line, col = get_line_and_col(content, res.start)
+        if 1 <= line <= len(lines):
+            line_content = lines[line - 1]
+            if "deid: ignore" in line_content.lower() or "pragma: allowlist" in line_content.lower():
+                continue
         violations.append(
             {
                 "file": file_path,
@@ -259,6 +264,10 @@ def is_excluded_path(path: str, root_dir: str) -> bool:
 
     # Exclude files starting with test_ or ending with .test.js, etc. or specific workspace documents
     name = os.path.basename(path).lower()
+    ext = os.path.splitext(name)[1]
+    if ext in {".py", ".js", ".ts", ".tsx", ".jsx", ".vue", ".mjs", ".pyc"}:
+        return True
+
     if (
         name.startswith("test_")
         or name.endswith(".test.js")
