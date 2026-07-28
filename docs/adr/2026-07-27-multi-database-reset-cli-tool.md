@@ -8,7 +8,7 @@
 ---
 
 ## 1. Context & Problem Statement
-During local eClinical software development, developers frequently need to reset database states to a known clean baseline to run automated validation tests and perform manual exploratory testing. Previously, state tear-down required manual commands to stop, remove, and recreate Docker containers and clear persistent volumes. This process introduced high developer friction, suffered from state drift across 12+ database instances, and took a significant amount of time (often over 1-2 minutes). 
+During local eClinical software development, developers frequently need to reset database states to a known clean baseline to run automated validation tests and perform manual exploratory testing. Previously, state tear-down required manual commands to stop, remove, and recreate Docker containers and clear persistent volumes. This process introduced high developer friction, suffered from state drift across 12+ database instances, and took a significant amount of time (often over 1-2 minutes).
 
 We need a unified, zero-downtime database reset entrypoint that purges schemas and database objects concurrently across all microservices, migrations, and databases (including PostgreSQL, Neo4j, and 10 local SQLite databases) in under 15 seconds, while strictly enforcing safety guardrails to prevent accidental destruction of production or staging environments.
 
