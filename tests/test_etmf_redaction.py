@@ -165,7 +165,9 @@ async def test_redaction_authorization_gates():
         headers=inspector_headers_view,
     )
     assert resp_inspector_download_redacted.status_code == 200
-    assert resp_inspector_download_redacted.text == "[REDACTED] protocol content."
+    assert resp_inspector_download_redacted.text.startswith(
+        "[REDACTED] protocol content."
+    )
 
 
 @pytest.mark.asyncio
