@@ -210,7 +210,7 @@ def resolve_path(path_str, md_file_path, repo_root, root_dirs, root_files):
         return None
 
     # Strip query parameters or anchors (e.g., # or ?)
-    path_str = path_str.split('#')[0].split('?')[0].strip()
+    path_str = path_str.split("#")[0].split("?")[0].strip()
     if not path_str:
         return None
 

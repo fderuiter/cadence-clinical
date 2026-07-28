@@ -62,7 +62,7 @@ jobs:
       - name: Run markdown link verification
         id: run_link_check
         if: always()
-        run: node scripts/check-links.js
+        run: python3 scripts/validate_markdown.py
 
       - name: Run linting
         id: run_linting

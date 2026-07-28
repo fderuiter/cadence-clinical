@@ -488,8 +488,10 @@ See [my document][ref1] and also [broken doc][ref2].
     md_file.write_text(md_content, encoding="utf-8")
 
     vm.process_markdown_file(md_file, repo_root, root_dirs, root_files)
-    
+
     # We expect 1 error from ref2: ./nonexistent-ref.md
     assert len(vm.errors) == 1
-    assert "Referenced reference-link './nonexistent-ref.md' does not exist." in vm.errors[0]["message"]
-
+    assert (
+        "Referenced reference-link './nonexistent-ref.md' does not exist."
+        in vm.errors[0]["message"]
+    )
