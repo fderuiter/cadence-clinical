@@ -108,6 +108,20 @@ STANDARD_DATASETS = {
             ("CMENDTC", "End Date/Time of Medication", "string"),
         ],
     },
+    "MH": {
+        "label": "Medical History",
+        "variables": [
+            ("STUDYID", "Study Identifier", "string"),
+            ("DOMAIN", "Domain Abbreviation", "string"),
+            ("USUBJID", "Unique Subject Identifier", "string"),
+            ("MHSEQ", "Sequence Number", "integer"),
+            ("MHTERM", "Reported Term for the Medical History", "string"),
+            ("MHDECOD", "Standardized Medical History Term", "string"),
+            ("MHCAT", "Category of Medical History", "string"),
+            ("MHBODSYS", "System Organ Class", "string"),
+            ("MHSTDTC", "Start Date/Time of Medical History", "string"),
+        ],
+    },
     "ADSL": {
         "label": "Subject-Level Analysis Dataset",
         "variables": [

@@ -425,3 +425,247 @@ def test_validator_adam_referential_consistency_missing_source_event():
     assert "Sequence AESEQ='2' for subject 'STUDY-01-001' not found in AE" in str(
         exc.value
     )
+
+
+def test_validator_controlled_terminology_failures():
+    """Verify that invalid controlled terminology raises clear validation errors with CONTROLLED_TERMINOLOGY_VIOLATION code."""
+    # Invalid SEX
+    bundle_sex = {
+        "DM": [
+            {
+                "STUDYID": "STUDY-01",
+                "DOMAIN": "DM",
+                "USUBJID": "STUDY-01-001",
+                "SUBJID": "001",
+                "SEX": "INVALID_SEX",
+                "RACE": "WHITE",
+                "ARM": "Active",
+            }
+        ]
+    }
+    dj = serialize_to_dataset_json(data=bundle_sex, study_id="STUDY-01")
+    with pytest.raises(DatasetJSONValidationError) as exc:
+        validate_dataset_json(dj)
+    assert "CONTROLLED_TERMINOLOGY_VIOLATION" in str(exc.value)
+    assert "SEX value 'INVALID_SEX' is not a valid CDISC controlled terminology." in str(exc.value)
+
+    # Invalid RACE
+    bundle_race = {
+        "DM": [
+            {
+                "STUDYID": "STUDY-01",
+                "DOMAIN": "DM",
+                "USUBJID": "STUDY-01-001",
+                "SUBJID": "001",
+                "SEX": "M",
+                "RACE": "INVALID_RACE",
+                "ARM": "Active",
+            }
+        ]
+    }
+    dj = serialize_to_dataset_json(data=bundle_race, study_id="STUDY-01")
+    with pytest.raises(DatasetJSONValidationError) as exc:
+        validate_dataset_json(dj)
+    assert "CONTROLLED_TERMINOLOGY_VIOLATION" in str(exc.value)
+    assert "RACE value 'INVALID_RACE' is not a valid CDISC controlled terminology." in str(exc.value)
+
+
+def test_validator_null_flavor_and_stat_reasnd_consistency():
+    """Verify that --STAT / --REASND and null-flavor rules are correctly enforced."""
+    # VSSTAT is 'NOT DONE' but VSREASND is empty
+    bundle_missing_reasnd = {
+        "VS": [
+            {
+                "STUDYID": "STUDY-01",
+                "DOMAIN": "VS",
+                "USUBJID": "STUDY-01-001",
+                "VSSEQ": 1,
+                "VSTESTCD": "SYSBP",
+                "VSTEST": "Systolic Blood Pressure",
+                "VSSTAT": "NOT DONE",
+                "VSREASND": "",
+            }
+        ]
+    }
+    dj = serialize_to_dataset_json(data=bundle_missing_reasnd, study_id="STUDY-01")
+    with pytest.raises(DatasetJSONValidationError) as exc:
+        validate_dataset_json(dj)
+    assert "NULL_FLAVOR_INCONSISTENCY" in str(exc.value)
+    assert "VSSTAT is 'NOT DONE', but VSREASND is empty or missing" in str(exc.value)
+
+    # VSSTAT is 'NOT DONE' but measurement field is populated
+    bundle_stat_with_meas = {
+        "VS": [
+            {
+                "STUDYID": "STUDY-01",
+                "DOMAIN": "VS",
+                "USUBJID": "STUDY-01-001",
+                "VSSEQ": 1,
+                "VSTESTCD": "SYSBP",
+                "VSTEST": "Systolic Blood Pressure",
+                "VSSTAT": "NOT DONE",
+                "VSREASND": "Equipment Failure",
+                "VSORRES": 120.0,
+            }
+        ]
+    }
+    dj = serialize_to_dataset_json(data=bundle_stat_with_meas, study_id="STUDY-01")
+    with pytest.raises(DatasetJSONValidationError) as exc:
+        validate_dataset_json(dj)
+    assert "NULL_FLAVOR_INCONSISTENCY" in str(exc.value)
+    assert "VSSTAT is 'NOT DONE', but measurement field VSORRES is populated with '120.0'." in str(exc.value)
+
+
+def test_validator_supp_dataset_linkage_and_structure():
+    """Verify that SUPP-- structural and parent referential linkage rules are validated."""
+    # 1. RDOMAIN mismatch
+    bundle_rdomain_mismatch = {
+        "AE": [
+            {
+                "STUDYID": "STUDY-01",
+                "DOMAIN": "AE",
+                "USUBJID": "STUDY-01-001",
+                "AESEQ": 1,
+                "AETERM": "Headache",
+                "AESER": "N",
+            }
+        ],
+        "SUPPAE": [
+            {
+                "STUDYID": "STUDY-01",
+                "RDOMAIN": "DM",  # Mismatch (should be AE)
+                "USUBJID": "STUDY-01-001",
+                "IDVAR": "AESEQ",
+                "IDVARVAL": "1",
+                "QNAM": "AELOC",
+                "QLABEL": "Location",
+                "QVAL": "LEFT",
+            }
+        ]
+    }
+    dj = serialize_to_dataset_json(data=bundle_rdomain_mismatch, study_id="STUDY-01")
+    with pytest.raises(DatasetJSONValidationError) as exc:
+        validate_dataset_json(dj)
+    assert "SUPPLEMENTAL_QUALIFIER_VIOLATION" in str(exc.value)
+    assert "RDOMAIN 'DM' must match parent domain 'AE'" in str(exc.value)
+
+    # 2. Parent record not found for USUBJID
+    bundle_parent_missing = {
+        "AE": [
+            {
+                "STUDYID": "STUDY-01",
+                "DOMAIN": "AE",
+                "USUBJID": "STUDY-01-001",
+                "AESEQ": 1,
+                "AETERM": "Headache",
+                "AESER": "N",
+            }
+        ],
+        "SUPPAE": [
+            {
+                "STUDYID": "STUDY-01",
+                "RDOMAIN": "AE",
+                "USUBJID": "STUDY-01-999",  # USUBJID does not exist in AE
+                "IDVAR": "AESEQ",
+                "IDVARVAL": "1",
+                "QNAM": "AELOC",
+                "QLABEL": "Location",
+                "QVAL": "LEFT",
+            }
+        ]
+    }
+    dj = serialize_to_dataset_json(data=bundle_parent_missing, study_id="STUDY-01")
+    with pytest.raises(DatasetJSONValidationError) as exc:
+        validate_dataset_json(dj)
+    assert "SUPPLEMENTAL_QUALIFIER_VIOLATION" in str(exc.value)
+    assert "Parent record not found for USUBJID='STUDY-01-999' in AE" in str(exc.value)
+
+    # 3. IDVAR not found in parent
+    bundle_idvar_missing = {
+        "AE": [
+            {
+                "STUDYID": "STUDY-01",
+                "DOMAIN": "AE",
+                "USUBJID": "STUDY-01-001",
+                "AESEQ": 1,
+                "AETERM": "Headache",
+                "AESER": "N",
+            }
+        ],
+        "SUPPAE": [
+            {
+                "STUDYID": "STUDY-01",
+                "RDOMAIN": "AE",
+                "USUBJID": "STUDY-01-001",
+                "IDVAR": "INVALID_VAR",  # Not in AE
+                "IDVARVAL": "1",
+                "QNAM": "AELOC",
+                "QLABEL": "Location",
+                "QVAL": "LEFT",
+            }
+        ]
+    }
+    dj = serialize_to_dataset_json(data=bundle_idvar_missing, study_id="STUDY-01")
+    with pytest.raises(DatasetJSONValidationError) as exc:
+        validate_dataset_json(dj)
+    assert "SUPPLEMENTAL_QUALIFIER_VIOLATION" in str(exc.value)
+    assert "Identifying variable IDVAR='INVALID_VAR' not found in parent dataset AE" in str(exc.value)
+
+    # 4. IDVARVAL value mismatch
+    bundle_idvarval_mismatch = {
+        "AE": [
+            {
+                "STUDYID": "STUDY-01",
+                "DOMAIN": "AE",
+                "USUBJID": "STUDY-01-001",
+                "AESEQ": 1,
+                "AETERM": "Headache",
+                "AESER": "N",
+            }
+        ],
+        "SUPPAE": [
+            {
+                "STUDYID": "STUDY-01",
+                "RDOMAIN": "AE",
+                "USUBJID": "STUDY-01-001",
+                "IDVAR": "AESEQ",
+                "IDVARVAL": "999",  # AESEQ 999 does not exist for STUDY-01-001
+                "QNAM": "AELOC",
+                "QLABEL": "Location",
+                "QVAL": "LEFT",
+            }
+        ]
+    }
+    dj = serialize_to_dataset_json(data=bundle_idvarval_mismatch, study_id="STUDY-01")
+    with pytest.raises(DatasetJSONValidationError) as exc:
+        validate_dataset_json(dj)
+    assert "SUPPLEMENTAL_QUALIFIER_VIOLATION" in str(exc.value)
+    assert "Identifying variable value IDVARVAL='999' for IDVAR='AESEQ' not found in parent record" in str(exc.value)
+
+    # 5. Completely valid SUPP-- linkage passes validation
+    bundle_valid = {
+        "AE": [
+            {
+                "STUDYID": "STUDY-01",
+                "DOMAIN": "AE",
+                "USUBJID": "STUDY-01-001",
+                "AESEQ": 1,
+                "AETERM": "Headache",
+                "AESER": "N",
+            }
+        ],
+        "SUPPAE": [
+            {
+                "STUDYID": "STUDY-01",
+                "RDOMAIN": "AE",
+                "USUBJID": "STUDY-01-001",
+                "IDVAR": "AESEQ",
+                "IDVARVAL": "1",
+                "QNAM": "AELOC",
+                "QLABEL": "Location",
+                "QVAL": "LEFT",
+            }
+        ]
+    }
+    dj = serialize_to_dataset_json(data=bundle_valid, study_id="STUDY-01")
+    validate_dataset_json(dj)  # Should pass with no exception
