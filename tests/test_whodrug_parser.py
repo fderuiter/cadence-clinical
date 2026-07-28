@@ -361,13 +361,11 @@ def test_parse_in_batches_whodrug() -> None:
 def test_public_entry_point_whodrug() -> None:
     """Verify the stable public entry point parses successfully using file path and auto-detection."""
     content = "N02BA01SALICYLIC ACID AND DERIVATIVES\n"
-    with tempfile.NamedTemporaryFile(
-        mode="w+", delete=False, suffix="atc.txt", encoding="utf-8"
-    ) as temp_file:
-        temp_file.write(content)
-        temp_path = temp_file.name
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = os.path.join(temp_dir, "atc.txt")
+        with open(temp_path, "w", encoding="utf-8") as temp_file:
+            temp_file.write(content)
 
-    try:
         # Autodetect file type from path suffix
         records = list(parse_whodrug_file(temp_path, dictionary_version="2024-03"))
         assert len(records) == 1
@@ -375,8 +373,6 @@ def test_public_entry_point_whodrug() -> None:
         assert records[0]["data"]["atc_code"] == "N02BA01"
         assert records[0]["data"]["description"] == "SALICYLIC ACID AND DERIVATIVES"
         assert records[0]["data"]["dictionary_version"] == "2024-03"
-    finally:
-        os.remove(temp_path)
 
 
 def test_public_entry_point_reusing_parser() -> None:
