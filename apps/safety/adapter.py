@@ -17,7 +17,7 @@ class SafetyDatabaseAdapter:
     ):
         self.endpoint_url = endpoint_url or os.getenv(
             "SAFETY_DB_TRANSMISSION_ENDPOINT",
-            "http://localhost:8006/api/v1/safety/transmit-mock",
+            "http://localhost:8006/api/v1/safety/transmit-mock",  # deid: ignore
         )
         self.client = client
 

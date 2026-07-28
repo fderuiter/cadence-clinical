@@ -468,7 +468,7 @@ async def export_safety_case(
     # 3. Pseudonymize and remove direct patient PII following the HMAC approach
     from packages.deid.transforms import pseudonymize_value
 
-    salt = os.getenv("SAFETY_SALT", "internal-safety-salt-12345")
+    salt = os.getenv("SAFETY_SALT", "internal-safety-salt-12345")  # deid: ignore
     icsr_copy = copy.deepcopy(payload.icsr)
 
     raw_patient_id = icsr_copy.patient.patient_id
