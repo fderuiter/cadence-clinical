@@ -12,6 +12,7 @@ ROW_KEYS: dict[str, str] = {
     "ADR Validation": "adr",
     "Dependency & Static Audit": "audit",
     "Dependency, Static Audit & Secrets Scan": "audit",
+    "DEID Compliance Scan": "deid",
     "Git Merge Conflicts": "conflict",
     "Code Duplication Scan": "duplication",
 }
@@ -92,7 +93,16 @@ def merge_outcomes(
 ) -> dict[str, str]:
     """Merge newly supplied outcomes with existing ones to avoid state erasure."""
     merged: dict[str, str] = {}
-    for key in ["lint", "test", "frontend", "adr", "audit", "conflict", "duplication"]:
+    for key in [
+        "lint",
+        "test",
+        "frontend",
+        "adr",
+        "audit",
+        "conflict",
+        "deid",
+        "duplication",
+    ]:
         new_val = new_outcomes.get(key)
         existing_val = existing_outcomes.get(key)
 
@@ -112,6 +122,7 @@ def build_comment_body(outcomes: dict[str, str], has_failures: bool) -> str:
     emoji_frontend = get_status_emoji(outcomes.get("frontend"))
     emoji_adr = get_status_emoji(outcomes.get("adr"))
     emoji_audit = get_status_emoji(outcomes.get("audit"))
+    emoji_deid = get_status_emoji(outcomes.get("deid"))
     emoji_duplication = get_status_emoji(outcomes.get("duplication"))
 
     # Turn the conflict emoji into a positive "No Conflict" if it's success (Passed), or "Conflict Detected" if it's failure
@@ -222,6 +233,7 @@ def build_comment_body(outcomes: dict[str, str], has_failures: bool) -> str:
 | **Frontend Checks** (pnpm check) | {emoji_frontend} |
 | **ADR Validation** (validate_adrs.py) | {emoji_adr} |
 | **Dependency, Static Audit & Secrets Scan** (pip-audit/bandit/detect-secrets) | {emoji_audit} |
+| **DEID Compliance Scan** (deid-scan) | {emoji_deid} |
 | **Code Duplication Scan** (detect_duplication.py) | {emoji_duplication} |
 | **Git Merge Conflicts** | {emoji_conflict} |
 {vulnerability_table}
@@ -336,6 +348,7 @@ def main() -> None:
         "adr": os.environ.get("ADR_OUTCOME", ""),
         "audit": combined_audit,
         "conflict": os.environ.get("CONFLICT_OUTCOME", ""),
+        "deid": os.environ.get("DEID_OUTCOME", ""),
         "duplication": os.environ.get("DUPLICATION_OUTCOME", ""),
     }
 
