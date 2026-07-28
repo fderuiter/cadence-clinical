@@ -120,6 +120,17 @@
               </router-link>
             </li>
             <li
+              id="tab-btn-rules"
+              class="nav-item"
+              :class="{ active: $route.name === 'rules' }"
+            >
+              <router-link v-slot="{ navigate }" to="/rules" custom>
+                <button type="button" @click="navigate">
+                  <span>⚙️</span> Rules Designer
+                </button>
+              </router-link>
+            </li>
+            <li
               id="tab-btn-audit"
               class="nav-item"
               :class="{ active: $route.name === 'audit' }"
