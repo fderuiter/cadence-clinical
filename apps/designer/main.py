@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Literal, Optional, Tuple
 
 import httpx
 from eligibility import EligibilityCriterion, ExpressionNode, parse_dsl
-from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile, status
+from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile, status, BackgroundTasks
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from neo4j import AsyncGraphDatabase
@@ -25,6 +25,7 @@ from apps.designer.db import (
     terminology_cache,
     update_mock_rule,
 )
+from signature import SigningReason, SignatureManifestation
 from apps.designer.delta import (
     MOCK_SOA_DATA,
     ConcurrentLockingError,
@@ -65,6 +66,7 @@ from apps.designer.delta import (
     update_study_arm,
     update_timing_window,
     update_visit,
+    approve_protocol_version,
 )
 from apps.designer.evs_client import NCIEVSClient
 from apps.designer.library import (
@@ -1841,6 +1843,301 @@ async def post_study_version(
             },
         )
     return {"status": "success", "message": "Study version created successfully"}
+
+
+class ProtocolSignOffRequest(BaseModel):
+    signing_reason: SigningReason = Field(default=SigningReason.APPROVAL, description="Part 11 signing reason")
+
+
+async def archive_protocol_to_etmf(
+    study_id: str, version_tag: str, signature_manifestation: Dict[str, Any]
+) -> bool:
+    """
+    Archives the signed protocol as an eTMF PROTOCOL_SIGNOFF artifact.
+    """
+    import os
+    import time
+    import httpx
+    from packages.security.signing import generate_gateway_signature
+
+    etmf_url = os.getenv("ETMF_URL", "http://localhost:8003")
+    ingest_endpoint = f"{etmf_url}/api/v1/etmf/ingest"
+
+    # Construct the ingestion payload
+    payload = {
+        "study_id": study_id,
+        "artifact_type": "PROTOCOL_SIGNOFF",
+        "filename": f"protocol_signoff_{study_id}_v{version_tag}.json",
+        "content": f"Protocol Sign-off for Study {study_id} Version {version_tag} signed by {signature_manifestation.get('signer_id')}.",
+        "mime_type": "application/json",
+        "metadata_json": {
+            "requires_signature": False,
+            "version_tag": version_tag,
+            "signature_manifestation": signature_manifestation,
+        },
+    }
+
+    # Generate internal gateway credentials for authorization
+    timestamp = str(time.time())
+    gateway_secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()
+    signature = generate_gateway_signature(
+        user_id="designer_system",
+        roles="admin,system",
+        timestamp=timestamp,
+        secret=gateway_secret,
+        change_reason="Archiving signed protocol to eTMF",
+    )
+
+    headers = {
+        "X-User-Id": "designer_system",
+        "X-User-Roles": "admin,system",
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": signature,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": "Archiving signed protocol to eTMF",
+    }
+
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                ingest_endpoint, json=payload, headers=headers, timeout=5.0
+            )
+            if resp.status_code == 201:
+                return True
+    except Exception:
+        # Gracefully log and fallback if boundary is offline
+        pass
+    return False
+
+
+@app.post(
+    "/api/v1/studies/{study_id}/versions/{version_id}/approve",
+    status_code=status.HTTP_200_OK,
+)
+@app.post(
+    "/api/v1/studies/{study_id}/versions/{version_id}/sign-off",
+    status_code=status.HTTP_200_OK,
+)
+async def approve_study_version_endpoint(
+    study_id: str,
+    version_id: str,
+    payload: ProtocolSignOffRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+) -> Dict[str, Any]:
+    """
+    Electronic signature batch sign-off and approval endpoint for study versions.
+    Requires a valid gateway step-up signature token in the X-Sig-Token header.
+    Generates a transient X.509 certificate on-the-fly and approves the protocol.
+    """
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = getattr(request.state, "change_reason", "Protocol Sign-off")
+    user_roles = getattr(request.state, "roles", "")
+
+    # Ensure role is not auditor/inspector
+    roles_list = [r.strip().lower() for r in user_roles.split(",") if r.strip()]
+    if any(r in ("auditor", "inspector", "regulatory_inspector") for r in roles_list):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Role-insufficient for protocol approval",
+        )
+
+    # Validate signature token existence and signature
+    sig_token = request.headers.get("X-Sig-Token")
+    if not sig_token:
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "detail": "REAUTHENTICATION_REQUIRED",
+                "error": "REAUTHENTICATION_REQUIRED",
+                "message": "21 CFR Part 11 mandate: Re-authentication is required.",
+            }
+        )
+
+    # Verify and decode signature token JWT
+    from jose import jwt, JWTError
+    gateway_secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
+    try:
+        sig_payload = jwt.decode(sig_token, gateway_secret, algorithms=["HS256"])
+
+        # Check expiration
+        import time
+        if sig_payload.get("exp", 0) < time.time():
+            raise HTTPException(
+                status_code=401,
+                detail={
+                    "detail": "REAUTHENTICATION_REQUIRED",
+                    "error": "REAUTHENTICATION_REQUIRED",
+                    "message": "Signature token has expired.",
+                }
+            )
+
+        # Check user binding
+        if sig_payload.get("sub") != user_id:
+            raise HTTPException(
+                status_code=401,
+                detail={
+                    "detail": "REAUTHENTICATION_REQUIRED",
+                    "error": "REAUTHENTICATION_REQUIRED",
+                    "message": "Signature token user mismatch.",
+                }
+            )
+
+    except JWTError:
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "detail": "REAUTHENTICATION_REQUIRED",
+                "error": "REAUTHENTICATION_REQUIRED",
+                "message": "Invalid signature token.",
+            }
+        )
+
+    # 1. Fetch study version to verify existence
+    driver = getattr(request.app.state, "driver", None)
+
+    # We can get study projection or version tag
+    study_data = get_study_projection(study_id)
+    if not study_data:
+        raise HTTPException(status_code=404, detail="Study not found")
+
+    # For Neo4j/Mock, get version properties first
+    # In Mock, versions are in MOCK_STUDY_VERSIONS
+    version_tag = "1.0"
+    if driver is None:
+        from apps.designer.db import MOCK_STUDY_VERSIONS
+        versions = MOCK_STUDY_VERSIONS.get(study_id, [])
+        target_ver = None
+        for v in versions:
+            if v.get("id") == version_id:
+                target_ver = v
+                break
+        if not target_ver:
+            raise HTTPException(status_code=404, detail="Study Version not found")
+        version_tag = target_ver.get("version_tag", "1.0")
+        current_status = target_ver.get("status")
+    else:
+        # Neo4j query
+        async with driver.session() as session:
+            res = await session.run(
+                "MATCH (sv:StudyVersion {id: $version_id}) RETURN sv {.*} as props",
+                version_id=version_id
+            )
+            rec = await res.single()
+            if not rec:
+                raise HTTPException(status_code=404, detail="Study Version not found")
+            props = rec["props"]
+            version_tag = props.get("version_tag", "1.0")
+            current_status = props.get("status")
+
+    if current_status in ("LOCKED", "PUBLISHED", "ARCHIVED", "APPROVED", "SIGNED"):
+        raise HTTPException(status_code=403, detail="IMMUTABILITY_VIOLATION")
+
+    # 2. Build SignatureManifestation
+    import hashlib
+    from datetime import datetime, timedelta, timezone
+    from cryptography import x509
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography.x509.oid import NameOID
+    from packages.security.signing import asymmetric_sign, capture_certificate_identifiers
+
+    client_ip = request.headers.get("x-forwarded-for") or (
+        request.client.host if request.client else "127.0.0.1"
+    )
+    if "," in client_ip:
+        client_ip = client_ip.split(",")[0].strip()
+
+    user_agent = request.headers.get("user-agent") or "Designer Service"
+    now_utc = datetime.now(timezone.utc)
+
+    # Hash study projection or study version tag/ID to link the signature cryptographically to the protocol
+    doc_hash = hashlib.sha256(f"{study_id}:{version_id}:{version_tag}".encode("utf-8")).hexdigest()
+
+    manifest = SignatureManifestation(
+        signer_id=user_id,
+        timestamp=now_utc,
+        signing_reason=payload.signing_reason,
+        ip_address=client_ip,
+        user_agent=user_agent,
+        sha256_hash=doc_hash,
+    )
+
+    # 3. Generate transient X.509 RSA certificate and key on-the-fly
+    private_key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=2048,
+    )
+
+    subject = issuer = x509.Name(
+        [
+            x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
+            x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, "California"),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Cadence Clinical"),
+            x509.NameAttribute(NameOID.COMMON_NAME, f"user-{user_id}"),
+        ]
+    )
+
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(private_key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(now_utc - timedelta(days=1))
+        .not_valid_after(now_utc + timedelta(days=10))
+        .add_extension(
+            x509.SubjectKeyIdentifier.from_public_key(private_key.public_key()),
+            critical=False,
+        )
+        .sign(private_key, hashes.SHA256())
+    )
+
+    private_key_pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption(),
+    ).decode("utf-8")
+
+    cert_pem = cert.public_bytes(serialization.Encoding.PEM).decode("utf-8")
+
+    # Sign canonical bytes
+    canonical_bytes = manifest.get_canonical_bytes()
+    sig_b64 = asymmetric_sign(canonical_bytes, private_key_pem)
+    ids = capture_certificate_identifiers(cert_pem)
+
+    manifest.signature = sig_b64
+    manifest.certificate_pem = cert_pem
+    manifest.key_identifier = ids["subject_key_identifier"]
+
+    manifest_dict = manifest.model_dump(mode="json")
+
+    # 4. Mutate study version status to 'APPROVED' / save signature
+    try:
+        updated_ver = await approve_protocol_version(
+            driver=driver,
+            study_id=study_id,
+            version_id=version_id,
+            user_id=user_id,
+            change_reason=change_reason,
+            manifestation_dict=manifest_dict,
+        )
+    except ImmutabilityViolationError:
+        raise HTTPException(status_code=403, detail="IMMUTABILITY_VIOLATION")
+
+    # 5. Archive signed protocol as an eTMF PROTOCOL_SIGNOFF artifact if boundary supports it
+    background_tasks.add_task(
+        archive_protocol_to_etmf, study_id, version_tag, manifest_dict
+    )
+
+    return {
+        "status": "success",
+        "study_id": study_id,
+        "version_id": version_id,
+        "version_tag": version_tag,
+        "protocol_status": "APPROVED",
+        "signature_manifestation": manifest_dict,
+    }
 
 
 @app.get("/api/v1/studies/{study_id}/rules", status_code=status.HTTP_200_OK)
