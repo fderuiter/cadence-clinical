@@ -317,6 +317,20 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: cadence
+          POSTGRES_PASSWORD: cadence_password
+          POSTGRES_DB: cadence_edc
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     outputs:
       test_outcome: ${{ steps.run_tests.outcome }}
     steps:

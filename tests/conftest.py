@@ -145,11 +145,15 @@ def patch_init_db():
     base_postgres_url = get_postgres_base_config()
 
     def patched_exec_init_db(self, database_url: str, **kwargs):
+        if not database_url.startswith(("postgres", "postgresql")):
+            return original_exec_init_db(self, database_url, **kwargs)
         db_name = f"cadence_edc{worker_suffix}"
         new_url = f"{base_postgres_url}{db_name}"
         return original_exec_init_db(self, new_url, **kwargs)
 
     def patched_rel_init_db(self, database_url: str, **kwargs):
+        if not database_url.startswith(("postgres", "postgresql")):
+            return original_rel_init_db(self, database_url, **kwargs)
         base_name = service_map.get(self.service_name, "cadence_edc")
         db_name = f"{base_name}{worker_suffix}"
         new_url = f"{base_postgres_url}{db_name}"
