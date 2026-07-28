@@ -190,7 +190,7 @@ def extract_requirement_references(content: str) -> set[str]:
     trace_pattern = re.compile(r"\btrace\s*[-]?\s*(\d+)\b", re.IGNORECASE)
     # Match prd-ABC-123 case-insensitively
     prd_pattern = re.compile(r"\bprd-([a-z0-9]+)-([a-z0-9]+)\b", re.IGNORECASE)
-    
+
     # We can also support req-X and sys-X case-insensitively just in case
     req_pattern = re.compile(r"\breq-(\d+)\b", re.IGNORECASE)
     sys_pattern = re.compile(r"\bsys-(\d+)\b", re.IGNORECASE)
@@ -204,11 +204,13 @@ def extract_requirement_references(content: str) -> set[str]:
         refs.add(f"REQ-{m.upper()}")
     for m in sys_pattern.findall(content):
         refs.add(f"SYS-{m.upper()}")
-        
+
     return refs
 
 
-def validate_adr_compliance(filename: str, content: str, valid_requirements: set[str]) -> tuple[bool, str]:
+def validate_adr_compliance(
+    filename: str, content: str, valid_requirements: set[str]
+) -> tuple[bool, str]:
     """
     Validates ADR compliance against design requirements.
     Bypasses pre-2026 legacy decisions.
@@ -220,13 +222,18 @@ def validate_adr_compliance(filename: str, content: str, valid_requirements: set
 
     referenced = extract_requirement_references(content)
     if not referenced:
-        return False, f"Error: Post-2026 ADR file '{filename}' lacks a valid requirement reference."
+        return (
+            False,
+            f"Error: Post-2026 ADR file '{filename}' lacks a valid requirement reference.",
+        )
 
     invalid_refs = sorted(list(referenced - valid_requirements))
     if invalid_refs:
         errors = []
         for inv in invalid_refs:
-            errors.append(f"Error: Post-2026 ADR file '{filename}' references invalid or misspelled requirement identifier(s): '{inv}'.")
+            errors.append(
+                f"Error: Post-2026 ADR file '{filename}' references invalid or misspelled requirement identifier(s): '{inv}'."
+            )
         return False, "\n".join(errors)
 
     return True, ""
