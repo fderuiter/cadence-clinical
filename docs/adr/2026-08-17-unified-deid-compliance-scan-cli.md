@@ -4,6 +4,7 @@
 * Date: 2026-08-17
 * Authors: @jules
 * Deciders: @fderuiter
+* Requirement Reference: PRD-TMF-005
 
 ---
 
