@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# CI Trigger
 """
 Repository-Wide Custom Markdown Linter
 Statically validates workspace paths/links and dry-runs CLI subcommands.
