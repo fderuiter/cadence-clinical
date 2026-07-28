@@ -17,10 +17,17 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.org.database import db_manager
-from apps.org.models import Base, Organization, OrgAuditLog, Personnel, Site, DelegationOfAuthority
+from apps.org.models import (
+    Base,
+    DelegationOfAuthority,
+    Organization,
+    OrgAuditLog,
+    Personnel,
+    Site,
+)
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
-from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.delegation import verify_delegation_scope
+from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.signing import verify_canonical_signature
 
 # Retrieve gateway secret for canonical signatures verification

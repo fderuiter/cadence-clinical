@@ -336,6 +336,7 @@ WHITELISTED_ROUTES = {
     ("post", "/api/v1/mdr/concepts/{id}/rename"),
     ("post", "/api/v1/mdr/library"),
     ("post", "/api/v1/mdr/library/{id}/amend"),
+    ("post", "/api/v1/mdr/library/{id}/transition"),
     ("post", "/api/v1/studies/{study_id}/eligibility-criteria"),
     ("post", "/api/v1/studies/{study_id}/library-instances"),
     ("post", "/api/v1/studies/{study_id}/rules"),

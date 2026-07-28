@@ -96,7 +96,7 @@ from apps.designer.validator import (
     validate_study_terminology,
 )
 from apps.designer.xml_mapping import validate_mapping_csv
-from packages.security import get_normalized_roles, ROLE_ALIASES
+from packages.security import ROLE_ALIASES, get_normalized_roles
 from packages.security.middleware import GatewayAuthMiddleware
 
 

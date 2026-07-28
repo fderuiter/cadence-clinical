@@ -875,7 +875,7 @@ async def propagate_to_etmf(
     Propagates the synchronized document to the eTMF service.
     """
     import logging
-    logger = logging.getLogger("eisf_sync")
+    logging.getLogger("eisf_sync")
     from apps.eisf.adapter import map_eisf_to_etmf
     from packages.security.signing import generate_gateway_signature
 
@@ -957,7 +957,7 @@ async def sync_documents(
     session: AsyncSession = Depends(get_db_session),
 ):
     import logging
-    logger = logging.getLogger("eisf_sync")
+    logging.getLogger("eisf_sync")
     user_id = getattr(request.state, "user_id", "system")
     roles = get_normalized_roles(request)
     role_str = ",".join(roles) if isinstance(roles, list) else str(roles)

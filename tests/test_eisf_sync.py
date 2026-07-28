@@ -1,9 +1,7 @@
-import os
-import time
+from datetime import datetime, timedelta, timezone
+
 import pytest
 import pytest_asyncio
-import hashlib
-from datetime import datetime, timedelta, timezone
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 

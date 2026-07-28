@@ -1,17 +1,17 @@
+import copy
 import os
 from typing import Any, Dict, List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
+from sae_icsr import IndividualCaseSafetyReport
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import copy
 from apps.safety.database import db_manager
 from apps.safety.models import Base, SafetyAuditLog, SafetyCaseICSR, SafetyExportJob
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
-from sae_icsr import IndividualCaseSafetyReport
 
 
 # Pydantic Schemas for Request/Response Validation

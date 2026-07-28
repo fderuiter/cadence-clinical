@@ -27,7 +27,7 @@ async function request(path, options = {}) {
   try {
     const authStore = useAuthStore();
     token = authStore?.token || authStore?.accessToken;
-  } catch (err) {
+  } catch {
     // Pinia not active or initialized, ignore or log
   }
 
@@ -79,7 +79,7 @@ async function request(path, options = {}) {
       let data = null;
       try {
         data = await response.json();
-      } catch (_) {
+      } catch {
         // Not JSON
       }
       throw new ApiError(

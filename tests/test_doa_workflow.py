@@ -10,12 +10,14 @@ from datetime import datetime, timezone
 import pytest
 from fastapi.testclient import TestClient
 from jose import jwt
-from sqlalchemy import select
 
 from apps.org.database import db_manager
-from apps.org.main import app, GATEWAY_SECRET
-from apps.org.models import Base, Personnel, Site, OrgAuditLog, DelegationOfAuthority
-from packages.security.signing import generate_gateway_signature, generate_canonical_signature
+from apps.org.main import GATEWAY_SECRET, app
+from apps.org.models import Base
+from packages.security.signing import (
+    generate_canonical_signature,
+    generate_gateway_signature,
+)
 
 
 @pytest.fixture(name="db_session_fixture")

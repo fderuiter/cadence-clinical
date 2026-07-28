@@ -358,8 +358,9 @@ async def test_successful_export_and_transmission():
     assert "<birth_date>" not in transmitted_xml
 
     # Check for pseudonymized patient_id
-    from packages.deid.transforms import pseudonymize_value
     import os
+
+    from packages.deid.transforms import pseudonymize_value
     salt = os.getenv("SAFETY_SALT", "internal-safety-salt-12345")
     expected_pseudo_id = pseudonymize_value(raw_patient_id, salt)
     assert expected_pseudo_id in transmitted_xml
