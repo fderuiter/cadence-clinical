@@ -876,14 +876,28 @@ export const GXP_BADGES = {
 };
 
 export function renderGxpBadge(type) {
-  const normalized = String(type).toUpperCase().replace(/[^A-Z0-9]/g, "_");
-  if (normalized === "CFR_11" || normalized.includes("CFR") || type === "21 CFR Part 11") {
+  const normalized = String(type)
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "_");
+  if (
+    normalized === "CFR_11" ||
+    normalized.includes("CFR") ||
+    type === "21 CFR Part 11"
+  ) {
     return GXP_BADGES.CFR_11;
   }
-  if (normalized === "GAMP_5" || normalized.includes("GAMP") || type === "GAMP 5") {
+  if (
+    normalized === "GAMP_5" ||
+    normalized.includes("GAMP") ||
+    type === "GAMP 5"
+  ) {
     return GXP_BADGES.GAMP_5;
   }
-  if (normalized === "IEC_62304" || normalized.includes("IEC") || type === "IEC 62304") {
+  if (
+    normalized === "IEC_62304" ||
+    normalized.includes("IEC") ||
+    type === "IEC 62304"
+  ) {
     return GXP_BADGES.IEC_62304;
   }
   return `<span class="badge">${type}</span>`;

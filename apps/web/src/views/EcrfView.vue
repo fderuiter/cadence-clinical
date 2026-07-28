@@ -1044,7 +1044,11 @@ const conceptRequestIds = reactive({});
 
 const debouncedConceptValidations = {};
 
-async function performConceptCodeInputValidation(field, newValue, currentReqId) {
+async function performConceptCodeInputValidation(
+  field,
+  newValue,
+  currentReqId
+) {
   try {
     const response = await terminologyClient.validateSingleCode(newValue, {
       userId: authStore.identity?.username || "fderuiter",

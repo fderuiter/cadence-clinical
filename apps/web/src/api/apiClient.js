@@ -31,7 +31,13 @@ async function request(path, options = {}) {
     // Pinia not active or initialized, ignore or log
   }
 
-  const { method = "GET", headers = {}, body, changeReason, ...customOptions } = options;
+  const {
+    method = "GET",
+    headers = {},
+    body,
+    changeReason,
+    ...customOptions
+  } = options;
 
   const requestHeaders = {
     "Content-Type": "application/json",
@@ -45,7 +51,8 @@ async function request(path, options = {}) {
   // Caller can supply a change reason for mutations, passed as X-Change-Reason
   const upperMethod = method.toUpperCase();
   const isMutation = ["POST", "PUT", "DELETE", "PATCH"].includes(upperMethod);
-  const resolvedChangeReason = changeReason || headers["X-Change-Reason"] || headers["x-change-reason"];
+  const resolvedChangeReason =
+    changeReason || headers["X-Change-Reason"] || headers["x-change-reason"];
 
   if (isMutation && resolvedChangeReason) {
     requestHeaders["X-Change-Reason"] = resolvedChangeReason;
@@ -76,7 +83,9 @@ async function request(path, options = {}) {
         // Not JSON
       }
       throw new ApiError(
-        data?.detail || data?.message || `Request failed with status ${response.status}`,
+        data?.detail ||
+          data?.message ||
+          `Request failed with status ${response.status}`,
         response.status,
         response.statusText,
         data

@@ -434,7 +434,11 @@ describe("GxP and Status Badges", () => {
   });
 
   it("renders status badges correctly", () => {
-    expect(renderStatusBadge("ACHIEVED", true)).toBe('<span class="badge gxp">ACHIEVED</span>');
-    expect(renderStatusBadge("PENDING", false)).toBe('<span class="badge ">PENDING</span>');
+    expect(renderStatusBadge("ACHIEVED", true)).toBe(
+      '<span class="badge gxp">ACHIEVED</span>'
+    );
+    expect(renderStatusBadge("PENDING", false)).toBe(
+      '<span class="badge ">PENDING</span>'
+    );
   });
 });
