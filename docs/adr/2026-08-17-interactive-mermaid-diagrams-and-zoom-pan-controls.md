@@ -37,7 +37,7 @@ The documentation portal for Cadence Clinical relies heavily on visual aids, inc
 
 ## 4. Decision Outcome
 * **Chosen Option:** Option 2
-* **Justification:** Choosing Option 2 provides a fully responsive, interactive, and maintainable diagram solution that aligns perfectly with our developer workflows and documentation quality standards. All diagrams are authored directly in Markdown, compiled at build-time, and enhanced with interactive zoom/pan controls to optimize the reading experience on any screen.
+* **Justification:** Choosing Option 2 provides a fully responsive, interactive, and maintainable diagram solution that aligns perfectly with our developer workflows, documentation quality standards, and GxP requirements for standard system tracking and audit capabilities (PRD-SYS-001). All diagrams are authored directly in Markdown, compiled at build-time, and enhanced with interactive zoom/pan controls to optimize the reading experience on any screen.
 
 ## 5. Consequences & Trade-offs
 * **Positive Impact:** Documentation maintains a clean, modern aesthetic with highly readable diagrams that auto-scale. Developers can edit architecture specifications using text blocks directly in Git.

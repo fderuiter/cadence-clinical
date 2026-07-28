@@ -22,7 +22,7 @@ To achieve 21 CFR Part 11 and GxP compliance, clinical designers must be able to
 ### Positive Impact
 * Completely eliminates initialization blocks and DOM-destruction errors.
 * Enforces defense-in-depth role access to study rules configurations.
-* Fully compliant 21 CFR Part 11 and GxP audit trails with cryptographic verification.
+* Fully compliant 21 CFR Part 11 and GxP audit trails (PRD-SYS-001) with cryptographic verification (PRD-SYS-003).
 
 ### Negative Impact / Technical Debt
 * Increases compiled SPA bundle size and layout complexity of the web application.
