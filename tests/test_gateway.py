@@ -1013,3 +1013,121 @@ def test_signature_gated_mutation_mismatched_action(
         )
         assert response.status_code == 401
         assert response.json()["detail"] == "REAUTHENTICATION_REQUIRED"
+
+
+def test_gateway_startup_production_with_test_secret() -> None:
+    """
+    Test that the gateway terminates with a non-zero exit code if the environment is set to production
+    and JWT_TEST_SECRET is present.
+    """
+    import subprocess
+    import sys
+
+    env = {
+        "APP_ENV": "production",
+        "JWT_TEST_SECRET": "some_test_secret",  # pragma: allowlist secret
+    }
+    result = subprocess.run(
+        [sys.executable, "-c", "import apps.gateway.main"],
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode != 0
+    assert "SECURITY ALERT" in result.stderr
+    assert "JWT_TEST_SECRET" in result.stderr
+
+
+def test_gateway_startup_production_with_unverified_jwt() -> None:
+    """
+    Test that the gateway terminates with a non-zero exit code if the environment is set to production
+    and ALLOW_UNVERIFIED_JWT_FOR_TEST is enabled.
+    """
+    import subprocess
+    import sys
+
+    env = {
+        "APP_ENV": "production",
+        "ALLOW_UNVERIFIED_JWT_FOR_TEST": "true",
+    }
+    result = subprocess.run(
+        [sys.executable, "-c", "import apps.gateway.main"],
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode != 0
+    assert "SECURITY ALERT" in result.stderr
+    assert "ALLOW_UNVERIFIED_JWT_FOR_TEST" in result.stderr
+
+
+def test_gateway_startup_production_with_skip_jwks() -> None:
+    """
+    Test that the gateway terminates with a non-zero exit code if the environment is set to production
+    and SKIP_JWKS_FETCH is enabled.
+    """
+    import subprocess
+    import sys
+
+    env = {
+        "APP_ENV": "production",
+        "SKIP_JWKS_FETCH": "true",
+    }
+    result = subprocess.run(
+        [sys.executable, "-c", "import apps.gateway.main"],
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode != 0
+    assert "SECURITY ALERT" in result.stderr
+    assert "SKIP_JWKS_FETCH" in result.stderr
+
+
+def test_gateway_startup_development_with_bypass_configs() -> None:
+    """
+    Test that the gateway initializes without errors when test bypass configurations are set and the
+    environment is explicitly configured as development.
+    """
+    import subprocess
+    import sys
+
+    env = {
+        "APP_ENV": "development",
+        "JWT_TEST_SECRET": "some_secret",  # pragma: allowlist secret
+        "ALLOW_UNVERIFIED_JWT_FOR_TEST": "true",
+        "SKIP_JWKS_FETCH": "true",
+    }
+    result = subprocess.run(
+        [sys.executable, "-c", "import apps.gateway.main"],
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
+
+
+def test_gateway_startup_production_no_bypass_configs() -> None:
+    """
+    Test that the gateway successfully completes initialization in production when no test bypass
+    configurations are detected.
+    """
+    import subprocess
+    import sys
+
+    env = {
+        "APP_ENV": "production",
+    }
+    # Ensure bypass env vars are not in the environment
+    env_keys = ["JWT_TEST_SECRET", "ALLOW_UNVERIFIED_JWT_FOR_TEST", "SKIP_JWKS_FETCH"]
+    for key in env_keys:
+        if key in env:
+            del env[key]
+
+    result = subprocess.run(
+        [sys.executable, "-c", "import apps.gateway.main"],
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
