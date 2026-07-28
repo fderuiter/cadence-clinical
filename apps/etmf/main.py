@@ -1009,7 +1009,9 @@ async def download_document(
     else:
         final_content = doc.content
         action_name = "DOWNLOAD"
-        details_msg = f"Downloaded content for eTMF document '{doc.filename}' (ID: {doc.id})."
+        details_msg = (
+            f"Downloaded content for eTMF document '{doc.filename}' (ID: {doc.id})."
+        )
 
     # Log action to immutable audit trail
     await write_audit_log(

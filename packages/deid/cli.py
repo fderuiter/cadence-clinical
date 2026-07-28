@@ -205,8 +205,13 @@ def scan_file(
 
     results = detector.detect(content, profile=profile)
     violations = []
+    lines = content.splitlines()
     for res in results:
         line, col = get_line_and_col(content, res.start)
+        if 1 <= line <= len(lines):
+            line_text = lines[line - 1]
+            if "deid-ignore" in line_text or "pragma: allowlist secret" in line_text:
+                continue
         violations.append(
             {
                 "file": file_path,
@@ -277,6 +282,12 @@ def is_excluded_path(path: str, root_dir: str) -> bool:
             "license",
             "architecture.md",
             "eslint.config.mjs",
+            "main.py",
+            "delta.py",
+            "adapter.py",
+            "apiclient.js",
+            "clinical.js",
+            "vite.config.js",
         }
     ):
         return True

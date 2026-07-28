@@ -17,7 +17,11 @@ from packages.security.middleware import GatewayAuthMiddleware
 # Pydantic Schemas for Request/Response Validation
 class ICSRDataExportRequest(BaseModel):
     job_name: str = Field(..., description="The descriptive name of the export job")
-    icsr: IndividualCaseSafetyReport = Field(..., description="The E2B ICSR report data")
+    icsr: IndividualCaseSafetyReport = Field(
+        ..., description="The E2B ICSR report data"
+    )
+
+
 class SafetyCaseICSRCreate(BaseModel):
     worldwide_unique_case_id: str = Field(
         ..., description="Worldwide unique identifier for this safety case"
@@ -497,7 +501,11 @@ async def export_safety_case(
     await session.flush()
 
     # 5. Write audit event to SafetyAuditLog, ensuring raw patient PII is absent
-    audit_action = "SAFETY_EXPORT_JOB_COMPLETE" if job.status == "COMPLETED" else "SAFETY_EXPORT_JOB_FAIL"
+    audit_action = (
+        "SAFETY_EXPORT_JOB_COMPLETE"
+        if job.status == "COMPLETED"
+        else "SAFETY_EXPORT_JOB_FAIL"
+    )
     audit_details = (
         f"Export job '{payload.job_name}' completed. Patient pseudonymized: {pseudonymized_patient_id}."
         if job.status == "COMPLETED"

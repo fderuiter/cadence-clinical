@@ -77,12 +77,12 @@ def generate_sig_token(user_id: str, action: str) -> str:
     """
     Generates a mock Part 11 step-up re-authentication token (X-Sig-Token).
     """
-    secret = "internal-gateway-secret-12345"
+    secret = "internal-gateway-secret-12345"  # pragma: allowlist secret
     payload = {
         "sub": user_id,
         "action": action,
         "exp": time.time() + 3600,
-        "jti": str(uuid.uuid4())
+        "jti": str(uuid.uuid4()),
     }
     return jwt.encode(payload, secret, algorithm="HS256")
 
@@ -103,7 +103,9 @@ async def test_complete_doa_workflow_lifecycle(db_session_fixture) -> None:
             "reason_for_change": "Initial site setup",
         }
         site_headers = get_scope_auth_headers("admin", "admin")
-        site_resp = client.post("/api/v1/org/sites", json=site_payload, headers=site_headers)
+        site_resp = client.post(
+            "/api/v1/org/sites", json=site_payload, headers=site_headers
+        )
         assert site_resp.status_code == 201
 
         # Create PI Personnel
@@ -117,7 +119,9 @@ async def test_complete_doa_workflow_lifecycle(db_session_fixture) -> None:
             "study_id": "study_alpha",
             "reason_for_change": "Initial PI setup",
         }
-        pi_resp = client.post("/api/v1/org/personnel", json=pi_payload, headers=site_headers)
+        pi_resp = client.post(
+            "/api/v1/org/personnel", json=pi_payload, headers=site_headers
+        )
         assert pi_resp.status_code == 201
         pi_id = pi_resp.json()["id"]
 
@@ -132,7 +136,9 @@ async def test_complete_doa_workflow_lifecycle(db_session_fixture) -> None:
             "study_id": "study_alpha",
             "reason_for_change": "Initial CRC setup",
         }
-        crc_resp = client.post("/api/v1/org/personnel", json=crc_payload, headers=site_headers)
+        crc_resp = client.post(
+            "/api/v1/org/personnel", json=crc_payload, headers=site_headers
+        )
         assert crc_resp.status_code == 201
         crc_id = crc_resp.json()["id"]
 
@@ -153,7 +159,9 @@ async def test_complete_doa_workflow_lifecycle(db_session_fixture) -> None:
             "reason_for_change": "Onboarding coordinator",
         }
 
-        grant_resp = client.post("/api/v1/org/delegations", json=grant_payload, headers=grant_headers)
+        grant_resp = client.post(
+            "/api/v1/org/delegations", json=grant_payload, headers=grant_headers
+        )
         assert grant_resp.status_code == 201
         doa_data = grant_resp.json()
         assert doa_data["is_active"] is True
@@ -167,7 +175,9 @@ async def test_complete_doa_workflow_lifecycle(db_session_fixture) -> None:
             site_id="site_100",
             change_reason="Hack attempt",
         )
-        bad_grant_resp = client.post("/api/v1/org/delegations", json=grant_payload, headers=bad_grant_headers)
+        bad_grant_resp = client.post(
+            "/api/v1/org/delegations", json=grant_payload, headers=bad_grant_headers
+        )
         assert bad_grant_resp.status_code == 403
 
         # C. Invalid Scope Attempt (Site ID mismatch, rejected with 403)
@@ -177,7 +187,9 @@ async def test_complete_doa_workflow_lifecycle(db_session_fixture) -> None:
             site_id="site_200",  # Mismatching site
             change_reason="Grant with wrong scope",
         )
-        wrong_scope_resp = client.post("/api/v1/org/delegations", json=grant_payload, headers=wrong_scope_headers)
+        wrong_scope_resp = client.post(
+            "/api/v1/org/delegations", json=grant_payload, headers=wrong_scope_headers
+        )
         assert wrong_scope_resp.status_code == 403
 
         # D. Sign Delegation (Succeeds with correct re-auth & signature)
@@ -201,7 +213,9 @@ async def test_complete_doa_workflow_lifecycle(db_session_fixture) -> None:
             change_reason="Signing delegation of authority",
         )
         # Generate re-auth step-up token for /sign-off endpoint
-        sig_token = generate_sig_token("kc-pi-001", f"/api/v1/org/delegations/{doa_id}/sign-off")
+        sig_token = generate_sig_token(
+            "kc-pi-001", f"/api/v1/org/delegations/{doa_id}/sign-off"
+        )
         sign_headers["X-Sig-Token"] = sig_token
 
         sign_payload = {
@@ -210,7 +224,11 @@ async def test_complete_doa_workflow_lifecycle(db_session_fixture) -> None:
             "reason_for_change": "I verify and execute this delegation",
         }
 
-        sign_resp = client.post(f"/api/v1/org/delegations/{doa_id}/sign-off", json=sign_payload, headers=sign_headers)
+        sign_resp = client.post(
+            f"/api/v1/org/delegations/{doa_id}/sign-off",
+            json=sign_payload,
+            headers=sign_headers,
+        )
         assert sign_resp.status_code == 200
         signed_doa = sign_resp.json()
         assert signed_doa["version_index"] == 2
@@ -224,15 +242,23 @@ async def test_complete_doa_workflow_lifecycle(db_session_fixture) -> None:
             roles="Principal Investigator",
             site_id="site_100",
         )
-        no_auth_resp = client.post(f"/api/v1/org/delegations/{doa_id}/sign-off", json=sign_payload, headers=no_auth_headers)
+        no_auth_resp = client.post(
+            f"/api/v1/org/delegations/{doa_id}/sign-off",
+            json=sign_payload,
+            headers=no_auth_headers,
+        )
         assert no_auth_resp.status_code == 401
 
         # F. Sign Delegation with Tampered Payload (Rejected with 400)
         tampered_payload = canonical_payload.copy()
-        tampered_payload["duties"] = ["Informed Consent", "CRF Data Entry", "Supervising Labs"] # Added extra duty!
+        tampered_payload["duties"] = [
+            "Informed Consent",
+            "CRF Data Entry",
+            "Supervising Labs",
+        ]  # Added extra duty!
         tampered_sign_payload = {
             "payload": tampered_payload,
-            "signature": valid_sig, # Reusing original signature (mismatch)
+            "signature": valid_sig,  # Reusing original signature (mismatch)
             "reason_for_change": "I execute this delegation with added duties",
         }
         tampered_headers = get_scope_auth_headers(
@@ -240,9 +266,15 @@ async def test_complete_doa_workflow_lifecycle(db_session_fixture) -> None:
             roles="Principal Investigator",
             site_id="site_100",
         )
-        tampered_headers["X-Sig-Token"] = generate_sig_token("kc-pi-001", f"/api/v1/org/delegations/{doa_id}/sign-off")
+        tampered_headers["X-Sig-Token"] = generate_sig_token(
+            "kc-pi-001", f"/api/v1/org/delegations/{doa_id}/sign-off"
+        )
 
-        tampered_resp = client.post(f"/api/v1/org/delegations/{doa_id}/sign-off", json=tampered_sign_payload, headers=tampered_headers)
+        tampered_resp = client.post(
+            f"/api/v1/org/delegations/{doa_id}/sign-off",
+            json=tampered_sign_payload,
+            headers=tampered_headers,
+        )
         assert tampered_resp.status_code == 400
 
         # G. Revoke Delegation (Succeeds)
@@ -256,17 +288,28 @@ async def test_complete_doa_workflow_lifecycle(db_session_fixture) -> None:
             "reason_for_change": "Gwen has transferred to another department",
         }
 
-        revoke_resp = client.post(f"/api/v1/org/delegations/{doa_id}/revoke", json=revoke_payload, headers=revoke_headers)
+        revoke_resp = client.post(
+            f"/api/v1/org/delegations/{doa_id}/revoke",
+            json=revoke_payload,
+            headers=revoke_headers,
+        )
         assert revoke_resp.status_code == 200
         revoked_doa = revoke_resp.json()
         assert revoked_doa["is_active"] is False
         assert revoked_doa["version_index"] == 3
-        assert revoked_doa["revocation_reason"] == "Gwen has transferred to another department"
+        assert (
+            revoked_doa["revocation_reason"]
+            == "Gwen has transferred to another department"
+        )
         assert revoked_doa["revoked_by"] == "kc-pi-001"
 
         # H. List and Filter (Returns only the latest unique version)
-        list_headers = get_scope_auth_headers("kc-pi-001", "Principal Investigator", "site_100")
-        list_resp = client.get("/api/v1/org/delegations?site_id=site_100", headers=list_headers)
+        list_headers = get_scope_auth_headers(
+            "kc-pi-001", "Principal Investigator", "site_100"
+        )
+        list_resp = client.get(
+            "/api/v1/org/delegations?site_id=site_100", headers=list_headers
+        )
         assert list_resp.status_code == 200
         list_data = list_resp.json()
         assert len(list_data) == 1
@@ -275,19 +318,27 @@ async def test_complete_doa_workflow_lifecycle(db_session_fixture) -> None:
         assert list_data[0]["version_index"] == 3
 
         # I. Retrieve Specific Versions (History)
-        v1_headers = get_scope_auth_headers("kc-pi-001", "Principal Investigator", "site_100")
-        v1_resp = client.get(f"/api/v1/org/delegations/{doa_id}?version_index=1", headers=v1_headers)
+        v1_headers = get_scope_auth_headers(
+            "kc-pi-001", "Principal Investigator", "site_100"
+        )
+        v1_resp = client.get(
+            f"/api/v1/org/delegations/{doa_id}?version_index=1", headers=v1_headers
+        )
         assert v1_resp.status_code == 200
         assert v1_resp.json()["version_index"] == 1
         assert v1_resp.json()["signature"] is None
 
-        v2_resp = client.get(f"/api/v1/org/delegations/{doa_id}?version_index=2", headers=v1_headers)
+        v2_resp = client.get(
+            f"/api/v1/org/delegations/{doa_id}?version_index=2", headers=v1_headers
+        )
         assert v2_resp.status_code == 200
         assert v2_resp.json()["version_index"] == 2
         assert v2_resp.json()["signature"] == valid_sig
 
         # J. Full Version History
-        history_resp = client.get(f"/api/v1/org/delegations/{doa_id}/history", headers=v1_headers)
+        history_resp = client.get(
+            f"/api/v1/org/delegations/{doa_id}/history", headers=v1_headers
+        )
         assert history_resp.status_code == 200
         history_data = history_resp.json()
         assert len(history_data) == 3
@@ -296,7 +347,9 @@ async def test_complete_doa_workflow_lifecycle(db_session_fixture) -> None:
         assert history_data[2]["version_index"] == 1
 
         # K. GxP Audit Trail Verifications
-        audit_headers = get_scope_auth_headers("kc-pi-001", "Principal Investigator", "site_100")
+        audit_headers = get_scope_auth_headers(
+            "kc-pi-001", "Principal Investigator", "site_100"
+        )
         audit_resp = client.get("/api/v1/org/audit-logs", headers=audit_headers)
         assert audit_resp.status_code == 200
         audit_logs = audit_resp.json()
