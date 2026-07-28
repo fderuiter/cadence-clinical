@@ -195,6 +195,9 @@ def delete_mock_rule(study_id: str, rule_id: str) -> bool:
     return False
 
 
+MOCK_DESIGNER_AUDIT_LOGS: List[Dict[str, Any]] = []
+
+
 def run_async(coro):
     """Runs an async coroutine synchronously, handling cases where an event loop is already running."""
     import asyncio

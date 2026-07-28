@@ -57,8 +57,12 @@ def ensure_docx_template_exists() -> str:
     docxtpl placeholders if it does not already exist.
     """
     template_path = os.path.join(TEMPLATES_DIR, "protocol_template.docx")
+    # Always regenerate/re-save template to ensure the latest conditional tags are active
     if os.path.exists(template_path):
-        return template_path
+        try:
+            os.remove(template_path)
+        except Exception:
+            pass
 
     doc = Document()
 
@@ -77,6 +81,7 @@ def ensure_docx_template_exists() -> str:
     doc.add_page_break()
 
     # Synopsis Section
+    doc.add_paragraph("{% if output == 'combined' or output == 'synopsis' %}")
     doc.add_heading("1. PROTOCOL SYNOPSIS", level=1)
     doc.add_paragraph("Protocol Title: {{ synopsis.protocol_title }}")
     doc.add_paragraph("Sponsor: {{ synopsis.sponsor_name }}")
@@ -99,10 +104,12 @@ def ensure_docx_template_exists() -> str:
     p_int = doc.add_paragraph(style="List Bullet")
     p_int.add_run("{{ inter }}")
     doc.add_paragraph("{% endfor %}")
+    doc.add_paragraph("{% endif %}")
 
     doc.add_page_break()
 
     # Narrative Sections
+    doc.add_paragraph("{% if output == 'combined' or output == 'narrative' %}")
     doc.add_heading("2. STUDY NARRATIVE & RATIONALE", level=1)
     doc.add_paragraph("{% for sec in narrative_sections %}")
     doc.add_heading("{{ sec.section_number }} {{ sec.title }}", level=2)
@@ -127,12 +134,15 @@ def ensure_docx_template_exists() -> str:
 
     doc.add_paragraph("{% endfor %}")  # end sub loop
     doc.add_paragraph("{% endfor %}")  # end sec loop
+    doc.add_paragraph("{% endif %}")
 
     doc.add_page_break()
 
     # Schedule of Activities (SoA)
+    doc.add_paragraph("{% if output == 'combined' or output == 'soa' %}")
     doc.add_heading("3. SCHEDULE OF ACTIVITIES (SoA)", level=1)
     doc.add_paragraph("{{ soa_subdoc }}")
+    doc.add_paragraph("{% endif %}")
 
     doc.save(template_path)
     return template_path
@@ -208,7 +218,7 @@ def build_soa_subdoc(subdoc: Any, soa_matrix: SoAMatrixView) -> None:
         row_idx += 1
 
 
-def render_protocol_to_pdf(doc: RenderedProtocolDocument) -> RendererResult:
+def render_protocol_to_pdf(doc: RenderedProtocolDocument, output: str = "combined") -> RendererResult:
     """
     Renders the RenderedProtocolDocument to a PDF byte stream using WeasyPrint.
     """
@@ -219,6 +229,7 @@ def render_protocol_to_pdf(doc: RenderedProtocolDocument) -> RendererResult:
         synopsis=doc.synopsis,
         narrative_sections=doc.narrative_sections,
         soa_matrix=doc.soa_matrix,
+        output=output,
     )
     # Generate PDF bytes via WeasyPrint
     pdf_bytes = HTML(string=html_content).write_pdf()
@@ -230,7 +241,7 @@ def render_protocol_to_pdf(doc: RenderedProtocolDocument) -> RendererResult:
     )
 
 
-def render_protocol_to_docx(doc: RenderedProtocolDocument) -> RendererResult:
+def render_protocol_to_docx(doc: RenderedProtocolDocument, output: str = "combined") -> RendererResult:
     """
     Renders the RenderedProtocolDocument to a DOCX byte stream using docxtpl.
     """
@@ -239,7 +250,10 @@ def render_protocol_to_docx(doc: RenderedProtocolDocument) -> RendererResult:
 
     # Build SubDoc for SoA
     subdoc = tpl.new_subdoc()
-    build_soa_subdoc(subdoc, doc.soa_matrix)
+    if output == "combined" or output == "soa":
+        build_soa_subdoc(subdoc, doc.soa_matrix)
+    else:
+        subdoc.add_paragraph("Schedule of Activities (SoA) omitted from this view.")
 
     # Convert model to dictionary structure
     context = {
@@ -264,6 +278,7 @@ def render_protocol_to_docx(doc: RenderedProtocolDocument) -> RendererResult:
         },
         "narrative_sections": doc.narrative_sections,
         "soa_subdoc": subdoc,
+        "output": output,
     }
 
     tpl.render(context)

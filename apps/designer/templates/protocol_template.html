@@ -195,6 +195,7 @@
     </div>
 
     <!-- Section 1: Synopsis -->
+    {% if output == 'combined' or output == 'synopsis' %}
     <h1>1. PROTOCOL SYNOPSIS</h1>
     <table class="synopsis-table">
         <tr>
@@ -258,8 +259,10 @@
             </td>
         </tr>
     </table>
+    {% endif %}
 
     <!-- Section 2: Narrative Sections -->
+    {% if output == 'combined' or output == 'narrative' %}
     <h1>2. STUDY NARRATIVE & RATIONALE</h1>
 
     {% macro render_section(sec, level=1) %}
@@ -287,8 +290,10 @@
     {% else %}
         <p>No narrative content available for this protocol version.</p>
     {% endif %}
+    {% endif %}
 
     <!-- Section 3: Schedule of Activities (SoA) -->
+    {% if output == 'combined' or output == 'soa' %}
     <div class="soa-section">
         <h1>3. SCHEDULE OF ACTIVITIES (SoA)</h1>
 
@@ -334,6 +339,7 @@
         <p>No Schedule of Activities (SoA) defined for this study.</p>
         {% endif %}
     </div>
+    {% endif %}
 
 </body>
 </html>

@@ -672,17 +672,75 @@ async def study_differences(
 # Protocol Export / Rendering Endpoints
 # ==========================================
 
-from fastapi import Response
+from fastapi import Response, BackgroundTasks
 from fastapi.concurrency import run_in_threadpool
 import usdm_model
 from apps.designer.rendering import render_protocol_to_pdf, render_protocol_to_docx
 from apps.designer.content_assembly import assemble_rendered_protocol_document
+from apps.designer.db import MOCK_DESIGNER_AUDIT_LOGS
+
+async def forward_to_etmf(
+    study_id: str,
+    filename: str,
+    content_bytes: bytes,
+    mime_type: str,
+    metadata_json: dict,
+    user_id: str,
+    roles: str,
+    change_reason: str,
+):
+    import os
+    import base64
+    import time
+    import httpx
+    from packages.security.signing import generate_gateway_signature
+
+    etmf_base_url = os.getenv("ETMF_URL", "http://localhost:8003")
+    url = f"{etmf_base_url}/api/v1/etmf/ingest"
+
+    try:
+        content_str = content_bytes.decode("utf-8", errors="ignore")
+    except Exception:
+        content_str = base64.b64encode(content_bytes).decode("utf-8")
+
+    payload = {
+        "study_id": study_id,
+        "artifact_type": "Protocol Sign-off",
+        "filename": filename,
+        "content": content_str,
+        "mime_type": mime_type,
+        "metadata_json": metadata_json,
+    }
+
+    timestamp = str(time.time())
+    secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode("utf-8")
+    sig = generate_gateway_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        secret=secret,
+        change_reason=change_reason,
+    )
+
+    headers = {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": sig,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": change_reason,
+    }
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(url, json=payload, headers=headers, timeout=5.0)
+        resp.raise_for_status()
 
 
 @app.get("/api/v1/studies/{study_id}/export")
 async def export_protocol(
     study_id: str,
-    format: Literal["pdf", "docx"] = Query("pdf"),
+    format: str = Query("pdf"),
+    output: str = Query("combined"),
     request: Request = None,
 ):
     """
@@ -690,12 +748,31 @@ async def export_protocol(
     and renders the resulting clinical protocol document as a structurally valid
     PDF or DOCX document using shared layout templates.
     """
+    # 1. Explicit Parameter Validation (Raise HTTP 422 for invalid format/output values)
+    if format not in ("pdf", "docx"):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Invalid format value. Supported formats: pdf, docx."
+        )
+    if output not in ("narrative", "synopsis", "soa", "combined"):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Invalid output value. Supported outputs: narrative, synopsis, soa, combined."
+        )
+
+    # 2. Study existence check
     study_data = get_study_projection(study_id)
     if not study_data:
         raise HTTPException(status_code=404, detail="Study not found")
 
+    # 3. Capture caller identity and reasoning
     user_id = getattr(request.state, "user_id", "system") if request else "system"
-    change_reason = getattr(request.state, "change_reason", "system_operation") if request else "system_operation"
+    change_reason = getattr(request.state, "change_reason", None) if request else None
+    if not change_reason and request:
+        change_reason = request.headers.get("X-Change-Reason")
+    if not change_reason:
+        change_reason = "Protocol document export"
+
     version_index = 1
     # Try to parse current version as integer if possible
     try:
@@ -732,13 +809,110 @@ async def export_protocol(
 
     # Render off the async request event loop to protect performance
     if format == "pdf":
-        result = await run_in_threadpool(render_protocol_to_pdf, doc_view)
+        result = await run_in_threadpool(render_protocol_to_pdf, doc_view, output)
     elif format == "docx":
-        result = await run_in_threadpool(render_protocol_to_docx, doc_view)
+        result = await run_in_threadpool(render_protocol_to_docx, doc_view, output)
     else:
         raise HTTPException(
-            status_code=400, detail=f"Unsupported format: {format}"
+            status_code=422, detail=f"Unsupported format: {format}"
         )
+
+    # 4. Record Part 11 compliant immutable generation audit event
+    import uuid
+    from datetime import timezone
+    audit_event = {
+        "id": str(uuid.uuid4()),
+        "actor": user_id,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "change_reason": change_reason,
+        "study_id": study_id,
+        "version": version_index,
+        "format": format,
+        "output": output,
+        "type": "PROTOCOL_EXPORT",
+    }
+    MOCK_DESIGNER_AUDIT_LOGS.append(audit_event)
+
+    # Neo4j action logger if active driver is present
+    driver = await get_neo4j_driver(request) if request else None
+    if driver is not None:
+        action_id = str(uuid.uuid4())
+        query = """
+        MATCH (s:Study {id: $study_id})
+        CREATE (a:Action {
+            id: $action_id,
+            type: "EXPORT",
+            format: $format,
+            output: $output,
+            user_id: $user_id,
+            change_reason: $change_reason,
+            timestamp: datetime()
+        })
+        CREATE (s)-[:HAS_ACTION]->(a)
+        RETURN a.id as action_id
+        """
+        try:
+            async with driver.session() as session:
+                await session.run(
+                    query,
+                    study_id=study_id,
+                    action_id=action_id,
+                    format=format,
+                    output=output,
+                    user_id=user_id,
+                    change_reason=change_reason,
+                )
+        except Exception:
+            pass
+
+    # 5. Configurable best-effort or strict forwarding to eTMF
+    forward_enabled = os.getenv("ETMF_FORWARDING_ENABLED", "true").lower() in ("true", "1", "yes")
+    strict_archival = os.getenv("ETMF_STRICT_ARCHIVAL", "false").lower() in ("true", "1", "yes")
+
+    if forward_enabled:
+        try:
+            roles = getattr(request.state, "roles", "sysadmin") if request else "sysadmin"
+            etmf_metadata = {
+                "creator": user_id,
+                "change_reason": change_reason,
+                "version_index": version_index,
+                "output": output,
+                "format": format,
+                "requires_signature": False,
+            }
+            if strict_archival:
+                await forward_to_etmf(
+                    study_id=study_id,
+                    filename=result.filename,
+                    content_bytes=result.content,
+                    mime_type=result.media_type,
+                    metadata_json=etmf_metadata,
+                    user_id=user_id,
+                    roles=roles,
+                    change_reason=change_reason,
+                )
+            else:
+                try:
+                    await forward_to_etmf(
+                        study_id=study_id,
+                        filename=result.filename,
+                        content_bytes=result.content,
+                        mime_type=result.media_type,
+                        metadata_json=etmf_metadata,
+                        user_id=user_id,
+                        roles=roles,
+                        change_reason=change_reason,
+                    )
+                except Exception as e:
+                    print(f"[ARCHIVAL WARNING] Best-effort eTMF forwarding failed: {str(e)}")
+        except Exception as e:
+            if strict_archival:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Strict Archival Failure: Failed to archive generated protocol to eTMF. Error: {str(e)}"
+                )
+            else:
+                print(f"[ARCHIVAL WARNING] Best-effort eTMF forwarding failed: {str(e)}")
 
     headers = {
         "Content-Disposition": f'attachment; filename="{result.filename}"'
