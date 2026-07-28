@@ -40,6 +40,7 @@ The Cadence Clinical platform is structured as an API-first, service-oriented ar
 The primary services are:
 1. **MDR Designer Service (`apps/designer`)**: Operates on a Neo4j graph database. Manages CDISC USDM studies, activities, visits, Biomedical Concepts (BCs), standards governance, and concept mappings.
 2. **EDC Execution Service (`apps/execution`)**: Operates on a PostgreSQL relational engine. Manages subject state transitions, eCRF data capture (ODM/CDASH structure), queries, translation workflows, and the GxP-compliant audit trail.
+3. **Agent Facade Service (`apps/agent_facade`)**: Completely isolated facade microservice acting as the exclusive API boundary for automated developer agents. Validates request boundaries and safely routes operations downstream using cryptographically signed gateway headers, avoiding direct database port exposures or clinical algorithm duplication.
 
 ---
 

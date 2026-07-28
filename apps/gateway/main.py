@@ -125,6 +125,7 @@ SERVICES = {
     "quality": os.getenv("QUALITY_URL", "http://localhost:8005"),
     "safety": os.getenv("SAFETY_URL", "http://localhost:8008"),
     "tickets": os.getenv("TICKETS_URL", "http://localhost:8009"),
+    "agent-facade": os.getenv("AGENT_FACADE_URL", "http://localhost:8010"),
 }
 
 jwks_cache: Optional[Dict[str, Any]] = None
@@ -898,6 +899,10 @@ async def proxy_requests(request: Request, path: str) -> Response:
         target_url = f"{SERVICES['safety']}/{path[len('safety/') :]}"
     elif path.startswith("tickets/"):
         target_url = f"{SERVICES['tickets']}/{path[len('tickets/') :]}"
+    elif path.startswith("agent-facade/"):
+        target_url = f"{SERVICES['agent-facade']}/{path[len('agent-facade/') :]}"
+    elif path.startswith("api/v1/agent-facade"):
+        target_url = f"{SERVICES['agent-facade']}/{path}"
     elif path.startswith("api/v1/terminology"):
         target_url = f"{SERVICES['designer']}/{path}"
     elif path.startswith("terminology/"):
@@ -941,6 +946,10 @@ async def proxy_requests(request: Request, path: str) -> Response:
             "x-site-id",
             "x-sponsor-id",
             "x-unblinded-access",
+            "x-delegator-site-id",
+            "x-delegator-sponsor-id",
+            "x-target-site-id",
+            "x-target-sponsor-id",
         ):
             headers.pop(k, None)
 

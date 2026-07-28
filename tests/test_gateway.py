@@ -671,6 +671,51 @@ def test_gateway_sponsor_claim_extraction(monkeypatch: pytest.MonkeyPatch) -> No
         assert sent_request_spoof.headers.get("X-Sponsor-Id") == "spon_nested_123"
 
 
+def test_gateway_delegation_spoof_prevention(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Test that the gateway successfully strips incoming client-supplied
+    delegation and target site headers before forwarding requests.
+    """
+    monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
+
+    # Mock send downstream
+    mock_send = AsyncMock()
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.content = b'{"status": "ok"}'
+    mock_resp.headers = {"content-type": "application/json"}
+    mock_send.return_value = mock_resp
+    monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
+
+    token = jwt.encode(
+        {
+            "sub": "user_normal",
+            "roles": ["investigator"],
+        },
+        "test_secret",
+        algorithm="HS256",
+    )
+
+    with TestClient(app) as client:
+        res = client.get(
+            "/designer/test",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "X-Delegator-Site-Id": "site_spoofed",
+                "X-Delegator-Sponsor-Id": "sponsor_spoofed",
+                "X-Target-Site-Id": "target_spoofed",
+                "X-Target-Sponsor-Id": "target_sponsor_spoofed",
+            },
+        )
+        assert res.status_code == 200
+        sent_request = mock_send.call_args.args[0]
+        # Assert that all the spoofed headers are stripped!
+        assert sent_request.headers.get("X-Delegator-Site-Id") is None
+        assert sent_request.headers.get("X-Delegator-Sponsor-Id") is None
+        assert sent_request.headers.get("X-Target-Site-Id") is None
+        assert sent_request.headers.get("X-Target-Sponsor-Id") is None
+
+
 def test_signature_verification_with_batch_id(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     Test successful re-authentication with an optional batch_id.

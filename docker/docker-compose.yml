@@ -8,8 +8,6 @@ services:
       POSTGRES_USER: cadence
       POSTGRES_PASSWORD: cadence_password
       POSTGRES_DB: cadence_edc
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -23,9 +21,6 @@ services:
     container_name: cadence-neo4j
     environment:
       NEO4J_AUTH: neo4j/cadence_password
-    ports:
-      - "7474:7474"
-      - "7687:7687"
     volumes:
       - neo4j_data:/data
     healthcheck:
