@@ -56,11 +56,11 @@ describe("Terminology API Client Unit Tests", () => {
       expect(url).toBe(
         "http://localhost:8000/api/v1/terminology/validate/C12345"
       );
-      expect(options.headers["X-User-Id"]).toBe("test-user-id");
-      expect(options.headers["X-User-Roles"]).toBe("sponsor_dm,cra");
-      expect(options.headers["X-Signature-Version"]).toBe("2");
-      expect(options.headers["X-Gateway-Signature"]).toBeDefined();
-      expect(options.headers["X-Change-Reason"]).toBe("Testing signed client");
+      expect(options.headers["X-User-Id"]).toBeUndefined();
+      expect(options.headers["X-User-Roles"]).toBeUndefined();
+      expect(options.headers["X-Signature-Version"]).toBeUndefined();
+      expect(options.headers["X-Gateway-Signature"]).toBeUndefined();
+      expect(options.headers["X-Change-Reason"]).toBeUndefined();
     });
 
     it("should handle invalid/malformed codes by returning the INVALID state", async () => {

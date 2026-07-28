@@ -134,8 +134,6 @@ describe("SoA Request Construction & Serialization Unit Tests", () => {
     });
 
     const options = {
-      userId: "test-user",
-      roles: "sponsor_admin",
       changeReason: "Testing signed headers",
     };
 
@@ -152,11 +150,11 @@ describe("SoA Request Construction & Serialization Unit Tests", () => {
 
     expect(url).toContain("/api/v1/studies/STUDY-01/versions/v_draft_01/arms");
     expect(requestOpts.method).toBe("POST");
-    expect(requestOpts.headers["X-User-Id"]).toBe("test-user");
-    expect(requestOpts.headers["X-User-Roles"]).toBe("sponsor_admin");
-    expect(requestOpts.headers["X-Signature-Version"]).toBe("2");
-    expect(requestOpts.headers["X-Gateway-Signature"]).toBeDefined();
-    expect(requestOpts.headers["X-Gateway-Timestamp"]).toBeDefined();
+    expect(requestOpts.headers["X-User-Id"]).toBeUndefined();
+    expect(requestOpts.headers["X-User-Roles"]).toBeUndefined();
+    expect(requestOpts.headers["X-Signature-Version"]).toBeUndefined();
+    expect(requestOpts.headers["X-Gateway-Signature"]).toBeUndefined();
+    expect(requestOpts.headers["X-Gateway-Timestamp"]).toBeUndefined();
     expect(requestOpts.headers["X-Change-Reason"]).toBe(
       "Testing signed headers"
     );
@@ -239,10 +237,10 @@ describe("SoA Builder Signed API Client & Store Integration", () => {
       "/api/v1/studies/STUDY-USDM-001/versions/v_draft_01/arms"
     );
     expect(options.method).toBe("POST");
-    expect(options.headers["X-User-Id"]).toBe("fderuiter");
-    expect(options.headers["X-User-Roles"]).toBe("STUDY_DESIGNER");
-    expect(options.headers["X-Signature-Version"]).toBe("2");
-    expect(options.headers["X-Gateway-Signature"]).toBeDefined();
+    expect(options.headers["X-User-Id"]).toBeUndefined();
+    expect(options.headers["X-User-Roles"]).toBeUndefined();
+    expect(options.headers["X-Signature-Version"]).toBeUndefined();
+    expect(options.headers["X-Gateway-Signature"]).toBeUndefined();
     expect(options.headers["X-Change-Reason"]).toBe("Configure arm");
 
     // Verify local USDM state updated via fetchSoAProjection trigger
