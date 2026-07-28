@@ -1010,6 +1010,23 @@ async def validate_usdm_endpoint(
     return report
 
 
+@app.post(
+    "/api/v1/designer/round-trip",
+    status_code=status.HTTP_200_OK,
+)
+async def run_round_trip_endpoint(
+    payload: Dict[str, Any],
+    request: Request,
+):
+    """
+    Orchestrates USDM→internal→USDM and internal→USDM→internal round trips.
+    Returns classification, fidelity details, source format, detected/resolved version, and mapping diagnostics.
+    """
+    from apps.designer.orchestration import execute_round_trip
+    report = execute_round_trip(payload)
+    return report
+
+
 # ==========================================
 # Biomedical Concepts (MDR) API Contracts
 # ==========================================
