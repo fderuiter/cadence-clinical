@@ -242,4 +242,4 @@ Strategic backlog priorities and technical debt resolutions currently planned (T
 
 ## 📄 License
 
-Cadence Clinical is licensed under the **GNU Affero General Public License v3.0** (AGPL-3.0). See the [LICENSE](LICENSE) file for the full terms and conditions.
+Cadence Clinical is licensed under the **ISC License**. See the [LICENSE](LICENSE) file for the full terms and conditions.
