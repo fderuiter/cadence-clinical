@@ -93,7 +93,16 @@ def merge_outcomes(
 ) -> dict[str, str]:
     """Merge newly supplied outcomes with existing ones to avoid state erasure."""
     merged: dict[str, str] = {}
-    for key in ["lint", "test", "frontend", "adr", "audit", "conflict", "deid", "duplication"]:
+    for key in [
+        "lint",
+        "test",
+        "frontend",
+        "adr",
+        "audit",
+        "conflict",
+        "deid",
+        "duplication",
+    ]:
         new_val = new_outcomes.get(key)
         existing_val = existing_outcomes.get(key)
 

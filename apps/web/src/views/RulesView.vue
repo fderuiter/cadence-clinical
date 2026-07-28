@@ -1,8 +1,5 @@
 <template>
-  <div
-    id="section-rules"
-    class="dashboard-section active"
-  >
+  <div id="section-rules" class="dashboard-section active">
     <div class="section-header">
       <h2>Interactive Rules Designer</h2>
       <p>
@@ -69,7 +66,8 @@
           <span
             v-if="loadingRules"
             style="font-size: 0.85rem; color: #64748b; font-weight: normal"
-          >Loading...</span>
+            >Loading...</span
+          >
         </div>
 
         <!-- Connection Error Banner if any -->
@@ -137,7 +135,8 @@
                     font-size: 0.95rem;
                     font-family: monospace;
                   "
-                >{{ rule.id }}</strong>
+                  >{{ rule.id }}</strong
+                >
                 <div style="display: flex; gap: 6px">
                   <button
                     class="btn"
@@ -188,7 +187,8 @@
                       font-size: 0.7rem;
                       padding: 2px 6px;
                     "
-                  >{{ rule.type }}</span>
+                    >{{ rule.type }}</span
+                  >
                 </div>
                 <div v-if="rule.type === 'skip_logic'">
                   <strong>Action:</strong> {{ rule.action }} field
@@ -196,13 +196,17 @@
                 </div>
                 <div v-else-if="rule.type === 'constraint'">
                   <strong>Target Field:</strong>
-                  <code>{{ rule.target_field }}</code> <br>
+                  <code>{{ rule.target_field }}</code> <br />
                   <strong>Discrepancy Message:</strong>
-                  <span style="font-style: italic; color: var(--primary)">"{{ rule.query_message }}"</span>
+                  <span style="font-style: italic; color: var(--primary)"
+                    >"{{ rule.query_message }}"</span
+                  >
                 </div>
                 <div v-else-if="rule.type === 'cross_form_check'">
                   <strong>Discrepancy Message:</strong>
-                  <span style="font-style: italic; color: var(--primary)">"{{ rule.query_message }}"</span>
+                  <span style="font-style: italic; color: var(--primary)"
+                    >"{{ rule.query_message }}"</span
+                  >
                 </div>
               </div>
               <div
@@ -247,10 +251,7 @@
         class="card"
         style="display: flex; flex-direction: column"
       >
-        <div
-          class="card-title"
-          style="margin-bottom: 16px"
-        >
+        <div class="card-title" style="margin-bottom: 16px">
           {{ editingRuleId ? "Edit Clinical Rule" : "Compose Clinical Rule" }}
         </div>
 
@@ -294,7 +295,8 @@
                     font-weight: 600;
                     font-size: 0.85rem;
                   "
-                >Rule Classification Type</label>
+                  >Rule Classification Type</label
+                >
                 <select
                   v-model="ruleType"
                   style="
@@ -317,10 +319,7 @@
                 </select>
               </div>
 
-              <div
-                v-if="ruleType !== 'cross_form_check'"
-                class="form-group"
-              >
+              <div v-if="ruleType !== 'cross_form_check'" class="form-group">
                 <label
                   style="
                     display: block;
@@ -328,7 +327,8 @@
                     font-weight: 600;
                     font-size: 0.85rem;
                   "
-                >Target Field</label>
+                  >Target Field</label
+                >
                 <select
                   v-model="targetField"
                   style="
@@ -338,9 +338,7 @@
                     border-radius: 6px;
                   "
                 >
-                  <option value="">
-                    -- Select Target Field --
-                  </option>
+                  <option value="">-- Select Target Field --</option>
                   <option
                     v-for="f in mockStudyFields"
                     :key="f.id"
@@ -355,10 +353,7 @@
             <div
               style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px"
             >
-              <div
-                v-if="ruleType === 'skip_logic'"
-                class="form-group"
-              >
+              <div v-if="ruleType === 'skip_logic'" class="form-group">
                 <label
                   style="
                     display: block;
@@ -366,7 +361,8 @@
                     font-weight: 600;
                     font-size: 0.85rem;
                   "
-                >Action on Target</label>
+                  >Action on Target</label
+                >
                 <select
                   v-model="ruleAction"
                   style="
@@ -376,19 +372,12 @@
                     border-radius: 6px;
                   "
                 >
-                  <option value="show">
-                    Show target field
-                  </option>
-                  <option value="hide">
-                    Hide target field
-                  </option>
+                  <option value="show">Show target field</option>
+                  <option value="hide">Hide target field</option>
                 </select>
               </div>
 
-              <div
-                v-if="ruleType === 'skip_logic'"
-                class="form-group"
-              >
+              <div v-if="ruleType === 'skip_logic'" class="form-group">
                 <label
                   style="
                     display: block;
@@ -396,7 +385,8 @@
                     font-weight: 600;
                     font-size: 0.85rem;
                   "
-                >Target Form (Optional)</label>
+                  >Target Form (Optional)</label
+                >
                 <select
                   v-model="targetForm"
                   style="
@@ -406,14 +396,8 @@
                     border-radius: 6px;
                   "
                 >
-                  <option value="">
-                    -- Select Target Form --
-                  </option>
-                  <option
-                    v-for="f in mockStudyForms"
-                    :key="f.id"
-                    :value="f.id"
-                  >
+                  <option value="">-- Select Target Form --</option>
+                  <option v-for="f in mockStudyForms" :key="f.id" :value="f.id">
                     {{ f.name }}
                   </option>
                 </select>
@@ -431,7 +415,8 @@
                     font-weight: 600;
                     font-size: 0.85rem;
                   "
-                >Auto-Query Discrepancy Message</label>
+                  >Auto-Query Discrepancy Message</label
+                >
                 <input
                   v-model="queryMessage"
                   type="text"
@@ -442,7 +427,7 @@
                     border: 1px solid var(--border);
                     border-radius: 6px;
                   "
-                >
+                />
               </div>
             </div>
           </fieldset>
@@ -461,10 +446,7 @@
               Rule Conditions (Logical Expression Tree)
             </legend>
 
-            <div
-              class="form-group"
-              style="margin-bottom: 16px"
-            >
+            <div class="form-group" style="margin-bottom: 16px">
               <label
                 style="
                   display: block;
@@ -472,7 +454,8 @@
                   font-weight: 600;
                   font-size: 0.85rem;
                 "
-              >Match Conditions Group Operator</label>
+                >Match Conditions Group Operator</label
+              >
               <select
                 v-model="matchOperator"
                 style="
@@ -482,12 +465,8 @@
                   font-size: 0.85rem;
                 "
               >
-                <option value="and">
-                  All conditions must be met (AND)
-                </option>
-                <option value="or">
-                  Any condition can be met (OR)
-                </option>
+                <option value="and">All conditions must be met (AND)</option>
+                <option value="or">Any condition can be met (OR)</option>
               </select>
             </div>
 
@@ -522,17 +501,15 @@
                     flex-wrap: wrap;
                   "
                 >
-                  <div
-                    class="form-group"
-                    style="flex: 1; min-width: 100px"
-                  >
+                  <div class="form-group" style="flex: 1; min-width: 100px">
                     <label
                       style="
                         font-size: 0.75rem;
                         display: block;
                         margin-bottom: 4px;
                       "
-                    >Left Form</label>
+                      >Left Form</label
+                    >
                     <select
                       v-model="cond.formId"
                       style="
@@ -543,9 +520,7 @@
                         border: 1px solid var(--border);
                       "
                     >
-                      <option value="">
-                        -- Select Form --
-                      </option>
+                      <option value="">-- Select Form --</option>
                       <option
                         v-for="f in mockStudyForms"
                         :key="f.id"
@@ -556,17 +531,15 @@
                     </select>
                   </div>
 
-                  <div
-                    class="form-group"
-                    style="flex: 1; min-width: 100px"
-                  >
+                  <div class="form-group" style="flex: 1; min-width: 100px">
                     <label
                       style="
                         font-size: 0.75rem;
                         display: block;
                         margin-bottom: 4px;
                       "
-                    >Left Field</label>
+                      >Left Field</label
+                    >
                     <select
                       v-model="cond.fieldId"
                       style="
@@ -577,9 +550,7 @@
                         border: 1px solid var(--border);
                       "
                     >
-                      <option value="">
-                        -- Select Field --
-                      </option>
+                      <option value="">-- Select Field --</option>
                       <option
                         v-for="f in mockStudyFields"
                         :key="f.id"
@@ -590,17 +561,15 @@
                     </select>
                   </div>
 
-                  <div
-                    class="form-group"
-                    style="flex: 1; min-width: 100px"
-                  >
+                  <div class="form-group" style="flex: 1; min-width: 100px">
                     <label
                       style="
                         font-size: 0.75rem;
                         display: block;
                         margin-bottom: 4px;
                       "
-                    >Operator</label>
+                      >Operator</label
+                    >
                     <select
                       v-model="cond.operator"
                       style="
@@ -611,37 +580,21 @@
                         border: 1px solid var(--border);
                       "
                     >
-                      <option value="==">
-                        equals
-                      </option>
-                      <option value="!=">
-                        does not equal
-                      </option>
-                      <option value="<">
-                        is less than
-                      </option>
-                      <option value="<=">
-                        is less than or equal to
-                      </option>
-                      <option value=">">
-                        is greater than
-                      </option>
-                      <option value=">=">
-                        is greater than or equal to
-                      </option>
-                      <option value="is_empty">
-                        is empty
-                      </option>
-                      <option value="is_not_empty">
-                        is not empty
-                      </option>
+                      <option value="==">equals</option>
+                      <option value="!=">does not equal</option>
+                      <option value="<">is less than</option>
+                      <option value="<=">is less than or equal to</option>
+                      <option value=">">is greater than</option>
+                      <option value=">=">is greater than or equal to</option>
+                      <option value="is_empty">is empty</option>
+                      <option value="is_not_empty">is not empty</option>
                     </select>
                   </div>
 
                   <div
                     v-if="
                       cond.operator !== 'is_empty' &&
-                        cond.operator !== 'is_not_empty'
+                      cond.operator !== 'is_not_empty'
                     "
                     class="form-group"
                     style="flex: 1; min-width: 100px"
@@ -652,7 +605,8 @@
                         display: block;
                         margin-bottom: 4px;
                       "
-                    >Right Value Type</label>
+                      >Right Value Type</label
+                    >
                     <select
                       v-model="cond.rightType"
                       style="
@@ -663,20 +617,16 @@
                         border: 1px solid var(--border);
                       "
                     >
-                      <option value="constant">
-                        Constant Value
-                      </option>
-                      <option value="field_ref">
-                        Field Reference
-                      </option>
+                      <option value="constant">Constant Value</option>
+                      <option value="field_ref">Field Reference</option>
                     </select>
                   </div>
 
                   <div
                     v-if="
                       cond.operator !== 'is_empty' &&
-                        cond.operator !== 'is_not_empty' &&
-                        cond.rightType === 'constant'
+                      cond.operator !== 'is_not_empty' &&
+                      cond.rightType === 'constant'
                     "
                     class="form-group"
                     style="flex: 1; min-width: 100px"
@@ -687,7 +637,8 @@
                         display: block;
                         margin-bottom: 4px;
                       "
-                    >Constant Value</label>
+                      >Constant Value</label
+                    >
                     <input
                       v-model="cond.rightValue"
                       type="text"
@@ -699,14 +650,14 @@
                         border-radius: 4px;
                         border: 1px solid var(--border);
                       "
-                    >
+                    />
                   </div>
 
                   <div
                     v-if="
                       cond.operator !== 'is_empty' &&
-                        cond.operator !== 'is_not_empty' &&
-                        cond.rightType === 'field_ref'
+                      cond.operator !== 'is_not_empty' &&
+                      cond.rightType === 'field_ref'
                     "
                     class="form-group"
                     style="flex: 1; min-width: 100px"
@@ -717,7 +668,8 @@
                         display: block;
                         margin-bottom: 4px;
                       "
-                    >Right Field</label>
+                      >Right Field</label
+                    >
                     <select
                       v-model="cond.rightFieldId"
                       style="
@@ -728,9 +680,7 @@
                         border: 1px solid var(--border);
                       "
                     >
-                      <option value="">
-                        -- Select Field --
-                      </option>
+                      <option value="">-- Select Field --</option>
                       <option
                         v-for="f in mockStudyFields"
                         :key="f.id"
@@ -832,12 +782,7 @@
                   margin-bottom: 8px;
                 "
               >
-                <div
-                  v-for="(f, i) in previewFailures"
-                  :key="i"
-                >
-                  ⚠️ {{ f }}
-                </div>
+                <div v-for="(f, i) in previewFailures" :key="i">⚠️ {{ f }}</div>
               </div>
               <div
                 v-else
@@ -854,10 +799,7 @@
                 v-if="previewCircularCycles.length > 0"
                 style="color: var(--error); font-weight: 600"
               >
-                <div
-                  v-for="(c, i) in previewCircularCycles"
-                  :key="i"
-                >
+                <div v-for="(c, i) in previewCircularCycles" :key="i">
                   🚨 {{ c }}
                 </div>
               </div>
@@ -948,11 +890,10 @@
             To comply with <strong>21 CFR Part 11 / EU Annex 11</strong>, you
             must document a reason for changing this clinical data check rule.
           </p>
-          <div
-            class="form-group"
-            style="margin-bottom: 12px"
-          >
-            <label style="display: block; margin-bottom: 4px; font-weight: 600">Select Standard Reason</label>
+          <div class="form-group" style="margin-bottom: 12px">
+            <label style="display: block; margin-bottom: 4px; font-weight: 600"
+              >Select Standard Reason</label
+            >
             <select
               v-model="changeReason"
               style="
@@ -962,28 +903,24 @@
                 border-radius: 6px;
               "
             >
-              <option value="Initial Entry">
-                Initial Data Entry
-              </option>
+              <option value="Initial Entry">Initial Data Entry</option>
               <option value="Typographical Error">
                 Correction of typographical error
               </option>
-              <option value="Re-measurement">
-                Re-measurement of vitals
-              </option>
+              <option value="Re-measurement">Re-measurement of vitals</option>
               <option value="Transcription Error">
                 Correction of transcription error
               </option>
               <option value="Protocol Amendment">
                 Protocol Amendment / Update
               </option>
-              <option value="Other">
-                Other (specify below)
-              </option>
+              <option value="Other">Other (specify below)</option>
             </select>
           </div>
           <div class="form-group">
-            <label style="display: block; margin-bottom: 4px; font-weight: 600">Custom Explanation (Optional)</label>
+            <label style="display: block; margin-bottom: 4px; font-weight: 600"
+              >Custom Explanation (Optional)</label
+            >
             <textarea
               v-model="customChangeReason"
               placeholder="Explain the clinical reason for this modification..."
