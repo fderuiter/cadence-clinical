@@ -9,6 +9,147 @@ from neo4j.exceptions import TransientError
 # Ensure offline terminology fallback is active for test isolation and speed
 os.environ.setdefault("TERMINOLOGY_OFFLINE", "true")
 
+# Identify and override Database URL for workers early, and ensure database isolation
+def get_postgres_base_config():
+    url = os.environ.get("TEST_DATABASE_URL") or os.environ.get("DATABASE_URL") or "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"
+    if "://" in url:
+        scheme, remainder = url.split("://", 1)
+        if "/" in remainder:
+            base_part, _ = remainder.rsplit("/", 1)
+        else:
+            base_part = remainder
+        return f"{scheme}://{base_part}/"
+    return "postgresql+asyncpg://cadence:cadence_password@localhost:5432/"
+
+async def create_databases_async(worker_suffix: str):
+    from sqlalchemy.ext.asyncio import create_async_engine
+    from sqlalchemy import text
+    
+    base_url = f"{get_postgres_base_config()}postgres"
+    db_names = [
+        f"cadence_edc{worker_suffix}",
+        f"cadence_etmf{worker_suffix}",
+        f"cadence_ctms{worker_suffix}",
+        f"cadence_quality{worker_suffix}",
+        f"cadence_interop{worker_suffix}",
+        f"cadence_tickets{worker_suffix}",
+        f"cadence_notifications{worker_suffix}",
+        f"cadence_econsent{worker_suffix}",
+        f"cadence_safety{worker_suffix}",
+        f"cadence_org{worker_suffix}",
+        f"cadence_eisf{worker_suffix}",
+    ]
+    
+    engine = create_async_engine(base_url, isolation_level="AUTOCOMMIT")
+    async with engine.connect() as conn:
+        for db_name in db_names:
+            res = await conn.execute(text(f"SELECT 1 FROM pg_database WHERE datname='{db_name}'"))
+            if not res.scalar():
+                try:
+                    await conn.execute(text(f"CREATE DATABASE {db_name}"))
+                    print(f"[conftest] Created isolated database: {db_name}")
+                except Exception as e:
+                    print(f"[conftest] Error creating database {db_name}: {e}")
+    await engine.dispose()
+
+async def drop_databases_async(worker_suffix: str):
+    from sqlalchemy.ext.asyncio import create_async_engine
+    from sqlalchemy import text
+    
+    base_url = f"{get_postgres_base_config()}postgres"
+    db_names = [
+        f"cadence_edc{worker_suffix}",
+        f"cadence_etmf{worker_suffix}",
+        f"cadence_ctms{worker_suffix}",
+        f"cadence_quality{worker_suffix}",
+        f"cadence_interop{worker_suffix}",
+        f"cadence_tickets{worker_suffix}",
+        f"cadence_notifications{worker_suffix}",
+        f"cadence_econsent{worker_suffix}",
+        f"cadence_safety{worker_suffix}",
+        f"cadence_org{worker_suffix}",
+        f"cadence_eisf{worker_suffix}",
+    ]
+    
+    engine = create_async_engine(base_url, isolation_level="AUTOCOMMIT")
+    async with engine.connect() as conn:
+        for db_name in db_names:
+            try:
+                await conn.execute(text(f"""
+                    SELECT pg_terminate_backend(pg_stat_activity.pid)
+                    FROM pg_stat_activity
+                    WHERE pg_stat_activity.datname = '{db_name}'
+                      AND pid <> pg_backend_pid()
+                """))
+                await conn.execute(text(f"DROP DATABASE IF EXISTS {db_name}"))
+                print(f"[conftest] Dropped isolated database: {db_name}")
+            except Exception as e:
+                print(f"[conftest] Error dropping database {db_name}: {e}")
+    await engine.dispose()
+
+def run_sync(coro):
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    
+    if loop.is_running():
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(asyncio.run, coro)
+            return future.result()
+    else:
+        return loop.run_until_complete(coro)
+
+worker_id = os.environ.get("PYTEST_XDIST_WORKER")
+worker_suffix = f"_{worker_id}" if worker_id else "_test"
+
+# Patch and create databases
+def patch_init_db():
+    from apps.execution.database.core import DatabaseSessionManager
+    from packages.database import RelationalDatabaseManager
+
+    original_exec_init_db = DatabaseSessionManager.init_db
+    original_rel_init_db = RelationalDatabaseManager.init_db
+
+    service_map = {
+        "Execution": "cadence_edc",
+        "eTMF": "cadence_etmf",
+        "CTMS": "cadence_ctms",
+        "Quality": "cadence_quality",
+        "Interop": "cadence_interop",
+        "Tickets": "cadence_tickets",
+        "Notifications": "cadence_notifications",
+        "eConsent": "cadence_econsent",
+        "Safety": "cadence_safety",
+        "Organization": "cadence_org",
+        "eISF": "cadence_eisf",
+    }
+
+    base_postgres_url = get_postgres_base_config()
+
+    def patched_exec_init_db(self, database_url: str, **kwargs):
+        db_name = f"cadence_edc{worker_suffix}"
+        new_url = f"{base_postgres_url}{db_name}"
+        return original_exec_init_db(self, new_url, **kwargs)
+
+    def patched_rel_init_db(self, database_url: str, **kwargs):
+        base_name = service_map.get(self.service_name, "cadence_edc")
+        db_name = f"{base_name}{worker_suffix}"
+        new_url = f"{base_postgres_url}{db_name}"
+        return original_rel_init_db(self, new_url, **kwargs)
+
+    DatabaseSessionManager.init_db = patched_exec_init_db
+    RelationalDatabaseManager.init_db = patched_rel_init_db
+
+# Override the env var so any standard fallback uses isolated DB too
+os.environ["TEST_DATABASE_URL"] = f"{get_postgres_base_config()}cadence_edc{worker_suffix}"
+
+# Create worker isolated databases and perform patching
+run_sync(create_databases_async(worker_suffix))
+patch_init_db()
+
 # Ensure packages path injection is run before tests start
 import packages  # noqa: F401
 
@@ -250,6 +391,11 @@ def pytest_sessionfinish(session, exitstatus):
     Hook to run after the test session finishes to generate/update the
     Requirements Traceability Matrix (RTM) and GxP Qualification Report.
     """
+    # Skip report generation if inside a pytest-xdist worker process
+    config = getattr(session, "config", None)
+    if config and hasattr(config, "workerinput"):
+        return
+
     import os
     import subprocess
     import sys
@@ -288,3 +434,107 @@ def pytest_sessionfinish(session, exitstatus):
             print(result.stderr)
     except Exception as e:
         print(f"Error executing RTM generator: {e}")
+
+
+def get_admin_db_url(db_url: str) -> str:
+    if "?" in db_url:
+        base, query = db_url.split("?", 1)
+        query = f"?{query}"
+    else:
+        base = db_url
+        query = ""
+    
+    if "/" in base:
+        base_parts = base.rsplit("/", 1)
+        return f"{base_parts[0]}/postgres{query}"
+    return db_url
+
+
+async def create_worker_db(worker_id: str):
+    original_db_url = os.environ.get("TEST_DATABASE_URL")
+    if not original_db_url or "postgresql" not in original_db_url:
+        return
+    
+    # Extract the database name from the rewritten TEST_DATABASE_URL
+    if "?" in original_db_url:
+        base, _ = original_db_url.split("?", 1)
+    else:
+        base = original_db_url
+        
+    if "/" in base:
+        worker_db_name = base.rsplit("/", 1)[1]
+    else:
+        return
+        
+    admin_url = get_admin_db_url(original_db_url)
+    from sqlalchemy.ext.asyncio import create_async_engine
+    from sqlalchemy import text
+    
+    engine = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
+    try:
+        async with engine.connect() as conn:
+            res = await conn.execute(
+                text("SELECT 1 FROM pg_database WHERE datname = :dbname"),
+                {"dbname": worker_db_name}
+            )
+            exists = res.scalar() is not None
+            if not exists:
+                print(f"[pytest-xdist] Creating worker database: {worker_db_name}")
+                await conn.execute(text(f"CREATE DATABASE {worker_db_name}"))
+            else:
+                print(f"[pytest-xdist] Worker database {worker_db_name} already exists")
+    except Exception as e:
+        print(f"[pytest-xdist] Error creating worker database {worker_db_name}: {e}")
+    finally:
+        await engine.dispose()
+
+
+async def drop_worker_db(worker_id: str):
+    current_db_url = os.environ.get("TEST_DATABASE_URL")
+    if not current_db_url or "postgresql" not in current_db_url:
+        return
+    
+    if "?" in current_db_url:
+        base, query = current_db_url.split("?", 1)
+        query = f"?{query}"
+    else:
+        base = current_db_url
+        query = ""
+        
+    if "/" in base:
+        base_parts = base.rsplit("/", 1)
+        worker_db_name = base_parts[1]
+        admin_url = f"{base_parts[0]}/postgres{query}"
+        
+        from sqlalchemy.ext.asyncio import create_async_engine
+        from sqlalchemy import text
+        
+        engine = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
+        try:
+            async with engine.connect() as conn:
+                print(f"[pytest-xdist] Dropping worker database: {worker_db_name}")
+                await conn.execute(text(f"""
+                    SELECT pg_terminate_backend(pg_stat_activity.pid)
+                    FROM pg_stat_activity
+                    WHERE pg_stat_activity.datname = '{worker_db_name}'
+                      AND pid <> pg_backend_pid();
+                """))
+                await conn.execute(text(f"DROP DATABASE IF EXISTS {worker_db_name}"))
+        except Exception as e:
+            print(f"[pytest-xdist] Error dropping worker database {worker_db_name}: {e}")
+        finally:
+            await engine.dispose()
+
+
+def pytest_configure(config):
+    worker_id = os.environ.get("PYTEST_XDIST_WORKER")
+    if worker_id:
+        import asyncio
+        asyncio.run(create_worker_db(worker_id))
+
+
+def pytest_unconfigure(config):
+    worker_id = os.environ.get("PYTEST_XDIST_WORKER")
+    if worker_id:
+        import asyncio
+        asyncio.run(drop_worker_db(worker_id))

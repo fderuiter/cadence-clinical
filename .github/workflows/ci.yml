@@ -49,7 +49,7 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v3
         with:
-          enable-cache: false
+          enable-cache: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -118,7 +118,7 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v3
         with:
-          enable-cache: false
+          enable-cache: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -127,6 +127,14 @@ jobs:
 
       - name: Install dependencies
         run: uv sync --all-extras
+
+      - name: Cache pre-commit
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+          restore-keys: |
+            pre-commit-${{ runner.os }}-
 
       - name: Run static analysis
         id: run_static
@@ -193,7 +201,7 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v3
         with:
-          enable-cache: false
+          enable-cache: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -208,7 +216,7 @@ jobs:
         if: always()
         env:
           TEST_DATABASE_URL: "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"
-        run: uv run pytest --ignore=tests/test_layout_validator.py --junitxml=report-unit.xml
+        run: uv run pytest -n auto --cov=apps --cov=packages --cov-fail-under=80 --ignore=tests/test_layout_validator.py --junitxml=report-unit.xml
 
       - name: Upload unit test report
         if: always()
@@ -248,7 +256,7 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v3
         with:
-          enable-cache: false
+          enable-cache: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -257,6 +265,15 @@ jobs:
 
       - name: Install dependencies
         run: uv sync --all-extras
+
+      - name: Cache Playwright Browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
 
       - name: Install Playwright Browsers
         run: |
@@ -298,7 +315,7 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v3
         with:
-          enable-cache: false
+          enable-cache: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -442,7 +459,7 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v3
         with:
-          enable-cache: false
+          enable-cache: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
