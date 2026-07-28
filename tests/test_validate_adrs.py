@@ -88,7 +88,7 @@ def test_get_changed_files_from_git_fallbacks(mock_run_git):
             return "feature-branch\n", ""
         elif "rev-parse HEAD" in cmd_str:
             return "commit-head-sha\n", ""
-        elif "branch --format" in cmd_str:
+        elif "branch" in cmd_str and "--format" in cmd_str:
             return "main\nfeature-branch\n", ""
         elif "merge-base" in cmd_str:
             return "commit-base-sha\n", ""
@@ -121,7 +121,7 @@ def test_validate_existing_adrs_with_targets_valid():
     # If valid target files are passed, they should pass
     # Let's mock a valid index list and check a valid target
     targets = ["docs/adr/2026-07-24-test-new-dependency.md"]
-    mock_content = "# ADR-[NUMBER]: Test Dependency\n## 1. Context & Problem Statement\n## 2. Decision Drivers & Constraints\n## 3. Options Considered\n## 4. Decision Outcome\n## 5. Consequences & Trade-offs\n## 6. Implementation & Verification\n"
+    mock_content = "# ADR-[NUMBER]: Test Dependency\n## 1. Context & Problem Statement\nImplements PRD-SYS-001.\n## 2. Decision Drivers & Constraints\n## 3. Options Considered\n## 4. Decision Outcome\n## 5. Consequences & Trade-offs\n## 6. Implementation & Verification\n"
 
     def make_mock_file(content):
         m = MagicMock()
@@ -241,7 +241,7 @@ def test_get_closest_local_branch_point_multiple_branches(mock_run_git):
             return "feature-branch\n", ""
         elif "rev-parse HEAD" in cmd_str:
             return "commit-head-sha\n", ""
-        elif "branch --format" in cmd_str:
+        elif "branch" in cmd_str and "--format" in cmd_str:
             # multiple local branches: main, other-feature, feature-branch
             return "main\nother-feature\nfeature-branch\n", ""
         elif "merge-base" in cmd_str:
@@ -274,7 +274,7 @@ def test_get_closest_local_branch_point_fallback_to_root(mock_run_git):
             return "main\n", ""
         elif "rev-parse HEAD" in cmd_str:
             return "commit-head-sha\n", ""
-        elif "branch --format" in cmd_str:
+        elif "branch" in cmd_str and "--format" in cmd_str:
             # Only current branch main exists locally
             return "main\n", ""
         elif "rev-list --max-parents=0" in cmd_str:
@@ -298,7 +298,7 @@ def test_get_changed_files_bypasses_merge_commits_and_parses_status(mock_run_git
             return "feature-branch\n", ""
         elif "rev-parse HEAD" in cmd_str:
             return "commit-head-sha\n", ""
-        elif "branch --format" in cmd_str:
+        elif "branch" in cmd_str and "--format" in cmd_str:
             return "main\nfeature-branch\n", ""
         elif "merge-base" in cmd_str:
             return "commit-base-sha\n", ""

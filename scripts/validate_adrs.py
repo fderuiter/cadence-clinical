@@ -116,14 +116,30 @@ def get_closest_local_branch_point() -> str:
     head_sha, _ = run_git_command(["git", "rev-parse", "HEAD"])
     head_sha = head_sha.strip()
 
-    # Get all local branches
-    stdout, _ = run_git_command(["git", "branch", "--format=%(refname:short)"])
+    # Get all local and remote branches available offline
+    stdout, _ = run_git_command(["git", "branch", "-a", "--format=%(refname:short)"])
     local_branches = []
     if stdout:
         for line in stdout.splitlines():
             branch = line.strip()
-            # Ignore current branch, HEAD pointer, or empty names
-            if branch and branch != current_branch and branch != "HEAD":
+            # Clean up potential "remotes/" prefix
+            if branch.startswith("remotes/"):
+                branch = branch[len("remotes/") :]
+
+            # Skip empty, HEAD, origin placeholder, or remote HEAD reference
+            if (
+                not branch
+                or branch == "HEAD"
+                or branch == "origin"
+                or branch == "origin/HEAD"
+            ):
+                continue
+
+            # Ignore current branch or remote tracking of current branch
+            if branch == current_branch or branch == f"origin/{current_branch}":
+                continue
+
+            if branch not in local_branches:
                 local_branches.append(branch)
 
     closest_mb = None
@@ -352,6 +368,14 @@ def validate_existing_adrs(targets: list[str] = None) -> bool:
                 )
                 all_passed = False
 
+            # 4. Check compliance requirement mapping
+            comp_ok, comp_err = compliance_utility.validate_adr_compliance(
+                filename, content, valid_reqs
+            )
+            if not comp_ok:
+                print(comp_err)
+                all_passed = False
+
     else:
         # Check for ADRs outside the proper folder
         for root, _, files in os.walk("."):
@@ -427,13 +451,13 @@ def validate_existing_adrs(targets: list[str] = None) -> bool:
                 )
                 all_passed = False
 
-        # 4. Check compliance requirement mapping
-        comp_ok, comp_err = compliance_utility.validate_adr_compliance(
-            filename, content, valid_reqs
-        )
-        if not comp_ok:
-            print(comp_err)
-            all_passed = False
+            # 4. Check compliance requirement mapping
+            comp_ok, comp_err = compliance_utility.validate_adr_compliance(
+                filename, content, valid_reqs
+            )
+            if not comp_ok:
+                print(comp_err)
+                all_passed = False
 
     return all_passed
 
