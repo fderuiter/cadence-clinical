@@ -1,0 +1,87 @@
+/* Custom CSS for Mermaid Diagrams with Pan & Zoom */
+.mermaid-container {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden; /* Prevent horizontal scrollbars on the main document page */
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 8px;
+  background-color: var(--vp-c-bg-soft);
+  margin: 24px 0;
+  padding: 16px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.3s, background-color 0.3s;
+}
+
+.mermaid-wrapper {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  cursor: grab;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.mermaid-wrapper:active {
+  cursor: grabbing;
+}
+
+.mermaid-wrapper svg {
+  max-width: 100%;
+  height: auto !important;
+  transition: transform 0.15s ease-out;
+  transform-origin: center center;
+}
+
+/* Custom Toolbar for Controls */
+.mermaid-toolbar {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 6px;
+  z-index: 10;
+  background-color: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 6px;
+  padding: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+.mermaid-container:hover .mermaid-toolbar {
+  opacity: 1;
+}
+
+.mermaid-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--vp-c-divider);
+  background-color: var(--vp-c-bg);
+  color: var(--vp-c-text-1);
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+  user-select: none;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.mermaid-btn:hover {
+  background-color: var(--vp-c-brand-1);
+  color: var(--vp-c-bg);
+  border-color: var(--vp-c-brand-1);
+}
+
+.mermaid-btn:active {
+  transform: scale(0.95);
+}

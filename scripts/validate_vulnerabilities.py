@@ -135,14 +135,16 @@ def load_and_validate_ledger(
             continue
 
         # Justification check
+        is_frontend = vuln_id.startswith("GHSA-")
+        min_len = 11 if is_frontend else 10
         if (
             not justification
             or not isinstance(justification, str)
-            or len(justification.strip()) < 10
+            or len(justification.strip()) < min_len
         ):
             errors.append(
                 f"Vulnerability {vuln_id} is missing a robust GxP compliance justification "
-                "(must be a non-empty string of at least 10 characters)."
+                f"(must be a non-empty string of {'exceeding 10' if is_frontend else 'at least 10'} characters)."
             )
             continue
 
@@ -209,6 +211,69 @@ def extract_active_vulnerabilities(audit_json: str) -> Tuple[List[Dict[str, Any]
     return vulns_list, ""
 
 
+def execute_pnpm_audit() -> Tuple[str, str, int]:
+    """Execute pnpm audit in JSON format and return stdout, stderr, and exit code.
+
+    Returns:
+        A tuple of (stdout, stderr, return_code).
+    """
+    try:
+        res = subprocess.run(
+            ["pnpm", "audit", "--json"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=False,
+        )
+        return res.stdout.strip(), res.stderr.strip(), res.returncode
+    except Exception as e:
+        return "", str(e), -1
+
+
+def extract_active_frontend_vulnerabilities(
+    audit_json: str,
+) -> Tuple[List[Dict[str, Any]], str]:
+    """Parse pnpm audit output and extract individual vulnerability findings.
+
+    Args:
+        audit_json: Raw JSON stdout string from pnpm audit execution.
+
+    Returns:
+        A tuple of (list of vulnerability dicts, error message string).
+    """
+    if not audit_json:
+        return [], "No stdout returned from pnpm audit."
+
+    try:
+        data = json.loads(audit_json)
+    except Exception as e:
+        return [], f"Failed to parse JSON output from pnpm audit: {e}"
+
+    vulns_list: List[Dict[str, Any]] = []
+    advisories = data.get("advisories", {})
+    for adv_id, adv in advisories.items():
+        v_id = adv.get("github_advisory_id") or adv.get("id") or str(adv_id)
+        if not isinstance(v_id, str):
+            v_id = str(v_id)
+        module_name = adv.get("module_name")
+
+        findings = adv.get("findings", [])
+        version = "unknown"
+        if findings and isinstance(findings, list):
+            version = findings[0].get("version", "unknown")
+
+        vulns_list.append(
+            {
+                "vulnerability_id": v_id,
+                "package_name": module_name,
+                "version": version,
+                "description": adv.get("title", ""),
+                "fix_versions": adv.get("patched_versions", ""),
+            }
+        )
+    return vulns_list, ""
+
+
 def main() -> None:
     """Core verification orchestrator."""
     print("--- Starting GxP FMEA-Aligned Vulnerability Exemption Ledger Validation ---")
@@ -255,6 +320,29 @@ def main() -> None:
         print(f"    Stderr: {stderr}")
         audit_error = f"pip-audit failed to execute successfully: {stderr}"
 
+    # Step 3b: Execute frontend vulnerability audit
+    print("Running automated frontend dependency vulnerability audit (pnpm audit)...")
+    p_stdout, p_stderr, p_code = execute_pnpm_audit()
+
+    active_frontend_vulnerabilities: List[Dict[str, Any]] = []
+    frontend_audit_error = ""
+
+    if p_code == 0:
+        print(
+            "Frontend dependency audit completed successfully with zero vulnerability findings."
+        )
+    elif p_code == 1:
+        print("Frontend dependency audit completed. Active vulnerabilities found.")
+        active_frontend_vulnerabilities, frontend_audit_error = (
+            extract_active_frontend_vulnerabilities(p_stdout)
+        )
+        if frontend_audit_error:
+            print(f"[!] Error parsing frontend audit results: {frontend_audit_error}")
+    else:
+        print(f"[!] Warning: pnpm audit exited with unexpected error code {p_code}.")
+        print(f"    Stderr: {p_stderr}")
+        frontend_audit_error = f"pnpm audit failed to execute successfully: {p_stderr}"
+
     # Step 4: Map active vulnerabilities against validated ledger entries
     print("Mapping active vulnerabilities against the GxP FMEA exemption ledger...")
     processed_vulns: List[Dict[str, Any]] = []
@@ -262,7 +350,11 @@ def main() -> None:
 
     ledger_map = {entry["vulnerability_id"]: entry for entry in ledger_entries}
 
-    for vuln in active_vulnerabilities:
+    all_vulnerabilities = [(v, "Python") for v in active_vulnerabilities] + [
+        (v, "Frontend") for v in active_frontend_vulnerabilities
+    ]
+
+    for vuln, source_type in all_vulnerabilities:
         v_id = vuln["vulnerability_id"]
         pkg = vuln["package_name"]
         ver = vuln["version"]
@@ -275,18 +367,18 @@ def main() -> None:
 
             if status != "active":
                 print(
-                    f"[❌] Vulnerability {v_id} matches ledger entry but its status is '{status}' (not active)."
+                    f"[❌] {source_type} vulnerability {v_id} matches ledger entry but its status is '{status}' (not active)."
                 )
                 vuln_status = "Blocked"
                 has_unapproved_vulns = True
             elif rpn < 20:
                 print(
-                    f"[✅] Vulnerability {v_id} ({pkg}@{ver}) matches validated low-risk exemption ledger entry with RPN {rpn} < 20."
+                    f"[✅] {source_type} vulnerability {v_id} ({pkg}@{ver}) matches validated low-risk exemption ledger entry with RPN {rpn} < 20."
                 )
                 vuln_status = "Approved"
             else:
                 print(
-                    f"[❌] Vulnerability {v_id} ({pkg}@{ver}) yields a high FMEA Risk Priority Number (RPN) of {rpn} >= 20. Blocked from automatic progression."
+                    f"[❌] {source_type} vulnerability {v_id} ({pkg}@{ver}) yields a high FMEA Risk Priority Number (RPN) of {rpn} >= 20. Blocked from automatic progression."
                 )
                 vuln_status = "Blocked"
                 has_unapproved_vulns = True
@@ -303,7 +395,7 @@ def main() -> None:
             )
         else:
             print(
-                f"[❌] Vulnerability {v_id} ({pkg}@{ver}) has no corresponding entry in the compliance ledger."
+                f"[❌] {source_type} vulnerability {v_id} ({pkg}@{ver}) has no corresponding entry in the compliance ledger."
             )
             has_unapproved_vulns = True
             processed_vulns.append(
@@ -313,7 +405,7 @@ def main() -> None:
                     "version": ver,
                     "rpn": "N/A",
                     "status": "Blocked",
-                    "justification": "Undocumented vulnerability bypass. No FMEA assessment exists.",
+                    "justification": f"Undocumented vulnerability bypass. No FMEA assessment exists for {source_type}.",
                 }
             )
 
@@ -323,6 +415,7 @@ def main() -> None:
         and not ledger_errors
         and not has_unapproved_vulns
         and not audit_error
+        and not frontend_audit_error
     )
 
     # Step 5: Save execution state summary for PR comment generator
@@ -344,7 +437,8 @@ def main() -> None:
     print("\n--- GxP Security Compliance Validation Report ---")
     print(f"Inline bypass violations: {len(inline_violations)}")
     print(f"Ledger schema/FMEA errors: {len(ledger_errors)}")
-    print(f"Active vulnerabilities: {len(active_vulnerabilities)}")
+    print(f"Active Python vulnerabilities: {len(active_vulnerabilities)}")
+    print(f"Active Frontend vulnerabilities: {len(active_frontend_vulnerabilities)}")
     print(
         f"Blocked vulnerability exclusions: {sum(1 for v in processed_vulns if v['status'] == 'Blocked')}"
     )
