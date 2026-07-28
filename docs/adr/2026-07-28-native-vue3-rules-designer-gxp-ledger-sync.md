@@ -4,7 +4,7 @@
 Accepted
 
 ## Context
-The legacy rules designer relied on parallel entry scripts and static HTML. This setup caused critical race conditions during initialization, as Vue 3 would completely wipe out the static layout upon mounting. Additionally, this architecture disconnected the rules engine from secure routing, role-based access controls, live production endpoints, and compliant audit tracking. 
+The legacy rules designer relied on parallel entry scripts and static HTML. This setup caused critical race conditions during initialization, as Vue 3 would completely wipe out the static layout upon mounting. Additionally, this architecture disconnected the rules engine from secure routing, role-based access controls, live production endpoints, and compliant audit tracking.
 
 To achieve 21 CFR Part 11 and GxP compliance, clinical designers must be able to securely author logical validation checks without risk of DOM-destruction errors or un-audited state changes.
 

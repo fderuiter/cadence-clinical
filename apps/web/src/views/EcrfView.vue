@@ -1170,6 +1170,8 @@ const requestCounters = reactive({});
 const conceptStatuses = reactive({});
 const conceptMessages = reactive({});
 
+
+
 /*
 function getStatusIcon(status) {
   if (status === "loading") return "⏳";
