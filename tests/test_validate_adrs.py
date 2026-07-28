@@ -260,6 +260,7 @@ def test_get_closest_local_branch_point_multiple_branches(mock_run_git):
     mock_run_git.side_effect = mock_run_git_side_effect
 
     from scripts.validate_adrs import get_closest_local_branch_point
+
     bp = get_closest_local_branch_point()
     assert bp == "commit-other-mb"
 
@@ -283,6 +284,7 @@ def test_get_closest_local_branch_point_fallback_to_root(mock_run_git):
     mock_run_git.side_effect = mock_run_git_side_effect
 
     from scripts.validate_adrs import get_closest_local_branch_point
+
     bp = get_closest_local_branch_point()
     assert bp == "commit-root-sha"
 
@@ -307,9 +309,9 @@ def test_get_changed_files_bypasses_merge_commits_and_parses_status(mock_run_git
             return "commit-normal-sha\ncommit-merge-sha\n", ""
         elif "log --pretty=%P" in cmd_str:
             if "commit-normal-sha" in cmd_str:
-                return "commit-parent-sha\n", "" # 1 parent (normal)
+                return "commit-parent-sha\n", ""  # 1 parent (normal)
             elif "commit-merge-sha" in cmd_str:
-                return "commit-parent1 commit-parent2\n", "" # 2 parents (merge)
+                return "commit-parent1 commit-parent2\n", ""  # 2 parents (merge)
         elif "diff-tree" in cmd_str:
             if "commit-normal-sha" in cmd_str:
                 return "apps/execution/main.py\n", ""
@@ -329,4 +331,3 @@ def test_get_changed_files_bypasses_merge_commits_and_parses_status(mock_run_git
         assert "new_file.py" in changed
         assert "untracked_file.py" in changed
         assert "should/not/be/here.py" not in changed
-

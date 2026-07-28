@@ -134,7 +134,7 @@ def get_closest_local_branch_point() -> str:
         mb = mb.strip()
         if not mb:
             continue
-        
+
         # If the merge base is HEAD itself, then HEAD is an ancestor of that branch,
         # which is not a parent branching point for the current commits.
         if mb == head_sha:
@@ -183,7 +183,9 @@ def get_changed_files() -> set[str]:
 
     # 3. Collect modified files from commit history from branch_point to HEAD
     # Following first-parent lineage bypasses parents of merge commits (Requirement 4)
-    stdout, _ = run_git_command(["git", "rev-list", "--first-parent", f"{branch_point}..HEAD"])
+    stdout, _ = run_git_command(
+        ["git", "rev-list", "--first-parent", f"{branch_point}..HEAD"]
+    )
     if stdout:
         for commit in stdout.splitlines():
             commit = commit.strip()
@@ -191,14 +193,18 @@ def get_changed_files() -> set[str]:
                 continue
 
             # Check if this commit is a merge commit (has more than 1 parent)
-            parents_out, _ = run_git_command(["git", "log", "--pretty=%P", "-n", "1", commit])
+            parents_out, _ = run_git_command(
+                ["git", "log", "--pretty=%P", "-n", "1", commit]
+            )
             parents = parents_out.strip().split()
             if len(parents) > 1:
                 # Bypass merge commits to prevent pulling in unrelated branch changes
                 continue
 
             # Get files modified in this commit
-            files_out, _ = run_git_command(["git", "diff-tree", "--no-commit-id", "--name-only", "-r", commit])
+            files_out, _ = run_git_command(
+                ["git", "diff-tree", "--no-commit-id", "--name-only", "-r", commit]
+            )
             if files_out:
                 for line in files_out.splitlines():
                     file_path = line.strip()

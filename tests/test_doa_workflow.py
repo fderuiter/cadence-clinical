@@ -77,7 +77,7 @@ def generate_sig_token(user_id: str, action: str) -> str:
     """
     Generates a mock Part 11 step-up re-authentication token (X-Sig-Token).
     """
-    secret = "internal-gateway-secret-12345"
+    secret = "internal-gateway-secret-12345"  # pragma: allowlist secret
     payload = {
         "sub": user_id,
         "action": action,
