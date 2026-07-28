@@ -1551,3 +1551,158 @@ async def test_watermarked_document_viewing_and_download():
         assert log["user_id"] == "test_user"
         assert log["user_role"] == "regulatory_inspector"
         assert "Downloaded watermarked content" in log["details"]
+
+
+@pytest.mark.asyncio
+async def test_regulatory_binder_export():
+    """
+    Verify the automated ZIP-based regulatory binder export for eTMF studies.
+    Covers:
+    - Authorization check (only auditor roles allowed).
+    - Latest-only vs full-history export modes.
+    - Format-agnostic watermarking on zipped files.
+    - Presence of manifest.json and masked audit_summary.json inside the ZIP.
+    - TMFAuditLog BINDER_EXPORT audit event registration.
+    """
+    client = TestClient(app)
+    admin_headers = get_auth_headers(roles="admin", change_reason="Binder test setup")
+    auditor_headers = get_auth_headers(roles="regulatory_inspector")
+    cra_headers = get_auth_headers(roles="cra", change_reason="CRA download attempt")
+
+    study_id = "study_binder_test"
+
+    # 1. Ingest documents (Protocol v1, Protocol v2, and a Define-XML file)
+    payload_prot_v1 = {
+        "study_id": study_id,
+        "artifact_type": "Clinical Trial Protocol",
+        "filename": "protocol.txt",
+        "content": "This is raw protocol text version 1.",
+        "mime_type": "text/plain",
+    }
+    resp1 = client.post(
+        "/api/v1/etmf/ingest", json=payload_prot_v1, headers=admin_headers
+    )
+    assert resp1.status_code == 201
+
+    payload_prot_v2 = {
+        "study_id": study_id,
+        "artifact_type": "Clinical Trial Protocol",
+        "filename": "protocol.txt",
+        "content": "This is raw protocol text version 2.",
+        "mime_type": "text/plain",
+    }
+    resp2 = client.post(
+        "/api/v1/etmf/ingest", json=payload_prot_v2, headers=admin_headers
+    )
+    assert resp2.status_code == 201
+
+    payload_xml = {
+        "study_id": study_id,
+        "artifact_type": "Define-XML Specifications",
+        "filename": "define.xml",
+        "content": "<xml>Specifications</xml>",
+        "mime_type": "application/xml",
+    }
+    resp3 = client.post("/api/v1/etmf/ingest", json=payload_xml, headers=admin_headers)
+    assert resp3.status_code == 201
+
+    # 2. Test authorization gates
+    # CRA role should be denied
+    resp_forbidden = client.get(
+        f"/api/v1/etmf/studies/{study_id}/binder", headers=cra_headers
+    )
+    assert resp_forbidden.status_code == 403
+    assert "restricted to authorized auditor" in resp_forbidden.json()["detail"]
+
+    # Auditor role should be allowed
+    resp_ok = client.get(
+        f"/api/v1/etmf/studies/{study_id}/binder", headers=auditor_headers
+    )
+    assert resp_ok.status_code == 200
+    assert (
+        resp_ok.headers["Content-Disposition"]
+        == f"attachment; filename=study_{study_id}_binder.zip"
+    )
+
+    # 3. Verify ZIP structure and default latest-only mode
+    import io
+    import json
+    import zipfile
+
+    zip_bytes = resp_ok.content
+    with zipfile.ZipFile(io.BytesIO(zip_bytes)) as z:
+        filenames = z.namelist()
+
+        # Must contain manifest.json and audit_summary.json at the root
+        assert "manifest.json" in filenames
+        assert "audit_summary.json" in filenames
+
+        # In latest-only mode:
+        # Clinical Trial Protocol (Zone 01, Section 01.01, filename protocol.txt)
+        # Define-XML Specifications (Zone 10, Section 10.01, filename define.xml)
+        assert "Zone 01/01.01/protocol.txt" in filenames
+        assert "Zone 10/10.01/define.xml" in filenames
+        # Protocol v1 should NOT be present
+        assert "Zone 01/01.01/protocol_v1.txt" not in filenames
+
+        # Verify manifest.json content
+        manifest_text = z.read("manifest.json").decode("utf-8")
+        manifest_data = json.loads(manifest_text)
+        assert manifest_data["study_id"] == study_id
+        assert manifest_data["include_history"] is False
+        assert manifest_data["document_count"] == 2
+
+        # Verify watermark is applied inside the zipped files
+        protocol_text = z.read("Zone 01/01.01/protocol.txt").decode("utf-8")
+        assert "This is raw protocol text version 2." in protocol_text
+        assert "CONFIDENTIAL — Auditor Copy" in protocol_text
+        assert "regulatory_inspector" in protocol_text
+
+        # Verify masked audit summary
+        audit_text = z.read("audit_summary.json").decode("utf-8")
+        audit_data = json.loads(audit_text)
+        assert len(audit_data) > 0
+
+        # Sensitive user_id must be masked using MASKED_... deterministic format
+        for entry in audit_data:
+            assert entry["user_id"].startswith("MASKED_")
+            assert "test_user" not in entry["user_id"]
+            if "test_user" in entry["details"]:
+                assert "test_user" not in entry["details"]
+                assert "MASKED_" in entry["details"]
+
+    # 4. Verify include_history=True mode
+    resp_history = client.get(
+        f"/api/v1/etmf/studies/{study_id}/binder?include_history=true",
+        headers=auditor_headers,
+    )
+    assert resp_history.status_code == 200
+
+    with zipfile.ZipFile(io.BytesIO(resp_history.content)) as z_hist:
+        filenames_hist = z_hist.namelist()
+
+        assert "manifest.json" in filenames_hist
+        assert "audit_summary.json" in filenames_hist
+
+        # In history mode, both versions must coexist, suffixed with their versions
+        assert "Zone 01/01.01/protocol_v1.txt" in filenames_hist
+        assert "Zone 01/01.01/protocol_v2.txt" in filenames_hist
+        assert (
+            "Zone 10/10.01/define_v1.xml" in filenames_hist
+            or "Zone 10/10.01/define.xml" in filenames_hist
+        )
+
+        manifest_text_hist = z_hist.read("manifest.json").decode("utf-8")
+        manifest_data_hist = json.loads(manifest_text_hist)
+        assert manifest_data_hist["include_history"] is True
+        assert manifest_data_hist["document_count"] == 3
+
+    # 5. Verify TMFAuditLog BINDER_EXPORT audit event registration
+    audit_resp = client.get(
+        "/api/v1/etmf/audit-logs?action=BINDER_EXPORT", headers=auditor_headers
+    )
+    assert audit_resp.status_code == 200
+    logs = audit_resp.json()["items"]
+    assert len(logs) >= 2
+    assert logs[0]["action"] == "BINDER_EXPORT"
+    assert f"Exported regulatory binder for study '{study_id}'" in logs[0]["details"]
