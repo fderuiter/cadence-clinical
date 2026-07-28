@@ -228,14 +228,14 @@ def scan_file(
         if cat_lower == "urls" and (
             "localhost" in val_lower
             or "127.0.0.1" in val_lower
-            or "0.0.0.0" in val_lower
+            or "0.0.0.0" in val_lower  # nosec B104
             or "transmit-mock" in val_lower
             or "cadence-clinical.com" in val_lower
-        ):  # nosec B104
+        ):
             continue
         if cat_lower == "ip_mac_addresses" and (
-            val_lower in {"127.0.0.1", "0.0.0.0", "::1"}
-        ):  # nosec B104
+            val_lower in {"127.0.0.1", "0.0.0.0", "::1"}  # nosec B104
+        ):
             continue
         if cat_lower == "zip_geographic" and (
             val_lower == "12345"
