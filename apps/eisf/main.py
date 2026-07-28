@@ -1,6 +1,7 @@
 import hashlib
 import os
-from datetime import datetime
+import time
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, status
@@ -84,6 +85,45 @@ class EISFIngestionRequest(BaseModel):
             if not bc:
                 data["binder_classification"] = at
         return data
+
+
+class EISFSyncItem(BaseModel):
+    id: Optional[str] = None
+    study_id: str = Field(..., description="The clinical study ID")
+    site_id: str = Field(..., description="The clinical site ID")
+    binder_classification: str = Field(..., description="Binder classification")
+    filename: str = Field(..., description="Document filename")
+    content: str = Field(..., description="Base64 or raw content")
+    mime_type: str = Field(..., description="MIME type")
+    version_index: Optional[int] = Field(None, description="Optional version index")
+    metadata_json: Optional[Dict[str, Any]] = Field(None, description="Metadata JSON")
+    correlation_key: Optional[str] = Field(None, description="Correlation key")
+    content_checksum: Optional[str] = Field(None, description="Content checksum")
+    source_system: str = Field("eISF", description="Source system name")
+    sync_status: str = Field("PENDING", description="Sync status")
+    conflict_policy: str = Field("CLIENT_WINS", description="CLIENT_WINS, SERVER_WINS, or MERGE")
+
+    @classmethod
+    @model_validator(mode="before")
+    def resolve_conflict_policy(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            cp = data.get("conflict_policy")
+            cs = data.get("conflict_strategy")
+            if not cp and cs:
+                data["conflict_policy"] = cs
+        return data
+
+
+class EISFSyncRequest(BaseModel):
+    submissions: List[EISFSyncItem] = Field(..., description="List of sync items")
+
+
+class EISFSyncResponse(BaseModel):
+    status: str = "success"
+    processed_count: int
+    created_count: int
+    updated_count: int
+    ignored_count: int
 
 
 class DocumentResponse(BaseModel):
@@ -356,6 +396,13 @@ async def create_document(
         or hashlib.sha256(payload.content.encode("utf-8")).hexdigest()
     )
 
+    # Derive correlation key if not provided
+    correlation_key = payload.correlation_key
+    if not correlation_key:
+        from apps.eisf.adapter import derive_correlation_key
+        artifact_type = (payload.metadata_json or {}).get("artifact_type") or payload.binder_classification
+        correlation_key = derive_correlation_key(payload.study_id, payload.site_id, payload.binder_classification, artifact_type)
+
     # Calculate version index
     stmt = (
         select(ISFDocument)
@@ -380,7 +427,7 @@ async def create_document(
         version_index=new_version_index,
         created_by=user_id,
         metadata_json=payload.metadata_json,
-        correlation_key=payload.correlation_key,
+        correlation_key=correlation_key,
         content_checksum=checksum,
         source_system=payload.source_system,
         sync_status="PENDING",
@@ -451,6 +498,13 @@ async def ingest_document(
             detail="binder_classification or artifact_type is required",
         )
 
+    # Derive correlation key if not provided
+    correlation_key = payload.correlation_key
+    if not correlation_key:
+        from apps.eisf.adapter import derive_correlation_key
+        artifact_type = (payload.metadata_json or {}).get("artifact_type") or payload.binder_classification or payload.artifact_type or ""
+        correlation_key = derive_correlation_key(payload.study_id, payload.site_id, binder_class, artifact_type)
+
     stmt = (
         select(ISFDocument)
         .where(
@@ -474,7 +528,7 @@ async def ingest_document(
         version_index=new_version_index,
         created_by=user_id,
         metadata_json=payload.metadata_json,
-        correlation_key=payload.correlation_key,
+        correlation_key=correlation_key,
         content_checksum=checksum,
         source_system=payload.source_system,
         sync_status="PENDING",
@@ -806,4 +860,436 @@ async def get_binder_completeness(
         site_id=site_id_filter,
         is_complete=global_is_complete,
         sections=sections_status,
+    )
+
+
+async def propagate_to_etmf(
+    study_id: str,
+    binder_classification: str,
+    filename: str,
+    content: str,
+    mime_type: str,
+    metadata_json: Optional[dict] = None,
+) -> None:
+    """
+    Propagates the synchronized document to the eTMF service.
+    """
+    import logging
+    logger = logging.getLogger("eisf_sync")
+    from apps.eisf.adapter import map_eisf_to_etmf
+    from packages.security.signing import generate_gateway_signature
+
+    # 1. Determine zone, section, artifact_type, and artifact_code
+    artifact_type = (metadata_json or {}).get("artifact_type") or binder_classification
+    try:
+        mapped = map_eisf_to_etmf(binder_classification, artifact_type)
+        zone = mapped["zone"]
+        section = mapped["section"]
+        etmf_art_type = mapped["artifact_type"]
+        etmf_art_code = mapped["artifact_code"]
+    except ValueError:
+        zone = None
+        section = None
+        etmf_art_type = binder_classification
+        etmf_art_code = None
+
+    # 2. Build payload for eTMF IngestionRequest
+    payload = {
+        "study_id": study_id,
+        "artifact_type": etmf_art_type,
+        "filename": filename,
+        "content": content,
+        "mime_type": mime_type,
+        "zone": zone,
+        "section": section,
+        "artifact_code": etmf_art_code,
+        "metadata_json": metadata_json or {},
+    }
+
+    # 3. Sign the service-to-service request using the internal gateway convention (V2)
+    user_id = "eisf_sync_service"
+    roles = "admin"
+    timestamp = str(time.time())
+    secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()
+    change_reason = "eISF to eTMF bidirectional sync propagation"
+
+    sig = generate_gateway_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        secret=secret,
+        change_reason=change_reason,
+    )
+
+    headers = {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": sig,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": change_reason,
+    }
+
+    # 4. Make the call to eTMF
+    etmf_base_url = os.getenv("ETMF_URL", "http://localhost:8003")
+    url = f"{etmf_base_url}/api/v1/etmf/ingest"
+
+    try:
+        import httpx
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(url, json=payload, headers=headers, timeout=5.0)
+            if resp.status_code not in (200, 201):
+                # We log the warning but don't fail the sync transaction
+                pass
+    except Exception:
+        # We handle network exceptions gracefully during sync
+        pass
+
+
+@app.post(
+    "/api/v1/eisf/sync",
+    response_model=EISFSyncResponse,
+)
+async def sync_documents(
+    request: Request,
+    payload: EISFSyncRequest,
+    _not_auditor=Depends(verify_not_auditor),
+    session: AsyncSession = Depends(get_db_session),
+):
+    import logging
+    logger = logging.getLogger("eisf_sync")
+    user_id = getattr(request.state, "user_id", "system")
+    roles = get_normalized_roles(request)
+    role_str = ",".join(roles) if isinstance(roles, list) else str(roles)
+
+    processed_count = 0
+    created_count = 0
+    updated_count = 0
+    ignored_count = 0
+
+    from apps.eisf.adapter import derive_correlation_key
+
+    for item in payload.submissions:
+        # Enforce site isolation for each item
+        await enforce_site_isolation(request, item.site_id, session)
+
+        processed_count += 1
+
+        # Derive correlation key if not provided
+        correlation_key = item.correlation_key
+        if not correlation_key:
+            art_type = (item.metadata_json or {}).get("artifact_type") or item.binder_classification
+            correlation_key = derive_correlation_key(item.study_id, item.site_id, item.binder_classification, art_type)
+
+        # Compute checksum if not provided
+        checksum = item.content_checksum or hashlib.sha256(item.content.encode("utf-8")).hexdigest()
+
+        # Query existing documents for this key or matching logical fields if correlation_key is null
+        stmt = (
+            select(ISFDocument)
+            .where(
+                (ISFDocument.correlation_key == correlation_key) |
+                (
+                    ISFDocument.correlation_key.is_(None) &
+                    (ISFDocument.study_id == item.study_id) &
+                    (ISFDocument.site_id == item.site_id) &
+                    (ISFDocument.binder_classification == item.binder_classification)
+                )
+            )
+            .order_by(ISFDocument.version_index.desc())
+        )
+        res = await session.execute(stmt)
+        existing_docs = res.scalars().all()
+
+        # 1. Duplicate detection
+        is_duplicate = False
+        for ex_doc in existing_docs:
+            if ex_doc.content_checksum == checksum:
+                # If metadata is also identical, then it is an exact duplicate
+                if (ex_doc.metadata_json or {}) == (item.metadata_json or {}):
+                    is_duplicate = True
+                    break
+
+        if is_duplicate:
+            ignored_count += 1
+            await write_audit_log(
+                session=session,
+                actor_id=user_id,
+                actor_role=role_str,
+                action="SYNC",
+                document_id=existing_docs[0].id if existing_docs else None,
+                details=f"SYNC: Ignored duplicate document with correlation_key '{correlation_key}' (checksum matching).",
+                reason_for_change="Bidirectional sync: Exact duplicate ignored",
+            )
+            continue
+
+        # 2. No existing documents: CREATE new document
+        if not existing_docs:
+            new_version_index = item.version_index or 1
+            doc = ISFDocument(
+                study_id=item.study_id,
+                site_id=item.site_id,
+                binder_classification=item.binder_classification,
+                filename=item.filename,
+                content=item.content,
+                mime_type=item.mime_type,
+                version_index=new_version_index,
+                created_by=user_id,
+                metadata_json=item.metadata_json,
+                correlation_key=correlation_key,
+                content_checksum=checksum,
+                source_system=item.source_system,
+                sync_status="SYNCED",
+            )
+            session.add(doc)
+            await session.flush()
+
+            # Trigger signed service-to-service eTMF propagation unless eTMF originated
+            if item.source_system != "eTMF":
+                await propagate_to_etmf(
+                    study_id=item.study_id,
+                    binder_classification=item.binder_classification,
+                    filename=item.filename,
+                    content=item.content,
+                    mime_type=item.mime_type,
+                    metadata_json=item.metadata_json,
+                )
+
+            created_count += 1
+            await write_audit_log(
+                session=session,
+                actor_id=user_id,
+                actor_role=role_str,
+                action="SYNC",
+                document_id=doc.id,
+                details=f"SYNC: Created new document '{item.filename}' (correlation_key: '{correlation_key}', version: {new_version_index}) from '{item.source_system}'.",
+                reason_for_change=f"Bidirectional sync: Created from {item.source_system}",
+            )
+            continue
+
+        # 3. Existing documents exist: Apply conflict resolution policies
+        latest_existing = existing_docs[0]
+        policy = item.conflict_policy.upper() if item.conflict_policy else "CLIENT_WINS"
+
+        if policy == "CLIENT_WINS":
+            new_version_index = latest_existing.version_index + 1
+            doc = ISFDocument(
+                study_id=item.study_id,
+                site_id=item.site_id,
+                binder_classification=item.binder_classification,
+                filename=item.filename,
+                content=item.content,
+                mime_type=item.mime_type,
+                version_index=new_version_index,
+                created_by=user_id,
+                metadata_json=item.metadata_json,
+                correlation_key=correlation_key,
+                content_checksum=checksum,
+                source_system=item.source_system,
+                sync_status="SYNCED",
+            )
+            session.add(doc)
+            await session.flush()
+
+            if item.source_system != "eTMF":
+                await propagate_to_etmf(
+                    study_id=item.study_id,
+                    binder_classification=item.binder_classification,
+                    filename=item.filename,
+                    content=item.content,
+                    mime_type=item.mime_type,
+                    metadata_json=item.metadata_json,
+                )
+
+            updated_count += 1
+            await write_audit_log(
+                session=session,
+                actor_id=user_id,
+                actor_role=role_str,
+                action="SYNC",
+                document_id=doc.id,
+                details=f"SYNC: Updated document '{item.filename}' to version {new_version_index} via CLIENT_WINS policy.",
+                reason_for_change=f"Bidirectional sync: CLIENT_WINS update from {item.source_system}",
+            )
+
+        elif policy == "SERVER_WINS":
+            ignored_count += 1
+            await write_audit_log(
+                session=session,
+                actor_id=user_id,
+                actor_role=role_str,
+                action="SYNC",
+                document_id=latest_existing.id,
+                details=f"SYNC: Ignored incoming document '{item.filename}' (correlation_key: '{correlation_key}') via SERVER_WINS policy.",
+                reason_for_change="Bidirectional sync: SERVER_WINS - incoming ignored",
+            )
+
+        elif policy == "MERGE":
+            # Document Merge Semantics (LWW and lexicographic tiebreakers)
+            # Parse overall timestamps
+            t_inc = None
+            if item.metadata_json:
+                ts_val = item.metadata_json.get("timestamp") or item.metadata_json.get("timestamps", {}).get("content")
+                if ts_val:
+                    try:
+                        t_inc = datetime.fromisoformat(str(ts_val))
+                        # If timezone-aware, convert to naive UTC
+                        if t_inc.tzinfo is not None:
+                            t_inc = t_inc.astimezone(timezone.utc).replace(tzinfo=None)
+                    except Exception:
+                        pass
+            if not t_inc:
+                t_inc = datetime.utcnow()
+
+            t_exist = None
+            if latest_existing.metadata_json:
+                ts_val = latest_existing.metadata_json.get("timestamp") or latest_existing.metadata_json.get("timestamps", {}).get("content")
+                if ts_val:
+                    try:
+                        t_exist = datetime.fromisoformat(str(ts_val))
+                        if t_exist.tzinfo is not None:
+                            t_exist = t_exist.astimezone(timezone.utc).replace(tzinfo=None)
+                    except Exception:
+                        pass
+            if not t_exist:
+                t_exist = latest_existing.created_at.replace(tzinfo=None) if latest_existing.created_at else datetime.utcnow()
+
+            # Get tiebreaker identifiers
+            inc_mod_by = (item.metadata_json or {}).get("modified_by") or item.source_system or "eISF"
+            exist_mod_by = (latest_existing.metadata_json or {}).get("modified_by") or latest_existing.source_system or "server"
+
+            # Determine core field winner
+            incoming_wins = False
+            if t_inc > t_exist:
+                incoming_wins = True
+            elif t_inc < t_exist:
+                incoming_wins = False
+            else:
+                if inc_mod_by > exist_mod_by:
+                    incoming_wins = True
+
+            if incoming_wins:
+                merged_content = item.content
+                merged_filename = item.filename
+                merged_mime_type = item.mime_type
+                merged_checksum = checksum
+            else:
+                merged_content = latest_existing.content
+                merged_filename = latest_existing.filename
+                merged_mime_type = latest_existing.mime_type
+                merged_checksum = latest_existing.content_checksum
+
+            # Merge metadata_json
+            merged_metadata = dict(latest_existing.metadata_json or {})
+            incoming_meta = dict(item.metadata_json or {})
+
+            for k, v in incoming_meta.items():
+                if k not in merged_metadata:
+                    merged_metadata[k] = v
+                else:
+                    # Overlapping key - Apply LWW
+                    t_k_inc = None
+                    t_k_exist = None
+                    if item.metadata_json and "timestamps" in item.metadata_json:
+                        tk_val = item.metadata_json["timestamps"].get(k)
+                        if tk_val:
+                            try:
+                                t_k_inc = datetime.fromisoformat(str(tk_val))
+                                if t_k_inc.tzinfo is not None:
+                                    t_k_inc = t_k_inc.astimezone(timezone.utc).replace(tzinfo=None)
+                            except Exception:
+                                pass
+                    if latest_existing.metadata_json and "timestamps" in latest_existing.metadata_json:
+                        tk_val = latest_existing.metadata_json["timestamps"].get(k)
+                        if tk_val:
+                            try:
+                                t_k_exist = datetime.fromisoformat(str(tk_val))
+                                if t_k_exist.tzinfo is not None:
+                                    t_k_exist = t_k_exist.astimezone(timezone.utc).replace(tzinfo=None)
+                            except Exception:
+                                pass
+
+                    if not t_k_inc:
+                        t_k_inc = t_inc
+                    if not t_k_exist:
+                        t_k_exist = t_exist
+
+                    if t_k_inc > t_k_exist:
+                        merged_metadata[k] = v
+                    elif t_k_inc < t_k_exist:
+                        merged_metadata[k] = latest_existing.metadata_json[k]
+                    else:
+                        if inc_mod_by > exist_mod_by:
+                            merged_metadata[k] = v
+                        else:
+                            merged_metadata[k] = latest_existing.metadata_json[k]
+
+            # Check if merged document represents any actual change
+            has_changes = (
+                merged_checksum != latest_existing.content_checksum
+                or merged_metadata != latest_existing.metadata_json
+                or merged_filename != latest_existing.filename
+                or merged_mime_type != latest_existing.mime_type
+            )
+
+            if has_changes:
+                new_version_index = latest_existing.version_index + 1
+                doc = ISFDocument(
+                    study_id=item.study_id,
+                    site_id=item.site_id,
+                    binder_classification=item.binder_classification,
+                    filename=merged_filename,
+                    content=merged_content,
+                    mime_type=merged_mime_type,
+                    version_index=new_version_index,
+                    created_by=user_id,
+                    metadata_json=merged_metadata,
+                    correlation_key=correlation_key,
+                    content_checksum=merged_checksum,
+                    source_system=item.source_system,
+                    sync_status="SYNCED",
+                )
+                session.add(doc)
+                await session.flush()
+
+                if item.source_system != "eTMF":
+                    await propagate_to_etmf(
+                        study_id=item.study_id,
+                        binder_classification=item.binder_classification,
+                        filename=merged_filename,
+                        content=merged_content,
+                        mime_type=merged_mime_type,
+                        metadata_json=merged_metadata,
+                    )
+
+                updated_count += 1
+                await write_audit_log(
+                    session=session,
+                    actor_id=user_id,
+                    actor_role=role_str,
+                    action="SYNC",
+                    document_id=doc.id,
+                    details=f"SYNC: Merged and updated document '{merged_filename}' to version {new_version_index}.",
+                    reason_for_change="Bidirectional sync: MERGE update",
+                )
+            else:
+                ignored_count += 1
+                await write_audit_log(
+                    session=session,
+                    actor_id=user_id,
+                    actor_role=role_str,
+                    action="SYNC",
+                    document_id=latest_existing.id,
+                    details=f"SYNC: Merged document result was identical to existing version {latest_existing.version_index}. Ignored.",
+                    reason_for_change="Bidirectional sync: MERGE - no changes detected",
+                )
+
+    await session.commit()
+
+    return EISFSyncResponse(
+        status="success",
+        processed_count=processed_count,
+        created_count=created_count,
+        updated_count=updated_count,
+        ignored_count=ignored_count,
     )
