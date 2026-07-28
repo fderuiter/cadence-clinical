@@ -158,6 +158,7 @@ async def test_tickets_lifecycle():
     update_payload = {
         "status": "RESOLVED",
         "description": "Resolved with reboot.",
+        "version_index": 1,
     }
     res_update = client.put(
         f"/api/v1/tickets/{ticket_id}", json=update_payload, headers=update_headers
@@ -175,6 +176,7 @@ async def test_tickets_lifecycle():
     )
     delete_payload = {
         "is_deleted": True,
+        "version_index": 2,
     }
     res_delete = client.put(
         f"/api/v1/tickets/{ticket_id}", json=delete_payload, headers=delete_headers
@@ -551,7 +553,7 @@ async def test_tickets_terminal_state_rejection():
     # 2. Update to CLOSED (terminal status)
     res_closed = client.put(
         f"/api/v1/tickets/{ticket_id}",
-        json={"status": "CLOSED"},
+        json={"status": "CLOSED", "version_index": 1},
         headers=headers,
     )
     assert res_closed.status_code == 200
@@ -560,7 +562,7 @@ async def test_tickets_terminal_state_rejection():
     # 3. Try to update a closed/terminal ticket -> Expect 400 Bad Request
     res_fail_closed = client.put(
         f"/api/v1/tickets/{ticket_id}",
-        json={"description": "Updated closed desc"},
+        json={"description": "Updated closed desc", "version_index": 2},
         headers=headers,
     )
     assert res_fail_closed.status_code == 400
@@ -683,3 +685,166 @@ async def test_tickets_validation_invalid_enums():
     # 2. Invalid status in query parameter on listing
     res_list = client.get("/api/v1/tickets?status=SUPER_OPEN", headers=headers)
     assert res_list.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_tickets_optimistic_locking_and_explicit_endpoints():
+    """
+    Verify:
+    (a) optimistic locking 409 responses for mismatched version indexes,
+    (b) 400 responses for invalid state transitions (undeclared),
+    (c) blocked modifications on terminal tickets unless reopening, and
+    (d) verification of the detailed audit log structure.
+    """
+    client = TestClient(app)
+    headers = get_auth_headers(roles="admin", change_reason="Lifecycle transition tests")
+
+    # 1. Create a ticket
+    res_create = client.post(
+        "/api/v1/tickets",
+        json={"title": "Locking Test", "description": "Lock desc", "priority": "MEDIUM"},
+        headers=headers,
+    )
+    assert res_create.status_code == 201
+    ticket = res_create.json()
+    ticket_id = ticket["id"]
+    assert ticket["version_index"] == 1
+
+    # (a) Optimistic locking check: mismatch version index should return 409
+    res_mismatch = client.put(
+        f"/api/v1/tickets/{ticket_id}",
+        json={"description": "Stale update", "version_index": 999},
+        headers=headers,
+    )
+    assert res_mismatch.status_code == 409
+    assert "Stale version index" in res_mismatch.json()["detail"]
+
+    # (a) Check missing version index returns 409
+    res_missing = client.put(
+        f"/api/v1/tickets/{ticket_id}",
+        json={"description": "Missing version index"},
+        headers=headers,
+    )
+    assert res_missing.status_code == 409
+    assert "Missing expected version index" in res_missing.json()["detail"]
+
+    # (b) Reject invalid state transitions
+    # Transitioning directly from OPEN to REOPENED is not valid/declared
+    res_invalid_transition = client.put(
+        f"/api/v1/tickets/{ticket_id}",
+        json={"status": "REOPENED", "version_index": 1},
+        headers=headers,
+    )
+    assert res_invalid_transition.status_code == 400
+    assert "Invalid transition" in res_invalid_transition.json()["detail"]
+
+    # Check invalid transition on explicit transition endpoint as well
+    res_invalid_transition_endpoint = client.post(
+        f"/api/v1/tickets/{ticket_id}/transition",
+        json={"status": "REOPENED", "version_index": 1},
+        headers=headers,
+    )
+    assert res_invalid_transition_endpoint.status_code == 400
+    assert "Invalid transition" in res_invalid_transition_endpoint.json()["detail"]
+
+    # Explicit /assign endpoint check
+    res_assign = client.post(
+        f"/api/v1/tickets/{ticket_id}/assign",
+        json={"assignee_user": "bob_developer", "assignee_role": "developer", "version_index": 1},
+        headers=headers,
+    )
+    assert res_assign.status_code == 200
+    ticket = res_assign.json()
+    assert ticket["assignee_user"] == "bob_developer"
+    assert ticket["assignee_role"] == "developer"
+    assert ticket["version_index"] == 2
+
+    # Explicit /transition endpoint check: Transition OPEN -> IN_PROGRESS
+    res_transition = client.post(
+        f"/api/v1/tickets/{ticket_id}/transition",
+        json={"status": "IN_PROGRESS", "version_index": 2},
+        headers=headers,
+    )
+    assert res_transition.status_code == 200
+    ticket = res_transition.json()
+    assert ticket["status"] == "IN_PROGRESS"
+    assert ticket["version_index"] == 3
+
+    # Transition IN_PROGRESS -> CANCELLED (cancelled is terminal)
+    res_cancel = client.post(
+        f"/api/v1/tickets/{ticket_id}/transition",
+        json={"status": "CANCELLED", "version_index": 3},
+        headers=headers,
+    )
+    assert res_cancel.status_code == 200
+    ticket = res_cancel.json()
+    assert ticket["status"] == "CANCELLED"
+    assert ticket["version_index"] == 4
+
+    # (c) Blocked modifications on terminal tickets unless reopening
+    # Try to change title of cancelled ticket -> Expect 400
+    res_mod_cancelled = client.put(
+        f"/api/v1/tickets/{ticket_id}",
+        json={"title": "Changed Title", "version_index": 4},
+        headers=headers,
+    )
+    assert res_mod_cancelled.status_code == 400
+    assert "Cannot update ticket because it is in terminal state" in res_mod_cancelled.json()["detail"]
+
+    # Reopening terminal ticket is allowed (from CANCELLED to REOPENED)
+    res_reopen = client.put(
+        f"/api/v1/tickets/{ticket_id}",
+        json={"status": "REOPENED", "version_index": 4},
+        headers=headers,
+    )
+    assert res_reopen.status_code == 200
+    ticket = res_reopen.json()
+    assert ticket["status"] == "REOPENED"
+    assert ticket["version_index"] == 5
+
+    # Check explicit assignment error when ticket is CLOSED (terminal)
+    # First, let's resolve and then close the ticket
+    res_resolve = client.post(
+        f"/api/v1/tickets/{ticket_id}/transition",
+        json={"status": "RESOLVED", "version_index": 5},
+        headers=headers,
+    )
+    assert res_resolve.status_code == 200
+    res_close = client.post(
+        f"/api/v1/tickets/{ticket_id}/transition",
+        json={"status": "CLOSED", "version_index": 6},
+        headers=headers,
+    )
+    assert res_close.status_code == 200
+
+    # Try assigning closed ticket -> Expect 400
+    res_assign_closed = client.post(
+        f"/api/v1/tickets/{ticket_id}/assign",
+        json={"assignee_user": "alice", "version_index": 7},
+        headers=headers,
+    )
+    assert res_assign_closed.status_code == 400
+    assert "terminal state" in res_assign_closed.json()["detail"]
+
+    # (d) Verification of the detailed audit log structure
+    # Fetch audit logs for this ticket
+    res_audit = client.get(f"/api/v1/tickets/audit-logs?ticket_id={ticket_id}", headers=headers)
+    assert res_audit.status_code == 200
+    logs = res_audit.json()
+    # Find TICKET_ASSIGN log
+    assign_log = next((log for log in logs if log["action"] == "TICKET_ASSIGN"), None)
+    assert assign_log is not None
+    assert assign_log["created_by"] == "tickets_test_user"
+    assert "Actor:" in assign_log["details"]
+    assert "Roles:" in assign_log["details"]
+    assert "Source State:" in assign_log["details"]
+    assert "Target State:" in assign_log["details"]
+    assert "Assignment Changes:" in assign_log["details"]
+    assert "Reason:" in assign_log["details"]
+    assert "assignee_user:" in assign_log["details"]
+    assert "assignee_role:" in assign_log["details"]
+
+    # Find TICKET_TRANSITION log
+    transition_log = next((log for log in logs if log["action"] == "TICKET_TRANSITION"), None)
+    assert transition_log is not None
+    assert "Source State: 'OPEN', Target State: 'IN_PROGRESS'" in transition_log["details"]

@@ -289,6 +289,7 @@ WHITELISTED_ROUTES = {
     ("patch", "/api/v1/execution/queries/{query_id}"),
     ("post", "/api/admin/cache/clear"),
     ("post", "/api/designer/protocols/{id}/amend"),
+    ("post", "/api/v1/designer/round-trip"),
     ("post", "/api/v1/designer/usdm/validate"),
     ("post", "/api/v1/designer/round-trip"),
     ("post", "/api/v1/execution/batch-sign-off"),
