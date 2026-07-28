@@ -107,7 +107,12 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "ctms_financial_milestone": {"create", "read", "trigger"},
         "ctms_financial_payable": {"read"},
         # eTMF
-        "etmf_document": {"create", "read", "read_raw", "redact", "sign"},
+        "etmf_document": {
+            "create", "read", "read_raw", "redact", "sign",
+            "transition_technical_qc", "transition_clinical_qc",
+            "transition_approved", "transition_archived",
+            "transition_rejected", "transition_draft", "transition_signed"
+        },
         "etmf_edl": {"read", "create"},
         "etmf_audit_logs": {"read"},
         # Quality
@@ -139,9 +144,13 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "ctms_financial_milestone": {"create", "read", "trigger"},
         "ctms_financial_payable": {"read"},
         # eTMF
-        "etmf_document": {"create", "read", "read_raw", "redact", "sign"},
+        "etmf_document": {
+            "create", "read", "read_raw", "redact", "sign",
+            "transition_technical_qc",
+            "transition_approved", "transition_archived",
+            "transition_rejected", "transition_draft", "transition_signed"
+        },
         "etmf_edl": {"read", "create"},
-        "etmf_audit_logs": {"read"},
         # Quality
         "quality_event": {"create", "read", "update", "delete", "investigate"},
         "quality_audit_logs": {"read"},
@@ -220,7 +229,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "ctms_cra_allocation": {"read"},
         "ctms_cra_workload": {"read"},
         # eTMF
-        "etmf_document": {"create", "read", "redact", "sign"},
+        "etmf_document": {"create", "read", "redact", "sign", "transition_clinical_qc"},
         "etmf_edl": {"read", "create"},
         # Quality
         "quality_event": {"create", "read", "update"},
@@ -237,7 +246,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "ctms_cra_allocation": {"read"},
         "ctms_cra_workload": {"read"},
         # eTMF
-        "etmf_document": {"create", "read", "redact", "sign"},
+        "etmf_document": {"create", "read", "redact", "sign", "transition_clinical_qc"},
         "etmf_edl": {"read", "create"},
         # Quality
         "quality_event": {"create", "read", "update"},
@@ -261,7 +270,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "ctms_financial_milestone": {"read"},
         "ctms_financial_payable": {"read"},
         # eTMF read-only
-        "etmf_document": {"read", "read_raw"},
+        "etmf_document": {"read"},
         "etmf_edl": {"read"},
         "etmf_audit_logs": {"read"},
         # Quality read-only
@@ -289,6 +298,47 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "etmf_document": {"create", "read", "redact", "sign"},
         "etmf_edl": {"read"},
         "quality_event": {"create", "read", "update"},
+    },
+    "sponsor_clinical": {
+        "etmf_document": {
+            "transition_clinical_qc",
+            "transition_approved",
+            "transition_rejected",
+            "transition_draft",
+            "transition_signed",
+        }
+    },
+    "admin": {
+        "study_design": {"read"},
+        "subject_enrollment": {"read"},
+        "ecrf_data_entry": {"read"},
+        "query_lifecycle": {"create", "read", "update", "delete"},
+        "system_audit_logs": {"read"},
+        "export_masked": {"create", "read", "update"},
+        # CTMS
+        "ctms_study": {"create", "read"},
+        "ctms_audit_logs": {"read"},
+        "ctms_monitoring_visit": {"create", "update", "read", "sign_off"},
+        "ctms_monitoring_letter": {"read", "read_type"},
+        "ctms_recruitment": {"create", "read"},
+        "ctms_site_milestone": {"create", "update", "read"},
+        "ctms_cra_allocation": {"create", "update", "read"},
+        "ctms_cra_workload": {"read"},
+        "ctms_financial": {"create", "read", "update", "write"},
+        "ctms_financial_budget": {"create", "read"},
+        "ctms_financial_milestone": {"create", "read", "trigger"},
+        "ctms_financial_payable": {"read"},
+        # eTMF
+        "etmf_document": {
+            "create", "read", "read_raw", "redact", "sign",
+            "transition_technical_qc", "transition_clinical_qc",
+            "transition_approved", "transition_archived",
+            "transition_rejected", "transition_draft", "transition_signed"
+        },
+        "etmf_edl": {"read", "create"},
+        # Quality
+        "quality_event": {"create", "read", "update", "delete", "investigate"},
+        "quality_audit_logs": {"read"},
     },
     "quality_manager": {
         "quality_event": {"create", "read", "update", "delete", "investigate"},
@@ -376,7 +426,17 @@ def has_permission(principal: Principal, permission: str) -> bool:
     resource = resource.strip().lower()
     action = action.strip().lower()
 
-    for role in principal.roles:
+    # Determine expanded list of roles to check permissions for
+    roles_to_check = list(principal.roles)
+    for r in principal.raw_roles:
+        norm_r = r.strip().lower()
+        if norm_r not in roles_to_check:
+            roles_to_check.append(norm_r)
+        if norm_r in ("admin", "sponsor admin", "sponsor_admin"):
+            if "admin" not in roles_to_check:
+                roles_to_check.append("admin")
+
+    for role in roles_to_check:
         perms = ROLE_PERMISSIONS.get(role, {})
         if resource in perms and action in perms[resource]:
             return True
@@ -609,12 +669,6 @@ async def get_principal(request: Request) -> Principal:
                 status_code=403,
                 detail="Missing change justification reason",
             )
-        if is_ingest_or_doc_route:
-            if len(principal.change_reason) < 10:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Part 11 change justification reason is required and must be at least 10 characters long.",
-                )
 
     return principal
 
