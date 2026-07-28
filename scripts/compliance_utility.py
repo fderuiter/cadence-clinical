@@ -141,7 +141,12 @@ def parse_prd(filepath: str) -> set[str]:
     return requirements
 
 
-def get_valid_requirements(docs_dir: str = "/app/docs") -> set[str]:
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.dirname(SCRIPT_DIR)
+DEFAULT_DOCS_DIR = os.path.join(REPO_ROOT, "docs")
+
+
+def get_valid_requirements(docs_dir: str = DEFAULT_DOCS_DIR) -> set[str]:
     """Gets the master set of valid requirement identifiers."""
     srs_path = os.path.join(docs_dir, "SRS.md")
     prd_path = os.path.join(docs_dir, "SDLC/01_Product_Requirements_Document_PRD.md")
