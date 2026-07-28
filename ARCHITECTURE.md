@@ -109,39 +109,25 @@ Traditional clinical trial builds require manual, error-prone translation of pro
 
 ## 3. Data Transformation Flow
 
-```text
-[ Study Designer Authors Protocol ]
-                 │
-                 ▼
- [ Saved to Neo4j Graph (USDM) ]
-                 │
-                 ▼
- [ DDF Event: "Study Published" ]
-                 │
-                 ▼
- [ Transformer: USDM -> ODM/XForm ]
-                 │
-                 ▼
- [ Provisioned into PostgreSQL EDC ] ───► [ eCOA Instrument Definition Assigned ]
-                 │                                        │
-                 ▼                                        ▼
- [ Live Site Data Entry & Audit Log ]    [ Patient Completes ePRO Assessment (PWA) ]
-                │                                         │
-                ├─────────────────────────────────────────┘
-                ▼
- [ CDASH Extractor: SDTM Domains ]
-                │
-                ▼
- [ Analysis Derivation: ADaM Datasets ]
-                │
-                ▼
- [ Serializer: CDISC Dataset-JSON 1.0 ]
-                │
-                ▼
- [ Validator: Conformance Verification ]
-                │
-                ├─────────────────────────┐
-         (If Valid)                 (If Invalid)
-                │                         │
-                ▼                         ▼
- [ Log SUCCESS in BiostatExport ]  [ Log FAILED & Raise HTTP 422 ]
+```mermaid
+flowchart TD
+    A[Study Designer Authors Protocol] --> B[(Saved to Neo4j Graph - USDM)]
+    B --> C[DDF Event: "Study Published"]
+    C --> D[Transformer: USDM ──► ODM/XForm]
+    D --> E[(Provisioned into PostgreSQL EDC)]
+    
+    E --> F[eCOA Instrument Definition Assigned]
+    E --> G[Live Site Data Entry & Audit Log]
+    
+    F --> H[Patient Completes ePRO Assessment - PWA]
+    
+    G --> I[CDASH Extractor: SDTM Domains]
+    H --> I
+    
+    I --> J[Analysis Derivation: ADaM Datasets]
+    J --> K[Serializer: CDISC Dataset-JSON 1.0]
+    K --> L{Validator: Conformance Verification}
+    
+    L -->|If Valid| M[Log SUCCESS in BiostatExport]
+    L -->|If Invalid| N[Log FAILED & Raise HTTP 422]
+```
