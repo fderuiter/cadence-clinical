@@ -457,6 +457,69 @@ def test_gateway_subject_role_routing_restrictions(
         )
         assert res.status_code == 200
 
+        # Newly allowed Subject self-service routes (GETs and owned-notification acknowledgement)
+        res_assignments = client.get(
+            "/api/v1/interop/assignments/subject/patient_123",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res_assignments.status_code == 200
+
+        res_instruments = client.get(
+            "/api/v1/interop/subjects/patient_123/instruments",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res_instruments.status_code == 200
+
+        res_instrument = client.get(
+            "/api/v1/interop/instruments/some-instrument-id",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res_instrument.status_code == 200
+
+        res_compliance = client.get(
+            "/api/v1/interop/subjects/patient_123/compliance",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res_compliance.status_code == 200
+
+        res_notifications = client.get(
+            "/api/v1/interop/subjects/patient_123/notifications",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res_notifications.status_code == 200
+
+        res_acknowledge = client.post(
+            "/api/v1/interop/notifications/notif_123/acknowledge",
+            headers={"Authorization": f"Bearer {token}", "X-Change-Reason": "ack_reason"},
+            json={"reason_for_change": "ack_reason"},
+        )
+        assert res_acknowledge.status_code == 200
+
+        # Cross-subject/Mismatched identity checks -> 403
+        res_cross_assignments = client.get(
+            "/api/v1/interop/assignments/subject/another_patient",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res_cross_assignments.status_code == 403
+
+        res_cross_instruments = client.get(
+            "/api/v1/interop/subjects/another_patient/instruments",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res_cross_instruments.status_code == 403
+
+        res_cross_compliance = client.get(
+            "/api/v1/interop/subjects/another_patient/compliance",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res_cross_compliance.status_code == 403
+
+        res_cross_notifications = client.get(
+            "/api/v1/interop/subjects/another_patient/notifications",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res_cross_notifications.status_code == 403
+
         # Blocked routes for Subject role -> 403
         res_fhir = client.post(
             "/api/v1/interop/fhir/prefill",
@@ -465,6 +528,13 @@ def test_gateway_subject_role_routing_restrictions(
         )
         assert res_fhir.status_code == 403
         assert "Access denied" in res_fhir.json()["detail"]
+
+        res_reminder_compute = client.post(
+            "/api/v1/interop/reminders/compute",
+            headers={"Authorization": f"Bearer {token}"},
+            json={},
+        )
+        assert res_reminder_compute.status_code == 403
 
         res_designer = client.get(
             "/designer/test", headers={"Authorization": f"Bearer {token}"}
