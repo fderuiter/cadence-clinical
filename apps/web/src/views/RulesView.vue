@@ -23,7 +23,7 @@
 
     <!-- Authorized Rules Panel -->
     <div v-else class="grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
-      
+
       <!-- Active Ruleset List -->
       <div class="card" style="display: flex; flex-direction: column; height: fit-content;">
         <div class="card-title" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
@@ -83,11 +83,11 @@
         </div>
 
         <div style="display: flex; flex-direction: column; gap: 16px; overflow-y: auto; max-height: 700px; padding-right: 4px;">
-          
+
           <!-- Rule Type & Target definition -->
           <fieldset style="border: 1px solid var(--border); border-radius: 8px; padding: 16px;">
             <legend style="padding: 0 8px; font-weight: bold; color: var(--accent);">Rule Type & Target Definition</legend>
-            
+
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
               <div class="form-group">
                 <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.85rem;">Rule Classification Type</label>
@@ -134,7 +134,7 @@
           <!-- Rule Conditions -->
           <fieldset style="border: 1px solid var(--border); border-radius: 8px; padding: 16px;">
             <legend style="padding: 0 8px; font-weight: bold; color: var(--accent);">Rule Conditions (Logical Expression Tree)</legend>
-            
+
             <div class="form-group" style="margin-bottom: 16px;">
               <label style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.85rem;">Match Conditions Group Operator</label>
               <select v-model="matchOperator" style="padding: 6px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem;">
@@ -147,7 +147,7 @@
             <div style="display: flex; flex-direction: column; gap: 12px;">
               <fieldset v-for="(cond, index) in conditions" :key="index" style="border: 1px dashed var(--border); border-radius: 8px; padding: 12px; background-color: #fafbfd;">
                 <legend style="font-size: 0.75rem; font-weight: bold; padding: 0 4px; color: var(--primary);">Condition Element #{{ index + 1 }}</legend>
-                
+
                 <div style="display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap;">
                   <div class="form-group" style="flex: 1; min-width: 100px;">
                     <label style="font-size: 0.75rem; display: block; margin-bottom: 4px;">Left Form</label>
@@ -311,9 +311,9 @@ const mockStudyFields = [
 // Authorization gating
 const hasEditAccess = computed(() => {
   // Check if user has study_designer role or sponsor_admin / admin privileges
-  return authStore.normalizedRoles.some(role => 
-    role === "study_designer" || 
-    role === "sponsor_designer" || 
+  return authStore.normalizedRoles.some(role =>
+    role === "study_designer" ||
+    role === "sponsor_designer" ||
     role === "sponsor_admin" ||
     role === "designer" ||
     role === "admin"
@@ -353,7 +353,7 @@ async function getSignedHeaders(changeReasonText) {
   // Fallback role matching backend validator logic
   const roles = authStore.isDemoMode ? "STUDY_DESIGNER" : (authStore.rawRoles.join(",") || "STUDY_DESIGNER");
   const timestamp = String(Date.now() / 1000);
-  const secret = "internal-gateway-secret-12345";
+  const secret = "internal-gateway-secret-12345"; // pragma: allowlist secret
 
   const signature = await generateGatewaySignature(
     userId,
