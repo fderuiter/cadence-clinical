@@ -128,7 +128,9 @@ def build_comment_body(outcomes: dict[str, str], has_failures: bool) -> str:
     emoji_duplication = get_status_emoji(outcomes.get("duplication"))
     emoji_traceability = get_status_emoji(outcomes.get("traceability"))
 
-    checked_traceability = "[x]" if outcomes.get("traceability") in ("success", "passed") else "[ ]"
+    checked_traceability = (
+        "[x]" if outcomes.get("traceability") in ("success", "passed") else "[ ]"
+    )
 
     # Turn the conflict emoji into a positive "No Conflict" if it's success (Passed), or "Conflict Detected" if it's failure
     conflict_val = outcomes.get("conflict", "success").lower()

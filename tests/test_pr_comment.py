@@ -134,4 +134,3 @@ def test_traceability_outcome_handling():
 
     body_fail = build_comment_body({"traceability": "failure"}, has_failures=True)
     assert "[ ] **Requirements Traceability:**" in body_fail
-

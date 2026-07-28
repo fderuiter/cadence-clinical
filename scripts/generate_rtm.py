@@ -711,9 +711,12 @@ def main():
             for req_id in sorted(unmapped_list):
                 print(f"  - {req_id}")
             import sys
+
             sys.exit(1)
         else:
-            print("SUCCESS: Requirements traceability validation passed! All requirements are mapped.")
+            print(
+                "SUCCESS: Requirements traceability validation passed! All requirements are mapped."
+            )
 
 
 if __name__ == "__main__":

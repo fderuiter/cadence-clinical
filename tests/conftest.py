@@ -470,7 +470,9 @@ def pytest_sessionfinish(session, exitstatus):
         is_test = output_dir is not None or dynamic_val is not None
 
         if not is_ci and not is_test:
-            print("Local pytest execution detected: launching RTM Generator asynchronously in background.")
+            print(
+                "Local pytest execution detected: launching RTM Generator asynchronously in background."
+            )
             subprocess.Popen(
                 cmd,
                 stdout=subprocess.DEVNULL,
