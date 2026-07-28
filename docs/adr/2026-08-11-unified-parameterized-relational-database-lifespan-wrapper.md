@@ -13,6 +13,8 @@ Across our clinical trial microservices architecture, multiple services implemen
 
 To simplify the database integration layer, standardise SQLite schema initialization, and streamline lifecycle/background tasks (such as the Notifications Poller or eTMF Cryptographic Sealer), we require a unified, parameterized lifespan helper in the core database library (`packages/database`).
 
+This decision implements requirements under Trace-8.
+
 ## 2. Decision Drivers & Constraints
 
 - **Type Safety & Style Enforcement:** Strictly typed implementation with comprehensive Docstrings matching PEP 8 / Black / Ruff configurations.

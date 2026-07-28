@@ -10,6 +10,8 @@
 ## 1. Context & Problem Statement
 For regulatory inspections, the electronic Trial Master File (eTMF) audit trail must be searchable and safely consumable at scale. Returning an unbounded, unfiltered list of actions is impractical and potentially introduces memory or performance bottlenecks. Callers require the ability to filter the audit log trail by users, actions, document references, and chronological/timestamp windows, alongside validated pagination.
 
+This decision implements requirements under Trace-1.
+
 ## 2. Decision Drivers & Constraints
 * **Regulatory Inspection Workflows:** Audit trails must support robust and precise querying of actions (e.g. INGEST, VIEW, QC_TRANSITION) by specific inspectors or users over designated periods.
 * **Scalability:** Unbounded endpoints pose significant load risks. Validated limit and offset pagination are required to ensure safe data consumption.

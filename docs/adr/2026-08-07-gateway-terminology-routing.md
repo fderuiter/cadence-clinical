@@ -12,6 +12,8 @@ The Metadata Designer microservice exposes controlled terminology validation and
 To allow downstream clients and external services to securely consume these terminology services, they must be routed through the unified API Gateway.
 At the same time, we must preserve GxP security headers, signed identity headers, and maintain existing study-scoped routing precedence.
 
+This decision implements requirements under Trace-8.
+
 ## 2. Decision Drivers & Constraints
 * **Unified Entrypoint:** Direct clients should always interact with the API Gateway instead of hitting microservices directly.
 * **Security & Auditing:** The gateway must enforce valid token verification and inject correct downstream headers, including `X-User-Id`, `X-User-Roles`, `X-Gateway-Timestamp`, `X-Gateway-Signature`, and `X-Signature-Version`.

@@ -11,6 +11,8 @@ Accepted
 ## 1. Context & Problem Statement
 To bring the platform into complete alignment with global clinical regulations (21 CFR Part 11 and EU Annex 11), we need to establish database-level audit protections, multi-party cryptographic key splitting, automatic key rotation, and automated read-only trial locks upon safety compromises. This guarantees a zero-loss, tamper-proof audit trail and secure blinding mechanics.
 
+This decision implements requirements under Trace-3.
+
 ## 2. Decision Drivers & Constraints
 * **Driver 1:** Regulatory Compliance (21 CFR Part 11, EU Annex 11) requiring tamper-proof audit trails.
 * **Driver 2:** Security and Blinding Mechanics requiring no single point of failure in treatment allocation.

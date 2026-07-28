@@ -21,3 +21,5 @@ Exposing unified Unified Study Definitions Model (USDM) schemas directly to clie
 - **Positive**: Legacy systems face zero downtime and zero mapping changes.
 - **Positive**: Terminology lookup avoids redundant DB queries.
 - **Negative**: The local caching approach implies cache inconsistency if scaled out to multiple stateless containers, unless cache eviction is synchronized. We provide an admin `/api/admin/cache/clear` endpoint to mitigate this explicitly.
+
+This decision implements requirements under PRD-MDR-001.

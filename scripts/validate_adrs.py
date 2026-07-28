@@ -3,6 +3,16 @@ import re
 import subprocess
 import sys
 
+# Import shared compliance utility
+try:
+    import compliance_utility
+except ImportError:
+    try:
+        from scripts import compliance_utility
+    except ImportError:
+        sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+        import compliance_utility
+
 ADR_DIR = "docs/adr"
 INDEX_FILE = os.path.join(ADR_DIR, "index.md")
 IGNORE_FILES = {"TEMPLATE.md", "index.md"}
@@ -182,6 +192,8 @@ def validate_existing_adrs() -> bool:
         print(f"Error: Directory {ADR_DIR} not found.")
         return False
 
+    valid_reqs = compliance_utility.get_valid_requirements()
+
     try:
         with open(INDEX_FILE, "r") as f:
             index_content = f.read()
@@ -263,6 +275,14 @@ def validate_existing_adrs() -> bool:
             print(
                 f"Error: File '{filename}' is missing required sections: {', '.join(missing_sections)}"
             )
+            all_passed = False
+
+        # 4. Check compliance requirement mapping
+        comp_ok, comp_err = compliance_utility.validate_adr_compliance(
+            filename, content, valid_reqs
+        )
+        if not comp_ok:
+            print(comp_err)
             all_passed = False
 
     return all_passed
