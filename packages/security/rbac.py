@@ -108,10 +108,18 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "ctms_financial_payable": {"read"},
         # eTMF
         "etmf_document": {
-            "create", "read", "read_raw", "redact", "sign",
-            "transition_technical_qc", "transition_clinical_qc",
-            "transition_approved", "transition_archived",
-            "transition_rejected", "transition_draft", "transition_signed"
+            "create",
+            "read",
+            "read_raw",
+            "redact",
+            "sign",
+            "transition_technical_qc",
+            "transition_clinical_qc",
+            "transition_approved",
+            "transition_archived",
+            "transition_rejected",
+            "transition_draft",
+            "transition_signed",
         },
         "etmf_edl": {"read", "create"},
         "etmf_audit_logs": {"read"},
@@ -145,10 +153,17 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "ctms_financial_payable": {"read"},
         # eTMF
         "etmf_document": {
-            "create", "read", "read_raw", "redact", "sign",
+            "create",
+            "read",
+            "read_raw",
+            "redact",
+            "sign",
             "transition_technical_qc",
-            "transition_approved", "transition_archived",
-            "transition_rejected", "transition_draft", "transition_signed"
+            "transition_approved",
+            "transition_archived",
+            "transition_rejected",
+            "transition_draft",
+            "transition_signed",
         },
         "etmf_edl": {"read", "create"},
         # Quality
@@ -330,10 +345,18 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "ctms_financial_payable": {"read"},
         # eTMF
         "etmf_document": {
-            "create", "read", "read_raw", "redact", "sign",
-            "transition_technical_qc", "transition_clinical_qc",
-            "transition_approved", "transition_archived",
-            "transition_rejected", "transition_draft", "transition_signed"
+            "create",
+            "read",
+            "read_raw",
+            "redact",
+            "sign",
+            "transition_technical_qc",
+            "transition_clinical_qc",
+            "transition_approved",
+            "transition_archived",
+            "transition_rejected",
+            "transition_draft",
+            "transition_signed",
         },
         "etmf_edl": {"read", "create"},
         # Quality
@@ -641,29 +664,13 @@ async def get_principal(request: Request) -> Principal:
     if principal.change_reason:
         principal.change_reason = principal.change_reason.strip()
 
-    # Reject write operations with a descriptive error if the resolved change justification is less than 10 characters long on ingestion/doc routes
+    # Reject write operations with a descriptive error if the resolved change justification is missing
     if hasattr(request, "method") and request.method in (
         "POST",
         "PUT",
         "PATCH",
         "DELETE",
     ):
-        path_lower = request.url.path.lower() if hasattr(request, "url") else ""
-        is_ingest_or_doc_route = any(
-            p in path_lower
-            for p in (
-                "/eisf/",
-                "/etmf/",
-                "/econsent/",
-                "/ctms/",
-                "/quality/",
-                "document",
-                "ingest",
-                "upload",
-                "expected-document",
-                "edl",
-            )
-        )
         if not principal.change_reason or not principal.change_reason.strip():
             raise HTTPException(
                 status_code=403,

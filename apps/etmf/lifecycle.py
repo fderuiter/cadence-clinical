@@ -9,7 +9,6 @@ from typing import Dict, Set
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.etmf.models import DocumentQCTransition, DocumentStatus, TMFDocument
-
 from packages.security.rbac import Principal, has_permission, normalize_role
 
 # Defined allowed forward and rejection transitions

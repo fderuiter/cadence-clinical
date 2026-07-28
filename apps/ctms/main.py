@@ -50,7 +50,6 @@ app.add_middleware(GatewayAuthMiddleware)
 get_db_session = DatabaseSessionDependency(db_manager)
 
 
-
 # Pydantic models for CTMS Study
 class CTMSStudyCreate(BaseModel):
     study_id: str = Field(..., description="Unique clinical study ID")
@@ -338,9 +337,7 @@ class InvestigatorPayableResponse(BaseModel):
 def check_financial_write_roles(principal: Principal) -> None:
     """Enforces that financial writes are restricted to Grants Manager or Sponsor Admin."""
     if not has_permission(principal, "ctms_financial:write"):
-        raise HTTPException(
-            status_code=403, detail="Forbidden: Access denied."
-        )
+        raise HTTPException(status_code=403, detail="Forbidden: Access denied.")
 
 
 def check_grant_mutable(grant: InvestigatorGrant) -> None:
@@ -433,7 +430,8 @@ async def create_study(
     request: Request,
     payload: CTMSStudyCreate,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> CTMSStudyResponse:
+    principal: Principal = Depends(get_principal),
+) -> CTMSStudyResponse:
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
     change_reason = principal.change_reason or "system_operation"
@@ -477,7 +475,8 @@ async def create_study(
 async def list_studies(
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> List[CTMSStudyResponse]:
+    principal: Principal = Depends(get_principal),
+) -> List[CTMSStudyResponse]:
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
@@ -515,7 +514,8 @@ async def list_studies(
 async def get_audit_trail(
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> List[CTMSAuditLogResponse]:
+    principal: Principal = Depends(get_principal),
+) -> List[CTMSAuditLogResponse]:
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
@@ -560,7 +560,8 @@ async def schedule_monitoring_visit(
     request: Request,
     payload: MonitoringVisitCreate,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> MonitoringVisitResponse:
+    principal: Principal = Depends(get_principal),
+) -> MonitoringVisitResponse:
     """
     Schedules a clinical site monitoring visit and automatically generates/persists
     a corresponding confirmation letter.
@@ -664,7 +665,8 @@ async def complete_monitoring_visit(
     request: Request,
     payload: MonitoringVisitComplete,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> MonitoringVisitResponse:
+    principal: Principal = Depends(get_principal),
+) -> MonitoringVisitResponse:
     """
     Completes a scheduled monitoring visit, records findings and action items,
     and automatically generates/persists a follow-up letter.
@@ -819,7 +821,8 @@ async def list_monitoring_visits(
     cra_id: Optional[str] = None,
     status: Optional[str] = None,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> List[MonitoringVisitResponse]:
+    principal: Principal = Depends(get_principal),
+) -> List[MonitoringVisitResponse]:
     """
     Lists and filters clinical trial site monitoring visits.
     """
@@ -879,7 +882,8 @@ async def get_monitoring_visit_letters(
     visit_id: str,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> List[GeneratedLetterResponse]:
+    principal: Principal = Depends(get_principal),
+) -> List[GeneratedLetterResponse]:
     """
     Retrieves all generated letters associated with a specific monitoring visit.
     Guarantees no re-rendering of previously issued letters by returning stored content.
@@ -926,7 +930,8 @@ async def get_monitoring_visit_letter_by_type(
     letter_type: str,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> GeneratedLetterResponse:
+    principal: Principal = Depends(get_principal),
+) -> GeneratedLetterResponse:
     """
     Retrieves a specific letter (e.g. CONFIRMATION or FOLLOW_UP) associated with a monitoring visit.
     Guarantees no re-rendering of previously issued letters by returning stored content.
@@ -978,7 +983,8 @@ async def sign_off_monitoring_visit(
     visit_id: str,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> MonitoringVisitResponse:
+    principal: Principal = Depends(get_principal),
+) -> MonitoringVisitResponse:
     """
     Allows a clinical Monitor to perform a supervisory sign-off on a completed monitoring visit.
     """
@@ -1048,7 +1054,8 @@ async def record_recruitment(
     request: Request,
     payload: RecruitmentRecordCreate,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> RecruitmentRecordResponse:
+    principal: Principal = Depends(get_principal),
+) -> RecruitmentRecordResponse:
     """
     Record or update recruitment metrics for a site and study.
     """
@@ -1107,7 +1114,8 @@ async def list_recruitment_records(
     study_id: Optional[str] = None,
     site_id: Optional[str] = None,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> List[RecruitmentRecordResponse]:
+    principal: Principal = Depends(get_principal),
+) -> List[RecruitmentRecordResponse]:
     """
     List recorded recruitment metrics, optionally filtered by site and/or study.
     """
@@ -1165,7 +1173,8 @@ async def create_site_milestone(
     request: Request,
     payload: SiteMilestoneCreate,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> SiteMilestoneResponse:
+    principal: Principal = Depends(get_principal),
+) -> SiteMilestoneResponse:
     """
     Create a new site lifecycle milestone.
     """
@@ -1226,7 +1235,8 @@ async def update_site_milestone(
     request: Request,
     payload: SiteMilestoneUpdate,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> SiteMilestoneResponse:
+    principal: Principal = Depends(get_principal),
+) -> SiteMilestoneResponse:
     """
     Update site lifecycle milestones.
     """
@@ -1292,7 +1302,8 @@ async def list_site_milestones(
     study_id: Optional[str] = None,
     site_id: Optional[str] = None,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> List[SiteMilestoneResponse]:
+    principal: Principal = Depends(get_principal),
+) -> List[SiteMilestoneResponse]:
     """
     List site milestones, optionally filtered by site and/or study.
     """
@@ -1350,7 +1361,8 @@ async def allocate_cra(
     request: Request,
     payload: CRAAllocationCreate,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> CRAAllocationResponse:
+    principal: Principal = Depends(get_principal),
+) -> CRAAllocationResponse:
     """
     Allocate or reallocate a CRA to a site and study.
     Restricted to Sponsor Admin.
@@ -1438,7 +1450,8 @@ async def update_cra_allocation(
     request: Request,
     payload: CRAAllocationUpdate,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> CRAAllocationResponse:
+    principal: Principal = Depends(get_principal),
+) -> CRAAllocationResponse:
     """
     Update or reassign an existing CRA allocation.
     Restricted to Sponsor Admin.
@@ -1509,7 +1522,8 @@ async def list_cra_allocations(
     cra_id: Optional[str] = None,
     status: Optional[str] = None,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> List[CRAAllocationResponse]:
+    principal: Principal = Depends(get_principal),
+) -> List[CRAAllocationResponse]:
     """
     List CRA allocations, optionally filtered.
     """
@@ -1568,7 +1582,8 @@ async def list_cra_allocations(
 async def retrieve_workload_summaries(
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> List[CRAWorkloadItem]:
+    principal: Principal = Depends(get_principal),
+) -> List[CRAWorkloadItem]:
     """
     Retrieve workload summaries reflecting active CRA allocations.
     """
@@ -1629,7 +1644,8 @@ async def create_grant(
     request: Request,
     payload: InvestigatorGrantCreate,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> InvestigatorGrantResponse:
+    principal: Principal = Depends(get_principal),
+) -> InvestigatorGrantResponse:
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
     change_reason = principal.change_reason or "system_operation"
@@ -1680,7 +1696,8 @@ async def list_grants(
     study_id: Optional[str] = None,
     site_id: Optional[str] = None,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> List[InvestigatorGrantResponse]:
+    principal: Principal = Depends(get_principal),
+) -> List[InvestigatorGrantResponse]:
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
@@ -1730,7 +1747,8 @@ async def get_grant(
     grant_id: str,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> InvestigatorGrantResponse:
+    principal: Principal = Depends(get_principal),
+) -> InvestigatorGrantResponse:
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
@@ -1775,7 +1793,8 @@ async def update_grant(
     request: Request,
     payload: InvestigatorGrantUpdate,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> InvestigatorGrantResponse:
+    principal: Principal = Depends(get_principal),
+) -> InvestigatorGrantResponse:
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
     change_reason = principal.change_reason or "system_operation"
@@ -1853,7 +1872,8 @@ async def create_budget_line_item(
     request: Request,
     payload: BudgetLineItemCreate,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> BudgetLineItemResponse:
+    principal: Principal = Depends(get_principal),
+) -> BudgetLineItemResponse:
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
     change_reason = principal.change_reason or "system_operation"
@@ -1911,7 +1931,8 @@ async def list_budget_line_items(
     grant_id: str,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> List[BudgetLineItemResponse]:
+    principal: Principal = Depends(get_principal),
+) -> List[BudgetLineItemResponse]:
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
@@ -1969,7 +1990,8 @@ async def create_payment_milestone(
     request: Request,
     payload: PaymentMilestoneCreate,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> PaymentMilestoneResponse:
+    principal: Principal = Depends(get_principal),
+) -> PaymentMilestoneResponse:
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
     change_reason = principal.change_reason or "system_operation"
@@ -2038,7 +2060,8 @@ async def list_payment_milestones(
     grant_id: str,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> List[PaymentMilestoneResponse]:
+    principal: Principal = Depends(get_principal),
+) -> List[PaymentMilestoneResponse]:
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
@@ -2094,7 +2117,8 @@ async def trigger_manual_milestone(
     milestone_id: str,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> PaymentMilestoneResponse:
+    principal: Principal = Depends(get_principal),
+) -> PaymentMilestoneResponse:
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
     change_reason = principal.change_reason or "system_operation"
@@ -2193,7 +2217,8 @@ async def evaluate_grant_milestones(
     request: Request,
     condition: str = "STUDY_APPROVED",
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> dict:
+    principal: Principal = Depends(get_principal),
+) -> dict:
     """Manually run the milestone evaluation engine for a specific condition."""
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
@@ -2241,7 +2266,8 @@ async def list_investigator_payables(
     grant_id: str,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> List[InvestigatorPayableResponse]:
+    principal: Principal = Depends(get_principal),
+) -> List[InvestigatorPayableResponse]:
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 

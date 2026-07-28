@@ -29,7 +29,6 @@ from packages.deid.detector import DeidDetector
 from packages.deid.manifest import build_redaction_manifest, sign_manifest_symmetric
 from packages.deid.models import ComplianceProfile, DetectionResult, DetectorCategory
 from packages.deid.transforms import apply_deid_transforms
-
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.rbac import Principal, get_principal, has_permission
 
@@ -521,7 +520,8 @@ async def ingest_document(
     request: Request,
     payload: IngestionRequest,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> Dict[str, Any]:
+    principal: Principal = Depends(get_principal),
+) -> Dict[str, Any]:
     """
     Listen to and ingest system publication events or manual document archives.
     Automatically assigns DIA TMF Zone and Section taxonomy, and indexes the content.
@@ -531,7 +531,10 @@ async def ingest_document(
 
     # Only write-privileged roles can ingest documents (No Inspectors)
     if not has_permission(principal, "etmf_document:create"):
-        raise HTTPException(status_code=403, detail="Forbidden: Inspectors are restricted to read-only access.")
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Inspectors are restricted to read-only access.",
+        )
 
     # Restrict affected trial to read-only state if trial is locked
     from apps.execution.trial_lock import TrialLockManager
@@ -814,7 +817,8 @@ async def list_documents(
     zone: Optional[int] = Query(None, description="Filter by TMF Zone"),
     search: Optional[str] = Query(None, description="Search document content"),
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> List[DocumentResponse]:
+    principal: Principal = Depends(get_principal),
+) -> List[DocumentResponse]:
     """
     Retrieve and search indexed, searchable eTMF document records.
     All views are logged to the immutable audit ledger.
@@ -881,7 +885,8 @@ async def view_document(
     request: Request,
     document_id: str,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> DocumentResponse:
+    principal: Principal = Depends(get_principal),
+) -> DocumentResponse:
     """
     View metadata for a specific eTMF document.
     All views are logged to the immutable audit ledger.
@@ -952,7 +957,8 @@ async def download_document(
     request: Request,
     document_id: str,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> Response:
+    principal: Principal = Depends(get_principal),
+) -> Response:
     """
     Download/stream indexed content for a specific eTMF document.
     All downloads are logged to the immutable audit ledger.
@@ -1014,7 +1020,8 @@ async def get_audit_trail(
     ),
     offset: int = Query(0, ge=0, description="Offset for pagination"),
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> PaginatedAuditLogResponse:
+    principal: Principal = Depends(get_principal),
+) -> PaginatedAuditLogResponse:
     """
     Retrieve audit trail of all eTMF interactions.
     Restricted to authorized roles like regulatory inspectors.
@@ -1023,7 +1030,10 @@ async def get_audit_trail(
     user_roles = ",".join(principal.raw_roles)
 
     if not has_permission(principal, "etmf_audit_logs:read"):
-        raise HTTPException(status_code=403, detail="Forbidden: Access is restricted to authorized auditor/inspection roles.")
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Access is restricted to authorized auditor/inspection roles.",
+        )
 
     # Log access to the audit trail itself
     await write_audit_log(
@@ -1123,7 +1133,8 @@ async def list_expectations(
     site_id: Optional[str] = Query(None, description="Optional clinical site ID"),
     milestone: Optional[str] = Query(None, description="Optional milestone"),
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> List[ExpectedDocumentResponse]:
+    principal: Principal = Depends(get_principal),
+) -> List[ExpectedDocumentResponse]:
     """
     List expected documents for a study, optionally filtered by site and milestone.
     """
@@ -1173,7 +1184,8 @@ async def create_expectation(
     request: Request,
     payload: ExpectedDocumentCreate,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> ExpectedDocumentResponse:
+    principal: Principal = Depends(get_principal),
+) -> ExpectedDocumentResponse:
     """
     Create a new Expected Document List (EDL) expectation.
     """
@@ -1181,7 +1193,10 @@ async def create_expectation(
     user_roles = ",".join(principal.raw_roles)
 
     if not has_permission(principal, "etmf_edl:create"):
-        raise HTTPException(status_code=403, detail="Forbidden: Inspectors are restricted to read-only access.")
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Inspectors are restricted to read-only access.",
+        )
 
     from apps.execution.trial_lock import TrialLockManager
 
@@ -1241,7 +1256,8 @@ async def update_expectation(
     edl_id: str,
     payload: ExpectedDocumentCreate,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> ExpectedDocumentResponse:
+    principal: Principal = Depends(get_principal),
+) -> ExpectedDocumentResponse:
     """
     Update an existing Expected Document List (EDL) expectation.
     """
@@ -1249,7 +1265,10 @@ async def update_expectation(
     user_roles = ",".join(principal.raw_roles)
 
     if not has_permission(principal, "etmf_edl:create"):
-        raise HTTPException(status_code=403, detail="Forbidden: Inspectors are restricted to read-only access.")
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Inspectors are restricted to read-only access.",
+        )
 
     from apps.execution.trial_lock import TrialLockManager
 
@@ -1315,7 +1334,8 @@ async def check_completeness(
     milestone: str = Query(..., description="The transition milestone to check"),
     site_id: Optional[str] = Query(None, description="Optional clinical site ID"),
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> CompletenessResponse:
+    principal: Principal = Depends(get_principal),
+) -> CompletenessResponse:
     """
     Completeness checking dashboard to verify mandatory artifacts
     before study milestone transitions.
@@ -1467,7 +1487,8 @@ async def redact_document_endpoint(
     document_id: str,
     payload: RedactRequest,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> DocumentResponse:
+    principal: Principal = Depends(get_principal),
+) -> DocumentResponse:
     """
     Perform controlled redaction on an existing unredacted eTMF document, producing a new
     redacted document version linked to the source.
@@ -1478,7 +1499,10 @@ async def redact_document_endpoint(
 
     # Only write-privileged roles can redact documents (No Inspectors/Auditors)
     if not has_permission(principal, "etmf_document:redact"):
-        raise HTTPException(status_code=403, detail="Forbidden: Inspectors are restricted to read-only access.")
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Inspectors are restricted to read-only access.",
+        )
 
     # Restrict affected trial to read-only state if trial is locked
     from apps.execution.trial_lock import TrialLockManager
@@ -1628,7 +1652,8 @@ async def auto_redact_document_endpoint(
     document_id: str,
     payload: AutomatedRedactRequest,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> AutomatedRedactResponse:
+    principal: Principal = Depends(get_principal),
+) -> AutomatedRedactResponse:
     """
     Perform controlled automated redaction on an existing unredacted eTMF document, producing a new
     redacted document version linked to the source.
@@ -1639,7 +1664,10 @@ async def auto_redact_document_endpoint(
 
     # Only write-privileged roles can redact documents (No Inspectors/Auditors)
     if not has_permission(principal, "etmf_document:redact"):
-        raise HTTPException(status_code=403, detail="Forbidden: Inspectors are restricted to read-only access.")
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Inspectors are restricted to read-only access.",
+        )
 
     # Restrict affected trial to read-only state if trial is locked
     from apps.execution.trial_lock import TrialLockManager
@@ -1815,7 +1843,8 @@ async def manual_redact_document_endpoint(
     document_id: str,
     payload: ManualRedactRequest,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> ManualRedactResponse:
+    principal: Principal = Depends(get_principal),
+) -> ManualRedactResponse:
     """
     Perform controlled manual redaction on an existing unredacted eTMF document using specified character spans and literal terms.
     Produces a new redacted document version linked to the source.
@@ -1826,7 +1855,10 @@ async def manual_redact_document_endpoint(
 
     # Only write-privileged roles can redact documents (No Inspectors/Auditors)
     if not has_permission(principal, "etmf_document:redact"):
-        raise HTTPException(status_code=403, detail="Forbidden: Inspectors are restricted to read-only access.")
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Inspectors are restricted to read-only access.",
+        )
 
     # Restrict affected trial to read-only state if trial is locked
     from apps.execution.trial_lock import TrialLockManager
@@ -2053,7 +2085,8 @@ async def transition_document_status_endpoint(
     document_id: str,
     payload: TransitionRequest,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> Dict[str, Any]:
+    principal: Principal = Depends(get_principal),
+) -> Dict[str, Any]:
     """
     Perform a secure, 21 CFR Part 11 compliant Quality Control (QC) status transition on an eTMF document.
     Enforces role-based access gates and logs an append-only state transition history record.
@@ -2133,7 +2166,8 @@ async def sign_document_endpoint(
     document_id: str,
     payload: SignDocumentRequest,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> DocumentResponse:
+    principal: Principal = Depends(get_principal),
+) -> DocumentResponse:
     """
     Approve and cryptographically sign an eTMF document, producing a 21 CFR Part 11 compliant
     persisted signature manifestation, recording immutable audit actions (SIGN & APPROVE),
@@ -2144,7 +2178,10 @@ async def sign_document_endpoint(
 
     # Enforce write roles can sign (no read-only roles like auditor, inspector)
     if not has_permission(principal, "etmf_document:sign"):
-        raise HTTPException(status_code=403, detail="Forbidden: Inspectors are restricted to read-only access.")
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Inspectors are restricted to read-only access.",
+        )
 
     # Restrict affected trial to read-only state if trial is locked
     from apps.execution.trial_lock import TrialLockManager
@@ -2331,7 +2368,8 @@ async def get_document_transition_history(
     request: Request,
     document_id: str,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> List[TransitionResponse]:
+    principal: Principal = Depends(get_principal),
+) -> List[TransitionResponse]:
     """
     Retrieve the append-only Quality Control (QC) transition history for a specific eTMF document.
     """
@@ -2385,7 +2423,8 @@ async def get_document_qc_history(
     request: Request,
     document_id: str,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal),) -> List[TransitionResponse]:
+    principal: Principal = Depends(get_principal),
+) -> List[TransitionResponse]:
     """
     Retrieve the append-only Quality Control (QC) review history for a specific eTMF document.
     """

@@ -22,7 +22,11 @@ from apps.quality.models import (
 )
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
-from packages.security.rbac import get_normalized_roles, Principal, get_principal, has_permission
+from packages.security.rbac import (
+    Principal,
+    get_principal,
+    has_permission,
+)
 
 
 # Pydantic Schemas for Request/Response Validation
@@ -306,10 +310,12 @@ def map_capa_to_response(capa: CAPARecord) -> CAPAResponse:
 @app.post(
     "/api/v1/quality/deviations", response_model=DeviationResponse, status_code=201
 )
-async def create_deviation(request: Request,
+async def create_deviation(
+    request: Request,
     payload: DeviationCreate,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal)):
+    principal: Principal = Depends(get_principal),
+):
     """
     Create a new clinical protocol deviation or quality deviation event.
     """
@@ -350,12 +356,14 @@ async def create_deviation(request: Request,
 
 
 @app.get("/api/v1/quality/deviations", response_model=List[DeviationResponse])
-async def list_deviations(request: Request,
+async def list_deviations(
+    request: Request,
     study_id: Optional[str] = Query(None, description="Filter by study ID"),
     site_id: Optional[str] = Query(None, description="Filter by site ID"),
     status: Optional[DeviationStatus] = Query(None, description="Filter by status"),
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal)):
+    principal: Principal = Depends(get_principal),
+):
     """
     Retrieve clinical deviation records with optional filtering.
     """
@@ -386,10 +394,12 @@ async def list_deviations(request: Request,
 
 
 @app.get("/api/v1/quality/deviations/{id}", response_model=DeviationResponse)
-async def view_deviation(request: Request,
+async def view_deviation(
+    request: Request,
     id: str,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal)):
+    principal: Principal = Depends(get_principal),
+):
     """
     Retrieve a specific clinical deviation by ID.
     """
@@ -416,11 +426,13 @@ async def view_deviation(request: Request,
 
 @app.post("/api/v1/quality/deviations/{id}/rca", response_model=RCAResponse)
 @app.put("/api/v1/quality/deviations/{id}/rca", response_model=RCAResponse)
-async def create_or_update_rca(request: Request,
+async def create_or_update_rca(
+    request: Request,
     id: str,
     payload: RCACreateOrUpdate,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal)):
+    principal: Principal = Depends(get_principal),
+):
     """
     Create or update Root Cause Analysis (RCA) linked to a specific deviation.
     Transitions the deviation status to RCA_COMPLETE.
@@ -507,10 +519,12 @@ async def create_or_update_rca(request: Request,
 
 
 @app.post("/api/v1/quality/capas", response_model=CAPAResponse, status_code=201)
-async def create_capa(request: Request,
+async def create_capa(
+    request: Request,
     payload: CAPACreate,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal)):
+    principal: Principal = Depends(get_principal),
+):
     """
     Create a new Corrective and Preventive Action (CAPA) record linked to a deviation.
     """
@@ -607,11 +621,13 @@ async def create_capa(request: Request,
 
 
 @app.post("/api/v1/quality/capas/{id}/transition", response_model=CAPAResponse)
-async def transition_capa(request: Request,
+async def transition_capa(
+    request: Request,
     id: str,
     payload: CAPATransitionRequest,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal)):
+    principal: Principal = Depends(get_principal),
+):
     """
     Perform a secure, 21 CFR Part 11 compliant status transition on a CAPA record.
     """
@@ -709,11 +725,13 @@ async def transition_capa(request: Request,
 
 
 @app.put("/api/v1/quality/capas/{id}", response_model=CAPAResponse)
-async def update_capa(request: Request,
+async def update_capa(
+    request: Request,
     id: str,
     payload: CAPAUpdate,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal)):
+    principal: Principal = Depends(get_principal),
+):
     """
     Update non-status attributes of a CAPA record. Disallowed once terminal (CLOSED/CANCELLED).
     """
@@ -790,9 +808,11 @@ class AuditLogResponse(BaseModel):
 
 
 @app.get("/api/v1/quality/audit-logs", response_model=List[AuditLogResponse])
-async def list_audit_logs(request: Request,
+async def list_audit_logs(
+    request: Request,
     session: AsyncSession = Depends(get_db_session),
-    principal: Principal = Depends(get_principal)):
+    principal: Principal = Depends(get_principal),
+):
     """
     Retrieve quality audit logs in descending chronological order.
     """
