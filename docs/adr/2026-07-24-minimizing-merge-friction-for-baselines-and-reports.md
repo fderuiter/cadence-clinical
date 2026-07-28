@@ -38,3 +38,5 @@ Make these files completely deterministic, ensuring they *only* change when func
 
 ### Cons
 - ❌ Line numbers of secrets are not recorded in `.secrets.baseline` (not required by `detect-secrets` anyway).
+
+This decision implements requirements under Trace-8.

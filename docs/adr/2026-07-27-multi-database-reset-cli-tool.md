@@ -12,6 +12,8 @@ During local eClinical software development, developers frequently need to reset
 
 We need a unified, zero-downtime database reset entrypoint that purges schemas and database objects concurrently across all microservices, migrations, and databases (including PostgreSQL, Neo4j, and 10 local SQLite databases) in under 15 seconds, while strictly enforcing safety guardrails to prevent accidental destruction of production or staging environments.
 
+This decision implements requirements under PRD-SYS-001.
+
 ## 2. Decision Drivers & Constraints
 * **Driver 1 (Speed & Efficiency):** Under 15-second total reset execution time without restarting underlying Docker containers.
 * **Driver 2 (Safety & Production Guardrails):** Absolute prevention of connection to non-local or cloud hosts (e.g., RDS, AWS, Azure, non-localhost IP addresses) and blocking strings with keywords suggesting production/staging states.

@@ -21,3 +21,5 @@ We will shift to **Metadata-Driven Grid Layouts** natively mapped from USDM defi
 ## Trade-offs
 - **Positive:** UI generation is fully declarative, easily readable, and highly maintainable. Layout constraints scale responsively using established OpenRosa standard width semantics. Schema conformance remains protected.
 - **Negative:** We introduce a minor dependency on Jinja2 for text manipulation, requiring parsing safety to strip out empty XML whitespace blocks.
+
+This decision implements requirements under Trace-8.

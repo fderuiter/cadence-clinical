@@ -12,6 +12,8 @@ In accordance with GxP validation pipelines and the 21 CFR Part 11 electronic re
 
 To support the full import, export, and round-trip of study designs using the Clinical Data Interchange Standards Consortium (CDISC) Unified Study Definitions Model (USDM) versions v2 and v3, we must define a single, stable **Canonical Internal Contract** and a **Mapping Coverage Matrix**. This documented contract is a strict GxP requirement before implementing normalization pipelines and bidirectional mappers. Without a formal field-level specification, lossless vs. lossy mapping behaviors are non-deterministic, potentially introducing regulatory risks, silent data truncation, or audit inconsistencies.
 
+This decision implements requirements under PRD-MDR-001.
+
 ## 2. Decision Drivers & Constraints
 * **Driver 1 (Compliance & Verifiability):** FDA 21 CFR Part 11 and EU Annex 11 mandate precise data trace-to-source trails. Any schema transformation or dynamic mapping must have deterministic, predictable outcomes.
 * **Driver 2 (Lossless Round-Trip):** Elements designed in the MDR must be translatable into the USDM exchange model and importable into the EDC Execution engine with zero loss of critical clinical or metadata parameters (Material Fidelity).

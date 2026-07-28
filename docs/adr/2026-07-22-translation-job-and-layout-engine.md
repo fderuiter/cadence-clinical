@@ -23,3 +23,5 @@ The `TranslationJob` schema tracks:
 ## Trade-offs
 - **Positive:** API endpoints remain responsive; resource-intensive XML generation occurs in the background. Complete immutability and auditing are retained because `TranslationJob` automatically hooks into the SQLAlchemy audit logger.
 - **Negative:** Eventual consistency – clients cannot immediately consume the XML payload in the same HTTP transaction and must query the status instead.
+
+This decision implements requirements under Trace-9.

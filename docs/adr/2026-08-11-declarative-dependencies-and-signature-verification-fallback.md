@@ -10,6 +10,8 @@
 ## 1. Context & Problem Statement
 To secure clinical execution APIs and comply with GxP standards, incoming requests must be authenticated and validated with clear caller identity and scope definitions (such as site_id, sponsor_id, and unblinded_access). Historically, route verification checks were performed inside endpoint bodies using legacy v2 signature structures, making it difficult to enforce authorization boundaries statically. We need to transition to standard, route-level declarative dependencies across execution routes while maintaining fallback backward compatibility for legacy clinical configurations and mock clinical verification.
 
+This decision implements requirements under Trace-7.
+
 ## 2. Decision Drivers & Constraints
 * **Driver 1:** Enforce route-level declarative authentication/authorization for secure clinical execution APIs.
 * **Driver 2:** Maintain fallback compatibility to verify identity-only legacy Version 2 signatures without breaking existing mock setups.

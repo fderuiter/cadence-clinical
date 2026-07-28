@@ -16,3 +16,5 @@ We enforce transactional safety with standard GxP auditing inside relational dat
 ## Trade-offs
 - Positive: Immutable and legally compliant audit trails.
 - Negative: Increased database write latency.
+
+This decision implements requirements under PRD-SYS-001.
