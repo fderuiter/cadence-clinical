@@ -82,13 +82,25 @@ def test_get_changed_files_from_txt():
 def test_get_changed_files_from_git_fallbacks(mock_run_git):
     # Mock fallback to git diff and status porcelain using a robust side effect function
     def mock_run_git_side_effect(args):
-        if "HEAD^" in args:
+        # args is a list, e.g., ["git", "rev-parse", "--abbrev-ref", "HEAD"]
+        cmd_str = " ".join(args)
+        if "rev-parse --abbrev-ref" in cmd_str:
+            return "feature-branch\n", ""
+        elif "rev-parse HEAD" in cmd_str:
+            return "commit-head-sha\n", ""
+        elif "branch --format" in cmd_str:
+            return "main\nfeature-branch\n", ""
+        elif "merge-base" in cmd_str:
+            return "commit-base-sha\n", ""
+        elif "rev-list --count" in cmd_str:
+            return "1\n", ""
+        elif "rev-list --first-parent" in cmd_str:
+            return "commit-head-sha\n", ""
+        elif "log --pretty=%P" in cmd_str:
+            return "commit-base-sha\n", ""
+        elif "diff-tree" in cmd_str:
             return "apps/gateway/main.py\n", ""
-        elif "origin/main" in args:
-            return "", ""
-        elif "HEAD~1" in args:
-            return "", ""
-        elif "--porcelain" in args:
+        elif "--porcelain" in cmd_str:
             return "M  pyproject.toml\n", ""
         return "", ""
 
@@ -218,3 +230,103 @@ def test_adr_compliance_validation_logic():
     assert "references invalid or misspelled requirement identifier(s)" in err
     assert "Trace-99" in err
     assert "2026-01-01-modern-adr.md" in err
+
+
+@patch("scripts.validate_adrs.run_git_command")
+def test_get_closest_local_branch_point_multiple_branches(mock_run_git):
+    # Test closest local branch point detection with multiple local branches
+    def mock_run_git_side_effect(args):
+        cmd_str = " ".join(args)
+        if "rev-parse --abbrev-ref" in cmd_str:
+            return "feature-branch\n", ""
+        elif "rev-parse HEAD" in cmd_str:
+            return "commit-head-sha\n", ""
+        elif "branch --format" in cmd_str:
+            # multiple local branches: main, other-feature, feature-branch
+            return "main\nother-feature\nfeature-branch\n", ""
+        elif "merge-base" in cmd_str:
+            if "main" in cmd_str:
+                return "commit-main-mb\n", ""
+            elif "other-feature" in cmd_str:
+                return "commit-other-mb\n", ""
+        elif "rev-list --count" in cmd_str:
+            if "commit-main-mb..HEAD" in cmd_str:
+                return "5\n", ""
+            elif "commit-other-mb..HEAD" in cmd_str:
+                # other-feature is closer! (distance of 2 commits vs 5)
+                return "2\n", ""
+        return "", ""
+
+    mock_run_git.side_effect = mock_run_git_side_effect
+
+    from scripts.validate_adrs import get_closest_local_branch_point
+    bp = get_closest_local_branch_point()
+    assert bp == "commit-other-mb"
+
+
+@patch("scripts.validate_adrs.run_git_command")
+def test_get_closest_local_branch_point_fallback_to_root(mock_run_git):
+    # Test fallback to root commit when there are no other local branches
+    def mock_run_git_side_effect(args):
+        cmd_str = " ".join(args)
+        if "rev-parse --abbrev-ref" in cmd_str:
+            return "main\n", ""
+        elif "rev-parse HEAD" in cmd_str:
+            return "commit-head-sha\n", ""
+        elif "branch --format" in cmd_str:
+            # Only current branch main exists locally
+            return "main\n", ""
+        elif "rev-list --max-parents=0" in cmd_str:
+            return "commit-root-sha\n", ""
+        return "", ""
+
+    mock_run_git.side_effect = mock_run_git_side_effect
+
+    from scripts.validate_adrs import get_closest_local_branch_point
+    bp = get_closest_local_branch_point()
+    assert bp == "commit-root-sha"
+
+
+@patch("scripts.validate_adrs.run_git_command")
+def test_get_changed_files_bypasses_merge_commits_and_parses_status(mock_run_git):
+    # Test that get_changed_files bypasses merge commits and parses status correctly (renames and quotes)
+    def mock_run_git_side_effect(args):
+        cmd_str = " ".join(args)
+        if "rev-parse --abbrev-ref" in cmd_str:
+            return "feature-branch\n", ""
+        elif "rev-parse HEAD" in cmd_str:
+            return "commit-head-sha\n", ""
+        elif "branch --format" in cmd_str:
+            return "main\nfeature-branch\n", ""
+        elif "merge-base" in cmd_str:
+            return "commit-base-sha\n", ""
+        elif "rev-list --count" in cmd_str:
+            return "2\n", ""
+        elif "rev-list --first-parent" in cmd_str:
+            # 2 commits in range: a normal commit and a merge commit
+            return "commit-normal-sha\ncommit-merge-sha\n", ""
+        elif "log --pretty=%P" in cmd_str:
+            if "commit-normal-sha" in cmd_str:
+                return "commit-parent-sha\n", "" # 1 parent (normal)
+            elif "commit-merge-sha" in cmd_str:
+                return "commit-parent1 commit-parent2\n", "" # 2 parents (merge)
+        elif "diff-tree" in cmd_str:
+            if "commit-normal-sha" in cmd_str:
+                return "apps/execution/main.py\n", ""
+            elif "commit-merge-sha" in cmd_str:
+                # Should not be called because we bypass merge commits!
+                return "should/not/be/here.py\n", ""
+        elif "--porcelain" in cmd_str:
+            # Test rename status and quoted path status
+            return 'R  "old_file.py" -> "new_file.py"\n?? "untracked_file.py"\n', ""
+        return "", ""
+
+    mock_run_git.side_effect = mock_run_git_side_effect
+
+    with patch("os.path.exists", return_value=False):
+        changed = get_changed_files()
+        assert "apps/execution/main.py" in changed
+        assert "new_file.py" in changed
+        assert "untracked_file.py" in changed
+        assert "should/not/be/here.py" not in changed
+
