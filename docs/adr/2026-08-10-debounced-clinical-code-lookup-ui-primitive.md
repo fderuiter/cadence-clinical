@@ -10,6 +10,8 @@
 ## 1. Context & Problem Statement
 To enforce data standards, such as NCI Thesaurus Controlled Terminology (CT), clinical metadata designers and investigators need rapid feedback when entering terminology concept codes in eCRF forms. However, making direct, synchronous network requests on every keystroke causes excessive request floods to terminology endpoints, degrades client and server performance, and disrupts standard synchronous validation workflows. We need a reusable, accessible UI primitive and debounce utility that delivers real-time validation feedback.
 
+This decision implements requirements under PRD-QRY-001.
+
 ## 2. Decision Drivers & Constraints
 * **Driver 1:** Support distinct loading, valid, invalid, and degraded states accessibly (using standard ARIA status regions).
 * **Driver 2:** Prevent network floods during typing with a bounded debounce utility.

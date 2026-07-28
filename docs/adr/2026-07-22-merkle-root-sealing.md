@@ -16,3 +16,5 @@ We seal block logs with a Merkle root verification pattern.
 ## Trade-offs
 - Positive: High security, easy audit validation.
 - Negative: Additional computation cost per transaction.
+
+This decision implements requirements under PRD-SYS-001.

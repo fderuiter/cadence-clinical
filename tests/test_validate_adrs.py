@@ -137,12 +137,84 @@ def test_validate_existing_adrs_with_targets_valid():
 def test_validate_existing_adrs_with_targets_outside_folder():
     # ADR file matching chronological pattern but outside docs/adr
     targets = ["some-folder/2026-07-24-outside.md"]
+
+    def make_mock_file(content):
+        m = MagicMock()
+        m.__enter__.return_value = m
+        m.__exit__.return_value = False
+        m.read.return_value = content
+        return m
+
+    mock_file_index = make_mock_file("")
+
     with (
         patch("builtins.open") as mock_open,
         patch("os.path.isdir", return_value=True),
     ):
-        mock_file_index = MagicMock()
-        mock_file_index.read.return_value = ""
         mock_open.return_value = mock_file_index
 
         assert validate_existing_adrs(targets) is False
+
+
+def test_compliance_utility_parsing():
+    from scripts import compliance_utility
+
+    reqs = compliance_utility.get_valid_requirements()
+
+    # Verify we successfully parsed both PRD and SRS requirements
+    assert len(reqs) > 0
+    assert "PRD-SYS-001" in reqs
+    assert "Trace-1" in reqs
+
+
+def test_compliance_utility_extraction_and_normalization():
+    from scripts import compliance_utility
+
+    content = (
+        "Implements trace 1, Trace-2, prd-sys-001 and trace 999. Also PRD-ABC-123."
+    )
+    refs = compliance_utility.extract_requirement_references(content)
+
+    # Check normalized outcomes
+    assert "Trace-1" in refs
+    assert "Trace-2" in refs
+    assert "PRD-SYS-001" in refs
+    assert "Trace-999" in refs
+    assert "PRD-ABC-123" in refs
+
+
+def test_adr_compliance_validation_logic():
+    from scripts import compliance_utility
+
+    valid_reqs = {"PRD-SYS-001", "Trace-1"}
+
+    # 1. Pre-2026 legacy ADRs pass without requirement references
+    success, err = compliance_utility.validate_adr_compliance(
+        "2025-12-31-legacy-adr.md", "Some context without references.", valid_reqs
+    )
+    assert success is True
+    assert err == ""
+
+    # 2. Post-2026 modern ADR with valid requirement reference passes
+    success, err = compliance_utility.validate_adr_compliance(
+        "2026-01-01-modern-adr.md", "This implements Trace-1. Perfect.", valid_reqs
+    )
+    assert success is True
+    assert err == ""
+
+    # 3. Post-2026 modern ADR with missing requirement reference fails
+    success, err = compliance_utility.validate_adr_compliance(
+        "2026-01-01-modern-adr.md", "No references anywhere.", valid_reqs
+    )
+    assert success is False
+    assert "lacks a valid requirement reference" in err
+    assert "2026-01-01-modern-adr.md" in err
+
+    # 4. Post-2026 modern ADR with invalid/misspelled requirement reference fails
+    success, err = compliance_utility.validate_adr_compliance(
+        "2026-01-01-modern-adr.md", "Implements Trace-99.", valid_reqs
+    )
+    assert success is False
+    assert "references invalid or misspelled requirement identifier(s)" in err
+    assert "Trace-99" in err
+    assert "2026-01-01-modern-adr.md" in err

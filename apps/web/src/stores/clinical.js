@@ -1,9 +1,13 @@
 import { defineStore } from "pinia";
-import { sha256 } from "../../index.js";
-import { generateGatewaySignature, generateJwtHS256 } from "ui";
+import {
+  generateGatewaySignature,
+  generateJwtHS256,
+  buildLedgerBlock,
+  debounce,
+} from "ui";
 import { useAuthStore } from "./auth.js";
 import { soaClient } from "../api/soaClient.js";
-import { evaluateAST, debounce } from "../evaluator.js";
+import { evaluateAST } from "../evaluator.js";
 
 export const useClinicalStore = defineStore("clinical", {
   state: () => {
@@ -493,19 +497,15 @@ export const useClinicalStore = defineStore("clinical", {
           ? "0000000000000000000000000000000000000000000000000000000000000000"
           : this.ledgerBlocks[index - 1].hash;
 
-      const payloadString = `${index}|${timestamp}|${action}|${JSON.stringify(details)}|${reason}|${prevHash}`;
-      const hash = await sha256(payloadString);
-
-      const block = {
+      const block = await buildLedgerBlock(
         index,
         timestamp,
         action,
         details,
         reason,
-        prevHash,
-        hash,
-        synced: false,
-      };
+        prevHash
+      );
+      block.synced = false;
 
       this.ledgerBlocks.push(block);
 

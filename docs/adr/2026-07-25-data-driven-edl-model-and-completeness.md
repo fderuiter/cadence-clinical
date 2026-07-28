@@ -29,3 +29,5 @@ Introduce an `ExpectedDocument` model and API.
 ### Cons
 - ❌ Slightly higher query complexity during completeness evaluations. Added database table and CRUD routes requiring RBAC security to prevent unauthorized definition changes.
 - ❌ Mitigated by inline RBAC checks blocking inspector roles from mutating EDL rows, and the system logging every EDL mutation (`EDL_UPDATE`) or view (`EDL_VIEW`, `COMPLETENESS`) action to the immutable TMFAuditLog.
+
+This decision implements requirements under Trace-4.

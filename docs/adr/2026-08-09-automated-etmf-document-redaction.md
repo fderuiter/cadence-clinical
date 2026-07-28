@@ -10,6 +10,8 @@
 ## 1. Context & Problem Statement
 To meet strict regulatory compliance standards (such as FDA 21 CFR Part 11 and GDPR/HIPAA), clinical documents stored in the electronic Investigator Site File (eISF) and electronic Trial Master File (eTMF) containing unblinded patient data or personally identifiable information (PII) must be de-identified before external distribution or inspection. Manually redacting these documents is error-prone, labor-intensive, and difficult to audit. We need an automated, auditable, and secure eTMF redaction pipeline that detects and masks PII/PHI categories while producing verifiable cryptographic manifests.
 
+This decision implements requirements under Trace-5.
+
 ## 2. Decision Drivers & Constraints
 * **GxP & 21 CFR Part 11 Compliance:** Every redaction operation must be fully auditable, require reason justifications, and preserve unredacted originals for authorized personnel.
 * **Privacy:** The redacted output and any returned metadata or logs must never contain raw matched identifiers.

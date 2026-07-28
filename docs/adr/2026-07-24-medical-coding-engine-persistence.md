@@ -11,6 +11,8 @@
 
 The Cadence Clinical platform requires a standardized, validated, and high-performance mechanism to code clinical verbatim terms (such as adverse events, concomitant medications, medical history) against industry-standard medical dictionaries (MedDRA, WHODrug, etc.). We need to define the relational database models for these terminologies, manage dictionary import execution/status, track investigator coding decisions, and maintain complete 21 CFR Part 11 and GxP compliant auditing.
 
+This decision implements requirements under Trace-1.
+
 ## 2. Decision Drivers & Constraints
 
 * **Driver 1 (Performance):** Ingesting massive vocabularies/dictionaries (hundreds of thousands of rows for MedDRA/WHODrug) must be highly performant and not suffer from per-row trigger overhead.
