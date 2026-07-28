@@ -128,6 +128,20 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked --all-extras
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install Node dependencies
+        run: pnpm install --frozen-lockfile
+
       - name: Run static analysis
         id: run_static
         if: always()
