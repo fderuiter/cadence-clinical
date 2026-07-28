@@ -549,10 +549,14 @@ def test_valid_indexed_repeat_schema_and_compile():
 
     # Designer Compile
     xpath_designer = compile_to_xpath(req.condition)
-    assert xpath_designer == "indexed-repeat(/clinical_data/vssbp, /clinical_data/repeating_vs, 2)"
+    assert (
+        xpath_designer
+        == "indexed-repeat(/clinical_data/vssbp, /clinical_data/repeating_vs, 2)"
+    )
 
     # Execution Compile
     from apps.execution.translator import compile_condition_to_xpath
+
     xpath_execution = compile_condition_to_xpath(req.condition)
     # Note: Execution compiler sanitizes identifiers
     assert xpath_execution == "indexed-repeat(/vssbp, /repeating_vs, 2)"
@@ -628,7 +632,7 @@ def test_compiler_agreement_all_functions():
         operands=[
             ExpressionNode(type="constant", value=1),
             ExpressionNode(type="constant", value=2),
-        ]
+        ],
     )
     assert compile_to_xpath(sum_node) == "sum(1, 2)"
     assert compile_condition_to_xpath(sum_node) == "sum(1, 2)"
@@ -637,7 +641,7 @@ def test_compiler_agreement_all_functions():
     empty_node = ExpressionNode(
         type="function",
         operator="empty",
-        operands=[ExpressionNode(type="constant", value="test")]
+        operands=[ExpressionNode(type="constant", value="test")],
     )
     assert compile_to_xpath(empty_node) == "empty('test')"
     assert compile_condition_to_xpath(empty_node) == "empty('test')"
@@ -646,7 +650,7 @@ def test_compiler_agreement_all_functions():
     not_empty_node = ExpressionNode(
         type="function",
         operator="is_not_empty",
-        operands=[ExpressionNode(type="constant", value="test")]
+        operands=[ExpressionNode(type="constant", value="test")],
     )
     assert compile_to_xpath(not_empty_node) == "not(empty('test'))"
     assert compile_condition_to_xpath(not_empty_node) == "not(empty('test'))"
@@ -660,10 +664,14 @@ def test_python_evaluator_indexed_repeat_and_arity_mismatch():
         type="function",
         operator="indexed-repeat",
         operands=[
-            ExpressionNode(type="field_ref", field_ref=FieldReference(field_id="vssbp")),
-            ExpressionNode(type="field_ref", field_ref=FieldReference(field_id="repeating_vs")),
+            ExpressionNode(
+                type="field_ref", field_ref=FieldReference(field_id="vssbp")
+            ),
+            ExpressionNode(
+                type="field_ref", field_ref=FieldReference(field_id="repeating_vs")
+            ),
             ExpressionNode(type="constant", value=2),
-        ]
+        ],
     )
     context = {
         "repeating_vs[1]/vssbp": 110,
@@ -678,7 +686,7 @@ def test_python_evaluator_indexed_repeat_and_arity_mismatch():
         "operands": [
             {"type": "field_ref", "field_ref": {"field_id": "vssbp"}},
             {"type": "field_ref", "field_ref": {"field_id": "repeating_vs"}},
-        ]
+        ],
     }
     assert evaluate_ast(invalid_node_2, context) is None
 
@@ -689,6 +697,6 @@ def test_python_evaluator_indexed_repeat_and_arity_mismatch():
         "operands": [
             {"type": "constant", "value": 1},
             {"type": "constant", "value": 2},
-        ]
+        ],
     }
     assert evaluate_ast(invalid_empty, context) is None

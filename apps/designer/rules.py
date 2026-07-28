@@ -211,15 +211,21 @@ def compile_to_xpath(node: ExpressionNode) -> str:
     elif node.type == "function":
         if node.operator in ("is_empty", "empty"):
             if len(node.operands) != 1:
-                raise ValueError(f"Function '{node.operator}' requires exactly 1 operand")
+                raise ValueError(
+                    f"Function '{node.operator}' requires exactly 1 operand"
+                )
             return f"empty({compile_to_xpath(node.operands[0])})"
         elif node.operator == "is_not_empty":
             if len(node.operands) != 1:
-                raise ValueError(f"Function '{node.operator}' requires exactly 1 operand")
+                raise ValueError(
+                    f"Function '{node.operator}' requires exactly 1 operand"
+                )
             return f"not(empty({compile_to_xpath(node.operands[0])}))"
         elif node.operator == "indexed-repeat":
             if len(node.operands) != 3:
-                raise ValueError(f"Function '{node.operator}' requires exactly 3 operands")
+                raise ValueError(
+                    f"Function '{node.operator}' requires exactly 3 operands"
+                )
             compiled_ops = [compile_to_xpath(op) for op in node.operands]
             return f"indexed-repeat({', '.join(compiled_ops)})"
 
