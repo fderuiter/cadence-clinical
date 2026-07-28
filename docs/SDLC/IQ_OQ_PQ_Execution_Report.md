@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1018
-- **Passed:** 1018 🟢
+- **Total Automated Test Cases Run:** 1075
+- **Passed:** 1075 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -38,18 +38,18 @@ The Installation Qualification verifies that the software execution environment,
 ```
 Package                 Version     Editable project location
 ----------------------- ----------- -------------------------
-aiosmtplib               5.1.2      
-aiosqlite                0.22.1     
-annotated-doc            0.0.4      
-annotated-types          0.7.0      
-anyio                    4.14.2     
-asyncpg                  0.31.0     
-bandit                   1.9.4      
-beautifulsoup4           4.15.0     
-boolean-py               5.0        
-brotli                   1.2.0      
-brotlicffi               1.2.0.1    
-cachecontrol             0.14.4     
+aiosmtplib               5.1.2
+aiosqlite                0.22.1
+annotated-doc            0.0.4
+annotated-types          0.7.0
+anyio                    4.14.2
+asyncpg                  0.31.0
+bandit                   1.9.4
+beautifulsoup4           4.15.0
+boolean-py               5.0
+brotli                   1.2.0
+brotlicffi               1.2.0.1
+cachecontrol             0.14.4
 cadence-clinical         0.1.0       /app
 certifi                  2026.7.22  
 cffi                     2.1.0      
@@ -122,46 +122,46 @@ pytest-cov               7.1.0
 pytest-playwright        0.8.0      
 pytest-xdist             3.8.0      
 python-dateutil          2.9.0.post0
-python-discovery         1.5.0      
-python-docx              1.2.0      
-python-dotenv            1.2.2      
-python-jose              3.5.0      
-python-multipart         0.0.32     
-python-slugify           8.0.4      
-pytz                     2026.2     
-pyyaml                   6.0.3      
-rapidfuzz                3.14.5     
-requests                 2.34.2     
-rich                     15.0.0     
-rsa                      4.9.1      
-ruff                     0.15.22    
-six                      1.17.0     
-sortedcontainers         2.4.0      
-soupsieve                2.9.1      
-sqlalchemy               2.0.51     
-starlette                1.3.1      
-stevedore                5.9.0      
-stringcase               1.2.0      
-text-unidecode           1.3        
-tinycss2                 1.5.1      
-tinyhtml5                2.1.0      
-tomli                    2.4.1      
-tomli-w                  1.2.0      
-typing-extensions        4.16.0     
-typing-inspection        0.4.2      
-tzdata                   2026.3     
-urllib3                  2.7.0      
-usdm                     0.66.0     
-usdm                     0.67.0     
-uvicorn                  0.51.0     
-uvloop                   0.22.1     
-virtualenv               21.7.0     
-watchfiles               1.2.0      
-weasyprint               69.0       
-webencodings             0.5.1      
-websockets               16.1.1     
-yattag                   1.16.1     
-zopfli                   0.4.3      
+python-discovery         1.5.0
+python-docx              1.2.0
+python-dotenv            1.2.2
+python-jose              3.5.0
+python-multipart         0.0.32
+python-slugify           8.0.4
+pytz                     2026.2
+pyyaml                   6.0.3
+rapidfuzz                3.14.5
+requests                 2.34.2
+rich                     15.0.0
+rsa                      4.9.1
+ruff                     0.15.22
+six                      1.17.0
+sortedcontainers         2.4.0
+soupsieve                2.9.1
+sqlalchemy               2.0.51
+starlette                1.3.1
+stevedore                5.9.0
+stringcase               1.2.0
+text-unidecode           1.3
+tinycss2                 1.5.1
+tinyhtml5                2.1.0
+tomli                    2.4.1
+tomli-w                  1.2.0
+typing-extensions        4.16.0
+typing-inspection        0.4.2
+tzdata                   2026.3
+urllib3                  2.7.0
+usdm                     0.66.0
+usdm                     0.67.0
+uvicorn                  0.51.0
+uvloop                   0.22.1
+virtualenv               21.7.0
+watchfiles               1.2.0
+weasyprint               69.0
+webencodings             0.5.1
+websockets               16.1.1
+yattag                   1.16.1
+zopfli                   0.4.3
 ```
 
 ## 3. Operational Qualification (OQ)
@@ -543,6 +543,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_gateway_cors_headers` | `tests.test_gateway` | PRD-UNI-001 | 🟢 PASSED | < 1s |
 | `test_gateway_rate_limiting` | `tests.test_gateway` | PRD-UNI-001 | 🟢 PASSED | < 1s |
 | `test_gateway_sponsor_claim_extraction` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gateway_startup_development_with_bypass_configs` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gateway_startup_production_no_bypass_configs` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gateway_startup_production_with_skip_jwks` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gateway_startup_production_with_test_secret` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gateway_startup_production_with_unverified_jwt` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_subject_role_routing_restrictions` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_generate_signature` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_generate_signature_v2` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
