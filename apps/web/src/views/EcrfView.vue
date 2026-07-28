@@ -1042,13 +1042,38 @@ const authStore = useAuthStore();
 const conceptValidationStates = reactive({});
 const conceptRequestIds = reactive({});
 
+const debouncedConceptValidations = {};
+
+async function performConceptCodeInputValidation(field, newValue, currentReqId) {
+  try {
+    const response = await terminologyClient.validateSingleCode(newValue, {
+      userId: authStore.identity?.username || "fderuiter",
+      roles: authStore.identity?.roles?.[0] || "Data Manager",
+    });
+
+    if (currentReqId !== conceptRequestIds[field.id]) {
+      return;
+    }
+
+    conceptValidationStates[field.id] = {
+      state: response.state,
+      decode: response.decode,
+      errorMessage: response.error_message,
+    };
+  } catch (err) {
+    if (currentReqId !== conceptRequestIds[field.id]) {
+      return;
+    }
+    conceptValidationStates[field.id] = {
+      state: "DEGRADED",
+      errorMessage: err.message || "Terminology service offline",
+    };
+  }
+}
+
 // eslint-disable-next-line no-unused-vars
 function handleConceptCodeInput(field, newValue) {
   store.formValues[field.id] = newValue;
-
-  if (field._debounceTimer) {
-    clearTimeout(field._debounceTimer);
-  }
 
   if (!newValue || !newValue.trim()) {
     conceptValidationStates[field.id] = null;
@@ -1060,32 +1085,13 @@ function handleConceptCodeInput(field, newValue) {
   }
   const currentReqId = ++conceptRequestIds[field.id];
 
-  field._debounceTimer = setTimeout(async () => {
-    try {
-      const response = await terminologyClient.validateSingleCode(newValue, {
-        userId: authStore.identity?.username || "fderuiter",
-        roles: authStore.identity?.roles?.[0] || "Data Manager",
-      });
+  if (!debouncedConceptValidations[field.id]) {
+    debouncedConceptValidations[field.id] = debounce((f, val, reqId) => {
+      performConceptCodeInputValidation(f, val, reqId);
+    }, 300);
+  }
 
-      if (currentReqId !== conceptRequestIds[field.id]) {
-        return;
-      }
-
-      conceptValidationStates[field.id] = {
-        state: response.state,
-        decode: response.decode,
-        errorMessage: response.error_message,
-      };
-    } catch (err) {
-      if (currentReqId !== conceptRequestIds[field.id]) {
-        return;
-      }
-      conceptValidationStates[field.id] = {
-        state: "DEGRADED",
-        errorMessage: err.message || "Terminology service offline",
-      };
-    }
-  }, 300);
+  debouncedConceptValidations[field.id](field, newValue, currentReqId);
 }
 
 // eslint-disable-next-line no-unused-vars
@@ -1210,7 +1216,6 @@ onMounted(() => {
 // Lookup Status States
 const lookupStatuses = ref({});
 const lastLookupRequestIds = {};
-const debounceTimers = {};
 
 async function performConceptCodeValidation(fieldId, value) {
   if (!value || !value.trim()) {
@@ -1268,22 +1273,24 @@ async function performConceptCodeValidation(fieldId, value) {
   }
 }
 
+const debouncedLookupValidations = {};
+
 function handleLookupInput(field, value) {
   const fieldId = field.id;
   store.formValues[fieldId] = value;
-
-  if (debounceTimers[fieldId]) {
-    clearTimeout(debounceTimers[fieldId]);
-  }
 
   if (!value || !value.trim()) {
     lookupStatuses.value[fieldId] = null;
     return;
   }
 
-  debounceTimers[fieldId] = setTimeout(() => {
-    performConceptCodeValidation(fieldId, value);
-  }, 300);
+  if (!debouncedLookupValidations[fieldId]) {
+    debouncedLookupValidations[fieldId] = debounce((fid, val) => {
+      performConceptCodeValidation(fid, val);
+    }, 300);
+  }
+
+  debouncedLookupValidations[fieldId](fieldId, value);
 }
 
 function getLookupStatusClass(fieldId) {

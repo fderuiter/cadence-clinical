@@ -110,3 +110,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-17: Frontend Standardization, CSS Grid Layouts, and Centralized UI Utilities](2026-08-17-frontend-standardization-css-grid-and-centralized-utilities.md)
 - [2026-08-17: Interactive Mermaid Diagrams and Responsive Layout Controls](2026-08-17-interactive-mermaid-diagrams-and-zoom-pan-controls.md)
 - [2026-08-18: Document Redaction Architecture, Regulatory Data-Handling, and Compliance Profiles](2026-08-18-document-redaction-architecture.md)
+- [2026-08-19: Strict Import Enforcement and Componentized GxP Badges](2026-08-19-strict-import-enforcement-and-gxp-badges.md)

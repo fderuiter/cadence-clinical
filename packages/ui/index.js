@@ -486,7 +486,7 @@ export function createCtmsMilestoneTable(milestones) {
       <td><strong>${m.type}</strong></td>
       <td>${m.plannedDate || "N/A"}</td>
       <td>${m.actualDate || "Pending"}</td>
-      <td><span class="badge ${m.status === "ACHIEVED" ? "gxp" : ""}">${m.status}</span></td>
+      <td>${renderStatusBadge(m.status, m.status === "ACHIEVED")}</td>
     </tr>
   `
     )
@@ -527,7 +527,7 @@ export function createCtmsVisitTable(visits) {
       <td>${v.scheduledDate || "N/A"}</td>
       <td>${v.actualDate || "Pending"}</td>
       <td>${v.cra || "N/A"}</td>
-      <td><span class="badge ${v.status === "SIGNED_OFF" ? "gxp" : ""}">${v.status}</span></td>
+      <td>${renderStatusBadge(v.status, v.status === "SIGNED_OFF")}</td>
     </tr>
   `
     )
@@ -857,6 +857,7 @@ export function createClinicalLookupInput(
  * @param {number} wait - The delay in milliseconds before executing the function.
  * @returns {Function} The debounced function.
  */
+// eslint-disable-next-line no-restricted-syntax
 export function debounce(func, wait) {
   let timeout;
   return function (...args) {
@@ -866,6 +867,30 @@ export function debounce(func, wait) {
       func.apply(context, args);
     }, wait);
   };
+}
+
+export const GXP_BADGES = {
+  CFR_11: '<span class="badge gxp">21 CFR Part 11</span>',
+  GAMP_5: '<span class="badge">GAMP 5</span>',
+  IEC_62304: '<span class="badge">IEC 62304</span>',
+};
+
+export function renderGxpBadge(type) {
+  const normalized = String(type).toUpperCase().replace(/[^A-Z0-9]/g, "_");
+  if (normalized === "CFR_11" || normalized.includes("CFR") || type === "21 CFR Part 11") {
+    return GXP_BADGES.CFR_11;
+  }
+  if (normalized === "GAMP_5" || normalized.includes("GAMP") || type === "GAMP 5") {
+    return GXP_BADGES.GAMP_5;
+  }
+  if (normalized === "IEC_62304" || normalized.includes("IEC") || type === "IEC 62304") {
+    return GXP_BADGES.IEC_62304;
+  }
+  return `<span class="badge">${type}</span>`;
+}
+
+export function renderStatusBadge(status, isGxp = false) {
+  return `<span class="badge ${isGxp ? "gxp" : ""}">${status}</span>`;
 }
 
 export {

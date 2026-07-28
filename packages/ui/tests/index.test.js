@@ -8,6 +8,9 @@ import {
   createQueryPanel,
   createClinicalLookupInput,
   debounce,
+  GXP_BADGES,
+  renderGxpBadge,
+  renderStatusBadge,
 } from "../index.js";
 
 describe("createClinicalInput", () => {
@@ -412,5 +415,26 @@ describe("debounce", () => {
     expect(callback).toHaveBeenCalledWith("third");
 
     vi.useRealTimers();
+  });
+});
+
+describe("GxP and Status Badges", () => {
+  it("exports a standard dictionary of GxP compliance badge HTML strings", () => {
+    expect(GXP_BADGES.CFR_11).toContain("21 CFR Part 11");
+    expect(GXP_BADGES.GAMP_5).toContain("GAMP 5");
+    expect(GXP_BADGES.IEC_62304).toContain("IEC 62304");
+  });
+
+  it("renders GxP badges correctly", () => {
+    expect(renderGxpBadge("CFR_11")).toBe(GXP_BADGES.CFR_11);
+    expect(renderGxpBadge("21 CFR Part 11")).toBe(GXP_BADGES.CFR_11);
+    expect(renderGxpBadge("GAMP_5")).toBe(GXP_BADGES.GAMP_5);
+    expect(renderGxpBadge("IEC_62304")).toBe(GXP_BADGES.IEC_62304);
+    expect(renderGxpBadge("Custom Badge")).toContain("Custom Badge");
+  });
+
+  it("renders status badges correctly", () => {
+    expect(renderStatusBadge("ACHIEVED", true)).toBe('<span class="badge gxp">ACHIEVED</span>');
+    expect(renderStatusBadge("PENDING", false)).toBe('<span class="badge ">PENDING</span>');
   });
 });

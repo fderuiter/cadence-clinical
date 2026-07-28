@@ -11,9 +11,9 @@
         style="display: flex; align-items: center; gap: 16px"
       >
         <div class="header-badges" style="display: flex; gap: 8px">
-          <span class="badge gxp">21 CFR Part 11</span>
-          <span class="badge">GAMP 5</span>
-          <span class="badge">IEC 62304</span>
+          <span v-html="renderGxpBadge('CFR_11')"></span>
+          <span v-html="renderGxpBadge('GAMP_5')"></span>
+          <span v-html="renderGxpBadge('IEC_62304')"></span>
         </div>
         <div
           class="user-status-card"
@@ -171,6 +171,7 @@
 import { onMounted } from "vue";
 import { useClinicalStore } from "./stores/clinical";
 import { useAuthStore } from "./stores/auth";
+import { renderGxpBadge } from "ui";
 import "./style.css";
 
 const store = useClinicalStore();
