@@ -21,6 +21,10 @@ This matrix details the distribution of core compliance and tracking features ac
 | **Medical Coding: MH Coverage**   | N/A | Automated MedDRA dictionary coding and system query generation for Medical History (MHTERM) | v1.5.0 | Supported |
 | **Medical Coding: CM Coverage**   | N/A | Automated WHODrug dictionary coding and system query generation for Concomitant Medications (CMTRT) | v1.5.0 | Supported |
 | **SDTM/ADaM CDISC Export**        | N/A | Secured Dataset-JSON 1.0.0 format exports (DM, AE, VS, LB, MH, ADSL, ADAE, ADVS) with audit trails | v1.7.0 | Supported |
+| **Global Library Templates**      | Multi-versioned Forms, Data Elements, Arms, and Visits | N/A (Referenced downstream on instantiation) | v1.8.0 | Supported |
+| **Multi-Tenant Scoping**          | Metadata partitioned by validated sponsor IDs, blank context blocked | N/A | v1.8.0 | Supported |
+| **Governance & State Machine**    | Allowed transition validations and role gates (DRAFT to ARCHIVED) | N/A | v1.8.0 | Supported |
+| **In-Use Locks & Amendments**     | In-use template mutation write blocking, formal `/amend` cloning workflow | N/A | v1.8.0 | Supported |
 
 ---
 
@@ -43,6 +47,8 @@ The table below specifies how individual clinical domain entities are processed,
 | **Patient Notifications**| Interop Service | SQLite/PostgreSQL | Append-only delivery logs and read acknowledgment timestamp auditing |
 | **Clinical Coding Assignments**| Execution | SQLite/PostgreSQL | Automated event-driven coding assignments, manual review overrides, system coding query triggers, and version up-versioning ledgers |
 | **Biostatistical Exports** | Execution | SQLite/PostgreSQL | Audit-logged `BiostatExport` transactions with Dataset-JSON validation |
+| **Global Library Objects** | Designer | Neo4j/Mock DB | Graph node versioning via `PREVIOUS_VERSION` chains and metadata JSON serialization |
+| **Study Library Instances** | Designer | Neo4j/Mock DB | Copy-on-instantiation clones linked via `INSTANTIATED_FROM` with local overrides |
 
 ---
 

@@ -86,3 +86,47 @@ The patient-facing ecosystem consists of a Progressive Web App (PWA) client and 
 * **Progressive Web App Architecture:** The `apps/subject-portal` front-end is hosted independently of sponsor tools to eliminate accidental administrative UI exposure. It is configured with a custom web app manifest (`manifest.json`) and service worker (`sw.js`) to cache static resources and enable offline access.
 * **IndexedDB Sync Queue Panel:** When a user is offline, submissions are signed and committed locally. The portal provides a Sync Queue Panel that displays pending, completed, or failed synchronization states visually, ensuring the patient is fully aware of their data transmission status.
 * **Clinical Queries on Sync Exceptions:** If a synchronized record references an Instrument or SubjectAssignment that has been deleted or is missing, the interop engine rejects the entry as a structural conflict. The defeated input is archived for review, and an `OPEN` status `ClinicalQuery` is generated automatically with a system exception change reason to prevent silent data loss.
+
+## 11. Global Library Governance, Versioning, and Multi-Tenant Isolation
+The Metadata Designer (MDR/SDR) service (`apps/designer`) hosts the Global Library, enabling sponsors to create, manage, and reuse standardized clinical components while maintaining rigid regulatory compliance and tenant isolation.
+
+### A. Global Library Entities and Schemas
+The Global Library supports four core clinical entities, validated via strict type-specific payloads:
+- **Forms (`FORM`)**: Reusable question templates containing sequences of CDASH/SDTM-conformant fields.
+- **Data Elements (`DATA_ELEMENT`)**: Standardized variables specifying primitive data types and allowed UCUM units of measure.
+- **Arms (`ARM`)**: Standardized trial arm designs capturing classification (e.g., Treatment vs. Placebo), randomization ratios, and sample size targets.
+- **Visits (`VISIT`)**: Standard visit components defining planned schedule offsets, margins, and scheduling types (Screening, Scheduled, Unscheduled).
+
+### B. Graph-Native Versioning Pattern
+The database represents Global Library elements in Neo4j (with an in-memory mock fallback) using a stable, unique global library ID. Instead of overwriting nodes during an update:
+- Updates create a new `:LibraryObject` node in the graph database.
+- The new node is chained linearly to its immediate predecessor using a `[:PREVIOUS_VERSION]` relationship.
+- This creates an unbroken historical timeline of template evolution, making every past definition reproducible for auditing.
+
+### C. Tenant Isolation and Scoped Access Security
+Multi-tenant security partitions the Global Library logical namespace by sponsor:
+- **Gateway Identification**: The API Gateway extracts sponsor identity from Keycloak JWT claims, sanitizes headers, and propagates signed headers (`X-Sponsor-Id`, `X-Tenant-Id`) downstream.
+- **Whitespace Gating**: The API strictly rejects any write or read attempt where the sponsor identifier is absent, empty, or whitespace-only with HTTP 403 Forbidden.
+- **Boundary Restriction**: Database queries are strictly parameterized by the validated sponsor context. Callers from Sponsor A are blocked from reading, listing, updating, or instantiating any Global Library template owned by Sponsor B, returning HTTP 404 or 403 to prevent intelligence gathering.
+
+### D. Governed State Machine and Role-Gated Transitions
+To enforce GxP content control, library templates follow a rigid status state machine:
+$$\text{DRAFT} \longrightarrow \text{IN\_REVIEW} \longrightarrow \text{APPROVED} \longrightarrow \text{PUBLISHED} \longrightarrow \text{ARCHIVED}$$
+- **Allowed Transition Paths**: Transitions must obey the established governance map (e.g., `DRAFT` can only transition to `IN_REVIEW`; `PUBLISHED` can only transition to `ARCHIVED`; `REJECTED` reverts to `DRAFT`).
+- **Role-Based Access**:
+  - `IN_REVIEW`: Authorized for `sponsor_designer`, `sponsor_dm`, `sponsor_admin`, or `sysadmin`.
+  - `APPROVED` / `REJECTED` / `PUBLISHED`: Authorized for `sponsor_dm`, `sponsor_admin`, or `sysadmin`.
+  - `ARCHIVED`: Gated strictly to `sponsor_admin` or `sysadmin`.
+- **Immutability of Locked States**: Direct updates (`PUT`) on templates marked as `PUBLISHED` or `ARCHIVED` are blocked at runtime. The system raises an uncatchable `IMMUTABILITY_VIOLATION` exception, returning HTTP 403 Forbidden.
+
+### E. In-Use Locking and Formal Amendments
+When a specific library object version is referenced (instantiated) by an active or active-recruiting clinical study:
+- **Write-Blocking**: Direct updates (`PUT`) on that specific version are blocked, throwing `LIBRARY_OBJECT_IN_USE` (HTTP 409 Conflict) to protect the trial configuration.
+- **Amendment Endpoint**: Users must invoke the explicit `POST /api/v1/mdr/library/{id}/amend` endpoint to fork the template. This clones the latest payload into a new version node, transitioning its status back to `DRAFT`.
+- Existing trial instances maintain unbroken source traceability back to the original version, while allowing future studies to adopt the amended template.
+
+### F. Instantiation and Inheritance Overrides
+Sponsor studies copy templates into study-scoped components via `POST /api/v1/studies/{study_id}/library-instances`:
+- **Unmodified Parity**: A newly instantiated, unmodified instance has an empty diff view compared to its linked source template.
+- **Copy-on-Instantiation**: The study creates a distinct copy of the payload. The copy is linked to its source via an `[:INSTANTIATED_FROM]` relationship.
+- **Local Overrides**: Modifying the study-scoped instance payload records only local override properties, keeping the parent library template fully immutable. The API exposes field-level, dot-notated differences comparing the instance against its parent.

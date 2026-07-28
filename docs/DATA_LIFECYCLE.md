@@ -237,3 +237,67 @@ Every redaction operation creates a highly detailed, immutable cryptographic pap
    - To maintain blinding and comply with GDPR/HIPAA standards, **raw matched PII/PHI values are strictly excluded from all audit trails, logging records, and manifest files**. Only the category, strategy, and replacement values are preserved.
 3. **Immutable Audit Trail Logging**:
    - The system logs a non-sensitive `REDACT` action to the immutable database-backed `TMFAuditLog`, containing the actor ID, roles, source/redacted version indices, and the cryptographic manifest signature to ensure tamper-evident non-repudiation.
+
+---
+
+# Data Lifecycle Specification: Global Library & Clinical Study Instances
+
+## 1. Overview
+The Global Library in the Metadata Designer (MDR/SDR) service (`apps/designer`) serves as the central, multi-tenant repository for reusable clinical protocol definitions. This specification defines the data lifecycle, retention rules, and strict tenant partitioning that separate shared global reference templates from trial-specific (study instance) execution data. It ensures system compliance under FDA 21 CFR Part 11, GxP standards, and GDPR multi-tenant guidelines, satisfying **Trace-3**.
+
+---
+
+## 2. Shared Library Objects versus Study-Instance Data
+
+The platform enforces a clear distinction between master template objects and localized trial instances:
+
+```
+[ Global Library (Master Data) ] ──────► [ POST /library-instances ] ──────► [ Study Instance (Execution) ]
+ - Owned by Sponsor A                     - Copy-on-Instantiation            - Scope bound to Study
+ - Versioned via Graph Chains             - Captures source link             - Local Overrides Allowed
+ - Locked statuses are Immutable          - Retains pedigree trace           - Lifespan bound to Trial
+```
+
+### Global Library Templates (Master Reference Data)
+- **Nature**: High-quality, reusable blueprint templates representing clinical design standards (`FORM`, `DATA_ELEMENT`, `ARM`, `VISIT`).
+- **Storage**: Persisted as graph nodes inside Neo4j.
+- **Auditing & Change Trails**: Modifications create new versioned nodes. Prior states are retained intact and chained linearly using `[:PREVIOUS_VERSION]` relationships to preserve historical protocol reproducibility.
+
+### Study Library Instances (Trial-Specific Data)
+- **Nature**: Active, study-scoped configurations instantiated for a particular clinical protocol.
+- **Storage**: Persisted as separate `:LibraryObjectInstance` nodes linked to the study root `:Study`.
+- **Overrides**: Study teams can customize or override these instantiated templates.
+- **Source Linkage**: Upon instantiation, the platform records a strict `[:INSTANTIATED_FROM]` relationship mapping the instance back to the exact source library template version (tracking source ID, version index, and sponsor ID). This guarantees absolute provenance and clinical traceability.
+- **Isolation of Modifying Effects**: Local overrides exist purely at the study-instance level. Modifying an instantiated copy has absolutely zero impact on the master Global Library template, preserving the template's purity.
+
+---
+
+## 3. Logical Tenant Partitioning & Sponsor Separation Guidelines
+
+To enforce strict clinical trial separation and prevent cross-sponsor metadata leakage:
+1. **Cryptographic Context Verification**: The API Gateway decodes the caller's Keycloak JWT, validates roles, and injects signed headers (`X-Sponsor-Id`, `X-Tenant-Id`) downstream.
+2. **Whitespace Gating**: The Metadata Designer service strictly parses incoming sponsor attributes. Write, read, list, or transition attempts are instantly rejected with HTTP 403 Forbidden if the sponsor ID is:
+   - Absent or missing.
+   - Null or empty (`""`).
+   - Whitespace-only (e.g., `"   "`).
+3. **Sponsor Boundary Enforcement**: Database queries are strictly scoped. Every query automatically appends a sponsor isolation parameter (e.g. `n.sponsor_id = $sponsor_id`). Callers are completely blocked from reading, listing, updating, or instantiating templates belonging to other sponsors (returning HTTP 404 or 403).
+
+---
+
+## 4. Retention Policy & Lifespan Rules
+
+The operational lifespan of library data and study data is governed by distinct regulatory retention schedules:
+
+| Data Classification | Lifecycle States | Retention Trigger | Compliance Retention Timeline |
+| :--- | :--- | :--- | :--- |
+| **Global Library Templates** | `DRAFT`, `IN_REVIEW`, `APPROVED`, `PUBLISHED`, `ARCHIVED` | Transition to `ARCHIVED` | Permanently retained as master metadata. Retained for 25 years post-trial completion per clinical master file guidelines. |
+| **Study Library Instances** | Active Trial State | Trial Completion or Soft Deletion | Linked directly to the study lifecycle. Retained/archived in parallel with study trial master records. |
+
+### Immutability of Locked Template Statuses
+- Once a template version's status is transitioned to `PUBLISHED` or `ARCHIVED`, its payload is locked. Standard `PUT` mutations on these records are strictly blocked at the API layer, raising an `IMMUTABILITY_VIOLATION` (HTTP 403 Forbidden).
+- **Formal Amendments**: To evolve a locked or in-use template, users must call `/api/v1/mdr/library/{id}/amend`. This copies the template's payload into a new, separate draft version node (incrementing the version sequence) while keeping existing active studies linked to the original version.
+
+### Non-Destructive Soft-Deletion Guidelines
+- Deletions are strictly non-destructive. To prevent historical audit trail breaks, master templates and study instances are never deleted from the database. Instead:
+  - Deletions write a new version marked as `is_deleted = true`.
+  - The previous active state remains securely preserved in the graph version chain, enabling complete retrospective reconstructibility of any trial configuration at any historical timestamp.
