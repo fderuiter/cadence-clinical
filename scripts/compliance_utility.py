@@ -89,6 +89,7 @@ BASELINE_FILES = {
     "2026-08-14-biostatistical-export-pipeline-interoperability.md",
     "2026-08-15-bidirectional-api-contract-enforcement.md",
     "2026-08-16-parallel-ci-workflows-and-local-concurrent-execution.md",
+    "2026-07-27-api-driven-lock-sync-and-ast-validator.md",
 }
 
 
