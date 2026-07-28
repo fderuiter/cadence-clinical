@@ -11,6 +11,8 @@
 The Cadence Clinical platform requires a standalone, robust in-application ticketing service responsible for managing issue tracking, helpdesk requests, and user support operations.
 To align with FDA 21 CFR Part 11 and full GxP auditing standards, all ticket records and mutations must be version-tracked, and an immutable, append-only audit trail ledger must capture every write operation securely.
 
+This decision implements requirements under Trace-8.
+
 ## 2. Decision Drivers & Constraints
 * **Driver 1:** Decoupled architectural boundaries to isolate the tickets service and storage from core EDC execution systems.
 * **Driver 2:** Strict compliance with 21 CFR Part 11 regarding electronic records and signatures, necessitating mutable-record auditing, non-empty change reasons, version tracking, and immutable audit logging.

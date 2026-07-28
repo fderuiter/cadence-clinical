@@ -9,6 +9,7 @@ from typing import Dict, Set
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.etmf.models import DocumentQCTransition, DocumentStatus, TMFDocument
+from packages.security.rbac import Principal, has_permission, normalize_role
 
 # Defined allowed forward and rejection transitions
 ALLOWED_TRANSITIONS: Dict[str, Set[str]] = {
@@ -29,32 +30,25 @@ ALLOWED_TRANSITIONS: Dict[str, Set[str]] = {
     DocumentStatus.SIGNED: set(),
 }
 
-# Mapping target-stages to required roles using the lowercase eTMF role convention
-STAGE_TO_REQUIRED_ROLES: Dict[str, list[str]] = {
-    DocumentStatus.TECHNICAL_QC: ["sponsor_dm", "admin"],
-    DocumentStatus.CLINICAL_QC: ["sponsor_clinical", "admin", "monitor"],
-    DocumentStatus.APPROVED: ["sponsor_dm", "sponsor_clinical", "admin"],
-    DocumentStatus.ARCHIVED: ["sponsor_dm", "admin"],
-    DocumentStatus.REJECTED: ["sponsor_dm", "sponsor_clinical", "admin"],
-    DocumentStatus.DRAFT: ["sponsor_dm", "sponsor_clinical", "admin"],
-    DocumentStatus.SIGNED: ["sponsor_dm", "sponsor_clinical", "admin"],
-}
-
 
 def has_required_role(actor_role: str | list[str], target_status: str) -> bool:
     """
-    Checks if the given actor roles contain any role authorized to transition to the target status.
+    Checks if the given actor roles possess the permission to transition to the target status.
+    All transitions are authorized against centralized role-to-permission mappings.
     """
-    required_roles = STAGE_TO_REQUIRED_ROLES.get(target_status)
-    if not required_roles:
-        return True
-
-    # Normalize roles to lowercase list
     if isinstance(actor_role, str):
-        actor_roles = [r.strip().lower() for r in actor_role.split(",")]
+        raw_roles = [r.strip() for r in actor_role.split(",") if r.strip()]
     else:
-        actor_roles = [str(r).strip().lower() for r in actor_role]
-    return any(role in required_roles for role in actor_roles)
+        raw_roles = [str(r).strip() for r in actor_role if str(r).strip()]
+    actor_roles = [normalize_role(r) for r in raw_roles]
+
+    principal = Principal(
+        user_id="lifecycle_actor",
+        roles=actor_roles,
+        raw_roles=raw_roles,
+    )
+    perm_to_check = f"etmf_document:transition_{target_status.lower()}"
+    return has_permission(principal, perm_to_check)
 
 
 async def validate_and_transition_document_status(

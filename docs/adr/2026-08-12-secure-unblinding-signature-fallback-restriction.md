@@ -10,6 +10,8 @@
 ## 1. Context & Problem Statement
 With the implementation of the 21 CFR Part 11 compliant emergency clinical unblinding API and the introduction of signature fallback logic for legacy tests, a vulnerability was identified. Specifically, if legacy 4-field signature fallback checks are executed unconditionally, a request containing active scope claims (such as `site_id`, `sponsor_id`, or `unblinded_access`) could bypass scope-aware cryptographic validation. We need to enforce strict validation rules such that signature verification fallbacks are strictly rejected if any scope parameter is active in the request.
 
+This decision implements requirements under Trace-2.
+
 ## 2. Decision Drivers & Constraints
 * **Security & Compliance:** Ensure active scope boundaries cannot be bypassed using legacy signatures.
 * **FDA 21 CFR Part 11 Compliance:** Complete audit trail and cryptographic signature verification for state-changing emergency unblinding.

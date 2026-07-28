@@ -10,6 +10,8 @@
 ## 1. Context & Problem Statement
 Currently, the `/api/v1/studies/{study_id}/differences` endpoint requires a direct connection to the underlying graph database (Neo4j/Cypher) to compute differences between two versions of a clinical study. As we migrate to an API-first microservices architecture, direct database connections from downstream domain services are deprecated. This resulted in the endpoint throwing a persistent `503 Service Unavailable` error, blocking clinical study designers from comparing different study design versions.
 
+This decision implements requirements under Trace-7.
+
 ## 2. Decision Drivers & Constraints
 * **Driver 1:** Decoupling downstream domain services from direct database dependencies.
 * **Driver 2:** High availability and eliminating `503 Service Unavailable` errors.

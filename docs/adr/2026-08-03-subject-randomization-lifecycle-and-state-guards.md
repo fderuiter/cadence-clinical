@@ -11,6 +11,8 @@
 In clinical trials, once a subject is randomized, their baseline characteristics (stratification factors) must remain completely static to ensure statistical validity and prevent post-hoc bias. Furthermore, state transitions—such as moving from screening to emergency unblinding or withdrawal—must follow a highly regulated, audited path.
 To satisfy these requirements, the platform needs a secure, randomization-aware state machine and immutable stratification factor locking in the clinical execution subject model (`ClinicalSubject`).
 
+This decision implements requirements under Trace-8.
+
 ## 2. Decision Drivers & Constraints
 * **Driver 1 (Compliance & GxP Standards):** Maintain CDISC USDM, CDISC ODM, and 21 CFR Part 11 compliant audit fields and immutability guards.
 * **Driver 2 (Statistical Validity):** Block post-randomization stratification factor mutation.

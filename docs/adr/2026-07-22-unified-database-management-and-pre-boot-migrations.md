@@ -20,3 +20,5 @@ We have decoupled schema migrations into an isolated pre-boot process and consol
 ## Trade-offs
 - **Positive:** Zero-downtime platform upgrades, strict compliance-level auditing without orphaned audit records, and coroutine-safe operations.
 - **Negative:** Adds complexity to the deployment process as a pre-boot migration job must run before the application can start.
+
+This decision implements requirements under PRD-SYS-001.

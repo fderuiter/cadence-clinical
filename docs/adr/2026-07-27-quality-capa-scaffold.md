@@ -10,6 +10,8 @@
 ## 1. Context & Problem Statement
 The Cadence Clinical platform requires a robust, compliant, and isolated Quality & CAPA subsystem to handle protocol deviation management, Root Cause Analysis (RCA), and Corrective and Preventive Actions (CAPA) tracking. To support 21 CFR Part 11 auditing regulations and avoid database schema leakage across bounds, we need to create a dedicated FastAPI microservice package (`apps/quality/`) with its own isolated database persistence managers and domain schema definitions.
 
+This decision implements requirements under Trace-7.
+
 ## 2. Decision Drivers & Constraints
 * **Driver 1 (Compliance):** Strict FDA 21 CFR Part 11 compliance requires mandatory change justification reasons, explicit versioning, creation metadata, and an append-only audit trail logging mechanism.
 * **Driver 2 (Database Isolation):** Bounded contexts must be strictly decoupled; hence, Quality schemas and operational connections must be separate from CTMS and trial execution databases.

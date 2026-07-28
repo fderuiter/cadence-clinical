@@ -14,6 +14,7 @@ ROW_KEYS: dict[str, str] = {
     "Dependency, Static Audit & Secrets Scan": "audit",
     "DEID Compliance Scan": "deid",
     "Git Merge Conflicts": "conflict",
+    "Code Duplication Scan": "duplication",
 }
 
 
@@ -92,7 +93,7 @@ def merge_outcomes(
 ) -> dict[str, str]:
     """Merge newly supplied outcomes with existing ones to avoid state erasure."""
     merged: dict[str, str] = {}
-    for key in ["lint", "test", "frontend", "adr", "audit", "conflict", "deid"]:
+    for key in ["lint", "test", "frontend", "adr", "audit", "conflict", "deid", "duplication"]:
         new_val = new_outcomes.get(key)
         existing_val = existing_outcomes.get(key)
 
@@ -113,6 +114,7 @@ def build_comment_body(outcomes: dict[str, str], has_failures: bool) -> str:
     emoji_adr = get_status_emoji(outcomes.get("adr"))
     emoji_audit = get_status_emoji(outcomes.get("audit"))
     emoji_deid = get_status_emoji(outcomes.get("deid"))
+    emoji_duplication = get_status_emoji(outcomes.get("duplication"))
 
     # Turn the conflict emoji into a positive "No Conflict" if it's success (Passed), or "Conflict Detected" if it's failure
     conflict_val = outcomes.get("conflict", "success").lower()
@@ -186,6 +188,31 @@ def build_comment_body(outcomes: dict[str, str], has_failures: bool) -> str:
         except Exception as e:
             vulnerability_table = f"\n\n#### 🛡️ GxP Security Exemption Ledger Status\n⚠️ Error reading vulnerability summary: {e}\n"
 
+    # Read duplication summary if present
+    duplication_table = ""
+    dup_summary_path = "duplication_summary.json"
+    if os.path.exists(dup_summary_path):
+        try:
+            with open(dup_summary_path, "r", encoding="utf-8") as f:
+                dup_summary = json.load(f)
+            duplicates = dup_summary.get("duplicates", [])
+            if duplicates:
+                duplication_table = "\n\n#### ⚠️ Code Duplication Scanner Warnings\n"
+                duplication_table += "| Block 1 | Block 2 | Code Preview |\n"
+                duplication_table += "| :--- | :--- | :--- |\n"
+                for dup in duplicates:
+                    loc1 = dup["loc1"]
+                    loc2 = dup["loc2"]
+                    # Replace newlines with <br> in HTML-friendly preview and handle markdown characters
+                    preview = dup["preview"].replace("\n", "<br>").replace("|", "\\|")
+                    duplication_table += (
+                        f"| `{loc1['file']}` (Lines {loc1['start']}-{loc1['end']}) | "
+                        f"`{loc2['file']}` (Lines {loc2['start']}-{loc2['end']}) | "
+                        f"`{preview}` |\n"
+                    )
+        except Exception as e:
+            duplication_table = f"\n\n#### ⚠️ Code Duplication Scanner Warnings\n⚠️ Error reading duplication summary: {e}\n"
+
     body = f"""<!-- ID: CADENCE_PR_QUALITY_GATE_CHECKLIST -->
 {header_message}
 
@@ -198,8 +225,10 @@ def build_comment_body(outcomes: dict[str, str], has_failures: bool) -> str:
 | **ADR Validation** (validate_adrs.py) | {emoji_adr} |
 | **Dependency, Static Audit & Secrets Scan** (pip-audit/bandit/detect-secrets) | {emoji_audit} |
 | **DEID Compliance Scan** (deid-scan) | {emoji_deid} |
+| **Code Duplication Scan** (detect_duplication.py) | {emoji_duplication} |
 | **Git Merge Conflicts** | {emoji_conflict} |
 {vulnerability_table}
+{duplication_table}
 ---
 
 # Universal Task & PR Review Checklist: Intelligent Code Review & Merge Validation
@@ -311,6 +340,7 @@ def main() -> None:
         "audit": combined_audit,
         "conflict": os.environ.get("CONFLICT_OUTCOME", ""),
         "deid": os.environ.get("DEID_OUTCOME", ""),
+        "duplication": os.environ.get("DUPLICATION_OUTCOME", ""),
     }
 
     # Fetch existing comments to see if we have an existing checklist comment

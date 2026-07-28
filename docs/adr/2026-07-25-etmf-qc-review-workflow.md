@@ -32,3 +32,5 @@ Persist document states in the database and write an append-only transaction his
 
 ### Cons
 - ❌ Slightly higher database storage requirements due to the append-only transition history log. This is an expected and required trade-off for GxP compliance.
+
+This decision implements requirements under Trace-5.

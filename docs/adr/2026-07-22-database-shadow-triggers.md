@@ -16,3 +16,5 @@ We utilize database shadow triggers to transparently audit mutations.
 ## Trade-offs
 - Positive: Guaranteed capture of all SQL mutations.
 - Negative: DB level trigger maintenance overhead.
+
+This decision implements requirements under Trace-1.

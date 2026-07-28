@@ -20,6 +20,7 @@ jobs:
       linting_outcome: ${{ steps.run_linting.outcome }}
       frontend_outcome: ${{ steps.run_frontend.outcome }}
       adr_outcome: ${{ steps.run_adr.outcome }}
+      duplication_outcome: ${{ steps.run_duplication.outcome }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -39,7 +40,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Install Node dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Run frontend style and lint
         id: run_frontend
@@ -57,12 +58,12 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: uv sync --all-extras
+        run: uv sync --locked --all-extras
 
       - name: Run markdown link verification
         id: run_link_check
         if: always()
-        run: node scripts/check-links.js
+        run: python3 scripts/validate_markdown.py
 
       - name: Run linting
         id: run_linting
@@ -83,21 +84,28 @@ jobs:
           git fetch origin main --depth=1 || true
           CHANGED_FILES=""
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            CHANGED_FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null | grep -E '\.(py|js|vue)$' || true)
+            CHANGED_FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null | grep -E '\.(py|js|vue|css)$' || true)
           else
-            CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD 2>/dev/null | grep -E '\.(py|js|vue)$' || true)
+            CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD 2>/dev/null | grep -E '\.(py|js|vue|css)$' || true)
           fi
           if [ -n "$CHANGED_FILES" ]; then
             python3 scripts/detect_duplication.py $CHANGED_FILES
           else
             # Fallback to scanning git status (staged/unstaged files)
-            CHANGED_FILES=$(git status --porcelain | awk '{print $2}' | grep -E '\.(py|js|vue)$' || true)
+            CHANGED_FILES=$(git status --porcelain | awk '{print $2}' | grep -E '\.(py|js|vue|css)$' || true)
             if [ -n "$CHANGED_FILES" ]; then
               python3 scripts/detect_duplication.py $CHANGED_FILES
             else
               echo "No relevant files changed."
             fi
           fi
+
+      - name: Upload Duplication Summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: duplication-summary
+          path: duplication_summary.json
 
   security:
     name: Security and Vulnerability Audit
@@ -127,7 +135,21 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: uv sync --all-extras
+        run: uv sync --locked --all-extras
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install Node dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Run static analysis
         id: run_static
@@ -204,7 +226,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Install Node dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Run frontend unit tests
         run: pnpm -r test
@@ -220,14 +242,14 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: uv sync --all-extras
+        run: uv sync --locked --all-extras
 
       - name: Run backend unit tests and coverage
         id: run_tests
         if: always()
         env:
           TEST_DATABASE_URL: "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"
-        run: uv run pytest --ignore=tests/test_layout_validator.py --junitxml=report-unit.xml
+        run: uv run pytest --ignore=tests/test_layout_validator.py --ignore=tests/validation --junitxml=report-unit.xml
 
       - name: Upload unit test report
         if: always()
@@ -275,7 +297,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: uv sync --all-extras
+        run: uv sync --locked --all-extras
 
       - name: Install Playwright Browsers
         run: |
@@ -300,11 +322,50 @@ jobs:
           name: junit-report-integration
           path: report-integration.xml
 
+  qualification-tests:
+    name: Isolated GxP Qualification Suite
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      test_outcome: ${{ steps.run_tests.outcome }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: uv sync --locked --all-extras
+
+      - name: Run GxP qualification validation suite
+        id: run_tests
+        if: always()
+        run: uv run pytest tests/validation -o "python_files=*_suite.py *_tests.py" --no-cov --junitxml=report-qualification.xml
+
+      - name: Upload qualification test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-report-qualification
+          path: report-qualification.xml
+
   compliance:
     name: GxP Compliance & Qualification Reporting
     runs-on: ubuntu-latest
-    needs: [unit-tests, integration-tests]
-    if: always() && needs.unit-tests.outputs.test_outcome == 'success' && needs.integration-tests.outputs.test_outcome == 'success'
+    needs: [unit-tests, integration-tests, qualification-tests]
+    if: always() && needs.unit-tests.outputs.test_outcome == 'success' && needs.integration-tests.outputs.test_outcome == 'success' && needs.qualification-tests.outputs.test_outcome == 'success'
     permissions:
       contents: read
     steps:
@@ -325,7 +386,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: uv sync --all-extras
+        run: uv sync --locked --all-extras
 
       - name: Download Unit Test Report
         uses: actions/download-artifact@v4
@@ -339,8 +400,14 @@ jobs:
           name: junit-report-integration
           path: .
 
+      - name: Download Qualification Test Report
+        uses: actions/download-artifact@v4
+        with:
+          name: junit-report-qualification
+          path: .
+
       - name: Merge JUnit XML Reports
-        run: python3 scripts/merge_junit.py report.xml report-unit.xml report-integration.xml
+        run: python3 scripts/merge_junit.py report.xml report-unit.xml report-integration.xml report-qualification.xml
 
       - name: Generate Compliance Reports
         run: uv run python scripts/generate_rtm.py
@@ -369,6 +436,14 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
+      - name: Download Duplication Summary
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          name: duplication-summary
+          path: .
+          ignore-on-missing: true
+
       - name: Post PR Comment
         env:
           GH_TOKEN: ${{ secrets.PAT_FDERUITER || secrets.GITHUB_TOKEN }}
@@ -381,6 +456,7 @@ jobs:
           STATIC_OUTCOME: ${{ needs.security.outputs.static_outcome }}
           SECRETS_OUTCOME: ${{ needs.security.outputs.secrets_outcome }}
           DEID_OUTCOME: ${{ needs.security.outputs.deid_outcome }}
+          DUPLICATION_OUTCOME: ${{ needs.style.outputs.duplication_outcome }}
         run: python3 scripts/post_pr_comment.py
   classify:
     name: Classify Change
@@ -470,7 +546,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: uv sync --all-extras
+        run: uv sync --locked --all-extras
 
       - name: Sync Ruleset
         env:

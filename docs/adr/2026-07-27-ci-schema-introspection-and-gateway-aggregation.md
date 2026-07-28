@@ -15,6 +15,8 @@ To prevent documentation downtime and catch schema-related bugs before they reac
 
 ---
 
+This decision implements requirements under Trace-8.
+
 ## 2. Decision Drivers & Constraints
 
 * **Zero Documentation Downtime:** Downstream microservice aggregation failures should not cascade and take the entire portal offline.
