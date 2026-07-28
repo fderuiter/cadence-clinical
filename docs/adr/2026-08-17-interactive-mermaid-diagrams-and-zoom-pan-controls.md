@@ -10,6 +10,8 @@
 ## 1. Context & Problem Statement
 The documentation portal for Cadence Clinical relies heavily on visual aids, including architecture flowcharts and sequence diagrams. Historically, these system diagrams were displayed either as raw static ASCII art (which overflows viewports and is difficult to read on smaller screens) or as raw text-based Mermaid code blocks without compilation. To ensure a seamless onboarding experience and robust readability for clinical systems engineers and technical reviewers across all device sizes, we need an automated, interactive rendering engine built directly into the static documentation site.
 
+This decision implements requirements under Trace-1.
+
 ## 2. Decision Drivers & Constraints
 * **Accessibility & Responsiveness:** Diagrams must scale responsively down to mobile viewports without causing page-level horizontal overflow or rendering unreadable text.
 * **Performance & SEO:** Diagrams should render static assets or compile at build-time to avoid client-side rendering lag and maintain search indexing speed, rather than loading large third-party runtime bundles on the fly.
