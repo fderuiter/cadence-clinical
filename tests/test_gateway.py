@@ -490,7 +490,10 @@ def test_gateway_subject_role_routing_restrictions(
 
         res_acknowledge = client.post(
             "/api/v1/interop/notifications/notif_123/acknowledge",
-            headers={"Authorization": f"Bearer {token}", "X-Change-Reason": "ack_reason"},
+            headers={
+                "Authorization": f"Bearer {token}",
+                "X-Change-Reason": "ack_reason",
+            },
             json={"reason_for_change": "ack_reason"},
         )
         assert res_acknowledge.status_code == 200

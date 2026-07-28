@@ -147,7 +147,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 app.add_middleware(RateLimitMiddleware)
 
 JWKS_URL = os.getenv(
-    "JWKS_URL", "http://keycloak:8080/realms/cadence/protocol/openid-connect/certs"
+    "JWKS_URL",
+    "http://keycloak:8080/realms/cadence/protocol/openid-connect/certs",  # deid-ignore
 )
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "RS256")
 GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
@@ -903,7 +904,9 @@ async def proxy_requests(request: Request, path: str) -> Response:
     # Subject / Patient security routing boundary checks
     user_roles_list = [r.strip().lower() for r in roles.split(",") if r.strip()]
     if "subject" in user_roles_list:
-        normalized_path = path[len("interop/"):] if path.startswith("interop/") else path
+        normalized_path = (
+            path[len("interop/") :] if path.startswith("interop/") else path
+        )
         parts = [p for p in normalized_path.split("/") if p]
 
         is_allowed = False
@@ -911,34 +914,67 @@ async def proxy_requests(request: Request, path: str) -> Response:
 
         if len(parts) == 5:
             # POST /api/v1/interop/epro/submit
-            if parts[:4] == ["api", "v1", "interop", "epro"] and parts[4] == "submit" and method == "POST":
+            if (
+                parts[:4] == ["api", "v1", "interop", "epro"]
+                and parts[4] == "submit"
+                and method == "POST"
+            ):
                 is_allowed = True
             # POST /api/v1/interop/epro/sync
-            elif parts[:4] == ["api", "v1", "interop", "epro"] and parts[4] == "sync" and method == "POST":
+            elif (
+                parts[:4] == ["api", "v1", "interop", "epro"]
+                and parts[4] == "sync"
+                and method == "POST"
+            ):
                 is_allowed = True
             # GET /api/v1/interop/instruments/{instrument-id}
-            elif parts[:4] == ["api", "v1", "interop", "instruments"] and method == "GET":
+            elif (
+                parts[:4] == ["api", "v1", "interop", "instruments"] and method == "GET"
+            ):
                 is_allowed = True
 
         elif len(parts) == 6:
             # GET /api/v1/interop/assignments/subject/{authenticated-subject-id}
-            if parts[:5] == ["api", "v1", "interop", "assignments", "subject"] and method == "GET":
+            if (
+                parts[:5] == ["api", "v1", "interop", "assignments", "subject"]
+                and method == "GET"
+            ):
                 if parts[5] == user_id:
                     is_allowed = True
             # GET /api/v1/interop/subjects/{authenticated-subject-id}/instruments
-            elif parts[:3] == ["api", "v1", "interop"] and parts[3] == "subjects" and parts[5] == "instruments" and method == "GET":
+            elif (
+                parts[:3] == ["api", "v1", "interop"]
+                and parts[3] == "subjects"
+                and parts[5] == "instruments"
+                and method == "GET"
+            ):
                 if parts[4] == user_id:
                     is_allowed = True
             # GET /api/v1/interop/subjects/{authenticated-subject-id}/compliance
-            elif parts[:3] == ["api", "v1", "interop"] and parts[3] == "subjects" and parts[5] == "compliance" and method == "GET":
+            elif (
+                parts[:3] == ["api", "v1", "interop"]
+                and parts[3] == "subjects"
+                and parts[5] == "compliance"
+                and method == "GET"
+            ):
                 if parts[4] == user_id:
                     is_allowed = True
             # GET /api/v1/interop/subjects/{authenticated-subject-id}/notifications
-            elif parts[:3] == ["api", "v1", "interop"] and parts[3] == "subjects" and parts[5] == "notifications" and method == "GET":
+            elif (
+                parts[:3] == ["api", "v1", "interop"]
+                and parts[3] == "subjects"
+                and parts[5] == "notifications"
+                and method == "GET"
+            ):
                 if parts[4] == user_id:
                     is_allowed = True
             # POST /api/v1/interop/notifications/{notification-id}/acknowledge
-            elif parts[:3] == ["api", "v1", "interop"] and parts[3] == "notifications" and parts[5] == "acknowledge" and method == "POST":
+            elif (
+                parts[:3] == ["api", "v1", "interop"]
+                and parts[3] == "notifications"
+                and parts[5] == "acknowledge"
+                and method == "POST"
+            ):
                 is_allowed = True
 
         if not is_allowed:
