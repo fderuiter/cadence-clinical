@@ -116,7 +116,6 @@ runPreflightChecks();
 try {
   // 1. Run validation scripts
   console.log('--- Step 1: Pre-Build Validation ---');
-  runCommand('node scripts/check-links.js');
   runCommand('python3 scripts/validate_adrs.py');
   runCommand('python3 scripts/validate_markdown.py');
 

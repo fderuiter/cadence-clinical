@@ -8,6 +8,8 @@ The legacy rules designer relied on parallel entry scripts and static HTML. This
 
 To achieve 21 CFR Part 11 and GxP compliance, clinical designers must be able to securely author logical validation checks without risk of DOM-destruction errors or un-audited state changes.
 
+This decision implements requirements under Trace-11.
+
 ## Decision
 1. Re-implement the rules designer as a native, recursive Vue 3 component inside the SPA web application.
 2. Integrate a Keycloak-aware role-verification guard with the router, restricting access to the STUDY_DESIGNER role.
@@ -22,7 +24,7 @@ To achieve 21 CFR Part 11 and GxP compliance, clinical designers must be able to
 ### Positive Impact
 * Completely eliminates initialization blocks and DOM-destruction errors.
 * Enforces defense-in-depth role access to study rules configurations.
-* Fully compliant 21 CFR Part 11 and GxP audit trails with cryptographic verification.
+* Fully compliant 21 CFR Part 11 and GxP audit trails (PRD-SYS-001) with cryptographic verification (PRD-SYS-003).
 
 ### Negative Impact / Technical Debt
 * Increases compiled SPA bundle size and layout complexity of the web application.

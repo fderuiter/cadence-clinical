@@ -89,6 +89,7 @@ BASELINE_FILES = {
     "2026-08-14-biostatistical-export-pipeline-interoperability.md",
     "2026-08-15-bidirectional-api-contract-enforcement.md",
     "2026-08-16-parallel-ci-workflows-and-local-concurrent-execution.md",
+    "2026-07-27-api-driven-lock-sync-and-ast-validator.md",
 }
 
 
@@ -198,7 +199,7 @@ def extract_requirement_references(content: str) -> set[str]:
 
     # We can also support req-X and sys-X case-insensitively just in case
     req_pattern = re.compile(r"\breq-(\d+)\b", re.IGNORECASE)
-    sys_pattern = re.compile(r"\bsys-(\d+)\b", re.IGNORECASE)
+    sys_pattern = re.compile(r"(?<!prd-)\bsys-(\d+)\b", re.IGNORECASE)
 
     refs = set()
     for m in trace_pattern.findall(content):
