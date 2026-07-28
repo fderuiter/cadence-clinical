@@ -9,6 +9,7 @@ def test_gxp_compliance_drifts_identified():
     GxP Compliance Verification Test:
     Ensures that the repository linter successfully scans the actual docs/SDLC directory
     and identifies the 7 critical architectural and electronic signature signature/schema drifts.
+    @req:PRD-SYS-001
     """
     vm.errors.clear()
 
