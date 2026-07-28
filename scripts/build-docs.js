@@ -42,6 +42,74 @@ function runCommand(command) {
   }
 }
 
+/**
+ * Rewrites relative links inside staged markdown documents.
+ * @param {string} content - The markdown file content.
+ * @returns {string} The updated markdown content with corrected links.
+ */
+function rewriteLinks(content) {
+  // Inline links [text](link)
+  let rewritten = content.replace(/(\[(?:[^\]]|\\\])*\]\()([^)]+)(\))/g, (match, prefix, url, suffix) => {
+    let cleanUrl = url.trim();
+    // Only modify relative local links. If it starts with http, https, mailto, or #, keep it as-is.
+    if (
+      cleanUrl.startsWith('http://') ||
+      cleanUrl.startsWith('https://') ||
+      cleanUrl.startsWith('mailto:') ||
+      cleanUrl.startsWith('#')
+    ) {
+      return match;
+    }
+    
+    // If the relative link starts with docs/, strip 'docs/' prefix
+    if (cleanUrl.startsWith('docs/')) {
+      cleanUrl = cleanUrl.substring(5); // strip 'docs/'
+    } else if (cleanUrl === 'LICENSE') {
+      // If it points to LICENSE, change it to LICENSE.md
+      cleanUrl = 'LICENSE.md';
+    }
+    
+    return `${prefix}${cleanUrl}${suffix}`;
+  });
+
+  // Reference links [id]: link
+  rewritten = rewritten.replace(/^(\[[^\]]+\]:\s*)(\S+)/gm, (match, prefix, url) => {
+    let cleanUrl = url.trim();
+    if (
+      cleanUrl.startsWith('http://') ||
+      cleanUrl.startsWith('https://') ||
+      cleanUrl.startsWith('mailto:') ||
+      cleanUrl.startsWith('#')
+    ) {
+      return match;
+    }
+    
+    if (cleanUrl.startsWith('docs/')) {
+      cleanUrl = cleanUrl.substring(5);
+    } else if (cleanUrl === 'LICENSE') {
+      cleanUrl = 'LICENSE.md';
+    }
+    
+    return `${prefix}${cleanUrl}`;
+  });
+
+  return rewritten;
+}
+
+/**
+ * Copies a source markdown file to docs directory with link preprocessing.
+ * @param {string} srcName - The source file name in repo root.
+ * @param {string} destName - The destination file name in docs/ folder.
+ */
+function copyAndPreprocess(srcName, destName) {
+  const srcPath = path.join(repoRoot, srcName);
+  const destPath = path.join(repoRoot, 'docs', destName);
+  let content = fs.readFileSync(srcPath, 'utf8');
+  content = rewriteLinks(content);
+  fs.writeFileSync(destPath, content, 'utf8');
+  console.log(`Successfully prepared and preprocessed ${srcName} -> docs/${destName}`);
+}
+
 // Run preflight checks before Step 1
 runPreflightChecks();
 
@@ -58,11 +126,22 @@ try {
 
   // 3. Prepare files for VitePress
   console.log('--- Step 3: Preparing Documentation Files ---');
-  // Copy files using path.join and repoRoot instead of hardcoded /app paths to maintain portability
-  fs.copyFileSync(path.join(repoRoot, 'README.md'), path.join(repoRoot, 'docs', 'index.md'));
-  fs.copyFileSync(path.join(repoRoot, 'ARCHITECTURE.md'), path.join(repoRoot, 'docs', 'ARCHITECTURE.md'));
-  fs.copyFileSync(path.join(repoRoot, 'AGENTS.md'), path.join(repoRoot, 'docs', 'AGENTS.md'));
-  console.log('Successfully prepared README.md, ARCHITECTURE.md, and AGENTS.md');
+  // Copy files with link preprocessing instead of straight copy to fix relative links
+  copyAndPreprocess('README.md', 'index.md');
+  copyAndPreprocess('ARCHITECTURE.md', 'ARCHITECTURE.md');
+  copyAndPreprocess('AGENTS.md', 'AGENTS.md');
+
+  // Convert plain-text LICENSE to docs/LICENSE.md
+  const licenseSrcPath = path.join(repoRoot, 'LICENSE');
+  const licenseDestPath = path.join(repoRoot, 'docs', 'LICENSE.md');
+  if (fs.existsSync(licenseSrcPath)) {
+    const licenseContent = fs.readFileSync(licenseSrcPath, 'utf8');
+    const licenseMarkdown = `# Project License\n\n\`\`\`text\n${licenseContent}\n\`\`\`\n`;
+    fs.writeFileSync(licenseDestPath, licenseMarkdown, 'utf8');
+    console.log(`Successfully converted plain-text LICENSE to markdown at docs/LICENSE.md`);
+  } else {
+    console.warn(`Plain-text LICENSE file not found at ${licenseSrcPath}`);
+  }
 
   // 4. Build VitePress static portal
   console.log('--- Step 4: Compiling VitePress Static Portal ---');
@@ -75,7 +154,7 @@ try {
 } finally {
   console.log('--- Cleanup Temporary Docs ---');
   // Derive temporary docs files relative to repoRoot for cleanup
-  for (const file of ['index.md', 'ARCHITECTURE.md', 'AGENTS.md']) {
+  for (const file of ['index.md', 'ARCHITECTURE.md', 'AGENTS.md', 'LICENSE.md']) {
     const filePath = path.join(repoRoot, 'docs', file);
     if (fs.existsSync(filePath)) {
       try {
