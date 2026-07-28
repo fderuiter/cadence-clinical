@@ -27,6 +27,7 @@ from apps.ctms.models import (
 from apps.ctms.rendering import render_confirmation_letter, render_follow_up_letter
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
+from packages.security.rbac import Principal, get_principal, has_permission
 
 DATABASE_URL = os.getenv("CTMS_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
@@ -47,16 +48,6 @@ app.add_middleware(GatewayAuthMiddleware)
 
 # Dependable to obtain database session
 get_db_session = DatabaseSessionDependency(db_manager)
-
-
-# Helper to check roles case-insensitively
-def check_roles(roles_str: str, allowed_roles: List[str]) -> None:
-    roles_list = [r.strip().lower() for r in roles_str.split(",") if r.strip()]
-    if not any(r in allowed_roles for r in roles_list):
-        raise HTTPException(
-            status_code=403,
-            detail=f"Forbidden: Access denied for roles: {roles_str}.",
-        )
 
 
 # Pydantic models for CTMS Study
@@ -343,9 +334,10 @@ class InvestigatorPayableResponse(BaseModel):
     version_index: int
 
 
-def check_financial_write_roles(roles_str: str) -> None:
+def check_financial_write_roles(principal: Principal) -> None:
     """Enforces that financial writes are restricted to Grants Manager or Sponsor Admin."""
-    check_roles(roles_str, ["grants manager", "sponsor admin", "system"])
+    if not has_permission(principal, "ctms_financial:write"):
+        raise HTTPException(status_code=403, detail="Forbidden: Access denied.")
 
 
 def check_grant_mutable(grant: InvestigatorGrant) -> None:
@@ -438,16 +430,15 @@ async def create_study(
     request: Request,
     payload: CTMSStudyCreate,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> CTMSStudyResponse:
-    user_id = getattr(request.state, "user_id", "system")
-    user_roles = getattr(request.state, "roles", "system")
-    change_reason = getattr(request.state, "change_reason", "system_operation")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
+    change_reason = principal.change_reason or "system_operation"
 
     # RBAC: Only write-privileged roles can manage CTMS studies
-    check_roles(
-        user_roles,
-        ["monitor", "grants manager", "cra", "sponsor admin", "admin", "system"],
-    )
+    if not has_permission(principal, "ctms_study:create"):
+        raise HTTPException(status_code=403, detail="Forbidden: Access denied.")
 
     study = CTMSStudy(
         study_id=payload.study_id,
@@ -484,24 +475,13 @@ async def create_study(
 async def list_studies(
     request: Request,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> List[CTMSStudyResponse]:
-    user_id = getattr(request.state, "user_id", "anonymous")
-    user_roles = getattr(request.state, "roles", "anonymous")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
 
-    check_roles(
-        user_roles,
-        [
-            "monitor",
-            "grants manager",
-            "cra",
-            "site investigator",
-            "sponsor admin",
-            "admin",
-            "auditor",
-            "anonymous",
-            "system",
-        ],
-    )
+    if not has_permission(principal, "ctms_study:read"):
+        raise HTTPException(status_code=403, detail="Forbidden: Access denied.")
 
     stmt = select(CTMSStudy).order_by(CTMSStudy.created_at.desc())
     result = await session.execute(stmt)
@@ -534,14 +514,13 @@ async def list_studies(
 async def get_audit_trail(
     request: Request,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> List[CTMSAuditLogResponse]:
-    user_id = getattr(request.state, "user_id", "anonymous")
-    user_roles = getattr(request.state, "roles", "anonymous")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
 
-    check_roles(
-        user_roles,
-        ["auditor", "sponsor admin", "admin", "monitor", "grants manager", "system"],
-    )
+    if not has_permission(principal, "ctms_audit_logs:read"):
+        raise HTTPException(status_code=403, detail="Forbidden: Access denied.")
 
     # Log view action first
     await write_audit_log(
@@ -581,20 +560,19 @@ async def schedule_monitoring_visit(
     request: Request,
     payload: MonitoringVisitCreate,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> MonitoringVisitResponse:
     """
     Schedules a clinical site monitoring visit and automatically generates/persists
     a corresponding confirmation letter.
     """
-    user_id = getattr(request.state, "user_id", "system")
-    user_roles = getattr(request.state, "roles", "system")
-    change_reason = getattr(request.state, "change_reason", "system_operation")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
+    change_reason = principal.change_reason or "system_operation"
 
     # RBAC: Only CRA (or admin/sponsor admin/system) can schedule/create visits
-    check_roles(
-        user_roles,
-        ["cra", "admin", "sponsor admin", "system"],
-    )
+    if not has_permission(principal, "ctms_monitoring_visit:create"):
+        raise HTTPException(status_code=403, detail="Forbidden: Access denied.")
 
     # 1. Validate active CRA allocation for study and site if one exists
     alloc_stmt = select(CRAAllocation).where(
@@ -687,20 +665,19 @@ async def complete_monitoring_visit(
     request: Request,
     payload: MonitoringVisitComplete,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> MonitoringVisitResponse:
     """
     Completes a scheduled monitoring visit, records findings and action items,
     and automatically generates/persists a follow-up letter.
     """
-    user_id = getattr(request.state, "user_id", "system")
-    user_roles = getattr(request.state, "roles", "system")
-    change_reason = getattr(request.state, "change_reason", "system_operation")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
+    change_reason = principal.change_reason or "system_operation"
 
     # RBAC: Only CRA (or admin/sponsor admin/system) can record/complete visit content
-    check_roles(
-        user_roles,
-        ["cra", "admin", "sponsor admin", "system"],
-    )
+    if not has_permission(principal, "ctms_monitoring_visit:update"):
+        raise HTTPException(status_code=403, detail="Forbidden: Access denied.")
 
     # 1. Retrieve the scheduled visit
     stmt = select(MonitoringVisit).where(MonitoringVisit.id == visit_id)
@@ -844,18 +821,17 @@ async def list_monitoring_visits(
     cra_id: Optional[str] = None,
     status: Optional[str] = None,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> List[MonitoringVisitResponse]:
     """
     Lists and filters clinical trial site monitoring visits.
     """
-    user_id = getattr(request.state, "user_id", "anonymous")
-    user_roles = getattr(request.state, "roles", "anonymous")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
 
     # RBAC: Allow CRA, Monitor, Auditor, Admin, Sponsor Admin, System to list visits
-    check_roles(
-        user_roles,
-        ["monitor", "cra", "admin", "sponsor admin", "auditor", "system"],
-    )
+    if not has_permission(principal, "ctms_monitoring_visit:read"):
+        raise HTTPException(status_code=403, detail="Forbidden: Access denied.")
 
     stmt = select(MonitoringVisit)
     if study_id:
@@ -906,18 +882,17 @@ async def get_monitoring_visit_letters(
     visit_id: str,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> List[GeneratedLetterResponse]:
     """
     Retrieves all generated letters associated with a specific monitoring visit.
     Guarantees no re-rendering of previously issued letters by returning stored content.
     """
-    user_id = getattr(request.state, "user_id", "anonymous")
-    user_roles = getattr(request.state, "roles", "anonymous")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
 
-    check_roles(
-        user_roles,
-        ["monitor", "cra", "admin", "sponsor admin", "auditor", "system"],
-    )
+    if not has_permission(principal, "ctms_monitoring_letter:read"):
+        raise HTTPException(status_code=403, detail="Forbidden: Access denied.")
 
     stmt = select(GeneratedLetter).where(GeneratedLetter.visit_id == visit_id)
     result = await session.execute(stmt)
@@ -955,18 +930,17 @@ async def get_monitoring_visit_letter_by_type(
     letter_type: str,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> GeneratedLetterResponse:
     """
     Retrieves a specific letter (e.g. CONFIRMATION or FOLLOW_UP) associated with a monitoring visit.
     Guarantees no re-rendering of previously issued letters by returning stored content.
     """
-    user_id = getattr(request.state, "user_id", "anonymous")
-    user_roles = getattr(request.state, "roles", "anonymous")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
 
-    check_roles(
-        user_roles,
-        ["monitor", "cra", "admin", "sponsor admin", "auditor", "system"],
-    )
+    if not has_permission(principal, "ctms_monitoring_letter:read_type"):
+        raise HTTPException(status_code=403, detail="Forbidden: Access denied.")
 
     stmt = select(GeneratedLetter).where(
         GeneratedLetter.visit_id == visit_id,
@@ -1009,19 +983,18 @@ async def sign_off_monitoring_visit(
     visit_id: str,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> MonitoringVisitResponse:
     """
     Allows a clinical Monitor to perform a supervisory sign-off on a completed monitoring visit.
     """
-    user_id = getattr(request.state, "user_id", "system")
-    user_roles = getattr(request.state, "roles", "system")
-    change_reason = getattr(request.state, "change_reason", "system_operation")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
+    change_reason = principal.change_reason or "system_operation"
 
     # RBAC: Only supervisory roles (Monitor, Admin, Sponsor Admin, System) can perform sign-off
-    check_roles(
-        user_roles,
-        ["monitor", "admin", "sponsor admin", "system"],
-    )
+    if not has_permission(principal, "ctms_monitoring_visit:sign_off"):
+        raise HTTPException(status_code=403, detail="Forbidden: Access denied.")
 
     # 1. Retrieve the visit
     stmt = select(MonitoringVisit).where(MonitoringVisit.id == visit_id)
@@ -1081,18 +1054,17 @@ async def record_recruitment(
     request: Request,
     payload: RecruitmentRecordCreate,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> RecruitmentRecordResponse:
     """
     Record or update recruitment metrics for a site and study.
     """
-    user_id = getattr(request.state, "user_id", "system")
-    user_roles = getattr(request.state, "roles", "system")
-    change_reason = getattr(request.state, "change_reason", "system_operation")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
+    change_reason = principal.change_reason or "system_operation"
 
-    check_roles(
-        user_roles,
-        ["cra", "monitor", "admin", "sponsor admin", "system"],
-    )
+    if not has_permission(principal, "ctms_recruitment:create"):
+        raise HTTPException(status_code=403, detail="Forbidden: Access denied.")
 
     as_of = payload.as_of_date or datetime.utcnow()
 
@@ -1142,17 +1114,16 @@ async def list_recruitment_records(
     study_id: Optional[str] = None,
     site_id: Optional[str] = None,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> List[RecruitmentRecordResponse]:
     """
     List recorded recruitment metrics, optionally filtered by site and/or study.
     """
-    user_id = getattr(request.state, "user_id", "anonymous")
-    user_roles = getattr(request.state, "roles", "anonymous")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
 
-    check_roles(
-        user_roles,
-        ["monitor", "cra", "admin", "sponsor admin", "auditor", "system", "anonymous"],
-    )
+    if not has_permission(principal, "ctms_recruitment:read"):
+        raise HTTPException(status_code=403, detail="Forbidden: Access denied.")
 
     stmt = select(RecruitmentRecord)
     if study_id:
@@ -1202,18 +1173,17 @@ async def create_site_milestone(
     request: Request,
     payload: SiteMilestoneCreate,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> SiteMilestoneResponse:
     """
     Create a new site lifecycle milestone.
     """
-    user_id = getattr(request.state, "user_id", "system")
-    user_roles = getattr(request.state, "roles", "system")
-    change_reason = getattr(request.state, "change_reason", "system_operation")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
+    change_reason = principal.change_reason or "system_operation"
 
-    check_roles(
-        user_roles,
-        ["cra", "monitor", "admin", "sponsor admin", "system"],
-    )
+    if not has_permission(principal, "ctms_site_milestone:create"):
+        raise HTTPException(status_code=403, detail="Forbidden: Access denied.")
 
     milestone = SiteMilestone(
         site_id=payload.site_id,
@@ -1265,18 +1235,17 @@ async def update_site_milestone(
     request: Request,
     payload: SiteMilestoneUpdate,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> SiteMilestoneResponse:
     """
     Update site lifecycle milestones.
     """
-    user_id = getattr(request.state, "user_id", "system")
-    user_roles = getattr(request.state, "roles", "system")
-    change_reason = getattr(request.state, "change_reason", "system_operation")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
+    change_reason = principal.change_reason or "system_operation"
 
-    check_roles(
-        user_roles,
-        ["cra", "monitor", "admin", "sponsor admin", "system"],
-    )
+    if not has_permission(principal, "ctms_site_milestone:update"):
+        raise HTTPException(status_code=403, detail="Forbidden: Access denied.")
 
     stmt = select(SiteMilestone).where(SiteMilestone.id == milestone_id)
     result = await session.execute(stmt)
@@ -1333,17 +1302,16 @@ async def list_site_milestones(
     study_id: Optional[str] = None,
     site_id: Optional[str] = None,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> List[SiteMilestoneResponse]:
     """
     List site milestones, optionally filtered by site and/or study.
     """
-    user_id = getattr(request.state, "user_id", "anonymous")
-    user_roles = getattr(request.state, "roles", "anonymous")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
 
-    check_roles(
-        user_roles,
-        ["monitor", "cra", "admin", "sponsor admin", "auditor", "system", "anonymous"],
-    )
+    if not has_permission(principal, "ctms_site_milestone:read"):
+        raise HTTPException(status_code=403, detail="Forbidden: Access denied.")
 
     stmt = select(SiteMilestone)
     if study_id:
@@ -1393,17 +1361,19 @@ async def allocate_cra(
     request: Request,
     payload: CRAAllocationCreate,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> CRAAllocationResponse:
     """
     Allocate or reallocate a CRA to a site and study.
     Restricted to Sponsor Admin.
     """
-    user_id = getattr(request.state, "user_id", "system")
-    user_roles = getattr(request.state, "roles", "system")
-    change_reason = getattr(request.state, "change_reason", "system_operation")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
+    change_reason = principal.change_reason or "system_operation"
 
     # Restrict CRA allocation writes strictly to Sponsor Admin
-    check_roles(user_roles, ["sponsor admin"])
+    if not has_permission(principal, "ctms_cra_allocation:create"):
+        raise HTTPException(status_code=403, detail="Forbidden: Access denied.")
 
     # Reassignment logic: deactivate any existing active allocations for this study and site
     stmt = select(CRAAllocation).where(
@@ -1480,16 +1450,18 @@ async def update_cra_allocation(
     request: Request,
     payload: CRAAllocationUpdate,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> CRAAllocationResponse:
     """
     Update or reassign an existing CRA allocation.
     Restricted to Sponsor Admin.
     """
-    user_id = getattr(request.state, "user_id", "system")
-    user_roles = getattr(request.state, "roles", "system")
-    change_reason = getattr(request.state, "change_reason", "system_operation")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
+    change_reason = principal.change_reason or "system_operation"
 
-    check_roles(user_roles, ["sponsor admin"])
+    if not has_permission(principal, "ctms_cra_allocation:update"):
+        raise HTTPException(status_code=403, detail="Forbidden: Access denied.")
 
     stmt = select(CRAAllocation).where(CRAAllocation.id == allocation_id)
     result = await session.execute(stmt)
@@ -1550,17 +1522,16 @@ async def list_cra_allocations(
     cra_id: Optional[str] = None,
     status: Optional[str] = None,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> List[CRAAllocationResponse]:
     """
     List CRA allocations, optionally filtered.
     """
-    user_id = getattr(request.state, "user_id", "anonymous")
-    user_roles = getattr(request.state, "roles", "anonymous")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
 
-    check_roles(
-        user_roles,
-        ["monitor", "cra", "admin", "sponsor admin", "auditor", "system", "anonymous"],
-    )
+    if not has_permission(principal, "ctms_cra_allocation:read"):
+        raise HTTPException(status_code=403, detail="Forbidden: Access denied.")
 
     stmt = select(CRAAllocation)
     if study_id:
@@ -1611,17 +1582,16 @@ async def list_cra_allocations(
 async def retrieve_workload_summaries(
     request: Request,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> List[CRAWorkloadItem]:
     """
     Retrieve workload summaries reflecting active CRA allocations.
     """
-    user_id = getattr(request.state, "user_id", "anonymous")
-    user_roles = getattr(request.state, "roles", "anonymous")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
 
-    check_roles(
-        user_roles,
-        ["monitor", "cra", "admin", "sponsor admin", "auditor", "system", "anonymous"],
-    )
+    if not has_permission(principal, "ctms_cra_workload:read"):
+        raise HTTPException(status_code=403, detail="Forbidden: Access denied.")
 
     # Fetch active allocations
     stmt = select(CRAAllocation).where(CRAAllocation.status == "ACTIVE")
@@ -1674,12 +1644,13 @@ async def create_grant(
     request: Request,
     payload: InvestigatorGrantCreate,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> InvestigatorGrantResponse:
-    user_id = getattr(request.state, "user_id", "system")
-    user_roles = getattr(request.state, "roles", "system")
-    change_reason = getattr(request.state, "change_reason", "system_operation")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
+    change_reason = principal.change_reason or "system_operation"
 
-    check_financial_write_roles(user_roles)
+    check_financial_write_roles(principal)
 
     grant = InvestigatorGrant(
         study_id=payload.study_id,
@@ -1725,23 +1696,13 @@ async def list_grants(
     study_id: Optional[str] = None,
     site_id: Optional[str] = None,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> List[InvestigatorGrantResponse]:
-    user_id = getattr(request.state, "user_id", "anonymous")
-    user_roles = getattr(request.state, "roles", "anonymous")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
 
-    check_roles(
-        user_roles,
-        [
-            "monitor",
-            "cra",
-            "admin",
-            "sponsor admin",
-            "grants manager",
-            "auditor",
-            "system",
-            "anonymous",
-        ],
-    )
+    if not has_permission(principal, "ctms_financial:read"):
+        raise HTTPException(status_code=403, detail="Forbidden: Access denied.")
 
     stmt = select(InvestigatorGrant)
     if study_id:
@@ -1786,23 +1747,13 @@ async def get_grant(
     grant_id: str,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> InvestigatorGrantResponse:
-    user_id = getattr(request.state, "user_id", "anonymous")
-    user_roles = getattr(request.state, "roles", "anonymous")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
 
-    check_roles(
-        user_roles,
-        [
-            "monitor",
-            "cra",
-            "admin",
-            "sponsor admin",
-            "grants manager",
-            "auditor",
-            "system",
-            "anonymous",
-        ],
-    )
+    if not has_permission(principal, "ctms_financial:read"):
+        raise HTTPException(status_code=403, detail="Forbidden: Access denied.")
 
     stmt = select(InvestigatorGrant).where(InvestigatorGrant.id == grant_id)
     result = await session.execute(stmt)
@@ -1842,12 +1793,13 @@ async def update_grant(
     request: Request,
     payload: InvestigatorGrantUpdate,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> InvestigatorGrantResponse:
-    user_id = getattr(request.state, "user_id", "system")
-    user_roles = getattr(request.state, "roles", "system")
-    change_reason = getattr(request.state, "change_reason", "system_operation")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
+    change_reason = principal.change_reason or "system_operation"
 
-    check_financial_write_roles(user_roles)
+    check_financial_write_roles(principal)
 
     stmt = select(InvestigatorGrant).where(InvestigatorGrant.id == grant_id)
     result = await session.execute(stmt)
@@ -1920,12 +1872,13 @@ async def create_budget_line_item(
     request: Request,
     payload: BudgetLineItemCreate,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> BudgetLineItemResponse:
-    user_id = getattr(request.state, "user_id", "system")
-    user_roles = getattr(request.state, "roles", "system")
-    change_reason = getattr(request.state, "change_reason", "system_operation")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
+    change_reason = principal.change_reason or "system_operation"
 
-    check_financial_write_roles(user_roles)
+    check_financial_write_roles(principal)
 
     # Fetch grant
     g_stmt = select(InvestigatorGrant).where(InvestigatorGrant.id == grant_id)
@@ -1978,23 +1931,13 @@ async def list_budget_line_items(
     grant_id: str,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> List[BudgetLineItemResponse]:
-    user_id = getattr(request.state, "user_id", "anonymous")
-    user_roles = getattr(request.state, "roles", "anonymous")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
 
-    check_roles(
-        user_roles,
-        [
-            "monitor",
-            "cra",
-            "admin",
-            "sponsor admin",
-            "grants manager",
-            "auditor",
-            "system",
-            "anonymous",
-        ],
-    )
+    if not has_permission(principal, "ctms_financial_budget:read"):
+        raise HTTPException(status_code=403, detail="Forbidden: Access denied.")
 
     # Confirm grant exists
     g_stmt = select(InvestigatorGrant).where(InvestigatorGrant.id == grant_id)
@@ -2047,12 +1990,13 @@ async def create_payment_milestone(
     request: Request,
     payload: PaymentMilestoneCreate,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> PaymentMilestoneResponse:
-    user_id = getattr(request.state, "user_id", "system")
-    user_roles = getattr(request.state, "roles", "system")
-    change_reason = getattr(request.state, "change_reason", "system_operation")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
+    change_reason = principal.change_reason or "system_operation"
 
-    check_financial_write_roles(user_roles)
+    check_financial_write_roles(principal)
 
     # Fetch grant
     g_stmt = select(InvestigatorGrant).where(InvestigatorGrant.id == grant_id)
@@ -2116,23 +2060,13 @@ async def list_payment_milestones(
     grant_id: str,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> List[PaymentMilestoneResponse]:
-    user_id = getattr(request.state, "user_id", "anonymous")
-    user_roles = getattr(request.state, "roles", "anonymous")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
 
-    check_roles(
-        user_roles,
-        [
-            "monitor",
-            "cra",
-            "admin",
-            "sponsor admin",
-            "grants manager",
-            "auditor",
-            "system",
-            "anonymous",
-        ],
-    )
+    if not has_permission(principal, "ctms_financial_milestone:read"):
+        raise HTTPException(status_code=403, detail="Forbidden: Access denied.")
 
     # Confirm grant exists
     g_stmt = select(InvestigatorGrant).where(InvestigatorGrant.id == grant_id)
@@ -2183,12 +2117,13 @@ async def trigger_manual_milestone(
     milestone_id: str,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> PaymentMilestoneResponse:
-    user_id = getattr(request.state, "user_id", "system")
-    user_roles = getattr(request.state, "roles", "system")
-    change_reason = getattr(request.state, "change_reason", "system_operation")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
+    change_reason = principal.change_reason or "system_operation"
 
-    check_financial_write_roles(user_roles)
+    check_financial_write_roles(principal)
 
     # Fetch grant
     g_stmt = select(InvestigatorGrant).where(InvestigatorGrant.id == grant_id)
@@ -2282,13 +2217,14 @@ async def evaluate_grant_milestones(
     request: Request,
     condition: str = "STUDY_APPROVED",
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> dict:
     """Manually run the milestone evaluation engine for a specific condition."""
-    user_id = getattr(request.state, "user_id", "system")
-    user_roles = getattr(request.state, "roles", "system")
-    change_reason = getattr(request.state, "change_reason", "system_operation")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
+    change_reason = principal.change_reason or "system_operation"
 
-    check_financial_write_roles(user_roles)
+    check_financial_write_roles(principal)
 
     g_stmt = select(InvestigatorGrant).where(InvestigatorGrant.id == grant_id)
     g_res = await session.execute(g_stmt)
@@ -2330,23 +2266,13 @@ async def list_investigator_payables(
     grant_id: str,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> List[InvestigatorPayableResponse]:
-    user_id = getattr(request.state, "user_id", "anonymous")
-    user_roles = getattr(request.state, "roles", "anonymous")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
 
-    check_roles(
-        user_roles,
-        [
-            "monitor",
-            "cra",
-            "admin",
-            "sponsor admin",
-            "grants manager",
-            "auditor",
-            "system",
-            "anonymous",
-        ],
-    )
+    if not has_permission(principal, "ctms_financial_payable:read"):
+        raise HTTPException(status_code=403, detail="Forbidden: Access denied.")
 
     # Confirm grant exists
     g_stmt = select(InvestigatorGrant).where(InvestigatorGrant.id == grant_id)

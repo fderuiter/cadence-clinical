@@ -16,3 +16,5 @@ We enforce user re-authentication upon performing e-signatures.
 ## Trade-offs
 - Positive: Strict FDA 21 CFR Part 11 compliance.
 - Negative: Additional prompt interaction for active users.
+
+This decision implements requirements under Trace-8.

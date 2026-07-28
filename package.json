@@ -13,7 +13,8 @@
     "format": "pnpm -r format && uv run ruff format .",
     "db:reset": "uv run python scripts/reset_db.py",
     "db-reset": "uv run python scripts/reset_db.py",
-    "check": "concurrently --kill-others-on-fail false -n \"format,lint,test,links,adr,markdown,security\" -c \"magenta,blue,green,cyan,yellow,gray,red\" \"pnpm format\" \"pnpm lint\" \"pnpm test\" \"node scripts/check-links.js\" \"python3 scripts/validate_adrs.py\" \"python3 scripts/validate_markdown.py\" \"uv run bandit -c pyproject.toml -ll -ii -r apps packages\"",
+    "check": "pnpm format && pnpm lint && pnpm test && node scripts/check-links.js && python3 scripts/validate_adrs.py && python3 scripts/validate_markdown.py && python3 scripts/validate_imports.py",
+    "check": "concurrently --kill-others-on-fail false -n \"format,lint,test,links,adr,markdown,security,imports\" -c \"magenta,blue,green,cyan,yellow,gray,red,white\" \"pnpm format\" \"pnpm lint\" \"pnpm test\" \"node scripts/check-links.js\" \"python3 scripts/validate_adrs.py\" \"python3 scripts/validate_markdown.py\" \"uv run bandit -c pyproject.toml -ll -ii -r apps packages\" \"python3 scripts/validate_imports.py\"",
     "build": "pnpm --filter web build",
     "build:docs": "node scripts/build-docs.js"
   },
@@ -37,8 +38,10 @@
     "eslint-plugin-vue": "^10.10.0",
     "js-yaml": "^5.2.2",
     "msw": "^2.15.0",
+    "mermaid": "^11.16.0",
     "prettier": "^3.9.6",
     "vitepress": "^1.6.4",
+    "vitepress-plugin-mermaid": "^2.0.17",
     "vitest": "^4.1.10"
   }
 }

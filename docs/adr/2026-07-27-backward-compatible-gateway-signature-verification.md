@@ -10,6 +10,8 @@
 ## 1. Context & Problem Statement
 The clinical platform gateway upgraded its signature scheme (V2) to support scoped identity headers, including site-level and sponsor-level constraints (`site_id`, `sponsor_id`, `unblinded_access`). However, legacy unit and integration test suites pass payload structures lacking these scope fields, generating 401/403 authorization failures. We need a backward-compatible verification fallback to support both legacy and updated structures.
 
+This decision implements requirements under Trace-8.
+
 ## 2. Decision Drivers & Constraints
 * **Driver 1:** Maintain strict backward-compatibility for legacy tests and services.
 * **Driver 2:** Ensure zero security degradation when clinical scopes are explicitly specified.

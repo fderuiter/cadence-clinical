@@ -16,3 +16,5 @@ USDM models are represented as Pydantic v2 domain models for schema validation.
 ## Trade-offs
 - Positive: Fast, robust validation.
 - Negative: Performance overhead.
+
+This decision implements requirements under PRD-MDR-001.

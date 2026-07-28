@@ -14,6 +14,8 @@ Clinical trial protocols specify inclusion and exclusion criteria to define part
 3. Gracefully handle and propagate indeterminate/missing observation values using Kleene 3-valued logic.
 4. Support full GxP and FDA 21 CFR Part 11 auditing with version tracking and reason-for-change logs.
 
+This decision implements requirements under Trace-8.
+
 ## 2. Decision Drivers & Constraints
 * **Driver 1 (Compliance):** Prevent any arbitrary python code execution (`eval`/`exec`) to ensure compliance with security and FDA software validation standards.
 * **Driver 2 (Interoperability):** Create a shared package in `packages/core-models` that can be imported by the designer, execution, and interop gateway microservices without database or FastAPI dependencies.

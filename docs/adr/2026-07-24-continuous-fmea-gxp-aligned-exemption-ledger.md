@@ -31,3 +31,5 @@ We introduce a centralized compliance ledger file at `docs/SDLC/vulnerability_ex
 
 ### Cons
 - ❌ Slightly higher overhead for developers to register and document exemptions.
+
+This decision implements requirements under Trace-1.

@@ -15,6 +15,8 @@ The core issues addressed by this decision are:
 - Centralizing query lifecycle validation to prevent invalid state transitions or data corruption.
 - Correctly capturing GxP audit metadata utilizing a session commit-then-reselect pattern.
 
+This decision implements requirements under Trace-8.
+
 ## 2. Decision Drivers & Constraints
 * **Driver 1 (Compliance):** Enforce allow-list-based role gates (e.g., CRAs/Data Managers can raise/close, Site Investigators can answer).
 * **Driver 2 (Reliability):** Guard against token claim mismatches across tenant directories.

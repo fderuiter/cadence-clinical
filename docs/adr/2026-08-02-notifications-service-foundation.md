@@ -11,6 +11,8 @@
 The Cadence Clinical platform requires a decoupled notifications service that is responsible for notification, alert, and action-item persistence and dashboard-facing APIs.
 To comply with FDA 21 CFR Part 11 and full GxP auditing standards, all notifications, status changes, and views must be thoroughly audited. Additionally, access to notifications must be role-restricted and recipient-targeted.
 
+This decision implements requirements under Trace-10.
+
 ## 2. Decision Drivers & Constraints
 * **Driver 1:** Decoupled architectural boundaries to ensure high scalability and easy maintenance of notifications, alerts, and action items.
 * **Driver 2:** Compliance with FDA 21 CFR Part 11 regarding electronic records, immutability of audit trails, and strict target-based visibility to avoid information leaks.

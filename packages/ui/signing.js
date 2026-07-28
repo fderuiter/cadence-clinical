@@ -323,3 +323,35 @@ export function validateField(
 
   return { valid: true };
 }
+
+/**
+ * Constructs a ledger block with a cryptographic hash.
+ *
+ * @param {number} index - Index of the block.
+ * @param {string} timestamp - ISO timestamp.
+ * @param {string} action - Action identifier.
+ * @param {Object} details - Details payload.
+ * @param {string} reason - Justification reason.
+ * @param {string} prevHash - Hash of the previous block.
+ * @returns {Promise<Object>} The completed ledger block containing the hash.
+ */
+export async function buildLedgerBlock(
+  index,
+  timestamp,
+  action,
+  details,
+  reason,
+  prevHash
+) {
+  const payloadString = `${index}|${timestamp}|${action}|${JSON.stringify(details)}|${reason}|${prevHash}`;
+  const hash = await sha256(payloadString);
+  return {
+    index,
+    timestamp,
+    action,
+    details,
+    reason,
+    prevHash,
+    hash,
+  };
+}

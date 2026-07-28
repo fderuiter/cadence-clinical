@@ -26,3 +26,5 @@ To implement these capabilities in Cadence Clinical Platform, we need a robust, 
 
 ### Negative Impact / Technical Debt
 * Introduces additional schema complexity for expression trees.
+
+This decision implements requirements under Trace-8.

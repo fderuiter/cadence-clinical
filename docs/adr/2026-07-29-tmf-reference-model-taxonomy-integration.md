@@ -11,6 +11,8 @@
 
 The eTMF microservice requires a robust, standardized mechanism to validate document ingestion against the DIA TMF Reference Model. We need to decide how to implement and model the catalog itself, how to manage named catalog versions, how to enforce validation on incoming artifacts, and how to maintain the corresponding requirement-to-test traceability.
 
+This decision implements requirements under Trace-5.
+
 ## 2. Decision Drivers & Constraints
 
 * **Driver 1 (Compliance & Traceability):** Regulatory standards (21 CFR Part 11, EU Annex 11, GAMP 5) require complete traceability from software requirements to automated verification.

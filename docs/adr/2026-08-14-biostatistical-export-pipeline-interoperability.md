@@ -15,6 +15,8 @@ This process requires a robust, performant transformation architecture that impl
 
 ---
 
+This decision implements requirements under Trace-8.
+
 ## 2. Decision Drivers & Constraints
 
 * **Regulatory Submission Readiness:** High-fidelity compliance with CDISC SDTM v2.0, ADaM v1.3, and CDASH v2.1 specifications.

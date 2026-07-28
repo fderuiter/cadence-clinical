@@ -10,6 +10,8 @@
 ## 1. Context & Problem Statement
 Our continuous integration (CI) and local validation workflows previously ran in a monolithic, sequential pipeline. This structure meant that fast, lightweight checks—like formatting, code style linting, security audits, and link validation—were blocked by high-overhead steps such as downloading and installing browser engines, database provisioning, and running end-to-end integration tests. Sequential execution increased developer feedback loops, wasted GitHub Actions runner minutes, and delayed pull request merges.
 
+This decision implements requirements under PRD-QRY-001.
+
 ## 2. Decision Drivers & Constraints
 * **Developer Feedback Loop:** Reduce local and remote validation cycles by parallelizing independent checks.
 * **Resource Optimization:** Maximize CPU usage on local environments and CI runners by executing non-dependent steps concurrently.

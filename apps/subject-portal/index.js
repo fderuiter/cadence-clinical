@@ -1,7 +1,8 @@
 import {
   generateGatewaySignature,
   createClinicalRadioGrid,
-  sha256,
+  createClinicalInput,
+  buildLedgerBlock,
   validateField,
 } from "ui";
 import {
@@ -178,18 +179,14 @@ async function logAuditRecord(
       ? "0000000000000000000000000000000000000000000000000000000000000000"
       : state.ledgerBlocks[index - 1].hash;
 
-  const payloadString = `${index}|${timestamp}|${action}|${JSON.stringify(details)}|${reason}|${prevHash}`;
-  const hash = await sha256(payloadString);
-
-  const block = {
+  const block = await buildLedgerBlock(
     index,
     timestamp,
     action,
     details,
     reason,
-    prevHash,
-    hash,
-  };
+    prevHash
+  );
 
   state.ledgerBlocks.push(block);
   renderLedger();
@@ -377,15 +374,7 @@ function startQuestionnaire(assignmentId) {
         12
       );
     } else {
-      // Create Clinical Input equivalent
-      formHtml += `
-        <div class="clinical-input grid-span-12" style="grid-column: span 12;" id="field-container-${id}">
-          <label for="${id}">${field.label}</label>
-          <div class="input-wrapper">
-            <input type="text" id="${id}" name="${id}" value="" />
-          </div>
-        </div>
-      `;
+      formHtml += createClinicalInput(id, field.label, "", null, 12);
     }
   });
 
