@@ -127,7 +127,7 @@
 <script setup>
 import { computed } from "vue";
 import { useClinicalStore } from "../stores/clinical";
-import { createCtmsMilestoneTable, createCtmsVisitTable } from "ui";
+import { createCtmsMilestoneTable, createCtmsVisitTable } from "../../index.js";
 
 const store = useClinicalStore();
 
