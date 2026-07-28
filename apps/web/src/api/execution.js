@@ -16,7 +16,11 @@ export const executionService = {
    * Submits consent record for a subject.
    */
   consentSubject(subjectId, body, options = {}) {
-    return apiClient.post(`/api/v1/execution/subjects/${subjectId}/consent`, body, options);
+    return apiClient.post(
+      `/api/v1/execution/subjects/${subjectId}/consent`,
+      body,
+      options
+    );
   },
 
   /**

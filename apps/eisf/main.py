@@ -101,7 +101,9 @@ class EISFSyncItem(BaseModel):
     content_checksum: Optional[str] = Field(None, description="Content checksum")
     source_system: str = Field("eISF", description="Source system name")
     sync_status: str = Field("PENDING", description="Sync status")
-    conflict_policy: str = Field("CLIENT_WINS", description="CLIENT_WINS, SERVER_WINS, or MERGE")
+    conflict_policy: str = Field(
+        "CLIENT_WINS", description="CLIENT_WINS, SERVER_WINS, or MERGE"
+    )
 
     @classmethod
     @model_validator(mode="before")
@@ -400,8 +402,16 @@ async def create_document(
     correlation_key = payload.correlation_key
     if not correlation_key:
         from apps.eisf.adapter import derive_correlation_key
-        artifact_type = (payload.metadata_json or {}).get("artifact_type") or payload.binder_classification
-        correlation_key = derive_correlation_key(payload.study_id, payload.site_id, payload.binder_classification, artifact_type)
+
+        artifact_type = (payload.metadata_json or {}).get(
+            "artifact_type"
+        ) or payload.binder_classification
+        correlation_key = derive_correlation_key(
+            payload.study_id,
+            payload.site_id,
+            payload.binder_classification,
+            artifact_type,
+        )
 
     # Calculate version index
     stmt = (
@@ -502,8 +512,16 @@ async def ingest_document(
     correlation_key = payload.correlation_key
     if not correlation_key:
         from apps.eisf.adapter import derive_correlation_key
-        artifact_type = (payload.metadata_json or {}).get("artifact_type") or payload.binder_classification or payload.artifact_type or ""
-        correlation_key = derive_correlation_key(payload.study_id, payload.site_id, binder_class, artifact_type)
+
+        artifact_type = (
+            (payload.metadata_json or {}).get("artifact_type")
+            or payload.binder_classification
+            or payload.artifact_type
+            or ""
+        )
+        correlation_key = derive_correlation_key(
+            payload.study_id, payload.site_id, binder_class, artifact_type
+        )
 
     stmt = (
         select(ISFDocument)
@@ -875,7 +893,8 @@ async def propagate_to_etmf(
     Propagates the synchronized document to the eTMF service.
     """
     import logging
-    logger = logging.getLogger("eisf_sync")
+
+    logging.getLogger("eisf_sync")
     from apps.eisf.adapter import map_eisf_to_etmf
     from packages.security.signing import generate_gateway_signature
 
@@ -936,6 +955,7 @@ async def propagate_to_etmf(
 
     try:
         import httpx
+
         async with httpx.AsyncClient() as client:
             resp = await client.post(url, json=payload, headers=headers, timeout=5.0)
             if resp.status_code not in (200, 201):
@@ -957,7 +977,8 @@ async def sync_documents(
     session: AsyncSession = Depends(get_db_session),
 ):
     import logging
-    logger = logging.getLogger("eisf_sync")
+
+    logging.getLogger("eisf_sync")
     user_id = getattr(request.state, "user_id", "system")
     roles = get_normalized_roles(request)
     role_str = ",".join(roles) if isinstance(roles, list) else str(roles)
@@ -978,22 +999,29 @@ async def sync_documents(
         # Derive correlation key if not provided
         correlation_key = item.correlation_key
         if not correlation_key:
-            art_type = (item.metadata_json or {}).get("artifact_type") or item.binder_classification
-            correlation_key = derive_correlation_key(item.study_id, item.site_id, item.binder_classification, art_type)
+            art_type = (item.metadata_json or {}).get(
+                "artifact_type"
+            ) or item.binder_classification
+            correlation_key = derive_correlation_key(
+                item.study_id, item.site_id, item.binder_classification, art_type
+            )
 
         # Compute checksum if not provided
-        checksum = item.content_checksum or hashlib.sha256(item.content.encode("utf-8")).hexdigest()
+        checksum = (
+            item.content_checksum
+            or hashlib.sha256(item.content.encode("utf-8")).hexdigest()
+        )
 
         # Query existing documents for this key or matching logical fields if correlation_key is null
         stmt = (
             select(ISFDocument)
             .where(
-                (ISFDocument.correlation_key == correlation_key) |
-                (
-                    ISFDocument.correlation_key.is_(None) &
-                    (ISFDocument.study_id == item.study_id) &
-                    (ISFDocument.site_id == item.site_id) &
-                    (ISFDocument.binder_classification == item.binder_classification)
+                (ISFDocument.correlation_key == correlation_key)
+                | (
+                    ISFDocument.correlation_key.is_(None)
+                    & (ISFDocument.study_id == item.study_id)
+                    & (ISFDocument.site_id == item.site_id)
+                    & (ISFDocument.binder_classification == item.binder_classification)
                 )
             )
             .order_by(ISFDocument.version_index.desc())
@@ -1129,7 +1157,9 @@ async def sync_documents(
             # Parse overall timestamps
             t_inc = None
             if item.metadata_json:
-                ts_val = item.metadata_json.get("timestamp") or item.metadata_json.get("timestamps", {}).get("content")
+                ts_val = item.metadata_json.get("timestamp") or item.metadata_json.get(
+                    "timestamps", {}
+                ).get("content")
                 if ts_val:
                     try:
                         t_inc = datetime.fromisoformat(str(ts_val))
@@ -1143,20 +1173,36 @@ async def sync_documents(
 
             t_exist = None
             if latest_existing.metadata_json:
-                ts_val = latest_existing.metadata_json.get("timestamp") or latest_existing.metadata_json.get("timestamps", {}).get("content")
+                ts_val = latest_existing.metadata_json.get(
+                    "timestamp"
+                ) or latest_existing.metadata_json.get("timestamps", {}).get("content")
                 if ts_val:
                     try:
                         t_exist = datetime.fromisoformat(str(ts_val))
                         if t_exist.tzinfo is not None:
-                            t_exist = t_exist.astimezone(timezone.utc).replace(tzinfo=None)
+                            t_exist = t_exist.astimezone(timezone.utc).replace(
+                                tzinfo=None
+                            )
                     except Exception:
                         pass
             if not t_exist:
-                t_exist = latest_existing.created_at.replace(tzinfo=None) if latest_existing.created_at else datetime.utcnow()
+                t_exist = (
+                    latest_existing.created_at.replace(tzinfo=None)
+                    if latest_existing.created_at
+                    else datetime.utcnow()
+                )
 
             # Get tiebreaker identifiers
-            inc_mod_by = (item.metadata_json or {}).get("modified_by") or item.source_system or "eISF"
-            exist_mod_by = (latest_existing.metadata_json or {}).get("modified_by") or latest_existing.source_system or "server"
+            inc_mod_by = (
+                (item.metadata_json or {}).get("modified_by")
+                or item.source_system
+                or "eISF"
+            )
+            exist_mod_by = (
+                (latest_existing.metadata_json or {}).get("modified_by")
+                or latest_existing.source_system
+                or "server"
+            )
 
             # Determine core field winner
             incoming_wins = False
@@ -1196,16 +1242,23 @@ async def sync_documents(
                             try:
                                 t_k_inc = datetime.fromisoformat(str(tk_val))
                                 if t_k_inc.tzinfo is not None:
-                                    t_k_inc = t_k_inc.astimezone(timezone.utc).replace(tzinfo=None)
+                                    t_k_inc = t_k_inc.astimezone(timezone.utc).replace(
+                                        tzinfo=None
+                                    )
                             except Exception:
                                 pass
-                    if latest_existing.metadata_json and "timestamps" in latest_existing.metadata_json:
+                    if (
+                        latest_existing.metadata_json
+                        and "timestamps" in latest_existing.metadata_json
+                    ):
                         tk_val = latest_existing.metadata_json["timestamps"].get(k)
                         if tk_val:
                             try:
                                 t_k_exist = datetime.fromisoformat(str(tk_val))
                                 if t_k_exist.tzinfo is not None:
-                                    t_k_exist = t_k_exist.astimezone(timezone.utc).replace(tzinfo=None)
+                                    t_k_exist = t_k_exist.astimezone(
+                                        timezone.utc
+                                    ).replace(tzinfo=None)
                             except Exception:
                                 pass
 

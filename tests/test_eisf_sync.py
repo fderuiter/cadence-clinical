@@ -1,9 +1,7 @@
-import os
-import time
+from datetime import datetime, timedelta, timezone
+
 import pytest
 import pytest_asyncio
-import hashlib
-from datetime import datetime, timedelta, timezone
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
@@ -35,15 +33,15 @@ def mock_etmf_propagation(monkeypatch):
     calls = []
 
     async def mock_post(self_client, url, *args, **kwargs):
-        calls.append({
-            "url": url,
-            "json": kwargs.get("json"),
-            "headers": kwargs.get("headers")
-        })
+        calls.append(
+            {"url": url, "json": kwargs.get("json"), "headers": kwargs.get("headers")}
+        )
         import httpx
+
         return httpx.Response(201, json={"status": "success"})
 
     import httpx
+
     monkeypatch.setattr(httpx.AsyncClient, "post", mock_post)
     return calls
 
@@ -150,7 +148,9 @@ async def test_eisf_sync_echo_loop_prevention(mock_etmf_propagation) -> None:
 
     # Verify stored with source_system="eTMF" and sync_status="SYNCED"
     async with db_manager.get_session_maker()() as session:
-        stmt = select(ISFDocument).where(ISFDocument.binder_classification == "FDA Form 1572")
+        stmt = select(ISFDocument).where(
+            ISFDocument.binder_classification == "FDA Form 1572"
+        )
         res = await session.execute(stmt)
         doc = res.scalars().one()
         assert doc.source_system == "eTMF"
@@ -184,7 +184,9 @@ async def test_eisf_sync_exact_duplicate_ignored(mock_etmf_propagation) -> None:
         "mime_type": "application/pdf",
         "reason_for_change": "Initial CV filing",
     }
-    init_resp = client.post("/api/v1/eisf/documents", json=payload_init, headers=headers)
+    init_resp = client.post(
+        "/api/v1/eisf/documents", json=payload_init, headers=headers
+    )
     assert init_resp.status_code == 201
     doc_id = init_resp.json()["id"]
 
@@ -348,7 +350,9 @@ async def test_eisf_sync_conflict_server_wins(mock_etmf_propagation) -> None:
 
 
 @pytest.mark.asyncio
-async def test_eisf_sync_conflict_merge_lww_incoming_wins(mock_etmf_propagation) -> None:
+async def test_eisf_sync_conflict_merge_lww_incoming_wins(
+    mock_etmf_propagation,
+) -> None:
     """
     Test that MERGE conflict policy with newer incoming timestamp overwrites existing content.
     """
@@ -375,13 +379,17 @@ async def test_eisf_sync_conflict_merge_lww_incoming_wins(mock_etmf_propagation)
 
     # Get the prepopulated document created_at time
     async with db_manager.get_session_maker()() as session:
-        stmt = select(ISFDocument).where(ISFDocument.binder_classification == "Approved Protocol")
+        stmt = select(ISFDocument).where(
+            ISFDocument.binder_classification == "Approved Protocol"
+        )
         res = await session.execute(stmt)
         doc = res.scalars().one()
         created_at_dt = doc.created_at
 
     # Build incoming with a much newer timestamp
-    future_time = (created_at_dt + timedelta(hours=2)).replace(tzinfo=timezone.utc).isoformat()
+    future_time = (
+        (created_at_dt + timedelta(hours=2)).replace(tzinfo=timezone.utc).isoformat()
+    )
 
     payload_sync = {
         "submissions": [
@@ -398,7 +406,7 @@ async def test_eisf_sync_conflict_merge_lww_incoming_wins(mock_etmf_propagation)
                     "timestamp": future_time,
                     "reviewer": "Dr. Sync",
                     "approver": "Sponsor Team",
-                }
+                },
             }
         ]
     }
@@ -420,13 +428,19 @@ async def test_eisf_sync_conflict_merge_lww_incoming_wins(mock_etmf_propagation)
         assert len(docs) == 2
         latest = docs[0]
         assert latest.version_index == 2
-        assert latest.content == "Protocol Content V2"  # Overwritten because incoming timestamp is newer
+        assert (
+            latest.content == "Protocol Content V2"
+        )  # Overwritten because incoming timestamp is newer
         assert latest.metadata_json["reviewer"] == "Dr. Sync"  # Overwritten via LWW
-        assert latest.metadata_json["approver"] == "Sponsor Team"  # Merged from incoming
+        assert (
+            latest.metadata_json["approver"] == "Sponsor Team"
+        )  # Merged from incoming
 
 
 @pytest.mark.asyncio
-async def test_eisf_sync_conflict_merge_lww_existing_wins(mock_etmf_propagation) -> None:
+async def test_eisf_sync_conflict_merge_lww_existing_wins(
+    mock_etmf_propagation,
+) -> None:
     """
     Test that MERGE conflict policy with older incoming timestamp retains existing content,
     but still merges independent fields from the metadata.
@@ -454,13 +468,17 @@ async def test_eisf_sync_conflict_merge_lww_existing_wins(mock_etmf_propagation)
 
     # Get the prepopulated document created_at time
     async with db_manager.get_session_maker()() as session:
-        stmt = select(ISFDocument).where(ISFDocument.binder_classification == "Approved Protocol")
+        stmt = select(ISFDocument).where(
+            ISFDocument.binder_classification == "Approved Protocol"
+        )
         res = await session.execute(stmt)
         doc = res.scalars().one()
         created_at_dt = doc.created_at
 
     # Build incoming with a much older timestamp
-    past_time = (created_at_dt - timedelta(hours=2)).replace(tzinfo=timezone.utc).isoformat()
+    past_time = (
+        (created_at_dt - timedelta(hours=2)).replace(tzinfo=timezone.utc).isoformat()
+    )
 
     payload_sync = {
         "submissions": [
@@ -477,7 +495,7 @@ async def test_eisf_sync_conflict_merge_lww_existing_wins(mock_etmf_propagation)
                     "timestamp": past_time,
                     "reviewer": "Dr. Sync",
                     "approver": "Sponsor Team",
-                }
+                },
             }
         ]
     }
@@ -499,13 +517,19 @@ async def test_eisf_sync_conflict_merge_lww_existing_wins(mock_etmf_propagation)
         assert len(docs) == 2
         latest = docs[0]
         assert latest.version_index == 2
-        assert latest.content == "Protocol Content V1"  # Retained because existing timestamp is newer
+        assert (
+            latest.content == "Protocol Content V1"
+        )  # Retained because existing timestamp is newer
         assert latest.metadata_json["reviewer"] == "Dr. Exist"  # Retained via LWW
-        assert latest.metadata_json["approver"] == "Sponsor Team"  # Merged independent metadata field
+        assert (
+            latest.metadata_json["approver"] == "Sponsor Team"
+        )  # Merged independent metadata field
 
 
 @pytest.mark.asyncio
-async def test_eisf_sync_conflict_merge_lexicographic_tiebreaker(mock_etmf_propagation) -> None:
+async def test_eisf_sync_conflict_merge_lexicographic_tiebreaker(
+    mock_etmf_propagation,
+) -> None:
     """
     Test that MERGE conflict policy with identical timestamps uses lexicographic modified_by tiebreaker.
     """
@@ -551,7 +575,7 @@ async def test_eisf_sync_conflict_merge_lexicographic_tiebreaker(mock_etmf_propa
                     "timestamp": timestamp_iso,
                     "modified_by": "beta",
                     "reviewer": "Dr. Win",
-                }
+                },
             }
         ]
     }
@@ -568,7 +592,9 @@ async def test_eisf_sync_conflict_merge_lexicographic_tiebreaker(mock_etmf_propa
         )
         res = await session.execute(stmt)
         docs = res.scalars().all()
-        assert docs[0].content == "Protocol Content V2 (Win)"  # Overwritten because "beta" > "alpha"
+        assert (
+            docs[0].content == "Protocol Content V2 (Win)"
+        )  # Overwritten because "beta" > "alpha"
         assert docs[0].metadata_json["reviewer"] == "Dr. Win"
 
     # 2. Sync incoming with modified_by = "aaa" (lexicographically smaller -> loses)
@@ -587,14 +613,16 @@ async def test_eisf_sync_conflict_merge_lexicographic_tiebreaker(mock_etmf_propa
                     "timestamp": timestamp_iso,
                     "modified_by": "aaa",
                     "reviewer": "Dr. Lose",
-                }
+                },
             }
         ]
     }
 
     resp = client.post("/api/v1/eisf/sync", json=payload_sync_lose, headers=headers)
     assert resp.status_code == 200
-    assert resp.json()["ignored_count"] == 1  # Ignored because no changes made to the winning document representation
+    assert (
+        resp.json()["ignored_count"] == 1
+    )  # Ignored because no changes made to the winning document representation
 
 
 @pytest.mark.asyncio
@@ -625,9 +653,13 @@ async def test_eisf_sync_per_field_metadata_lww(mock_etmf_propagation) -> None:
             "reviewer": "Dr. Exist",
             "approver": "Sponsor Exist",
             "timestamps": {
-                "reviewer": (t_base + timedelta(hours=1)).replace(tzinfo=timezone.utc).isoformat(),
-                "approver": (t_base - timedelta(hours=1)).replace(tzinfo=timezone.utc).isoformat(),
-            }
+                "reviewer": (t_base + timedelta(hours=1))
+                .replace(tzinfo=timezone.utc)
+                .isoformat(),
+                "approver": (t_base - timedelta(hours=1))
+                .replace(tzinfo=timezone.utc)
+                .isoformat(),
+            },
         },
     }
     client.post("/api/v1/eisf/documents", json=payload_init, headers=headers)
@@ -649,11 +681,15 @@ async def test_eisf_sync_per_field_metadata_lww(mock_etmf_propagation) -> None:
                     "approver": "Sponsor Incoming Newer",
                     "timestamps": {
                         # Incoming reviewer timestamp is OLDER than existing -> will lose
-                        "reviewer": (t_base - timedelta(hours=2)).replace(tzinfo=timezone.utc).isoformat(),
+                        "reviewer": (t_base - timedelta(hours=2))
+                        .replace(tzinfo=timezone.utc)
+                        .isoformat(),
                         # Incoming approver timestamp is NEWER than existing -> will win
-                        "approver": (t_base + timedelta(hours=2)).replace(tzinfo=timezone.utc).isoformat(),
-                    }
-                }
+                        "approver": (t_base + timedelta(hours=2))
+                        .replace(tzinfo=timezone.utc)
+                        .isoformat(),
+                    },
+                },
             }
         ]
     }
@@ -671,5 +707,9 @@ async def test_eisf_sync_per_field_metadata_lww(mock_etmf_propagation) -> None:
         res = await session.execute(stmt)
         docs = res.scalars().all()
         latest = docs[0]
-        assert latest.metadata_json["reviewer"] == "Dr. Exist"  # Retained because existing was newer
-        assert latest.metadata_json["approver"] == "Sponsor Incoming Newer"  # Overwritten because incoming was newer
+        assert (
+            latest.metadata_json["reviewer"] == "Dr. Exist"
+        )  # Retained because existing was newer
+        assert (
+            latest.metadata_json["approver"] == "Sponsor Incoming Newer"
+        )  # Overwritten because incoming was newer

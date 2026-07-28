@@ -1410,8 +1410,11 @@ async def test_watermarked_document_viewing_and_download():
     database non-modification, and WATERMARKED_DOWNLOAD audit trailing.
     """
     import json
+
     client = TestClient(app)
-    admin_headers = get_auth_headers(roles="admin", change_reason="Ingest documents for watermarking")
+    admin_headers = get_auth_headers(
+        roles="admin", change_reason="Ingest documents for watermarking"
+    )
     auditor_headers = get_auth_headers(roles="regulatory_inspector")
     cra_headers = get_auth_headers(roles="cra", change_reason="CRA download attempt")
 
@@ -1536,7 +1539,9 @@ async def test_watermarked_document_viewing_and_download():
     assert resp_cra_unaffected.json()["key"] == "original_value"
 
     # 6. Verify that accessing a watermarked copy generates WATERMARKED_DOWNLOAD audit log
-    audit_resp = client.get("/api/v1/etmf/audit-logs?action=WATERMARKED_DOWNLOAD", headers=auditor_headers)
+    audit_resp = client.get(
+        "/api/v1/etmf/audit-logs?action=WATERMARKED_DOWNLOAD", headers=auditor_headers
+    )
     assert audit_resp.status_code == 200
     logs = audit_resp.json()["items"]
     # We performed watermarked downloads on multiple formats, so there should be multiple logs

@@ -23,6 +23,9 @@ export const interopService = {
    * Fetches active assigned instruments for a given subject.
    */
   getInstruments(subjectId, options = {}) {
-    return apiClient.get(`/api/v1/interop/subjects/${subjectId}/instruments`, options);
+    return apiClient.get(
+      `/api/v1/interop/subjects/${subjectId}/instruments`,
+      options
+    );
   },
 };

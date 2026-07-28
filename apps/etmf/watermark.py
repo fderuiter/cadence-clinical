@@ -21,7 +21,9 @@ def apply_watermark(content: str, mime_type: str, user_id: str, user_role: str) 
     """
     now_utc = datetime.now(timezone.utc).isoformat()
     marker = "CONFIDENTIAL — Auditor Copy"
-    watermark_msg = f"{marker} | Access by: {user_id} ({user_role}) | UTC Time: {now_utc}"
+    watermark_msg = (
+        f"{marker} | Access by: {user_id} ({user_role}) | UTC Time: {now_utc}"
+    )
 
     mime_lower = mime_type.lower().strip()
 
@@ -48,7 +50,7 @@ def apply_watermark(content: str, mime_type: str, user_id: str, user_role: str) 
 
     # 3. CSV
     if "csv" in mime_lower:
-        row = f'\n# {watermark_msg}'
+        row = f"\n# {watermark_msg}"
         return content + row
 
     # 4. Fallback (Plain Text / unknown formats)

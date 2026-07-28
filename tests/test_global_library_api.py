@@ -1115,7 +1115,9 @@ async def test_global_library_governance_lifecycle_transitions():
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
         # 1. Setup - Create a DRAFT library object owned by spon_pharma
-        designer_headers = get_auth_headers(roles="sponsor_designer", sponsor_id="spon_pharma")
+        designer_headers = get_auth_headers(
+            roles="sponsor_designer", sponsor_id="spon_pharma"
+        )
         form_payload = {
             "id": "lib_gov_form",
             "version": "1.0.0",
@@ -1137,7 +1139,10 @@ async def test_global_library_governance_lifecycle_transitions():
         dm_headers = get_auth_headers(roles="sponsor_dm", sponsor_id="spon_pharma")
         res_bad_transition = await client.post(
             "/api/v1/mdr/library/lib_gov_form/transition",
-            json={"status": "APPROVED", "change_reason": "Approved from DRAFT directly"},
+            json={
+                "status": "APPROVED",
+                "change_reason": "Approved from DRAFT directly",
+            },
             headers=dm_headers,
         )
         assert res_bad_transition.status_code == 400
@@ -1154,7 +1159,10 @@ async def test_global_library_governance_lifecycle_transitions():
         # 4. Allowed transition: DRAFT -> IN_REVIEW (can be done by sponsor_designer)
         res_to_review = await client.post(
             "/api/v1/mdr/library/lib_gov_form/transition",
-            json={"status": "IN_REVIEW", "change_reason": "Transitioning to review state"},
+            json={
+                "status": "IN_REVIEW",
+                "change_reason": "Transitioning to review state",
+            },
             headers=designer_headers,
         )
         assert res_to_review.status_code == 200
@@ -1166,7 +1174,10 @@ async def test_global_library_governance_lifecycle_transitions():
         # 5. Role restrictions: Try to approve using sponsor_designer -> should return 403 Forbidden
         res_designer_approve = await client.post(
             "/api/v1/mdr/library/lib_gov_form/transition",
-            json={"status": "APPROVED", "change_reason": "Designer attempting approval"},
+            json={
+                "status": "APPROVED",
+                "change_reason": "Designer attempting approval",
+            },
             headers=designer_headers,
         )
         assert res_designer_approve.status_code == 403
@@ -1203,7 +1214,9 @@ async def test_global_library_governance_lifecycle_transitions():
         assert res_dm_archive.status_code == 403
 
         # 9. Allowed transition: PUBLISHED -> ARCHIVED (can be done by sponsor_admin)
-        admin_headers = get_auth_headers(roles="sponsor_admin", sponsor_id="spon_pharma")
+        admin_headers = get_auth_headers(
+            roles="sponsor_admin", sponsor_id="spon_pharma"
+        )
         res_to_archive = await client.post(
             "/api/v1/mdr/library/lib_gov_form/transition",
             json={"status": "ARCHIVED", "change_reason": "Archived by Admin"},
@@ -1251,4 +1264,6 @@ async def test_global_library_governance_lifecycle_transitions():
         assert history_list[4]["status"] == "ARCHIVED"
         assert history_list[4]["prior_status"] == "PUBLISHED"
         assert history_list[4]["reason_for_change"] == "Archived by Admin"
-        assert history_list[4]["updated_by"] == "test_designer"  # user_id of admin token
+        assert (
+            history_list[4]["updated_by"] == "test_designer"
+        )  # user_id of admin token

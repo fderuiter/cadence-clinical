@@ -1,5 +1,8 @@
 <template>
-  <div id="section-ecrf" class="dashboard-section active">
+  <div
+    id="section-ecrf"
+    class="dashboard-section active"
+  >
     <div class="section-header">
       <h2>eCRF Runtime Renderer</h2>
       <p>
@@ -11,7 +14,9 @@
     <div class="grid-2">
       <!-- Dynamic eCRF Form -->
       <div class="card">
-        <div class="card-title">Subject eCRF Data Entry Form</div>
+        <div class="card-title">
+          Subject eCRF Data Entry Form
+        </div>
         <form
           id="form-VS_DEMO"
           class="clinical-form clinical-form-grid"
@@ -22,7 +27,10 @@
           "
           @submit.prevent
         >
-          <template v-for="field in store.ecrfFields" :key="field.id">
+          <template
+            v-for="field in store.ecrfFields"
+            :key="field.id"
+          >
             <!-- Text input field -->
             <div
               v-if="field.type !== 'radio' && field.type !== 'concept_code'"
@@ -42,7 +50,7 @@
                   @change="
                     handleFieldChange(field, $event.target.value, $event.target)
                   "
-                />
+                >
 
                 <!-- Query Flag -->
                 <button
@@ -74,9 +82,7 @@
                 role="region"
               >
                 <div class="query-panel-header">
-                  <span class="query-panel-title"
-                    >Query Manager - {{ field.id }}</span
-                  >
+                  <span class="query-panel-title">Query Manager - {{ field.id }}</span>
                   <button
                     type="button"
                     class="btn-close-panel"
@@ -95,9 +101,7 @@
                       Raise a query for this field:
                     </p>
                     <div class="form-group">
-                      <label :for="`query-message-${field.id}`"
-                        >Discrepancy Message</label
-                      >
+                      <label :for="`query-message-${field.id}`">Discrepancy Message</label>
                       <textarea
                         :id="`query-message-${field.id}`"
                         v-model="queryInputs[field.id]"
@@ -118,7 +122,7 @@
                   <div
                     v-else-if="
                       getQueryStatus(field.id) === 'OPEN' ||
-                      getQueryStatus(field.id) === 'REOPENED'
+                        getQueryStatus(field.id) === 'REOPENED'
                     "
                     class="query-details"
                   >
@@ -137,11 +141,12 @@
                       {{ store.formQueries[field.id].createdBy || "System" }} on
                       {{ store.formQueries[field.id].createdAt }}
                     </p>
-                    <div class="query-respond-section" style="margin-top: 12px">
+                    <div
+                      class="query-respond-section"
+                      style="margin-top: 12px"
+                    >
                       <div class="form-group">
-                        <label :for="`query-response-${field.id}`"
-                          >Your Response</label
-                        >
+                        <label :for="`query-response-${field.id}`">Your Response</label>
                         <textarea
                           :id="`query-response-${field.id}`"
                           v-model="queryResponses[field.id]"
@@ -249,7 +254,7 @@
                   @change="
                     handleFieldChange(field, $event.target.value, $event.target)
                   "
-                />
+                >
 
                 <!-- Query Flag -->
                 <button
@@ -272,7 +277,10 @@
                 role="status"
                 aria-live="polite"
               >
-                <span class="lookup-status-icon" aria-hidden="true">{{
+                <span
+                  class="lookup-status-icon"
+                  aria-hidden="true"
+                >{{
                   getLookupStatusIcon(field.id)
                 }}</span>
                 <span class="lookup-status-text">{{
@@ -298,9 +306,7 @@
                 role="region"
               >
                 <div class="query-panel-header">
-                  <span class="query-panel-title"
-                    >Query Manager - {{ field.id }}</span
-                  >
+                  <span class="query-panel-title">Query Manager - {{ field.id }}</span>
                   <button
                     type="button"
                     class="btn-close-panel"
@@ -319,9 +325,7 @@
                       Raise a query for this field:
                     </p>
                     <div class="form-group">
-                      <label :for="`query-message-${field.id}`"
-                        >Discrepancy Message</label
-                      >
+                      <label :for="`query-message-${field.id}`">Discrepancy Message</label>
                       <textarea
                         :id="`query-message-${field.id}`"
                         v-model="queryInputs[field.id]"
@@ -342,7 +346,7 @@
                   <div
                     v-else-if="
                       getQueryStatus(field.id) === 'OPEN' ||
-                      getQueryStatus(field.id) === 'REOPENED'
+                        getQueryStatus(field.id) === 'REOPENED'
                     "
                     class="query-details"
                   >
@@ -361,11 +365,12 @@
                       {{ store.formQueries[field.id].createdBy || "System" }} on
                       {{ store.formQueries[field.id].createdAt }}
                     </p>
-                    <div class="query-respond-section" style="margin-top: 12px">
+                    <div
+                      class="query-respond-section"
+                      style="margin-top: 12px"
+                    >
                       <div class="form-group">
-                        <label :for="`query-response-${field.id}`"
-                          >Your Response</label
-                        >
+                        <label :for="`query-response-${field.id}`">Your Response</label>
                         <textarea
                           :id="`query-response-${field.id}`"
                           v-model="queryResponses[field.id]"
@@ -478,7 +483,7 @@
                       @change="
                         handleFieldChange(field, opt.value, $event.target)
                       "
-                    />
+                    >
                     <label :for="`${field.id}_option_${idx}`">{{
                       opt.label
                     }}</label>
@@ -505,9 +510,7 @@
                 role="region"
               >
                 <div class="query-panel-header">
-                  <span class="query-panel-title"
-                    >Query Manager - {{ field.id }}</span
-                  >
+                  <span class="query-panel-title">Query Manager - {{ field.id }}</span>
                   <button
                     type="button"
                     class="btn-close-panel"
@@ -526,9 +529,7 @@
                       Raise a query for this field:
                     </p>
                     <div class="form-group">
-                      <label :for="`query-message-${field.id}`"
-                        >Discrepancy Message</label
-                      >
+                      <label :for="`query-message-${field.id}`">Discrepancy Message</label>
                       <textarea
                         :id="`query-message-${field.id}`"
                         v-model="queryInputs[field.id]"
@@ -549,7 +550,7 @@
                   <div
                     v-else-if="
                       getQueryStatus(field.id) === 'OPEN' ||
-                      getQueryStatus(field.id) === 'REOPENED'
+                        getQueryStatus(field.id) === 'REOPENED'
                     "
                     class="query-details"
                   >
@@ -568,11 +569,12 @@
                       {{ store.formQueries[field.id].createdBy || "System" }} on
                       {{ store.formQueries[field.id].createdAt }}
                     </p>
-                    <div class="query-respond-section" style="margin-top: 12px">
+                    <div
+                      class="query-respond-section"
+                      style="margin-top: 12px"
+                    >
                       <div class="form-group">
-                        <label :for="`query-response-${field.id}`"
-                          >Your Response</label
-                        >
+                        <label :for="`query-response-${field.id}`">Your Response</label>
                         <textarea
                           :id="`query-response-${field.id}`"
                           v-model="queryResponses[field.id]"
@@ -663,7 +665,11 @@
         </form>
 
         <div class="form-actions">
-          <button id="btn-clear-ecrf" class="btn" @click="clearForm">
+          <button
+            id="btn-clear-ecrf"
+            class="btn"
+            @click="clearForm"
+          >
             Clear Form
           </button>
           <button
@@ -682,7 +688,9 @@
         style="display: flex; flex-direction: column; gap: 16px"
       >
         <div>
-          <div class="card-title">CDASH Metadata Specification</div>
+          <div class="card-title">
+            CDASH Metadata Specification
+          </div>
           <p style="font-size: 0.85rem; color: #475569; margin-bottom: 8px">
             The fields on the left are dynamically rendered using structural
             CDASH metadata tags (e.g. <code>DM.BRTHDT</code>,
@@ -764,7 +772,9 @@
         class="card"
         style="display: flex; flex-direction: column; gap: 16px"
       >
-        <div class="card-title">PI Sign-Off Worklist & Verification</div>
+        <div class="card-title">
+          PI Sign-Off Worklist & Verification
+        </div>
         <p style="font-size: 0.85rem; color: #475569; margin-bottom: 4px">
           Perform a 21 CFR Part 11 compliant electronic signature. This action
           requires re-authenticating the Principal Investigator credentials to
@@ -773,9 +783,7 @@
 
         <div style="display: flex; flex-direction: column; gap: 12px">
           <div class="form-group">
-            <label for="signoff-target-type"
-              >Sign-Off Scope (Granularity)</label
-            >
+            <label for="signoff-target-type">Sign-Off Scope (Granularity)</label>
             <select
               id="signoff-target-type"
               v-model="signoffTargetType"
@@ -786,9 +794,15 @@
                 border-radius: 4px;
               "
             >
-              <option value="FORM">FORM Level</option>
-              <option value="VISIT">VISIT Level</option>
-              <option value="SUBJECT">SUBJECT Level</option>
+              <option value="FORM">
+                FORM Level
+              </option>
+              <option value="VISIT">
+                VISIT Level
+              </option>
+              <option value="SUBJECT">
+                SUBJECT Level
+              </option>
             </select>
           </div>
 
@@ -804,7 +818,9 @@
                 border-radius: 4px;
               "
             >
-              <option value="">-- Choose ID --</option>
+              <option value="">
+                -- Choose ID --
+              </option>
               <template v-if="signoffTargetType === 'SUBJECT'">
                 <option
                   v-for="sub in availableSubjects"
@@ -832,11 +848,16 @@
                   {{ form }}
                 </option>
               </template>
-              <option value="custom">-- Enter Custom --</option>
+              <option value="custom">
+                -- Enter Custom --
+              </option>
             </select>
           </div>
 
-          <div v-if="signoffTargetId === 'custom'" class="form-group">
+          <div
+            v-if="signoffTargetId === 'custom'"
+            class="form-group"
+          >
             <label for="signoff-custom-target-id">Custom Target ID Value</label>
             <input
               id="signoff-custom-target-id"
@@ -849,7 +870,7 @@
                 border-radius: 4px;
               "
               @input="(e) => (customTargetId = e.target.value)"
-            />
+            >
           </div>
 
           <div class="form-group">
@@ -896,30 +917,42 @@
       style="display: flex"
     >
       <div class="modal">
-        <div class="modal-header">Reason for Change Required</div>
+        <div class="modal-header">
+          Reason for Change Required
+        </div>
         <div class="modal-body">
           <p>
             To comply with <strong>21 CFR Part 11 / EU Annex 11</strong>, you
             must document a reason for changing this clinical data field.
           </p>
-          <div class="form-group" style="margin-bottom: 12px">
+          <div
+            class="form-group"
+            style="margin-bottom: 12px"
+          >
             <label for="change-reason-select">Select Standard Reason</label>
-            <select id="change-reason-select" v-model="selectedReason">
-              <option value="Initial Entry">Initial Data Entry</option>
+            <select
+              id="change-reason-select"
+              v-model="selectedReason"
+            >
+              <option value="Initial Entry">
+                Initial Data Entry
+              </option>
               <option value="Typographical Error">
                 Correction of typographical error
               </option>
-              <option value="Re-measurement">Re-measurement of vitals</option>
+              <option value="Re-measurement">
+                Re-measurement of vitals
+              </option>
               <option value="Transcription Error">
                 Correction of transcription error
               </option>
-              <option value="Other">Other (specify below)</option>
+              <option value="Other">
+                Other (specify below)
+              </option>
             </select>
           </div>
           <div class="form-group">
-            <label for="change-reason-text"
-              >Custom Explanation (Optional)</label
-            >
+            <label for="change-reason-text">Custom Explanation (Optional)</label>
             <textarea
               id="change-reason-text"
               v-model="customReasonExplanation"
@@ -928,7 +961,11 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button id="btn-cancel-change" class="btn" @click="cancelChange">
+          <button
+            id="btn-cancel-change"
+            class="btn"
+            @click="cancelChange"
+          >
             Cancel Change
           </button>
           <button
@@ -950,14 +987,19 @@
       style="display: flex"
     >
       <div class="modal">
-        <div class="modal-header">Identity Re-Authentication Required</div>
+        <div class="modal-header">
+          Identity Re-Authentication Required
+        </div>
         <div class="modal-body">
           <p>
             To comply with <strong>FDA 21 CFR Part 11 / EU Annex 11</strong>,
             you must re-verify your identity before performing this
             high-security action.
           </p>
-          <div class="form-group" style="margin-bottom: 12px">
+          <div
+            class="form-group"
+            style="margin-bottom: 12px"
+          >
             <label for="reauth-username">Username</label>
             <input
               id="reauth-username"
@@ -969,9 +1011,12 @@
                 border: 1px solid var(--border);
                 border-radius: 4px;
               "
-            />
+            >
           </div>
-          <div class="form-group" style="margin-bottom: 12px">
+          <div
+            class="form-group"
+            style="margin-bottom: 12px"
+          >
             <label for="reauth-password">Password</label>
             <input
               id="reauth-password"
@@ -986,9 +1031,12 @@
                 border-radius: 4px;
               "
               @keyup.enter="confirmReauth"
-            />
+            >
           </div>
-          <div class="form-group" style="margin-bottom: 12px">
+          <div
+            class="form-group"
+            style="margin-bottom: 12px"
+          >
             <label for="reauth-totp">MFA/TOTP Token (Optional)</label>
             <input
               id="reauth-totp"
@@ -1001,7 +1049,7 @@
                 border: 1px solid var(--border);
                 border-radius: 4px;
               "
-            />
+            >
           </div>
           <div
             v-if="reauthError"
@@ -1012,7 +1060,11 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button id="btn-cancel-reauth" class="btn" @click="cancelReauth">
+          <button
+            id="btn-cancel-reauth"
+            class="btn"
+            @click="cancelReauth"
+          >
             Cancel
           </button>
           <button
