@@ -104,5 +104,3 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-16: Parallel Continuous Integration Workflows and Local Concurrent Verification](2026-08-16-parallel-ci-workflows-and-local-concurrent-execution.md)
 - [2026-08-17: Frontend Standardization, CSS Grid Layouts, and Centralized UI Utilities](2026-08-17-frontend-standardization-css-grid-and-centralized-utilities.md)
 - [2026-08-17: Interactive Mermaid Diagrams and Responsive Layout Controls](2026-08-17-interactive-mermaid-diagrams-and-zoom-pan-controls.md)
-
-
