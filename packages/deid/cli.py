@@ -228,7 +228,11 @@ def scan_file(
             or "gateway-secret" in val_lower
             or "redaction_signing_secret" in val_lower
             or val_lower == "65537"
-            or (res.category == "telephone_fax" and val_lower.isdigit() and len(val_lower) > 8)
+            or (
+                res.category == "telephone_fax"
+                and val_lower.isdigit()
+                and len(val_lower) > 8
+            )
         ):
             continue
 
