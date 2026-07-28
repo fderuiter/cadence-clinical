@@ -53,6 +53,8 @@ ALLOWED_COMMON_TOOLS = {
     "ls",
     "source",
     "export",
+    "powershell",
+    "pre-commit",
     "poetry",
     "make",
     "chmod",
