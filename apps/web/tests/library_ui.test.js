@@ -293,7 +293,8 @@ describe("Global Library Management UI & Governance", () => {
         }
       },
 
-      handleInstantiateLibraryConfirm(id, targetStudyId, reason, role) { // eslint-disable-line no-unused-vars
+      /* eslint-disable-next-line no-unused-vars */
+      handleInstantiateLibraryConfirm(id, targetStudyId, reason, role) {
         const obj = this.mockLibraryObjects.find((o) => o.id === id);
         if (!obj) return;
 
