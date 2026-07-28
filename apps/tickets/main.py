@@ -81,7 +81,9 @@ class TicketUpdate(BaseModel):
     )
     due_date: Optional[datetime] = Field(None, description="Updated due date")
     is_deleted: Optional[bool] = Field(None, description="Soft delete state")
-    version_index: Optional[int] = Field(None, description="Expected version index for optimistic locking")
+    version_index: Optional[int] = Field(
+        None, description="Expected version index for optimistic locking"
+    )
 
 
 class TicketAssignPayload(BaseModel):
@@ -91,7 +93,9 @@ class TicketAssignPayload(BaseModel):
 
     assignee_user: Optional[str] = Field(None, description="Username of the assignee")
     assignee_role: Optional[str] = Field(None, description="Role-based routing target")
-    version_index: int = Field(..., description="Expected version index for optimistic locking")
+    version_index: int = Field(
+        ..., description="Expected version index for optimistic locking"
+    )
 
 
 class TicketTransitionPayload(BaseModel):
@@ -99,8 +103,12 @@ class TicketTransitionPayload(BaseModel):
     Pydantic schema for transitioning support ticket lifecycle status.
     """
 
-    status: TicketStatus = Field(..., description="Target status for the lifecycle transition")
-    version_index: int = Field(..., description="Expected version index for optimistic locking")
+    status: TicketStatus = Field(
+        ..., description="Target status for the lifecycle transition"
+    )
+    version_index: int = Field(
+        ..., description="Expected version index for optimistic locking"
+    )
 
 
 class TicketResponse(BaseModel):
@@ -296,21 +304,27 @@ async def get_next_ticket_reference(session: AsyncSession) -> str:
 TICKET_CREATION_LOCK = asyncio.Lock()
 
 
-def check_optimistic_locking(ticket: Ticket, payload_version: Optional[int], request: Request) -> None:
+def check_optimistic_locking(
+    ticket: Ticket, payload_version: Optional[int], request: Request
+) -> None:
     """
     Verifies that the requested mutation specifies a matching expected version index.
     Raises HTTP 409 Conflict if missing or mismatched.
     """
     expected_version = payload_version
     if expected_version is None:
-        q_val = request.query_params.get("version_index") or request.query_params.get("expected_version")
+        q_val = request.query_params.get("version_index") or request.query_params.get(
+            "expected_version"
+        )
         if q_val:
             try:
                 expected_version = int(q_val)
             except ValueError:
                 pass
     if expected_version is None:
-        h_val = request.headers.get("If-Match") or request.headers.get("X-Expected-Version")
+        h_val = request.headers.get("If-Match") or request.headers.get(
+            "X-Expected-Version"
+        )
         if h_val:
             try:
                 expected_version = int(h_val)
@@ -581,7 +595,11 @@ async def update_ticket(
             status_code=403, detail="Missing change justification reason"
         )
 
-    stmt = select(Ticket).where((Ticket.id == id) | (Ticket.reference == id)).with_for_update()
+    stmt = (
+        select(Ticket)
+        .where((Ticket.id == id) | (Ticket.reference == id))
+        .with_for_update()
+    )
     result = await session.execute(stmt)
     ticket = result.scalars().first()
 
@@ -601,7 +619,7 @@ async def update_ticket(
     check_optimistic_locking(ticket, payload.version_index, request)
 
     # Reject updates to terminal tickets unless explicitly transitioning to REOPENED
-    is_reopening = (payload.status == TicketStatus.REOPENED)
+    is_reopening = payload.status == TicketStatus.REOPENED
     if ticket.status in TERMINAL_STATES and not is_reopening:
         raise HTTPException(
             status_code=400,
@@ -620,12 +638,24 @@ async def update_ticket(
 
     # Track audit details
     assignment_changes = []
-    if payload.assignee_user is not None and payload.assignee_user != ticket.assignee_user:
-        assignment_changes.append(f"assignee_user: '{ticket.assignee_user}' -> '{payload.assignee_user}'")
-    if payload.assignee_role is not None and payload.assignee_role != ticket.assignee_role:
-        assignment_changes.append(f"assignee_role: '{ticket.assignee_role}' -> '{payload.assignee_role}'")
+    if (
+        payload.assignee_user is not None
+        and payload.assignee_user != ticket.assignee_user
+    ):
+        assignment_changes.append(
+            f"assignee_user: '{ticket.assignee_user}' -> '{payload.assignee_user}'"
+        )
+    if (
+        payload.assignee_role is not None
+        and payload.assignee_role != ticket.assignee_role
+    ):
+        assignment_changes.append(
+            f"assignee_role: '{ticket.assignee_role}' -> '{payload.assignee_role}'"
+        )
 
-    assignment_str = "; ".join(assignment_changes) if assignment_changes else "No assignment changes"
+    assignment_str = (
+        "; ".join(assignment_changes) if assignment_changes else "No assignment changes"
+    )
     actor_roles = ", ".join(principal.roles)
     audit_details = (
         f"Actor: {user_id}, Roles: [{actor_roles}]. "
@@ -684,7 +714,11 @@ async def transition_ticket(
             status_code=403, detail="Missing change justification reason"
         )
 
-    stmt = select(Ticket).where((Ticket.id == id) | (Ticket.reference == id)).with_for_update()
+    stmt = (
+        select(Ticket)
+        .where((Ticket.id == id) | (Ticket.reference == id))
+        .with_for_update()
+    )
     result = await session.execute(stmt)
     ticket = result.scalars().first()
 
@@ -767,7 +801,11 @@ async def assign_ticket(
             status_code=403, detail="Missing change justification reason"
         )
 
-    stmt = select(Ticket).where((Ticket.id == id) | (Ticket.reference == id)).with_for_update()
+    stmt = (
+        select(Ticket)
+        .where((Ticket.id == id) | (Ticket.reference == id))
+        .with_for_update()
+    )
     result = await session.execute(stmt)
     ticket = result.scalars().first()
 
@@ -795,14 +833,28 @@ async def assign_ticket(
 
     # Record details for auditing before we modify the model
     assignment_changes = []
-    if payload.assignee_user is not None and payload.assignee_user != ticket.assignee_user:
-        assignment_changes.append(f"assignee_user: '{ticket.assignee_user}' -> '{payload.assignee_user}'")
-    if payload.assignee_role is not None and payload.assignee_role != ticket.assignee_role:
-        assignment_changes.append(f"assignee_role: '{ticket.assignee_role}' -> '{payload.assignee_role}'")
+    if (
+        payload.assignee_user is not None
+        and payload.assignee_user != ticket.assignee_user
+    ):
+        assignment_changes.append(
+            f"assignee_user: '{ticket.assignee_user}' -> '{payload.assignee_user}'"
+        )
+    if (
+        payload.assignee_role is not None
+        and payload.assignee_role != ticket.assignee_role
+    ):
+        assignment_changes.append(
+            f"assignee_role: '{ticket.assignee_role}' -> '{payload.assignee_role}'"
+        )
 
-    assignment_str = "; ".join(assignment_changes) if assignment_changes else "No assignment changes"
+    assignment_str = (
+        "; ".join(assignment_changes) if assignment_changes else "No assignment changes"
+    )
     actor_roles = ", ".join(principal.roles)
-    status_val = ticket.status.value if hasattr(ticket.status, "value") else ticket.status
+    status_val = (
+        ticket.status.value if hasattr(ticket.status, "value") else ticket.status
+    )
     audit_details = (
         f"Actor: {user_id}, Roles: [{actor_roles}]. "
         f"Source State: '{status_val}', Target State: '{status_val}'. "

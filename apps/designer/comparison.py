@@ -30,6 +30,7 @@ def flatten_dict(d: Any, parent_key: str = "", sep: str = ".") -> Dict[str, Any]
 
     return dict(items)
 
+
 def collect_original_ids(d: Any) -> Dict[str, str]:
     """
     Traverses a nested structure to collect all mapping pairs between UUIDs and original string IDs
@@ -56,6 +57,7 @@ def collect_original_ids(d: Any) -> Dict[str, str]:
 
     return mappings
 
+
 def normalize_version(v: Any) -> str:
     """
     Normalizes semantic versions by stripping trailing zeros and whitespace.
@@ -74,6 +76,7 @@ def normalize_version(v: Any) -> str:
         return f"{int(major)}.{int(minor)}.{patch_val}"
     return v_clean
 
+
 def is_empty_value(val: Any) -> bool:
     """
     Checks if a value is semantically empty (None, empty string, empty list, empty dict).
@@ -83,6 +86,7 @@ def is_empty_value(val: Any) -> bool:
     if isinstance(val, (str, list, dict)) and len(val) == 0:
         return True
     return False
+
 
 def compare_payloads(original: Any, round_tripped: Any) -> Dict[str, Any]:
     """
@@ -126,7 +130,16 @@ def compare_payloads(original: Any, round_tripped: Any) -> Dict[str, Any]:
             reason = "Field was added in the round-tripped payload."
 
             # Non-material additions
-            if any(part in key for part in ("_original_id", "instanceType", "preservation_metadata", "audit_metadata", "reason_for_change")):
+            if any(
+                part in key
+                for part in (
+                    "_original_id",
+                    "instanceType",
+                    "preservation_metadata",
+                    "audit_metadata",
+                    "reason_for_change",
+                )
+            ):
                 is_mat = False
                 reason = f"Non-material: standard structural metadata '{key}' added."
 
@@ -135,12 +148,9 @@ def compare_payloads(original: Any, round_tripped: Any) -> Dict[str, Any]:
             else:
                 non_material_difference_count += 1
 
-            added_paths.append({
-                "field": key,
-                "value": val_rt,
-                "is_material": is_mat,
-                "reason": reason
-            })
+            added_paths.append(
+                {"field": key, "value": val_rt, "is_material": is_mat, "reason": reason}
+            )
 
         elif not in_rt:
             # Key was DROPPED
@@ -148,7 +158,16 @@ def compare_payloads(original: Any, round_tripped: Any) -> Dict[str, Any]:
             reason = "Field was dropped in the round-tripped payload."
 
             # Non-material drops (e.g. empty fields or private/unmapped preservation fields)
-            if any(part in key for part in ("_original_id", "instanceType", "preservation_metadata", "audit_metadata", "reason_for_change")):
+            if any(
+                part in key
+                for part in (
+                    "_original_id",
+                    "instanceType",
+                    "preservation_metadata",
+                    "audit_metadata",
+                    "reason_for_change",
+                )
+            ):
                 is_mat = False
                 reason = f"Non-material: standard structural metadata '{key}' dropped."
 
@@ -157,12 +176,14 @@ def compare_payloads(original: Any, round_tripped: Any) -> Dict[str, Any]:
             else:
                 non_material_difference_count += 1
 
-            dropped_paths.append({
-                "field": key,
-                "value": val_orig,
-                "is_material": is_mat,
-                "reason": reason
-            })
+            dropped_paths.append(
+                {
+                    "field": key,
+                    "value": val_orig,
+                    "is_material": is_mat,
+                    "reason": reason,
+                }
+            )
 
         else:
             # Key is in both but might be ALTERED
@@ -185,7 +206,10 @@ def compare_payloads(original: Any, round_tripped: Any) -> Dict[str, Any]:
             # ID mapping check (e.g. string ID was converted to UUID but is semantically the same)
             is_id_translated = False
             if isinstance(val_orig, str) and isinstance(val_rt, str):
-                if id_mappings.get(val_rt) == val_orig or id_mappings.get(val_orig) == val_rt:
+                if (
+                    id_mappings.get(val_rt) == val_orig
+                    or id_mappings.get(val_orig) == val_rt
+                ):
                     is_id_translated = True
 
             if is_id_translated:
@@ -197,7 +221,10 @@ def compare_payloads(original: Any, round_tripped: Any) -> Dict[str, Any]:
             reason = "Value has altered between payloads."
 
             # If it's standard metadata or version difference that is non-material
-            if any(part in key for part in ("_original_id", "instanceType", "preservation_metadata")):
+            if any(
+                part in key
+                for part in ("_original_id", "instanceType", "preservation_metadata")
+            ):
                 is_mat = False
                 reason = f"Non-material: metadata field '{key}' updated."
 
@@ -206,15 +233,17 @@ def compare_payloads(original: Any, round_tripped: Any) -> Dict[str, Any]:
             else:
                 non_material_difference_count += 1
 
-            altered_paths.append({
-                "field": key,
-                "old_value": val_orig,
-                "new_value": val_rt,
-                "is_material": is_mat,
-                "reason": reason
-            })
+            altered_paths.append(
+                {
+                    "field": key,
+                    "old_value": val_orig,
+                    "new_value": val_rt,
+                    "is_material": is_mat,
+                    "reason": reason,
+                }
+            )
 
-    is_lossless = (material_difference_count == 0)
+    is_lossless = material_difference_count == 0
 
     return {
         "lossless": is_lossless,
@@ -222,5 +251,5 @@ def compare_payloads(original: Any, round_tripped: Any) -> Dict[str, Any]:
         "non_material_difference_count": non_material_difference_count,
         "added": added_paths,
         "dropped": dropped_paths,
-        "altered": altered_paths
+        "altered": altered_paths,
     }

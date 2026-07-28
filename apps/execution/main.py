@@ -4878,6 +4878,7 @@ async def run_sdtm_extraction(session, study_id: str, domain: str) -> List[dict]
     elif dom_upper == "CM":
         from apps.execution.database.models import ClinicalVisit
         from apps.execution.sdtm_mapper import map_cm
+
         stmt_visit = select(ClinicalVisit).where(
             ClinicalVisit.study_id == study_id,
             ClinicalVisit.is_deleted.is_(False),
@@ -4885,7 +4886,10 @@ async def run_sdtm_extraction(session, study_id: str, domain: str) -> List[dict]
         res_visit = await session.execute(stmt_visit)
         visits = res_visit.scalars().all()
         cm_models = map_cm(subjects, visits, observations)
-        records = [cm.model_dump() if hasattr(cm, "model_dump") else cm.dict() for cm in cm_models]
+        records = [
+            cm.model_dump() if hasattr(cm, "model_dump") else cm.dict()
+            for cm in cm_models
+        ]
     else:
         raise ValueError(f"Unsupported SDTM domain: {domain}")
 

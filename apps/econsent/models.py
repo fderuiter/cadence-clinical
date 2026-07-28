@@ -135,7 +135,9 @@ class ConsentTranslation(Base):
 
     # Source metadata
     source_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    source_type: Mapped[str] = mapped_column(String(50), nullable=False)  # "clause" or "template"
+    source_type: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # "clause" or "template"
     source_version_index: Mapped[int] = mapped_column(Integer, nullable=False)
 
     # Translation details

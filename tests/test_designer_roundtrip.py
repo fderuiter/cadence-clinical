@@ -15,7 +15,7 @@ def test_flatten_dict_complex():
     nested = {
         "id": "study_1",
         "nested_dict": {"a": 1, "b": "hello"},
-        "nested_list": [{"x": 10}, {"y": 20}]
+        "nested_list": [{"x": 10}, {"y": 20}],
     }
     flat = flatten_dict(nested)
     assert flat["id"] == "study_1"
@@ -30,14 +30,14 @@ def test_compare_payloads_lossless_equivalence():
         "study_id": "study_1",
         "title": "Oncology Phase III",
         "version": "1.0.0",
-        "description": "Fasting required  "
+        "description": "Fasting required  ",
     }
     # Semantically identical with whitespace and version padding difference
     round_tripped = {
         "study_id": "study_1",
         "title": "Oncology Phase III",
         "version": "1.0",
-        "description": "Fasting required"
+        "description": "Fasting required",
     }
 
     report = compare_payloads(original, round_tripped)
@@ -51,14 +51,14 @@ def test_compare_payloads_lossy_mismatch():
         "study_id": "study_1",
         "title": "Oncology Phase III",
         "version": "1.0.0",
-        "description": "Fasting required"
+        "description": "Fasting required",
     }
     # Material difference (title altered, version changed)
     round_tripped = {
         "study_id": "study_1",
         "title": "Oncology Phase IV",
         "version": "2.0.0",
-        "description": "Fasting required"
+        "description": "Fasting required",
     }
 
     report = compare_payloads(original, round_tripped)
@@ -153,11 +153,12 @@ def test_orchestrate_usdm_to_internal_to_usdm_lossless():
             }
         ],
         "rules": [],
-        "eligibility_criteria": []
+        "eligibility_criteria": [],
     }
 
     # Map to USDM format first
     from apps.designer.mapper import map_study_to_usdm
+
     usdm_payload = map_study_to_usdm(study_data)
 
     report = execute_round_trip(usdm_payload)
@@ -199,13 +200,16 @@ def test_orchestrate_circular_skip_logic_lossy():
                     ],
                 },
                 "target_field": "act_2",
-            }
+            },
         ],
     }
 
     report = execute_round_trip(study_data)
     assert report["classification"] == "lossy"
-    assert any("Circular skip-logic dependency" in item for item in report["mapping_diagnostics"]["unsupported_constructs"])
+    assert any(
+        "Circular skip-logic dependency" in item
+        for item in report["mapping_diagnostics"]["unsupported_constructs"]
+    )
 
 
 def test_orchestrate_stochastic_operator_lossy():
@@ -233,7 +237,10 @@ def test_orchestrate_stochastic_operator_lossy():
 
     report = execute_round_trip(study_data)
     assert report["classification"] == "lossy"
-    assert any("STOCHASTIC_RANDOM_SELECT" in item for item in report["mapping_diagnostics"]["unsupported_constructs"])
+    assert any(
+        "STOCHASTIC_RANDOM_SELECT" in item
+        for item in report["mapping_diagnostics"]["unsupported_constructs"]
+    )
 
 
 def test_api_round_trip_endpoint_internal_success(client):
@@ -251,12 +258,11 @@ def test_api_round_trip_endpoint_internal_success(client):
     # Let's see: some endpoints require Gateway headers or authentications.
     # We can pass authentications in headers using standard helper.
     from tests.test_designer_differences import get_auth_headers
+
     headers = get_auth_headers()
 
     response = client.post(
-        "/api/v1/designer/round-trip",
-        json=study_data,
-        headers=headers
+        "/api/v1/designer/round-trip", json=study_data, headers=headers
     )
     assert response.status_code == 200
     data = response.json()

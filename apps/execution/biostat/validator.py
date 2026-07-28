@@ -21,29 +21,37 @@ try:
 except ImportError:
     # Fallbacks in case environment lacks packages during isolated testing
     from enum import Enum
+
     class Sex(str, Enum):
         M = "M"
         F = "F"
         U = "U"
+
     class Race(str, Enum):
         AMERICAN_INDIAN_OR_ALASKA_NATIVE = "AMERICAN INDIAN OR ALASKA NATIVE"
         ASIAN = "ASIAN"
         BLACK_OR_AFRICAN_AMERICAN = "BLACK OR AFRICAN AMERICAN"
-        NATIVE_HAWAIIAN_OR_OTHER_PACIFIC_ISLANDER = "NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER"
+        NATIVE_HAWAIIAN_OR_OTHER_PACIFIC_ISLANDER = (
+            "NATIVE HAWAIIAN OR OTHER PACIFIC ISLANDER"
+        )
         WHITE = "WHITE"
         MULTIPLE = "MULTIPLE"
         OTHER = "OTHER"
+
     class AESeverity(str, Enum):
         MILD = "MILD"
         MODERATE = "MODERATE"
         SEVERE = "SEVERE"
+
     class AESeriousness(str, Enum):
         Y = "Y"
         N = "N"
+
     class AERelationship(str, Enum):
         RELATED = "RELATED"
         NOT_RELATED = "NOT RELATED"
         POSSIBLY_RELATED = "POSSIBLY RELATED"
+
     class AEOutcome(str, Enum):
         RECOVERED_RESOLVED = "RECOVERED/RESOLVED"
         RECOVERING_RESOLVING = "RECOVERING/RESOLVING"
@@ -51,6 +59,7 @@ except ImportError:
         RECOVERED_RESOLVED_WITH_SEQUELAE = "RECOVERED/RESOLVED WITH SEQUELAE"
         FATAL = "FATAL"
         UNKNOWN = "UNKNOWN"
+
     class NullFlavor(str, Enum):
         NI = "NI"
         NA = "NA"
@@ -225,7 +234,16 @@ def validate_dataset_json(
         # --- Check 1: Required variables ---
         required_vars = REQUIRED_VARIABLES.get(ds_name_upper)
         if not required_vars and ds_name_upper.startswith("SUPP"):
-            required_vars = ["STUDYID", "RDOMAIN", "USUBJID", "IDVAR", "IDVARVAL", "QNAM", "QLABEL", "QVAL"]
+            required_vars = [
+                "STUDYID",
+                "RDOMAIN",
+                "USUBJID",
+                "IDVAR",
+                "IDVARVAL",
+                "QNAM",
+                "QLABEL",
+                "QVAL",
+            ]
 
         if required_vars:
             missing_vars = [v for v in required_vars if v not in var_names]
@@ -332,7 +350,10 @@ def validate_dataset_json(
                 reasnd_var = prefix + "REASND"
                 for i, row in enumerate(records, start=1):
                     stat_val = row.get(var_name)
-                    if stat_val is not None and str(stat_val).strip().upper() == "NOT DONE":
+                    if (
+                        stat_val is not None
+                        and str(stat_val).strip().upper() == "NOT DONE"
+                    ):
                         # --REASND must be populated
                         reasnd_val = row.get(reasnd_var)
                         if reasnd_val is None or str(reasnd_val).strip() == "":
@@ -342,7 +363,10 @@ def validate_dataset_json(
                         # Measurement variables must be empty/null
                         # e.g., anything starting with prefix and ending in ORRES, STRESN, STRESC
                         for field, val in row.items():
-                            if field.startswith(prefix) and any(field.endswith(suf) for suf in ["ORRES", "STRESN", "STRESC"]):
+                            if field.startswith(prefix) and any(
+                                field.endswith(suf)
+                                for suf in ["ORRES", "STRESN", "STRESC"]
+                            ):
                                 # Skip validation if it's the STAT or REASND field itself
                                 if field in {var_name, reasnd_var}:
                                     continue
@@ -505,7 +529,9 @@ def validate_dataset_json(
 
                 if parent_records is not None:
                     # Find parent records with matching USUBJID
-                    matching_parents = [r for r in parent_records if r.get("USUBJID") == usubjid]
+                    matching_parents = [
+                        r for r in parent_records if r.get("USUBJID") == usubjid
+                    ]
                     if not matching_parents:
                         errors.append(
                             f"[{SUPPLEMENTAL_QUALIFIER_VIOLATION}] [{ds_name_upper}] Row {i}: Parent record not found for USUBJID='{usubjid}' in {parent_domain_name}."

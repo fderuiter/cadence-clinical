@@ -27,7 +27,9 @@ class ApprovedTranslationCache:
             else:
                 self.ttl = 3600.0
 
-    def get_cached(self, template_id: str, version_index: int, language_code: str) -> Tuple[Optional[Dict[str, Any]], bool]:
+    def get_cached(
+        self, template_id: str, version_index: int, language_code: str
+    ) -> Tuple[Optional[Dict[str, Any]], bool]:
         """
         Retrieves the item from cache. Returns (data, is_expired).
         """
@@ -41,7 +43,13 @@ class ApprovedTranslationCache:
                 return data, True
         return None, False
 
-    def set_cached(self, template_id: str, version_index: int, language_code: str, data: Dict[str, Any]) -> None:
+    def set_cached(
+        self,
+        template_id: str,
+        version_index: int,
+        language_code: str,
+        data: Dict[str, Any],
+    ) -> None:
         key = (template_id, version_index, language_code)
         with self._lock:
             if len(self._cache) >= self.max_size and key not in self._cache:
@@ -50,7 +58,9 @@ class ApprovedTranslationCache:
                 self._cache.pop(oldest_key)
             self._cache[key] = (data, time.time())
 
-    def invalidate(self, template_id: str, version_index: int, language_code: str) -> None:
+    def invalidate(
+        self, template_id: str, version_index: int, language_code: str
+    ) -> None:
         key = (template_id, version_index, language_code)
         with self._lock:
             if key in self._cache:
@@ -82,7 +92,9 @@ async def get_approved_template_translation(
     Read-through cache mechanism that implements stale-on-error fallback.
     """
     # 1. Check cache
-    cached_data, is_expired = cache.get_cached(template_id, version_index, language_code)
+    cached_data, is_expired = cache.get_cached(
+        template_id, version_index, language_code
+    )
     if cached_data is not None and not is_expired:
         return cached_data
 

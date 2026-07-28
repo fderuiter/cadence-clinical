@@ -185,7 +185,8 @@ def test_export_protocol_outputs_rendering(client):
             )
             assert response.status_code == 200
             expected_mime = (
-                "application/pdf" if fmt == "pdf"
+                "application/pdf"
+                if fmt == "pdf"
                 else "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             )
             assert response.headers["content-type"] == expected_mime

@@ -54,7 +54,11 @@ const routes = [
       // - CRA (cra / monitor) → /ctms
       // - Data Manager (data_manager) → /rules
       // - TMF Auditor (auditor / tmf_auditor) → /audit
-      if (roles.includes("sponsor_designer") || roles.includes("designer") || roles.includes("study_designer")) {
+      if (
+        roles.includes("sponsor_designer") ||
+        roles.includes("designer") ||
+        roles.includes("study_designer")
+      ) {
         return "/mdr";
       }
       if (roles.includes("site_investigator") || roles.includes("crc")) {
@@ -93,7 +97,13 @@ const routes = [
     component: () => import("./views/MdrView.vue"),
     meta: {
       requiresAuth: true,
-      requiresRole: ["sponsor_designer", "designer", "study_designer", "data_manager", "sponsor_admin"],
+      requiresRole: [
+        "sponsor_designer",
+        "designer",
+        "study_designer",
+        "data_manager",
+        "sponsor_admin",
+      ],
     },
   },
   {
@@ -102,7 +112,12 @@ const routes = [
     component: () => import("./views/EcrfView.vue"),
     meta: {
       requiresAuth: true,
-      requiresRole: ["site_investigator", "crc", "data_manager", "sponsor_admin"],
+      requiresRole: [
+        "site_investigator",
+        "crc",
+        "data_manager",
+        "sponsor_admin",
+      ],
     },
   },
   {
@@ -152,7 +167,10 @@ router.beforeEach(async (to) => {
       if (!authStore.isDemoMode) {
         try {
           await authStore.login({
-            redirectUri: window.location.origin + (import.meta.env.BASE_URL || "/cadence-clinical/") + to.fullPath.replace(/^\//, ""),
+            redirectUri:
+              window.location.origin +
+              (import.meta.env.BASE_URL || "/cadence-clinical/") +
+              to.fullPath.replace(/^\//, ""),
           });
           return false; // Abort navigation as page is redirecting
         } catch (err) {

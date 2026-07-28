@@ -205,15 +205,24 @@ class ConsentTranslationCreate(AuditFields):
     """
     Schema for creating/ingesting a new consent translation.
     """
+
     translation_id: Optional[str] = Field(
         None,
         description="Unique translation identifier across versions. Generated if not provided.",
     )
-    source_id: str = Field(..., description="Unique source clause_id or template_id being translated")
-    source_type: str = Field(..., description="The type of the source: 'clause' or 'template'")
-    source_version_index: int = Field(..., description="The version of the source being translated")
+    source_id: str = Field(
+        ..., description="Unique source clause_id or template_id being translated"
+    )
+    source_type: str = Field(
+        ..., description="The type of the source: 'clause' or 'template'"
+    )
+    source_version_index: int = Field(
+        ..., description="The version of the source being translated"
+    )
     language_code: str = Field(..., description="Validated ISO 639-1 language code")
-    translated_title: str = Field(..., max_length=255, description="Translated title of the clause/template")
+    translated_title: str = Field(
+        ..., max_length=255, description="Translated title of the clause/template"
+    )
     translated_text: str = Field(..., description="Translated text/content")
 
     @field_validator("language_code")
@@ -234,28 +243,52 @@ class ConsentTranslationResponse(AuditFields):
     """
     Schema for retrieving an eConsent translation version.
     """
+
     model_config = ConfigDict(from_attributes=True)
 
-    id: str = Field(..., description="Unique generated UUID of this translation version")
-    translation_id: str = Field(..., description="Unique translation identifier across versions")
-    source_id: str = Field(..., description="Unique source clause_id or template_id being translated")
-    source_type: str = Field(..., description="The type of the source: 'clause' or 'template'")
-    source_version_index: int = Field(..., description="The version of the source being translated")
+    id: str = Field(
+        ..., description="Unique generated UUID of this translation version"
+    )
+    translation_id: str = Field(
+        ..., description="Unique translation identifier across versions"
+    )
+    source_id: str = Field(
+        ..., description="Unique source clause_id or template_id being translated"
+    )
+    source_type: str = Field(
+        ..., description="The type of the source: 'clause' or 'template'"
+    )
+    source_version_index: int = Field(
+        ..., description="The version of the source being translated"
+    )
     language_code: str = Field(..., description="Validated ISO 639-1 language code")
-    translated_title: str = Field(..., description="Translated title of the clause/template")
+    translated_title: str = Field(
+        ..., description="Translated title of the clause/template"
+    )
     translated_text: str = Field(..., description="Translated text/content")
-    status: str = Field(..., description="The status of the translation (DRAFT, IN_REVIEW, APPROVED)")
+    status: str = Field(
+        ..., description="The status of the translation (DRAFT, IN_REVIEW, APPROVED)"
+    )
 
 
 class ConsentTranslationUpdate(AuditFields):
     """
     Schema for updating/versioning an existing eConsent translation.
     """
-    source_id: str = Field(..., description="Unique source clause_id or template_id being translated")
-    source_type: str = Field(..., description="The type of the source: 'clause' or 'template'")
-    source_version_index: int = Field(..., description="The version of the source being translated")
+
+    source_id: str = Field(
+        ..., description="Unique source clause_id or template_id being translated"
+    )
+    source_type: str = Field(
+        ..., description="The type of the source: 'clause' or 'template'"
+    )
+    source_version_index: int = Field(
+        ..., description="The version of the source being translated"
+    )
     language_code: str = Field(..., description="Validated ISO 639-1 language code")
-    translated_title: str = Field(..., max_length=255, description="Translated title of the clause/template")
+    translated_title: str = Field(
+        ..., max_length=255, description="Translated title of the clause/template"
+    )
     translated_text: str = Field(..., description="Translated text/content")
 
     @field_validator("language_code")
@@ -276,7 +309,10 @@ class TranslationTransitionRequest(BaseModel):
     """
     Request payload to transition translation status.
     """
-    status: str = Field(..., description="Target status: 'DRAFT', 'IN_REVIEW', or 'APPROVED'")
+
+    status: str = Field(
+        ..., description="Target status: 'DRAFT', 'IN_REVIEW', or 'APPROVED'"
+    )
     reason_for_change: str = Field(..., description="Explanation of transition")
 
     @field_validator("status")
@@ -284,7 +320,9 @@ class TranslationTransitionRequest(BaseModel):
     def check_status(cls, v: str) -> str:
         v_clean = v.strip().upper()
         if v_clean not in ("DRAFT", "IN_REVIEW", "APPROVED"):
-            raise ValueError("status must be either 'DRAFT', 'IN_REVIEW', or 'APPROVED'")
+            raise ValueError(
+                "status must be either 'DRAFT', 'IN_REVIEW', or 'APPROVED'"
+            )
         return v_clean
 
 
@@ -703,6 +741,7 @@ async def create_consent_template(
 
 # --- Translation Management Endpoints ---
 
+
 @app.post(
     "/api/v1/econsent/translations",
     response_model=ConsentTranslationResponse,
@@ -872,7 +911,9 @@ async def list_consent_translations(
     if status:
         stmt = stmt.where(ConsentTranslation.status == status)
 
-    stmt = stmt.order_by(ConsentTranslation.translation_id, desc(ConsentTranslation.version_index))
+    stmt = stmt.order_by(
+        ConsentTranslation.translation_id, desc(ConsentTranslation.version_index)
+    )
 
     result = await session.execute(stmt)
     translations_list = result.scalars().all()
@@ -918,7 +959,9 @@ async def get_consent_translation(
     user_role = getattr(request.state, "roles", "system")
     change_reason = getattr(request.state, "change_reason", "Retrieve translation")
 
-    stmt = select(ConsentTranslation).where(ConsentTranslation.translation_id == translation_id)
+    stmt = select(ConsentTranslation).where(
+        ConsentTranslation.translation_id == translation_id
+    )
     if version_index is not None:
         stmt = stmt.where(ConsentTranslation.version_index == version_index)
     else:
@@ -1022,7 +1065,11 @@ async def transition_consent_translation(
     # Invalidate cache if APPROVED or updated
     if target_status == "APPROVED":
         if translation.source_type == "template":
-            approved_translation_cache.invalidate(translation.source_id, translation.source_version_index, translation.language_code)
+            approved_translation_cache.invalidate(
+                translation.source_id,
+                translation.source_version_index,
+                translation.language_code,
+            )
         elif translation.source_type == "clause":
             # For simplicity and absolute correctness, invalidate all cached entries
             approved_translation_cache.clear()
@@ -1031,6 +1078,7 @@ async def transition_consent_translation(
 
 
 # --- Patient-Facing Approved Content Retrieval ---
+
 
 async def fetch_composed_translation_from_db(
     template_id: str,
@@ -1056,13 +1104,17 @@ async def fetch_composed_translation_from_db(
         )
 
     # 2. Fetch approved translation for the template
-    tpl_trans_stmt = select(ConsentTranslation).where(
-        ConsentTranslation.source_id == template_id,
-        ConsentTranslation.source_type == "template",
-        ConsentTranslation.source_version_index == version_index,
-        ConsentTranslation.language_code == language_code,
-        ConsentTranslation.status == "APPROVED",
-    ).order_by(desc(ConsentTranslation.version_index))
+    tpl_trans_stmt = (
+        select(ConsentTranslation)
+        .where(
+            ConsentTranslation.source_id == template_id,
+            ConsentTranslation.source_type == "template",
+            ConsentTranslation.source_version_index == version_index,
+            ConsentTranslation.language_code == language_code,
+            ConsentTranslation.status == "APPROVED",
+        )
+        .order_by(desc(ConsentTranslation.version_index))
+    )
     tpl_trans_res = await session.execute(tpl_trans_stmt)
     tpl_translation = tpl_trans_res.scalars().first()
 
@@ -1094,13 +1146,17 @@ async def fetch_composed_translation_from_db(
             )
 
         # Find approved translation for this specific clause version
-        clause_trans_stmt = select(ConsentTranslation).where(
-            ConsentTranslation.source_id == clause_id,
-            ConsentTranslation.source_type == "clause",
-            ConsentTranslation.source_version_index == clause.version_index,
-            ConsentTranslation.language_code == language_code,
-            ConsentTranslation.status == "APPROVED",
-        ).order_by(desc(ConsentTranslation.version_index))
+        clause_trans_stmt = (
+            select(ConsentTranslation)
+            .where(
+                ConsentTranslation.source_id == clause_id,
+                ConsentTranslation.source_type == "clause",
+                ConsentTranslation.source_version_index == clause.version_index,
+                ConsentTranslation.language_code == language_code,
+                ConsentTranslation.status == "APPROVED",
+            )
+            .order_by(desc(ConsentTranslation.version_index))
+        )
         clause_trans_res = await session.execute(clause_trans_stmt)
         clause_translation = clause_trans_res.scalars().first()
 
@@ -1110,12 +1166,14 @@ async def fetch_composed_translation_from_db(
                 detail=f"Approved clause translation for '{clause_id}' (version {clause.version_index}) in '{language_code}' not found.",
             )
 
-        composed_clauses.append({
-            "clause_id": clause.clause_id,
-            "title": clause_translation.translated_title,
-            "text": clause_translation.translated_text,
-            "version_index": clause.version_index,
-        })
+        composed_clauses.append(
+            {
+                "clause_id": clause.clause_id,
+                "title": clause_translation.translated_title,
+                "text": clause_translation.translated_text,
+                "version_index": clause.version_index,
+            }
+        )
 
     return {
         "id": template.id,

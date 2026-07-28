@@ -508,12 +508,16 @@ if (typeof document !== "undefined") {
 
     // --- 6. TAB NAVIGATION ---
     function switchTab(activeTab, activeSec) {
-      [tabMdr, tabEcrf, tabCtms, tabRules, tabAudit, tabLibrary].forEach((t) => {
-        if (t) t.classList.remove("active");
-      });
-      [secMdr, secEcrf, secCtms, secRules, secAudit, secLibrary].forEach((s) => {
-        if (s) s.classList.remove("active");
-      });
+      [tabMdr, tabEcrf, tabCtms, tabRules, tabAudit, tabLibrary].forEach(
+        (t) => {
+          if (t) t.classList.remove("active");
+        }
+      );
+      [secMdr, secEcrf, secCtms, secRules, secAudit, secLibrary].forEach(
+        (s) => {
+          if (s) s.classList.remove("active");
+        }
+      );
 
       if (activeTab) activeTab.classList.add("active");
       if (activeSec) activeSec.classList.add("active");
@@ -1797,18 +1801,50 @@ if (typeof document !== "undefined") {
         sponsor_id: "SPONSOR-A",
         created_at: "2026-08-01T12:00:00Z",
         created_by: "usr_dm_fderuiter",
-        reason_for_change: "Initial publication of core Demographics CDASH form template.",
+        reason_for_change:
+          "Initial publication of core Demographics CDASH form template.",
         payload: {
           items: [
-            { item_id: "brthdt", name: "DM.BRTHDT", question_text: "Date of Birth", data_type: "date", required: true },
-            { item_id: "sex", name: "DM.SEX", question_text: "Sex at Birth", data_type: "choice", required: true }
-          ]
+            {
+              item_id: "brthdt",
+              name: "DM.BRTHDT",
+              question_text: "Date of Birth",
+              data_type: "date",
+              required: true,
+            },
+            {
+              item_id: "sex",
+              name: "DM.SEX",
+              question_text: "Sex at Birth",
+              data_type: "choice",
+              required: true,
+            },
+          ],
         },
         history: [
-          { version: "1.0.0", status: "PUBLISHED", change_reason: "Initial publication of core Demographics CDASH form template.", updated_by: "usr_dm_fderuiter", updated_at: "2026-08-01T12:00:00Z" },
-          { version: "0.9.0", status: "IN_REVIEW", change_reason: "Sent for DM review.", updated_by: "usr_designer_alice", updated_at: "2026-07-28T10:00:00Z" },
-          { version: "0.1.0", status: "DRAFT", change_reason: "Initial draft.", updated_by: "usr_designer_alice", updated_at: "2026-07-25T09:00:00Z" }
-        ]
+          {
+            version: "1.0.0",
+            status: "PUBLISHED",
+            change_reason:
+              "Initial publication of core Demographics CDASH form template.",
+            updated_by: "usr_dm_fderuiter",
+            updated_at: "2026-08-01T12:00:00Z",
+          },
+          {
+            version: "0.9.0",
+            status: "IN_REVIEW",
+            change_reason: "Sent for DM review.",
+            updated_by: "usr_designer_alice",
+            updated_at: "2026-07-28T10:00:00Z",
+          },
+          {
+            version: "0.1.0",
+            status: "DRAFT",
+            change_reason: "Initial draft.",
+            updated_by: "usr_designer_alice",
+            updated_at: "2026-07-25T09:00:00Z",
+          },
+        ],
       },
       {
         id: "lib-elem-sbp",
@@ -1822,12 +1858,24 @@ if (typeof document !== "undefined") {
         payload: {
           data_type: "numeric",
           allowable_units: ["mm[Hg]"],
-          default_unit: "mm[Hg]"
+          default_unit: "mm[Hg]",
         },
         history: [
-          { version: "1.1.0", status: "APPROVED", change_reason: "Added support for mmHg UCUM code verification.", updated_by: "usr_dm_fderuiter", updated_at: "2026-08-02T14:30:00Z" },
-          { version: "1.0.0", status: "DRAFT", change_reason: "Initial baseline element definition.", updated_by: "usr_designer_alice", updated_at: "2026-07-26T15:00:00Z" }
-        ]
+          {
+            version: "1.1.0",
+            status: "APPROVED",
+            change_reason: "Added support for mmHg UCUM code verification.",
+            updated_by: "usr_dm_fderuiter",
+            updated_at: "2026-08-02T14:30:00Z",
+          },
+          {
+            version: "1.0.0",
+            status: "DRAFT",
+            change_reason: "Initial baseline element definition.",
+            updated_by: "usr_designer_alice",
+            updated_at: "2026-07-26T15:00:00Z",
+          },
+        ],
       },
       {
         id: "lib-arm-placebo",
@@ -1842,12 +1890,18 @@ if (typeof document !== "undefined") {
           attributes: {
             arm_type: "PLACEBO",
             target_sample_size: 50,
-            randomization_ratio: "1:1"
-          }
+            randomization_ratio: "1:1",
+          },
         },
         history: [
-          { version: "1.0.0", status: "DRAFT", change_reason: "Draft version for Placebo treatment arm metadata.", updated_by: "usr_designer_alice", updated_at: "2026-08-03T11:00:00Z" }
-        ]
+          {
+            version: "1.0.0",
+            status: "DRAFT",
+            change_reason: "Draft version for Placebo treatment arm metadata.",
+            updated_by: "usr_designer_alice",
+            updated_at: "2026-08-03T11:00:00Z",
+          },
+        ],
       },
       {
         id: "lib-visit-screening",
@@ -1857,19 +1911,33 @@ if (typeof document !== "undefined") {
         sponsor_id: "SPONSOR-A",
         created_at: "2026-08-04T09:15:00Z",
         created_by: "usr_dm_fderuiter",
-        reason_for_change: "Published standard screening visit metadata config.",
+        reason_for_change:
+          "Published standard screening visit metadata config.",
         payload: {
           attributes: {
             visit_type: "SCREENING",
             planned_day: -7,
-            window_days: 2
-          }
+            window_days: 2,
+          },
         },
         history: [
-          { version: "1.0.0", status: "PUBLISHED", change_reason: "Published standard screening visit metadata config.", updated_by: "usr_dm_fderuiter", updated_at: "2026-08-04T09:15:00Z" },
-          { version: "0.1.0", status: "DRAFT", change_reason: "Initial screening visit skeleton.", updated_by: "usr_designer_alice", updated_at: "2026-08-01T14:00:00Z" }
-        ]
-      }
+          {
+            version: "1.0.0",
+            status: "PUBLISHED",
+            change_reason:
+              "Published standard screening visit metadata config.",
+            updated_by: "usr_dm_fderuiter",
+            updated_at: "2026-08-04T09:15:00Z",
+          },
+          {
+            version: "0.1.0",
+            status: "DRAFT",
+            change_reason: "Initial screening visit skeleton.",
+            updated_by: "usr_designer_alice",
+            updated_at: "2026-08-01T14:00:00Z",
+          },
+        ],
+      },
     ];
 
     const ALLOWED_LIBRARY_TRANSITIONS = {
@@ -1878,28 +1946,45 @@ if (typeof document !== "undefined") {
       APPROVED: ["PUBLISHED"],
       PUBLISHED: ["ARCHIVED"],
       REJECTED: ["DRAFT"],
-      ARCHIVED: []
+      ARCHIVED: [],
     };
 
     const TRANSITION_ROLES_MAP = {
-      IN_REVIEW: ["sponsor_designer", "sponsor_dm", "sponsor_admin", "sysadmin"],
+      IN_REVIEW: [
+        "sponsor_designer",
+        "sponsor_dm",
+        "sponsor_admin",
+        "sysadmin",
+      ],
       APPROVED: ["sponsor_dm", "sponsor_admin", "sysadmin"],
       REJECTED: ["sponsor_dm", "sponsor_admin", "sysadmin"],
       PUBLISHED: ["sponsor_dm", "sponsor_admin", "sysadmin"],
       ARCHIVED: ["sponsor_admin", "sysadmin"],
-      DRAFT: ["sponsor_designer", "sponsor_dm", "sponsor_admin", "sysadmin"]
+      DRAFT: ["sponsor_designer", "sponsor_dm", "sponsor_admin", "sysadmin"],
     };
 
     let selectedLibraryObjectId = null;
     let pendingLibraryAction = null; // { type: 'transition'/'instantiate', id, targetStatus, targetStudyId }
 
     // API triggers
-    async function apiTransitionLibraryObject(id, targetStatus, changeReason, role) {
+    async function apiTransitionLibraryObject(
+      id,
+      targetStatus,
+      changeReason,
+      role
+    ) {
       const userId = "usr_9921a88b2c410";
       const timestamp = new Date().toISOString();
       const secret = "internal-gateway-secret-12345"; // pragma: allowlist secret
 
-      const signature = await generateGatewaySignature(userId, role, timestamp, "2", changeReason, secret);
+      const signature = await generateGatewaySignature(
+        userId,
+        role,
+        timestamp,
+        "2",
+        changeReason,
+        secret
+      );
       const headers = {
         "X-User-Id": userId,
         "X-User-Roles": role,
@@ -1907,28 +1992,50 @@ if (typeof document !== "undefined") {
         "X-Gateway-Signature": signature,
         "X-Signature-Version": "2",
         "X-Change-Reason": changeReason,
-        "X-Sponsor-Id": "SPONSOR-A"
+        "X-Sponsor-Id": "SPONSOR-A",
       };
 
-      const response = await fetch(`http://localhost:8000/api/v1/mdr/library/${id}/transition`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...headers },
-        body: JSON.stringify({ status: targetStatus, change_reason: changeReason })
-      });
+      const response = await fetch(
+        `http://localhost:8000/api/v1/mdr/library/${id}/transition`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...headers },
+          body: JSON.stringify({
+            status: targetStatus,
+            change_reason: changeReason,
+          }),
+        }
+      );
       if (!response.ok) {
         let errData = null;
-        try { errData = await response.json(); } catch { /* ignore */ }
+        try {
+          errData = await response.json();
+        } catch {
+          /* ignore */
+        }
         throw new Error(errData?.detail || `API error ${response.status}`);
       }
       return await response.json();
     }
 
-    async function apiInstantiateLibraryObject(studyId, libraryObjectId, changeReason, role) {
+    async function apiInstantiateLibraryObject(
+      studyId,
+      libraryObjectId,
+      changeReason,
+      role
+    ) {
       const userId = "usr_9921a88b2c410";
       const timestamp = new Date().toISOString();
       const secret = "internal-gateway-secret-12345"; // pragma: allowlist secret
 
-      const signature = await generateGatewaySignature(userId, role, timestamp, "2", changeReason, secret);
+      const signature = await generateGatewaySignature(
+        userId,
+        role,
+        timestamp,
+        "2",
+        changeReason,
+        secret
+      );
       const headers = {
         "X-User-Id": userId,
         "X-User-Roles": role,
@@ -1936,17 +2043,24 @@ if (typeof document !== "undefined") {
         "X-Gateway-Signature": signature,
         "X-Signature-Version": "2",
         "X-Change-Reason": changeReason,
-        "X-Sponsor-Id": "SPONSOR-A"
+        "X-Sponsor-Id": "SPONSOR-A",
       };
 
-      const response = await fetch(`http://localhost:8000/api/v1/studies/${studyId}/library-instances`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...headers },
-        body: JSON.stringify({ library_object_id: libraryObjectId })
-      });
+      const response = await fetch(
+        `http://localhost:8000/api/v1/studies/${studyId}/library-instances`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...headers },
+          body: JSON.stringify({ library_object_id: libraryObjectId }),
+        }
+      );
       if (!response.ok) {
         let errData = null;
-        try { errData = await response.json(); } catch { /* ignore */ }
+        try {
+          errData = await response.json();
+        } catch {
+          /* ignore */
+        }
         throw new Error(errData?.detail || `API error ${response.status}`);
       }
       return await response.json();
@@ -1985,13 +2099,13 @@ if (typeof document !== "undefined") {
       if (type === "FORM") {
         html += `<p style="font-size: 0.85rem; margin-bottom: 6px;"><strong>Questions / Fields (${payload.items?.length || 0}):</strong></p>`;
         html += `<ul style="font-size: 0.85rem; padding-left: 20px; line-height: 1.4;">`;
-        (payload.items || []).forEach(item => {
+        (payload.items || []).forEach((item) => {
           html += `<li><code>${item.name}</code> (${item.data_type}${item.required ? ", required" : ""}): <em>"${item.question_text}"</em></li>`;
         });
         html += `</ul>`;
       } else if (type === "DATA_ELEMENT") {
         html += `<p style="font-size: 0.85rem;"><strong>Data Type:</strong> <code>${payload.data_type || "N/A"}</code></p>`;
-        html += `<p style="font-size: 0.85rem;"><strong>Allowable Units:</strong> ${(payload.allowable_units || []).map(u => `<code>${u}</code>`).join(", ") || "None"}</p>`;
+        html += `<p style="font-size: 0.85rem;"><strong>Allowable Units:</strong> ${(payload.allowable_units || []).map((u) => `<code>${u}</code>`).join(", ") || "None"}</p>`;
         html += `<p style="font-size: 0.85rem;"><strong>Default Unit:</strong> <code>${payload.default_unit || "None"}</code></p>`;
       } else if (type === "ARM") {
         const attr = payload.attributes || {};
@@ -2011,9 +2125,10 @@ if (typeof document !== "undefined") {
 
     function getHistoryHTML(obj) {
       if (!obj || !obj.history || obj.history.length === 0) return "";
-      let rows = obj.history.map(hist => {
-        const badgeClass = `status-${hist.status.toLowerCase().replace(/[^a-z0-9]/g, "-")}`;
-        return `
+      let rows = obj.history
+        .map((hist) => {
+          const badgeClass = `status-${hist.status.toLowerCase().replace(/[^a-z0-9]/g, "-")}`;
+          return `
           <tr>
             <td><strong>v${hist.version}</strong></td>
             <td><span class="badge ${badgeClass}">${hist.status}</span></td>
@@ -2024,7 +2139,8 @@ if (typeof document !== "undefined") {
             </td>
           </tr>
         `;
-      }).join("");
+        })
+        .join("");
 
       return `
         <div style="margin-top: 16px;">
@@ -2056,7 +2172,7 @@ if (typeof document !== "undefined") {
       if (allowedNext.length === 0) {
         html += `<span style="font-size: 0.85rem; color: #64748b; font-style: italic;">No further status transitions allowed in this state.</span>`;
       } else {
-        allowedNext.forEach(nextState => {
+        allowedNext.forEach((nextState) => {
           html += `
             <button class="btn btn-secondary btn-library-transition" data-id="${obj.id}" data-target-status="${nextState}" style="padding: 6px 12px; font-size: 0.8rem;">
               Transition to ${nextState.replace("_", " ")}
@@ -2083,13 +2199,15 @@ if (typeof document !== "undefined") {
     }
 
     function renderLibrary() {
-      const typeFilter = document.getElementById("library-filter-type")?.value || "";
-      const statusFilter = document.getElementById("library-filter-status")?.value || "";
+      const typeFilter =
+        document.getElementById("library-filter-type")?.value || "";
+      const statusFilter =
+        document.getElementById("library-filter-status")?.value || "";
 
       const container = document.getElementById("library-objects-list");
       if (!container) return;
 
-      const filtered = mockLibraryObjects.filter(obj => {
+      const filtered = mockLibraryObjects.filter((obj) => {
         if (typeFilter && obj.object_type !== typeFilter) return false;
         if (statusFilter && obj.status !== statusFilter) return false;
         return true;
@@ -2100,11 +2218,15 @@ if (typeof document !== "undefined") {
         return;
       }
 
-      container.innerHTML = filtered.map(obj => {
-        const isSelected = obj.id === selectedLibraryObjectId ? "border-color: var(--accent); background-color: var(--accent-bg);" : "border-color: var(--border);";
-        const badgeClass = `status-${obj.status.toLowerCase().replace(/[^a-z0-9]/g, "-")}`;
+      container.innerHTML = filtered
+        .map((obj) => {
+          const isSelected =
+            obj.id === selectedLibraryObjectId
+              ? "border-color: var(--accent); background-color: var(--accent-bg);"
+              : "border-color: var(--border);";
+          const badgeClass = `status-${obj.status.toLowerCase().replace(/[^a-z0-9]/g, "-")}`;
 
-        return `
+          return `
           <div class="library-item-card" data-id="${obj.id}" style="border: 2px solid; border-radius: 8px; padding: 12px; cursor: pointer; transition: all 0.2s; ${isSelected}">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
               <strong style="color: var(--primary); font-size: 0.95rem;">${obj.id}</strong>
@@ -2116,9 +2238,10 @@ if (typeof document !== "undefined") {
             </div>
           </div>
         `;
-      }).join("");
+        })
+        .join("");
 
-      container.querySelectorAll(".library-item-card").forEach(card => {
+      container.querySelectorAll(".library-item-card").forEach((card) => {
         card.addEventListener("click", () => {
           selectedLibraryObjectId = card.getAttribute("data-id");
           renderLibrary();
@@ -2151,7 +2274,9 @@ if (typeof document !== "undefined") {
         return;
       }
 
-      const obj = mockLibraryObjects.find(o => o.id === selectedLibraryObjectId);
+      const obj = mockLibraryObjects.find(
+        (o) => o.id === selectedLibraryObjectId
+      );
       if (!obj) {
         container.innerHTML = `<p style="color: var(--error); font-style: italic;">Selected object not found.</p>`;
         return;
@@ -2181,13 +2306,13 @@ if (typeof document !== "undefined") {
       html += `</div>`;
       container.innerHTML = html;
 
-      container.querySelectorAll(".btn-library-transition").forEach(btn => {
+      container.querySelectorAll(".btn-library-transition").forEach((btn) => {
         btn.addEventListener("click", () => {
           const targetStatus = btn.getAttribute("data-target-status");
           openLibraryReasonModal({
             type: "transition",
             id: obj.id,
-            targetStatus
+            targetStatus,
           });
         });
       });
@@ -2195,37 +2320,53 @@ if (typeof document !== "undefined") {
       const instBtn = document.getElementById("btn-library-instantiate");
       if (instBtn) {
         instBtn.addEventListener("click", () => {
-          const studyInput = document.getElementById("library-instantiate-study-select");
-          const targetStudyId = studyInput ? studyInput.value.trim() : currentUsdm.studyId;
+          const studyInput = document.getElementById(
+            "library-instantiate-study-select"
+          );
+          const targetStudyId = studyInput
+            ? studyInput.value.trim()
+            : currentUsdm.studyId;
 
           if (!targetStudyId) {
-            displayLibraryError("Validation Failure: Please enter a target Study ID.");
+            displayLibraryError(
+              "Validation Failure: Please enter a target Study ID."
+            );
             return;
           }
 
           openLibraryReasonModal({
             type: "instantiate",
             id: obj.id,
-            targetStudyId
+            targetStudyId,
           });
         });
       }
     }
 
-    async function handleTransitionLibraryConfirm(id, targetStatus, reason, role) {
+    async function handleTransitionLibraryConfirm(
+      id,
+      targetStatus,
+      reason,
+      role
+    ) {
       const allowedRoles = TRANSITION_ROLES_MAP[targetStatus] || [];
       if (!allowedRoles.includes(role)) {
-        displayLibraryError(`Authorization Failure: Role '${role}' is not authorized to transition object to '${targetStatus}'. Allowed roles: ${allowedRoles.join(", ")}`);
+        displayLibraryError(
+          `Authorization Failure: Role '${role}' is not authorized to transition object to '${targetStatus}'. Allowed roles: ${allowedRoles.join(", ")}`
+        );
         return;
       }
 
       try {
         await apiTransitionLibraryObject(id, targetStatus, reason, role);
       } catch (err) {
-        console.warn("API transition failed, continuing with sandbox-offline mock fallback:", err.message);
+        console.warn(
+          "API transition failed, continuing with sandbox-offline mock fallback:",
+          err.message
+        );
       }
 
-      const obj = mockLibraryObjects.find(o => o.id === id);
+      const obj = mockLibraryObjects.find((o) => o.id === id);
       if (obj) {
         const priorStatus = obj.status;
         obj.status = targetStatus;
@@ -2249,7 +2390,7 @@ if (typeof document !== "undefined") {
           status: targetStatus,
           change_reason: reason,
           updated_by: `usr_${role}_signed`,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         });
 
         clearLibraryError();
@@ -2264,7 +2405,7 @@ if (typeof document !== "undefined") {
             targetStatus,
             newVersion: nextVer,
             reason,
-            roleSigned: role
+            roleSigned: role,
           },
           reason
         );
@@ -2272,21 +2413,31 @@ if (typeof document !== "undefined") {
       }
     }
 
-    async function handleInstantiateLibraryConfirm(id, targetStudyId, reason, role) {
+    async function handleInstantiateLibraryConfirm(
+      id,
+      targetStudyId,
+      reason,
+      role
+    ) {
       try {
         await apiInstantiateLibraryObject(targetStudyId, id, reason, role);
       } catch (err) {
-        console.warn("API instantiation failed, continuing with sandbox-offline mock fallback:", err.message);
+        console.warn(
+          "API instantiation failed, continuing with sandbox-offline mock fallback:",
+          err.message
+        );
       }
 
-      const obj = mockLibraryObjects.find(o => o.id === id);
+      const obj = mockLibraryObjects.find((o) => o.id === id);
       if (!obj) {
         displayLibraryError(`Error: Object with ID ${id} not found.`);
         return;
       }
 
       if (targetStudyId !== currentUsdm.studyId) {
-        displayLibraryError(`Validation Error: Target study '${targetStudyId}' does not match active sandbox study '${currentUsdm.studyId}'.`);
+        displayLibraryError(
+          `Validation Error: Target study '${targetStudyId}' does not match active sandbox study '${currentUsdm.studyId}'.`
+        );
         return;
       }
 
@@ -2295,40 +2446,51 @@ if (typeof document !== "undefined") {
 
       if (type === "FORM") {
         if (!currentUsdm.forms) currentUsdm.forms = [];
-        if (currentUsdm.forms.some(f => f.name === obj.id)) {
-          displayLibraryError(`Governance Error: Form '${obj.id}' is already instantiated in study '${targetStudyId}'.`);
+        if (currentUsdm.forms.some((f) => f.name === obj.id)) {
+          displayLibraryError(
+            `Governance Error: Form '${obj.id}' is already instantiated in study '${targetStudyId}'.`
+          );
           return;
         }
         currentUsdm.forms.push({
           name: obj.id,
-          statuses: currentUsdm.visits ? currentUsdm.visits.map(() => "Pending") : ["Pending"]
+          statuses: currentUsdm.visits
+            ? currentUsdm.visits.map(() => "Pending")
+            : ["Pending"],
         });
       } else if (type === "ARM") {
         if (!currentUsdm.arms) currentUsdm.arms = [];
-        if (currentUsdm.arms.some(a => a.arm_id === obj.id)) {
-          displayLibraryError(`Governance Error: Arm '${obj.id}' is already instantiated in study '${targetStudyId}'.`);
+        if (currentUsdm.arms.some((a) => a.arm_id === obj.id)) {
+          displayLibraryError(
+            `Governance Error: Arm '${obj.id}' is already instantiated in study '${targetStudyId}'.`
+          );
           return;
         }
         currentUsdm.arms.push({
           arm_id: obj.id,
-          arm_name: `Arm: ${obj.id} (${payload.attributes?.arm_type || "TREATMENT"})`
+          arm_name: `Arm: ${obj.id} (${payload.attributes?.arm_type || "TREATMENT"})`,
         });
       } else if (type === "VISIT") {
         if (!currentUsdm.encounters) currentUsdm.encounters = [];
-        if (currentUsdm.encounters.some(e => e.encounter_id === obj.id)) {
-          displayLibraryError(`Governance Error: Visit/Encounter '${obj.id}' is already instantiated in study '${targetStudyId}'.`);
+        if (currentUsdm.encounters.some((e) => e.encounter_id === obj.id)) {
+          displayLibraryError(
+            `Governance Error: Visit/Encounter '${obj.id}' is already instantiated in study '${targetStudyId}'.`
+          );
           return;
         }
         currentUsdm.encounters.push({
           encounter_id: obj.id,
           encounter_name: `Visit ${obj.id}`,
-          epoch_id: currentUsdm.epochs && currentUsdm.epochs[0] ? currentUsdm.epochs[0].epoch_id : "EP-SCR",
-          sequence: currentUsdm.encounters.length + 1
+          epoch_id:
+            currentUsdm.epochs && currentUsdm.epochs[0]
+              ? currentUsdm.epochs[0].epoch_id
+              : "EP-SCR",
+          sequence: currentUsdm.encounters.length + 1,
         });
 
         if (currentUsdm.visits) {
           currentUsdm.visits.push(`Visit ${obj.id}`);
-          (currentUsdm.forms || []).forEach(f => {
+          (currentUsdm.forms || []).forEach((f) => {
             f.statuses.push("Pending");
           });
         }
@@ -2347,12 +2509,14 @@ if (typeof document !== "undefined") {
           targetStudyId,
           version: obj.version,
           reason,
-          roleSigned: role
+          roleSigned: role,
         },
         reason
       );
 
-      alert(`Successfully instantiated library object '${id}' into study '${targetStudyId}'!`);
+      alert(
+        `Successfully instantiated library object '${id}' into study '${targetStudyId}'!`
+      );
     }
 
     const libReasonModal = document.getElementById("library-reason-modal");
@@ -2395,7 +2559,9 @@ if (typeof document !== "undefined") {
         const role = libUserRole ? libUserRole.value : "sponsor_dm";
 
         if (!reason) {
-          alert("A valid justification / Change Reason is required under 21 CFR Part 11!");
+          alert(
+            "A valid justification / Change Reason is required under 21 CFR Part 11!"
+          );
           return;
         }
 
@@ -2405,9 +2571,19 @@ if (typeof document !== "undefined") {
         closeLibraryReasonModal();
 
         if (action.type === "transition") {
-          handleTransitionLibraryConfirm(action.id, action.targetStatus, reason, role);
+          handleTransitionLibraryConfirm(
+            action.id,
+            action.targetStatus,
+            reason,
+            role
+          );
         } else if (action.type === "instantiate") {
-          handleInstantiateLibraryConfirm(action.id, action.targetStudyId, reason, role);
+          handleInstantiateLibraryConfirm(
+            action.id,
+            action.targetStudyId,
+            reason,
+            role
+          );
         }
       });
     }
@@ -2425,7 +2601,9 @@ if (typeof document !== "undefined") {
         displayLibraryError,
         clearLibraryError,
         getSelectedLibraryObjectId: () => selectedLibraryObjectId,
-        setSelectedLibraryObjectId: (id) => { selectedLibraryObjectId = id; }
+        setSelectedLibraryObjectId: (id) => {
+          selectedLibraryObjectId = id;
+        },
       };
     }
 

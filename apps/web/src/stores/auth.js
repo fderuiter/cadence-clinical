@@ -82,11 +82,19 @@ export const useAuthStore = defineStore("auth", {
       if (window.keycloakInstance && !this.isDemoMode) {
         await window.keycloakInstance.login(options);
       } else {
-        console.warn("Keycloak not initialized or running in demo mode. Logging in with offline mock.");
+        console.warn(
+          "Keycloak not initialized or running in demo mode. Logging in with offline mock."
+        );
         this.isAuthenticated = true;
         this.isDemoMode = true;
         // Seed default roles so the offline UI is functional
-        this.rawRoles = ["Sponsor Admin", "CRA", "Data Manager", "Site Investigator", "Auditor"];
+        this.rawRoles = [
+          "Sponsor Admin",
+          "CRA",
+          "Data Manager",
+          "Site Investigator",
+          "Auditor",
+        ];
       }
     },
     async logout(options = {}) {

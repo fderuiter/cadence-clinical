@@ -697,12 +697,18 @@ async def test_tickets_optimistic_locking_and_explicit_endpoints():
     (d) verification of the detailed audit log structure.
     """
     client = TestClient(app)
-    headers = get_auth_headers(roles="admin", change_reason="Lifecycle transition tests")
+    headers = get_auth_headers(
+        roles="admin", change_reason="Lifecycle transition tests"
+    )
 
     # 1. Create a ticket
     res_create = client.post(
         "/api/v1/tickets",
-        json={"title": "Locking Test", "description": "Lock desc", "priority": "MEDIUM"},
+        json={
+            "title": "Locking Test",
+            "description": "Lock desc",
+            "priority": "MEDIUM",
+        },
         headers=headers,
     )
     assert res_create.status_code == 201
@@ -750,7 +756,11 @@ async def test_tickets_optimistic_locking_and_explicit_endpoints():
     # Explicit /assign endpoint check
     res_assign = client.post(
         f"/api/v1/tickets/{ticket_id}/assign",
-        json={"assignee_user": "bob_developer", "assignee_role": "developer", "version_index": 1},
+        json={
+            "assignee_user": "bob_developer",
+            "assignee_role": "developer",
+            "version_index": 1,
+        },
         headers=headers,
     )
     assert res_assign.status_code == 200
@@ -789,7 +799,10 @@ async def test_tickets_optimistic_locking_and_explicit_endpoints():
         headers=headers,
     )
     assert res_mod_cancelled.status_code == 400
-    assert "Cannot update ticket because it is in terminal state" in res_mod_cancelled.json()["detail"]
+    assert (
+        "Cannot update ticket because it is in terminal state"
+        in res_mod_cancelled.json()["detail"]
+    )
 
     # Reopening terminal ticket is allowed (from CANCELLED to REOPENED)
     res_reopen = client.put(
@@ -828,7 +841,9 @@ async def test_tickets_optimistic_locking_and_explicit_endpoints():
 
     # (d) Verification of the detailed audit log structure
     # Fetch audit logs for this ticket
-    res_audit = client.get(f"/api/v1/tickets/audit-logs?ticket_id={ticket_id}", headers=headers)
+    res_audit = client.get(
+        f"/api/v1/tickets/audit-logs?ticket_id={ticket_id}", headers=headers
+    )
     assert res_audit.status_code == 200
     logs = res_audit.json()
     # Find TICKET_ASSIGN log
@@ -845,6 +860,10 @@ async def test_tickets_optimistic_locking_and_explicit_endpoints():
     assert "assignee_role:" in assign_log["details"]
 
     # Find TICKET_TRANSITION log
-    transition_log = next((log for log in logs if log["action"] == "TICKET_TRANSITION"), None)
+    transition_log = next(
+        (log for log in logs if log["action"] == "TICKET_TRANSITION"), None
+    )
     assert transition_log is not None
-    assert "Source State: 'OPEN', Target State: 'IN_PROGRESS'" in transition_log["details"]
+    assert (
+        "Source State: 'OPEN', Target State: 'IN_PROGRESS'" in transition_log["details"]
+    )

@@ -574,6 +574,7 @@ async def test_instantiate_library_object_inaccessible_study():
     Verifies that instantiation requests targeting an inaccessible (cross-sponsor) study are rejected.
     """
     from apps.designer.db import MOCK_STUDIES
+
     # Setup target study for sponsor "spon_active"
     MOCK_STUDIES["study_active"] = {
         "study_id": "study_active",

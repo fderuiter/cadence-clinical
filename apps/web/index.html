@@ -47,9 +47,7 @@
                 </button>
               </li>
               <li class="nav-item" id="tab-btn-library">
-                <button type="button">
-                  <span>📚</span> Global Library
-                </button>
+                <button type="button"><span>📚</span> Global Library</button>
               </li>
             </ul>
           </div>
@@ -319,7 +317,9 @@
             <div class="section-header">
               <h2>Global Library Management</h2>
               <p>
-                Browse sponsor-scoped global library objects, review version history, request governed transitions, and instantiate definitions.
+                Browse sponsor-scoped global library objects, review version
+                history, request governed transitions, and instantiate
+                definitions.
               </p>
             </div>
 
@@ -328,15 +328,31 @@
               <div class="card">
                 <div class="card-title">
                   <span>Library Objects Catalog</span>
-                  <div style="display: flex; gap: 8px;">
-                    <select id="library-filter-type" style="padding: 6px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem;">
+                  <div style="display: flex; gap: 8px">
+                    <select
+                      id="library-filter-type"
+                      style="
+                        padding: 6px;
+                        border: 1px solid var(--border);
+                        border-radius: 6px;
+                        font-size: 0.85rem;
+                      "
+                    >
                       <option value="">All Types</option>
                       <option value="FORM">Form</option>
                       <option value="DATA_ELEMENT">Data Element</option>
                       <option value="ARM">Arm</option>
                       <option value="VISIT">Visit</option>
                     </select>
-                    <select id="library-filter-status" style="padding: 6px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem;">
+                    <select
+                      id="library-filter-status"
+                      style="
+                        padding: 6px;
+                        border: 1px solid var(--border);
+                        border-radius: 6px;
+                        font-size: 0.85rem;
+                      "
+                    >
                       <option value="">All Statuses</option>
                       <option value="DRAFT">Draft</option>
                       <option value="IN_REVIEW">In Review</option>
@@ -348,9 +364,31 @@
                   </div>
                 </div>
 
-                <div id="library-error-banner" style="display: none; background-color: var(--error-bg); border: 1px solid rgba(220, 38, 38, 0.2); color: var(--error); padding: 12px; border-radius: 6px; margin-bottom: 16px; font-size: 0.9rem; font-weight: 600;"></div>
+                <div
+                  id="library-error-banner"
+                  style="
+                    display: none;
+                    background-color: var(--error-bg);
+                    border: 1px solid rgba(220, 38, 38, 0.2);
+                    color: var(--error);
+                    padding: 12px;
+                    border-radius: 6px;
+                    margin-bottom: 16px;
+                    font-size: 0.9rem;
+                    font-weight: 600;
+                  "
+                ></div>
 
-                <div id="library-objects-list" style="display: flex; flex-direction: column; gap: 12px; max-height: 500px; overflow-y: auto;">
+                <div
+                  id="library-objects-list"
+                  style="
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                    max-height: 500px;
+                    overflow-y: auto;
+                  "
+                >
                   <!-- Dynamic library object list injected here -->
                 </div>
               </div>
@@ -358,8 +396,15 @@
               <!-- Right Column: Details & Governance -->
               <div class="card" id="library-details-panel">
                 <div class="card-title">Object Details & Governance</div>
-                <div id="library-details-content" style="display: flex; flex-direction: column; gap: 16px;">
-                  <p style="color: #64748b; font-style: italic;">Select a library object from the catalog to inspect attributes, view audit trail, transition its lifecycle, or instantiate it into the active study version.</p>
+                <div
+                  id="library-details-content"
+                  style="display: flex; flex-direction: column; gap: 16px"
+                >
+                  <p style="color: #64748b; font-style: italic">
+                    Select a library object from the catalog to inspect
+                    attributes, view audit trail, transition its lifecycle, or
+                    instantiate it into the active study version.
+                  </p>
                 </div>
               </div>
             </div>
@@ -410,31 +455,74 @@
       </div>
 
       <!-- Global Library Reason Modal -->
-      <div class="modal-overlay" id="library-reason-modal" style="display: none;">
+      <div
+        class="modal-overlay"
+        id="library-reason-modal"
+        style="display: none"
+      >
         <div class="modal">
-          <div class="modal-header" id="library-reason-modal-title">Global Library Action Signature</div>
+          <div class="modal-header" id="library-reason-modal-title">
+            Global Library Action Signature
+          </div>
           <div class="modal-body">
             <p>
-              To comply with <strong>21 CFR Part 11 / EU Annex 11</strong>, you must document an action justification and verify your credentials.
+              To comply with <strong>21 CFR Part 11 / EU Annex 11</strong>, you
+              must document an action justification and verify your credentials.
             </p>
             <div class="form-group mb-12">
-              <label for="library-change-reason">Reason for Action / Modification</label>
-              <textarea id="library-change-reason" placeholder="Explain the regulatory or clinical justification for this library action..." required style="width: 100%; height: 80px; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-family: var(--font); font-size: 0.9rem; resize: vertical;"></textarea>
+              <label for="library-change-reason"
+                >Reason for Action / Modification</label
+              >
+              <textarea
+                id="library-change-reason"
+                placeholder="Explain the regulatory or clinical justification for this library action..."
+                required
+                style="
+                  width: 100%;
+                  height: 80px;
+                  padding: 10px;
+                  border: 1px solid var(--border);
+                  border-radius: 6px;
+                  font-family: var(--font);
+                  font-size: 0.9rem;
+                  resize: vertical;
+                "
+              ></textarea>
             </div>
             <div class="form-group">
               <label for="library-user-role">Simulated Role Signature</label>
-              <select id="library-user-role" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-family: var(--font); font-size: 0.9rem;">
+              <select
+                id="library-user-role"
+                style="
+                  width: 100%;
+                  padding: 10px;
+                  border: 1px solid var(--border);
+                  border-radius: 6px;
+                  font-family: var(--font);
+                  font-size: 0.9rem;
+                "
+              >
                 <option value="sponsor_dm">Sponsor DM (sponsor_dm)</option>
-                <option value="sponsor_designer">Sponsor Designer (sponsor_designer)</option>
-                <option value="sponsor_admin">Sponsor Admin (sponsor_admin)</option>
-                <option value="sysadmin">System Administrator (sysadmin)</option>
-                <option value="unauthorized_role">Regulatory Auditor (unauthorized)</option>
+                <option value="sponsor_designer">
+                  Sponsor Designer (sponsor_designer)
+                </option>
+                <option value="sponsor_admin">
+                  Sponsor Admin (sponsor_admin)
+                </option>
+                <option value="sysadmin">
+                  System Administrator (sysadmin)
+                </option>
+                <option value="unauthorized_role">
+                  Regulatory Auditor (unauthorized)
+                </option>
               </select>
             </div>
           </div>
           <div class="modal-footer">
             <button id="btn-library-cancel-action" class="btn">Cancel</button>
-            <button id="btn-library-confirm-action" class="btn btn-primary">Sign & Execute</button>
+            <button id="btn-library-confirm-action" class="btn btn-primary">
+              Sign & Execute
+            </button>
           </div>
         </div>
       </div>

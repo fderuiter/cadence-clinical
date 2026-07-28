@@ -238,9 +238,7 @@ def test_proxy_requests_paths(monkeypatch: pytest.MonkeyPatch) -> None:
         )
 
         # Test safety prefix
-        res = client.get(
-            "/safety/test", headers={"Authorization": f"Bearer {token}"}
-        )
+        res = client.get("/safety/test", headers={"Authorization": f"Bearer {token}"})
         assert res.status_code == 200
         assert str(mock_send.call_args.args[0].url) == "http://localhost:8008/test"
 

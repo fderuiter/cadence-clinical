@@ -27,7 +27,7 @@ async function runAxe(htmlString) {
         "html-has-lang": { enabled: false },
         "landmark-one-main": { enabled: false },
         "page-has-heading-one": { enabled: false },
-        "region": { enabled: false },
+        region: { enabled: false },
         "color-contrast": { enabled: false }, // jsdom does not support style/layout calculation
       },
     });
@@ -49,7 +49,12 @@ describe("In-Memory accessibility audits for shared UI components", () => {
       { value: "M", label: "Male" },
       { value: "F", label: "Female" },
     ];
-    const html = createClinicalRadioGrid("gender", "Gender Selection", options, "F");
+    const html = createClinicalRadioGrid(
+      "gender",
+      "Gender Selection",
+      options,
+      "F"
+    );
     const violations = await runAxe(html);
     expect(violations).toEqual([]);
   });
@@ -57,9 +62,7 @@ describe("In-Memory accessibility audits for shared UI components", () => {
   it("createClinicalVisitMatrix has zero accessibility violations", async () => {
     const matrixData = {
       visits: ["Screening", "Week 2"],
-      forms: [
-        { name: "Demographics", statuses: ["Complete", "N/A"] },
-      ],
+      forms: [{ name: "Demographics", statuses: ["Complete", "N/A"] }],
     };
     const html = createClinicalVisitMatrix(matrixData);
     const violations = await runAxe(html);
@@ -70,12 +73,16 @@ describe("In-Memory accessibility audits for shared UI components", () => {
     const soaData = {
       arms: [{ arm_id: "ARM-A", arm_name: "Arm A" }],
       epochs: [{ epoch_id: "EP-1", epoch_name: "Epoch 1", arm_id: "ARM-A" }],
-      encounters: [{ encounter_id: "E1", encounter_name: "Encounter 1", epoch_id: "EP-1" }],
+      encounters: [
+        { encounter_id: "E1", encounter_name: "Encounter 1", epoch_id: "EP-1" },
+      ],
       rows: [
         {
           activity_id: "ACT1",
           activity_name: "Procedure 1",
-          cells: [{ encounter_id: "E1", is_applicable: true, details: "Mandatory" }],
+          cells: [
+            { encounter_id: "E1", is_applicable: true, details: "Mandatory" },
+          ],
         },
       ],
     };
@@ -91,7 +98,11 @@ describe("In-Memory accessibility audits for shared UI components", () => {
   });
 
   it("createQueryPanel has zero accessibility violations", async () => {
-    const query = { status: "OPEN", message: "Discrepancy message", createdBy: "CRA" };
+    const query = {
+      status: "OPEN",
+      message: "Discrepancy message",
+      createdBy: "CRA",
+    };
     const html = createQueryPanel("fieldX", query);
     const violations = await runAxe(html);
     expect(violations).toEqual([]);
@@ -114,7 +125,12 @@ describe("In-Memory accessibility audits for shared UI components", () => {
   });
 
   it("createClinicalLookupInput has zero accessibility violations", async () => {
-    const html = createClinicalLookupInput("meddraCode", "MedDRA Code", "", "loading");
+    const html = createClinicalLookupInput(
+      "meddraCode",
+      "MedDRA Code",
+      "",
+      "loading"
+    );
     const violations = await runAxe(html);
     expect(violations).toEqual([]);
   });

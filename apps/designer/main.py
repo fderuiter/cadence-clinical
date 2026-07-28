@@ -718,7 +718,9 @@ async def forward_to_etmf(
     }
 
     timestamp = str(time.time())
-    secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode("utf-8")
+    secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode(
+        "utf-8"
+    )
     sig = generate_gateway_signature(
         user_id=user_id,
         roles=roles,
@@ -757,12 +759,12 @@ async def export_protocol(
     if format not in ("pdf", "docx"):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Invalid format value. Supported formats: pdf, docx."
+            detail="Invalid format value. Supported formats: pdf, docx.",
         )
     if output not in ("narrative", "synopsis", "soa", "combined"):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Invalid output value. Supported outputs: narrative, synopsis, soa, combined."
+            detail="Invalid output value. Supported outputs: narrative, synopsis, soa, combined.",
         )
 
     # 2. Study existence check
@@ -792,6 +794,7 @@ async def export_protocol(
     try:
         usdm_dict = map_study_to_usdm(study_data)
         from apps.designer.mapper import to_uuid
+
         usdm_dict["id"] = to_uuid(usdm_dict["id"], "study")
         study_obj = usdm_model.Study.model_validate(usdm_dict)
     except Exception as e:
@@ -808,9 +811,7 @@ async def export_protocol(
             version_index=max(1, version_index),
         )
     except Exception as e:
-        raise HTTPException(
-            status_code=400, detail=f"Assembly Error: {str(e)}"
-        )
+        raise HTTPException(status_code=400, detail=f"Assembly Error: {str(e)}")
 
     # Render off the async request event loop to protect performance
     if format == "pdf":
@@ -818,13 +819,12 @@ async def export_protocol(
     elif format == "docx":
         result = await run_in_threadpool(render_protocol_to_docx, doc_view, output)
     else:
-        raise HTTPException(
-            status_code=422, detail=f"Unsupported format: {format}"
-        )
+        raise HTTPException(status_code=422, detail=f"Unsupported format: {format}")
 
     # 4. Record Part 11 compliant immutable generation audit event
     import uuid
     from datetime import timezone
+
     audit_event = {
         "id": str(uuid.uuid4()),
         "actor": user_id,
@@ -871,12 +871,22 @@ async def export_protocol(
             pass
 
     # 5. Configurable best-effort or strict forwarding to eTMF
-    forward_enabled = os.getenv("ETMF_FORWARDING_ENABLED", "true").lower() in ("true", "1", "yes")
-    strict_archival = os.getenv("ETMF_STRICT_ARCHIVAL", "false").lower() in ("true", "1", "yes")
+    forward_enabled = os.getenv("ETMF_FORWARDING_ENABLED", "true").lower() in (
+        "true",
+        "1",
+        "yes",
+    )
+    strict_archival = os.getenv("ETMF_STRICT_ARCHIVAL", "false").lower() in (
+        "true",
+        "1",
+        "yes",
+    )
 
     if forward_enabled:
         try:
-            roles = getattr(request.state, "roles", "sysadmin") if request else "sysadmin"
+            roles = (
+                getattr(request.state, "roles", "sysadmin") if request else "sysadmin"
+            )
             etmf_metadata = {
                 "creator": user_id,
                 "change_reason": change_reason,
@@ -909,19 +919,21 @@ async def export_protocol(
                         change_reason=change_reason,
                     )
                 except Exception as e:
-                    print(f"[ARCHIVAL WARNING] Best-effort eTMF forwarding failed: {str(e)}")
+                    print(
+                        f"[ARCHIVAL WARNING] Best-effort eTMF forwarding failed: {str(e)}"
+                    )
         except Exception as e:
             if strict_archival:
                 raise HTTPException(
                     status_code=500,
-                    detail=f"Strict Archival Failure: Failed to archive generated protocol to eTMF. Error: {str(e)}"
+                    detail=f"Strict Archival Failure: Failed to archive generated protocol to eTMF. Error: {str(e)}",
                 )
             else:
-                print(f"[ARCHIVAL WARNING] Best-effort eTMF forwarding failed: {str(e)}")
+                print(
+                    f"[ARCHIVAL WARNING] Best-effort eTMF forwarding failed: {str(e)}"
+                )
 
-    headers = {
-        "Content-Disposition": f'attachment; filename="{result.filename}"'
-    }
+    headers = {"Content-Disposition": f'attachment; filename="{result.filename}"'}
     return Response(
         content=result.content,
         media_type=result.media_type,
@@ -1284,6 +1296,7 @@ async def run_round_trip_endpoint(
     Returns classification, fidelity details, source format, detected/resolved version, and mapping diagnostics.
     """
     from apps.designer.orchestration import execute_round_trip
+
     report = execute_round_trip(payload)
     return report
 

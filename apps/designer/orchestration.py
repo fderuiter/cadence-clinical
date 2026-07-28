@@ -73,16 +73,16 @@ def execute_round_trip(source_payload: Dict[str, Any]) -> Dict[str, Any]:
                             "field": "all",
                             "value": "Unable to parse source",
                             "is_material": True,
-                            "reason": f"Ingestion pipeline failed: {str(e)}"
+                            "reason": f"Ingestion pipeline failed: {str(e)}",
                         }
                     ],
-                    "altered": []
+                    "altered": [],
                 },
                 "mapping_diagnostics": {
                     "unsupported_constructs": [str(e)],
                     "errors": errors,
-                    "warnings": ["Payload failed parsing validation."]
-                }
+                    "warnings": ["Payload failed parsing validation."],
+                },
             }
 
         # 2. Map back to USDM
@@ -113,16 +113,16 @@ def execute_round_trip(source_payload: Dict[str, Any]) -> Dict[str, Any]:
                             "field": "all",
                             "value": "Unable to map source",
                             "is_material": True,
-                            "reason": f"Export pipeline failed: {str(e)}"
+                            "reason": f"Export pipeline failed: {str(e)}",
                         }
                     ],
-                    "altered": []
+                    "altered": [],
                 },
                 "mapping_diagnostics": {
                     "unsupported_constructs": [str(e)],
                     "errors": errors,
-                    "warnings": ["Source internal payload failed mapping."]
-                }
+                    "warnings": ["Source internal payload failed mapping."],
+                },
             }
 
         # 2. Map USDM back to Internal Study Projection
@@ -143,10 +143,16 @@ def execute_round_trip(source_payload: Dict[str, Any]) -> Dict[str, Any]:
     try:
         cycles = detect_circular_dependencies(rules)
         if cycles:
-            unsupported_constructs.append(f"Circular skip-logic dependency detected: {', '.join(cycles)}")
-            warnings.append("Circular dependencies might cause evaluation infinite loops.")
+            unsupported_constructs.append(
+                f"Circular skip-logic dependency detected: {', '.join(cycles)}"
+            )
+            warnings.append(
+                "Circular dependencies might cause evaluation infinite loops."
+            )
     except Exception as e:
-        warnings.append(f"Failed to check for circular skip-logic dependencies: {str(e)}")
+        warnings.append(
+            f"Failed to check for circular skip-logic dependencies: {str(e)}"
+        )
 
     # Check for unsupported stochastic or complex math operators
     # (By checking if rule condition has anything not standard)
@@ -158,7 +164,9 @@ def execute_round_trip(source_payload: Dict[str, Any]) -> Dict[str, Any]:
         for k, v in flat_cond.items():
             if "operator" in k and isinstance(v, str):
                 if v not in standard_operators:
-                    unsupported_constructs.append(f"Stochastic/Complex mathematical operator '{v}' is unsupported.")
+                    unsupported_constructs.append(
+                        f"Stochastic/Complex mathematical operator '{v}' is unsupported."
+                    )
 
     # 3. Perform path-by-path comparison
     comparison_report = compare_payloads(source_payload, round_tripped)
@@ -166,12 +174,18 @@ def execute_round_trip(source_payload: Dict[str, Any]) -> Dict[str, Any]:
     # Classify as lossless only when:
     # - The comparison reports 'lossless' == True (no material differences exist)
     # - There are no mapping errors or unsupported constructs detected
-    is_lossless = comparison_report["lossless"] and len(errors) == 0 and len(unsupported_constructs) == 0
+    is_lossless = (
+        comparison_report["lossless"]
+        and len(errors) == 0
+        and len(unsupported_constructs) == 0
+    )
     classification = "lossless" if is_lossless else "lossy"
 
     # Collect warnings if there are non-material differences
     if comparison_report["non_material_difference_count"] > 0:
-        warnings.append(f"Detected {comparison_report['non_material_difference_count']} non-material representation updates (e.g. metadata tags or ID formatting).")
+        warnings.append(
+            f"Detected {comparison_report['non_material_difference_count']} non-material representation updates (e.g. metadata tags or ID formatting)."
+        )
 
     return {
         "classification": classification,
@@ -181,11 +195,11 @@ def execute_round_trip(source_payload: Dict[str, Any]) -> Dict[str, Any]:
         "fidelity_details": {
             "added": comparison_report["added"],
             "dropped": comparison_report["dropped"],
-            "altered": comparison_report["altered"]
+            "altered": comparison_report["altered"],
         },
         "mapping_diagnostics": {
             "unsupported_constructs": unsupported_constructs,
             "errors": errors,
-            "warnings": warnings
-        }
+            "warnings": warnings,
+        },
     }

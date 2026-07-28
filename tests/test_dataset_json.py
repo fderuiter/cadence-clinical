@@ -447,7 +447,10 @@ def test_validator_controlled_terminology_failures():
     with pytest.raises(DatasetJSONValidationError) as exc:
         validate_dataset_json(dj)
     assert "CONTROLLED_TERMINOLOGY_VIOLATION" in str(exc.value)
-    assert "SEX value 'INVALID_SEX' is not a valid CDISC controlled terminology." in str(exc.value)
+    assert (
+        "SEX value 'INVALID_SEX' is not a valid CDISC controlled terminology."
+        in str(exc.value)
+    )
 
     # Invalid RACE
     bundle_race = {
@@ -467,7 +470,10 @@ def test_validator_controlled_terminology_failures():
     with pytest.raises(DatasetJSONValidationError) as exc:
         validate_dataset_json(dj)
     assert "CONTROLLED_TERMINOLOGY_VIOLATION" in str(exc.value)
-    assert "RACE value 'INVALID_RACE' is not a valid CDISC controlled terminology." in str(exc.value)
+    assert (
+        "RACE value 'INVALID_RACE' is not a valid CDISC controlled terminology."
+        in str(exc.value)
+    )
 
 
 def test_validator_null_flavor_and_stat_reasnd_consistency():
@@ -513,7 +519,10 @@ def test_validator_null_flavor_and_stat_reasnd_consistency():
     with pytest.raises(DatasetJSONValidationError) as exc:
         validate_dataset_json(dj)
     assert "NULL_FLAVOR_INCONSISTENCY" in str(exc.value)
-    assert "VSSTAT is 'NOT DONE', but measurement field VSORRES is populated with '120.0'." in str(exc.value)
+    assert (
+        "VSSTAT is 'NOT DONE', but measurement field VSORRES is populated with '120.0'."
+        in str(exc.value)
+    )
 
 
 def test_validator_supp_dataset_linkage_and_structure():
@@ -541,7 +550,7 @@ def test_validator_supp_dataset_linkage_and_structure():
                 "QLABEL": "Location",
                 "QVAL": "LEFT",
             }
-        ]
+        ],
     }
     dj = serialize_to_dataset_json(data=bundle_rdomain_mismatch, study_id="STUDY-01")
     with pytest.raises(DatasetJSONValidationError) as exc:
@@ -572,7 +581,7 @@ def test_validator_supp_dataset_linkage_and_structure():
                 "QLABEL": "Location",
                 "QVAL": "LEFT",
             }
-        ]
+        ],
     }
     dj = serialize_to_dataset_json(data=bundle_parent_missing, study_id="STUDY-01")
     with pytest.raises(DatasetJSONValidationError) as exc:
@@ -603,13 +612,16 @@ def test_validator_supp_dataset_linkage_and_structure():
                 "QLABEL": "Location",
                 "QVAL": "LEFT",
             }
-        ]
+        ],
     }
     dj = serialize_to_dataset_json(data=bundle_idvar_missing, study_id="STUDY-01")
     with pytest.raises(DatasetJSONValidationError) as exc:
         validate_dataset_json(dj)
     assert "SUPPLEMENTAL_QUALIFIER_VIOLATION" in str(exc.value)
-    assert "Identifying variable IDVAR='INVALID_VAR' not found in parent dataset AE" in str(exc.value)
+    assert (
+        "Identifying variable IDVAR='INVALID_VAR' not found in parent dataset AE"
+        in str(exc.value)
+    )
 
     # 4. IDVARVAL value mismatch
     bundle_idvarval_mismatch = {
@@ -634,13 +646,16 @@ def test_validator_supp_dataset_linkage_and_structure():
                 "QLABEL": "Location",
                 "QVAL": "LEFT",
             }
-        ]
+        ],
     }
     dj = serialize_to_dataset_json(data=bundle_idvarval_mismatch, study_id="STUDY-01")
     with pytest.raises(DatasetJSONValidationError) as exc:
         validate_dataset_json(dj)
     assert "SUPPLEMENTAL_QUALIFIER_VIOLATION" in str(exc.value)
-    assert "Identifying variable value IDVARVAL='999' for IDVAR='AESEQ' not found in parent record" in str(exc.value)
+    assert (
+        "Identifying variable value IDVARVAL='999' for IDVAR='AESEQ' not found in parent record"
+        in str(exc.value)
+    )
 
     # 5. Completely valid SUPP-- linkage passes validation
     bundle_valid = {
@@ -665,7 +680,7 @@ def test_validator_supp_dataset_linkage_and_structure():
                 "QLABEL": "Location",
                 "QVAL": "LEFT",
             }
-        ]
+        ],
     }
     dj = serialize_to_dataset_json(data=bundle_valid, study_id="STUDY-01")
     validate_dataset_json(dj)  # Should pass with no exception
