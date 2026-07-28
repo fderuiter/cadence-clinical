@@ -29,6 +29,26 @@ class CTMSAuditLog(Base):
     user_role: Mapped[str] = mapped_column(String(255), nullable=False)
     action: Mapped[str] = mapped_column(String(50), nullable=False)
     details: Mapped[str] = mapped_column(String(1000), nullable=False)
+    cryptographic_seal: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+
+
+class CTMSAuditLedgerSeal(Base):
+    """
+    Represents a cryptographic block seal for the CTMS audit logs.
+    """
+
+    __tablename__ = "ctms_audit_ledger_seals"
+
+    block_index: Mapped[int] = mapped_column(
+        Integer, primary_key=True, autoincrement=True
+    )
+    previous_block_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    current_block_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    sealed_record_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    merkle_root_hash: Mapped[str] = mapped_column(String(64), nullable=False)
 
 
 class CTMSStudy(Base):

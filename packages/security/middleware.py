@@ -277,10 +277,12 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
             current_site_id,
             current_sponsor_id,
             current_unblinded_access,
+            current_user_roles,
         )
 
         # Set the thread-safe context variables
         user_token = current_user_id.set(user_id)
+        roles_token = current_user_roles.set(roles or "system")
         reason_token = current_change_reason.set(change_reason or "system_operation")
         ip_token = current_ip_address.set(ip_address)
         ts_token = current_timestamp.set(
@@ -295,6 +297,7 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
         finally:
             # Clean up the context variables to prevent context leakage across tasks
             current_user_id.reset(user_token)
+            current_user_roles.reset(roles_token)
             current_change_reason.reset(reason_token)
             current_ip_address.reset(ip_token)
             current_timestamp.reset(ts_token)

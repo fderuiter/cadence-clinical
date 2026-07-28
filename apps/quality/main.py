@@ -153,6 +153,18 @@ class CAPAResponse(BaseModel):
     reason_for_change: str
 
 
+async def quality_startup() -> None:
+    """Startup hook to start background Quality sealer."""
+    from apps.quality.sealer import start_background_quality_sealer
+    await start_background_quality_sealer(db_manager.get_session_maker())
+
+
+async def quality_shutdown() -> None:
+    """Shutdown hook to stop background Quality sealer."""
+    from apps.quality.sealer import stop_background_quality_sealer
+    await stop_background_quality_sealer()
+
+
 DATABASE_URL = os.getenv("QUALITY_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 
@@ -163,6 +175,8 @@ app = FastAPI(
         db_manager=db_manager,
         database_url=DATABASE_URL,
         base_metadata=Base.metadata,
+        startup_hooks=[quality_startup],
+        shutdown_hooks=[quality_shutdown],
     ),
 )
 

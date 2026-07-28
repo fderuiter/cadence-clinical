@@ -199,3 +199,23 @@ class QualityAuditLog(Base):
     details: Mapped[str] = mapped_column(String(1000), nullable=False)
     record_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     change_reason: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
+    cryptographic_seal: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+
+
+class QualityAuditLedgerSeal(Base):
+    """
+    Represents a cryptographic block seal for the Quality audit logs.
+    """
+
+    __tablename__ = "quality_audit_ledger_seals"
+
+    block_index: Mapped[int] = mapped_column(
+        Integer, primary_key=True, autoincrement=True
+    )
+    previous_block_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    current_block_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    sealed_record_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    merkle_root_hash: Mapped[str] = mapped_column(String(64), nullable=False)

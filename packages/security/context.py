@@ -9,6 +9,7 @@ R = TypeVar("R")
 
 # Context variables for the current execution context
 current_user_id = contextvars.ContextVar("current_user_id", default="system")
+current_user_roles = contextvars.ContextVar("current_user_roles", default="system")
 current_change_reason = contextvars.ContextVar(
     "current_change_reason", default="system_operation"
 )
@@ -29,6 +30,7 @@ current_signature_context = contextvars.ContextVar(
 @contextmanager
 def audit_context(
     user_id: str | None = None,
+    user_roles: str | None = None,
     change_reason: str | None = None,
     ip_address: str | None = None,
     timestamp: datetime | None = None,
@@ -45,6 +47,7 @@ def audit_context(
 
     Args:
         user_id (str | None): The unique identifier of the initiating user.
+        user_roles (str | None): The roles of the initiating user.
         change_reason (str | None): The justification or reason for change.
         ip_address (str | None): The network IP address of the client.
         timestamp (datetime | None): The timestamp of the operation.
@@ -54,6 +57,7 @@ def audit_context(
         None
     """
     u = user_id if user_id is not None else "system"
+    ur = user_roles if user_roles is not None else "system"
     r = change_reason if change_reason is not None else "system_operation"
     ip = ip_address if ip_address is not None else "127.0.0.1"
     ts = (
@@ -63,6 +67,7 @@ def audit_context(
     )
 
     user_token = current_user_id.set(u)
+    roles_token = current_user_roles.set(ur)
     reason_token = current_change_reason.set(r)
     ip_token = current_ip_address.set(ip)
     ts_token = current_timestamp.set(ts)
@@ -74,6 +79,7 @@ def audit_context(
         yield
     finally:
         current_user_id.reset(user_token)
+        current_user_roles.reset(roles_token)
         current_change_reason.reset(reason_token)
         current_ip_address.reset(ip_token)
         current_timestamp.reset(ts_token)
