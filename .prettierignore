@@ -1,0 +1,19 @@
+# Ignore build directories and outputs
+dist/
+build/
+out/
+.dist/
+.turbo/
+tmp_etmf/
+
+# Ignore dependency directories
+node_modules/
+.venv/
+venv/
+
+# Ignore documentation built assets and XML reports
+report.xml
+report-unit.xml
+report-integration.xml
+report-qualification.xml
+docs/SDLC/
