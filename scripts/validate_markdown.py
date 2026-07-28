@@ -77,6 +77,8 @@ ALLOWED_COMMON_TOOLS = {
     "cypher-shell",
     "EOF",
     "tee",
+    "powershell",
+    "pre-commit",
 }
 
 # Regex to check if a flag is syntactically well-formed (cannot start with triple dashes)
@@ -129,6 +131,7 @@ def is_potential_path_ref(token, root_dirs, root_files):
         "placeholder" in token.lower()
         or "your-" in token.lower()
         or "example" in token.lower()
+        or "node.js" in token.lower()
     ):
         return False
 
@@ -222,6 +225,7 @@ def resolve_path(path_str, md_file_path, repo_root, root_dirs, root_files):
         "placeholder" in path_str.lower()
         or "your-" in path_str.lower()
         or "example" in path_str.lower()
+        or "node.js" in path_str.lower()
     ):
         return None
 
