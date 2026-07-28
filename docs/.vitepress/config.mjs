@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitepress'
+import { withMermaid } from 'vitepress-plugin-mermaid'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -48,7 +49,7 @@ function getSdlcSidebar() {
     })
 }
 
-export default defineConfig({
+export default withMermaid(defineConfig({
   title: 'Cadence Clinical Portal',
   description: 'Metadata-Driven Clinical Execution Platform Documentation Portal',
   base: '/cadence-clinical/docs/',
@@ -92,4 +93,4 @@ export default defineConfig({
       }
     ]
   }
-})
+}))

@@ -76,6 +76,8 @@ The Quality & CAPA subsystem (`apps/quality/`) manages clinical protocol deviati
 
 * **Trace 10: Simulated Multi-Channel Notification Dispatcher:** The interop scheduler computes subject-specific compliance reminders on demand via `POST /api/v1/interop/reminders/compute` by checking outstanding `SubjectAssignment` due windows against registered `EPROSubmission` timestamps. It creates `SubjectNotification` entries and dispatches asynchronous background simulation tasks across four parallel channels (`EMAIL`, `SMS`, `WEBHOOK`, `IN_APP`), logged transactionally in `InteropAuditLog`, as verified in `tests/test_interop.py`.
 
+* **Trace 11: Native Vue 3 Rules Designer and GxP Ledger Sync:** Clinical study rule configuration and logical expression tree authoring is fully integrated within the Vue 3 client-side router (`apps/web/src/router.js`). Navigation access is secured via a Keycloak role guard restricting access to `STUDY_DESIGNER`. All rule saving and soft deletions capture a mandatory GxP reason-for-change justification, which is cryptographically signed and synchronously appended to the clinical audit ledger, as verified in `tests/test_designer_rules.py` and `apps/web/tests/smoke.test.js`.
+
 ## 10. eCOA Subject Portal & Interoperability Ecosystem
 The patient-facing ecosystem consists of a Progressive Web App (PWA) client and an interoperability microservice designed to handle patient diary logs and medical data integrations with absolute privacy and performance safety.
 

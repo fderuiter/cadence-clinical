@@ -29,8 +29,8 @@ from packages.deid.detector import DeidDetector
 from packages.deid.manifest import build_redaction_manifest, sign_manifest_symmetric
 from packages.deid.models import ComplianceProfile, DetectionResult, DetectorCategory
 from packages.deid.transforms import apply_deid_transforms
-from packages.security import verify_is_auditor, verify_not_auditor
 from packages.security.middleware import GatewayAuthMiddleware
+from packages.security.rbac import Principal, get_principal, has_permission
 
 DATABASE_URL = os.getenv("ETMF_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
@@ -519,26 +519,18 @@ async def health_check() -> dict[str, str]:
 async def ingest_document(
     request: Request,
     payload: IngestionRequest,
-    roles: list[str] = Depends(verify_not_auditor),
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> Dict[str, Any]:
     """
     Listen to and ingest system publication events or manual document archives.
     Automatically assigns DIA TMF Zone and Section taxonomy, and indexes the content.
     """
-    user_id = getattr(request.state, "user_id", "system")
-    user_roles = getattr(request.state, "roles", "system")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
 
     # Only write-privileged roles can ingest documents (No Inspectors)
-    if isinstance(user_roles, str):
-        roles_list = [r.strip().lower() for r in user_roles.split(",")]
-    else:
-        roles_list = [str(r).strip().lower() for r in user_roles]
-    if (
-        "inspector" in roles_list
-        or "regulatory_inspector" in roles_list
-        or "auditor" in roles_list
-    ):
+    if not has_permission(principal, "etmf_document:create"):
         raise HTTPException(
             status_code=403,
             detail="Forbidden: Inspectors are restricted to read-only access.",
@@ -825,13 +817,14 @@ async def list_documents(
     zone: Optional[int] = Query(None, description="Filter by TMF Zone"),
     search: Optional[str] = Query(None, description="Search document content"),
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> List[DocumentResponse]:
     """
     Retrieve and search indexed, searchable eTMF document records.
     All views are logged to the immutable audit ledger.
     """
-    user_id = getattr(request.state, "user_id", "anonymous")
-    user_roles = getattr(request.state, "roles", "anonymous")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
 
     stmt = select(TMFDocument)
     if study_id:
@@ -892,13 +885,14 @@ async def view_document(
     request: Request,
     document_id: str,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> DocumentResponse:
     """
     View metadata for a specific eTMF document.
     All views are logged to the immutable audit ledger.
     """
-    user_id = getattr(request.state, "user_id", "anonymous")
-    user_roles = getattr(request.state, "roles", "anonymous")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
 
     stmt = select(TMFDocument).where(TMFDocument.id == document_id)
     result = await session.execute(stmt)
@@ -908,21 +902,13 @@ async def view_document(
         raise HTTPException(status_code=404, detail="eTMF Document not found")
 
     # Enforce raw-original authorization controls
-    if isinstance(user_roles, str):
-        roles_list = [r.strip().lower() for r in user_roles.split(",") if r.strip()]
-    elif isinstance(user_roles, list):
-        roles_list = [str(r).strip().lower() for r in user_roles if str(r).strip()]
-    else:
-        roles_list = []
-
-    auditor_roles = {"auditor", "inspector", "regulatory_inspector"}
     if not doc.is_redacted:
         stmt_redacted = select(TMFDocument).where(
             TMFDocument.redaction_source_id == doc.id
         )
         res_redacted = await session.execute(stmt_redacted)
         if res_redacted.scalars().first() is not None:
-            if any(r in auditor_roles for r in roles_list):
+            if not has_permission(principal, "etmf_document:read_raw"):
                 raise HTTPException(
                     status_code=403,
                     detail="Forbidden: Raw-original retrieval is restricted to privileged roles.",
@@ -971,13 +957,14 @@ async def download_document(
     request: Request,
     document_id: str,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> Response:
     """
     Download/stream indexed content for a specific eTMF document.
     All downloads are logged to the immutable audit ledger.
     """
-    user_id = getattr(request.state, "user_id", "anonymous")
-    user_roles = getattr(request.state, "roles", "anonymous")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
 
     stmt = select(TMFDocument).where(TMFDocument.id == document_id)
     result = await session.execute(stmt)
@@ -987,21 +974,13 @@ async def download_document(
         raise HTTPException(status_code=404, detail="eTMF Document not found")
 
     # Enforce raw-original authorization controls
-    if isinstance(user_roles, str):
-        roles_list = [r.strip().lower() for r in user_roles.split(",") if r.strip()]
-    elif isinstance(user_roles, list):
-        roles_list = [str(r).strip().lower() for r in user_roles if str(r).strip()]
-    else:
-        roles_list = []
-
-    auditor_roles = {"auditor", "inspector", "regulatory_inspector"}
     if not doc.is_redacted:
         stmt_redacted = select(TMFDocument).where(
             TMFDocument.redaction_source_id == doc.id
         )
         res_redacted = await session.execute(stmt_redacted)
         if res_redacted.scalars().first() is not None:
-            if any(r in auditor_roles for r in roles_list):
+            if not has_permission(principal, "etmf_document:read_raw"):
                 raise HTTPException(
                     status_code=403,
                     detail="Forbidden: Raw-original retrieval is restricted to privileged roles.",
@@ -1040,17 +1019,23 @@ async def get_audit_trail(
         50, ge=1, le=250, description="Limit the number of audit log records returned"
     ),
     offset: int = Query(0, ge=0, description="Offset for pagination"),
-    roles: list[str] = Depends(verify_is_auditor),
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> PaginatedAuditLogResponse:
     """
     Retrieve audit trail of all eTMF interactions.
     Restricted to authorized roles like regulatory inspectors.
     """
-    request_user_id = getattr(request.state, "user_id", "anonymous")
-    user_roles = getattr(request.state, "roles", "anonymous")
+    request_user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
 
-    # Log access to the audit trail itself first
+    if not has_permission(principal, "etmf_audit_logs:read"):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Access is restricted to authorized auditor/inspection roles.",
+        )
+
+    # Log access to the audit trail itself
     await write_audit_log(
         session=session,
         user_id=request_user_id,
@@ -1148,12 +1133,13 @@ async def list_expectations(
     site_id: Optional[str] = Query(None, description="Optional clinical site ID"),
     milestone: Optional[str] = Query(None, description="Optional milestone"),
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> List[ExpectedDocumentResponse]:
     """
     List expected documents for a study, optionally filtered by site and milestone.
     """
-    user_id = getattr(request.state, "user_id", "anonymous")
-    user_roles = getattr(request.state, "roles", "anonymous")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
 
     stmt = select(ExpectedDocument).where(ExpectedDocument.study_id == study_id)
     if site_id:
@@ -1197,24 +1183,16 @@ async def list_expectations(
 async def create_expectation(
     request: Request,
     payload: ExpectedDocumentCreate,
-    roles: list[str] = Depends(verify_not_auditor),
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> ExpectedDocumentResponse:
     """
     Create a new Expected Document List (EDL) expectation.
     """
-    user_id = getattr(request.state, "user_id", "system")
-    user_roles = getattr(request.state, "roles", "system")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
 
-    if isinstance(user_roles, str):
-        roles_list = [r.strip().lower() for r in user_roles.split(",")]
-    else:
-        roles_list = [str(r).strip().lower() for r in user_roles]
-    if (
-        "inspector" in roles_list
-        or "regulatory_inspector" in roles_list
-        or "auditor" in roles_list
-    ):
+    if not has_permission(principal, "etmf_edl:create"):
         raise HTTPException(
             status_code=403,
             detail="Forbidden: Inspectors are restricted to read-only access.",
@@ -1277,24 +1255,16 @@ async def update_expectation(
     request: Request,
     edl_id: str,
     payload: ExpectedDocumentCreate,
-    roles: list[str] = Depends(verify_not_auditor),
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> ExpectedDocumentResponse:
     """
     Update an existing Expected Document List (EDL) expectation.
     """
-    user_id = getattr(request.state, "user_id", "system")
-    user_roles = getattr(request.state, "roles", "system")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
 
-    if isinstance(user_roles, str):
-        roles_list = [r.strip().lower() for r in user_roles.split(",")]
-    else:
-        roles_list = [str(r).strip().lower() for r in user_roles]
-    if (
-        "inspector" in roles_list
-        or "regulatory_inspector" in roles_list
-        or "auditor" in roles_list
-    ):
+    if not has_permission(principal, "etmf_edl:create"):
         raise HTTPException(
             status_code=403,
             detail="Forbidden: Inspectors are restricted to read-only access.",
@@ -1364,13 +1334,14 @@ async def check_completeness(
     milestone: str = Query(..., description="The transition milestone to check"),
     site_id: Optional[str] = Query(None, description="Optional clinical site ID"),
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> CompletenessResponse:
     """
     Completeness checking dashboard to verify mandatory artifacts
     before study milestone transitions.
     """
-    user_id = getattr(request.state, "user_id", "anonymous")
-    user_roles = getattr(request.state, "roles", "anonymous")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
 
     milestone_normalized = normalize_milestone(milestone)
 
@@ -1516,26 +1487,18 @@ async def redact_document_endpoint(
     document_id: str,
     payload: RedactRequest,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> DocumentResponse:
     """
     Perform controlled redaction on an existing unredacted eTMF document, producing a new
     redacted document version linked to the source.
     All redactions are logged to the immutable audit trail and block auditor/inspector personas.
     """
-    user_id = getattr(request.state, "user_id", "system")
-    user_roles = getattr(request.state, "roles", "system")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
 
     # Only write-privileged roles can redact documents (No Inspectors/Auditors)
-    if isinstance(user_roles, str):
-        roles_list = [r.strip().lower() for r in user_roles.split(",")]
-    else:
-        roles_list = [str(r).strip().lower() for r in user_roles]
-
-    if (
-        "inspector" in roles_list
-        or "regulatory_inspector" in roles_list
-        or "auditor" in roles_list
-    ):
+    if not has_permission(principal, "etmf_document:redact"):
         raise HTTPException(
             status_code=403,
             detail="Forbidden: Inspectors are restricted to read-only access.",
@@ -1581,7 +1544,7 @@ async def redact_document_endpoint(
     change_reason = request.headers.get("X-Change-Reason", "").strip()
     if not change_reason:
         # Check if stored in request state
-        change_reason = getattr(request.state, "change_reason", "").strip()
+        change_reason = principal.change_reason or "system_operation".strip()
     if not change_reason:
         raise HTTPException(
             status_code=400,
@@ -1689,26 +1652,18 @@ async def auto_redact_document_endpoint(
     document_id: str,
     payload: AutomatedRedactRequest,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> AutomatedRedactResponse:
     """
     Perform controlled automated redaction on an existing unredacted eTMF document, producing a new
     redacted document version linked to the source.
     All redactions are logged to the immutable audit trail and block auditor/inspector personas.
     """
-    user_id = getattr(request.state, "user_id", "system")
-    user_roles = getattr(request.state, "roles", "system")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
 
     # Only write-privileged roles can redact documents (No Inspectors/Auditors)
-    if isinstance(user_roles, str):
-        roles_list = [r.strip().lower() for r in user_roles.split(",")]
-    else:
-        roles_list = [str(r).strip().lower() for r in user_roles]
-
-    if (
-        "inspector" in roles_list
-        or "regulatory_inspector" in roles_list
-        or "auditor" in roles_list
-    ):
+    if not has_permission(principal, "etmf_document:redact"):
         raise HTTPException(
             status_code=403,
             detail="Forbidden: Inspectors are restricted to read-only access.",
@@ -1754,7 +1709,7 @@ async def auto_redact_document_endpoint(
     change_reason = request.headers.get("X-Change-Reason", "").strip()
     if not change_reason:
         # Check if stored in request state
-        change_reason = getattr(request.state, "change_reason", "").strip()
+        change_reason = principal.change_reason or "system_operation".strip()
     if not change_reason:
         raise HTTPException(
             status_code=400,
@@ -1888,26 +1843,18 @@ async def manual_redact_document_endpoint(
     document_id: str,
     payload: ManualRedactRequest,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> ManualRedactResponse:
     """
     Perform controlled manual redaction on an existing unredacted eTMF document using specified character spans and literal terms.
     Produces a new redacted document version linked to the source.
     All redactions are logged to the immutable audit trail and block auditor/inspector personas.
     """
-    user_id = getattr(request.state, "user_id", "system")
-    user_roles = getattr(request.state, "roles", "system")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
 
     # Only write-privileged roles can redact documents (No Inspectors/Auditors)
-    if isinstance(user_roles, str):
-        roles_list = [r.strip().lower() for r in user_roles.split(",")]
-    else:
-        roles_list = [str(r).strip().lower() for r in user_roles]
-
-    if (
-        "inspector" in roles_list
-        or "regulatory_inspector" in roles_list
-        or "auditor" in roles_list
-    ):
+    if not has_permission(principal, "etmf_document:redact"):
         raise HTTPException(
             status_code=403,
             detail="Forbidden: Inspectors are restricted to read-only access.",
@@ -1953,7 +1900,7 @@ async def manual_redact_document_endpoint(
     change_reason = request.headers.get("X-Change-Reason", "").strip()
     if not change_reason:
         # Check if stored in request state
-        change_reason = getattr(request.state, "change_reason", "").strip()
+        change_reason = principal.change_reason or "system_operation".strip()
     if not change_reason:
         raise HTTPException(
             status_code=400,
@@ -2137,15 +2084,15 @@ async def transition_document_status_endpoint(
     request: Request,
     document_id: str,
     payload: TransitionRequest,
-    roles: list[str] = Depends(verify_not_auditor),
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> Dict[str, Any]:
     """
     Perform a secure, 21 CFR Part 11 compliant Quality Control (QC) status transition on an eTMF document.
     Enforces role-based access gates and logs an append-only state transition history record.
     """
-    user_id = getattr(request.state, "user_id", "system")
-    user_roles = getattr(request.state, "roles", "system")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
 
     stmt = select(TMFDocument).where(TMFDocument.id == document_id)
     result = await session.execute(stmt)
@@ -2219,25 +2166,18 @@ async def sign_document_endpoint(
     document_id: str,
     payload: SignDocumentRequest,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> DocumentResponse:
     """
     Approve and cryptographically sign an eTMF document, producing a 21 CFR Part 11 compliant
     persisted signature manifestation, recording immutable audit actions (SIGN & APPROVE),
     and transitioning the record to SIGNED.
     """
-    user_id = getattr(request.state, "user_id", "system")
-    user_roles = getattr(request.state, "roles", "system")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
 
     # Enforce write roles can sign (no read-only roles like auditor, inspector)
-    if isinstance(user_roles, str):
-        roles_list = [r.strip().lower() for r in user_roles.split(",")]
-    else:
-        roles_list = [str(r).strip().lower() for r in user_roles]
-    if (
-        "inspector" in roles_list
-        or "regulatory_inspector" in roles_list
-        or "auditor" in roles_list
-    ):
+    if not has_permission(principal, "etmf_document:sign"):
         raise HTTPException(
             status_code=403,
             detail="Forbidden: Inspectors are restricted to read-only access.",
@@ -2428,12 +2368,13 @@ async def get_document_transition_history(
     request: Request,
     document_id: str,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> List[TransitionResponse]:
     """
     Retrieve the append-only Quality Control (QC) transition history for a specific eTMF document.
     """
-    user_id = getattr(request.state, "user_id", "anonymous")
-    user_roles = getattr(request.state, "roles", "anonymous")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
 
     # Verify document exists
     stmt_exist = select(TMFDocument).where(TMFDocument.id == document_id)
@@ -2482,12 +2423,13 @@ async def get_document_qc_history(
     request: Request,
     document_id: str,
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ) -> List[TransitionResponse]:
     """
     Retrieve the append-only Quality Control (QC) review history for a specific eTMF document.
     """
-    user_id = getattr(request.state, "user_id", "anonymous")
-    user_roles = getattr(request.state, "roles", "anonymous")
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
 
     # Verify document exists
     stmt_exist = select(TMFDocument).where(TMFDocument.id == document_id)

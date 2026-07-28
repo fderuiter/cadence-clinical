@@ -243,6 +243,10 @@ def test_detect_circular_dependencies():
 
 @pytest.mark.asyncio
 async def test_rules_crud_endpoints():
+    """
+    Test rules CRUD endpoints.
+    @req: Trace-11
+    """
     # Clear rules first
     MOCK_RULES.clear()
 

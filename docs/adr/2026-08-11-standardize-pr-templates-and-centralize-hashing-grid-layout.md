@@ -10,6 +10,8 @@
 ## 1. Context & Problem Statement
 Previously, the absence of standardized guidelines and review processes allowed duplicate markup and redundant utility functions to slip into codebase applications (such as the patient/subject portal and main web app). This fragmentation weakened our UI consistency, deviated from our design system standards, and introduced maintenance overhead via duplicate cryptographic implementations. Specifically, different applications implemented separate, redundant SHA-256 helpers and generated inline HTML structures for clinical radio grids.
 
+This decision implements requirements under Trace-8.
+
 ## 2. Decision Drivers & Constraints
 * **Compliance & Standard Guidelines:** GxP/FDA Part 11 requirements demand robust, traceable processes during SDLC.
 * **Consistency:** Ensure UI layout consistency across multiple platform apps (subject-portal, web).

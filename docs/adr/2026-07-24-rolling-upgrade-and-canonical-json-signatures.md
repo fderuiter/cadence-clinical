@@ -10,6 +10,8 @@
 ## 1. Context & Problem Statement
 To eliminate parameter injection and signature collision vulnerabilities in our legacy colon-concatenated signature format, we are migrating to secure Canonical JSON Signing (Version 2). However, a "big-bang" deployment that upgrades the Gateway and all downstream microservices simultaneously is extremely risky and can cause service disruption or downtime. To ensure a zero-downtime transition, we must support both the legacy (Version 1) format and the secure canonical (Version 2) format concurrently during the migration window.
 
+This decision implements requirements under Trace-8.
+
 ## 2. Decision Drivers & Constraints
 * **Zero Downtime:** Downstream services must be able to verify requests continuously without interruption during the roll-out of the gateway and microservices.
 * **Compatibility:** Existing web clients and microservices utilizing Version 1 signatures must remain functional during transition.

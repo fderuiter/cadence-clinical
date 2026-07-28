@@ -12,6 +12,8 @@ To maintain strict GxP and FDA 21 CFR Part 11 compliance, the API Gateway must g
 
 Previously, test bypass configuration flags could be accidentally propagated to production without any automated guardrails to prevent them from executing. To eliminate the risk of accidental authentication bypasses, we need "fail-fast" programmatic environment checks at the startup phase.
 
+This decision implements requirements under Trace-8.
+
 ## 2. Decision Drivers & Constraints
 * **GxP & Security Compliance:** Zero tolerance for authentication/authorization bypasses in non-development environments.
 * **Resilience & Safe Startup:** The gateway must immediately fail to boot ("fail-fast") if misconfigurations are present, ensuring vulnerable states are never exposed on network ports.
