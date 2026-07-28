@@ -15,7 +15,7 @@ def get_postgres_base_config():
     url = (
         os.environ.get("TEST_DATABASE_URL")
         or os.environ.get("DATABASE_URL")
-        or "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"
+        or "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"  # pragma: allowlist secret
     )
     if "://" in url:
         scheme, remainder = url.split("://", 1)
@@ -24,7 +24,7 @@ def get_postgres_base_config():
         else:
             base_part = remainder
         return f"{scheme}://{base_part}/"
-    return "postgresql+asyncpg://cadence:cadence_password@localhost:5432/"
+    return "postgresql+asyncpg://cadence:cadence_password@localhost:5432/"  # pragma: allowlist secret
 
 
 async def create_databases_async(worker_suffix: str):
