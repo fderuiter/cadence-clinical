@@ -15,6 +15,8 @@ Our frontend test suites previously maintained manual, fragile, and ad-hoc overr
 
 To resolve these challenges, we need a unified interception framework capable of validating mocked payloads in real-time against actual backend OpenAPI schemas, with fallback mechanisms designed for offline resilience.
 
+This decision implements requirements under PRD-EDC-007, PRD-EDC-008, and Trace-9.
+
 ## 2. Decision Drivers & Constraints
 * **Driver 1:** Absolute alignment between frontend mocked requests/responses and current backend schema standards.
 * **Driver 2:** High local developer velocity and offline capabilities.

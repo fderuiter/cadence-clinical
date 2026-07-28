@@ -10,6 +10,8 @@
 ## 1. Context & Problem Statement
 Previously, our frontend integration and unit tests relied on fragile, manually maintained network mock overrides (`vi.fn()` and global fetch overrides). This approach led to silent API drift where frontend tests would pass successfully but staging or production deployments failed due to mismatches between frontend expectations and backend schemas. We needed a centralized contract-mocking solution that dynamically validates all mocked request and response payloads against the gateway OpenAPI specification in real-time.
 
+This decision implements requirements under PRD-EDC-007, PRD-EDC-008, and Trace-9.
+
 ## 2. Decision Drivers & Constraints
 * **Prevention of API Drift:** Real-time validation of all mock HTTP interactions to eliminate silent failures.
 * **Offline Resilience:** Ensure developers can run tests and the subject-portal offline or with a disconnected gateway.
