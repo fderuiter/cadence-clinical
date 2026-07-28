@@ -1,23 +1,27 @@
+import copy
 import os
 from typing import Any, Dict, List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
+from sae_icsr import IndividualCaseSafetyReport
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import copy
 from apps.safety.database import db_manager
 from apps.safety.models import Base, SafetyAuditLog, SafetyCaseICSR, SafetyExportJob
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
-from sae_icsr import IndividualCaseSafetyReport
 
 
 # Pydantic Schemas for Request/Response Validation
 class ICSRDataExportRequest(BaseModel):
     job_name: str = Field(..., description="The descriptive name of the export job")
-    icsr: IndividualCaseSafetyReport = Field(..., description="The E2B ICSR report data")
+    icsr: IndividualCaseSafetyReport = Field(
+        ..., description="The E2B ICSR report data"
+    )
+
+
 class SafetyCaseICSRCreate(BaseModel):
     worldwide_unique_case_id: str = Field(
         ..., description="Worldwide unique identifier for this safety case"
@@ -497,7 +501,11 @@ async def export_safety_case(
     await session.flush()
 
     # 5. Write audit event to SafetyAuditLog, ensuring raw patient PII is absent
-    audit_action = "SAFETY_EXPORT_JOB_COMPLETE" if job.status == "COMPLETED" else "SAFETY_EXPORT_JOB_FAIL"
+    audit_action = (
+        "SAFETY_EXPORT_JOB_COMPLETE"
+        if job.status == "COMPLETED"
+        else "SAFETY_EXPORT_JOB_FAIL"
+    )
     audit_details = (
         f"Export job '{payload.job_name}' completed. Patient pseudonymized: {pseudonymized_patient_id}."
         if job.status == "COMPLETED"

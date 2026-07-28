@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { useAuthStore } from "../src/stores/auth";
-import { apiClient, ApiError } from "../src/api/apiClient";
+import { apiClient } from "../src/api/apiClient";
 import { designerService } from "../src/api/designer";
 import { executionService } from "../src/api/execution";
 import { etmfService } from "../src/api/etmf";

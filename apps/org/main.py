@@ -17,10 +17,17 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.org.database import db_manager
-from apps.org.models import Base, Organization, OrgAuditLog, Personnel, Site, DelegationOfAuthority
+from apps.org.models import (
+    Base,
+    DelegationOfAuthority,
+    Organization,
+    OrgAuditLog,
+    Personnel,
+    Site,
+)
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
-from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.delegation import verify_delegation_scope
+from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.signing import verify_canonical_signature
 
 # Retrieve gateway secret for canonical signatures verification
@@ -506,15 +513,26 @@ async def get_organization_history(
 
 # --- Delegation of Authority (DOA) API Models ---
 
+
 class DelegationCreate(BaseModel):
-    delegator_id: str = Field(..., description="The Personnel ID of the delegator (typically the PI)")
+    delegator_id: str = Field(
+        ..., description="The Personnel ID of the delegator (typically the PI)"
+    )
     delegatee_id: str = Field(..., description="The Personnel ID of the delegatee")
-    site_id: str = Field(..., description="The site ID where authority is being delegated")
+    site_id: str = Field(
+        ..., description="The site ID where authority is being delegated"
+    )
     study_id: str = Field(..., description="The study ID")
     duties: List[str] = Field(..., description="List of delegated duties")
-    start_date: datetime = Field(..., description="The effective start date of the delegation")
-    end_date: Optional[datetime] = Field(None, description="Optional effective end date of the delegation")
-    reason_for_change: str = Field(..., description="Part 11 change justification reason")
+    start_date: datetime = Field(
+        ..., description="The effective start date of the delegation"
+    )
+    end_date: Optional[datetime] = Field(
+        None, description="Optional effective end date of the delegation"
+    )
+    reason_for_change: str = Field(
+        ..., description="Part 11 change justification reason"
+    )
 
     @field_validator("reason_for_change")
     @classmethod
@@ -527,9 +545,15 @@ class DelegationCreate(BaseModel):
 
 
 class DelegationSign(BaseModel):
-    payload: dict = Field(..., description="The canonical delegation payload to sign and verify")
-    signature: str = Field(..., description="The symmetric HMAC canonical signature of the payload")
-    reason_for_change: str = Field(..., description="Part 11 change justification reason")
+    payload: dict = Field(
+        ..., description="The canonical delegation payload to sign and verify"
+    )
+    signature: str = Field(
+        ..., description="The symmetric HMAC canonical signature of the payload"
+    )
+    reason_for_change: str = Field(
+        ..., description="Part 11 change justification reason"
+    )
 
     @field_validator("reason_for_change")
     @classmethod
@@ -542,7 +566,9 @@ class DelegationSign(BaseModel):
 
 
 class DelegationRevoke(BaseModel):
-    reason_for_change: str = Field(..., description="The revocation reason / Part 11 justification")
+    reason_for_change: str = Field(
+        ..., description="The revocation reason / Part 11 justification"
+    )
 
     @field_validator("reason_for_change")
     @classmethod
@@ -585,6 +611,7 @@ class DelegationResponse(BaseModel):
 
 # --- Delegation of Authority (DOA) REST Endpoints ---
 
+
 @app.post("/api/v1/org/delegations", response_model=DelegationResponse, status_code=201)
 async def create_delegation(
     request: Request,
@@ -606,16 +633,27 @@ async def create_delegation(
     )
 
     # 2. Database existence and role verification for delegator and delegatee
-    stmt_delegator = select(Personnel).where(Personnel.id == payload.delegator_id).order_by(desc(Personnel.version_index))
+    stmt_delegator = (
+        select(Personnel)
+        .where(Personnel.id == payload.delegator_id)
+        .order_by(desc(Personnel.version_index))
+    )
     res_delegator = await session.execute(stmt_delegator)
     delegator_p = res_delegator.scalars().first()
     if not delegator_p:
         raise HTTPException(status_code=404, detail="Delegator personnel not found")
 
     if delegator_p.role != "Principal Investigator":
-        raise HTTPException(status_code=403, detail="Forbidden: Delegator must be a Principal Investigator.")
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Delegator must be a Principal Investigator.",
+        )
 
-    stmt_delegatee = select(Personnel).where(Personnel.id == payload.delegatee_id).order_by(desc(Personnel.version_index))
+    stmt_delegatee = (
+        select(Personnel)
+        .where(Personnel.id == payload.delegatee_id)
+        .order_by(desc(Personnel.version_index))
+    )
     res_delegatee = await session.execute(stmt_delegatee)
     delegatee_p = res_delegatee.scalars().first()
     if not delegatee_p:
@@ -668,11 +706,17 @@ async def sign_delegation(
     change_reason = change_reason or payload.reason_for_change
 
     # 1. Fetch latest delegation record
-    stmt = select(DelegationOfAuthority).where(DelegationOfAuthority.id == id).order_by(desc(DelegationOfAuthority.version_index))
+    stmt = (
+        select(DelegationOfAuthority)
+        .where(DelegationOfAuthority.id == id)
+        .order_by(desc(DelegationOfAuthority.version_index))
+    )
     res = await session.execute(stmt)
     latest_doa = res.scalars().first()
     if not latest_doa:
-        raise HTTPException(status_code=404, detail="Delegation of Authority record not found")
+        raise HTTPException(
+            status_code=404, detail="Delegation of Authority record not found"
+        )
 
     # 2. Scope/Role authorization verification
     verify_delegation_scope(
@@ -683,22 +727,33 @@ async def sign_delegation(
     )
 
     # 3. Verify canonical signed payload and reject on mismatch or tampering
-    is_valid = verify_canonical_signature(payload.payload, payload.signature, GATEWAY_SECRET)
+    is_valid = verify_canonical_signature(
+        payload.payload, payload.signature, GATEWAY_SECRET
+    )
     if not is_valid:
-        raise HTTPException(status_code=400, detail="Signature verification failed: tampered content or invalid signature.")
+        raise HTTPException(
+            status_code=400,
+            detail="Signature verification failed: tampered content or invalid signature.",
+        )
 
     # Treat the canonical signed payload as authoritative: verify that key fields match the record
     signed_data = payload.payload
     if signed_data.get("id") != latest_doa.id:
         raise HTTPException(status_code=400, detail="Signed payload 'id' mismatch")
     if signed_data.get("delegator_id") != latest_doa.delegator_id:
-        raise HTTPException(status_code=400, detail="Signed payload 'delegator_id' mismatch")
+        raise HTTPException(
+            status_code=400, detail="Signed payload 'delegator_id' mismatch"
+        )
     if signed_data.get("delegatee_id") != latest_doa.delegatee_id:
-        raise HTTPException(status_code=400, detail="Signed payload 'delegatee_id' mismatch")
+        raise HTTPException(
+            status_code=400, detail="Signed payload 'delegatee_id' mismatch"
+        )
     if signed_data.get("site_id") != latest_doa.site_id:
         raise HTTPException(status_code=400, detail="Signed payload 'site_id' mismatch")
     if signed_data.get("study_id") != latest_doa.study_id:
-        raise HTTPException(status_code=400, detail="Signed payload 'study_id' mismatch")
+        raise HTTPException(
+            status_code=400, detail="Signed payload 'study_id' mismatch"
+        )
 
     signed_duties = signed_data.get("duties") or []
     if sorted(signed_duties) != sorted(latest_doa.duties):
@@ -757,11 +812,17 @@ async def revoke_delegation(
     change_reason = change_reason or payload.reason_for_change
 
     # 1. Fetch latest delegation record
-    stmt = select(DelegationOfAuthority).where(DelegationOfAuthority.id == id).order_by(desc(DelegationOfAuthority.version_index))
+    stmt = (
+        select(DelegationOfAuthority)
+        .where(DelegationOfAuthority.id == id)
+        .order_by(desc(DelegationOfAuthority.version_index))
+    )
     res = await session.execute(stmt)
     latest_doa = res.scalars().first()
     if not latest_doa:
-        raise HTTPException(status_code=404, detail="Delegation of Authority record not found")
+        raise HTTPException(
+            status_code=404, detail="Delegation of Authority record not found"
+        )
 
     # 2. Scope/Role authorization verification
     verify_delegation_scope(
@@ -815,8 +876,12 @@ async def list_delegations(
     request: Request,
     site_id: Optional[str] = Query(None, description="Filter by site_id"),
     study_id: Optional[str] = Query(None, description="Filter by study_id"),
-    delegator_id: Optional[str] = Query(None, description="Filter by delegator personnel ID"),
-    delegatee_id: Optional[str] = Query(None, description="Filter by delegatee personnel ID"),
+    delegator_id: Optional[str] = Query(
+        None, description="Filter by delegator personnel ID"
+    ),
+    delegatee_id: Optional[str] = Query(
+        None, description="Filter by delegatee personnel ID"
+    ),
     is_active: Optional[bool] = Query(None, description="Filter by active status"),
     session: AsyncSession = Depends(get_db_session),
 ) -> List[DelegationResponse]:
@@ -826,7 +891,9 @@ async def list_delegations(
     user_id, user_role, change_reason = get_user_context(request)
 
     # Retrieve all rows ordered by version_index to extract latest in-memory
-    stmt = select(DelegationOfAuthority).order_by(DelegationOfAuthority.id, desc(DelegationOfAuthority.version_index))
+    stmt = select(DelegationOfAuthority).order_by(
+        DelegationOfAuthority.id, desc(DelegationOfAuthority.version_index)
+    )
     res = await session.execute(stmt)
     all_doas = res.scalars().all()
 
@@ -865,7 +932,9 @@ async def list_delegations(
 async def get_delegation(
     request: Request,
     id: str,
-    version_index: Optional[int] = Query(None, description="Optionally retrieve a specific version"),
+    version_index: Optional[int] = Query(
+        None, description="Optionally retrieve a specific version"
+    ),
     session: AsyncSession = Depends(get_db_session),
 ) -> DelegationResponse:
     """
@@ -882,7 +951,9 @@ async def get_delegation(
     res = await session.execute(stmt)
     doa = res.scalars().first()
     if not doa:
-        raise HTTPException(status_code=404, detail="Delegation of Authority record not found")
+        raise HTTPException(
+            status_code=404, detail="Delegation of Authority record not found"
+        )
 
     await write_audit_log(
         session=session,
@@ -897,7 +968,9 @@ async def get_delegation(
     return doa
 
 
-@app.get("/api/v1/org/delegations/{id}/history", response_model=List[DelegationResponse])
+@app.get(
+    "/api/v1/org/delegations/{id}/history", response_model=List[DelegationResponse]
+)
 async def get_delegation_history(
     request: Request,
     id: str,
@@ -908,7 +981,11 @@ async def get_delegation_history(
     """
     user_id, user_role, change_reason = get_user_context(request)
 
-    stmt = select(DelegationOfAuthority).where(DelegationOfAuthority.id == id).order_by(desc(DelegationOfAuthority.version_index))
+    stmt = (
+        select(DelegationOfAuthority)
+        .where(DelegationOfAuthority.id == id)
+        .order_by(desc(DelegationOfAuthority.version_index))
+    )
     res = await session.execute(stmt)
     history = res.scalars().all()
     if not history:

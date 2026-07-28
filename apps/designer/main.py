@@ -96,7 +96,7 @@ from apps.designer.validator import (
     validate_study_terminology,
 )
 from apps.designer.xml_mapping import validate_mapping_csv
-from packages.security import get_normalized_roles, ROLE_ALIASES
+from packages.security import ROLE_ALIASES, get_normalized_roles
 from packages.security.middleware import GatewayAuthMiddleware
 
 
@@ -1720,12 +1720,22 @@ async def transition_library_object_endpoint(
 
     # Rules for each target transition status:
     required_roles_map = {
-        LibraryStatus.IN_REVIEW: {"sponsor_designer", "sponsor_dm", "sponsor_admin", "sysadmin"},
+        LibraryStatus.IN_REVIEW: {
+            "sponsor_designer",
+            "sponsor_dm",
+            "sponsor_admin",
+            "sysadmin",
+        },
         LibraryStatus.APPROVED: {"sponsor_dm", "sponsor_admin", "sysadmin"},
         LibraryStatus.REJECTED: {"sponsor_dm", "sponsor_admin", "sysadmin"},
         LibraryStatus.PUBLISHED: {"sponsor_dm", "sponsor_admin", "sysadmin"},
         LibraryStatus.ARCHIVED: {"sponsor_admin", "sysadmin"},
-        LibraryStatus.DRAFT: {"sponsor_designer", "sponsor_dm", "sponsor_admin", "sysadmin"},
+        LibraryStatus.DRAFT: {
+            "sponsor_designer",
+            "sponsor_dm",
+            "sponsor_admin",
+            "sysadmin",
+        },
     }
 
     allowed_roles = required_roles_map.get(target_status, set())

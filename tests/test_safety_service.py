@@ -317,6 +317,7 @@ async def test_successful_export_and_transmission():
     class MockAsyncClient:
         def __init__(self):
             self.posts = []
+
         async def post(self, url, content, headers=None):
             self.posts.append({"url": url, "content": content, "headers": headers})
             return httpx.Response(status_code=200, content=b"OK")
@@ -330,14 +331,12 @@ async def test_successful_export_and_transmission():
     )
 
     from tests.test_safety_e2b import get_valid_icsr
+
     icsr = get_valid_icsr()
     icsr.patient.birth_date = "1981-01-15"
     raw_patient_id = icsr.patient.patient_id
 
-    payload = {
-        "job_name": "SAE-EXPORT-001",
-        "icsr": icsr.model_dump()
-    }
+    payload = {"job_name": "SAE-EXPORT-001", "icsr": icsr.model_dump()}
 
     res = client.post("/api/v1/safety/export", json=payload, headers=headers)
     assert res.status_code == 201
@@ -358,8 +357,10 @@ async def test_successful_export_and_transmission():
     assert "<birth_date>" not in transmitted_xml
 
     # Check for pseudonymized patient_id
-    from packages.deid.transforms import pseudonymize_value
     import os
+
+    from packages.deid.transforms import pseudonymize_value
+
     salt = os.getenv("SAFETY_SALT", "internal-safety-salt-12345")
     expected_pseudo_id = pseudonymize_value(raw_patient_id, salt)
     assert expected_pseudo_id in transmitted_xml
@@ -389,6 +390,7 @@ async def test_invalid_xml_validation_fails():
     class MockAsyncClient:
         def __init__(self):
             self.posts = []
+
         async def post(self, url, content, headers=None):
             self.posts.append({"url": url, "content": content, "headers": headers})
             return httpx.Response(status_code=200, content=b"OK")
@@ -397,18 +399,14 @@ async def test_invalid_xml_validation_fails():
     app.state.test_httpx_client = mock_client
 
     client = TestClient(app)
-    headers = get_auth_headers(
-        roles="admin", change_reason="Exporting invalid SAE"
-    )
+    headers = get_auth_headers(roles="admin", change_reason="Exporting invalid SAE")
 
     from tests.test_safety_e2b import get_valid_icsr
+
     icsr = get_valid_icsr()
     icsr.patient.patient_id = "   "
 
-    payload = {
-        "job_name": "SAE-INVALID-EXPORT",
-        "icsr": icsr.model_dump()
-    }
+    payload = {"job_name": "SAE-INVALID-EXPORT", "icsr": icsr.model_dump()}
 
     res = client.post("/api/v1/safety/export", json=payload, headers=headers)
     assert res.status_code == 422
@@ -428,11 +426,9 @@ async def test_missing_v2_headers_or_change_reason_fails():
     client = TestClient(app)
 
     from tests.test_safety_e2b import get_valid_icsr
+
     icsr = get_valid_icsr()
-    payload = {
-        "job_name": "SAE-EXPORT-UNAUTHORIZED",
-        "icsr": icsr.model_dump()
-    }
+    payload = {"job_name": "SAE-EXPORT-UNAUTHORIZED", "icsr": icsr.model_dump()}
 
     # Case 1: Missing all gateway headers -> 403 (for mutations)
     res = client.post("/api/v1/safety/export", json=payload)
