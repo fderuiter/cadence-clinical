@@ -15,6 +15,11 @@ from jose import JWTError, jwt
 from pydantic import BaseModel
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from packages.security.config_validation import validate_runtime_config
+
+# Dynamically assert configuration integrity and fail fast on insecure setups
+validate_runtime_config()
+
 app = FastAPI(
     title="Cadence Clinical - API Gateway",
     version="0.1.0",

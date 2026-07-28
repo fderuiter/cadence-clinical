@@ -1,3 +1,8 @@
+from packages.security.config_validation import (
+    ConfigurationError,
+    is_production_profile,
+    validate_runtime_config,
+)
 from packages.security.context import (
     audit_context,
     audit_context_decorator,
@@ -54,6 +59,9 @@ from packages.security.signing import (
 )
 
 __all__ = [
+    "ConfigurationError",
+    "is_production_profile",
+    "validate_runtime_config",
     "current_user_id",
     "current_change_reason",
     "current_ip_address",

@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from jose import JWTError, jwt
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from packages.security.config_validation import validate_runtime_config
 from packages.security.context import (
     current_change_reason,
     current_ip_address,
@@ -53,6 +54,7 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
             app: The ASGI application to wrap.
         """
         super().__init__(app)
+        validate_runtime_config()
         self.gateway_secret = os.getenv(
             "GATEWAY_SECRET", "internal-gateway-secret-12345"
         ).encode()
