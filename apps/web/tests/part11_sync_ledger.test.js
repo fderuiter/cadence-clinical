@@ -111,16 +111,11 @@ describe("FDA 21 CFR Part 11 Sync Ledger Store", () => {
     const [url, options] = mockFetch.mock.calls[0];
     expect(url).toContain("/api/v1/execution/queries/sync");
     expect(options.method).toBe("POST");
-
-    // X-Change-Reason should be propagated
+    expect(options.headers["Authorization"]).toBe("Bearer mock-keycloak-jwt-token");
     expect(options.headers["X-Change-Reason"]).toBe(
       "Background sync of clinical query ledger blocks"
     );
-
-    // X-Sig-Token should NOT be present (since we didn't pass one)
     expect(options.headers["X-Sig-Token"]).toBeUndefined();
-
-    // Browser-side trusted gateway headers should NOT be present
     expect(options.headers["X-Signature-Version"]).toBeUndefined();
     expect(options.headers["X-Gateway-Signature"]).toBeUndefined();
     expect(options.headers["X-Gateway-Timestamp"]).toBeUndefined();

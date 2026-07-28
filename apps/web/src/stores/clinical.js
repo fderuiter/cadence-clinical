@@ -566,12 +566,7 @@ export const useClinicalStore = defineStore("clinical", {
       );
 
       try {
-        await apiClient.post(
-          "/api/v1/execution/queries/sync",
-          { blocks: unsynced },
-          { changeReason: "Background sync of clinical query ledger blocks" }
-        );
-        const options = {
+const options = {
           changeReason: "Background sync of clinical query ledger blocks",
         };
         if (sigToken) {
