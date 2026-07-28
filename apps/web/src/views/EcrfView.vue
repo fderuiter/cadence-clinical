@@ -1034,6 +1034,7 @@ import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { soaClient } from "../api/soaClient";
 import { validateField } from "../../index";
+import { debounce } from "ui";
 import { terminologyClient } from "../api/terminologyClient";
 const store = useClinicalStore();
 const authStore = useAuthStore();
@@ -1129,18 +1130,7 @@ function getStatusIcon(status) {
 }
 */
 
-// Inline debounce helper
-function localDebounce(fn, delay) {
-  let timeoutId = null;
-  return function (...args) {
-    if (timeoutId) clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => {
-      fn(...args);
-    }, delay);
-  };
-}
-
-const debouncedValidate = localDebounce(async (fieldId, value) => {
+const debouncedValidate = debounce(async (fieldId, value) => {
   if (!value || !value.trim()) {
     conceptStatuses[fieldId] = "none";
     conceptMessages[fieldId] = "";

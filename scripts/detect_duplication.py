@@ -6,7 +6,9 @@ to detect copied blocks of logic before commits or merges.
 """
 
 import hashlib
+import json
 import os
+import re
 import sys
 from typing import Dict, List, Tuple
 
@@ -23,6 +25,14 @@ def normalize_line(line: str) -> str:
         The normalized line string.
     """
     cleaned = line.strip()
+
+    # 1. Handle CSS / JS block comments on single line or partial line
+    cleaned = re.sub(r"/\*.*?\*/", "", cleaned).strip()
+
+    # If the line is part of a block comment or starts with comment markers
+    if cleaned.startswith("/*") or cleaned.startswith("*/") or cleaned.startswith("* "):
+        return ""
+
     # Remove single line comments
     if cleaned.startswith("#") or cleaned.startswith("//"):
         return ""
@@ -31,6 +41,12 @@ def normalize_line(line: str) -> str:
         cleaned = cleaned.split("#", 1)[0].strip()
     if "//" in cleaned:
         cleaned = cleaned.split("//", 1)[0].strip()
+
+    # 2. Normalize standard URLs to avoid false positives from different URLs
+    cleaned = re.sub(r"https?://\S+", "http://url-placeholder", cleaned)
+
+    # 3. Normalize string formats (single quotes, backticks to double quotes)
+    cleaned = cleaned.replace("'", '"').replace("`", '"')
 
     # Ignore imports/exports/braces
     if (
@@ -88,7 +104,7 @@ def main() -> None:
         for arg in args:
             abs_path = os.path.abspath(arg)
             if (
-                abs_path.endswith((".py", ".js", ".vue"))
+                abs_path.endswith((".py", ".js", ".vue", ".css"))
                 and os.path.exists(abs_path)
                 and not any(
                     p in abs_path
@@ -131,7 +147,7 @@ def main() -> None:
             ):
                 continue
             for file in files:
-                if file.endswith((".py", ".js", ".vue")):
+                if file.endswith((".py", ".js", ".vue", ".css")):
                     all_files.append(os.path.join(root, file))
 
     # 2. Extract blocks from all files to index them
@@ -249,6 +265,24 @@ def main() -> None:
                         if dup_key not in unique_dups_reported:
                             unique_dups_reported.add(dup_key)
                             duplicates_found.append((loc1, loc2))
+
+    # Write summary
+    summary_data = {"duplicates": []}
+    for loc1, loc2 in duplicates_found:
+        p_file1 = os.path.relpath(loc1[0], "/app")
+        p_file2 = os.path.relpath(loc2[0], "/app")
+        summary_data["duplicates"].append(
+            {
+                "loc1": {"file": p_file1, "start": loc1[1], "end": loc1[2]},
+                "loc2": {"file": p_file2, "start": loc2[1], "end": loc2[2]},
+                "preview": loc1[3],
+            }
+        )
+    try:
+        with open("duplication_summary.json", "w", encoding="utf-8") as f:
+            json.dump(summary_data, f, indent=2)
+    except Exception as e:
+        print(f"Error writing duplication summary: {e}")
 
     if duplicates_found:
         print("\n\033[91m[ERROR] Code Duplication Detected Above Threshold!\033[0m")

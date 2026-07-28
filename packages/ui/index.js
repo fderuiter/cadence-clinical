@@ -877,4 +877,5 @@ export {
   generateJwtHS256,
   sha256,
   validateField,
+  buildLedgerBlock,
 } from "./signing.js";
