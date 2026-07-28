@@ -1917,7 +1917,7 @@ if (typeof document !== "undefined") {
       });
       if (!response.ok) {
         let errData = null;
-        try { errData = await response.json(); } catch {}
+        try { errData = await response.json(); } catch { /* ignore */ }
         throw new Error(errData?.detail || `API error ${response.status}`);
       }
       return await response.json();
@@ -1946,7 +1946,7 @@ if (typeof document !== "undefined") {
       });
       if (!response.ok) {
         let errData = null;
-        try { errData = await response.json(); } catch {}
+        try { errData = await response.json(); } catch { /* ignore */ }
         throw new Error(errData?.detail || `API error ${response.status}`);
       }
       return await response.json();
