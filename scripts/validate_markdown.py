@@ -77,8 +77,8 @@ ALLOWED_COMMON_TOOLS = {
     "cypher-shell",
     "EOF",
     "tee",
-    "pre-commit",
     "powershell",
+    "pre-commit",
 }
 
 # Regex to check if a flag is syntactically well-formed (cannot start with triple dashes)
