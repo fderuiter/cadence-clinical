@@ -3,8 +3,8 @@ import {
   generateGatewaySignature,
   generateJwtHS256,
   buildLedgerBlock,
-  debounce,
-} from "ui";
+} from "../utils/clinical.js";
+import { debounce } from "ui";
 import { useAuthStore } from "./auth.js";
 import { soaClient } from "../api/soaClient.js";
 import { evaluateAST } from "../evaluator.js";

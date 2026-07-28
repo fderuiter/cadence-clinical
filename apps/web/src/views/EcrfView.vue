@@ -1033,7 +1033,7 @@ import { ref, reactive, watch, onMounted } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { soaClient } from "../api/soaClient";
-import { validateField } from "../../index";
+import { validateField } from "../utils/clinical.js";
 import { debounce } from "ui";
 import { terminologyClient } from "../api/terminologyClient";
 const store = useClinicalStore();

@@ -28,6 +28,12 @@ export default defineConfig({
   build: {
     outDir: "dist",
     emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, "index.html"),
+        legacy: path.resolve(__dirname, "legacy.html"),
+      },
+    },
   },
   test: {
     environment: "jsdom",
