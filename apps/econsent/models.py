@@ -117,3 +117,40 @@ class ConsentAuditLog(Base):
     )
     details: Mapped[str] = mapped_column(String(1000), nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+
+
+class ConsentTranslation(Base):
+    """
+    Represents an audited, human-reviewed, per-language consent translation
+    tied to a specific source clause or template version.
+    Complies with FDA 21 CFR Part 11 auditing and tracking constraints.
+    """
+
+    __tablename__ = "consent_translations"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    translation_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+
+    # Source metadata
+    source_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    source_type: Mapped[str] = mapped_column(String(50), nullable=False)  # "clause" or "template"
+    source_version_index: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    # Translation details
+    language_code: Mapped[str] = mapped_column(String(10), nullable=False, index=True)
+    translated_title: Mapped[str] = mapped_column(String(255), nullable=False)
+    translated_text: Mapped[str] = mapped_column(String, nullable=False)
+
+    # Review & approval workflow: DRAFT -> IN_REVIEW -> APPROVED
+    status: Mapped[str] = mapped_column(String(50), default="DRAFT", nullable=False)
+
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    # 21 CFR Part 11 Compliance Auditing Metadata
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
