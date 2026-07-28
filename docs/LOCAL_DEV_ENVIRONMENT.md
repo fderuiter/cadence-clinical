@@ -91,7 +91,7 @@ The local containerized cluster orchestrates **13 primary services** defined in 
 | **`tickets`** | `8009:8009` | `apps/tickets/` | Shared workspace: `/app/tickets.db` (SQLite) | Communication and query tickets workflow between sites, monitors, and data managers. |
 | **`notifications`** | `8006:8006` | `apps/notifications/` | Shared workspace: `/app/notifications.db` (SQLite) | Dispatches emails/alerts, maps notification templates, and provides webhook relays. |
 | **`gateway`** | `8000:8000` | `apps/gateway/` | N/A | Central routing reverse-proxy exposing unified endpoint routing to individual backend APIs. |
-| **`subject-portal`** | `5174:5174` | `apps/subject-portal/` | N/A | Patient-facing SPA (Vue/Node.js) for completing diaries, surveys, and reviewing profile metrics. |
+| **`subject-portal`** | `5174:5174` | `apps/subject-portal/` | N/A | Patient-facing SPA (Vue and Node.js) for completing diaries, surveys, and reviewing profile metrics. |
 
 ---
 
