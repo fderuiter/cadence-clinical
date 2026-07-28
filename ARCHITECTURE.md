@@ -115,19 +115,19 @@ flowchart TD
     B --> C[DDF Event: "Study Published"]
     C --> D[Transformer: USDM ──► ODM/XForm]
     D --> E[(Provisioned into PostgreSQL EDC)]
-    
+
     E --> F[eCOA Instrument Definition Assigned]
     E --> G[Live Site Data Entry & Audit Log]
-    
+
     F --> H[Patient Completes ePRO Assessment - PWA]
-    
+
     G --> I[CDASH Extractor: SDTM Domains]
     H --> I
-    
+
     I --> J[Analysis Derivation: ADaM Datasets]
     J --> K[Serializer: CDISC Dataset-JSON 1.0]
     K --> L{Validator: Conformance Verification}
-    
+
     L -->|If Valid| M[Log SUCCESS in BiostatExport]
     L -->|If Invalid| N[Log FAILED & Raise HTTP 422]
 ```

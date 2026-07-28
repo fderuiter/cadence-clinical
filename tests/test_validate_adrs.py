@@ -105,6 +105,57 @@ def test_validate_existing_adrs_valid_case():
     assert validate_existing_adrs() is True
 
 
+def test_validate_existing_adrs_with_targets_valid():
+    # If valid target files are passed, they should pass
+    # Let's mock a valid index list and check a valid target
+    targets = ["docs/adr/2026-07-24-test-new-dependency.md"]
+    mock_content = "# ADR-[NUMBER]: Test Dependency\n## 1. Context & Problem Statement\n## 2. Decision Drivers & Constraints\n## 3. Options Considered\n## 4. Decision Outcome\n## 5. Consequences & Trade-offs\n## 6. Implementation & Verification\n"
+
+    def make_mock_file(content):
+        m = MagicMock()
+        m.__enter__.return_value = m
+        m.__exit__.return_value = False
+        m.read.return_value = content
+        return m
+
+    mock_file_index = make_mock_file(
+        "- [ADR-[NUMBER]: Test Dependency](2026-07-24-test-new-dependency.md)"
+    )
+    mock_file_target = make_mock_file(mock_content)
+
+    with (
+        patch("builtins.open") as mock_open,
+        patch("os.path.isdir", return_value=True),
+    ):
+        mock_open.side_effect = lambda filepath, mode="r", *args, **kwargs: (
+            mock_file_index if "index.md" in filepath else mock_file_target
+        )
+
+        assert validate_existing_adrs(targets) is True
+
+
+def test_validate_existing_adrs_with_targets_outside_folder():
+    # ADR file matching chronological pattern but outside docs/adr
+    targets = ["some-folder/2026-07-24-outside.md"]
+
+    def make_mock_file(content):
+        m = MagicMock()
+        m.__enter__.return_value = m
+        m.__exit__.return_value = False
+        m.read.return_value = content
+        return m
+
+    mock_file_index = make_mock_file("")
+
+    with (
+        patch("builtins.open") as mock_open,
+        patch("os.path.isdir", return_value=True),
+    ):
+        mock_open.return_value = mock_file_index
+
+        assert validate_existing_adrs(targets) is False
+
+
 def test_compliance_utility_parsing():
     from scripts import compliance_utility
 

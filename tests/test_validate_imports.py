@@ -6,7 +6,7 @@ from scripts.validate_imports import APPS_DIR, check_file_imports, get_service_n
 def test_get_service_name():
     assert get_service_name(APPS_DIR / "etmf" / "main.py") == "etmf"
     assert get_service_name(APPS_DIR / "execution" / "trial_lock.py") == "execution"
-    assert get_service_name(Path("/tmp/foo.py")) == ""
+    assert get_service_name(Path("/tmp/foo.py")) == ""  # nosec B108
 
 
 def test_check_file_imports_same_service(tmp_path):

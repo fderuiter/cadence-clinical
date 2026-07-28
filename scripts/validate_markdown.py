@@ -54,6 +54,8 @@ ALLOWED_COMMON_TOOLS = {
     "ls",
     "source",
     "export",
+    "powershell",
+    "pre-commit",
     "poetry",
     "make",
     "chmod",
@@ -252,7 +254,7 @@ def resolve_path(path_str, md_file_path, repo_root, root_dirs, root_files):
                 "/proc/",
                 "/sys/",
                 "/var/",
-                "/tmp/",
+                "/tmp/",  # nosec B108
             )
         ):
             if path_str.startswith("/app/"):
@@ -1194,27 +1196,40 @@ def main():
         "dist",
     }
 
-    # Scan and process all .md files
+    # Scan and process target .md files
     md_files = []
-    for root, dirs, files in os.walk(repo_root):
-        # Exclude directories in-place to optimize walk
-        dirs[:] = [d for d in dirs if d not in exclude_dirs and not d.startswith(".")]
-        for f in files:
-            if f.endswith(".md"):
-                file_path = Path(root) / f
-                # Skip SDLC documentation suite from standard CLI validation as they contain intentional
-                # compliance drifts used for testing the linter in gxp_compliance_suite.py
-                if (
-                    "docs/SDLC" in file_path.as_posix()
-                    or "docs\\SDLC" in file_path.as_posix()
-                ):
+    if len(sys.argv) > 1:
+        for arg in sys.argv[1:]:
+            p = Path(arg).resolve()
+            if p.is_file() and p.suffix == ".md":
+                if "docs/SDLC" in p.as_posix() or "docs\\SDLC" in p.as_posix():
                     continue
-                md_files.append(file_path)
+                md_files.append(p)
+    else:
+        for root, dirs, files in os.walk(repo_root):
+            # Exclude directories in-place to optimize walk
+            dirs[:] = [
+                d for d in dirs if d not in exclude_dirs and not d.startswith(".")
+            ]
+            for f in files:
+                if f.endswith(".md"):
+                    file_path = Path(root) / f
+                    # Skip SDLC documentation suite from standard CLI validation as they contain intentional
+                    # compliance drifts used for testing the linter in gxp_compliance_suite.py
+                    if (
+                        "docs/SDLC" in file_path.as_posix()
+                        or "docs\\SDLC" in file_path.as_posix()
+                    ):
+                        continue
+                    md_files.append(file_path)
 
     print("Building codebase map for targeted validations...")
     codebase_map = build_codebase_map(repo_root)
 
-    print(f"Scanning {len(md_files)} markdown files across the repository...")
+    if len(sys.argv) > 1:
+        print(f"Scanning {len(md_files)} specified markdown file(s)...")
+    else:
+        print(f"Scanning {len(md_files)} markdown files across the repository...")
     for md_file in sorted(md_files):
         process_markdown_file(md_file, repo_root, root_dirs, root_files, codebase_map)
 

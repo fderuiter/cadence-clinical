@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1107
-- **Passed:** 1107 🟢
+- **Total Automated Test Cases Run:** 1110
+- **Passed:** 1110 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -715,6 +715,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_html_comment_filtering` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_is_potential_path_ref` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_json_block_validation` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_main_with_arguments` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_process_markdown_file_e2e` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_python_block_validation` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reference_style_link_validation` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1229,6 +1230,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_get_changed_files_from_txt` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_is_architectural_file` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validate_existing_adrs_valid_case` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_validate_existing_adrs_with_targets_outside_folder` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_validate_existing_adrs_with_targets_valid` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_check_file_imports_cross_service_violation` | `tests.test_validate_imports` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_check_file_imports_invalid_syntax` | `tests.test_validate_imports` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_check_file_imports_relative_cross_service` | `tests.test_validate_imports` | *Regression/Helper* | 🟢 PASSED | < 1s |

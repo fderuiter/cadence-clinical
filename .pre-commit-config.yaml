@@ -47,6 +47,18 @@ repos:
         files: \.(py|js|vue|css)$
         pass_filenames: true
 
+      - id: validate-adrs
+        name: Validate ADRs
+        entry: python3 scripts/validate_adrs.py
+        language: system
+        files: ^(docs/adr/|apps/gateway/|packages/security/|packages/ui/|apps/execution/database/|pyproject.toml$|package.json$|apps/execution/.*(models|migrations))
+        pass_filenames: true
+
+      - id: validate-markdown
+        name: Validate Custom Markdown
+        entry: python3 scripts/validate_markdown.py
+        language: system
+        files: \.md$
       - id: deid-compliance-scan
         name: DEID Compliance Scan
         entry: uv run python -m packages.deid.cli

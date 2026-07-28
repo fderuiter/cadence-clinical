@@ -77,6 +77,11 @@ jobs:
         if: always()
         run: python3 scripts/validate_adrs.py
 
+      - name: Run custom markdown validation
+        id: run_markdown
+        if: always()
+        run: python3 scripts/validate_markdown.py
+
       - name: Run code duplication verification
         id: run_duplication
         if: always()

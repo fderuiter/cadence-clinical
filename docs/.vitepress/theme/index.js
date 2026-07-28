@@ -10,7 +10,7 @@ export default {
 
     const initPanZoom = () => {
       if (typeof window === 'undefined') return;
-      
+
       const elements = document.querySelectorAll('.mermaid');
       elements.forEach((el) => {
         // Check if we already initialized this element
@@ -38,10 +38,10 @@ export default {
     const enhanceSvg = (container, svg) => {
       const parent = container.parentNode;
       if (!parent) return;
-      
+
       const outerContainer = document.createElement('div');
       outerContainer.className = 'mermaid-container';
-      
+
       const wrapper = document.createElement('div');
       wrapper.className = 'mermaid-wrapper';
 
