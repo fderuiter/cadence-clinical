@@ -10,3 +10,4 @@ onlyBuiltDependencies:
   - esbuild
   - "@shikijs/core"
   - shiki
+  - msw
