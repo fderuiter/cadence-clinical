@@ -929,7 +929,9 @@ async def propagate_to_etmf(
     user_id = "eisf_sync_service"
     roles = "admin"
     timestamp = str(time.time())
-    secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()  # deid: ignore
+    secret = os.getenv(
+        "GATEWAY_SECRET", "internal-gateway-secret-12345"
+    ).encode()  # deid: ignore
     change_reason = "eISF to eTMF bidirectional sync propagation"
 
     sig = generate_gateway_signature(

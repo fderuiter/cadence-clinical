@@ -100,7 +100,9 @@ def verify_version_signature(version_props: Dict[str, Any]) -> bool:
 
     from packages.security.signing import verify_canonical_signature
 
-    secret = os.getenv("SIGNING_SECRET", "designer-amendment-secure-key-12345").encode(  # deid: ignore
+    secret = os.getenv(
+        "SIGNING_SECRET", "designer-amendment-secure-key-12345"
+    ).encode(  # deid: ignore
         "utf-8"
     )
     return verify_canonical_signature(payload, signature, secret)
@@ -236,7 +238,8 @@ async def assert_graph_mutable(
                     "created_by": version_props.get("created_by", "system"),
                 }
                 secret = os.getenv(
-                    "SIGNING_SECRET", "designer-amendment-secure-key-12345"  # deid: ignore
+                    "SIGNING_SECRET",
+                    "designer-amendment-secure-key-12345",  # deid: ignore
                 ).encode("utf-8")
                 version_props["signature"] = generate_canonical_signature(
                     payload, secret
@@ -1176,7 +1179,8 @@ async def amend_protocol_version(
 
             # Generate canonical signature
             secret = os.getenv(
-                "SIGNING_SECRET", "designer-amendment-secure-key-12345"  # deid: ignore
+                "SIGNING_SECRET",
+                "designer-amendment-secure-key-12345",  # deid: ignore
             ).encode("utf-8")
             signature = generate_canonical_signature(new_ver_payload, secret)
             new_ver_payload["signature"] = signature
@@ -1306,7 +1310,8 @@ async def amend_protocol_version(
                 "parent_version": parent_version_tag,
             }
             secret = os.getenv(
-                "SIGNING_SECRET", "designer-amendment-secure-key-12345"  # deid: ignore
+                "SIGNING_SECRET",
+                "designer-amendment-secure-key-12345",  # deid: ignore
             ).encode("utf-8")
             signature = generate_canonical_signature(new_ver_payload, secret)
 

@@ -1859,7 +1859,8 @@ async def auto_redact_document_endpoint(
 
     # Sign with HMAC symmetric key
     secret_key = os.getenv(
-        "REDACTION_SIGNING_SECRET", "internal-gateway-secret-12345"  # deid: ignore
+        "REDACTION_SIGNING_SECRET",
+        "internal-gateway-secret-12345",  # deid: ignore
     ).encode("utf-8")
     signed_manifest = sign_manifest_symmetric(manifest, secret_key)
     manifest_data = signed_manifest.model_dump()
@@ -2096,7 +2097,8 @@ async def manual_redact_document_endpoint(
 
     # Sign with HMAC symmetric key
     secret_key = os.getenv(
-        "REDACTION_SIGNING_SECRET", "internal-gateway-secret-12345"  # deid: ignore
+        "REDACTION_SIGNING_SECRET",
+        "internal-gateway-secret-12345",  # deid: ignore
     ).encode("utf-8")
     signed_manifest = sign_manifest_symmetric(manifest, secret_key)
     manifest_data = signed_manifest.model_dump()

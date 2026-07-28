@@ -209,7 +209,11 @@ def scan_file(
     for res in results:
         line, col = get_line_and_col(content, res.start)
         line_content = lines[line - 1] if (line - 1) < len(lines) else ""
-        if "deid: ignore" in line_content or "allowlist secret" in line_content or "pragma: allowlist deid" in line_content:
+        if (
+            "deid: ignore" in line_content
+            or "allowlist secret" in line_content
+            or "pragma: allowlist deid" in line_content
+        ):
             continue
         violations.append(
             {
