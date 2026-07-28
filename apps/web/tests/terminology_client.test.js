@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   terminologyClient,
   TerminologyNetworkError,
@@ -31,9 +31,9 @@ describe("Terminology API Client Unit Tests", () => {
       };
 
       const { mswServer, http, HttpResponse } = globalThis;
-      const handlerSpy = vi.fn().mockImplementation(() =>
-        HttpResponse.json(mockResult)
-      );
+      const handlerSpy = vi
+        .fn()
+        .mockImplementation(() => HttpResponse.json(mockResult));
       mswServer.use(
         http.get("**/api/v1/terminology/validate/:code", handlerSpy)
       );
@@ -55,7 +55,9 @@ describe("Terminology API Client Unit Tests", () => {
       expect(request.headers.get("X-User-Roles")).toBe("sponsor_dm,cra");
       expect(request.headers.get("X-Signature-Version")).toBe("2");
       expect(request.headers.get("X-Gateway-Signature")).toBeDefined();
-      expect(request.headers.get("X-Change-Reason")).toBe("Testing signed client");
+      expect(request.headers.get("X-Change-Reason")).toBe(
+        "Testing signed client"
+      );
     });
 
     it("should handle invalid/malformed codes by returning the INVALID state", async () => {
@@ -107,8 +109,10 @@ describe("Terminology API Client Unit Tests", () => {
     it("should throw TerminologyNetworkError when gateway returns a 502/503/500 error", async () => {
       const { mswServer, http, HttpResponse } = globalThis;
       mswServer.use(
-        http.get("**/api/v1/terminology/validate/:code", () =>
-          new HttpResponse(null, { status: 502, statusText: "Bad Gateway" })
+        http.get(
+          "**/api/v1/terminology/validate/:code",
+          () =>
+            new HttpResponse(null, { status: 502, statusText: "Bad Gateway" })
         )
       );
 
@@ -158,12 +162,10 @@ describe("Terminology API Client Unit Tests", () => {
       };
 
       const { mswServer, http, HttpResponse } = globalThis;
-      const handlerSpy = vi.fn().mockImplementation(() =>
-        HttpResponse.json(mockResult)
-      );
-      mswServer.use(
-        http.get("**/api/v1/terminology/search", handlerSpy)
-      );
+      const handlerSpy = vi
+        .fn()
+        .mockImplementation(() => HttpResponse.json(mockResult));
+      mswServer.use(http.get("**/api/v1/terminology/search", handlerSpy));
 
       const result = await terminologyClient.searchTerminology("Pain", {
         ...authOptions,
@@ -201,12 +203,10 @@ describe("Terminology API Client Unit Tests", () => {
       };
 
       const { mswServer, http, HttpResponse } = globalThis;
-      const handlerSpy = vi.fn().mockImplementation(() =>
-        HttpResponse.json(mockReport)
-      );
-      mswServer.use(
-        http.get("**/terminology-validation", handlerSpy)
-      );
+      const handlerSpy = vi
+        .fn()
+        .mockImplementation(() => HttpResponse.json(mockReport));
+      mswServer.use(http.get("**/terminology-validation", handlerSpy));
 
       const result = await terminologyClient.getStudyTerminologyValidation(
         "STUDY-001",
@@ -238,12 +238,10 @@ describe("Terminology API Client Unit Tests", () => {
       };
 
       const { mswServer, http, HttpResponse } = globalThis;
-      const handlerSpy = vi.fn().mockImplementation(() =>
-        HttpResponse.json(mockReport)
-      );
-      mswServer.use(
-        http.get("**/ct-validation", handlerSpy)
-      );
+      const handlerSpy = vi
+        .fn()
+        .mockImplementation(() => HttpResponse.json(mockReport));
+      mswServer.use(http.get("**/ct-validation", handlerSpy));
 
       const result = await terminologyClient.getStudyCtValidation(
         "STUDY-001",

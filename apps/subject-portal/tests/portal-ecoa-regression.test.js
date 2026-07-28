@@ -99,12 +99,10 @@ beforeEach(async () => {
 
   // Mock global fetch to prevent actual calls in unit tests
   const { mswServer, http, HttpResponse } = globalThis;
-  const defaultHandler = vi.fn().mockImplementation(() =>
-    HttpResponse.json({ status: "success" })
-  );
-  mswServer.use(
-    http.all('*', defaultHandler)
-  );
+  const defaultHandler = vi
+    .fn()
+    .mockImplementation(() => HttpResponse.json({ status: "success" }));
+  mswServer.use(http.all("*", defaultHandler));
 });
 
 describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
@@ -242,7 +240,7 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
     // Mock successful sync payload
     vi.clearAllMocks();
     const { mswServer, http, HttpResponse } = globalThis;
-    const syncHandler = vi.fn().mockImplementation(async ({ request }) => {
+    const syncHandler = vi.fn().mockImplementation(async () => {
       return HttpResponse.json({
         status: "success",
         processed_count: 1,
@@ -260,9 +258,7 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
       });
     });
 
-    mswServer.use(
-      http.post('**/epro/sync', syncHandler)
-    );
+    mswServer.use(http.post("**/epro/sync", syncHandler));
 
     // Transition online and sync
     portal.state.session.isOfflineMode = false;
@@ -300,7 +296,7 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
     // Sync fails with network error
     const { mswServer, http, HttpResponse } = globalThis;
     mswServer.use(
-      http.post('**/epro/sync', () => {
+      http.post("**/epro/sync", () => {
         return HttpResponse.error();
       })
     );
@@ -335,7 +331,7 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
     // Mock conflict responses: one MERGED and one IGNORED_SERVER_WINS
     const { mswServer, http, HttpResponse } = globalThis;
     mswServer.use(
-      http.post('**/epro/sync', () => {
+      http.post("**/epro/sync", () => {
         return HttpResponse.json({
           status: "success",
           processed_count: 1,

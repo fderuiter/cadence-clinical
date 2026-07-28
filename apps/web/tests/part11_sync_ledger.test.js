@@ -75,12 +75,12 @@ describe("FDA 21 CFR Part 11 Sync Ledger Store", () => {
 
   it("background sync worker successfully transmits unsynced blocks to execution sync gateway", async () => {
     const { mswServer, http, HttpResponse } = globalThis;
-    const syncHandler = vi.fn().mockImplementation(() =>
-      HttpResponse.json({ status: "success", processed_blocks: 1 })
-    );
-    mswServer.use(
-      http.post("**/api/v1/execution/queries/sync", syncHandler)
-    );
+    const syncHandler = vi
+      .fn()
+      .mockImplementation(() =>
+        HttpResponse.json({ status: "success", processed_blocks: 1 })
+      );
+    mswServer.use(http.post("**/api/v1/execution/queries/sync", syncHandler));
 
     const store = useClinicalStore();
 
@@ -119,9 +119,7 @@ describe("FDA 21 CFR Part 11 Sync Ledger Store", () => {
   it("handles fetch network failure gracefully without dropping unsynced transactions", async () => {
     const { mswServer, http, HttpResponse } = globalThis;
     mswServer.use(
-      http.post("**/api/v1/execution/queries/sync", () =>
-        HttpResponse.error()
-      )
+      http.post("**/api/v1/execution/queries/sync", () => HttpResponse.error())
     );
 
     const store = useClinicalStore();

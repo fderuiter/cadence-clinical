@@ -125,11 +125,14 @@ describe("SoA Matrix Pure Function Unit Tests", () => {
 describe("SoA Request Construction & Serialization Unit Tests", () => {
   it("constructs GxP compliant signed requests with expected header contract", async () => {
     const { mswServer, http, HttpResponse } = globalThis;
-    const saveArmSpy = vi.fn().mockImplementation(() =>
-      HttpResponse.json({ status: "success" })
-    );
+    const saveArmSpy = vi
+      .fn()
+      .mockImplementation(() => HttpResponse.json({ status: "success" }));
     mswServer.use(
-      http.post("**/api/v1/studies/:studyId/versions/:versionId/arms", saveArmSpy)
+      http.post(
+        "**/api/v1/studies/:studyId/versions/:versionId/arms",
+        saveArmSpy
+      )
     );
 
     const options = {
@@ -149,7 +152,9 @@ describe("SoA Request Construction & Serialization Unit Tests", () => {
     expect(saveArmSpy).toHaveBeenCalledTimes(1);
     const { request } = saveArmSpy.mock.calls[0][0];
 
-    expect(request.url).toContain("/api/v1/studies/STUDY-01/versions/v_draft_01/arms");
+    expect(request.url).toContain(
+      "/api/v1/studies/STUDY-01/versions/v_draft_01/arms"
+    );
     expect(request.method).toBe("POST");
     expect(request.headers.get("X-User-Id")).toBe("test-user");
     expect(request.headers.get("X-User-Roles")).toBe("sponsor_admin");
@@ -169,11 +174,14 @@ describe("SoA Request Construction & Serialization Unit Tests", () => {
 
   it("serializes nested mutations correctly for PUT requests", async () => {
     const { mswServer, http, HttpResponse } = globalThis;
-    const mutateSpy = vi.fn().mockImplementation(() =>
-      HttpResponse.json({ status: "success" })
-    );
+    const mutateSpy = vi
+      .fn()
+      .mockImplementation(() => HttpResponse.json({ status: "success" }));
     mswServer.use(
-      http.put("**/api/v1/studies/:studyId/versions/:versionId/arms/:armId", mutateSpy)
+      http.put(
+        "**/api/v1/studies/:studyId/versions/:versionId/arms/:armId",
+        mutateSpy
+      )
     );
 
     const options = {
@@ -209,9 +217,11 @@ describe("SoA Request Construction & Serialization Unit Tests", () => {
 describe("SoA Builder Signed API Client & Store Integration", () => {
   it("generates correct GxP version 2 signed headers for mutations", async () => {
     const { mswServer, http, HttpResponse } = globalThis;
-    const armMutationSpy = vi.fn().mockImplementation(() =>
-      HttpResponse.json({ status: "success", id: "ARM-A" })
-    );
+    const armMutationSpy = vi
+      .fn()
+      .mockImplementation(() =>
+        HttpResponse.json({ status: "success", id: "ARM-A" })
+      );
     const soaProjectionSpy = vi.fn().mockImplementation(() =>
       HttpResponse.json({
         epochs: [{ epoch_id: "EP-1", epoch_name: "Epoch 1" }],
@@ -223,8 +233,14 @@ describe("SoA Builder Signed API Client & Store Integration", () => {
     );
 
     mswServer.use(
-      http.post("**/api/v1/studies/:studyId/versions/:versionId/arms", armMutationSpy),
-      http.get("**/api/v1/studies/:studyId/versions/:versionId/soa-projection", soaProjectionSpy)
+      http.post(
+        "**/api/v1/studies/:studyId/versions/:versionId/arms",
+        armMutationSpy
+      ),
+      http.get(
+        "**/api/v1/studies/:studyId/versions/:versionId/soa-projection",
+        soaProjectionSpy
+      )
     );
 
     const store = useClinicalStore();
@@ -259,16 +275,26 @@ describe("SoA Builder Signed API Client & Store Integration", () => {
 
   it("handles link creation API calls correctly with signed headers", async () => {
     const { mswServer, http, HttpResponse } = globalThis;
-    const linkSpy = vi.fn().mockImplementation(() =>
-      HttpResponse.json({ status: "success", message: "Link established" })
-    );
-    const soaProjectionSpy = vi.fn().mockImplementation(() =>
-      HttpResponse.json({ epochs: [], encounters: [], rows: [] })
-    );
+    const linkSpy = vi
+      .fn()
+      .mockImplementation(() =>
+        HttpResponse.json({ status: "success", message: "Link established" })
+      );
+    const soaProjectionSpy = vi
+      .fn()
+      .mockImplementation(() =>
+        HttpResponse.json({ epochs: [], encounters: [], rows: [] })
+      );
 
     mswServer.use(
-      http.post("**/api/v1/studies/:studyId/versions/:versionId/links/visit-procedure", linkSpy),
-      http.get("**/api/v1/studies/:studyId/versions/:versionId/soa-projection", soaProjectionSpy)
+      http.post(
+        "**/api/v1/studies/:studyId/versions/:versionId/links/visit-procedure",
+        linkSpy
+      ),
+      http.get(
+        "**/api/v1/studies/:studyId/versions/:versionId/soa-projection",
+        soaProjectionSpy
+      )
     );
 
     const store = useClinicalStore();
@@ -328,7 +354,9 @@ describe("SoA Authoring Failure & Immutability Guards", () => {
     mswServer.use(
       http.post("**/api/v1/studies/:studyId/versions/:versionId/arms", () =>
         HttpResponse.json(
-          { detail: "IMMUTABILITY_VIOLATION: Locked Version cannot be modified" },
+          {
+            detail: "IMMUTABILITY_VIOLATION: Locked Version cannot be modified",
+          },
           { status: 403 }
         )
       )

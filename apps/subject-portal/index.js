@@ -896,9 +896,13 @@ async function initializeApp() {
     const res = await fetch("http://localhost:8000/openapi.json");
     if (res.ok) {
       const spec = await res.json();
-      const assignmentSchema = spec?.components?.schemas?.Interop_SubjectAssignment || spec?.components?.schemas?.SubjectAssignment;
+      const assignmentSchema =
+        spec?.components?.schemas?.Interop_SubjectAssignment ||
+        spec?.components?.schemas?.SubjectAssignment;
       if (assignmentSchema) {
-        console.log("[App] Generating dynamic clinical assignments from active API schema constraints...");
+        console.log(
+          "[App] Generating dynamic clinical assignments from active API schema constraints..."
+        );
         const dynamicAssignment = {
           id: "assign_dynamic_01",
           subject_id: state.session.userId,
@@ -911,7 +915,7 @@ async function initializeApp() {
         state.assignments.push(dynamicAssignment);
       }
     }
-  } catch (e) {
+  } catch {
     // Offline / gateway unreachable fallback
   }
 
