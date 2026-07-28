@@ -974,9 +974,6 @@ import { apiClient } from "../api/apiClient";
 const store = useClinicalStore();
 const authStore = useAuthStore();
 
-// Base URL configuration for Rest endpoints
-const GATEWAY_URL = "http://localhost:8000";
-
 // Standard CDASH mock structures aligned with index.js legacy logic and backend visits
 const mockStudyForms = [
   { id: "form_dm", name: "Demographics" },
