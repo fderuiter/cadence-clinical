@@ -46,6 +46,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-25: FDA 21 CFR Part 11 Offline Sync Ledger & Digital Signatures](2026-07-25-part11-offline-sync-ledger.md)
 - [2026-07-26: CTMS Foundation, Database, Auditing, and RBAC Infrastructure](2026-07-26-ctms-foundation-infrastructure.md)
 - [2026-07-27: Quality & CAPA Foundation and Domain Models](2026-07-27-quality-capa-scaffold.md)
+- [2026-07-27: Programmatic Multi-Database Reset CLI Tool with Safety Guardrails](2026-07-27-multi-database-reset-cli-tool.md)
 - [2026-07-27: Standardize FastAPI Identity Dependency and Site Access Migration](2026-07-27-standardize-fastapi-identity-dependency.md)
 - [2026-07-27: Backward-Compatible Gateway Signature Verification](2026-07-27-backward-compatible-gateway-signature-verification.md)
 - [2026-07-27: CI Schema Introspection and Gateway Aggregation Resilience](2026-07-27-ci-schema-introspection-and-gateway-aggregation.md)
