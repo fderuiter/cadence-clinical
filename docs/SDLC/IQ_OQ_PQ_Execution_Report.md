@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1070
-- **Passed:** 1070 🟢
+- **Total Automated Test Cases Run:** 1074
+- **Passed:** 1074 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1210,8 +1210,12 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_execution_validation_error_rfc7807` | `tests.test_validation_problem_details` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_generate_alignment_report` | `tests.test_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_generate_alignment_report_with_mappings` | `tests.test_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_extract_active_frontend_vulnerabilities_invalid` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_extract_active_frontend_vulnerabilities_valid` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_extract_active_vulnerabilities_invalid` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_extract_active_vulnerabilities_valid` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_load_and_validate_ledger_frontend_invalid_justification` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_load_and_validate_ledger_frontend_invalid_rpn` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_load_and_validate_ledger_incorrect_rpn` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_load_and_validate_ledger_invalid_fmea_scores` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_load_and_validate_ledger_invalid_json` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
