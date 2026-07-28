@@ -24,22 +24,38 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
-      - name: Set up Node.js
+      - name: Set up Node.js (temporary for pnpm setup)
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
+
+      - name: Install pnpm
+        run: npm install -g pnpm@11.1.3
+
+      - name: Set up Node.js with caching
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
           cache: 'pnpm'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: uv sync --all-extras
+
       - name: Build Web Application
-        run: pnpm --filter web build
+        run: uv run pnpm --filter web build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
