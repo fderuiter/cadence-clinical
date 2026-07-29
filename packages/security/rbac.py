@@ -510,7 +510,13 @@ def can_access_site(principal: Principal, site_id: str) -> bool:
     Site-scoped users are restricted to their assigned_sites.
     Sponsor/SysAdmin users with empty assigned_sites are allowed global access.
     """
-    site_scoped_roles = {ROLE_INVESTIGATOR, ROLE_CRC, ROLE_CRA_CANONICAL, "monitor", ROLE_EXTERNAL_MONITOR}
+    site_scoped_roles = {
+        ROLE_INVESTIGATOR,
+        ROLE_CRC,
+        ROLE_CRA_CANONICAL,
+        "monitor",
+        ROLE_EXTERNAL_MONITOR,
+    }
     user_site_roles = [r for r in principal.roles if r in site_scoped_roles]
 
     if user_site_roles:
@@ -574,7 +580,7 @@ def get_principal_sync(request: Request) -> Principal:
     if ROLE_EXTERNAL_MONITOR in normalized_roles:
         raise HTTPException(
             status_code=500,
-            detail="External Monitor principal must be resolved via the async get_principal path to allow directory enrichment."
+            detail="External Monitor principal must be resolved via the async get_principal path to allow directory enrichment.",
         )
 
     # 3. Assigned Sites
@@ -771,6 +777,7 @@ async def get_principal(request: Request) -> Principal:
 
     if ROLE_EXTERNAL_MONITOR in principal.roles:
         from packages.security.org_client import resolve_personnel_assignments
+
         res = await resolve_personnel_assignments(principal.user_id)
         if res:
             principal.assigned_sites = res.get("assigned_sites", [])

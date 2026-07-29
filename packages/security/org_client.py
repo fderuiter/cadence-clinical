@@ -1,11 +1,12 @@
 import os
 import sys
 import time
-from typing import Dict, Any, Optional
+from typing import Any, Dict
 
 import httpx
 
 from packages.security.signing import generate_gateway_signature
+
 
 async def resolve_personnel_assignments(keycloak_user_id: str) -> Dict[str, Any]:
     """
@@ -24,32 +25,47 @@ async def resolve_personnel_assignments(keycloak_user_id: str) -> Dict[str, Any]
 
                 session_maker = db_mgr.get_session_maker()
                 async with session_maker() as session:
-                    stmt = select(Personnel).where(Personnel.keycloak_user_id == keycloak_user_id).order_by(desc(Personnel.version_index))
+                    stmt = (
+                        select(Personnel)
+                        .where(Personnel.keycloak_user_id == keycloak_user_id)
+                        .order_by(desc(Personnel.version_index))
+                    )
                     person = (await session.execute(stmt)).scalars().first()
                     if person:
-                        stmt_assign = select(PersonnelAssignment).where(PersonnelAssignment.personnel_id == person.id).order_by(PersonnelAssignment.id, desc(PersonnelAssignment.version_index))
-                        all_assigns = (await session.execute(stmt_assign)).scalars().all()
+                        stmt_assign = (
+                            select(PersonnelAssignment)
+                            .where(PersonnelAssignment.personnel_id == person.id)
+                            .order_by(
+                                PersonnelAssignment.id,
+                                desc(PersonnelAssignment.version_index),
+                            )
+                        )
+                        all_assigns = (
+                            (await session.execute(stmt_assign)).scalars().all()
+                        )
                         latest_assigns = {}
                         for a in all_assigns:
                             if a.id not in latest_assigns:
                                 latest_assigns[a.id] = a
-                        active_assigns = [a for a in latest_assigns.values() if a.is_active]
+                        active_assigns = [
+                            a for a in latest_assigns.values() if a.is_active
+                        ]
                         assigned_sites = list(set(a.site_id for a in active_assigns))
                         assigned_studies = list(set(a.study_id for a in active_assigns))
                         return {
                             "personnel_id": person.id,
                             "roles": ["external_monitor"],
                             "assigned_sites": assigned_sites,
-                            "assigned_studies": assigned_studies
+                            "assigned_studies": assigned_studies,
                         }
-        except Exception as e:
+        except Exception:
             pass
         # Default test fallback
         return {
             "personnel_id": "test_personnel_id",
             "roles": ["external_monitor"],
             "assigned_sites": [],
-            "assigned_studies": []
+            "assigned_studies": [],
         }
 
     org_service_url = os.getenv("ORG_SERVICE_URL", "http://localhost:8001")
@@ -94,12 +110,12 @@ async def resolve_personnel_assignments(keycloak_user_id: str) -> Dict[str, Any]
                     "personnel_id": "",
                     "roles": [],
                     "assigned_sites": [],
-                    "assigned_studies": []
+                    "assigned_studies": [],
                 }
     except Exception:
         return {
             "personnel_id": "",
             "roles": [],
             "assigned_sites": [],
-            "assigned_studies": []
+            "assigned_studies": [],
         }

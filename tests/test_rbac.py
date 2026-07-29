@@ -691,6 +691,7 @@ def test_external_monitor_permissions_matrix() -> None:
 async def test_external_monitor_eisf_denies_writes_allows_reads() -> None:
     """Verify that External Monitor is allowed to read eISF but forbidden from writing."""
     from apps.eisf.main import app as eisf_app
+
     client = TestClient(eisf_app)
 
     # 1. Block Create
@@ -729,20 +730,25 @@ async def test_external_monitor_eisf_denies_writes_allows_reads() -> None:
 @pytest.mark.asyncio
 async def test_external_monitor_principal_resolution(monkeypatch) -> None:
     """Verify directory-backed resolution ignoring spoofed headers and enforcing site/study scope."""
-    from packages.security.rbac import get_principal, Principal, ROLE_EXTERNAL_MONITOR, can_access_site, can_access_study
-    from fastapi import Request
+
+    from packages.security.rbac import (
+        can_access_site,
+        can_access_study,
+        get_principal,
+    )
 
     class MockRequest:
         def __init__(self):
             class State:
                 pass
+
             self.state = State()
             self.headers = {
                 "X-User-Id": "ext_mon_user",
                 "X-User-Roles": "external_monitor",
                 "X-Site-Id": "spoofed_site",
                 "X-Study-Id": "spoofed_study",
-                "X-Change-Reason": "Valid reason"
+                "X-Change-Reason": "Valid reason",
             }
 
     async def mock_resolve(user_id):
@@ -750,11 +756,14 @@ async def test_external_monitor_principal_resolution(monkeypatch) -> None:
             "personnel_id": "p_ext_1",
             "roles": ["external_monitor"],
             "assigned_sites": ["site_alpha", "site_beta"],
-            "assigned_studies": ["study_x", "study_y"]
+            "assigned_studies": ["study_x", "study_y"],
         }
 
     import packages.security.org_client
-    monkeypatch.setattr(packages.security.org_client, "resolve_personnel_assignments", mock_resolve)
+
+    monkeypatch.setattr(
+        packages.security.org_client, "resolve_personnel_assignments", mock_resolve
+    )
 
     req = MockRequest()
     principal = await get_principal(req)

@@ -89,7 +89,9 @@ class PersonnelAssignmentCreate(BaseModel):
     site_id: str = Field(..., description="The clinical site ID")
     study_id: str = Field(..., description="The clinical study ID")
     is_active: bool = Field(True, description="Whether the assignment is active")
-    reason_for_change: str = Field(..., description="Part 11 change justification reason")
+    reason_for_change: str = Field(
+        ..., description="Part 11 change justification reason"
+    )
 
     @field_validator("reason_for_change")
     @classmethod
@@ -105,7 +107,9 @@ class PersonnelAssignmentUpdate(BaseModel):
     site_id: Optional[str] = Field(None, description="Updated clinical site ID")
     study_id: Optional[str] = Field(None, description="Updated clinical study ID")
     is_active: Optional[bool] = Field(None, description="Updated active status")
-    reason_for_change: str = Field(..., description="Part 11 change justification reason")
+    reason_for_change: str = Field(
+        ..., description="Part 11 change justification reason"
+    )
 
     @field_validator("reason_for_change")
     @classmethod
@@ -1325,7 +1329,11 @@ async def create_personnel(
                 status_code=400,
                 detail="External Monitor must be affiliated to a CRO organization.",
             )
-        stmt_org = select(Organization).where(Organization.id == payload.organization_id).order_by(desc(Organization.version_index))
+        stmt_org = (
+            select(Organization)
+            .where(Organization.id == payload.organization_id)
+            .order_by(desc(Organization.version_index))
+        )
         org = (await session.execute(stmt_org)).scalars().first()
         if not org or org.org_type != "CRO":
             raise HTTPException(
@@ -1495,14 +1503,22 @@ async def update_personnel(
         raise HTTPException(status_code=404, detail="Personnel not found")
 
     target_role = payload.role.value if payload.role is not None else latest_person.role
-    target_org_id = payload.organization_id if payload.organization_id is not None else latest_person.organization_id
+    target_org_id = (
+        payload.organization_id
+        if payload.organization_id is not None
+        else latest_person.organization_id
+    )
     if target_role == "External Monitor":
         if not target_org_id:
             raise HTTPException(
                 status_code=400,
                 detail="External Monitor must be affiliated to a CRO organization.",
             )
-        stmt_org = select(Organization).where(Organization.id == target_org_id).order_by(desc(Organization.version_index))
+        stmt_org = (
+            select(Organization)
+            .where(Organization.id == target_org_id)
+            .order_by(desc(Organization.version_index))
+        )
         org = (await session.execute(stmt_org)).scalars().first()
         if not org or org.org_type != "CRO":
             raise HTTPException(
@@ -1587,7 +1603,11 @@ async def get_personnel_history(
     return history
 
 
-@app.post("/api/v1/org/personnel/{personnel_id}/assignments", response_model=PersonnelAssignmentResponse, status_code=201)
+@app.post(
+    "/api/v1/org/personnel/{personnel_id}/assignments",
+    response_model=PersonnelAssignmentResponse,
+    status_code=201,
+)
 async def create_personnel_assignment(
     request: Request,
     personnel_id: str,
@@ -1597,7 +1617,11 @@ async def create_personnel_assignment(
     user_id, user_role, change_reason = get_user_context(request)
     change_reason = change_reason or payload.reason_for_change
 
-    stmt_person = select(Personnel).where(Personnel.id == personnel_id).order_by(desc(Personnel.version_index))
+    stmt_person = (
+        select(Personnel)
+        .where(Personnel.id == personnel_id)
+        .order_by(desc(Personnel.version_index))
+    )
     person = (await session.execute(stmt_person)).scalars().first()
     if not person:
         raise HTTPException(status_code=404, detail="Personnel not found")
@@ -1608,7 +1632,11 @@ async def create_personnel_assignment(
                 status_code=400,
                 detail="External Monitor must be affiliated to a CRO organization.",
             )
-        stmt_org = select(Organization).where(Organization.id == person.organization_id).order_by(desc(Organization.version_index))
+        stmt_org = (
+            select(Organization)
+            .where(Organization.id == person.organization_id)
+            .order_by(desc(Organization.version_index))
+        )
         org = (await session.execute(stmt_org)).scalars().first()
         if not org or org.org_type != "CRO":
             raise HTTPException(
@@ -1642,7 +1670,10 @@ async def create_personnel_assignment(
     return assignment
 
 
-@app.get("/api/v1/org/personnel/{personnel_id}/assignments", response_model=List[PersonnelAssignmentResponse])
+@app.get(
+    "/api/v1/org/personnel/{personnel_id}/assignments",
+    response_model=List[PersonnelAssignmentResponse],
+)
 async def list_personnel_assignments(
     request: Request,
     personnel_id: str,
@@ -1650,7 +1681,11 @@ async def list_personnel_assignments(
 ) -> List[PersonnelAssignmentResponse]:
     user_id, user_role, change_reason = get_user_context(request)
 
-    stmt = select(PersonnelAssignment).where(PersonnelAssignment.personnel_id == personnel_id).order_by(PersonnelAssignment.id, desc(PersonnelAssignment.version_index))
+    stmt = (
+        select(PersonnelAssignment)
+        .where(PersonnelAssignment.personnel_id == personnel_id)
+        .order_by(PersonnelAssignment.id, desc(PersonnelAssignment.version_index))
+    )
     res = await session.execute(stmt)
     all_assigns = res.scalars().all()
 
@@ -1671,7 +1706,9 @@ async def list_personnel_assignments(
     return list(latest_assigns.values())
 
 
-@app.put("/api/v1/org/personnel/assignments/{id}", response_model=PersonnelAssignmentResponse)
+@app.put(
+    "/api/v1/org/personnel/assignments/{id}", response_model=PersonnelAssignmentResponse
+)
 async def update_personnel_assignment(
     request: Request,
     id: str,
@@ -1681,7 +1718,11 @@ async def update_personnel_assignment(
     user_id, user_role, change_reason = get_user_context(request)
     change_reason = change_reason or payload.reason_for_change
 
-    stmt = select(PersonnelAssignment).where(PersonnelAssignment.id == id).order_by(desc(PersonnelAssignment.version_index))
+    stmt = (
+        select(PersonnelAssignment)
+        .where(PersonnelAssignment.id == id)
+        .order_by(desc(PersonnelAssignment.version_index))
+    )
     latest_assign = (await session.execute(stmt)).scalars().first()
     if not latest_assign:
         raise HTTPException(status_code=404, detail="Personnel assignment not found")
@@ -1689,9 +1730,15 @@ async def update_personnel_assignment(
     new_assign = PersonnelAssignment(
         id=id,
         personnel_id=latest_assign.personnel_id,
-        site_id=payload.site_id if payload.site_id is not None else latest_assign.site_id,
-        study_id=payload.study_id if payload.study_id is not None else latest_assign.study_id,
-        is_active=payload.is_active if payload.is_active is not None else latest_assign.is_active,
+        site_id=payload.site_id
+        if payload.site_id is not None
+        else latest_assign.site_id,
+        study_id=payload.study_id
+        if payload.study_id is not None
+        else latest_assign.study_id,
+        is_active=payload.is_active
+        if payload.is_active is not None
+        else latest_assign.is_active,
         created_by=user_id,
         reason_for_change=change_reason,
         version_index=latest_assign.version_index + 1,
@@ -1712,7 +1759,10 @@ async def update_personnel_assignment(
     return new_assign
 
 
-@app.get("/api/v1/org/personnel/assignments/{id}/history", response_model=List[PersonnelAssignmentResponse])
+@app.get(
+    "/api/v1/org/personnel/assignments/{id}/history",
+    response_model=List[PersonnelAssignmentResponse],
+)
 async def get_personnel_assignment_history(
     request: Request,
     id: str,
@@ -1720,11 +1770,17 @@ async def get_personnel_assignment_history(
 ) -> List[PersonnelAssignmentResponse]:
     user_id, user_role, change_reason = get_user_context(request)
 
-    stmt = select(PersonnelAssignment).where(PersonnelAssignment.id == id).order_by(desc(PersonnelAssignment.version_index))
+    stmt = (
+        select(PersonnelAssignment)
+        .where(PersonnelAssignment.id == id)
+        .order_by(desc(PersonnelAssignment.version_index))
+    )
     res = await session.execute(stmt)
     history = res.scalars().all()
     if not history:
-        raise HTTPException(status_code=404, detail="Personnel assignment history not found")
+        raise HTTPException(
+            status_code=404, detail="Personnel assignment history not found"
+        )
 
     await write_audit_log(
         session=session,
@@ -1750,13 +1806,23 @@ async def resolve_assignments(
     """
     user_id, user_role, change_reason = get_user_context(request)
 
-    stmt = select(Personnel).where(Personnel.keycloak_user_id == keycloak_user_id).order_by(desc(Personnel.version_index))
+    stmt = (
+        select(Personnel)
+        .where(Personnel.keycloak_user_id == keycloak_user_id)
+        .order_by(desc(Personnel.version_index))
+    )
     person = (await session.execute(stmt)).scalars().first()
     if not person:
-        raise HTTPException(status_code=404, detail="Personnel not found for keycloak_user_id")
+        raise HTTPException(
+            status_code=404, detail="Personnel not found for keycloak_user_id"
+        )
 
     # Fetch all assignments and extract latest active ones
-    stmt_assign = select(PersonnelAssignment).where(PersonnelAssignment.personnel_id == person.id).order_by(PersonnelAssignment.id, desc(PersonnelAssignment.version_index))
+    stmt_assign = (
+        select(PersonnelAssignment)
+        .where(PersonnelAssignment.personnel_id == person.id)
+        .order_by(PersonnelAssignment.id, desc(PersonnelAssignment.version_index))
+    )
     res = await session.execute(stmt_assign)
     all_assigns = res.scalars().all()
 
@@ -1790,7 +1856,7 @@ async def resolve_assignments(
         "Sub-Investigator": "investigator",
         "CRC": "crc",
         "CRA/Monitor": "cra",
-        "External Monitor": "external_monitor"
+        "External Monitor": "external_monitor",
     }
     resolved_role = role_mapping.get(person.role, person.role.lower().replace(" ", "_"))
 

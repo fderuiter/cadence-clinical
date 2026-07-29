@@ -711,7 +711,9 @@ async def test_cro_affiliation_validation(db_session_fixture) -> None:
         non_cro_id = non_cro_resp.json()["id"]
 
         # Try to create External Monitor with non-CRO organization_id -> Should fail
-        p_headers = get_auth_headers("admin_user_001", "admin", "Creating external monitor")
+        p_headers = get_auth_headers(
+            "admin_user_001", "admin", "Creating external monitor"
+        )
         payload_fail = {
             "keycloak_user_id": "kc-user-mon-fail",
             "first_name": "John",
@@ -908,7 +910,7 @@ async def test_resolve_assignments_endpoint(db_session_fixture) -> None:
 
         # Call resolve endpoint
         resolve_resp = client.get(
-            f"/api/v1/org/assignments/resolve?keycloak_user_id=kc-ext-monitor-1",
+            "/api/v1/org/assignments/resolve?keycloak_user_id=kc-ext-monitor-1",
             headers=get_auth_headers("admin_user_001", "admin"),
         )
         assert resolve_resp.status_code == 200

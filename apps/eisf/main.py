@@ -13,7 +13,10 @@ from apps.eisf.database import db_manager
 from apps.eisf.models import Base, ISFAuditLog, ISFDocument
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
-from packages.security.rbac import get_normalized_roles, verify_not_auditor, require_permission
+from packages.security.rbac import (
+    get_normalized_roles,
+    require_permission,
+)
 
 DATABASE_URL = os.getenv("EISF_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
