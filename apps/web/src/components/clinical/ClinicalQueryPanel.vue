@@ -41,7 +41,10 @@
       </div>
 
       <!-- OPEN / REOPENED state -->
-      <div v-else-if="status === 'OPEN' || status === 'REOPENED'" class="query-details">
+      <div
+        v-else-if="status === 'OPEN' || status === 'REOPENED'"
+        class="query-details"
+      >
         <div
           class="query-status-badge"
           :class="`badge-${status.toLowerCase()}`"
@@ -52,9 +55,10 @@
           <strong>Discrepancy:</strong> {{ query.message }}
         </p>
         <p class="query-meta">
-          Raised by: {{ query.createdBy || "System" }} on {{ query.createdAt || "N/A" }}
+          Raised by: {{ query.createdBy || "System" }} on
+          {{ query.createdAt || "N/A" }}
         </p>
-        <div class="query-respond-section" style="margin-top: 12px;">
+        <div class="query-respond-section" style="margin-top: 12px">
           <div class="form-group">
             <label :for="`query-response-${id}`">Your Response</label>
             <textarea
@@ -83,12 +87,17 @@
           <strong>Discrepancy:</strong> {{ query.message }}
         </p>
         <p class="query-response-msg">
-          <strong>Response:</strong> {{ query.response || "No response provided" }}
+          <strong>Response:</strong>
+          {{ query.response || "No response provided" }}
         </p>
         <p class="query-meta">
-          Responded by: {{ query.respondedBy || "Investigator" }} on {{ query.respondedAt || "N/A" }}
+          Responded by: {{ query.respondedBy || "Investigator" }} on
+          {{ query.respondedAt || "N/A" }}
         </p>
-        <div class="query-actions-section" style="margin-top: 12px; display: flex; gap: 8px;">
+        <div
+          class="query-actions-section"
+          style="margin-top: 12px; display: flex; gap: 8px"
+        >
           <button
             type="button"
             class="btn-close-query"
@@ -120,9 +129,12 @@
           <strong>Response:</strong> {{ query.response || "N/A" }}
         </p>
         <p class="query-meta">
-          Closed by: {{ query.closedBy || "CRA/DM" }} on {{ query.closedAt || "N/A" }}
+          Closed by: {{ query.closedBy || "CRA/DM" }} on
+          {{ query.closedAt || "N/A" }}
         </p>
-        <p class="query-history-info">This query is permanently resolved and closed.</p>
+        <p class="query-history-info">
+          This query is permanently resolved and closed.
+        </p>
       </div>
     </div>
   </div>
@@ -154,7 +166,9 @@ const messageInput = ref("");
 const responseInput = ref("");
 
 const status = computed(() => {
-  return props.query && props.query.status ? props.query.status.toUpperCase() : "NONE";
+  return props.query && props.query.status
+    ? props.query.status.toUpperCase()
+    : "NONE";
 });
 
 // Clear inputs when status changes

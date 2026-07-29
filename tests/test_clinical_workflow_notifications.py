@@ -7,14 +7,12 @@ import httpx
 import pytest
 import pytest_asyncio
 from jose import jwt
-from sqlalchemy import select
 
-from apps.execution.database.context import current_change_reason, current_user_id
 from apps.execution.database.core import db_manager
-from apps.execution.database.models import Base, ClinicalSubject, SubjectRandomization
+from apps.execution.database.models import Base, ClinicalSubject
 from apps.execution.main import app
 from apps.execution.notifications_client import publish_notification
-from apps.execution.trial_lock import NotificationRouter, TrialLockManager
+from apps.execution.trial_lock import NotificationRouter
 from packages.security.signing import generate_gateway_signature
 
 GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")

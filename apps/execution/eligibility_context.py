@@ -69,7 +69,9 @@ async def build_eligibility_context(
             subject_id = subject_obj.subject_id or subject_obj.id
 
     if not subject_id:
-        logger.warning("Could not determine subject_id for eligibility context construction.")
+        logger.warning(
+            "Could not determine subject_id for eligibility context construction."
+        )
         return context
 
     # 2. Fetch observations with precedence rules

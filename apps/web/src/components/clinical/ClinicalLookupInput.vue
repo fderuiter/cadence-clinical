@@ -14,7 +14,10 @@
         :name="id"
         :value="modelValue"
         autocomplete="off"
-        @input="$emit('update:modelValue', $event.target.value); $emit('input', $event.target.value)"
+        @input="
+          $emit('update:modelValue', $event.target.value);
+          $emit('input', $event.target.value);
+        "
         @change="$emit('change', $event.target.value, $event.target)"
       />
 
@@ -36,7 +39,9 @@
       role="status"
       aria-live="polite"
     >
-      <span class="lookup-status-icon" aria-hidden="true">{{ statusIcon }}</span>
+      <span class="lookup-status-icon" aria-hidden="true">{{
+        statusIcon
+      }}</span>
       <span class="lookup-status-text">{{ ariaLiveMessage }}</span>
     </div>
     <div
@@ -45,7 +50,7 @@
       class="lookup-status-indicator"
       role="status"
       aria-live="polite"
-      style="display: none;"
+      style="display: none"
     ></div>
 
     <!-- Validation Error -->
@@ -147,8 +152,10 @@ const ariaLiveMessage = computed(() => {
   if (props.statusMessage) return props.statusMessage;
   if (props.status === "loading") return "Searching terminology database...";
   if (props.status === "valid") return "Code is valid.";
-  if (props.status === "invalid") return "Invalid code. Please check and try again.";
-  if (props.status === "degraded") return "Terminology service degraded. Validation offline.";
+  if (props.status === "invalid")
+    return "Invalid code. Please check and try again.";
+  if (props.status === "degraded")
+    return "Terminology service degraded. Validation offline.";
   return "";
 });
 </script>

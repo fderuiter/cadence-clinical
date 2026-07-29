@@ -1,41 +1,34 @@
-import os
-import pytest
-import pytest_asyncio
 import hashlib
 import hmac
-import time
 import json
-from datetime import datetime, date
-from typing import Any, Dict, List
-from unittest.mock import AsyncMock, patch
+import os
+import time
+from datetime import datetime
+from typing import Any, Dict
+from unittest.mock import patch
 
-from sqlalchemy import select
+import pytest
+import pytest_asyncio
+from eligibility.models import EligibilityCriterion
 from fastapi import HTTPException
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy import select
 
 from apps.execution.database.context import (
     current_change_reason,
-    current_session,
     current_user_id,
 )
 from apps.execution.database.core import db_manager
-from apps.execution.database.decorators import transactional
 from apps.execution.database.models import (
-    Base,
-    ClinicalSubject,
-    ClinicalObservation,
     AuditLog,
+    Base,
+    ClinicalObservation,
+    ClinicalSubject,
 )
 from apps.execution.demographics import encrypt_demographics
-from apps.execution.designer_client import DesignerCriteriaClient, fetch_study_criteria
+from apps.execution.designer_client import DesignerCriteriaClient
 from apps.execution.eligibility_context import build_eligibility_context
-from apps.execution.eligibility_service import (
-    evaluate_subject_eligibility,
-    verify_subject_eligible_for_randomization,
-)
 from apps.execution.main import app
-from eligibility.models import EligibilityCriterion, ExpressionNode, FieldReference
-from packages.security.signing import generate_gateway_signature
 
 GATEWAY_SECRET = "internal-gateway-secret-12345"  # pragma: allowlist secret
 
@@ -136,6 +129,7 @@ async def test_designer_criteria_client_retrieval_and_parsing():
     # Mock the http call
     with patch("httpx.AsyncClient.get") as mock_get:
         from unittest.mock import MagicMock
+
         mock_resp = MagicMock()
         mock_resp.status_code = 200
         mock_resp.json.return_value = mock_response_data
@@ -149,7 +143,9 @@ async def test_designer_criteria_client_retrieval_and_parsing():
         assert criteria[0].criterion_id == "INC_01"
         assert criteria[0].criterion_type == "inclusion"
         assert criteria[0].condition.operator == ">="
-        assert criteria[0].condition.operands[0].field_ref.raw_reference == "eCRF.DM.AGE"
+        assert (
+            criteria[0].condition.operands[0].field_ref.raw_reference == "eCRF.DM.AGE"
+        )
 
         assert isinstance(criteria[1], EligibilityCriterion)
         assert criteria[1].criterion_id == "EXC_01"
@@ -281,11 +277,18 @@ async def test_screening_endpoint_eligible_and_transition():
 
     # Mock criteria from designer service
     mock_criteria = [
-        EligibilityCriterion(**make_mock_criterion("INC_01", "inclusion", "eCRF.DM.AGE", ">=", 18, True))
+        EligibilityCriterion(
+            **make_mock_criterion("INC_01", "inclusion", "eCRF.DM.AGE", ">=", 18, True)
+        )
     ]
 
-    with patch("apps.execution.eligibility_service.fetch_study_criteria", return_value=mock_criteria):
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+    with patch(
+        "apps.execution.eligibility_service.fetch_study_criteria",
+        return_value=mock_criteria,
+    ):
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
             res = await client.post(
                 "/api/v1/execution/subjects/SUBJ-100/screening",
                 json={"study_id": "STUDY_XYZ"},
@@ -307,7 +310,9 @@ async def test_screening_endpoint_eligible_and_transition():
             # Verify database state has transitioned to ENROLLED
             async with db_manager.get_session_maker()() as session:
                 res_sub = await session.execute(
-                    select(ClinicalSubject).where(ClinicalSubject.subject_id == "SUBJ-100")
+                    select(ClinicalSubject).where(
+                        ClinicalSubject.subject_id == "SUBJ-100"
+                    )
                 )
                 db_subj = res_sub.scalars().one()
                 assert db_subj.status == "ENROLLED"
@@ -334,15 +339,24 @@ async def test_screening_endpoint_ineligible_transition_and_audit():
         await session.commit()
 
     mock_criteria = [
-        EligibilityCriterion(**make_mock_criterion("INC_01", "inclusion", "eCRF.DM.AGE", ">=", 18, True))
+        EligibilityCriterion(
+            **make_mock_criterion("INC_01", "inclusion", "eCRF.DM.AGE", ">=", 18, True)
+        )
     ]
 
-    with patch("apps.execution.eligibility_service.fetch_study_criteria", return_value=mock_criteria):
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+    with patch(
+        "apps.execution.eligibility_service.fetch_study_criteria",
+        return_value=mock_criteria,
+    ):
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
             res = await client.post(
                 "/api/v1/execution/subjects/SUBJ-200/screening",
                 json={"study_id": "STUDY_XYZ"},
-                headers=get_auth_headers(user_id="dr_smith", change_reason="Primary screening"),
+                headers=get_auth_headers(
+                    user_id="dr_smith", change_reason="Primary screening"
+                ),
             )
             assert res.status_code == 200
             data = res.json()
@@ -352,16 +366,22 @@ async def test_screening_endpoint_ineligible_transition_and_audit():
             # Verify database state transitioned to SCREEN_FAILED
             async with db_manager.get_session_maker()() as session:
                 res_sub = await session.execute(
-                    select(ClinicalSubject).where(ClinicalSubject.subject_id == "SUBJ-200")
+                    select(ClinicalSubject).where(
+                        ClinicalSubject.subject_id == "SUBJ-200"
+                    )
                 )
                 db_subj = res_sub.scalars().one()
                 assert db_subj.status == "SCREEN_FAILED"
 
                 # Verify immutable audit ledger trail attributes failure details to actor
-                stmt_audit = select(AuditLog).where(
-                    AuditLog.table_name == "clinical_subjects",
-                    AuditLog.record_id == db_subj.id,
-                ).order_by(AuditLog.timestamp.desc())
+                stmt_audit = (
+                    select(AuditLog)
+                    .where(
+                        AuditLog.table_name == "clinical_subjects",
+                        AuditLog.record_id == db_subj.id,
+                    )
+                    .order_by(AuditLog.timestamp.desc())
+                )
                 res_audit = await session.execute(stmt_audit)
                 audit_logs = res_audit.scalars().all()
 
@@ -376,7 +396,10 @@ async def test_screening_endpoint_ineligible_transition_and_audit():
 
                 assert screen_fail_log is not None
                 assert screen_fail_log.user_id == "dr_smith"
-                assert "Screen failure due to failed criteria: INC_01" in screen_fail_log.change_reason
+                assert (
+                    "Screen failure due to failed criteria: INC_01"
+                    in screen_fail_log.change_reason
+                )
 
 
 # @req:PRD-ELIGIBILITY-013
@@ -397,11 +420,18 @@ async def test_screening_endpoint_indeterminate_behavior():
         await session.commit()
 
     mock_criteria = [
-        EligibilityCriterion(**make_mock_criterion("INC_01", "inclusion", "eCRF.DM.AGE", ">=", 18, True))
+        EligibilityCriterion(
+            **make_mock_criterion("INC_01", "inclusion", "eCRF.DM.AGE", ">=", 18, True)
+        )
     ]
 
-    with patch("apps.execution.eligibility_service.fetch_study_criteria", return_value=mock_criteria):
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+    with patch(
+        "apps.execution.eligibility_service.fetch_study_criteria",
+        return_value=mock_criteria,
+    ):
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
             res = await client.post(
                 "/api/v1/execution/subjects/SUBJ-300/screening",
                 json={"study_id": "STUDY_XYZ"},
@@ -415,7 +445,9 @@ async def test_screening_endpoint_indeterminate_behavior():
             # Verify subject status remains as SCREENING (no terminal transition)
             async with db_manager.get_session_maker()() as session:
                 res_sub = await session.execute(
-                    select(ClinicalSubject).where(ClinicalSubject.subject_id == "SUBJ-300")
+                    select(ClinicalSubject).where(
+                        ClinicalSubject.subject_id == "SUBJ-300"
+                    )
                 )
                 db_subj = res_sub.scalars().one()
                 assert db_subj.status == "SCREENING"
@@ -427,12 +459,18 @@ async def test_randomization_allocation_rejection_gate():
     """Verify that allocation/randomization is strictly rejected for SCREENING and SCREEN_FAILED subjects."""
     # Test gate on different subject state states
     # Note: Subject initialization must start with "SCREENING" to obey transitions guard, then transition to SCREEN_FAILED or ENROLLED
-    subj_screening = ClinicalSubject(subject_id="S_SCR", study_id="STUDY_XYZ", status="SCREENING")
+    subj_screening = ClinicalSubject(
+        subject_id="S_SCR", study_id="STUDY_XYZ", status="SCREENING"
+    )
 
-    subj_screen_failed = ClinicalSubject(subject_id="S_FAIL", study_id="STUDY_XYZ", status="SCREENING")
+    subj_screen_failed = ClinicalSubject(
+        subject_id="S_FAIL", study_id="STUDY_XYZ", status="SCREENING"
+    )
     subj_screen_failed.status = "SCREEN_FAILED"
 
-    subj_enrolled = ClinicalSubject(subject_id="S_ENR", study_id="STUDY_XYZ", status="SCREENING")
+    subj_enrolled = ClinicalSubject(
+        subject_id="S_ENR", study_id="STUDY_XYZ", status="SCREENING"
+    )
     subj_enrolled.status = "ENROLLED"
 
     # 1. SCREENING subject randomization must be blocked

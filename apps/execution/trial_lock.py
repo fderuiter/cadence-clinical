@@ -1,7 +1,7 @@
 import json
 import logging
 import time
-from typing import Any, Dict, List, Optional
+from typing import List
 
 from apps.execution.notifications_client import publish_notification, run_async
 
@@ -44,7 +44,9 @@ class NotificationRouter:
                         site_id = line.split(":", 1)[1].strip()
                 if study_id or site_id:
                     related_entity_type = "study-site"
-                    related_entity_id = f"{study_id or 'Unknown'}:{site_id or 'Unknown'}"
+                    related_entity_id = (
+                        f"{study_id or 'Unknown'}:{site_id or 'Unknown'}"
+                    )
 
             for recipient in recipients:
                 payload = {
@@ -184,9 +186,7 @@ class NotificationRouter:
                     }
                     run_async(publish_notification(notif_payload))
         except Exception as e:
-            logger.error(
-                "Failed to send dashboard notification: %s", e, exc_info=True
-            )
+            logger.error("Failed to send dashboard notification: %s", e, exc_info=True)
 
 
 class TrialLockManager:

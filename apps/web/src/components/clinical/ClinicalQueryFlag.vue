@@ -34,19 +34,28 @@ const props = defineProps({
 defineEmits(["click"]);
 
 const statusClass = computed(() => {
-  const status = props.query && props.query.status ? props.query.status.toUpperCase() : "NONE";
+  const status =
+    props.query && props.query.status
+      ? props.query.status.toUpperCase()
+      : "NONE";
   return status.toLowerCase();
 });
 
 const ariaLabel = computed(() => {
-  const status = props.query && props.query.status ? props.query.status.toUpperCase() : "NONE";
+  const status =
+    props.query && props.query.status
+      ? props.query.status.toUpperCase()
+      : "NONE";
   return status === "NONE"
     ? "No active queries. Click to create."
     : `Query status: ${status}`;
 });
 
 const icon = computed(() => {
-  const status = props.query && props.query.status ? props.query.status.toUpperCase() : "NONE";
+  const status =
+    props.query && props.query.status
+      ? props.query.status.toUpperCase()
+      : "NONE";
   return status === "NONE" ? "💬" : "⚠️";
 });
 </script>

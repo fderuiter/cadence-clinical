@@ -1,12 +1,12 @@
 import logging
 import os
 import time
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 import httpx
+from eligibility.models import EligibilityCriterion
 from fastapi import HTTPException
 
-from eligibility.models import EligibilityCriterion
 from packages.security.signing import generate_gateway_signature
 
 logger = logging.getLogger("execution-designer-client")
@@ -14,6 +14,7 @@ logger = logging.getLogger("execution-designer-client")
 
 class DesignerCriteriaClientError(Exception):
     """Base exception for Designer Criteria client errors."""
+
     pass
 
 
@@ -26,9 +27,7 @@ class DesignerCriteriaClient:
         timeout: float = 10.0,
     ) -> None:
         self.base_url = (
-            base_url
-            or os.getenv("DESIGNER_URL")
-            or "http://localhost:8001"
+            base_url or os.getenv("DESIGNER_URL") or "http://localhost:8001"
         ).rstrip("/")
         self.timeout = timeout
 
@@ -44,7 +43,9 @@ class DesignerCriteriaClient:
         Returns:
             List[EligibilityCriterion]: List of deserialized eligibility criteria.
         """
-        gateway_secret_env = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
+        gateway_secret_env = os.getenv(
+            "GATEWAY_SECRET", "internal-gateway-secret-12345"
+        )
         gateway_secret = (
             gateway_secret_env.encode("utf-8")
             if isinstance(gateway_secret_env, str)
@@ -97,7 +98,9 @@ class DesignerCriteriaClient:
                 if "created_by" not in item:
                     item["created_by"] = item.get("created_by") or "designer"
                 if "reason_for_change" not in item:
-                    item["reason_for_change"] = item.get("reason_for_change") or "Initial definition"
+                    item["reason_for_change"] = (
+                        item.get("reason_for_change") or "Initial definition"
+                    )
 
                 # EligibilityCriterion can be constructed via standard pydantic parse
                 criteria.append(EligibilityCriterion(**item))
@@ -105,7 +108,9 @@ class DesignerCriteriaClient:
             return criteria
 
         except httpx.RequestError as e:
-            logger.error("Failed to connect to Designer service for eligibility criteria: %s", e)
+            logger.error(
+                "Failed to connect to Designer service for eligibility criteria: %s", e
+            )
             raise HTTPException(
                 status_code=502,
                 detail=f"Failed to connect to Designer service: {str(e)}",

@@ -111,7 +111,9 @@ describe("FDA 21 CFR Part 11 Sync Ledger Store", () => {
     const [url, options] = mockFetch.mock.calls[0];
     expect(url).toContain("/api/v1/execution/queries/sync");
     expect(options.method).toBe("POST");
-    expect(options.headers["Authorization"]).toBe("Bearer mock-keycloak-jwt-token");
+    expect(options.headers["Authorization"]).toBe(
+      "Bearer mock-keycloak-jwt-token"
+    );
     expect(options.headers["X-Change-Reason"]).toBe(
       "Background sync of clinical query ledger blocks"
     );
@@ -176,7 +178,9 @@ describe("FDA 21 CFR Part 11 Sync Ledger Store", () => {
     expect(store.ledgerBlocks[0].synced).toBe(false);
 
     // Run sync (which catches, logs, and rethrows the error)
-    await expect(store.syncUnsyncedBlocks()).rejects.toThrow("Network disconnect");
+    await expect(store.syncUnsyncedBlocks()).rejects.toThrow(
+      "Network disconnect"
+    );
 
     // Transaction is not dropped and synced flag remains false
     expect(store.ledgerBlocks[0].synced).toBe(false);

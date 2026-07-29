@@ -52,7 +52,7 @@
 
       <!-- Encounter/Visit Row -->
       <tr>
-        <th v-if="!hasArms" style="display: none;"></th>
+        <th v-if="!hasArms" style="display: none"></th>
         <th
           v-for="c in cols"
           :key="c.encounter.encounter_id"
@@ -206,9 +206,11 @@ const epochGroups = computed(() => {
 });
 
 function getCell(row, encounterId) {
-  return row.cells?.find((c) => c.encounter_id === encounterId) || {
-    is_applicable: false,
-  };
+  return (
+    row.cells?.find((c) => c.encounter_id === encounterId) || {
+      is_applicable: false,
+    }
+  );
 }
 
 function isApplicable(row, encounterId) {

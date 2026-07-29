@@ -497,15 +497,18 @@ async def evaluate_and_transition_screening(
     subject_id: str,
     request: Request,
     payload: Optional[SubjectScreeningRequest] = None,
-    roles: list[str] = Depends(require_roles(ROLE_SITE_INVESTIGATOR, ROLE_DATA_MANAGER, "investigator")),
-    _justification = Depends(verify_change_justification),
+    roles: list[str] = Depends(
+        require_roles(ROLE_SITE_INVESTIGATOR, ROLE_DATA_MANAGER, "investigator")
+    ),
+    _justification=Depends(verify_change_justification),
 ) -> SubjectScreeningResponse:
     """Evaluate subject's eligibility criteria and execute the guarded screening lifecycle transition."""
     change_reason = request.headers.get("X-Change-Reason", "")
 
     async with db_manager.get_session_maker()() as session:
         stmt_subj = select(ClinicalSubject).where(
-            (ClinicalSubject.subject_id == subject_id) | (ClinicalSubject.id == subject_id)
+            (ClinicalSubject.subject_id == subject_id)
+            | (ClinicalSubject.id == subject_id)
         )
         res_subj = await session.execute(stmt_subj)
         subject_obj = res_subj.scalars().first()
@@ -701,6 +704,7 @@ async def unblind_subject(
         # Helper/task to be dispatched after commit
         def dispatch_unblind_notification(subj_id: str, msg: str):
             from apps.execution.trial_lock import NotificationRouter
+
             router = NotificationRouter()
             router.send_dashboard_notification(
                 recipients=[],
@@ -709,10 +713,12 @@ async def unblind_subject(
                     "recipient_roles": ["Sponsor Safety Lead", "Lead CRA", "IDMC"],
                     "subject_id": subj_id,
                     "message": msg,
-                }
+                },
             )
 
-        background_tasks.add_task(dispatch_unblind_notification, subject.subject_id, message_text)
+        background_tasks.add_task(
+            dispatch_unblind_notification, subject.subject_id, message_text
+        )
 
         # Determine unmasked treatment_arm and drug_code values
         unmasked_treatment_arm = "Active Treatment Arm"

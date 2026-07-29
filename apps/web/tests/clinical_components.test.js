@@ -14,7 +14,9 @@ describe("ClinicalQueryFlag.vue", () => {
     });
     expect(wrapper.classes()).toContain("query-status-none");
     expect(wrapper.text()).toContain("💬");
-    expect(wrapper.attributes("aria-label")).toBe("No active queries. Click to create.");
+    expect(wrapper.attributes("aria-label")).toBe(
+      "No active queries. Click to create."
+    );
   });
 
   it("renders with status OPEN correctly", () => {
@@ -67,7 +69,9 @@ describe("ClinicalQueryPanel.vue", () => {
     await respondBtn.trigger("click");
 
     expect(wrapper.emitted("respond-query")).toBeTruthy();
-    expect(wrapper.emitted("respond-query")[0]).toEqual(["Justification notes"]);
+    expect(wrapper.emitted("respond-query")[0]).toEqual([
+      "Justification notes",
+    ]);
   });
 
   it("renders resolve/reopen buttons for ANSWERED status", async () => {
@@ -130,7 +134,9 @@ describe("ClinicalInput.vue", () => {
     });
 
     expect(wrapper.classes()).toContain("has-error");
-    expect(wrapper.find(".validation-error-msg").text()).toContain("must be between 50 and 250 mmHg");
+    expect(wrapper.find(".validation-error-msg").text()).toContain(
+      "must be between 50 and 250 mmHg"
+    );
   });
 });
 
@@ -177,7 +183,10 @@ describe("ClinicalLookupInput.vue", () => {
     expect(indicator.text()).toContain("⏳");
     expect(indicator.text()).toContain("Searching terminology database...");
 
-    await wrapper.setProps({ status: "valid", statusMessage: "Code C123 is verified." });
+    await wrapper.setProps({
+      status: "valid",
+      statusMessage: "Code C123 is verified.",
+    });
     expect(indicator.classes()).toContain("lookup-valid");
     expect(indicator.text()).toContain("✅");
     expect(indicator.text()).toContain("Code C123 is verified.");
@@ -192,16 +201,27 @@ describe("ClinicalFormField.vue", () => {
     });
     expect(wrapperText.findComponent(ClinicalInput).exists()).toBe(true);
 
-    const fieldRadio = { id: "radio-id", label: "Radio Label", type: "radio", options: ["Y", "N"] };
+    const fieldRadio = {
+      id: "radio-id",
+      label: "Radio Label",
+      type: "radio",
+      options: ["Y", "N"],
+    };
     const wrapperRadio = mount(ClinicalFormField, {
       props: { field: fieldRadio, modelValue: "Y" },
     });
     expect(wrapperRadio.findComponent(ClinicalRadioGroup).exists()).toBe(true);
 
-    const fieldConcept = { id: "lookup-id", label: "Lookup Label", type: "concept_code" };
+    const fieldConcept = {
+      id: "lookup-id",
+      label: "Lookup Label",
+      type: "concept_code",
+    };
     const wrapperConcept = mount(ClinicalFormField, {
       props: { field: fieldConcept, modelValue: "C11" },
     });
-    expect(wrapperConcept.findComponent(ClinicalLookupInput).exists()).toBe(true);
+    expect(wrapperConcept.findComponent(ClinicalLookupInput).exists()).toBe(
+      true
+    );
   });
 });

@@ -1,8 +1,4 @@
-import {
-  generateGatewaySignature,
-  buildLedgerBlock,
-  validateField,
-} from "ui";
+import { generateGatewaySignature, buildLedgerBlock, validateField } from "ui";
 import {
   queueSubmission,
   getQueuedSubmissions,

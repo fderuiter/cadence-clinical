@@ -8,16 +8,16 @@ the randomization guard.
 """
 
 import logging
-from typing import Any, Dict, Optional, Union
+from typing import Union
 
+from eligibility.evaluator import evaluate_eligibility
+from eligibility.models import AggregateEligibilityResult
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.execution.database.models import ClinicalSubject
 from apps.execution.designer_client import fetch_study_criteria
 from apps.execution.eligibility_context import build_eligibility_context
-from eligibility.evaluator import evaluate_eligibility
-from eligibility.models import AggregateEligibilityResult
 
 logger = logging.getLogger("execution-eligibility-service")
 

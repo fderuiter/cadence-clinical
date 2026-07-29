@@ -1,13 +1,9 @@
 import { defineStore } from "pinia";
-import {
-  buildLedgerBlock,
-  debounce,
-} from "ui";
+import { buildLedgerBlock, debounce } from "ui";
 import { useAuthStore } from "./auth.js";
 import { soaClient } from "../api/soaClient.js";
 import { executionService } from "../api/execution.js";
 import { evaluateAST } from "../evaluator.js";
-import { apiClient } from "../api/apiClient.js";
 
 export const useClinicalStore = defineStore("clinical", {
   state: () => {
@@ -566,7 +562,7 @@ export const useClinicalStore = defineStore("clinical", {
       );
 
       try {
-const options = {
+        const options = {
           changeReason: "Background sync of clinical query ledger blocks",
         };
         if (sigToken) {
