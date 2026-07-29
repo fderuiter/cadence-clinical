@@ -228,7 +228,9 @@ async def test_translation_status_workflow_and_rbac():
 
 @pytest.mark.asyncio
 async def test_approved_content_retrieval_and_cache():
-    """Verify only approved translations are accessible, cache hits, expiration, and stale-on-error fallback."""
+    """Verify only approved translations are accessible, cache hits, expiration, and stale-on-error fallback.
+    # @req:Trace-10
+    """
     client = TestClient(app)
     headers = get_auth_headers(roles="Grants Manager")
 

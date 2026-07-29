@@ -768,7 +768,10 @@ function commitChange(field, oldValue, newValue, reason) {
 
 // Query Operations
 function createQuery(fieldId, msgFromComponent = null) {
-  const msg = msgFromComponent !== null ? msgFromComponent : (queryInputs[fieldId] || "").trim();
+  const msg =
+    msgFromComponent !== null
+      ? msgFromComponent
+      : (queryInputs[fieldId] || "").trim();
   if (!msg) {
     alert("Please enter a discrepancy message!");
     return;
@@ -790,7 +793,10 @@ function createQuery(fieldId, msgFromComponent = null) {
 }
 
 function respondQuery(fieldId, respFromComponent = null) {
-  const resp = respFromComponent !== null ? respFromComponent : (queryResponses[fieldId] || "").trim();
+  const resp =
+    respFromComponent !== null
+      ? respFromComponent
+      : (queryResponses[fieldId] || "").trim();
   if (!resp) {
     alert("Please enter a response!");
     return;

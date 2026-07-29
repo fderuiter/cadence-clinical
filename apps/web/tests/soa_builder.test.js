@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { useClinicalStore } from "../src/stores/clinical.js";
 import { soaClient } from "../src/api/soaClient.js";
-import { createClinicalSoAMatrix } from "ui";
 import { useAuthStore } from "../src/stores/auth.js";
 import { mount } from "@vue/test-utils";
 import ClinicalSoAMatrix from "../src/components/clinical/ClinicalSoAMatrix.vue";
@@ -163,8 +162,12 @@ describe("SoA Request Construction & Serialization Unit Tests", () => {
 
     expect(url).toContain("/api/v1/studies/STUDY-01/versions/v_draft_01/arms");
     expect(requestOpts.method).toBe("POST");
-    expect(requestOpts.headers["Authorization"]).toBe("Bearer mock-keycloak-jwt-token");
-    expect(requestOpts.headers["X-Change-Reason"]).toBe("Testing signed headers");
+    expect(requestOpts.headers["Authorization"]).toBe(
+      "Bearer mock-keycloak-jwt-token"
+    );
+    expect(requestOpts.headers["X-Change-Reason"]).toBe(
+      "Testing signed headers"
+    );
     expect(requestOpts.headers["X-User-Id"]).toBeUndefined();
     expect(requestOpts.headers["X-Gateway-Signature"]).toBeUndefined();
 
@@ -246,7 +249,9 @@ describe("SoA Builder Signed API Client & Store Integration", () => {
       "/api/v1/studies/STUDY-USDM-001/versions/v_draft_01/arms"
     );
     expect(options.method).toBe("POST");
-    expect(options.headers["Authorization"]).toBe("Bearer mock-keycloak-jwt-token");
+    expect(options.headers["Authorization"]).toBe(
+      "Bearer mock-keycloak-jwt-token"
+    );
     expect(options.headers["X-Change-Reason"]).toBe("Configure arm");
     expect(options.headers["X-User-Id"]).toBeUndefined();
     expect(options.headers["X-Gateway-Signature"]).toBeUndefined();

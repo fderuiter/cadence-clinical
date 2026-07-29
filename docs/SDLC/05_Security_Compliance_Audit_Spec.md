@@ -98,6 +98,7 @@ The Cadence Clinical platform enforces a highly granular Role-Based Access Contr
 7. **Clinical Research Coordinator (CRC):** Performs daily data entry on subjects, saves draft eCRFs, responds to query validation issues, and manages subject visits.
 8. **Clinical Research Associate (CRA / Monitor):** Represents the sponsor at the site. Performs Source Document Verification (SDV), raises manual queries, and monitors protocol compliance.
 9. **Subject / Patient (ePRO):** Individual enrolled in the trial. Limited access strictly through a mobile or web portal to submit self-reported outcomes (ePRO/diaries) without visibility into any backend trial configurations, dictionaries, or other subjects.
+10. **External Monitor (CRO Monitor):** Associated with CRO affiliation. Performs high-level clinical oversight as a strict read-only persona. Excluded from delegation-of-authority workflows, and holds only read permissions for eTMF, EDL, eTMF Audit Logs, and eISF.
 
 ### 2.2 System Resource & Feature Permission Matrix
 
@@ -119,11 +120,12 @@ The following matrix defines the granular operations allowed for each role acros
 | **Site Coordinator (CRC)**| R | C/R/U | C/R/U (Draft) | R/U (Ans) | N | R (Site) | N | N | N |
 | **Site Monitor (CRA)** | R | R | R | C/R/U/D | C/R/U/D | R (Site) | N | N | R (Site) |
 | **Patient (ePRO)** | N | N | C/U (Diary) | N | N | N | N | N | N |
+| **External Monitor (CRO)** | R | N | N | N | N | R | N | N | R |
 
 ### 2.3 Field-Level Visibility & Blinding Matrix
 To guarantee compliance with blinding regulations, several parameters must be completely hidden or obfuscated from blinded roles. Blinded roles include CRCs, PIs, CRAs, and general Sponsor Data Managers during active trial phases. Unblinded roles include designated unblinded statisticians, unblinded pharmacists, and specific safety monitoring boards (DSMB).
 
-| Database Table / Entity | Field/Attribute | Blinded Roles (PI, CRC, CRA, DM, MM) | Unblinded Roles (Unblinded Pharmacist, DSMB) | Technical Enforcement Mechanism |
+| Database Table / Entity | Field/Attribute | Blinded Roles (PI, CRC, CRA, DM, MM, External Monitor) | Unblinded Roles (Unblinded Pharmacist, DSMB) | Technical Enforcement Mechanism |
 | :--- | :--- | :--- | :--- | :--- |
 | `subject_demographics` | Patient Initials, SSN, DOB | Masked / Hashed (No Read) | Read Only (PI/CRC Site Only) | API-layer field stripping in Gateway based on OIDC token attributes. |
 | `subject_demographics` | Country, Gender, Age | Read Only | Read Only | Exposed globally across all clinical site roles. |

@@ -624,6 +624,7 @@ async def test_subject_role_authorization_and_identity_binding():
     - An authenticated Subject cannot submit/sync records for another subject (returns 403).
     - An authenticated Subject cannot access staff-only endpoints like FHIR prefill (returns 403).
     - Staff members can submit/sync for any subject without restriction.
+    # @req:Trace-8
     """
     # Set up Instrument and Assignment to prevent structural conflicts
     async_session = db_manager.get_session_maker()

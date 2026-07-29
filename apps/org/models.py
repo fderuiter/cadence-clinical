@@ -157,10 +157,50 @@ class Personnel(Base):
         primaryjoin="foreign(Personnel.site_id) == Site.site_id",
         back_populates="personnel",
     )
+    assignments: Mapped[List["PersonnelAssignment"]] = relationship(
+        "PersonnelAssignment",
+        primaryjoin="Personnel.id == foreign(PersonnelAssignment.personnel_id)",
+        back_populates="personnel",
+        cascade="all, delete-orphan",
+    )
 
 
 # Alias as requested
 SiteStaff = Personnel
+
+
+class PersonnelAssignment(Base):
+    """
+    Represents an assignment of personnel to a specific site and study.
+    Follows the existing append-only, Part-11-versioned pattern.
+    """
+
+    __tablename__ = "personnel_assignments"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    personnel_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    # 21 CFR Part 11 Compliance Auditing Metadata
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(
+        Integer, primary_key=True, default=1, nullable=False
+    )
+
+    # Relationships
+    personnel: Mapped["Personnel"] = relationship(
+        "Personnel",
+        primaryjoin="foreign(PersonnelAssignment.personnel_id) == remote(Personnel.id)",
+        back_populates="assignments",
+    )
 
 
 class DelegationOfAuthority(Base):

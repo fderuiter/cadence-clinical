@@ -15,6 +15,7 @@ ROW_KEYS: dict[str, str] = {
     "DEID Compliance Scan": "deid",
     "Git Merge Conflicts": "conflict",
     "Code Duplication Scan": "duplication",
+    "Requirements Traceability": "traceability",
 }
 
 
@@ -102,6 +103,7 @@ def merge_outcomes(
         "conflict",
         "deid",
         "duplication",
+        "traceability",
     ]:
         new_val = new_outcomes.get(key)
         existing_val = existing_outcomes.get(key)
@@ -124,6 +126,11 @@ def build_comment_body(outcomes: dict[str, str], has_failures: bool) -> str:
     emoji_audit = get_status_emoji(outcomes.get("audit"))
     emoji_deid = get_status_emoji(outcomes.get("deid"))
     emoji_duplication = get_status_emoji(outcomes.get("duplication"))
+    emoji_traceability = get_status_emoji(outcomes.get("traceability"))
+
+    checked_traceability = (
+        "[x]" if outcomes.get("traceability") in ("success", "passed") else "[ ]"
+    )
 
     # Turn the conflict emoji into a positive "No Conflict" if it's success (Passed), or "Conflict Detected" if it's failure
     conflict_val = outcomes.get("conflict", "success").lower()
@@ -230,6 +237,7 @@ def build_comment_body(outcomes: dict[str, str], has_failures: bool) -> str:
 | :--- | :--- |
 | **Linting & Formatting** (Ruff) | {emoji_lint} |
 | **Backend Tests & Coverage** (pytest) | {emoji_test} |
+| **Requirements Traceability** (generate_rtm.py) | {emoji_traceability} |
 | **Frontend Checks** (pnpm check) | {emoji_frontend} |
 | **ADR Validation** (validate_adrs.py) | {emoji_adr} |
 | **Dependency, Static Audit & Secrets Scan** (pip-audit/bandit/detect-secrets) | {emoji_audit} |
@@ -290,6 +298,7 @@ Before approving a PR or signing off on a merged state, verify completion of thi
 *   [ ] **Type Safety & Linting:** Code strictly complies with the project's type-checking and linting configurations.
 *   [ ] **Documentation:** Comprehensive docstrings exist on all public functions/classes, and workspace docs reflect any data flow changes.
 *   [ ] **Test Coverage:** Unit and/or integration tests are added under the appropriate test directory, maintaining the 80% coverage threshold.
+*   {checked_traceability} **Requirements Traceability:** SRS and PRD requirements are fully mapped to automated verification tests.
 *   [ ] **Architectural Intent:** An ADR is added to the architecture logs if major new design patterns or dependencies were introduced.
 *   [ ] **Clean Verification Suite:** All local checks (test runner, linter, type-checker) pass successfully without warnings or errors.
 *   [ ] **Conflict-Free:** All Git conflict markers and lockfile discrepancies are fully resolved.
@@ -350,6 +359,7 @@ def main() -> None:
         "conflict": os.environ.get("CONFLICT_OUTCOME", ""),
         "deid": os.environ.get("DEID_OUTCOME", ""),
         "duplication": os.environ.get("DUPLICATION_OUTCOME", ""),
+        "traceability": os.environ.get("TRACEABILITY_OUTCOME", ""),
     }
 
     # Fetch existing comments to see if we have an existing checklist comment

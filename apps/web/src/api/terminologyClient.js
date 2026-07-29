@@ -58,7 +58,11 @@ export const terminologyClient = {
       throw new Error("Search term cannot be empty or whitespace.");
     }
 
-    const { fromRecord, pageSize, changeReason = "Search terminology" } = options;
+    const {
+      fromRecord,
+      pageSize,
+      changeReason = "Search terminology",
+    } = options;
     const queryParams = new URLSearchParams({ term });
     if (fromRecord !== undefined && fromRecord !== null) {
       queryParams.append("from_record", String(fromRecord));

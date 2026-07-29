@@ -48,6 +48,10 @@ export const executionService = {
    * Syncs clinical query ledger blocks.
    */
   syncQueries(blocks, options = {}) {
-    return apiClient.post(`/api/v1/execution/queries/sync`, { blocks }, options);
+    return apiClient.post(
+      `/api/v1/execution/queries/sync`,
+      { blocks },
+      options
+    );
   },
 };

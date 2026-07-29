@@ -641,3 +641,139 @@ def test_mask_payload_recursive() -> None:
     unmasked_model = mask_payload(payload_model, unblinded_principal)
     assert unmasked_model.initials == "JD"
     assert unmasked_model.ssn == "123-45-6789"
+
+
+# ==========================================
+# External Monitor RBAC & Verification Tests
+# ==========================================
+
+
+def test_external_monitor_aliases() -> None:
+    """Verify normalization of all External Monitor alias strings."""
+    from packages.security.rbac import ROLE_EXTERNAL_MONITOR, normalize_role
+
+    assert normalize_role("external monitor") == ROLE_EXTERNAL_MONITOR
+    assert normalize_role("external_monitor") == ROLE_EXTERNAL_MONITOR
+    assert normalize_role("external-monitor") == ROLE_EXTERNAL_MONITOR
+    assert normalize_role("cro monitor") == ROLE_EXTERNAL_MONITOR
+    assert normalize_role("cro_monitor") == ROLE_EXTERNAL_MONITOR
+    assert normalize_role("cro-monitor") == ROLE_EXTERNAL_MONITOR
+
+
+def test_external_monitor_permissions_matrix() -> None:
+    """Verify only read access is granted, and writes/redacts/signs/QC are explicitly denied."""
+    from packages.security.rbac import ROLE_EXTERNAL_MONITOR, Principal, has_permission
+
+    p = Principal(user_id="em1", roles=[ROLE_EXTERNAL_MONITOR])
+
+    # Allowed reads
+    assert has_permission(p, "etmf_document:read") is True
+    assert has_permission(p, "etmf_edl:read") is True
+    assert has_permission(p, "etmf_audit_logs:read") is True
+    assert has_permission(p, "eisf_document:read") is True
+
+    # Denied writes/mutations
+    assert has_permission(p, "etmf_document:create") is False
+    assert has_permission(p, "etmf_document:read_raw") is False
+    assert has_permission(p, "etmf_document:redact") is False
+    assert has_permission(p, "etmf_document:sign") is False
+    assert has_permission(p, "etmf_document:transition_technical_qc") is False
+    assert has_permission(p, "etmf_document:transition_clinical_qc") is False
+    assert has_permission(p, "etmf_document:transition_approved") is False
+    assert has_permission(p, "etmf_document:transition_archived") is False
+    assert has_permission(p, "eisf_document:create") is False
+    assert has_permission(p, "eisf_document:update") is False
+    assert has_permission(p, "eisf_document:delete") is False
+    assert has_permission(p, "eisf_document:sync") is False
+
+
+@pytest.mark.asyncio
+async def test_external_monitor_eisf_denies_writes_allows_reads() -> None:
+    """Verify that External Monitor is allowed to read eISF but forbidden from writing."""
+    from apps.eisf.main import app as eisf_app
+
+    client = TestClient(eisf_app)
+
+    # 1. Block Create
+    payload = {
+        "study_id": "study_001",
+        "site_id": "site_001",
+        "binder_classification": "Investigator CV",
+        "filename": "cv.pdf",
+        "content": "CV text",
+        "mime_type": "application/pdf",
+        "reason_for_change": "Onboarding",
+    }
+    resp = client.post(
+        "/api/v1/eisf/documents",
+        json=payload,
+        headers=get_auth_headers("external_monitor"),
+    )
+    assert resp.status_code == 403
+
+    # 2. Block Update
+    resp = client.put(
+        "/api/v1/eisf/documents/doc123",
+        json=payload,
+        headers=get_auth_headers("external_monitor"),
+    )
+    assert resp.status_code == 403
+
+    # 3. Block Delete
+    resp = client.delete(
+        "/api/v1/eisf/documents/doc123?reason_for_change=Valid+Reason+At+Least+Ten+Chars",
+        headers=get_auth_headers("external_monitor"),
+    )
+    assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_external_monitor_principal_resolution(monkeypatch) -> None:
+    """Verify directory-backed resolution ignoring spoofed headers and enforcing site/study scope."""
+
+    from packages.security.rbac import (
+        can_access_site,
+        can_access_study,
+        get_principal,
+    )
+
+    class MockRequest:
+        def __init__(self):
+            class State:
+                pass
+
+            self.state = State()
+            self.headers = {
+                "X-User-Id": "ext_mon_user",
+                "X-User-Roles": "external_monitor",
+                "X-Site-Id": "spoofed_site",
+                "X-Study-Id": "spoofed_study",
+                "X-Change-Reason": "Valid reason",
+            }
+
+    async def mock_resolve(user_id):
+        return {
+            "personnel_id": "p_ext_1",
+            "roles": ["external_monitor"],
+            "assigned_sites": ["site_alpha", "site_beta"],
+            "assigned_studies": ["study_x", "study_y"],
+        }
+
+    import packages.security.org_client
+
+    monkeypatch.setattr(
+        packages.security.org_client, "resolve_personnel_assignments", mock_resolve
+    )
+
+    req = MockRequest()
+    principal = await get_principal(req)
+
+    assert principal.user_id == "ext_mon_user"
+    assert "external_monitor" in principal.roles
+    assert principal.assigned_sites == ["site_alpha", "site_beta"]
+    assert principal.assigned_studies == ["study_x", "study_y"]
+
+    assert can_access_site(principal, "site_alpha") is True
+    assert can_access_site(principal, "site_gamma") is False
+    assert can_access_study(principal, "study_x") is True
+    assert can_access_study(principal, "study_z") is False

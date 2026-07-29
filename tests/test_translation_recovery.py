@@ -125,7 +125,9 @@ async def test_translation_status_and_listing_success():
 
 @pytest.mark.asyncio
 async def test_translation_error_status_and_rollback():
-    """Test failure flow: invalid study triggers rollback and writes FAILED status."""
+    """Test failure flow: invalid study triggers rollback and writes FAILED status.
+    # @req:Trace-12
+    """
     study_payload = {
         "study_id": "test_failed_study",
         "payload": {

@@ -19,7 +19,10 @@
             :name="id"
             :value="opt.value"
             :checked="modelValue === opt.value"
-            @change="$emit('update:modelValue', opt.value); $emit('change', opt.value, $event.target)"
+            @change="
+              $emit('update:modelValue', opt.value);
+              $emit('change', opt.value, $event.target);
+            "
           />
           <label :for="`${id}_option_${idx}`">{{ opt.label }}</label>
         </div>

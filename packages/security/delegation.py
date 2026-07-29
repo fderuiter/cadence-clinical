@@ -54,6 +54,11 @@ def normalize_and_validate_staff_role(role_str: str) -> StaffRole:
     }:
         return ClinicalStaffRole.CRA_MONITOR
 
+    # Note: External Monitor ("external monitor"/"external_monitor") is intentionally
+    # excluded from the Delegation-of-Authority (DOA) scope because monitors perform
+    # oversight duties rather than delegated site duties. They fall through to the
+    # invalid clinical staff role exception below.
+
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
         detail=f"Invalid clinical staff role: '{role_str}'",

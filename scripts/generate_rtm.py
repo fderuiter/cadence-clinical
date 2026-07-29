@@ -619,6 +619,12 @@ def main():
         action="store_true",
         help="Use current UTC system timestamp instead of the stable baseline timestamp.",
     )
+    parser.add_argument(
+        "--validate",
+        "-v",
+        action="store_true",
+        help="Exit with code 1 if any requirement is unmapped.",
+    )
     args = parser.parse_args()
 
     print(
@@ -692,6 +698,25 @@ def main():
         timestamp=timestamp,
     )
     print(f"Qualification Execution Report successfully written to {qual_out}")
+
+    if args.validate:
+        unmapped_list = [
+            req_id
+            for req_id in all_requirements
+            if req_id not in test_mappings or not test_mappings[req_id]
+        ]
+        if unmapped_list:
+            print("ERROR: Requirements traceability validation failed!")
+            print(f"Found {len(unmapped_list)} unmapped requirements:")
+            for req_id in sorted(unmapped_list):
+                print(f"  - {req_id}")
+            import sys
+
+            sys.exit(1)
+        else:
+            print(
+                "SUCCESS: Requirements traceability validation passed! All requirements are mapped."
+            )
 
 
 if __name__ == "__main__":

@@ -110,7 +110,9 @@ async def test_concept_mutations_unreferenced():
 
 @pytest.mark.asyncio
 async def test_concept_mutations_locked_active_recruiting():
-    """Verify that mutations are rejected with 409 Conflict when a concept is referenced by an Active-Recruiting study."""
+    """Verify that mutations are rejected with 409 Conflict when a concept is referenced by an Active-Recruiting study.
+    # @req:PRD-MDR-002
+    """
     # Inject active-recruiting study referencing C_LOCKED
     MOCK_STUDIES["study_recruiting_lock"] = {
         "study_id": "study_recruiting_lock",

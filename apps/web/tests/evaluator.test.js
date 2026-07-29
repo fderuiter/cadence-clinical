@@ -337,7 +337,9 @@ describe("Client-side AST Evaluator & Cascading Nullification", () => {
         operands: [],
       };
 
-      expect(evaluateAST(isEmptyInvalid, { comment: "", vssbp: 120 })).toBeNull();
+      expect(
+        evaluateAST(isEmptyInvalid, { comment: "", vssbp: 120 })
+      ).toBeNull();
       expect(evaluateAST(isNotEmptyInvalid, {})).toBeNull();
     });
   });

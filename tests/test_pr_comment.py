@@ -104,3 +104,33 @@ def test_build_comment_body():
 
     body_fail = build_comment_body(outcomes, has_failures=True)
     assert "### ⚠️ Quality Gate Alerts & Review Checklist Required" in body_fail
+
+
+def test_traceability_outcome_handling():
+    """Verify Requirements Traceability is parsed, merged, and rendered."""
+    sample_comment = """<!-- ID: CADENCE_PR_QUALITY_GATE_CHECKLIST -->
+### ⚠️ Quality Gate Alerts & Review Checklist Required
+
+| Quality Gate / Check | Status |
+| :--- | :--- |
+| **Requirements Traceability** (generate_rtm.py) | ❌ Failed |
+| **Backend Tests & Coverage** (pytest) | ✅ Passed |
+"""
+    outcomes = parse_existing_outcomes(sample_comment)
+    assert outcomes.get("traceability") == "failure"
+    assert outcomes.get("test") == "success"
+
+    # Test merging
+    existing = {"traceability": "failure", "test": "success"}
+    new_runs = {"traceability": "success", "test": "skipped"}
+    merged = merge_outcomes(new_runs, existing)
+    assert merged.get("traceability") == "success"
+    assert merged.get("test") == "success"
+
+    # Test rendering of pass and fail checklist item
+    body_pass = build_comment_body({"traceability": "success"}, has_failures=False)
+    assert "Requirements Traceability" in body_pass
+    assert "[x] **Requirements Traceability:**" in body_pass
+
+    body_fail = build_comment_body({"traceability": "failure"}, has_failures=True)
+    assert "[ ] **Requirements Traceability:**" in body_fail

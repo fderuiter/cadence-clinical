@@ -1040,7 +1040,7 @@ async function fetchRules() {
   connectionError.value = false;
   try {
     const response = await apiClient.get(`/api/v1/studies/study_1/rules`, {
-      changeReason: "Fetch clinical rules"
+      changeReason: "Fetch clinical rules",
     });
     activeRules.value = response;
   } catch (err) {
@@ -1386,9 +1386,13 @@ async function confirmChangeReason() {
 
       let saved;
       if (isEdit) {
-        saved = await apiClient.put(url, action.payload, { changeReason: reasonText });
+        saved = await apiClient.put(url, action.payload, {
+          changeReason: reasonText,
+        });
       } else {
-        saved = await apiClient.post(url, action.payload, { changeReason: reasonText });
+        saved = await apiClient.post(url, action.payload, {
+          changeReason: reasonText,
+        });
       }
 
       // Sync verified record into compliance ledger

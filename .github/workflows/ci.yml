@@ -21,6 +21,7 @@ jobs:
       frontend_outcome: ${{ steps.run_frontend.outcome }}
       adr_outcome: ${{ steps.run_adr.outcome }}
       duplication_outcome: ${{ steps.run_duplication.outcome }}
+      traceability_outcome: ${{ steps.run_traceability.outcome }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -81,6 +82,11 @@ jobs:
         id: run_markdown
         if: always()
         run: python3 scripts/validate_markdown.py
+
+      - name: Run Requirements Traceability Validation
+        id: run_traceability
+        if: always()
+        run: uv run python scripts/generate_rtm.py --validate
 
       - name: Run code duplication verification
         id: run_duplication
@@ -493,6 +499,7 @@ jobs:
           SECRETS_OUTCOME: ${{ needs.security.outputs.secrets_outcome }}
           DEID_OUTCOME: ${{ needs.security.outputs.deid_outcome }}
           DUPLICATION_OUTCOME: ${{ needs.style.outputs.duplication_outcome }}
+          TRACEABILITY_OUTCOME: ${{ needs.style.outputs.traceability_outcome }}
         run: python3 scripts/post_pr_comment.py
   classify:
     name: Classify Change

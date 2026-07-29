@@ -68,6 +68,7 @@ async def test_defeated_record_persistence_on_conflicts():
     Verify that normal conflict outcomes (CLIENT_WINS, SERVER_WINS, MERGE)
     record the winning decision, version increment, and preserve defeated/overwritten
     inputs with status 'Defeated by online-merge conflict resolution' in EPROSubmissionDefeated.
+    # @req:Trace-9
     """
     # 1. Setup Instrument and SubjectAssignment
     async_session = db_manager.get_session_maker()
