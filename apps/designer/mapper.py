@@ -394,7 +394,12 @@ def map_study_to_usdm(study_data: Dict[str, Any]) -> Dict[str, Any]:
                 "_original_id": b_id,
                 "name": block.get("criterion_id"),
                 "description": block.get("text", ""),
-                "category": make_code_obj(None, block.get("criterion_type", "inclusion"), block.get("criterion_type", "inclusion"), "CDISC-CT"),
+                "category": make_code_obj(
+                    None,
+                    block.get("criterion_type", "inclusion"),
+                    block.get("criterion_type", "inclusion"),
+                    "CDISC-CT",
+                ),
                 "identifier": block.get("criterion_id"),
                 "criterionItemId": to_uuid(b_id, "criterion_item"),
                 "instanceType": "EligibilityCriterion",
@@ -463,19 +468,21 @@ def map_study_to_usdm(study_data: Dict[str, Any]) -> Dict[str, Any]:
     # Add legacy-flat study blocks representation
     legacy_flat_blocks = []
     for b in blocks:
-        legacy_flat_blocks.append({
-            "block_id": b["block_id"],
-            "block_type": b.get("block_type"),
-            "order": b.get("order"),
-            "parent_id": b.get("parent_id"),
-            "title": b.get("title"),
-            "text": b.get("text", ""),
-            "objective_id": b.get("objective_id"),
-            "criterion_id": b.get("criterion_id"),
-            "criterion_type": b.get("criterion_type"),
-            "dsl_source": b.get("dsl_source"),
-            "derived_from_soa": b.get("derived_from_soa", False),
-        })
+        legacy_flat_blocks.append(
+            {
+                "block_id": b["block_id"],
+                "block_type": b.get("block_type"),
+                "order": b.get("order"),
+                "parent_id": b.get("parent_id"),
+                "title": b.get("title"),
+                "text": b.get("text", ""),
+                "objective_id": b.get("objective_id"),
+                "criterion_id": b.get("criterion_id"),
+                "criterion_type": b.get("criterion_type"),
+                "dsl_source": b.get("dsl_source"),
+                "derived_from_soa": b.get("derived_from_soa", False),
+            }
+        )
 
     # --- 3. Construct and Return Combined Payload ---
     return {

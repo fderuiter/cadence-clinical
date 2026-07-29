@@ -85,7 +85,9 @@ class NarrativeSectionView(BaseModel):
         description="Subsections nested inside this section.",
     )
     order: int = Field(..., description="Sequential sorting order within its parent.")
-    derived_from_soa: bool = Field(False, description="Flag indicating selective lineage.")
+    derived_from_soa: bool = Field(
+        False, description="Flag indicating selective lineage."
+    )
 
 
 class SynopsisView(BaseModel):
@@ -178,7 +180,9 @@ class SoACellView(BaseModel):
         None, description="Optional timing windows, constraints, or instruction notes."
     )
     arm_id: Optional[str] = Field(None, description="Optional associated arm ID.")
-    derived_from_soa: bool = Field(False, description="Flag indicating selective lineage.")
+    derived_from_soa: bool = Field(
+        False, description="Flag indicating selective lineage."
+    )
 
 
 class SoARowView(BaseModel):
@@ -194,7 +198,9 @@ class SoARowView(BaseModel):
         default_factory=list,
         description="Applicability cell mapping for each encounter column.",
     )
-    derived_from_soa: bool = Field(False, description="Flag indicating selective lineage.")
+    derived_from_soa: bool = Field(
+        False, description="Flag indicating selective lineage."
+    )
 
 
 class SoAMatrixView(BaseModel):

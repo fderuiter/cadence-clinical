@@ -1,51 +1,36 @@
 import pytest
-import uuid
-import datetime as dt
-from typing import Any, Dict, List
-from unittest.mock import AsyncMock, MagicMock
 from fastapi.testclient import TestClient
-
-from pydantic import ValidationError
 from protocol_authoring import (
+    CANONICAL_ICH_SKELETON,
     BlockType,
-    ProtocolBlock,
+    EligibilityBlock,
     NarrativeBlock,
     ObjectiveBlock,
-    EligibilityBlock,
     SoADerivedBlock,
-    ProtocolBlockUnion,
-    ICHSection,
-    CANONICAL_ICH_SKELETON,
-    build_canonical_ich_skeleton,
 )
-from protocol_render import SoAMatrixView, SoAHeaderArm
 
-from apps.designer.main import app
+from apps.designer.comparison import compare_payloads
 from apps.designer.db import (
     MOCK_STUDY_VERSIONS,
-    create_mock_study_version,
-    get_study_projection,
 )
 from apps.designer.delta import (
     MOCK_SOA_DATA,
-    ImmutabilityViolationError,
     ConcurrentLockingError,
+    ImmutabilityViolationError,
     create_block,
-    update_block,
+    create_study_arm,
     delete_block,
     get_block,
-    list_blocks,
-    reorder_blocks,
-    create_study_arm,
-    update_study_arm,
     get_soa_matrix_projection,
     link_arm_applicability,
+    list_blocks,
+    reorder_blocks,
+    update_block,
+    update_study_arm,
 )
-from apps.designer.mapper import map_study_to_usdm
 from apps.designer.inverse_mapper import map_usdm_to_study
-from apps.designer.comparison import compare_payloads
-from apps.designer.content_assembly import assemble_rendered_protocol_document
-
+from apps.designer.main import app
+from apps.designer.mapper import map_study_to_usdm
 from packages.security.signing import generate_gateway_signature
 
 
@@ -59,6 +44,7 @@ def clean_mock_stores():
 # ==========================================
 # 1. Model Validation Tests
 # ==========================================
+
 
 def test_protocol_block_validation():
     # Valid NarrativeBlock
@@ -142,6 +128,7 @@ def test_canonical_ich_skeleton():
 # 2. Persistence & Projection Tests
 # ==========================================
 
+
 @pytest.mark.asyncio
 async def test_block_persistence_lifecycle():
     study_version_id = "sv_block_1"
@@ -162,12 +149,19 @@ async def test_block_persistence_lifecycle():
         user_id="user_test",
         change_reason="Add initial narrative",
         block_id="block_narr",
-        properties={"title": "Introduction", "text": "This is introductory text.", "block_type": "narrative", "order": 1},
+        properties={
+            "title": "Introduction",
+            "text": "This is introductory text.",
+            "block_type": "narrative",
+            "order": 1,
+        },
     )
     assert b_id == "block_narr"
 
     # Get Block
-    block = await get_block(driver=None, study_version_id=study_version_id, block_id="block_narr")
+    block = await get_block(
+        driver=None, study_version_id=study_version_id, block_id="block_narr"
+    )
     assert block["title"] == "Introduction"
     assert block["order"] == 1
     assert block["version_index"] == 1
@@ -190,9 +184,16 @@ async def test_block_persistence_lifecycle():
         user_id="user_test",
         change_reason="Modify introductory text",
         block_id="block_narr",
-        properties={"title": "Introduction (Updated)", "text": "New text.", "block_type": "narrative", "order": 1},
+        properties={
+            "title": "Introduction (Updated)",
+            "text": "New text.",
+            "block_type": "narrative",
+            "order": 1,
+        },
     )
-    updated_block = await get_block(driver=None, study_version_id=study_version_id, block_id="block_narr")
+    updated_block = await get_block(
+        driver=None, study_version_id=study_version_id, block_id="block_narr"
+    )
     assert updated_block["title"] == "Introduction (Updated)"
     assert updated_block["version_index"] == 2
 
@@ -204,7 +205,9 @@ async def test_block_persistence_lifecycle():
         change_reason="Soft-delete narrative",
         block_id="block_narr",
     )
-    deleted_block = await get_block(driver=None, study_version_id=study_version_id, block_id="block_narr")
+    deleted_block = await get_block(
+        driver=None, study_version_id=study_version_id, block_id="block_narr"
+    )
     assert deleted_block is None
 
 
@@ -222,10 +225,20 @@ async def test_reorder_blocks():
     ]
 
     await create_block(
-        None, study_version_id, "user1", "b1", "b_1", {"block_type": "narrative", "order": 1, "text": "One"}
+        None,
+        study_version_id,
+        "user1",
+        "b1",
+        "b_1",
+        {"block_type": "narrative", "order": 1, "text": "One"},
     )
     await create_block(
-        None, study_version_id, "user1", "b2", "b_2", {"block_type": "narrative", "order": 2, "text": "Two"}
+        None,
+        study_version_id,
+        "user1",
+        "b2",
+        "b_2",
+        {"block_type": "narrative", "order": 2, "text": "Two"},
     )
 
     success = await reorder_blocks(
@@ -284,12 +297,23 @@ async def test_arm_aware_soa_matrix_projection():
 
     # Create StudyArm
     await create_study_arm(
-        None, study_version_id, "user1", "create arm", "arm_tx", {"name": "Active Arm", "sequence": 1}
+        None,
+        study_version_id,
+        "user1",
+        "create arm",
+        "arm_tx",
+        {"name": "Active Arm", "sequence": 1},
     )
 
     # Link applicability
     await link_arm_applicability(
-        None, study_version_id, "user1", "link applicability", "arm_tx", "visit_1", "visit"
+        None,
+        study_version_id,
+        "user1",
+        "link applicability",
+        "arm_tx",
+        "visit_1",
+        "visit",
     )
 
     # Query projection
@@ -303,6 +327,7 @@ async def test_arm_aware_soa_matrix_projection():
 # ==========================================
 # 3. Round-Trip Mapping Tests
 # ==========================================
+
 
 def test_usdm_block_round_trip():
     # Construct original flat projection with blocks
@@ -332,8 +357,8 @@ def test_usdm_block_round_trip():
                 "criterion_id": "INC_01",
                 "criterion_type": "inclusion",
                 "text": "Adult patient >= 18.",
-            }
-        ]
+            },
+        ],
     }
 
     # Map to USDM
@@ -367,6 +392,7 @@ def test_usdm_block_round_trip():
 # 4. Lineage & Selective Propagation Tests
 # ==========================================
 
+
 @pytest.mark.asyncio
 async def test_selective_lineage_propagation():
     study_version_id = "sv_lineage"
@@ -394,7 +420,7 @@ async def test_selective_lineage_propagation():
             "source_entity_type": "arm",
             "text": "Treatment Arm 1 details",
             "derived_from_soa": False,
-        }
+        },
     )
 
     # Update StudyArm to trigger lineage propagation
@@ -402,7 +428,12 @@ async def test_selective_lineage_propagation():
         None, study_version_id, "user1", "create arm Y", "arm_tx_1", {"name": "Arm Y"}
     )
     await update_study_arm(
-        None, study_version_id, "user1", "rename arm Y", "arm_tx_1", {"name": "Arm Y (Modified)"}
+        None,
+        study_version_id,
+        "user1",
+        "rename arm Y",
+        "arm_tx_1",
+        {"name": "Arm Y (Modified)"},
     )
 
     # Assert selective block was propagated and flagged derived_from_soa = True
@@ -413,6 +444,7 @@ async def test_selective_lineage_propagation():
 # ==========================================
 # 5. REST API Security & Endpoint Routing Tests
 # ==========================================
+
 
 def test_api_block_crud_with_rbac():
     client = TestClient(app)
@@ -433,6 +465,7 @@ def test_api_block_crud_with_rbac():
     # Helper to generate HMAC headers
     def get_auth_headers(roles="sponsor_designer", change_reason="REST Action"):
         import time
+
         timestamp = str(time.time())
         secret = b"internal-gateway-secret-12345"
         sig = generate_gateway_signature(
@@ -454,7 +487,12 @@ def test_api_block_crud_with_rbac():
     # 1. Reject without permissions/roles
     resp = client.post(
         f"/api/v1/studies/{study_id}/versions/{version_id}/blocks",
-        json={"id": "b_api_1", "block_type": "narrative", "order": 1, "properties": {"text": "A"}},
+        json={
+            "id": "b_api_1",
+            "block_type": "narrative",
+            "order": 1,
+            "properties": {"text": "A"},
+        },
     )
     assert resp.status_code == 403
 
@@ -462,7 +500,12 @@ def test_api_block_crud_with_rbac():
     headers = get_auth_headers(roles="sponsor_designer")
     resp = client.post(
         f"/api/v1/studies/{study_id}/versions/{version_id}/blocks",
-        json={"id": "b_api_1", "block_type": "narrative", "order": 1, "properties": {"text": "A"}},
+        json={
+            "id": "b_api_1",
+            "block_type": "narrative",
+            "order": 1,
+            "properties": {"text": "A"},
+        },
         headers=headers,
     )
     assert resp.status_code == 201
@@ -471,7 +514,12 @@ def test_api_block_crud_with_rbac():
     # 3. Conflict ProblemDetails response on duplicate creation
     resp = client.post(
         f"/api/v1/studies/{study_id}/versions/{version_id}/blocks",
-        json={"id": "b_api_1", "block_type": "narrative", "order": 1, "properties": {"text": "A"}},
+        json={
+            "id": "b_api_1",
+            "block_type": "narrative",
+            "order": 1,
+            "properties": {"text": "A"},
+        },
         headers=headers,
     )
     assert resp.status_code == 409

@@ -8,17 +8,18 @@ selective lineage metadata tracking.
 
 from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Union
-from pydantic import BaseModel, Field, model_validator
-from typing_extensions import Annotated
 
 # Import shared Part 11 audit fields from sibling module
 from audit import AuditFields
+from pydantic import BaseModel, Field
+from typing_extensions import Annotated
 
 
 class BlockType(str, Enum):
     """
     Discriminator enum for supported protocol block variants.
     """
+
     NARRATIVE = "narrative"
     OBJECTIVE = "objective"
     ELIGIBILITY = "eligibility"
@@ -30,6 +31,7 @@ class ProtocolBlock(AuditFields):
     Base domain model for all clinical trial protocol blocks.
     Enforces stable block_id, ordering, nesting, audit, and locking fields.
     """
+
     block_id: str = Field(
         ...,
         description="Stable unique block identifier, preserved across versions.",
@@ -68,6 +70,7 @@ class NarrativeBlock(ProtocolBlock):
     """
     Protocol block variant representing general clinical or narrative text blocks.
     """
+
     block_type: Literal[BlockType.NARRATIVE] = BlockType.NARRATIVE
     title: Optional[str] = Field(
         None,
@@ -83,6 +86,7 @@ class ObjectiveBlock(ProtocolBlock):
     """
     Protocol block variant directly mapped to a structured Study Objective.
     """
+
     block_type: Literal[BlockType.OBJECTIVE] = BlockType.OBJECTIVE
     objective_id: str = Field(
         ...,
@@ -98,6 +102,7 @@ class EligibilityBlock(ProtocolBlock):
     """
     Protocol block variant directly mapped to a versioned study eligibility criterion.
     """
+
     block_type: Literal[BlockType.ELIGIBILITY] = BlockType.ELIGIBILITY
     criterion_id: str = Field(
         ...,
@@ -117,6 +122,7 @@ class SoADerivedBlock(ProtocolBlock):
     """
     Protocol block variant selectively derived from Schedule of Activities (SoA) elements.
     """
+
     block_type: Literal[BlockType.SOA_DERIVED] = BlockType.SOA_DERIVED
     derived_from_soa: bool = Field(
         default=True,
@@ -147,6 +153,7 @@ class ICHSection(BaseModel):
     """
     Self-referential recursive Pydantic model for representing sequence-ordered ICH M11 document skeletons.
     """
+
     section_id: str = Field(
         ...,
         description="Stable unique identifier representing the document section.",

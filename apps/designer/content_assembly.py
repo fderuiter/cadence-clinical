@@ -248,7 +248,9 @@ def assemble_narrative_sections(
                     )
 
         title = resolve_text_references(nc.sectionTitle or nc.name or "", study)
-        derived_from_soa = getattr(nc, "derived_from_soa", False) or getattr(nc, "_derived_from_soa", False)
+        derived_from_soa = getattr(nc, "derived_from_soa", False) or getattr(
+            nc, "_derived_from_soa", False
+        )
         if isinstance(derived_from_soa, str):
             derived_from_soa = derived_from_soa.lower() in ("true", "1")
         return NarrativeSectionView(
@@ -568,7 +570,9 @@ def assemble_soa_matrix(study: usdm_model.Study) -> SoAMatrixView:
                                                 (enc_id, ep_id, act_id)
                                             )
 
-                                    derived_flag = getattr(act, "derived_from_soa", False) or getattr(act, "_derived_from_soa", False)
+                                    derived_flag = getattr(
+                                        act, "derived_from_soa", False
+                                    ) or getattr(act, "_derived_from_soa", False)
                                     cells.append(
                                         SoACellView(
                                             activity_id=act_id,

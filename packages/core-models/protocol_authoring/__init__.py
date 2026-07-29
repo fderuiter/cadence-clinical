@@ -3,15 +3,15 @@ Clinical Protocol Block Authoring package.
 """
 
 from .models import (
+    CANONICAL_ICH_SKELETON,
     BlockType,
-    ProtocolBlock,
+    EligibilityBlock,
+    ICHSection,
     NarrativeBlock,
     ObjectiveBlock,
-    EligibilityBlock,
-    SoADerivedBlock,
+    ProtocolBlock,
     ProtocolBlockUnion,
-    ICHSection,
-    CANONICAL_ICH_SKELETON,
+    SoADerivedBlock,
     build_canonical_ich_skeleton,
 )
 

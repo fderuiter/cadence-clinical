@@ -7,7 +7,16 @@ from typing import Any, Dict, List, Literal, Optional, Tuple
 
 import httpx
 from eligibility import EligibilityCriterion, ExpressionNode, parse_dsl
-from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile, status, Depends
+from fastapi import (
+    Depends,
+    FastAPI,
+    File,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+    status,
+)
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from neo4j import AsyncGraphDatabase
@@ -35,6 +44,7 @@ from apps.designer.delta import (
     _init_mock_soa,
     amend_protocol_version,
     compute_graph_diff,
+    create_block,
     create_eligibility_criterion,
     create_epoch,
     create_library_object_version,
@@ -44,7 +54,9 @@ from apps.designer.delta import (
     create_study_version,
     create_timing_window,
     create_visit,
+    delete_block,
     delete_rule_node,
+    get_block,
     get_eligibility_criteria_from_graph,
     get_latest_library_object,
     get_library_instance_in_study,
@@ -57,7 +69,10 @@ from apps.designer.delta import (
     link_epoch_to_visit,
     link_visit_or_procedure_to_timing,
     link_visit_to_procedure,
+    list_blocks,
     list_library_objects,
+    reorder_blocks,
+    update_block,
     update_eligibility_criterion,
     update_epoch,
     update_library_instance_in_study,
@@ -66,12 +81,6 @@ from apps.designer.delta import (
     update_study_arm,
     update_timing_window,
     update_visit,
-    create_block,
-    update_block,
-    delete_block,
-    get_block,
-    list_blocks,
-    reorder_blocks,
 )
 from apps.designer.evs_client import NCIEVSClient
 from apps.designer.library import (
@@ -2464,6 +2473,7 @@ def require_permission(permission: str):
         if not raw_roles:
             raise HTTPException(status_code=403, detail="Missing role credentials.")
         return True
+
     return dependency
 
 

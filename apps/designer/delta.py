@@ -1473,7 +1473,9 @@ async def create_study_arm(
             "after": node,
         }
         MOCK_SOA_DATA[study_version_id]["actions"].append(action)
-        await propagate_soa_mutation(driver, study_version_id, arm_id, user_id, change_reason)
+        await propagate_soa_mutation(
+            driver, study_version_id, arm_id, user_id, change_reason
+        )
         return arm_id
 
     async with driver.session() as session:
@@ -1523,7 +1525,9 @@ async def create_study_arm(
             )
             record = await res.single()
             ret_id = record["id"]
-            await propagate_soa_mutation(driver, study_version_id, ret_id, user_id, change_reason)
+            await propagate_soa_mutation(
+                driver, study_version_id, ret_id, user_id, change_reason
+            )
             return ret_id
 
 
@@ -1560,7 +1564,9 @@ async def update_study_arm(
             "after": new_node,
         }
         MOCK_SOA_DATA[study_version_id]["actions"].append(action)
-        await propagate_soa_mutation(driver, study_version_id, arm_id, user_id, change_reason)
+        await propagate_soa_mutation(
+            driver, study_version_id, arm_id, user_id, change_reason
+        )
         return arm_id
 
     async with driver.session() as session:
@@ -1613,7 +1619,9 @@ async def update_study_arm(
             )
             record = await res.single()
             ret_id = record["id"]
-            await propagate_soa_mutation(driver, study_version_id, ret_id, user_id, change_reason)
+            await propagate_soa_mutation(
+                driver, study_version_id, ret_id, user_id, change_reason
+            )
             return ret_id
 
 
@@ -2602,7 +2610,11 @@ async def get_soa_matrix_projection(driver, study_version_id: str) -> Dict[str, 
         ]
         # Extracted arm applicability links
         arm_applicability_links = [
-            {"arm_id": L["from_id"], "target_id": L["to_id"], "target_type": L["target_type"]}
+            {
+                "arm_id": L["from_id"],
+                "target_id": L["to_id"],
+                "target_type": L["target_type"],
+            }
             for L in data["links"]
             if L["type"] == "arm_applicability"
         ]
@@ -2775,7 +2787,12 @@ async def get_soa_matrix_projection(driver, study_version_id: str) -> Dict[str, 
             )
             seen_procs.add(p_id)
 
-    return {"epochs": epochs_list, "encounters": encounters_list, "rows": rows_list, "arms": arms_list}
+    return {
+        "epochs": epochs_list,
+        "encounters": encounters_list,
+        "rows": rows_list,
+        "arms": arms_list,
+    }
 
 
 @with_transaction_retry()
@@ -3082,7 +3099,8 @@ async def list_blocks(
     if driver is None:
         _init_mock_soa(study_version_id)
         blocks = [
-            b for b in MOCK_SOA_DATA[study_version_id]["blocks"].values()
+            b
+            for b in MOCK_SOA_DATA[study_version_id]["blocks"].values()
             if not b.get("is_deleted", False)
         ]
         blocks.sort(key=lambda x: x.get("order", 0))
@@ -4228,16 +4246,34 @@ async def get_eligibility_criteria_from_graph(
         return criteria
 
 
-async def propagate_soa_mutation(driver, study_version_id: str, entity_id: str, user_id: str, change_reason: str):
+async def propagate_soa_mutation(
+    driver, study_version_id: str, entity_id: str, user_id: str, change_reason: str
+):
     """
     Finds and updates any blocks that are derived from the specified SoA entity,
     marking them as derived_from_soa = True and writing an audit trail.
     """
     blocks = await list_blocks(driver, study_version_id)
     for b in blocks:
-        if b.get("block_type") == "soa_derived" and b.get("source_entity_id") == entity_id:
+        if (
+            b.get("block_type") == "soa_derived"
+            and b.get("source_entity_id") == entity_id
+        ):
             properties = dict(b)
-            for k in ("id", "version_index", "created_by", "created_at", "reason_for_change"):
+            for k in (
+                "id",
+                "version_index",
+                "created_by",
+                "created_at",
+                "reason_for_change",
+            ):
                 properties.pop(k, None)
             properties["derived_from_soa"] = True
-            await update_block(driver, study_version_id, user_id, f"Lineage propagation from {entity_id}: {change_reason}", b["block_id"], properties)
+            await update_block(
+                driver,
+                study_version_id,
+                user_id,
+                f"Lineage propagation from {entity_id}: {change_reason}",
+                b["block_id"],
+                properties,
+            )

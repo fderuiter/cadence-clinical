@@ -148,6 +148,7 @@ def get_study_projection(study_id: str) -> Optional[Dict[str, Any]]:
         latest_ver = sorted(versions, key=lambda x: x.get("version_index", 0))[-1]
         version_id = latest_ver.get("id")
         from apps.designer.delta import MOCK_SOA_DATA
+
         if version_id in MOCK_SOA_DATA:
             blocks_dict = MOCK_SOA_DATA[version_id].get("blocks", {})
             # Only non-deleted blocks sorted by order
