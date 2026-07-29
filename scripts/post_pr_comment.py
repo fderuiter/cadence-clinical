@@ -215,8 +215,8 @@ def summarize_components(changed_files: list[str]) -> str:
 def build_comment_body(
     outcomes: dict[str, str],
     has_failures: bool,
-    repo: str,
-    pr_number: str,
+    repo: str = "owner/repo",
+    pr_number: str = "123",
 ) -> str:
     pr_title, changed_files = get_pr_metadata(repo, pr_number)
     component_summary = summarize_components(changed_files)

@@ -98,23 +98,23 @@ def test_build_comment_body():
         "conflict": "success",
     }
     body = build_comment_body(outcomes, has_failures=False)
-    assert "### ✅ All Quality Gates Passed Successfully" in body
+    assert "### ✅ PR Quality Verification Passed" in body
     assert "✅ Passed" in body
     assert "✅ No Conflicts" in body
 
     body_fail = build_comment_body(outcomes, has_failures=True)
-    assert "### ⚠️ Quality Gate Alerts & Review Checklist Required" in body_fail
+    assert "### ⚠️ Action Required: Quality Gate Verification Issues" in body_fail
 
 
 def test_traceability_outcome_handling():
     """Verify Requirements Traceability is parsed, merged, and rendered."""
     sample_comment = """<!-- ID: CADENCE_PR_QUALITY_GATE_CHECKLIST -->
-### ⚠️ Quality Gate Alerts & Review Checklist Required
+### ⚠️ Action Required: Quality Gate Verification Issues
 
 | Quality Gate / Check | Status |
 | :--- | :--- |
-| **Requirements Traceability** (generate_rtm.py) | ❌ Failed |
-| **Backend Tests & Coverage** (pytest) | ✅ Passed |
+| **Requirements Traceability** | ❌ Failed |
+| **Backend Tests & Coverage (pytest)** | ✅ Passed |
 """
     outcomes = parse_existing_outcomes(sample_comment)
     assert outcomes.get("traceability") == "failure"
