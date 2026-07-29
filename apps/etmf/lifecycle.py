@@ -6,6 +6,7 @@ with immutable audit trail logging in compliance with 21 CFR Part 11.
 
 from typing import Dict, Set
 
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.etmf.models import DocumentQCTransition, DocumentStatus, TMFDocument
@@ -121,8 +122,18 @@ async def validate_and_transition_document_status(
         if isinstance(actor_role, (list, tuple, set))
         else str(actor_role)
     )
+
+    # Sequentially calculate transition_sequence
+    stmt_seq = select(func.max(DocumentQCTransition.transition_sequence)).where(
+        DocumentQCTransition.document_id == document.id
+    )
+    res_seq = await session.execute(stmt_seq)
+    max_seq = res_seq.scalar()
+    next_seq = (max_seq or 0) + 1
+
     transition_record = DocumentQCTransition(
         document_id=document.id,
+        transition_sequence=next_seq,
         from_status=from_status,
         to_status=to_status,
         actor_id=actor_id,
