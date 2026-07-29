@@ -46,7 +46,9 @@ async def generate_binder_zip(
         is_site_scoped = len(principal.assigned_sites) > 0
         if is_site_scoped:
             if principal.assigned_sites:
-                stmt_docs = stmt_docs.where(TMFDocument.site_id.in_(principal.assigned_sites))
+                stmt_docs = stmt_docs.where(
+                    TMFDocument.site_id.in_(principal.assigned_sites)
+                )
             else:
                 stmt_docs = stmt_docs.where(TMFDocument.site_id == "NONE_ASSIGNED")
 

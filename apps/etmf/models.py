@@ -69,7 +69,9 @@ class DocumentStatus(str, enum.Enum):
     SIGNED = "SIGNED"
 
 
-def is_site_level_artifact(artifact_type: str, artifact_code: Optional[str] = None) -> bool:
+def is_site_level_artifact(
+    artifact_type: str, artifact_code: Optional[str] = None
+) -> bool:
     """
     Determines if an eTMF artifact or code is expected at site-level (True) or study-level (False).
     Used to prevent silent scope inference and properly quarantine unassigned legacy records.
@@ -82,7 +84,11 @@ def is_site_level_artifact(artifact_type: str, artifact_code: Optional[str] = No
         "site signature page",
         "site feasibility survey",
     }
-    site_codes_prefix = {"05.02", "04.01", "05.01"} # Zone 5 Investigator Qualification, Zone 4 regulatory
+    site_codes_prefix = {
+        "05.02",
+        "04.01",
+        "05.01",
+    }  # Zone 5 Investigator Qualification, Zone 4 regulatory
 
     art_lower = artifact_type.strip().lower()
     if art_lower in site_artifacts:

@@ -29,6 +29,7 @@ async def setup_db():
     eisf_db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)
     async with eisf_db_manager.engine.begin() as conn:
         from apps.eisf.models import Base as EIsfBase
+
         await conn.run_sync(EIsfBase.metadata.create_all)
 
     yield
@@ -39,6 +40,7 @@ async def setup_db():
 
     async with eisf_db_manager.engine.begin() as conn:
         from apps.eisf.models import Base as EIsfBase
+
         await conn.run_sync(EIsfBase.metadata.drop_all)
     await eisf_db_manager.close()
 
@@ -64,7 +66,9 @@ def get_global_auth_headers(roles: str = "admin", change_reason: str = "") -> di
     return headers
 
 
-def get_site_auth_headers(roles: str = "investigator", site_id: str = "site_alpha", change_reason: str = "") -> dict:
+def get_site_auth_headers(
+    roles: str = "investigator", site_id: str = "site_alpha", change_reason: str = ""
+) -> dict:
     """
     Helper to generate valid site-scoped V2 signed headers.
     """
@@ -76,7 +80,7 @@ def get_site_auth_headers(roles: str = "investigator", site_id: str = "site_alph
         timestamp=timestamp,
         version="2",
         change_reason=change_reason,
-        site_id=site_id
+        site_id=site_id,
     )
     headers = {
         "X-User-Id": user_id,
@@ -100,7 +104,9 @@ async def test_is_site_level_artifact_helper():
     assert is_site_level_artifact("Investigator CV") is True
     assert is_site_level_artifact("Clinical Trial Protocol") is False
     assert is_site_level_artifact("Define-XML Specifications") is False
-    assert is_site_level_artifact("Some Custom Artifact", "05.02.04") is True # Code matches prefix
+    assert (
+        is_site_level_artifact("Some Custom Artifact", "05.02.04") is True
+    )  # Code matches prefix
     assert is_site_level_artifact("Some Custom Artifact", "01.01.01") is False
 
 
@@ -131,40 +137,54 @@ async def test_site_scoped_users_read_isolation():
     Verify site-scoped users can only access matching site records, and cannot see other sites or study-level.
     """
     client = TestClient(app)
-    admin_headers = get_global_auth_headers(roles="admin", change_reason="Ingest records")
+    admin_headers = get_global_auth_headers(
+        roles="admin", change_reason="Ingest records"
+    )
 
     # Ingest document for site_alpha
-    res_alpha = client.post("/api/v1/etmf/ingest", json={
-        "study_id": "study_001",
-        "site_id": "site_alpha",
-        "artifact_type": "Investigator CV",
-        "filename": "cv_alpha.pdf",
-        "content": "CV alpha content",
-        "mime_type": "application/pdf"
-    }, headers=admin_headers)
+    res_alpha = client.post(
+        "/api/v1/etmf/ingest",
+        json={
+            "study_id": "study_001",
+            "site_id": "site_alpha",
+            "artifact_type": "Investigator CV",
+            "filename": "cv_alpha.pdf",
+            "content": "CV alpha content",
+            "mime_type": "application/pdf",
+        },
+        headers=admin_headers,
+    )
     assert res_alpha.status_code == 201
     doc_alpha_id = res_alpha.json()["document_id"]
 
     # Ingest document for site_beta
-    res_beta = client.post("/api/v1/etmf/ingest", json={
-        "study_id": "study_001",
-        "site_id": "site_beta",
-        "artifact_type": "Investigator CV",
-        "filename": "cv_beta.pdf",
-        "content": "CV beta content",
-        "mime_type": "application/pdf"
-    }, headers=admin_headers)
+    res_beta = client.post(
+        "/api/v1/etmf/ingest",
+        json={
+            "study_id": "study_001",
+            "site_id": "site_beta",
+            "artifact_type": "Investigator CV",
+            "filename": "cv_beta.pdf",
+            "content": "CV beta content",
+            "mime_type": "application/pdf",
+        },
+        headers=admin_headers,
+    )
     assert res_beta.status_code == 201
     doc_beta_id = res_beta.json()["document_id"]
 
     # Ingest study-level document (site_id=None)
-    res_study = client.post("/api/v1/etmf/ingest", json={
-        "study_id": "study_001",
-        "artifact_type": "Clinical Trial Protocol",
-        "filename": "protocol.pdf",
-        "content": "Protocol content",
-        "mime_type": "application/pdf"
-    }, headers=admin_headers)
+    res_study = client.post(
+        "/api/v1/etmf/ingest",
+        json={
+            "study_id": "study_001",
+            "artifact_type": "Clinical Trial Protocol",
+            "filename": "protocol.pdf",
+            "content": "Protocol content",
+            "mime_type": "application/pdf",
+        },
+        headers=admin_headers,
+    )
     assert res_study.status_code == 201
     doc_study_id = res_study.json()["document_id"]
 
@@ -177,17 +197,49 @@ async def test_site_scoped_users_read_isolation():
     listed_ids = [d["id"] for d in list_resp.json()]
     assert doc_alpha_id in listed_ids
     assert doc_beta_id not in listed_ids
-    assert doc_study_id not in listed_ids # Study-level document is not visible to site-scoped user!
+    assert (
+        doc_study_id not in listed_ids
+    )  # Study-level document is not visible to site-scoped user!
 
     # 2. View checks
-    assert client.get(f"/api/v1/etmf/documents/{doc_alpha_id}", headers=alpha_headers).status_code == 200
-    assert client.get(f"/api/v1/etmf/documents/{doc_beta_id}", headers=alpha_headers).status_code == 403
-    assert client.get(f"/api/v1/etmf/documents/{doc_study_id}", headers=alpha_headers).status_code == 403
+    assert (
+        client.get(
+            f"/api/v1/etmf/documents/{doc_alpha_id}", headers=alpha_headers
+        ).status_code
+        == 200
+    )
+    assert (
+        client.get(
+            f"/api/v1/etmf/documents/{doc_beta_id}", headers=alpha_headers
+        ).status_code
+        == 403
+    )
+    assert (
+        client.get(
+            f"/api/v1/etmf/documents/{doc_study_id}", headers=alpha_headers
+        ).status_code
+        == 403
+    )
 
     # 3. Download checks
-    assert client.get(f"/api/v1/etmf/documents/{doc_alpha_id}/download", headers=alpha_headers).status_code == 200
-    assert client.get(f"/api/v1/etmf/documents/{doc_beta_id}/download", headers=alpha_headers).status_code == 403
-    assert client.get(f"/api/v1/etmf/documents/{doc_study_id}/download", headers=alpha_headers).status_code == 403
+    assert (
+        client.get(
+            f"/api/v1/etmf/documents/{doc_alpha_id}/download", headers=alpha_headers
+        ).status_code
+        == 200
+    )
+    assert (
+        client.get(
+            f"/api/v1/etmf/documents/{doc_beta_id}/download", headers=alpha_headers
+        ).status_code
+        == 403
+    )
+    assert (
+        client.get(
+            f"/api/v1/etmf/documents/{doc_study_id}/download", headers=alpha_headers
+        ).status_code
+        == 403
+    )
 
 
 @pytest.mark.asyncio
@@ -196,7 +248,9 @@ async def test_site_scoped_write_restrictions():
     Verify site-scoped users can only ingest documents for their own assigned site.
     """
     client = TestClient(app)
-    alpha_headers = get_site_auth_headers(roles="cra", site_id="site_alpha", change_reason="Ingest CV")
+    alpha_headers = get_site_auth_headers(
+        roles="cra", site_id="site_alpha", change_reason="Ingest CV"
+    )
 
     # Ingest for same site -> should succeed
     payload_ok = {
@@ -205,9 +259,14 @@ async def test_site_scoped_write_restrictions():
         "artifact_type": "Investigator CV",
         "filename": "cv_smith.pdf",
         "content": "Dr Smith CV.",
-        "mime_type": "application/pdf"
+        "mime_type": "application/pdf",
     }
-    assert client.post("/api/v1/etmf/ingest", json=payload_ok, headers=alpha_headers).status_code == 201
+    assert (
+        client.post(
+            "/api/v1/etmf/ingest", json=payload_ok, headers=alpha_headers
+        ).status_code
+        == 201
+    )
 
     # Ingest for another site -> should fail
     payload_bad = {
@@ -216,9 +275,14 @@ async def test_site_scoped_write_restrictions():
         "artifact_type": "Investigator CV",
         "filename": "cv_jones.pdf",
         "content": "Dr Jones CV.",
-        "mime_type": "application/pdf"
+        "mime_type": "application/pdf",
     }
-    assert client.post("/api/v1/etmf/ingest", json=payload_bad, headers=alpha_headers).status_code == 403
+    assert (
+        client.post(
+            "/api/v1/etmf/ingest", json=payload_bad, headers=alpha_headers
+        ).status_code
+        == 403
+    )
 
 
 @pytest.mark.asyncio
@@ -228,44 +292,71 @@ async def test_site_scoping_on_redactions_and_signatures():
     """
     client = TestClient(app)
     admin_headers = get_global_auth_headers(roles="admin", change_reason="Setup")
-    alpha_headers = get_site_auth_headers(roles="cra", site_id="site_alpha", change_reason="Mutation test")
+    alpha_headers = get_site_auth_headers(
+        roles="cra", site_id="site_alpha", change_reason="Mutation test"
+    )
 
     # Ingest site_beta document
-    res = client.post("/api/v1/etmf/ingest", json={
-        "study_id": "study_001",
-        "site_id": "site_beta",
-        "artifact_type": "Investigator CV",
-        "filename": "cv.pdf",
-        "content": "CV beta content",
-        "mime_type": "application/pdf"
-    }, headers=admin_headers)
+    res = client.post(
+        "/api/v1/etmf/ingest",
+        json={
+            "study_id": "study_001",
+            "site_id": "site_beta",
+            "artifact_type": "Investigator CV",
+            "filename": "cv.pdf",
+            "content": "CV beta content",
+            "mime_type": "application/pdf",
+        },
+        headers=admin_headers,
+    )
     doc_beta_id = res.json()["document_id"]
 
     # Try transitions
-    assert client.post(f"/api/v1/etmf/documents/{doc_beta_id}/transition", json={
-        "to_status": "TECHNICAL_QC",
-        "reason_for_change": "Technical QC reviews"
-    }, headers=alpha_headers).status_code == 403
+    assert (
+        client.post(
+            f"/api/v1/etmf/documents/{doc_beta_id}/transition",
+            json={
+                "to_status": "TECHNICAL_QC",
+                "reason_for_change": "Technical QC reviews",
+            },
+            headers=alpha_headers,
+        ).status_code
+        == 403
+    )
 
     # Try sign-off (requires re-auth token)
     from jose import jwt
-    sig_token = jwt.encode({
-        "sub": "user_site_alpha",
-        "action": f"/api/v1/etmf/documents/{doc_beta_id}/sign-off",
-        "exp": time.time() + 3600
-    }, "internal-gateway-secret-12345", algorithm="HS256")
+
+    sig_token = jwt.encode(
+        {
+            "sub": "user_site_alpha",
+            "action": f"/api/v1/etmf/documents/{doc_beta_id}/sign-off",
+            "exp": time.time() + 3600,
+        },
+        "internal-gateway-secret-12345",
+        algorithm="HS256",
+    )
     alpha_sign_headers = dict(alpha_headers)
     alpha_sign_headers["X-Sig-Token"] = sig_token
 
-    assert client.post(f"/api/v1/etmf/documents/{doc_beta_id}/sign-off", json={
-        "signing_reason": "APPROVAL"
-    }, headers=alpha_sign_headers).status_code == 403
+    assert (
+        client.post(
+            f"/api/v1/etmf/documents/{doc_beta_id}/sign-off",
+            json={"signing_reason": "APPROVAL"},
+            headers=alpha_sign_headers,
+        ).status_code
+        == 403
+    )
 
     # Try redact
-    assert client.post(f"/api/v1/etmf/documents/{doc_beta_id}/redact", json={
-        "redacted_content": "Redacted content",
-        "manifest": {}
-    }, headers=alpha_headers).status_code == 403
+    assert (
+        client.post(
+            f"/api/v1/etmf/documents/{doc_beta_id}/redact",
+            json={"redacted_content": "Redacted content", "manifest": {}},
+            headers=alpha_headers,
+        ).status_code
+        == 403
+    )
 
 
 @pytest.mark.asyncio
@@ -277,13 +368,17 @@ async def test_auto_quarantine_site_level_no_site_id():
     headers = get_global_auth_headers(roles="admin", change_reason="Ingestion")
 
     # Ingest site-level artifact ("Investigator CV") without site_id
-    res = client.post("/api/v1/etmf/ingest", json={
-        "study_id": "study_001",
-        "artifact_type": "Investigator CV",
-        "filename": "cv_unassigned.pdf",
-        "content": "CV content.",
-        "mime_type": "application/pdf"
-    }, headers=headers)
+    res = client.post(
+        "/api/v1/etmf/ingest",
+        json={
+            "study_id": "study_001",
+            "artifact_type": "Investigator CV",
+            "filename": "cv_unassigned.pdf",
+            "content": "CV content.",
+            "mime_type": "application/pdf",
+        },
+        headers=headers,
+    )
     assert res.status_code == 201
     doc_id = res.json()["document_id"]
 
@@ -314,7 +409,7 @@ async def test_legacy_records_quarantine_policy():
             created_by="system",
             version_index=1,
             taxonomy_version="v3.2.0-complete",
-            artifact_code="05.02.03"
+            artifact_code="05.02.03",
         )
         # A study-level document without site_id (legitimate None)
         doc_study = TMFDocument(
@@ -330,7 +425,7 @@ async def test_legacy_records_quarantine_policy():
             created_by="system",
             version_index=1,
             taxonomy_version="v3.2.0-complete",
-            artifact_code="01.01.01"
+            artifact_code="01.01.01",
         )
         session.add(doc_site)
         session.add(doc_study)
@@ -338,16 +433,17 @@ async def test_legacy_records_quarantine_policy():
 
     # 2. Run migrate.upgrade_existing_tables to run backfill/quarantine
     from apps.etmf.migrate import upgrade_existing_tables
+
     async with db_manager.engine.begin() as conn:
         await upgrade_existing_tables(conn, "sqlite")
 
     # 3. Check values in DB
     async with db_manager.get_session_maker()() as session:
         res_site = await session.get(TMFDocument, "legacy_site_doc")
-        assert res_site.site_id == "QUARANTINED" # Site-level is quarantined!
+        assert res_site.site_id == "QUARANTINED"  # Site-level is quarantined!
 
         res_study = await session.get(TMFDocument, "legacy_study_doc")
-        assert res_study.site_id is None # Study-level remains None!
+        assert res_study.site_id is None  # Study-level remains None!
 
 
 @pytest.mark.asyncio
@@ -356,27 +452,28 @@ async def test_eisf_to_etmf_sync_preserves_scope(monkeypatch):
     Verify eISF sync preserves and propagates site_id accurately to eTMF.
     """
     eisf_client = TestClient(eisf_app)
-    eisf_headers = {
-        "X-User-Id": "pi_user",
-        "X-User-Roles": "site investigator",
-        "X-Site-Id": "site_boston",
-        "X-Gateway-Timestamp": str(time.time()),
-        "X-Gateway-Signature": "mock_sig",
-        "X-Signature-Version": "2",
-        "X-Change-Reason": "Syncing required documents"
-    }
+    from tests.test_eisf_api import get_eisf_auth_headers
 
-    # Mock gateway signature verification inside eISF
-    monkeypatch.setattr("packages.security.middleware.GatewayAuthMiddleware.dispatch", lambda self, req, call_next: call_next(req))
+    eisf_headers = get_eisf_auth_headers(
+        user_id="pi_user",
+        roles="site investigator",
+        site_id="site_boston",
+        change_reason="Syncing required documents",
+    )
 
     # Mock httpx AsyncClient post to capture propagated payload to eTMF
     captured_payloads = []
+
     async def mock_post(self_client, url, *args, **kwargs):
         captured_payloads.append(kwargs.get("json"))
         import httpx
-        return httpx.Response(201, json={"status": "success", "document_id": "propagated_id"})
+
+        return httpx.Response(
+            201, json={"status": "success", "document_id": "propagated_id"}
+        )
 
     import httpx
+
     monkeypatch.setattr(httpx.AsyncClient, "post", mock_post)
 
     payload = {
@@ -389,7 +486,7 @@ async def test_eisf_to_etmf_sync_preserves_scope(monkeypatch):
                 "content": "Dr. Boston CV.",
                 "mime_type": "application/pdf",
                 "source_system": "eISF",
-                "conflict_policy": "CLIENT_WINS"
+                "conflict_policy": "CLIENT_WINS",
             }
         ]
     }
@@ -399,7 +496,9 @@ async def test_eisf_to_etmf_sync_preserves_scope(monkeypatch):
 
     # Verify site_id is preserved in eISF DB
     async with eisf_db_manager.get_session_maker()() as session:
-        res = await session.execute(select(ISFDocument).where(ISFDocument.filename == "cv_boston.pdf"))
+        res = await session.execute(
+            select(ISFDocument).where(ISFDocument.filename == "cv_boston.pdf")
+        )
         doc = res.scalars().one()
         assert doc.site_id == "site_boston"
 
@@ -418,11 +517,17 @@ async def test_completeness_site_isolation():
     alpha_headers = get_site_auth_headers(roles="investigator", site_id="site_alpha")
 
     # Run for same site -> should succeed (returns 200)
-    res_ok = client.get("/api/v1/etmf/completeness?study_id=study_001&site_id=site_alpha&milestone=INITIATION", headers=alpha_headers)
+    res_ok = client.get(
+        "/api/v1/etmf/completeness?study_id=study_001&site_id=site_alpha&milestone=INITIATION",
+        headers=alpha_headers,
+    )
     assert res_ok.status_code == 200
 
     # Run for other site -> should be rejected with 403 Forbidden
-    res_bad = client.get("/api/v1/etmf/completeness?study_id=study_001&site_id=site_beta&milestone=INITIATION", headers=alpha_headers)
+    res_bad = client.get(
+        "/api/v1/etmf/completeness?study_id=study_001&site_id=site_beta&milestone=INITIATION",
+        headers=alpha_headers,
+    )
     assert res_bad.status_code == 403
 
 
@@ -432,33 +537,47 @@ async def test_regulatory_binder_export_site_isolation():
     Verify regulatory binder export organizes files and filters correctly for site-scoped auditors.
     """
     client = TestClient(app)
-    admin_headers = get_global_auth_headers(roles="admin", change_reason="Setup study docs")
+    admin_headers = get_global_auth_headers(
+        roles="admin", change_reason="Setup study docs"
+    )
 
     # Ingest a site-level document for site_alpha
-    client.post("/api/v1/etmf/ingest", json={
-        "study_id": "study_export_test",
-        "site_id": "site_alpha",
-        "artifact_type": "Investigator CV",
-        "filename": "cv_alpha.pdf",
-        "content": "Alpha CV content.",
-        "mime_type": "application/pdf"
-    }, headers=admin_headers)
+    client.post(
+        "/api/v1/etmf/ingest",
+        json={
+            "study_id": "study_export_test",
+            "site_id": "site_alpha",
+            "artifact_type": "Investigator CV",
+            "filename": "cv_alpha.pdf",
+            "content": "Alpha CV content.",
+            "mime_type": "application/pdf",
+        },
+        headers=admin_headers,
+    )
 
     # Ingest a site-level document for site_beta
-    client.post("/api/v1/etmf/ingest", json={
-        "study_id": "study_export_test",
-        "site_id": "site_beta",
-        "artifact_type": "Investigator CV",
-        "filename": "cv_beta.pdf",
-        "content": "Beta CV content.",
-        "mime_type": "application/pdf"
-    }, headers=admin_headers)
+    client.post(
+        "/api/v1/etmf/ingest",
+        json={
+            "study_id": "study_export_test",
+            "site_id": "site_beta",
+            "artifact_type": "Investigator CV",
+            "filename": "cv_beta.pdf",
+            "content": "Beta CV content.",
+            "mime_type": "application/pdf",
+        },
+        headers=admin_headers,
+    )
 
     # Auditor scoped to site_alpha only
-    auditor_headers = get_site_auth_headers(roles="regulatory_inspector", site_id="site_alpha")
+    auditor_headers = get_site_auth_headers(
+        roles="regulatory_inspector", site_id="site_alpha"
+    )
 
     # Export regulatory binder
-    resp = client.get("/api/v1/etmf/studies/study_export_test/binder", headers=auditor_headers)
+    resp = client.get(
+        "/api/v1/etmf/studies/study_export_test/binder", headers=auditor_headers
+    )
     assert resp.status_code == 200
 
     # Inspect ZIP contents

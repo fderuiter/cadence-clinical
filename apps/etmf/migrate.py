@@ -298,10 +298,14 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
             # Add site_id column to PostgreSQL table if missing
             try:
                 await conn.execute(
-                    text("ALTER TABLE tmf_documents ADD COLUMN IF NOT EXISTS site_id VARCHAR(255);")
+                    text(
+                        "ALTER TABLE tmf_documents ADD COLUMN IF NOT EXISTS site_id VARCHAR(255);"
+                    )
                 )
                 await conn.execute(
-                    text("CREATE INDEX IF NOT EXISTS ix_tmf_documents_site_id ON tmf_documents (site_id);")
+                    text(
+                        "CREATE INDEX IF NOT EXISTS ix_tmf_documents_site_id ON tmf_documents (site_id);"
+                    )
                 )
             except Exception:
                 pass
@@ -322,14 +326,19 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
         # Scan legacy records with null site_id, classifying them using is_site_level_artifact.
         # If site-level, update site_id to 'QUARANTINED' to prevent silent scope inference.
         from apps.etmf.models import is_site_level_artifact
+
         res_site_check = await conn.execute(
-            text("SELECT id, artifact_type, artifact_code FROM tmf_documents WHERE site_id IS NULL")
+            text(
+                "SELECT id, artifact_type, artifact_code FROM tmf_documents WHERE site_id IS NULL"
+            )
         )
         rows_site_check = res_site_check.fetchall()
         for doc_id, art_type, art_code in rows_site_check:
             if is_site_level_artifact(art_type, art_code):
                 await conn.execute(
-                    text("UPDATE tmf_documents SET site_id = 'QUARANTINED' WHERE id = :id"),
+                    text(
+                        "UPDATE tmf_documents SET site_id = 'QUARANTINED' WHERE id = :id"
+                    ),
                     {"id": doc_id},
                 )
 
