@@ -146,8 +146,8 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
                     RETURN NEW;
                 END IF;
 
-                v_user_id := COALESCE(current_setting('cadence.current_user_id', true), 'system_process');
-                v_change_reason := COALESCE(current_setting('cadence.current_change_reason', true), 'Automated system operation');
+                v_user_id := COALESCE(NULLIF(current_setting('cadence.current_user_id', true), ''), 'system_process');
+                v_change_reason := COALESCE(NULLIF(current_setting('cadence.current_change_reason', true), ''), 'Automated system operation');
 
                 IF (TG_OP = 'INSERT') THEN
                     v_action := 'INSERT';
