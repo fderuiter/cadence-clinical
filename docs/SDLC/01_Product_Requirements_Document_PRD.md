@@ -130,7 +130,7 @@ The system must implement a data-driven Expected Document List (EDL) reference d
 
 #### PRD-TMF-001: TMF Taxonomy Catalog Hierarchy and Version Selection
 
-The system must support loading different versions of the versioned DIA TMF Reference Model (e.g., v3.2.0, v4.0.0) from the `tmf_reference_model` taxonomy package in memory. Consumers must be able to retrieve any registered catalog version or set the active default catalog version dynamically.
+The system must support loading different versions of the versioned DIA TMF Reference Model (including `v3.2.0`, and `v3.2.0-complete` as active default) from the `tmf_reference_model` taxonomy package in memory. Consumers must be able to retrieve any registered catalog version or set the active default catalog version dynamically.
 
 #### PRD-TMF-002: Strict Taxonomy Validation and Ingestion Rejection
 
@@ -146,7 +146,7 @@ Completeness audits and expected document list seeding must dynamically query ma
 
 #### PRD-TMF-005: Automated and Manual Document Redaction & Integrity Verification
 
-The system must support server-side automated and manual redaction of personally identifiable information (PII) and protected health information (PHI) within clinical documents. It must apply de-identification profiles (e.g. HIPAA, GDPR, EU_CTR) and custom terms to redact and shift dates/ages deterministically without changing the original source document. A signed, tamper-evident manifest must be generated for each redaction operation, and signature validation must fail upon any manifest modification. Raw matched values must never be returned or stored in manifest summaries, and unauthorized/read-only roles (such as inspectors and auditors) must be blocked from performing redaction or accessing unredacted original files.
+The system must support server-side automated and manual redaction of personally identifiable information (PII) and protected health information (PHI) within clinical documents. It must apply de-identification profiles (e.g. HIPAA, GDPR, EU_CTR) and custom terms to redact and shift dates/ages deterministically without changing the original source document. A signed, tamper-evident manifest must be generated for each redaction operation, and signature validation must fail upon any manifest modification. Raw matched values must never be returned or stored in manifest summaries, and unauthorized/read-only roles (such as inspectors and auditors) must be blocked from performing redaction or accessing unredacted original files. (Traced to SRS Trace-12; cross-referenced with ADR-065/ADR-098).
 
 ---
 

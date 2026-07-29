@@ -1706,3 +1706,215 @@ async def test_regulatory_binder_export():
     assert len(logs) >= 2
     assert logs[0]["action"] == "BINDER_EXPORT"
     assert f"Exported regulatory binder for study '{study_id}'" in logs[0]["details"]
+
+
+@pytest.mark.asyncio
+async def test_qualify_catalog_cutover_and_extension_persistence():
+    """
+    Cover POST to /api/v1/etmf/ingest with valid artifacts from v3.2.0-complete,
+    and a v3.2.0-extended is_extension=True artifact with explicit taxonomy_version.
+    Cover negative-path tests asserting HTTP 422 for unknown artifacts and mismatched hierarchies.
+    """
+    # @req:PRD-TMF-002
+    # @req:Trace-5
+    client = TestClient(app)
+    headers = get_auth_headers(roles="admin", change_reason="Qualifying catalog cutover")
+
+    # 1. Valid artifact from v3.2.0-complete (active default)
+    payload_complete = {
+        "study_id": "study_cutover_test",
+        "artifact_type": "Investigator CV", # Under Zone 5, Section 05.02 in v3.2.0-complete
+        "filename": "cv.pdf",
+        "content": "CV of PI Dr. John",
+        "mime_type": "application/pdf"
+    }
+    resp_complete = client.post("/api/v1/etmf/ingest", json=payload_complete, headers=headers)
+    assert resp_complete.status_code == 201
+    data_complete = resp_complete.json()
+    assert data_complete["zone"] == 5
+    assert data_complete["section"] == "05.02"
+    assert data_complete["artifact_code"] == "05.02.03"
+    assert data_complete["taxonomy_version"] == "v3.2.0-complete"
+
+    # 2. Extension artifact from v3.2.0-extended via explicit taxonomy_version
+    payload_extension = {
+        "study_id": "study_cutover_test",
+        "artifact_type": "Cadence Investigator Portal Training Certificate", # 05.02.99
+        "filename": "cert.pdf",
+        "content": "Certificate of training",
+        "mime_type": "application/pdf",
+        "taxonomy_version": "v3.2.0-extended"
+    }
+    resp_ext = client.post("/api/v1/etmf/ingest", json=payload_extension, headers=headers)
+    assert resp_ext.status_code == 201
+    data_ext = resp_ext.json()
+    assert data_ext["zone"] == 5
+    assert data_ext["section"] == "05.02"
+    assert data_ext["artifact_code"] == "05.02.99"
+    assert data_ext["taxonomy_version"] == "v3.2.0-extended"
+
+    # 3. Negative-path: unknown artifact name
+    payload_unknown = {
+        "study_id": "study_cutover_test",
+        "artifact_type": "Totally Fake Artifact Not Registered",
+        "filename": "fake.pdf",
+        "content": "Some fake content",
+        "mime_type": "application/pdf"
+    }
+    resp_unknown = client.post("/api/v1/etmf/ingest", json=payload_unknown, headers=headers)
+    assert resp_unknown.status_code == 422
+
+    # 4. Negative-path: mismatched hierarchy
+    payload_mismatch = {
+        "study_id": "study_cutover_test",
+        "artifact_type": "Investigator CV",
+        "filename": "cv.pdf",
+        "content": "Mismatched content",
+        "mime_type": "application/pdf",
+        "zone": 1, # Investigator CV belongs to zone 5, not zone 1
+        "section": "01.01"
+    }
+    resp_mismatch = client.post("/api/v1/etmf/ingest", json=payload_mismatch, headers=headers)
+    assert resp_mismatch.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_explicit_and_default_taxonomy_version_roundtrip_and_legacy_interpretability():
+    """
+    Ingest under explicit taxonomy_version: "v3.2.0" and default v3.2.0-complete in the same study.
+    GET both documents and assert taxonomy_version/artifact_code round-trip unchanged.
+    Assert legacy v3.2.0-tagged document remains resolvable via resolve_artifact.
+    """
+    # @req:PRD-TMF-003
+    client = TestClient(app)
+    headers = get_auth_headers(roles="admin", change_reason="Testing legacy interpretability")
+
+    # 1. Ingest under explicit "v3.2.0"
+    payload_legacy = {
+        "study_id": "study_interpret_test",
+        "artifact_type": "Clinical Trial Protocol",
+        "filename": "protocol_legacy.pdf",
+        "content": "Legacy protocol",
+        "mime_type": "application/pdf",
+        "taxonomy_version": "v3.2.0"
+    }
+    resp_legacy = client.post("/api/v1/etmf/ingest", json=payload_legacy, headers=headers)
+    assert resp_legacy.status_code == 201
+    doc_id_legacy = resp_legacy.json()["document_id"]
+
+    # 2. Ingest under active default "v3.2.0-complete"
+    payload_complete = {
+        "study_id": "study_interpret_test",
+        "artifact_type": "Clinical Trial Protocol",
+        "filename": "protocol_complete.pdf",
+        "content": "Complete protocol",
+        "mime_type": "application/pdf"
+    }
+    resp_complete = client.post("/api/v1/etmf/ingest", json=payload_complete, headers=headers)
+    assert resp_complete.status_code == 201
+    doc_id_complete = resp_complete.json()["document_id"]
+
+    # 3. GET both and assert they round-trip successfully
+    get_legacy = client.get(f"/api/v1/etmf/documents/{doc_id_legacy}", headers=headers)
+    assert get_legacy.status_code == 200
+    doc_legacy_data = get_legacy.json()
+    assert doc_legacy_data["taxonomy_version"] == "v3.2.0"
+    assert doc_legacy_data["artifact_code"] == "01.01.01"
+
+    get_complete = client.get(f"/api/v1/etmf/documents/{doc_id_complete}", headers=headers)
+    assert get_complete.status_code == 200
+    doc_complete_data = get_complete.json()
+    assert doc_complete_data["taxonomy_version"] == "v3.2.0-complete"
+    assert doc_complete_data["artifact_code"] == "01.01.01"
+
+    # 4. Assert a legacy v3.2.0-tagged document remains resolvable via resolve_artifact
+    from tmf_reference_model import resolve_artifact
+    resolved_legacy = resolve_artifact(version="v3.2.0", code="01.01.01")
+    assert resolved_legacy["artifact"].name == "Clinical Trial Protocol"
+    assert resolved_legacy["version"] == "v3.2.0"
+
+
+@pytest.mark.asyncio
+async def test_completeness_from_catalog_across_versions():
+    """
+    Test /api/v1/etmf/completeness for INITIATION/CONDUCT milestones with documents
+    spanning both v3.2.0 and v3.2.0-complete, asserting reporting matches active version.
+    Confirm unknown-milestone rejection.
+    """
+    # @req:PRD-TMF-004
+    client = TestClient(app)
+    admin_headers = get_auth_headers(roles="admin", change_reason="Preparing completeness mixed versions")
+    inspector_headers = get_auth_headers(roles="regulatory_inspector")
+
+    study_id = "study_completeness_mixed"
+
+    # 1. Initially check INITIATION milestone (missing Clinical Trial Protocol)
+    res_init = client.get(
+        f"/api/v1/etmf/completeness?study_id={study_id}&milestone=INITIATION",
+        headers=inspector_headers,
+    )
+    assert res_init.status_code == 200
+    assert res_init.json()["is_complete"] is False
+    assert "Clinical Trial Protocol" in res_init.json()["missing_artifacts"]
+
+    # 2. Ingest Clinical Trial Protocol under explicit legacy version "v3.2.0"
+    payload_prot_legacy = {
+        "study_id": study_id,
+        "artifact_type": "Clinical Trial Protocol",
+        "filename": "protocol_legacy.pdf",
+        "content": "Protocol Content Legacy",
+        "mime_type": "application/pdf",
+        "taxonomy_version": "v3.2.0"
+    }
+    client.post("/api/v1/etmf/ingest", json=payload_prot_legacy, headers=admin_headers)
+
+    # 3. Check INITIATION milestone -> should now be True (it can resolve and match Clinical Trial Protocol across versions)
+    res_init_2 = client.get(
+        f"/api/v1/etmf/completeness?study_id={study_id}&milestone=INITIATION",
+        headers=inspector_headers,
+    )
+    assert res_init_2.json()["is_complete"] is True
+
+    # 4. Check CONDUCT milestone (requires Clinical Trial Protocol, Define-XML Specifications, Blank CRF) -> should be False
+    res_cond = client.get(
+        f"/api/v1/etmf/completeness?study_id={study_id}&milestone=CONDUCT",
+        headers=inspector_headers,
+    )
+    assert res_cond.json()["is_complete"] is False
+    assert "Define-XML Specifications" in res_cond.json()["missing_artifacts"]
+    assert "Blank CRF" in res_cond.json()["missing_artifacts"]
+
+    # Ingest Blank CRF under "v3.2.0-complete" (default active)
+    payload_crf = {
+        "study_id": study_id,
+        "artifact_type": "Blank CRF",
+        "filename": "crf.xml",
+        "content": "Blank CRF Content",
+        "mime_type": "application/xml"
+    }
+    client.post("/api/v1/etmf/ingest", json=payload_crf, headers=admin_headers)
+
+    # Ingest Define-XML Specifications under "v3.2.0" (legacy)
+    payload_define = {
+        "study_id": study_id,
+        "artifact_type": "Define-XML Specifications",
+        "filename": "define.xml",
+        "content": "Define XML Content",
+        "mime_type": "application/xml",
+        "taxonomy_version": "v3.2.0"
+    }
+    client.post("/api/v1/etmf/ingest", json=payload_define, headers=admin_headers)
+
+    # 5. Check CONDUCT milestone again -> should now be True!
+    res_cond_2 = client.get(
+        f"/api/v1/etmf/completeness?study_id={study_id}&milestone=CONDUCT",
+        headers=inspector_headers,
+    )
+    assert res_cond_2.json()["is_complete"] is True
+
+    # 6. Unknown milestone HTTP 400 rejection path is covered
+    res_unknown = client.get(
+        f"/api/v1/etmf/completeness?study_id={study_id}&milestone=SOME_FAKE_MILESTONE",
+        headers=inspector_headers,
+    )
+    assert res_unknown.status_code == 400

@@ -278,6 +278,7 @@ def test_eisf_mappings_resolve_through_active_catalog():
         assert artifact.zone_code == zone
         assert parent_section.code == section
         assert parent_zone.code == zone
+        assert artifact.is_extension is False
 
 
 def test_eisf_reverse_mappings_resolve_through_active_catalog():
@@ -309,3 +310,16 @@ def test_eisf_reverse_mappings_resolve_through_active_catalog():
         assert artifact.zone_code == zone
         assert parent_section.code == section
         assert parent_zone.code == zone
+        assert artifact.is_extension is False
+
+
+def test_eisf_resolve_known_extension_artifact():
+    """
+    Verify that resolving a known extension artifact directly from v3.2.0-extended
+    results in an artifact with is_extension=True.
+    """
+    from tmf_reference_model import resolve_artifact
+    resolved = resolve_artifact("v3.2.0-extended", code="05.02.99")
+    artifact = resolved["artifact"]
+    assert artifact.code == "05.02.99"
+    assert artifact.is_extension is True

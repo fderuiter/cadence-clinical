@@ -1,6 +1,6 @@
 # ADR-049: TMF Reference Model Taxonomy Integration
 
-* **Status:** Proposed
+* **Status:** Accepted (Gated on final approval from recorded deciders @fderuiter, @jules; see PR review note)
 * **Date:** 2026-07-29
 * **Authors:** @fderuiter
 * **Deciders:** @fderuiter
@@ -58,8 +58,11 @@ Store all zones, sections, and artifacts in relational tables (PostgreSQL or Neo
 
 ### Named Catalog Versions & Active Default
 
-* We register named catalog versions (`v3.2.0`, `v4.0.0`) in a thread-safe registry.
-* `v3.2.0` is designated as the active default version.
+* We register three real catalog versions in a thread-safe registry:
+  * `v3.2.0`: Standard representative catalog retained strictly for historical reproducibility of pre-cutover records.
+  * `v3.2.0-complete`: The active default catalog representing the pure, complete standard DIA Reference Model v3.2.0. All new lookups, document ingestions, and validations resolve against this version by default.
+  * `v3.2.0-extended`: Layers Cadence-specific `is_extension=True` custom extensions on top of the complete catalog.
+* Cross-reference the Standard-vs-Extension policy in [packages/core-models/tmf_reference_model/README.md](../../packages/core-models/tmf_reference_model/README.md) §3.
 * Version isolation is enforced; once a version is registered, it cannot be mutated or overridden.
 
 ### Strict Ingestion Validation vs Heuristic Fallback
@@ -76,7 +79,8 @@ Store all zones, sections, and artifacts in relational tables (PostgreSQL or Neo
 ## 5. Consequences & Trade-offs
 
 * **Positive Impact:** Strong validation guarantees that all documents in the eTMF conform exactly to the official DIA reference model taxonomy.
-* **Negative Impact / Technical Debt:** To support future major DIA TMF Reference Model versions (e.g., v4.0), a developer must code the new dictionary structure and register it in `tmf_reference_model`.
+* **Negative Impact / Technical Debt / Hypothetical Scenario:** In a hypothetical future scenario where a major new DIA TMF Reference Model version is released (e.g., a potential future v4.0.0, which is not registered today), a developer would need to define its dictionary structure and register it in `tmf_reference_model` to make it available.
+* **Mitigation Strategy:** The static-catalog approach leverages a unified model registry allowing multi-version registration and run-time selection, enabling older trials to remain bound to `v3.2.0` or `v3.2.0-complete` without disruption during any future cutover.
 
 ## 6. Implementation & Verification
 

@@ -13,6 +13,8 @@ Based on the executed automated verification suite, the platform meets all prede
 - **Passed:** 1222 🟢
 - **Total Automated Test Cases Run:** 1167
 - **Passed:** 1167 🟢
+- **Total Automated Test Cases Run:** 1232
+- **Passed:** 1232 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -470,6 +472,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_derive_correlation_key` | `tests.test_eisf_adapter` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_deterministic_bidirectional_mapping_success` | `tests.test_eisf_adapter` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_mappings_resolve_through_active_catalog` | `tests.test_eisf_adapter` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_eisf_resolve_known_extension_artifact` | `tests.test_eisf_adapter` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_reverse_mappings_resolve_through_active_catalog` | `tests.test_eisf_adapter` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_mapping_failures` | `tests.test_eisf_adapter` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_mapping_normalization` | `tests.test_eisf_adapter` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -499,6 +502,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_eisf_sync_echo_loop_prevention` | `tests.test_eisf_sync` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_sync_exact_duplicate_ignored` | `tests.test_eisf_sync` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_sync_per_field_metadata_lww` | `tests.test_eisf_sync` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_eisf_sync_unmapped_propagation` | `tests.test_eisf_sync` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_aggregate_eligibility_evaluation` | `tests.test_eligibility_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_evaluation_all_operators` | `tests.test_eligibility_engine` | PRD-ELIGIBILITY-005 | 🟢 PASSED | < 1s |
 | `test_evaluation_incompatible_types_graceful_handling` | `tests.test_eligibility_engine` | PRD-ELIGIBILITY-007 | 🟢 PASSED | < 1s |
@@ -520,12 +524,15 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_canonical_catalog_ingestion_validations` | `tests.test_etmf` | PRD-TMF-002, PRD-TMF-003, Trace-5 | 🟢 PASSED | < 1s |
 | `test_completeness_checking_transitions` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_completeness_from_catalog` | `tests.test_etmf` | PRD-TMF-004 | 🟢 PASSED | < 1s |
+| `test_completeness_from_catalog_across_versions` | `tests.test_etmf` | PRD-TMF-004 | 🟢 PASSED | < 1s |
 | `test_edl_definitions_and_crud` | `tests.test_etmf` | PRD-EDL-001, Trace-4 | 🟢 PASSED | < 1s |
 | `test_etmf_audit_logs_filtering_and_pagination` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_etmf_edge_cases_for_coverage` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_etmf_qc_lifecycle_and_audit` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_explicit_and_default_taxonomy_version_roundtrip_and_legacy_interpretability` | `tests.test_etmf` | PRD-TMF-003 | 🟢 PASSED | < 1s |
 | `test_inspector_portal_read_only_access_limits` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_placeholder_scripts` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_qualify_catalog_cutover_and_extension_persistence` | `tests.test_etmf` | PRD-TMF-002, Trace-5 | 🟢 PASSED | < 1s |
 | `test_regulatory_binder_export` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_site_aware_completeness` | `tests.test_etmf` | PRD-EDL-001, Trace-4 | 🟢 PASSED | < 1s |
 | `test_tmf_taxonomy_mapping` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
