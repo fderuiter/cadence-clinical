@@ -22,6 +22,7 @@ from apps.execution.database.models import (  # noqa: F401
     RandomizationConfig,
     SDVSignOff,
     StratumState,
+    StudyAuthoredRule,
     SubjectRandomization,
     TSDVConfig,
     WHODrugATC,
@@ -29,7 +30,6 @@ from apps.execution.database.models import (  # noqa: F401
     WHODrugDrugIngredient,
     WHODrugIngredient,
     WHODrugRecord,
-    StudyAuthoredRule,
 )
 
 # Design Guideline:

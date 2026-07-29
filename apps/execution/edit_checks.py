@@ -1,7 +1,7 @@
+import copy
 import logging
 from datetime import datetime
-import copy
-from typing import List, Optional, Any
+from typing import Any, List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -341,8 +341,8 @@ class AuthoredCrossFormRule(EditCheckRule):
 async def load_active_authored_rules(session: AsyncSession, study_id: str) -> List[AuthoredCrossFormRule]:
     stmt = select(StudyAuthoredRule).where(
         StudyAuthoredRule.study_id == study_id,
-        StudyAuthoredRule.is_active == True,
-        StudyAuthoredRule.is_deleted == False
+        StudyAuthoredRule.is_active.is_(True),
+        StudyAuthoredRule.is_deleted.is_(False),
     )
     res = await session.execute(stmt)
     rows = res.scalars().all()

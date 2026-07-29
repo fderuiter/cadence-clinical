@@ -44,7 +44,11 @@ from apps.execution.cdisc_validator import validate_cdisc_xml_structure
 from apps.execution.coding import match_verbatim_term
 from apps.execution.coding.importer import process_dictionary_import
 from apps.execution.coding.parsers import MedDRAParser, WHODrugParser
-from apps.execution.database.context import current_change_reason, current_user_id, audit_context
+from apps.execution.database.context import (
+    audit_context,
+    current_change_reason,
+    current_user_id,
+)
 from apps.execution.database.core import db_manager
 from apps.execution.database.middleware import ContextResetMiddleware
 from apps.execution.database.models import (
@@ -61,11 +65,11 @@ from apps.execution.database.models import (
     FormSubmission,
     ImportState,
     SDVSignOff,
+    StudyAuthoredRule,
     SubjectConsent,
     SubjectRandomization,
     TranslationJob,
     TSDVConfig,
-    StudyAuthoredRule,
 )
 from apps.execution.database.models import (
     DictionaryType as DBDictionaryType,
@@ -250,8 +254,8 @@ async def study_published(
                         select(StudyAuthoredRule)
                         .where(
                             StudyAuthoredRule.study_id == event.study_id,
-                            StudyAuthoredRule.is_active == True,
-                            StudyAuthoredRule.is_deleted == False,
+                            StudyAuthoredRule.is_active.is_(True),
+                            StudyAuthoredRule.is_deleted.is_(False),
                         )
                     )
                     res = await session.execute(stmt)
