@@ -713,3 +713,48 @@ async def test_eisf_sync_per_field_metadata_lww(mock_etmf_propagation) -> None:
         assert (
             latest.metadata_json["approver"] == "Sponsor Incoming Newer"
         )  # Overwritten because incoming was newer
+
+
+@pytest.mark.asyncio
+async def test_eisf_sync_unmapped_propagation(mock_etmf_propagation) -> None:
+    """
+    Test that driving propagate_to_etmf with an unmapped binder_classification results
+    in an outgoing payload with zone=None, section=None, artifact_code=None, and
+    artifact_type matching the raw classification.
+    """
+    client = TestClient(eisf_app)
+    headers = get_eisf_auth_headers(
+        user_id="pi-boston",
+        roles="site investigator",
+        site_id="site-boston-01",
+        change_reason="Filing generic unmapped document",
+    )
+
+    payload = {
+        "submissions": [
+            {
+                "study_id": "study-100",
+                "site_id": "site-boston-01",
+                "binder_classification": "Generic Unmapped Classification",
+                "filename": "generic.txt",
+                "content": "Generic content",
+                "mime_type": "text/plain",
+                "source_system": "eISF",
+                "conflict_policy": "CLIENT_WINS",
+            }
+        ]
+    }
+
+    resp = client.post("/api/v1/eisf/sync", json=payload, headers=headers)
+    assert resp.status_code == 200
+    assert resp.json()["created_count"] == 1
+
+    # Verify eTMF propagation happened with unmapped fields set correctly
+    assert len(mock_etmf_propagation) == 1
+    prop = mock_etmf_propagation[0]
+    assert prop["json"]["study_id"] == "study-100"
+    assert prop["json"]["content"] == "Generic content"
+    assert prop["json"]["zone"] is None
+    assert prop["json"]["section"] is None
+    assert prop["json"]["artifact_code"] is None
+    assert prop["json"]["artifact_type"] == "Generic Unmapped Classification"

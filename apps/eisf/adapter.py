@@ -31,6 +31,8 @@ class DocumentClassification(str, Enum):
 # This includes "05.02.03" (Investigator CV) and "05.02.04" (Delegation of Authority Log),
 # which are standard DIA artifacts restored to standard status in the complete catalog.
 # Any custom extensions must be registered using the explicit extension mechanism.
+#
+# Note: Financial Disclosure / Medical License cross-walk entries are deferred and tracked under issue #688.
 FORWARD_MAPPING: Dict[Tuple[str, str], Tuple[int, str, str, str]] = {
     ("investigator & staff", "investigator cv"): (
         5,
