@@ -138,11 +138,16 @@ def test_sync_ruleset_update_existing():
 
 
 def test_sync_ruleset_permission_denied_403():
-    """Verify that a permission denied (HTTP 403) from the GitHub API raises SystemExit with code 1."""
+    """Verify that a permission denied (HTTP 403) from GitHub API raises SystemExit when FAIL_ON_RULESET_SYNC_ERROR is true."""
     import subprocess
 
     with patch.dict(
-        os.environ, {"GITHUB_REPOSITORY": "owner/repo", "GITHUB_TOKEN": "token"}
+        os.environ,
+        {
+            "GITHUB_REPOSITORY": "owner/repo",
+            "GITHUB_TOKEN": "token",
+            "FAIL_ON_RULESET_SYNC_ERROR": "true",
+        },
     ):
         mock_run = MagicMock()
         # First call: GET existing rulesets -> empty list
@@ -171,6 +176,41 @@ def test_sync_ruleset_permission_denied_403():
                         with pytest.raises(SystemExit) as exc_info:
                             sync_ruleset()
                         assert exc_info.value.code == 1
+
+
+def test_sync_ruleset_permission_denied_403_graceful():
+    """Verify that a permission denied (HTTP 403) logs a warning and returns cleanly without raising SystemExit when FAIL_ON_RULESET_SYNC_ERROR is not set."""
+    import subprocess
+
+    with patch.dict(
+        os.environ,
+        {"GITHUB_REPOSITORY": "owner/repo", "GITHUB_TOKEN": "token"},
+        clear=True,
+    ):
+        mock_run = MagicMock()
+        err = subprocess.CalledProcessError(
+            returncode=1,
+            cmd=["gh", "api", "--method", "POST", "repos/owner/repo/rulesets"],
+            output="",
+            stderr="Resource not accessible by integration",
+        )
+        mock_run.side_effect = [
+            MagicMock(stdout="[]", stderr="", returncode=0),
+            err,
+        ]
+
+        with patch("subprocess.run", mock_run):
+            with patch("pathlib.Path.exists", return_value=True):
+                with patch(
+                    "pathlib.Path.glob",
+                    return_value=[Path(".github/rulesets/main.json")],
+                ):
+                    with patch(
+                        "builtins.open",
+                        mock_open(read_data='{"name": "main-branch-protection"}'),
+                    ):
+                        # Should complete without raising SystemExit
+                        sync_ruleset()
 
 
 def test_sync_ruleset_multiple_files_integration():
