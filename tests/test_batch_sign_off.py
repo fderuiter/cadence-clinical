@@ -62,7 +62,9 @@ def get_auth_headers(
         if payload and "batch-sign-off" in action:
             norm_study = str(payload.get("study_id")).strip()
             norm_type = str(payload.get("target_type")).strip().upper()
-            sorted_ids = sorted([str(tid).strip() for tid in payload.get("target_ids", [])])
+            sorted_ids = sorted(
+                [str(tid).strip() for tid in payload.get("target_ids", [])]
+            )
             norm_ids = ",".join(sorted_ids)
             norm_reason = str(payload.get("signing_reason")).strip()
             binding_str = f"{norm_study}:{norm_type}:{norm_ids}:{norm_reason}"
@@ -173,10 +175,15 @@ async def test_batch_sign_off_happy_path_form() -> None:
             assert manifestation["signer_full_name"] == "Test User"
             assert manifestation["signing_timestamp_utc"].endswith("Z")
             assert manifestation["signing_reason_code"] == "PI_APPROVAL"
-            assert manifestation["signing_reason_text"] == "I approve this clinical record and confirm medical responsibility."
+            assert (
+                manifestation["signing_reason_text"]
+                == "I approve this clinical record and confirm medical responsibility."
+            )
             assert manifestation["record_id"] == id1
             assert manifestation["record_version"] == 2
-            assert manifestation["signature_hash_sha256"] == m1["canonical_signature_hash"]
+            assert (
+                manifestation["signature_hash_sha256"] == m1["canonical_signature_hash"]
+            )
 
 
 @pytest.mark.asyncio
@@ -315,7 +322,9 @@ async def test_batch_sign_off_pi_only() -> None:
             res = await client.post(
                 action_path,
                 json=payload,
-                headers=get_auth_headers(roles=bad_role, action=action_path, payload=payload),
+                headers=get_auth_headers(
+                    roles=bad_role, action=action_path, payload=payload
+                ),
             )
             assert res.status_code == 403
             assert "Only a Principal Investigator" in res.json()["detail"]
@@ -345,6 +354,7 @@ async def test_batch_sign_off_token_replay() -> None:
         norm_reason = "PI approval and sign-off."
         binding_str = f"{norm_study}:{norm_type}:{norm_ids}:{norm_reason}"
         import hashlib
+
         batch_id = hashlib.sha256(binding_str.encode("utf-8")).hexdigest()
 
         sig_payload = {
@@ -416,7 +426,9 @@ async def test_batch_sign_off_locks_and_atomic_rollback() -> None:
             await client.post(
                 action_path,
                 json=payload,
-                headers=get_auth_headers(roles="pi", action=action_path, payload=payload),
+                headers=get_auth_headers(
+                    roles="pi", action=action_path, payload=payload
+                ),
             )
 
         # Verify that sub1 was NOT approved (proper rollback occurred!)
@@ -463,7 +475,9 @@ async def test_batch_sign_off_mismatched_bindings_and_no_write() -> None:
         headers_wrong_study = get_auth_headers(
             roles="pi", action=action_path, payload=payload_wrong_study
         )
-        res_a = await client.post(action_path, json=correct_payload, headers=headers_wrong_study)
+        res_a = await client.post(
+            action_path, json=correct_payload, headers=headers_wrong_study
+        )
         assert res_a.status_code == 401
         assert "mismatch" in res_a.json()["message"]
 
@@ -472,7 +486,9 @@ async def test_batch_sign_off_mismatched_bindings_and_no_write() -> None:
         headers_wrong_type = get_auth_headers(
             roles="pi", action=action_path, payload=payload_wrong_type
         )
-        res_b = await client.post(action_path, json=correct_payload, headers=headers_wrong_type)
+        res_b = await client.post(
+            action_path, json=correct_payload, headers=headers_wrong_type
+        )
         assert res_b.status_code == 401
 
         # Case C: Token generated with different target_ids
@@ -480,20 +496,30 @@ async def test_batch_sign_off_mismatched_bindings_and_no_write() -> None:
         headers_wrong_ids = get_auth_headers(
             roles="pi", action=action_path, payload=payload_wrong_ids
         )
-        res_c = await client.post(action_path, json=correct_payload, headers=headers_wrong_ids)
+        res_c = await client.post(
+            action_path, json=correct_payload, headers=headers_wrong_ids
+        )
         assert res_c.status_code == 401
 
         # Case D: Token generated with a different signing_reason
-        payload_wrong_reason = dict(correct_payload, signing_reason="Review and confirmation.")
+        payload_wrong_reason = dict(
+            correct_payload, signing_reason="Review and confirmation."
+        )
         headers_wrong_reason = get_auth_headers(
             roles="pi", action=action_path, payload=payload_wrong_reason
         )
-        res_d = await client.post(action_path, json=correct_payload, headers=headers_wrong_reason)
+        res_d = await client.post(
+            action_path, json=correct_payload, headers=headers_wrong_reason
+        )
         assert res_d.status_code == 401
 
         # Case E: Token not bound to a batch
-        headers_no_batch = get_auth_headers(roles="pi", action=action_path)  # no payload => no batch_id
-        res_e = await client.post(action_path, json=correct_payload, headers=headers_no_batch)
+        headers_no_batch = get_auth_headers(
+            roles="pi", action=action_path
+        )  # no payload => no batch_id
+        res_e = await client.post(
+            action_path, json=correct_payload, headers=headers_no_batch
+        )
         assert res_e.status_code == 401
 
         # Verify that the form submission remains unchanged in the database (NO WRITE/MUTATION)

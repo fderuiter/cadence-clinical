@@ -253,13 +253,19 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
                     body_bytes = await request.body()
                     try:
                         import json
+
                         body_json = json.loads(body_bytes)
                     except Exception:
                         body_json = {}
 
                     # Restore body receive for Starlette downstream
                     async def receive():
-                        return {"type": "http.request", "body": body_bytes, "more_body": False}
+                        return {
+                            "type": "http.request",
+                            "body": body_bytes,
+                            "more_body": False,
+                        }
+
                     request._receive = receive
 
                     req_study_id = body_json.get("study_id")
@@ -267,7 +273,14 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
                     req_target_ids = body_json.get("target_ids")
                     req_signing_reason = body_json.get("signing_reason")
 
-                    if not all([req_study_id, req_target_type, req_target_ids is not None, req_signing_reason]):
+                    if not all(
+                        [
+                            req_study_id,
+                            req_target_type,
+                            req_target_ids is not None,
+                            req_signing_reason,
+                        ]
+                    ):
                         return JSONResponse(
                             status_code=400,
                             content={
@@ -285,7 +298,9 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
                     norm_reason = str(req_signing_reason).strip()
 
                     binding_str = f"{norm_study}:{norm_type}:{norm_ids}:{norm_reason}"
-                    computed_batch_id = hashlib.sha256(binding_str.encode("utf-8")).hexdigest()
+                    computed_batch_id = hashlib.sha256(
+                        binding_str.encode("utf-8")
+                    ).hexdigest()
 
                     if token_batch_id != computed_batch_id:
                         return JSONResponse(

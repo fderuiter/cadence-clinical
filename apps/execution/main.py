@@ -3568,11 +3568,10 @@ async def post_batch_sign_off(
         )
 
     from jose import JWTError, jwt
+
     secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()
     try:
-        sig_payload = jwt.decode(
-            sig_token, secret, algorithms=["HS256"]
-        )
+        sig_payload = jwt.decode(sig_token, secret, algorithms=["HS256"])
     except JWTError:
         raise HTTPException(
             status_code=401,
@@ -3595,6 +3594,7 @@ async def post_batch_sign_off(
 
     binding_str = f"{norm_study}:{norm_type}:{norm_ids}:{norm_reason}"
     import hashlib
+
     computed_batch_id = hashlib.sha256(binding_str.encode("utf-8")).hexdigest()
 
     if token_batch_id != computed_batch_id:
@@ -3692,26 +3692,48 @@ async def post_batch_sign_off(
                     )
 
                     username = request.state.user_id or "unknown"
-                    full_name = f"{username.replace('_', ' ').replace('.', ' ').title()}"
+                    full_name = (
+                        f"{username.replace('_', ' ').replace('.', ' ').title()}"
+                    )
                     if "pi" in username.lower() or "investigator" in username.lower():
                         full_name += ", MD"
 
                     signing_timestamp_utc = datetime.utcnow().isoformat() + "Z"
 
                     reason_mapping = {
-                        "I attest that this data is accurate and complete.": ("DATA_RECORDING", "I attest that this data is accurate and complete."),
-                        "PI approval and sign-off.": ("PI_APPROVAL", "I approve this clinical record and confirm medical responsibility."),
-                        "Review and confirmation.": ("REVIEW_CONFIRMATION", "Review and confirmation."),
+                        "I attest that this data is accurate and complete.": (
+                            "DATA_RECORDING",
+                            "I attest that this data is accurate and complete.",
+                        ),
+                        "PI approval and sign-off.": (
+                            "PI_APPROVAL",
+                            "I approve this clinical record and confirm medical responsibility.",
+                        ),
+                        "Review and confirmation.": (
+                            "REVIEW_CONFIRMATION",
+                            "Review and confirmation.",
+                        ),
                         "DATA_RECORDING": ("DATA_RECORDING", "I author this data"),
-                        "DATA_ENTRY_COMPLETED": ("DATA_RECORDING", "I author this data"),
+                        "DATA_ENTRY_COMPLETED": (
+                            "DATA_RECORDING",
+                            "I author this data",
+                        ),
                         "PI_REVIEW": ("PI_APPROVAL", "I approve this clinical record"),
-                        "PI_SIGN_OFF": ("PI_APPROVAL", "I approve this clinical record and confirm medical responsibility."),
-                        "COMPLIANCE_ATTESTATION": ("COMPLIANCE_ATTESTATION", "I review and confirm this data"),
+                        "PI_SIGN_OFF": (
+                            "PI_APPROVAL",
+                            "I approve this clinical record and confirm medical responsibility.",
+                        ),
+                        "COMPLIANCE_ATTESTATION": (
+                            "COMPLIANCE_ATTESTATION",
+                            "I review and confirm this data",
+                        ),
                     }
 
                     reason_key = payload.signing_reason
                     if reason_key in reason_mapping:
-                        signing_reason_code, signing_reason_text = reason_mapping[reason_key]
+                        signing_reason_code, signing_reason_text = reason_mapping[
+                            reason_key
+                        ]
                     else:
                         signing_reason_code = reason_key.replace(" ", "_").upper()
                         signing_reason_text = reason_key
@@ -3742,7 +3764,7 @@ async def post_batch_sign_off(
                             "record_id": sub.id,
                             "record_version": sub.version + 1,
                             "signature_hash_sha256": canonical_hash,
-                        }
+                        },
                     }
 
                     sub.status = "APPROVED"
