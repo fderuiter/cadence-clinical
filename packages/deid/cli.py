@@ -231,6 +231,12 @@ def scan_file(
             or "0.0.0.0" in val_lower  # nosec B104
             or "transmit-mock" in val_lower
             or "cadence-clinical.com" in val_lower
+            # Development infrastructure — not PHI: source control, package registries,
+            # CI/CD providers, and documentation hosts are standard toolchain URLs.
+            or "github.com" in val_lower
+            or "githubusercontent.com" in val_lower
+            or "pypi.org" in val_lower
+            or "npmjs.com" in val_lower
         ):
             continue
         if cat_lower == "ip_mac_addresses" and (
@@ -321,7 +327,11 @@ def is_excluded_path(path: str, root_dir: str) -> bool:
             "pnpm-lock.yaml",
             "uv.lock",
             "readme.md",
+            # Developer-facing documentation files that will legitimately contain
+            # repository URLs, CLI examples with usernames, and similar content
+            # that is not PHI/PII. Treat the same as readme.md.
             "agents.md",
+            "contributing.md",
             "license",
             "architecture.md",
             "eslint.config.mjs",

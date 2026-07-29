@@ -186,8 +186,8 @@ Architectural or design changes require scaffolding a new ADR:
 python3 scripts/create_adr.py --title "Short Title" --domain "core-platform" --req "PRD-SYS-xxx"
 ```
 
-This creates `docs/adr/YYYY-MM-DD-short-title.md` and auto-indexes it in
-`docs/adr/index.md`.
+This creates a dated ADR file under `docs/adr/` (e.g. `2026-07-29-short-title.md`) and
+auto-indexes it in `docs/adr/index.md`.
 
 **An ADR is required when:**
 - Adding a new third-party dependency or database engine.
