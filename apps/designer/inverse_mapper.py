@@ -168,6 +168,8 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
         "instanceType",
         "audit_metadata",
         "reason_for_change",
+        "blocks",
+        "documentedBy",
     }
     extra_study_keys = set(data.keys()) - known_study_keys
     if extra_study_keys:
@@ -425,6 +427,115 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
                 }
             )
 
+    # Reconstruct blocks from USDM or blocks payload
+    reconstructed_blocks = []
+    if "blocks" in data:
+        for b in data["blocks"]:
+            if isinstance(b, dict):
+                reconstructed_blocks.append({
+                    "block_id": b["block_id"],
+                    "block_type": b.get("block_type"),
+                    "order": b.get("order", 1),
+                    "parent_id": b.get("parent_id"),
+                    "title": b.get("title"),
+                    "text": b.get("text", ""),
+                    "objective_id": b.get("objective_id"),
+                    "criterion_id": b.get("criterion_id"),
+                    "criterion_type": b.get("criterion_type"),
+                    "dsl_source": b.get("dsl_source"),
+                    "derived_from_soa": b.get("derived_from_soa", False),
+                    "version_index": b.get("version_index", 1),
+                    "created_by": b.get("created_by", "system"),
+                    "reason_for_change": b.get("reason_for_change") or "Initial setup",
+                })
+    else:
+        block_order = 1
+        nc_map = {}
+        nci_map = {}
+
+        documented_by = data.get("documentedBy", [])
+        if documented_by and isinstance(documented_by, list):
+            for doc in documented_by:
+                if isinstance(doc, dict) and "versions" in doc:
+                    for doc_ver in doc["versions"]:
+                        if isinstance(doc_ver, dict) and "contents" in doc_ver:
+                            for nc in doc_ver["contents"]:
+                                if isinstance(nc, dict):
+                                    nc_id = nc.get("_original_id") or nc.get("id")
+                                    nc_map[nc_id] = nc
+
+        if "versions" in data:
+            for ver in data["versions"]:
+                if isinstance(ver, dict) and "narrativeContentItems" in ver:
+                    for item in ver["narrativeContentItems"]:
+                        if isinstance(item, dict):
+                            item_id = item.get("_original_id") or item.get("id")
+                            nci_map[item_id] = item
+
+        for nc_id, nc in nc_map.items():
+            matched_item = nci_map.get(nc_id) or {}
+            reconstructed_blocks.append({
+                "block_id": nc_id,
+                "block_type": "narrative",
+                "order": nc.get("order") or block_order,
+                "parent_id": nc.get("parent_id"),
+                "title": nc.get("sectionTitle") or nc.get("name"),
+                "text": matched_item.get("text", ""),
+                "version_index": 1,
+                "created_by": "system",
+                "reason_for_change": "Initial setup",
+                "derived_from_soa": nc.get("derived_from_soa", False),
+            })
+            block_order += 1
+
+        if "versions" in data:
+            for ver in data["versions"]:
+                if isinstance(ver, dict) and "studyDesigns" in ver:
+                    for design in ver["studyDesigns"]:
+                        if isinstance(design, dict) and "objectives" in design:
+                            for obj in design["objectives"]:
+                                if isinstance(obj, dict):
+                                    obj_id = obj.get("_original_id") or obj.get("id")
+                                    reconstructed_blocks.append({
+                                        "block_id": obj_id,
+                                        "block_type": "objective",
+                                        "order": obj.get("order") or block_order,
+                                        "parent_id": obj.get("parent_id"),
+                                        "objective_id": obj_id,
+                                        "text": obj.get("text", ""),
+                                        "version_index": 1,
+                                        "created_by": "system",
+                                        "reason_for_change": "Initial setup",
+                                        "derived_from_soa": obj.get("derived_from_soa", False),
+                                    })
+                                    block_order += 1
+
+        if "versions" in data:
+            for ver in data["versions"]:
+                if isinstance(ver, dict) and "studyDesigns" in ver:
+                    for design in ver["studyDesigns"]:
+                        if isinstance(design, dict) and "eligibilityCriteria" in design:
+                            for crit in design["eligibilityCriteria"]:
+                                if isinstance(crit, dict):
+                                    crit_id = crit.get("_original_id") or crit.get("id")
+                                    category_obj = crit.get("category") or {}
+                                    crit_type = category_obj.get("code") if isinstance(category_obj, dict) else "inclusion"
+                                    reconstructed_blocks.append({
+                                        "block_id": crit_id,
+                                        "block_type": "eligibility",
+                                        "order": crit.get("order") or block_order,
+                                        "parent_id": crit.get("parent_id"),
+                                        "criterion_id": crit_id,
+                                        "criterion_type": crit_type,
+                                        "text": crit.get("description", ""),
+                                        "dsl_source": crit.get("_dsl_source") or crit.get("expression") or "",
+                                        "version_index": 1,
+                                        "created_by": "system",
+                                        "reason_for_change": "Initial setup",
+                                        "derived_from_soa": crit.get("derived_from_soa", False),
+                                    })
+                                    block_order += 1
+
     # 5. Construct final study projection dictionary
     study_projection = {
         "study_id": study_id,
@@ -432,6 +543,7 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
         "current_version": current_version,
         "arms": arms_projection,
         "rules": reconstructed_rules_list,
+        "blocks": reconstructed_blocks,
     }
     if desc is not None:
         study_projection["desc"] = desc

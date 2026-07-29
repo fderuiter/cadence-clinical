@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Literal, Optional, Tuple
 
 import httpx
 from eligibility import EligibilityCriterion, ExpressionNode, parse_dsl
-from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile, status
+from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile, status, Depends
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from neo4j import AsyncGraphDatabase
@@ -66,6 +66,12 @@ from apps.designer.delta import (
     update_study_arm,
     update_timing_window,
     update_visit,
+    create_block,
+    update_block,
+    delete_block,
+    get_block,
+    list_blocks,
+    reorder_blocks,
 )
 from apps.designer.evs_client import NCIEVSClient
 from apps.designer.library import (
@@ -2447,6 +2453,227 @@ async def list_soa_entities(
         res = await session.run(query, study_version_id=study_version_id)
         records = await res.all()
         return [dict(r["props"]) for r in records]
+
+
+# --- Block Helpers & Permissions ---
+
+
+def require_permission(permission: str):
+    def dependency(request: Request):
+        raw_roles = get_normalized_roles(request)
+        if not raw_roles:
+            raise HTTPException(status_code=403, detail="Missing role credentials.")
+        return True
+    return dependency
+
+
+def resolve_change_reason(request: Request, body_reason: Optional[str] = None) -> str:
+    reason = getattr(request.state, "change_reason", None)
+    if not reason:
+        reason = request.headers.get("X-Change-Reason")
+    if not reason:
+        reason = body_reason
+    if not reason or not reason.strip():
+        raise HTTPException(
+            status_code=400, detail="Missing change justification reason"
+        )
+    return reason.strip()
+
+
+class CreateBlockRequest(BaseModel):
+    id: str
+    block_type: str
+    order: int
+    properties: Dict[str, Any]
+    change_reason: Optional[str] = None
+
+
+class UpdateBlockRequest(BaseModel):
+    properties: Dict[str, Any]
+    change_reason: Optional[str] = None
+
+
+class ReorderBlocksRequest(BaseModel):
+    block_ids: List[str]
+    change_reason: Optional[str] = None
+
+
+class BlockCreatedResponse(BaseModel):
+    status: str = "success"
+    id: str
+
+
+class BlockDetailResponse(BaseModel):
+    id: str
+    block_id: str
+    block_type: str
+    order: int
+    version_index: int
+    created_by: str
+    created_at: str
+
+    model_config = {"extra": "allow"}
+
+
+@app.post(
+    "/api/v1/studies/{study_id}/versions/{version_id}/blocks",
+    response_model=BlockCreatedResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_permission("study_design:create"))],
+)
+async def create_block_endpoint(
+    study_id: str,
+    version_id: str,
+    payload: CreateBlockRequest,
+    request: Request,
+) -> BlockCreatedResponse:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = resolve_change_reason(request, payload.change_reason)
+
+    try:
+        await create_block(
+            driver=driver,
+            study_version_id=version_id,
+            user_id=user_id,
+            change_reason=change_reason,
+            block_id=payload.id,
+            properties={
+                **payload.properties,
+                "block_type": payload.block_type,
+                "order": payload.order,
+            },
+        )
+    except ConcurrentLockingError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except ImmutabilityViolationError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    return BlockCreatedResponse(id=payload.id)
+
+
+@app.put(
+    "/api/v1/studies/{study_id}/versions/{version_id}/blocks/{block_id}",
+    response_model=BlockCreatedResponse,
+    dependencies=[Depends(require_permission("study_design:update"))],
+)
+async def update_block_endpoint(
+    study_id: str,
+    version_id: str,
+    block_id: str,
+    payload: UpdateBlockRequest,
+    request: Request,
+) -> BlockCreatedResponse:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = resolve_change_reason(request, payload.change_reason)
+
+    try:
+        await update_block(
+            driver=driver,
+            study_version_id=version_id,
+            user_id=user_id,
+            change_reason=change_reason,
+            block_id=block_id,
+            properties=payload.properties,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ImmutabilityViolationError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    return BlockCreatedResponse(id=block_id)
+
+
+@app.delete(
+    "/api/v1/studies/{study_id}/versions/{version_id}/blocks/{block_id}",
+    response_model=BlockCreatedResponse,
+    dependencies=[Depends(require_permission("study_design:delete"))],
+)
+async def delete_block_endpoint(
+    study_id: str,
+    version_id: str,
+    block_id: str,
+    request: Request,
+) -> BlockCreatedResponse:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = resolve_change_reason(request, None)
+
+    try:
+        await delete_block(
+            driver=driver,
+            study_version_id=version_id,
+            user_id=user_id,
+            change_reason=change_reason,
+            block_id=block_id,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ImmutabilityViolationError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    return BlockCreatedResponse(id=block_id)
+
+
+@app.get(
+    "/api/v1/studies/{study_id}/versions/{version_id}/blocks/{block_id}",
+    response_model=BlockDetailResponse,
+    dependencies=[Depends(require_permission("study_design:read"))],
+)
+async def get_block_endpoint(
+    study_id: str,
+    version_id: str,
+    block_id: str,
+    request: Request,
+) -> BlockDetailResponse:
+    driver = await get_neo4j_driver(request)
+    block = await get_block(driver, version_id, block_id)
+    if not block:
+        raise HTTPException(status_code=404, detail="Block not found")
+    return BlockDetailResponse(**block)
+
+
+@app.get(
+    "/api/v1/studies/{study_id}/versions/{version_id}/blocks",
+    response_model=List[BlockDetailResponse],
+    dependencies=[Depends(require_permission("study_design:read"))],
+)
+async def list_blocks_endpoint(
+    study_id: str,
+    version_id: str,
+    request: Request,
+) -> List[BlockDetailResponse]:
+    driver = await get_neo4j_driver(request)
+    blocks = await list_blocks(driver, version_id)
+    return [BlockDetailResponse(**b) for b in blocks]
+
+
+@app.post(
+    "/api/v1/studies/{study_id}/versions/{version_id}/blocks/reorder",
+    response_model=SoALinkResponse,
+    dependencies=[Depends(require_permission("study_design:reorder"))],
+)
+async def reorder_blocks_endpoint(
+    study_id: str,
+    version_id: str,
+    payload: ReorderBlocksRequest,
+    request: Request,
+) -> SoALinkResponse:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = resolve_change_reason(request, payload.change_reason)
+
+    try:
+        await reorder_blocks(
+            driver=driver,
+            study_version_id=version_id,
+            user_id=user_id,
+            change_reason=change_reason,
+            block_ids_ordered=payload.block_ids,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except ImmutabilityViolationError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    return SoALinkResponse()
 
 
 # --- Arms Endpoints ---

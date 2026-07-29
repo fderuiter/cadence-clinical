@@ -85,6 +85,7 @@ class NarrativeSectionView(BaseModel):
         description="Subsections nested inside this section.",
     )
     order: int = Field(..., description="Sequential sorting order within its parent.")
+    derived_from_soa: bool = Field(False, description="Flag indicating selective lineage.")
 
 
 class SynopsisView(BaseModel):
@@ -124,6 +125,18 @@ class SynopsisView(BaseModel):
     )
 
 
+class SoAHeaderArm(BaseModel):
+    """
+    Presentation header representing a trial Study Arm.
+    """
+
+    arm_id: str = Field(..., description="Unique arm identifier.")
+    arm_name: str = Field(
+        ..., description="Name of the study arm (e.g., Active, Placebo)."
+    )
+    sequence: int = Field(..., description="Sequence number of the arm.")
+
+
 class SoAHeaderEpoch(BaseModel):
     """
     Presentation header representing a trial Study Epoch.
@@ -134,6 +147,7 @@ class SoAHeaderEpoch(BaseModel):
         ..., description="Name of the study epoch (e.g., Treatment, Follow-up)."
     )
     sequence: int = Field(..., description="Sequence number of the epoch.")
+    arm_id: Optional[str] = Field(None, description="Optional associated arm ID.")
 
 
 class SoAHeaderEncounter(BaseModel):
@@ -145,6 +159,7 @@ class SoAHeaderEncounter(BaseModel):
     encounter_name: str = Field(..., description="Name of the encounter/visit.")
     epoch_id: str = Field(..., description="Associated study epoch identifier.")
     sequence: int = Field(..., description="Sequence number of the encounter/visit.")
+    arm_id: Optional[str] = Field(None, description="Optional associated arm ID.")
 
 
 class SoACellView(BaseModel):
@@ -162,6 +177,8 @@ class SoACellView(BaseModel):
     details: Optional[str] = Field(
         None, description="Optional timing windows, constraints, or instruction notes."
     )
+    arm_id: Optional[str] = Field(None, description="Optional associated arm ID.")
+    derived_from_soa: bool = Field(False, description="Flag indicating selective lineage.")
 
 
 class SoARowView(BaseModel):
@@ -177,6 +194,7 @@ class SoARowView(BaseModel):
         default_factory=list,
         description="Applicability cell mapping for each encounter column.",
     )
+    derived_from_soa: bool = Field(False, description="Flag indicating selective lineage.")
 
 
 class SoAMatrixView(BaseModel):
@@ -195,6 +213,10 @@ class SoAMatrixView(BaseModel):
     rows: List[SoARowView] = Field(
         default_factory=list,
         description="Ordered list of row-wise activity procedures.",
+    )
+    arms: List[SoAHeaderArm] = Field(
+        default_factory=list,
+        description="Ordered list of Study Arm columns.",
     )
 
 

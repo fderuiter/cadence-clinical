@@ -1437,6 +1437,7 @@ def _init_mock_soa(study_version_id: str):
             "timing_windows": {},
             "actions": [],
             "links": [],
+            "blocks": {},
         }
 
 
@@ -1472,6 +1473,7 @@ async def create_study_arm(
             "after": node,
         }
         MOCK_SOA_DATA[study_version_id]["actions"].append(action)
+        await propagate_soa_mutation(driver, study_version_id, arm_id, user_id, change_reason)
         return arm_id
 
     async with driver.session() as session:
@@ -1520,7 +1522,9 @@ async def create_study_arm(
                 properties=properties,
             )
             record = await res.single()
-            return record["id"]
+            ret_id = record["id"]
+            await propagate_soa_mutation(driver, study_version_id, ret_id, user_id, change_reason)
+            return ret_id
 
 
 @with_transaction_retry()
@@ -1556,6 +1560,7 @@ async def update_study_arm(
             "after": new_node,
         }
         MOCK_SOA_DATA[study_version_id]["actions"].append(action)
+        await propagate_soa_mutation(driver, study_version_id, arm_id, user_id, change_reason)
         return arm_id
 
     async with driver.session() as session:
@@ -1607,7 +1612,9 @@ async def update_study_arm(
                 properties=properties,
             )
             record = await res.single()
-            return record["id"]
+            ret_id = record["id"]
+            await propagate_soa_mutation(driver, study_version_id, ret_id, user_id, change_reason)
+            return ret_id
 
 
 @with_transaction_retry()
@@ -2593,6 +2600,12 @@ async def get_soa_matrix_projection(driver, study_version_id: str) -> Dict[str, 
             for L in data["links"]
             if L["type"] == "timing" and L["source_type"] == "procedure"
         ]
+        # Extracted arm applicability links
+        arm_applicability_links = [
+            {"arm_id": L["from_id"], "target_id": L["to_id"], "target_type": L["target_type"]}
+            for L in data["links"]
+            if L["type"] == "arm_applicability"
+        ]
     else:
         async with driver.session() as session:
             query = """
@@ -2607,6 +2620,7 @@ async def get_soa_matrix_projection(driver, study_version_id: str) -> Dict[str, 
             OPTIONAL MATCH (v)-[:HAS_TIMING]->(tw_v:TimingWindow)
             OPTIONAL MATCH (p)-[:HAS_TIMING]->(tw_p:TimingWindow)
 
+            OPTIONAL MATCH (sa)-[:APPLICABLE_TO]->(tgt)
             RETURN
                 collect(distinct ep {.*}) as epochs,
                 collect(distinct v {.*}) as encounters,
@@ -2615,12 +2629,13 @@ async def get_soa_matrix_projection(driver, study_version_id: str) -> Dict[str, 
                 collect(distinct {epoch_id: ep.id, visit_id: v.id}) as epoch_visit_links,
                 collect(distinct {visit_id: v.id, procedure_id: p.id}) as visit_proc_links,
                 collect(distinct {visit_id: v.id, timing_name: tw_v.name}) as visit_timing,
-                collect(distinct {procedure_id: p.id, timing_name: tw_p.name}) as proc_timing
+                collect(distinct {procedure_id: p.id, timing_name: tw_p.name}) as proc_timing,
+                collect(distinct {arm_id: sa.id, target_id: tgt.id, target_type: labels(tgt)[0]}) as applicability_links
             """
             res = await session.run(query, study_version_id=study_version_id)
             record = await res.single()
             if not record:
-                return {"epochs": [], "encounters": [], "rows": []}
+                return {"epochs": [], "encounters": [], "rows": [], "arms": []}
 
             raw_epochs = record.get("epochs") or []
             raw_encounters = record.get("encounters") or []
@@ -2630,6 +2645,33 @@ async def get_soa_matrix_projection(driver, study_version_id: str) -> Dict[str, 
             visit_proc_links = record.get("visit_proc_links") or []
             visit_timing = record.get("visit_timing") or []
             proc_timing = record.get("proc_timing") or []
+            arm_applicability_links = record.get("applicability_links") or []
+
+    # Map raw arms to SoAHeaderArm shape
+    arms_list = []
+    seen_arms = set()
+    for sa in _raw_arms:
+        if not sa or sa.get("id") is None:
+            continue
+        sa_id = sa["id"]
+        if sa_id not in seen_arms:
+            arms_list.append(
+                {
+                    "arm_id": sa_id,
+                    "arm_name": sa.get("name") or sa_id,
+                    "sequence": int(sa.get("sequence") or len(arms_list) + 1),
+                }
+            )
+            seen_arms.add(sa_id)
+    arms_list.sort(key=lambda x: x["sequence"])
+
+    # Target to Arm mapping
+    target_to_arm = {}
+    for app in arm_applicability_links:
+        t_id = app.get("target_id")
+        a_id = app.get("arm_id")
+        if t_id and a_id:
+            target_to_arm[t_id] = a_id
 
     # Map raw epochs to SoAHeaderEpoch shape
     epochs_list = []
@@ -2644,6 +2686,7 @@ async def get_soa_matrix_projection(driver, study_version_id: str) -> Dict[str, 
                     "epoch_id": ep_id,
                     "epoch_name": ep.get("name") or ep.get("epoch_name") or ep_id,
                     "sequence": int(ep.get("sequence") or 1),
+                    "arm_id": target_to_arm.get(ep_id),
                 }
             )
             seen_epochs.add(ep_id)
@@ -2672,6 +2715,7 @@ async def get_soa_matrix_projection(driver, study_version_id: str) -> Dict[str, 
                     "encounter_name": v.get("name") or v.get("encounter_name") or v_id,
                     "epoch_id": ep_id,
                     "sequence": int(v.get("sequence") or 1),
+                    "arm_id": target_to_arm.get(v_id),
                 }
             )
             seen_encs.add(v_id)
@@ -2718,6 +2762,7 @@ async def get_soa_matrix_projection(driver, study_version_id: str) -> Dict[str, 
                         "epoch_id": ep_id,
                         "is_applicable": is_applicable,
                         "details": details,
+                        "arm_id": target_to_arm.get(enc_id) or target_to_arm.get(p_id),
                     }
                 )
 
@@ -2730,7 +2775,452 @@ async def get_soa_matrix_projection(driver, study_version_id: str) -> Dict[str, 
             )
             seen_procs.add(p_id)
 
-    return {"epochs": epochs_list, "encounters": encounters_list, "rows": rows_list}
+    return {"epochs": epochs_list, "encounters": encounters_list, "rows": rows_list, "arms": arms_list}
+
+
+@with_transaction_retry()
+async def create_block(
+    driver,
+    study_version_id: str,
+    user_id: str,
+    change_reason: str,
+    block_id: str,
+    properties: Dict[str, Any],
+) -> str:
+    if driver is None:
+        assert_mock_study_version_mutable(study_version_id)
+        _init_mock_soa(study_version_id)
+        store = MOCK_SOA_DATA[study_version_id]["blocks"]
+        if block_id in store:
+            raise ConcurrentLockingError("Block already exists")
+        node = {
+            "id": block_id,
+            "block_id": block_id,
+            "version_index": 1,
+            "created_by": user_id,
+            "created_at": dt.datetime.now().isoformat(),
+            "reason_for_change": change_reason,
+            "is_deleted": False,
+            **properties,
+        }
+        store[block_id] = node
+        action = {
+            "id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "change_reason": change_reason,
+            "timestamp": dt.datetime.now().isoformat(),
+            "before": None,
+            "after": node,
+        }
+        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
+        return block_id
+
+    async with driver.session() as session:
+        tx = await session.begin_transaction()
+        async with tx:
+            await assert_study_version_mutable(tx, study_version_id)
+            await tx.run(
+                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
+                study_version_id=study_version_id,
+            )
+            check = await tx.run(
+                "MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_BLOCK]->(b:ProtocolBlock {id: $block_id}) RETURN b.id",
+                study_version_id=study_version_id,
+                block_id=block_id,
+            )
+            if await check.single():
+                raise ConcurrentLockingError("Block already exists")
+
+            action_id = str(uuid.uuid4())
+            query = """
+            MATCH (sv:StudyVersion {id: $study_version_id})
+            CREATE (b:ProtocolBlock {
+                id: $block_id,
+                block_id: $block_id,
+                version_index: 1,
+                created_at: datetime(),
+                created_by: $created_by,
+                reason_for_change: $change_reason,
+                is_deleted: false
+            })
+            SET b += $properties
+            CREATE (sv)-[:HAS_BLOCK]->(b)
+            CREATE (a:Action {
+                id: $action_id,
+                user_id: $created_by,
+                change_reason: $change_reason,
+                timestamp: datetime()
+            })
+            CREATE (a)-[:AFTER]->(b)
+            RETURN b.id as id
+            """
+            res = await tx.run(
+                query,
+                study_version_id=study_version_id,
+                block_id=block_id,
+                created_by=user_id,
+                change_reason=change_reason,
+                action_id=action_id,
+                properties=properties,
+            )
+            record = await res.single()
+            return record["id"]
+
+
+@with_transaction_retry()
+async def update_block(
+    driver,
+    study_version_id: str,
+    user_id: str,
+    change_reason: str,
+    block_id: str,
+    properties: Dict[str, Any],
+) -> str:
+    if driver is None:
+        assert_mock_study_version_mutable(study_version_id)
+        _init_mock_soa(study_version_id)
+        store = MOCK_SOA_DATA[study_version_id]["blocks"]
+        if block_id not in store:
+            raise ValueError(f"Block {block_id} not found")
+        old_node = store[block_id]
+        new_node = {
+            **old_node,
+            "version_index": old_node["version_index"] + 1,
+            "created_by": user_id,
+            "created_at": dt.datetime.now().isoformat(),
+            "reason_for_change": change_reason,
+            **properties,
+        }
+        store[block_id] = new_node
+        action = {
+            "id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "change_reason": change_reason,
+            "timestamp": dt.datetime.now().isoformat(),
+            "before": old_node,
+            "after": new_node,
+        }
+        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
+        return block_id
+
+    async with driver.session() as session:
+        tx = await session.begin_transaction()
+        async with tx:
+            await assert_study_version_mutable(tx, study_version_id)
+            await tx.run(
+                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
+                study_version_id=study_version_id,
+            )
+            check = await tx.run(
+                "MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_BLOCK]->(old_b:ProtocolBlock {id: $block_id}) RETURN old_b.id",
+                study_version_id=study_version_id,
+                block_id=block_id,
+            )
+            if not await check.single():
+                raise ValueError(f"Block {block_id} not found")
+
+            action_id = str(uuid.uuid4())
+            query = """
+            MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_BLOCK]->(old_b:ProtocolBlock {id: $block_id})
+            CREATE (new_b:ProtocolBlock {
+                id: $block_id,
+                block_id: $block_id,
+                version_index: old_b.version_index + 1,
+                created_at: datetime(),
+                created_by: $created_by,
+                reason_for_change: $change_reason,
+                is_deleted: false
+            })
+            SET new_b += $properties
+            CREATE (sv)-[:HAS_BLOCK]->(new_b)
+            DELETE r
+            CREATE (new_b)-[:PREVIOUS_VERSION]->(old_b)
+            CREATE (a:Action {
+                id: $action_id,
+                user_id: $created_by,
+                change_reason: $change_reason,
+                timestamp: datetime()
+            })
+            CREATE (a)-[:AFTER]->(new_b)
+            CREATE (a)-[:BEFORE]->(old_b)
+            RETURN new_b.id as id
+            """
+            res = await tx.run(
+                query,
+                study_version_id=study_version_id,
+                block_id=block_id,
+                created_by=user_id,
+                change_reason=change_reason,
+                action_id=action_id,
+                properties=properties,
+            )
+            record = await res.single()
+            return record["id"]
+
+
+@with_transaction_retry()
+async def delete_block(
+    driver,
+    study_version_id: str,
+    user_id: str,
+    change_reason: str,
+    block_id: str,
+) -> str:
+    if driver is None:
+        assert_mock_study_version_mutable(study_version_id)
+        _init_mock_soa(study_version_id)
+        store = MOCK_SOA_DATA[study_version_id]["blocks"]
+        if block_id not in store:
+            raise ValueError(f"Block {block_id} not found")
+        old_node = store[block_id]
+        new_node = {
+            **old_node,
+            "version_index": old_node["version_index"] + 1,
+            "created_by": user_id,
+            "created_at": dt.datetime.now().isoformat(),
+            "reason_for_change": change_reason,
+            "is_deleted": True,
+        }
+        store[block_id] = new_node
+        action = {
+            "id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "change_reason": change_reason,
+            "timestamp": dt.datetime.now().isoformat(),
+            "before": old_node,
+            "after": new_node,
+        }
+        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
+        return block_id
+
+    async with driver.session() as session:
+        tx = await session.begin_transaction()
+        async with tx:
+            await assert_study_version_mutable(tx, study_version_id)
+            await tx.run(
+                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
+                study_version_id=study_version_id,
+            )
+            check = await tx.run(
+                "MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_BLOCK]->(old_b:ProtocolBlock {id: $block_id}) RETURN old_b.id",
+                study_version_id=study_version_id,
+                block_id=block_id,
+            )
+            if not await check.single():
+                raise ValueError(f"Block {block_id} not found")
+
+            action_id = str(uuid.uuid4())
+            query = """
+            MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_BLOCK]->(old_b:ProtocolBlock {id: $block_id})
+            CREATE (new_b:ProtocolBlock {
+                id: $block_id,
+                block_id: $block_id,
+                version_index: old_b.version_index + 1,
+                created_at: datetime(),
+                created_by: $created_by,
+                reason_for_change: $change_reason,
+                is_deleted: true
+            })
+            SET new_b += properties(old_b)
+            SET new_b.is_deleted = true
+            CREATE (sv)-[:HAS_BLOCK]->(new_b)
+            DELETE r
+            CREATE (new_b)-[:PREVIOUS_VERSION]->(old_b)
+            CREATE (a:Action {
+                id: $action_id,
+                user_id: $created_by,
+                change_reason: $change_reason,
+                timestamp: datetime()
+            })
+            CREATE (a)-[:AFTER]->(new_b)
+            CREATE (a)-[:BEFORE]->(old_b)
+            RETURN new_b.id as id
+            """
+            res = await tx.run(
+                query,
+                study_version_id=study_version_id,
+                block_id=block_id,
+                created_by=user_id,
+                change_reason=change_reason,
+                action_id=action_id,
+            )
+            record = await res.single()
+            return record["id"]
+
+
+async def get_block(
+    driver,
+    study_version_id: str,
+    block_id: str,
+) -> Optional[Dict[str, Any]]:
+    if driver is None:
+        _init_mock_soa(study_version_id)
+        block = MOCK_SOA_DATA[study_version_id]["blocks"].get(block_id)
+        if block and not block.get("is_deleted", False):
+            return block
+        return None
+
+    query = """
+    MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_BLOCK]->(b:ProtocolBlock {id: $block_id})
+    WHERE b.is_deleted = false
+    RETURN properties(b) as props
+    """
+    async with driver.session() as session:
+        res = await session.run(
+            query, study_version_id=study_version_id, block_id=block_id
+        )
+        record = await res.single()
+        if record:
+            return dict(record["props"])
+        return None
+
+
+async def list_blocks(
+    driver,
+    study_version_id: str,
+) -> List[Dict[str, Any]]:
+    if driver is None:
+        _init_mock_soa(study_version_id)
+        blocks = [
+            b for b in MOCK_SOA_DATA[study_version_id]["blocks"].values()
+            if not b.get("is_deleted", False)
+        ]
+        blocks.sort(key=lambda x: x.get("order", 0))
+        return blocks
+
+    query = """
+    MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_BLOCK]->(b:ProtocolBlock)
+    WHERE b.is_deleted = false
+    RETURN properties(b) as props
+    ORDER BY b.order ASC
+    """
+    async with driver.session() as session:
+        res = await session.run(query, study_version_id=study_version_id)
+        records = await res.all()
+        return [dict(r["props"]) for r in records]
+
+
+@with_transaction_retry()
+async def reorder_blocks(
+    driver,
+    study_version_id: str,
+    user_id: str,
+    change_reason: str,
+    block_ids_ordered: List[str],
+) -> bool:
+    # 1. Perform mock path reorder
+    if driver is None:
+        assert_mock_study_version_mutable(study_version_id)
+        _init_mock_soa(study_version_id)
+        store = MOCK_SOA_DATA[study_version_id]["blocks"]
+
+        # Validate that the supplied block_ids exist
+        for b_id in block_ids_ordered:
+            if b_id not in store or store[b_id].get("is_deleted", False):
+                raise ValueError(f"Block {b_id} not found or is deleted")
+
+        action_id = str(uuid.uuid4())
+        action_log = {
+            "id": action_id,
+            "user_id": user_id,
+            "change_reason": change_reason,
+            "timestamp": dt.datetime.now().isoformat(),
+            "type": "REORDER",
+            "before_order": {b_id: store[b_id]["order"] for b_id in block_ids_ordered},
+            "after_order": {},
+        }
+
+        # Sequence-assign orders
+        for idx, b_id in enumerate(block_ids_ordered):
+            old_node = store[b_id]
+            new_node = {
+                **old_node,
+                "order": idx + 1,
+                "version_index": old_node["version_index"] + 1,
+                "created_by": user_id,
+                "created_at": dt.datetime.now().isoformat(),
+                "reason_for_change": change_reason,
+            }
+            store[b_id] = new_node
+            action_log["after_order"][b_id] = idx + 1
+
+        MOCK_SOA_DATA[study_version_id]["actions"].append(action_log)
+        return True
+
+    # 2. Neo4j transaction-safe atomic path reorder
+    async with driver.session() as session:
+        tx = await session.begin_transaction()
+        async with tx:
+            await assert_study_version_mutable(tx, study_version_id)
+            # Take pessimistic lock on StudyVersion
+            await tx.run(
+                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
+                study_version_id=study_version_id,
+            )
+
+            # Retrieve existing active blocks to validate
+            existing_res = await tx.run(
+                "MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_BLOCK]->(b:ProtocolBlock) WHERE b.is_deleted = false RETURN b.id as id",
+                study_version_id=study_version_id,
+            )
+            existing_ids = {r["id"] for r in await existing_res.all()}
+
+            for b_id in block_ids_ordered:
+                if b_id not in existing_ids:
+                    raise ValueError(f"Block {b_id} not found or is deleted")
+
+            action_id = str(uuid.uuid4())
+            # Create a single Action node for the entire batch operation
+            await tx.run(
+                """
+                CREATE (a:Action {
+                    id: $action_id,
+                    user_id: $user_id,
+                    change_reason: $change_reason,
+                    timestamp: datetime(),
+                    type: "REORDER"
+                })
+                """,
+                action_id=action_id,
+                user_id=user_id,
+                change_reason=change_reason,
+            )
+
+            # Update each block to its new rank position
+            for idx, b_id in enumerate(block_ids_ordered):
+                query = """
+                MATCH (sv:StudyVersion {id: $study_version_id})-[r:HAS_BLOCK]->(old_b:ProtocolBlock {id: $block_id})
+                MATCH (a:Action {id: $action_id})
+                CREATE (new_b:ProtocolBlock {
+                    id: $block_id,
+                    block_id: $block_id,
+                    version_index: old_b.version_index + 1,
+                    created_at: datetime(),
+                    created_by: $user_id,
+                    reason_for_change: $change_reason,
+                    order: $new_order,
+                    is_deleted: false
+                })
+                SET new_b += properties(old_b)
+                SET new_b.order = $new_order
+                SET new_b.version_index = old_b.version_index + 1
+                CREATE (sv)-[:HAS_BLOCK]->(new_b)
+                DELETE r
+                CREATE (new_b)-[:PREVIOUS_VERSION]->(old_b)
+                CREATE (a)-[:AFTER]->(new_b)
+                CREATE (a)-[:BEFORE]->(old_b)
+                """
+                await tx.run(
+                    query,
+                    study_version_id=study_version_id,
+                    block_id=b_id,
+                    action_id=action_id,
+                    user_id=user_id,
+                    change_reason=change_reason,
+                    new_order=idx + 1,
+                )
+
+            return True
 
 
 @with_transaction_retry()
@@ -3736,3 +4226,18 @@ async def get_eligibility_criteria_from_graph(
                 props["expected_outcome"] = bool(props["expected_outcome"])
             criteria.append(props)
         return criteria
+
+
+async def propagate_soa_mutation(driver, study_version_id: str, entity_id: str, user_id: str, change_reason: str):
+    """
+    Finds and updates any blocks that are derived from the specified SoA entity,
+    marking them as derived_from_soa = True and writing an audit trail.
+    """
+    blocks = await list_blocks(driver, study_version_id)
+    for b in blocks:
+        if b.get("block_type") == "soa_derived" and b.get("source_entity_id") == entity_id:
+            properties = dict(b)
+            for k in ("id", "version_index", "created_by", "created_at", "reason_for_change"):
+                properties.pop(k, None)
+            properties["derived_from_soa"] = True
+            await update_block(driver, study_version_id, user_id, f"Lineage propagation from {entity_id}: {change_reason}", b["block_id"], properties)

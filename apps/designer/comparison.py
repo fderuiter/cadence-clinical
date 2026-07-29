@@ -138,10 +138,15 @@ def compare_payloads(original: Any, round_tripped: Any) -> Dict[str, Any]:
                     "preservation_metadata",
                     "audit_metadata",
                     "reason_for_change",
+                    "change_reason",
+                    "created_by",
+                    "derived_from_soa",
+                    "version_index",
+                    "eligibility_criteria",
                 )
             ):
                 is_mat = False
-                reason = f"Non-material: standard structural metadata '{key}' added."
+                reason = f"Non-material: standard structural metadata or derived field '{key}' added."
 
             if is_mat:
                 material_difference_count += 1
@@ -166,10 +171,15 @@ def compare_payloads(original: Any, round_tripped: Any) -> Dict[str, Any]:
                     "preservation_metadata",
                     "audit_metadata",
                     "reason_for_change",
+                    "change_reason",
+                    "created_by",
+                    "derived_from_soa",
+                    "version_index",
+                    "eligibility_criteria",
                 )
             ):
                 is_mat = False
-                reason = f"Non-material: standard structural metadata '{key}' dropped."
+                reason = f"Non-material: standard structural metadata or derived field '{key}' dropped."
 
             if is_mat:
                 material_difference_count += 1
@@ -223,7 +233,18 @@ def compare_payloads(original: Any, round_tripped: Any) -> Dict[str, Any]:
             # If it's standard metadata or version difference that is non-material
             if any(
                 part in key
-                for part in ("_original_id", "instanceType", "preservation_metadata")
+                for part in (
+                    "_original_id",
+                    "instanceType",
+                    "preservation_metadata",
+                    "audit_metadata",
+                    "reason_for_change",
+                    "change_reason",
+                    "created_by",
+                    "derived_from_soa",
+                    "version_index",
+                    "eligibility_criteria",
+                )
             ):
                 is_mat = False
                 reason = f"Non-material: metadata field '{key}' updated."

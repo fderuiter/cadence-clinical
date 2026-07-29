@@ -139,6 +139,24 @@ def get_study_projection(study_id: str) -> Optional[Dict[str, Any]]:
         for c in MOCK_ELIGIBILITY_CRITERIA.get(study_id, [])
         if not c.get("is_deleted", False)
     ]
+
+    # Fetch blocks from MOCK_SOA_DATA for the latest version of the study if available
+    versions = MOCK_STUDY_VERSIONS.get(study_id, [])
+    blocks_list = []
+    if versions:
+        # Get the latest version based on version_index
+        latest_ver = sorted(versions, key=lambda x: x.get("version_index", 0))[-1]
+        version_id = latest_ver.get("id")
+        from apps.designer.delta import MOCK_SOA_DATA
+        if version_id in MOCK_SOA_DATA:
+            blocks_dict = MOCK_SOA_DATA[version_id].get("blocks", {})
+            # Only non-deleted blocks sorted by order
+            blocks_list = [
+                b for b in blocks_dict.values() if not b.get("is_deleted", False)
+            ]
+            blocks_list.sort(key=lambda x: x.get("order", 0))
+    study["blocks"] = blocks_list
+
     return study
 
 

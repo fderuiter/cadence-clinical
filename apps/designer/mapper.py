@@ -329,6 +329,79 @@ def map_study_to_usdm(study_data: Dict[str, Any]) -> Dict[str, Any]:
         "instanceType": "StudyDesignPopulation",
     }
 
+    # Map blocks
+    blocks = study_data.get("blocks", [])
+
+    # 1. Narrative Content & Items
+    narrative_contents = []
+    narrative_items = []
+    for idx, block in enumerate(blocks):
+        b_id = block["block_id"]
+        b_type = block.get("block_type")
+        if b_type == "narrative":
+            nc_dict = {
+                "id": to_uuid(b_id, "narrative_content"),
+                "_original_id": b_id,
+                "name": block.get("title") or "Narrative Section",
+                "sectionNumber": f"{idx + 1}.0",
+                "sectionTitle": block.get("title") or "Narrative Section",
+                "displaySectionNumber": True,
+                "displaySectionTitle": True,
+                "contentItemId": to_uuid(b_id, "narrative_item"),
+                "instanceType": "NarrativeContent",
+                "order": block.get("order", idx + 1),
+            }
+            narrative_contents.append(nc_dict)
+
+            nci_dict = {
+                "id": to_uuid(b_id, "narrative_item"),
+                "_original_id": b_id,
+                "name": block.get("title") or "Narrative Item",
+                "text": block.get("text", ""),
+                "instanceType": "NarrativeContentItem",
+            }
+            narrative_items.append(nci_dict)
+
+    # 2. Objectives
+    objectives_list = []
+    for idx, block in enumerate(blocks):
+        b_id = block["block_id"]
+        b_type = block.get("block_type")
+        if b_type == "objective":
+            obj_dict = {
+                "id": to_uuid(b_id, "objective"),
+                "_original_id": b_id,
+                "name": f"Objective {block.get('objective_id')}",
+                "text": block.get("text", ""),
+                "level": {
+                    "id": to_uuid("primary", "level"),
+                    "code": "PRIMARY",
+                    "decode": "Primary",
+                    "instanceType": "Code",
+                },
+                "instanceType": "Objective",
+            }
+            objectives_list.append(obj_dict)
+
+    # 3. Eligibility Criteria from blocks
+    criteria_list = list(canonical_criteria)
+    for idx, block in enumerate(blocks):
+        b_id = block["block_id"]
+        b_type = block.get("block_type")
+        if b_type == "eligibility":
+            crit_dict = {
+                "id": to_uuid(b_id, "criterion"),
+                "_original_id": b_id,
+                "name": block.get("criterion_id"),
+                "description": block.get("text", ""),
+                "category": make_code_obj(None, block.get("criterion_type", "inclusion"), block.get("criterion_type", "inclusion"), "CDISC-CT"),
+                "identifier": block.get("criterion_id"),
+                "criterionItemId": to_uuid(b_id, "criterion_item"),
+                "instanceType": "EligibilityCriterion",
+                "_dsl_source": block.get("dsl_source") or "",
+            }
+            criteria_list.append(crit_dict)
+
     canonical_design = {
         "id": to_uuid(f"{study_id}_design", "design"),
         "_original_id": f"{study_id}_design",
@@ -341,7 +414,8 @@ def map_study_to_usdm(study_data: Dict[str, Any]) -> Dict[str, Any]:
         "model": make_code_obj(None, "interventional_model", "Interventional Model"),
         "encounters": canonical_encounters,
         "activities": canonical_activities,
-        "eligibilityCriteria": canonical_criteria,
+        "eligibilityCriteria": criteria_list,
+        "objectives": objectives_list,
         "instanceType": "InterventionalStudyDesign",
     }
 
@@ -362,8 +436,46 @@ def map_study_to_usdm(study_data: Dict[str, Any]) -> Dict[str, Any]:
             "titles": [],
             "instanceType": "StudyVersion",
             "studyDesigns": [canonical_design],
+            "narrativeContentItems": narrative_items,
         }
     ]
+
+    doc_version = {
+        "id": to_uuid(f"{study_id}_doc_version", "doc_version"),
+        "_original_id": f"{study_id}_doc_version",
+        "version": "1",
+        "status": make_code_obj(None, "approved", "Approved"),
+        "contents": narrative_contents,
+        "instanceType": "StudyDefinitionDocumentVersion",
+    }
+
+    def_doc = {
+        "id": to_uuid(f"{study_id}_doc", "doc"),
+        "_original_id": f"{study_id}_doc",
+        "name": "Study Protocol Document",
+        "templateName": "Standard TransCelerate Template",
+        "language": make_code_obj(None, "en", "English"),
+        "type": make_code_obj(None, "protocol", "Protocol"),
+        "versions": [doc_version],
+        "instanceType": "StudyDefinitionDocument",
+    }
+
+    # Add legacy-flat study blocks representation
+    legacy_flat_blocks = []
+    for b in blocks:
+        legacy_flat_blocks.append({
+            "block_id": b["block_id"],
+            "block_type": b.get("block_type"),
+            "order": b.get("order"),
+            "parent_id": b.get("parent_id"),
+            "title": b.get("title"),
+            "text": b.get("text", ""),
+            "objective_id": b.get("objective_id"),
+            "criterion_id": b.get("criterion_id"),
+            "criterion_type": b.get("criterion_type"),
+            "dsl_source": b.get("dsl_source"),
+            "derived_from_soa": b.get("derived_from_soa", False),
+        })
 
     # --- 3. Construct and Return Combined Payload ---
     return {
@@ -375,9 +487,11 @@ def map_study_to_usdm(study_data: Dict[str, Any]) -> Dict[str, Any]:
         "arms": arms,
         "rules": mapped_rules,
         "eligibility_criteria": eligibility_criteria,
+        "blocks": legacy_flat_blocks,
         # Standard Canonical USDM v3 Structure
         "instanceType": "Study",
         "audit_metadata": audit_metadata,
         "reason_for_change": study_data.get("change_reason") or "Initial setup",
         "versions": canonical_versions,
+        "documentedBy": [def_doc],
     }

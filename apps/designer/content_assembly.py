@@ -248,6 +248,9 @@ def assemble_narrative_sections(
                     )
 
         title = resolve_text_references(nc.sectionTitle or nc.name or "", study)
+        derived_from_soa = getattr(nc, "derived_from_soa", False) or getattr(nc, "_derived_from_soa", False)
+        if isinstance(derived_from_soa, str):
+            derived_from_soa = derived_from_soa.lower() in ("true", "1")
         return NarrativeSectionView(
             section_id=nc.id,
             section_number=nc.sectionNumber,
@@ -255,6 +258,7 @@ def assemble_narrative_sections(
             items=items,
             subsections=subsections,
             order=order_in_parent,
+            derived_from_soa=bool(derived_from_soa),
         )
 
     assembled_roots: List[NarrativeSectionView] = []
@@ -564,6 +568,7 @@ def assemble_soa_matrix(study: usdm_model.Study) -> SoAMatrixView:
                                                 (enc_id, ep_id, act_id)
                                             )
 
+                                    derived_flag = getattr(act, "derived_from_soa", False) or getattr(act, "_derived_from_soa", False)
                                     cells.append(
                                         SoACellView(
                                             activity_id=act_id,
@@ -571,6 +576,7 @@ def assemble_soa_matrix(study: usdm_model.Study) -> SoAMatrixView:
                                             epoch_id=ep_id,
                                             is_applicable=is_applicable,
                                             details=details_val,
+                                            derived_from_soa=bool(derived_flag),
                                         )
                                     )
 
@@ -579,6 +585,7 @@ def assemble_soa_matrix(study: usdm_model.Study) -> SoAMatrixView:
                                         activity_id=act_id,
                                         activity_name=act_name,
                                         cells=cells,
+                                        derived_from_soa=bool(derived_flag),
                                     )
                                 )
                                 activity_ids_added.add(act_id)
