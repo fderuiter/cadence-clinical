@@ -45,10 +45,6 @@ const checkKeycloakReachable = async () => {
 };
 
 checkKeycloakReachable().then((reachable) => {
-  if (window.location.search.includes("vanilla=true")) {
-    console.log("Vanilla mode requested. Skipping Vue mount.");
-    return;
-  }
   if (reachable) {
     keycloak
       .init({

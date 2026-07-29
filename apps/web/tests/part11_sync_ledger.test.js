@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { useClinicalStore } from "../src/stores/clinical.js";
+import { useAuthStore } from "../src/stores/auth.js";
 
 // Mock global fetch
 const mockFetch = vi.fn();
@@ -10,6 +11,10 @@ describe("FDA 21 CFR Part 11 Sync Ledger Store", () => {
   beforeEach(() => {
     const pinia = createPinia();
     setActivePinia(pinia);
+    const authStore = useAuthStore();
+    authStore.accessToken = "mock-keycloak-jwt-token";
+    authStore.isAuthenticated = true;
+    authStore.isDemoMode = false;
     window.localStorage.clear();
     mockFetch.mockReset();
   });
@@ -101,21 +106,16 @@ describe("FDA 21 CFR Part 11 Sync Ledger Store", () => {
     // Run sync without a step-up token
     await store.syncUnsyncedBlocks();
 
-    // Verify fetch was called
+    // Verify fetch was called with standard Bearer authorization and change-reason headers
     expect(mockFetch).toHaveBeenCalledTimes(1);
     const [url, options] = mockFetch.mock.calls[0];
     expect(url).toContain("/api/v1/execution/queries/sync");
     expect(options.method).toBe("POST");
-
-    // X-Change-Reason should be propagated
+    expect(options.headers["Authorization"]).toBe("Bearer mock-keycloak-jwt-token");
     expect(options.headers["X-Change-Reason"]).toBe(
       "Background sync of clinical query ledger blocks"
     );
-
-    // X-Sig-Token should NOT be present (since we didn't pass one)
     expect(options.headers["X-Sig-Token"]).toBeUndefined();
-
-    // Browser-side trusted gateway headers should NOT be present
     expect(options.headers["X-Signature-Version"]).toBeUndefined();
     expect(options.headers["X-Gateway-Signature"]).toBeUndefined();
     expect(options.headers["X-Gateway-Timestamp"]).toBeUndefined();

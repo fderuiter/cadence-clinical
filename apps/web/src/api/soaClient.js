@@ -1,37 +1,4 @@
-import { generateGatewaySignature } from "ui";
-
-const GATEWAY_URL = "http://localhost:8000";
-const DEFAULT_SECRET = "internal-gateway-secret-12345"; // pragma: allowlist secret
-
-/**
- * Helper to construct gateway-signed request headers.
- */
-async function getSignedHeaders({
-  userId,
-  roles,
-  changeReason,
-  secret = DEFAULT_SECRET,
-}) {
-  const timestamp = String(Date.now() / 1000);
-  const signature = await generateGatewaySignature(
-    userId,
-    roles,
-    timestamp,
-    "2",
-    changeReason,
-    secret
-  );
-
-  return {
-    "Content-Type": "application/json",
-    "X-User-Id": userId,
-    "X-User-Roles": roles,
-    "X-Gateway-Timestamp": timestamp,
-    "X-Gateway-Signature": signature,
-    "X-Signature-Version": "2",
-    "X-Change-Reason": changeReason,
-  };
-}
+import { apiClient } from "./apiClient";
 
 /**
  * Thin API Client for SoA projection and entity mutations.
@@ -40,23 +7,12 @@ export const soaClient = {
   /**
    * Fetches the complete SoA matrix projection for a given study and version.
    */
-  async getSoAProjection(studyId, versionId, { userId, roles }) {
-    const headers = await getSignedHeaders({
-      userId,
-      roles,
-      changeReason: "Get projection",
-    });
-    const response = await fetch(
-      `${GATEWAY_URL}/api/v1/studies/${studyId}/versions/${versionId}/soa-projection`,
-      { headers }
+  async getSoAProjection(studyId, versionId, options = {}) {
+    const { changeReason = "Get projection" } = options;
+    return apiClient.get(
+      `/api/v1/studies/${studyId}/versions/${versionId}/soa-projection`,
+      { changeReason }
     );
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(
-        err.detail || `Failed to fetch SoA projection: ${response.status}`
-      );
-    }
-    return response.json();
   },
 
   /**
@@ -68,26 +24,18 @@ export const soaClient = {
     entityType,
     entityId,
     properties,
-    { userId, roles, changeReason, method = "POST" }
+    options = {}
   ) {
-    const headers = await getSignedHeaders({ userId, roles, changeReason });
-    const isPut = method === "PUT";
-    const url = `${GATEWAY_URL}/api/v1/studies/${studyId}/versions/${versionId}/${entityType}${isPut ? `/${entityId}` : ""}`;
+    const { changeReason, method = "POST" } = options;
+    const isPut = method.toUpperCase() === "PUT";
+    const path = `/api/v1/studies/${studyId}/versions/${versionId}/${entityType}${isPut ? `/${entityId}` : ""}`;
     const body = isPut ? { properties } : { id: entityId, properties };
 
-    const response = await fetch(url, {
-      method,
-      headers,
-      body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(
-        err.detail || `Failed to mutate ${entityType}: ${response.status}`
-      );
+    if (isPut) {
+      return apiClient.put(path, body, { changeReason });
+    } else {
+      return apiClient.post(path, body, { changeReason });
     }
-    return response.json();
   },
 
   /**
@@ -149,66 +97,28 @@ export const soaClient = {
   /**
    * Establishes link association.
    */
-  async createLink(
-    studyId,
-    versionId,
-    linkType,
-    payload,
-    { userId, roles, changeReason }
-  ) {
-    const headers = await getSignedHeaders({ userId, roles, changeReason });
-    const url = `${GATEWAY_URL}/api/v1/studies/${studyId}/versions/${versionId}/links/${linkType}`;
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(
-        err.detail || `Failed to establish link ${linkType}: ${response.status}`
-      );
-    }
-    return response.json();
+  async createLink(studyId, versionId, linkType, payload, options = {}) {
+    const { changeReason } = options;
+    return apiClient.post(
+      `/api/v1/studies/${studyId}/versions/${versionId}/links/${linkType}`,
+      payload,
+      { changeReason }
+    );
   },
 
   /**
    * Verifies re-supplied credentials to obtain a short-lived signature token (sig_token).
    */
-  async verifySignature(
-    { username, password, totp = null, action },
-    token = null
-  ) {
-    const headers = {
-      "Content-Type": "application/json",
-    };
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-
-    const response = await fetch(
-      `${GATEWAY_URL}/api/v1/auth/signature-verification`,
+  async verifySignature({ username, password, totp = null, action }) {
+    return apiClient.post(
+      "/api/v1/auth/signature-verification",
       {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          username,
-          password,
-          totp,
-          action,
-        }),
+        username,
+        password,
+        totp,
+        action,
       }
     );
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(
-        err.detail || `Signature verification failed: ${response.status}`
-      );
-    }
-    return response.json();
   },
 
   /**
@@ -216,52 +126,22 @@ export const soaClient = {
    */
   async batchSignOff(
     { studyId, targetType, targetIds, signingReason },
-    { userId, roles, changeReason, sigToken },
-    token = null
+    { changeReason, sigToken }
   ) {
-    const signedHeaders = await getSignedHeaders({
-      userId,
-      roles,
-      changeReason,
-    });
-    const headers = {
-      ...signedHeaders,
-      "X-Sig-Token": sigToken,
-    };
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-
-    const response = await fetch(
-      `${GATEWAY_URL}/api/v1/execution/batch-sign-off`,
+    return apiClient.post(
+      "/api/v1/execution/batch-sign-off",
       {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          study_id: studyId,
-          target_type: targetType,
-          target_ids: targetIds,
-          signing_reason: signingReason,
-        }),
+        study_id: studyId,
+        target_type: targetType,
+        target_ids: targetIds,
+        signing_reason: signingReason,
+      },
+      {
+        changeReason,
+        headers: {
+          "X-Sig-Token": sigToken,
+        },
       }
     );
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      if (
-        response.status === 401 ||
-        err.detail === "REAUTHENTICATION_REQUIRED" ||
-        err.error === "REAUTHENTICATION_REQUIRED"
-      ) {
-        const error = new Error("REAUTHENTICATION_REQUIRED");
-        error.status = response.status;
-        error.detail = err.detail || "REAUTHENTICATION_REQUIRED";
-        throw error;
-      }
-      throw new Error(
-        err.detail || `Batch sign-off failed: ${response.status}`
-      );
-    }
-    return response.json();
   },
 };

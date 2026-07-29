@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { useClinicalStore } from "../src/stores/clinical.js";
 import { soaClient } from "../src/api/soaClient.js";
+import { createClinicalSoAMatrix } from "ui";
+import { useAuthStore } from "../src/stores/auth.js";
 import { mount } from "@vue/test-utils";
 import ClinicalSoAMatrix from "../src/components/clinical/ClinicalSoAMatrix.vue";
 
@@ -11,6 +13,10 @@ globalThis.fetch = mockFetch;
 beforeEach(() => {
   const pinia = createPinia();
   setActivePinia(pinia);
+  const authStore = useAuthStore();
+  authStore.accessToken = "mock-keycloak-jwt-token";
+  authStore.isAuthenticated = true;
+  authStore.isDemoMode = false;
   if (typeof window !== "undefined" && window.localStorage) {
     window.localStorage.clear();
   }
@@ -157,14 +163,10 @@ describe("SoA Request Construction & Serialization Unit Tests", () => {
 
     expect(url).toContain("/api/v1/studies/STUDY-01/versions/v_draft_01/arms");
     expect(requestOpts.method).toBe("POST");
-    expect(requestOpts.headers["X-User-Id"]).toBe("test-user");
-    expect(requestOpts.headers["X-User-Roles"]).toBe("sponsor_admin");
-    expect(requestOpts.headers["X-Signature-Version"]).toBe("2");
-    expect(requestOpts.headers["X-Gateway-Signature"]).toBeDefined();
-    expect(requestOpts.headers["X-Gateway-Timestamp"]).toBeDefined();
-    expect(requestOpts.headers["X-Change-Reason"]).toBe(
-      "Testing signed headers"
-    );
+    expect(requestOpts.headers["Authorization"]).toBe("Bearer mock-keycloak-jwt-token");
+    expect(requestOpts.headers["X-Change-Reason"]).toBe("Testing signed headers");
+    expect(requestOpts.headers["X-User-Id"]).toBeUndefined();
+    expect(requestOpts.headers["X-Gateway-Signature"]).toBeUndefined();
 
     const body = JSON.parse(requestOpts.body);
     expect(body).toEqual({
@@ -244,11 +246,10 @@ describe("SoA Builder Signed API Client & Store Integration", () => {
       "/api/v1/studies/STUDY-USDM-001/versions/v_draft_01/arms"
     );
     expect(options.method).toBe("POST");
-    expect(options.headers["X-User-Id"]).toBe("fderuiter");
-    expect(options.headers["X-User-Roles"]).toBe("STUDY_DESIGNER");
-    expect(options.headers["X-Signature-Version"]).toBe("2");
-    expect(options.headers["X-Gateway-Signature"]).toBeDefined();
+    expect(options.headers["Authorization"]).toBe("Bearer mock-keycloak-jwt-token");
     expect(options.headers["X-Change-Reason"]).toBe("Configure arm");
+    expect(options.headers["X-User-Id"]).toBeUndefined();
+    expect(options.headers["X-Gateway-Signature"]).toBeUndefined();
 
     // Verify local USDM state updated via fetchSoAProjection trigger
     expect(store.currentUsdm.epochs).toHaveLength(1);

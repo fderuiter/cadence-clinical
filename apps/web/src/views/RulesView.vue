@@ -969,13 +969,10 @@
 import { ref, computed, onMounted, watch } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
-import { generateGatewaySignature } from "ui";
+import { apiClient } from "../api/apiClient";
 
 const store = useClinicalStore();
 const authStore = useAuthStore();
-
-// Base URL configuration for Rest endpoints
-const GATEWAY_URL = "http://localhost:8000";
 
 // Standard CDASH mock structures aligned with index.js legacy logic and backend visits
 const mockStudyForms = [
@@ -1037,47 +1034,15 @@ const customChangeReason = ref("");
 const pendingAction = ref(null); // { type: 'save' | 'delete', ruleId?: string, payload?: any }
 
 // Helper to construct signed headers
-async function getSignedHeaders(changeReasonText) {
-  const userId = authStore.identity?.username || "fderuiter";
-  // Fallback role matching backend validator logic
-  const roles = authStore.isDemoMode
-    ? "STUDY_DESIGNER"
-    : authStore.rawRoles.join(",") || "STUDY_DESIGNER";
-  const timestamp = String(Date.now() / 1000);
-  const secret = "internal-gateway-secret-12345"; // pragma: allowlist secret
-
-  const signature = await generateGatewaySignature(
-    userId,
-    roles,
-    timestamp,
-    "2",
-    changeReasonText,
-    secret
-  );
-
-  return {
-    "Content-Type": "application/json",
-    "X-User-Id": userId,
-    "X-User-Roles": roles,
-    "X-Gateway-Timestamp": timestamp,
-    "X-Gateway-Signature": signature,
-    "X-Signature-Version": "2",
-    "X-Change-Reason": changeReasonText,
-  };
-}
-
 // Fetch active rules from backend REST API
 async function fetchRules() {
   loadingRules.value = true;
   connectionError.value = false;
   try {
-    const headers = await getSignedHeaders("Fetch clinical rules");
-    const response = await fetch(
-      `${GATEWAY_URL}/api/v1/studies/study_1/rules`,
-      { headers }
-    );
-    if (!response.ok) throw new Error("REST API Fetch error");
-    activeRules.value = await response.json();
+    const response = await apiClient.get(`/api/v1/studies/study_1/rules`, {
+      changeReason: "Fetch clinical rules"
+    });
+    activeRules.value = response;
   } catch (err) {
     console.warn(
       "Failed to fetch active rules from REST backend, falling back to empty:",
@@ -1203,17 +1168,11 @@ async function triggerPreview() {
   };
 
   try {
-    const headers = await getSignedHeaders("Rule compilation preview");
-    const response = await fetch(
-      `${GATEWAY_URL}/api/v1/studies/study_1/rules/preview`,
-      {
-        method: "POST",
-        headers,
-        body: JSON.stringify(payload),
-      }
+    const data = await apiClient.post(
+      `/api/v1/studies/study_1/rules/preview`,
+      payload,
+      { changeReason: "Rule compilation preview" }
     );
-    if (!response.ok) throw new Error("Preview API error");
-    const data = await response.json();
     previewXpath.value = data.xpath;
     previewFailures.value = data.failures || [];
     previewCircularCycles.value = data.circular_cycles || [];
@@ -1420,27 +1379,17 @@ async function confirmChangeReason() {
 
   try {
     if (action.type === "save") {
-      const headers = await getSignedHeaders(reasonText);
       const isEdit = !!editingRuleId.value;
       const url = isEdit
-        ? `${GATEWAY_URL}/api/v1/studies/study_1/rules/${editingRuleId.value}`
-        : `${GATEWAY_URL}/api/v1/studies/study_1/rules`;
-      const method = isEdit ? "PUT" : "POST";
+        ? `/api/v1/studies/study_1/rules/${editingRuleId.value}`
+        : `/api/v1/studies/study_1/rules`;
 
-      const response = await fetch(url, {
-        method,
-        headers,
-        body: JSON.stringify(action.payload),
-      });
-
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(
-          err.detail || "Server failed to compile or authorize rule."
-        );
+      let saved;
+      if (isEdit) {
+        saved = await apiClient.put(url, action.payload, { changeReason: reasonText });
+      } else {
+        saved = await apiClient.post(url, action.payload, { changeReason: reasonText });
       }
-
-      const saved = await response.json();
 
       // Sync verified record into compliance ledger
       await store.addLedgerBlock(
@@ -1449,33 +1398,22 @@ async function confirmChangeReason() {
           ruleId: saved.id,
           type: saved.type,
           xpath: saved.compiled_xpath || previewXpath.value,
-          headers,
+          headers: {},
         },
         reasonText
       );
 
       alert(`Rule successfully compiled and signed save verified!`);
     } else if (action.type === "delete") {
-      const headers = await getSignedHeaders(reasonText);
-      const response = await fetch(
-        `${GATEWAY_URL}/api/v1/studies/study_1/rules/${action.ruleId}`,
-        {
-          method: "DELETE",
-          headers,
-        }
-      );
-
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.detail || "Server failed to delete rule.");
-      }
+      const url = `/api/v1/studies/study_1/rules/${action.ruleId}`;
+      await apiClient.delete(url, { changeReason: reasonText });
 
       // Sync deletion block
       await store.addLedgerBlock(
         "RULE_DELETE",
         {
           ruleId: action.ruleId,
-          headers,
+          headers: {},
         },
         reasonText
       );

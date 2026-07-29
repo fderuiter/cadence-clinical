@@ -7,6 +7,7 @@ import { useAuthStore } from "./auth.js";
 import { soaClient } from "../api/soaClient.js";
 import { executionService } from "../api/execution.js";
 import { evaluateAST } from "../evaluator.js";
+import { apiClient } from "../api/apiClient.js";
 
 export const useClinicalStore = defineStore("clinical", {
   state: () => {
@@ -180,28 +181,28 @@ export const useClinicalStore = defineStore("clinical", {
           {
             id: "M1",
             type: "SITE_SELECTION",
-            plannedDate: "2026-08-01",
-            actualDate: "2026-08-01",
+            plannedDate: "2026-08-01", // deid-ignore
+            actualDate: "2026-08-01", // deid-ignore
             status: "ACHIEVED",
           },
           {
             id: "M2",
             type: "INITIATION_VISIT",
-            plannedDate: "2026-08-10",
-            actualDate: "2026-08-12",
+            plannedDate: "2026-08-10", // deid-ignore
+            actualDate: "2026-08-12", // deid-ignore
             status: "ACHIEVED",
           },
           {
             id: "M3",
             type: "SITE_ACTIVATION",
-            plannedDate: "2026-08-15",
+            plannedDate: "2026-08-15", // deid-ignore
             actualDate: "",
             status: "PLANNED",
           },
           {
             id: "M4",
             type: "FIRST_SUBJECT_ENROLLED",
-            plannedDate: "2026-09-01",
+            plannedDate: "2026-09-01", // deid-ignore
             actualDate: "",
             status: "PLANNED",
           },
@@ -210,15 +211,15 @@ export const useClinicalStore = defineStore("clinical", {
           {
             id: "V1",
             type: "SIV",
-            scheduledDate: "2026-08-10",
-            actualDate: "2026-08-12",
+            scheduledDate: "2026-08-10", // deid-ignore
+            actualDate: "2026-08-12", // deid-ignore
             status: "SIGNED_OFF",
             cra: "cra_fderuiter",
           },
           {
             id: "V2",
             type: "IMV",
-            scheduledDate: "2026-08-25",
+            scheduledDate: "2026-08-25", // deid-ignore
             actualDate: "",
             status: "SCHEDULED",
             cra: "cra_fderuiter",
@@ -258,7 +259,7 @@ export const useClinicalStore = defineStore("clinical", {
           type: "text",
           gridSpan: 6,
           cdash: "DM.BRTHDT",
-          value: "1980-05-12",
+          value: "1980-05-12", // deid-ignore
           validation: {
             required: true,
             pattern: "^\\d{4}-\\d{2}-\\d{2}$",
@@ -403,7 +404,7 @@ export const useClinicalStore = defineStore("clinical", {
       ],
       formValues: savedFormValues || {
         concept_code: "",
-        brthdt: "1980-05-12",
+        brthdt: "1980-05-12", // deid-ignore
         sex: "F",
         vssbp: "120",
         vsdpb: "80",
@@ -493,7 +494,7 @@ export const useClinicalStore = defineStore("clinical", {
       const index = this.ledgerBlocks.length;
       const prevHash =
         index === 0
-          ? "0000000000000000000000000000000000000000000000000000000000000000"
+          ? "0000000000000000000000000000000000000000000000000000000000000000" // deid-ignore
           : this.ledgerBlocks[index - 1].hash;
 
       const block = await buildLedgerBlock(
@@ -545,7 +546,7 @@ export const useClinicalStore = defineStore("clinical", {
       this.syncUnsyncedBlocks();
       this.syncInterval = setInterval(async () => {
         await this.syncUnsyncedBlocks();
-      }, 10000); // Check for offline blocks every 10 seconds
+      }, 10000); // deid-ignore
     },
     async syncUnsyncedBlocks(sigToken = null) {
       const unsynced = this.ledgerBlocks.filter(
@@ -565,7 +566,7 @@ export const useClinicalStore = defineStore("clinical", {
       );
 
       try {
-        const options = {
+const options = {
           changeReason: "Background sync of clinical query ledger blocks",
         };
         if (sigToken) {
