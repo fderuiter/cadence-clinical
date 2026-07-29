@@ -5225,7 +5225,14 @@ async def get_execution_audit_integrity(
     remain structurally unbroken.
     """
     is_auditor = "auditor" in principal.roles or any(
-        r in {"auditor", "inspector", "regulatory_inspector", "tmf_auditor", "sponsor_admin"}
+        r
+        in {
+            "auditor",
+            "inspector",
+            "regulatory_inspector",
+            "tmf_auditor",
+            "sponsor_admin",
+        }
         for r in principal.raw_roles
     )
     if not is_auditor:
@@ -5235,18 +5242,19 @@ async def get_execution_audit_integrity(
         )
 
     from apps.execution.database.sealer import validate_ledger_integrity
+
     try:
         async with db_manager.get_session_maker()() as session:
             # validate_ledger_integrity returns True or raises ValueError on tamper
             is_valid = await validate_ledger_integrity(session)
             return {
                 "verified": is_valid,
-                "message": "GxP clinical execution ledger chain fully verified and structurally intact."
+                "message": "GxP clinical execution ledger chain fully verified and structurally intact.",
             }
     except ValueError as e:
         return {
             "verified": False,
-            "message": f"GxP Core Data Integrity Breach Detected: {str(e)}"
+            "message": f"GxP Core Data Integrity Breach Detected: {str(e)}",
         }
 
 
