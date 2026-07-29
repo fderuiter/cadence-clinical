@@ -207,6 +207,9 @@ class ClinicalSubject(AuditedModel):
         self, randomization_id: str, kit_reference: str, strat_factors: dict
     ) -> None:
         """Assigns randomization details and transitions the subject to the RANDOMIZED state."""
+        from apps.execution.eligibility_service import verify_subject_eligible_for_randomization
+        verify_subject_eligible_for_randomization(self)
+
         self.strat_factors = strat_factors
         self.status = "RANDOMIZED"
         self.randomization_id = randomization_id

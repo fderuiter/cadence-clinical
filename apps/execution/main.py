@@ -312,6 +312,17 @@ async def get_translation_job(job_id: str) -> TranslationJobResponse:
 # ==========================================
 
 
+def verify_change_justification(request: Request) -> None:
+    """Enforce presence of change justification header (version 1 or 2)."""
+    version = request.headers.get("X-Signature-Version")
+    change_reason = request.headers.get("X-Change-Reason")
+    if version not in ("1", "v1", "2", "v2") or not change_reason:
+        raise HTTPException(
+            status_code=403,
+            detail="API rejects any state modifications that do not contain a verified, gateway-signed change justification header.",
+        )
+
+
 class Demographics(BaseModel):
     """Pydantic schema representing demographic details."""
 
@@ -336,6 +347,32 @@ class SubjectResponse(BaseModel):
     subject_id: str
     study_id: str
     encrypted_demographics: Optional[str] = None
+
+
+class CriterionLevelResult(BaseModel):
+    """Pydantic schema for individual criterion level evaluation result."""
+
+    criterion_id: str
+    criterion_type: str
+    description: str
+    dsl_source: str
+    is_met: bool
+    is_indeterminate: bool
+
+
+class SubjectScreeningResponse(BaseModel):
+    """Pydantic schema for subject screening evaluation outcome, excluding PHI."""
+
+    eligible: Optional[bool] = None
+    failed_criteria: List[str] = Field(default_factory=list)
+    indeterminate_criteria: List[str] = Field(default_factory=list)
+    criterion_evaluations: List[CriterionLevelResult] = Field(default_factory=list)
+
+
+class SubjectScreeningRequest(BaseModel):
+    """Pydantic schema for requesting subject eligibility screening."""
+
+    study_id: Optional[str] = None
 
 
 class SubjectConsentRequest(BaseModel):
@@ -449,6 +486,88 @@ async def create_subject(
             subject_id=subj_db.subject_id,
             study_id=subj_db.study_id,
             encrypted_demographics=subj_db.encrypted_demographics,
+        )
+
+
+@app.post(
+    "/api/v1/execution/subjects/{subject_id}/screening",
+    response_model=SubjectScreeningResponse,
+)
+async def evaluate_and_transition_screening(
+    subject_id: str,
+    request: Request,
+    payload: Optional[SubjectScreeningRequest] = None,
+    roles: list[str] = Depends(require_roles(ROLE_SITE_INVESTIGATOR, ROLE_DATA_MANAGER, "investigator")),
+    _justification = Depends(verify_change_justification),
+) -> SubjectScreeningResponse:
+    """Evaluate subject's eligibility criteria and execute the guarded screening lifecycle transition."""
+    change_reason = request.headers.get("X-Change-Reason", "")
+
+    async with db_manager.get_session_maker()() as session:
+        stmt_subj = select(ClinicalSubject).where(
+            (ClinicalSubject.subject_id == subject_id) | (ClinicalSubject.id == subject_id)
+        )
+        res_subj = await session.execute(stmt_subj)
+        subject_obj = res_subj.scalars().first()
+        if not subject_obj:
+            raise HTTPException(status_code=404, detail="Clinical subject not found.")
+
+        study_id = payload.study_id if payload else None
+        if not study_id:
+            study_id = subject_obj.study_id
+
+        if not study_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Study ID must be provided in the payload or resolved from the ClinicalSubject.",
+            )
+
+        from apps.execution.eligibility_service import evaluate_subject_eligibility
+
+        # Evaluate eligibility using our service
+        res = await evaluate_subject_eligibility(study_id, subject_obj, session)
+
+        try:
+            if res.eligible is False:
+                # Log failed criterion IDs in the change reason/justification context
+                failed_ids = ", ".join(res.failed_criteria)
+                custom_reason = f"Screen failure due to failed criteria: {failed_ids}. Original reason: {change_reason}"
+                current_change_reason.set(custom_reason)
+
+                subject_obj.status = "SCREEN_FAILED"
+                session.add(subject_obj)
+                await session.commit()
+            elif res.eligible is True:
+                custom_reason = f"Subject met all eligibility criteria and transitioned to ENROLLED. Original reason: {change_reason}"
+                current_change_reason.set(custom_reason)
+
+                subject_obj.status = "ENROLLED"
+                session.add(subject_obj)
+                await session.commit()
+            else:
+                # Indeterminate: no state transition (leave status as SCREENING)
+                pass
+        except InvalidStateTransitionError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+        eval_list = []
+        for cid, cev in res.criteria_evaluations.items():
+            eval_list.append(
+                CriterionLevelResult(
+                    criterion_id=cev.criterion_id,
+                    criterion_type=cev.criterion_type,
+                    description=cev.description,
+                    dsl_source=cev.dsl_source,
+                    is_met=cev.is_met,
+                    is_indeterminate=cev.is_indeterminate,
+                )
+            )
+
+        return SubjectScreeningResponse(
+            eligible=res.eligible,
+            failed_criteria=res.failed_criteria,
+            indeterminate_criteria=res.indeterminate_criteria,
+            criterion_evaluations=eval_list,
         )
 
 
@@ -2409,17 +2528,6 @@ def validate_transition(current_status: str, new_status: str) -> None:
     if new_status not in allowed:
         raise StateTransitionError(
             f"Invalid transition from {current_status} to {new_status}. Allowed transitions are: {allowed}"
-        )
-
-
-def verify_change_justification(request: Request) -> None:
-    """Enforce presence of change justification header (version 1 or 2)."""
-    version = request.headers.get("X-Signature-Version")
-    change_reason = request.headers.get("X-Change-Reason")
-    if version not in ("1", "v1", "2", "v2") or not change_reason:
-        raise HTTPException(
-            status_code=403,
-            detail="API rejects any state modifications that do not contain a verified, gateway-signed change justification header.",
         )
 
 

@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1174
-- **Passed:** 1174 🟢
+- **Total Automated Test Cases Run:** 1129
+- **Passed:** 1129 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -582,6 +582,13 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_search_concepts_success` | `tests.test_evs_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_search_concepts_timeout` | `tests.test_evs_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_search_concepts_transport_error` | `tests.test_evs_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_designer_criteria_client_retrieval_and_parsing` | `tests.test_execution_eligibility` | PRD-ELIGIBILITY-009 | 🟢 PASSED | < 1s |
+| `test_ecrf_context_builder_demographics_and_precedence` | `tests.test_execution_eligibility` | PRD-ELIGIBILITY-010 | 🟢 PASSED | < 1s |
+| `test_ecrf_context_builder_kleene_absent_semantics` | `tests.test_execution_eligibility` | PRD-ELIGIBILITY-011 | 🟢 PASSED | < 1s |
+| `test_randomization_allocation_rejection_gate` | `tests.test_execution_eligibility` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_screening_endpoint_eligible_and_transition` | `tests.test_execution_eligibility` | PRD-ELIGIBILITY-012 | 🟢 PASSED | < 1s |
+| `test_screening_endpoint_indeterminate_behavior` | `tests.test_execution_eligibility` | PRD-ELIGIBILITY-014 | 🟢 PASSED | < 1s |
+| `test_screening_endpoint_ineligible_transition_and_audit` | `tests.test_execution_eligibility` | PRD-ELIGIBILITY-013 | 🟢 PASSED | < 1s |
 | `test_form_submission_audit_logging` | `tests.test_form_submissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_form_submission_invalid_transitions` | `tests.test_form_submissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_form_submission_lifecycle_happy_path` | `tests.test_form_submissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
