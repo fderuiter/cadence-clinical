@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { createCtmsMilestoneTable, createCtmsVisitTable } from "ui";
+import { createCtmsMilestoneTable, createCtmsVisitTable } from "../index.js";
 import { renderCtms } from "../index.js";
 
 // Minimal stub for document and elements to run without browser/jsdom

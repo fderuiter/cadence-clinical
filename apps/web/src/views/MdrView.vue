@@ -564,7 +564,7 @@
 <script setup>
 import { ref, computed, watch, reactive } from "vue";
 import { useClinicalStore } from "../stores/clinical";
-import { createClinicalVisitMatrix } from "ui";
+import { createClinicalVisitMatrix } from "../../index.js";
 import { terminologyClient } from "../api/terminologyClient.js";
 import { useAuthStore } from "../stores/auth.js";
 import { debounce } from "ui";

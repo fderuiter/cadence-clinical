@@ -22,644 +22,23 @@
           "
           @submit.prevent
         >
-          <template v-for="field in store.ecrfFields" :key="field.id">
-            <!-- Text input field -->
-            <div
-              v-if="field.type !== 'radio' && field.type !== 'concept_code'"
-              v-show="store.fieldVisibility[field.id] !== false"
-              :id="`field-container-${field.id}`"
-              class="clinical-input"
-              :class="{ 'has-error': getValidationError(field) }"
-              :style="`grid-column: span ${field.gridSpan || 12};`"
-            >
-              <label :for="field.id">{{ field.label }}</label>
-              <div class="input-wrapper">
-                <input
-                  :id="field.id"
-                  type="text"
-                  :name="field.id"
-                  :value="store.formValues[field.id]"
-                  @change="
-                    handleFieldChange(field, $event.target.value, $event.target)
-                  "
-                />
-
-                <!-- Query Flag -->
-                <button
-                  :id="`query-flag-${field.id}`"
-                  class="query-flag"
-                  :class="`query-status-${getQueryStatus(field.id).toLowerCase()}`"
-                  type="button"
-                  @click="toggleQueryPanel(field.id)"
-                >
-                  {{ getQueryStatus(field.id) === "NONE" ? "💬" : "⚠️" }}
-                </button>
-              </div>
-
-              <!-- Validation Error -->
-              <div
-                v-if="
-                  getValidationError(field) && store.formValues[field.id] !== ''
-                "
-                class="validation-error-msg"
-              >
-                {{ getValidationError(field) }}
-              </div>
-
-              <!-- Query Panel -->
-              <div
-                v-if="activeQueryPanels[field.id]"
-                :id="`query-panel-${field.id}`"
-                class="query-panel"
-                role="region"
-              >
-                <div class="query-panel-header">
-                  <span class="query-panel-title"
-                    >Query Manager - {{ field.id }}</span
-                  >
-                  <button
-                    type="button"
-                    class="btn-close-panel"
-                    @click="toggleQueryPanel(field.id)"
-                  >
-                    ×
-                  </button>
-                </div>
-                <div class="query-panel-body">
-                  <!-- No Query State -->
-                  <div
-                    v-if="getQueryStatus(field.id) === 'NONE'"
-                    class="query-create-section"
-                  >
-                    <p class="query-panel-instruction">
-                      Raise a query for this field:
-                    </p>
-                    <div class="form-group">
-                      <label :for="`query-message-${field.id}`"
-                        >Discrepancy Message</label
-                      >
-                      <textarea
-                        :id="`query-message-${field.id}`"
-                        v-model="queryInputs[field.id]"
-                        placeholder="Enter clinical discrepancy details..."
-                        required
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      class="btn-submit-query"
-                      @click="createQuery(field.id)"
-                    >
-                      Submit Query
-                    </button>
-                  </div>
-
-                  <!-- Open/Reopened Query State -->
-                  <div
-                    v-else-if="
-                      getQueryStatus(field.id) === 'OPEN' ||
-                      getQueryStatus(field.id) === 'REOPENED'
-                    "
-                    class="query-details"
-                  >
-                    <div
-                      class="query-status-badge"
-                      :class="`badge-${getQueryStatus(field.id).toLowerCase()}`"
-                    >
-                      Status: {{ getQueryStatus(field.id) }}
-                    </div>
-                    <p class="query-current-msg">
-                      <strong>Discrepancy:</strong>
-                      {{ store.formQueries[field.id].message }}
-                    </p>
-                    <p class="query-meta">
-                      Raised by:
-                      {{ store.formQueries[field.id].createdBy || "System" }} on
-                      {{ store.formQueries[field.id].createdAt }}
-                    </p>
-                    <div class="query-respond-section" style="margin-top: 12px">
-                      <div class="form-group">
-                        <label :for="`query-response-${field.id}`"
-                          >Your Response</label
-                        >
-                        <textarea
-                          :id="`query-response-${field.id}`"
-                          v-model="queryResponses[field.id]"
-                          placeholder="Enter clinical justification or resolution explanation..."
-                          required
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        class="btn-respond-query"
-                        @click="respondQuery(field.id)"
-                      >
-                        Submit Response
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- Answered Query State -->
-                  <div
-                    v-else-if="getQueryStatus(field.id) === 'ANSWERED'"
-                    class="query-details"
-                  >
-                    <div class="query-status-badge badge-answered">
-                      Status: ANSWERED
-                    </div>
-                    <p class="query-current-msg">
-                      <strong>Discrepancy:</strong>
-                      {{ store.formQueries[field.id].message }}
-                    </p>
-                    <p class="query-response-msg">
-                      <strong>Response:</strong>
-                      {{ store.formQueries[field.id].response }}
-                    </p>
-                    <p class="query-meta">
-                      Responded by:
-                      {{ store.formQueries[field.id].respondedBy }} on
-                      {{ store.formQueries[field.id].respondedAt }}
-                    </p>
-                    <div
-                      class="query-actions-section"
-                      style="margin-top: 12px; display: flex; gap: 8px"
-                    >
-                      <button
-                        type="button"
-                        class="btn-close-query"
-                        @click="closeQuery(field.id)"
-                      >
-                        Close Query (Resolve)
-                      </button>
-                      <button
-                        type="button"
-                        class="btn-reopen-query"
-                        @click="reopenQuery(field.id)"
-                      >
-                        Reopen Query
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- Closed Query State -->
-                  <div
-                    v-else-if="getQueryStatus(field.id) === 'CLOSED'"
-                    class="query-details"
-                  >
-                    <div class="query-status-badge badge-closed">
-                      Status: CLOSED
-                    </div>
-                    <p class="query-current-msg">
-                      <strong>Discrepancy:</strong>
-                      {{ store.formQueries[field.id].message }}
-                    </p>
-                    <p class="query-response-msg">
-                      <strong>Response:</strong>
-                      {{ store.formQueries[field.id].response }}
-                    </p>
-                    <p class="query-meta">
-                      Closed by: {{ store.formQueries[field.id].closedBy }} on
-                      {{ store.formQueries[field.id].closedAt }}
-                    </p>
-                    <p class="query-history-info">
-                      This query is permanently resolved and closed.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Concept code lookup field -->
-            <div
-              v-else-if="field.type === 'concept_code'"
-              v-show="store.fieldVisibility[field.id] !== false"
-              :id="`field-container-${field.id}`"
-              class="clinical-input clinical-lookup-container"
-              :class="{ 'has-error': getValidationError(field) }"
-              :style="`grid-column: span ${field.gridSpan || 12};`"
-            >
-              <label :for="field.id">{{ field.label }}</label>
-              <div class="input-wrapper">
-                <input
-                  :id="field.id"
-                  type="text"
-                  :name="field.id"
-                  :value="store.formValues[field.id]"
-                  @input="handleLookupInput(field, $event.target.value)"
-                  @change="
-                    handleFieldChange(field, $event.target.value, $event.target)
-                  "
-                />
-
-                <!-- Query Flag -->
-                <button
-                  :id="`query-flag-${field.id}`"
-                  class="query-flag"
-                  :class="`query-status-${getQueryStatus(field.id).toLowerCase()}`"
-                  type="button"
-                  @click="toggleQueryPanel(field.id)"
-                >
-                  {{ getQueryStatus(field.id) === "NONE" ? "💬" : "⚠️" }}
-                </button>
-              </div>
-
-              <!-- Lookup Status Indicator -->
-              <div
-                v-if="lookupStatuses[field.id]"
-                :id="`lookup-status-${field.id}`"
-                class="lookup-status-indicator"
-                :class="getLookupStatusClass(field.id)"
-                role="status"
-                aria-live="polite"
-              >
-                <span class="lookup-status-icon" aria-hidden="true">{{
-                  getLookupStatusIcon(field.id)
-                }}</span>
-                <span class="lookup-status-text">{{
-                  lookupStatuses[field.id].message
-                }}</span>
-              </div>
-
-              <!-- Validation Error -->
-              <div
-                v-if="
-                  getValidationError(field) && store.formValues[field.id] !== ''
-                "
-                class="validation-error-msg"
-              >
-                {{ getValidationError(field) }}
-              </div>
-
-              <!-- Query Panel -->
-              <div
-                v-if="activeQueryPanels[field.id]"
-                :id="`query-panel-${field.id}`"
-                class="query-panel"
-                role="region"
-              >
-                <div class="query-panel-header">
-                  <span class="query-panel-title"
-                    >Query Manager - {{ field.id }}</span
-                  >
-                  <button
-                    type="button"
-                    class="btn-close-panel"
-                    @click="toggleQueryPanel(field.id)"
-                  >
-                    ×
-                  </button>
-                </div>
-                <div class="query-panel-body">
-                  <!-- No Query State -->
-                  <div
-                    v-if="getQueryStatus(field.id) === 'NONE'"
-                    class="query-create-section"
-                  >
-                    <p class="query-panel-instruction">
-                      Raise a query for this field:
-                    </p>
-                    <div class="form-group">
-                      <label :for="`query-message-${field.id}`"
-                        >Discrepancy Message</label
-                      >
-                      <textarea
-                        :id="`query-message-${field.id}`"
-                        v-model="queryInputs[field.id]"
-                        placeholder="Enter clinical discrepancy details..."
-                        required
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      class="btn-submit-query"
-                      @click="createQuery(field.id)"
-                    >
-                      Submit Query
-                    </button>
-                  </div>
-
-                  <!-- Open/Reopened Query State -->
-                  <div
-                    v-else-if="
-                      getQueryStatus(field.id) === 'OPEN' ||
-                      getQueryStatus(field.id) === 'REOPENED'
-                    "
-                    class="query-details"
-                  >
-                    <div
-                      class="query-status-badge"
-                      :class="`badge-${getQueryStatus(field.id).toLowerCase()}`"
-                    >
-                      Status: {{ getQueryStatus(field.id) }}
-                    </div>
-                    <p class="query-current-msg">
-                      <strong>Discrepancy:</strong>
-                      {{ store.formQueries[field.id].message }}
-                    </p>
-                    <p class="query-meta">
-                      Raised by:
-                      {{ store.formQueries[field.id].createdBy || "System" }} on
-                      {{ store.formQueries[field.id].createdAt }}
-                    </p>
-                    <div class="query-respond-section" style="margin-top: 12px">
-                      <div class="form-group">
-                        <label :for="`query-response-${field.id}`"
-                          >Your Response</label
-                        >
-                        <textarea
-                          :id="`query-response-${field.id}`"
-                          v-model="queryResponses[field.id]"
-                          placeholder="Enter clinical justification or resolution explanation..."
-                          required
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        class="btn-respond-query"
-                        @click="respondQuery(field.id)"
-                      >
-                        Submit Response
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- Answered Query State -->
-                  <div
-                    v-else-if="getQueryStatus(field.id) === 'ANSWERED'"
-                    class="query-details"
-                  >
-                    <div class="query-status-badge badge-answered">
-                      Status: ANSWERED
-                    </div>
-                    <p class="query-current-msg">
-                      <strong>Discrepancy:</strong>
-                      {{ store.formQueries[field.id].message }}
-                    </p>
-                    <p class="query-response-msg">
-                      <strong>Response:</strong>
-                      {{ store.formQueries[field.id].response }}
-                    </p>
-                    <p class="query-meta">
-                      Responded by:
-                      {{ store.formQueries[field.id].respondedBy }} on
-                      {{ store.formQueries[field.id].respondedAt }}
-                    </p>
-                    <div
-                      class="query-actions-section"
-                      style="margin-top: 12px; display: flex; gap: 8px"
-                    >
-                      <button
-                        type="button"
-                        class="btn-close-query"
-                        @click="closeQuery(field.id)"
-                      >
-                        Close Query (Resolve)
-                      </button>
-                      <button
-                        type="button"
-                        class="btn-reopen-query"
-                        @click="reopenQuery(field.id)"
-                      >
-                        Reopen Query
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- Closed Query State -->
-                  <div
-                    v-else-if="getQueryStatus(field.id) === 'CLOSED'"
-                    class="query-details"
-                  >
-                    <div class="query-status-badge badge-closed">
-                      Status: CLOSED
-                    </div>
-                    <p class="query-current-msg">
-                      <strong>Discrepancy:</strong>
-                      {{ store.formQueries[field.id].message }}
-                    </p>
-                    <p class="query-response-msg">
-                      <strong>Response:</strong>
-                      {{ store.formQueries[field.id].response }}
-                    </p>
-                    <p class="query-meta">
-                      Closed by: {{ store.formQueries[field.id].closedBy }} on
-                      {{ store.formQueries[field.id].closedAt }}
-                    </p>
-                    <p class="query-history-info">
-                      This query is permanently resolved and closed.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Radio input field -->
-            <fieldset
-              v-else-if="field.type === 'radio'"
-              v-show="store.fieldVisibility[field.id] !== false"
-              :id="`field-container-${field.id}`"
-              class="clinical-radio-grid"
-              :style="`grid-column: span ${field.gridSpan || 12};`"
-            >
-              <legend>{{ field.label }}</legend>
-              <div class="radio-options-wrapper">
-                <div class="radio-options">
-                  <div
-                    v-for="(opt, idx) in field.options"
-                    :key="idx"
-                    class="radio-option"
-                  >
-                    <input
-                      :id="`${field.id}_option_${idx}`"
-                      type="radio"
-                      :name="field.id"
-                      :value="opt.value"
-                      :checked="store.formValues[field.id] === opt.value"
-                      @change="
-                        handleFieldChange(field, opt.value, $event.target)
-                      "
-                    />
-                    <label :for="`${field.id}_option_${idx}`">{{
-                      opt.label
-                    }}</label>
-                  </div>
-                </div>
-
-                <!-- Query Flag -->
-                <button
-                  :id="`query-flag-${field.id}`"
-                  class="query-flag"
-                  :class="`query-status-${getQueryStatus(field.id).toLowerCase()}`"
-                  type="button"
-                  @click="toggleQueryPanel(field.id)"
-                >
-                  {{ getQueryStatus(field.id) === "NONE" ? "💬" : "⚠️" }}
-                </button>
-              </div>
-
-              <!-- Query Panel -->
-              <div
-                v-if="activeQueryPanels[field.id]"
-                :id="`query-panel-${field.id}`"
-                class="query-panel"
-                role="region"
-              >
-                <div class="query-panel-header">
-                  <span class="query-panel-title"
-                    >Query Manager - {{ field.id }}</span
-                  >
-                  <button
-                    type="button"
-                    class="btn-close-panel"
-                    @click="toggleQueryPanel(field.id)"
-                  >
-                    ×
-                  </button>
-                </div>
-                <div class="query-panel-body">
-                  <!-- No Query State -->
-                  <div
-                    v-if="getQueryStatus(field.id) === 'NONE'"
-                    class="query-create-section"
-                  >
-                    <p class="query-panel-instruction">
-                      Raise a query for this field:
-                    </p>
-                    <div class="form-group">
-                      <label :for="`query-message-${field.id}`"
-                        >Discrepancy Message</label
-                      >
-                      <textarea
-                        :id="`query-message-${field.id}`"
-                        v-model="queryInputs[field.id]"
-                        placeholder="Enter clinical discrepancy details..."
-                        required
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      class="btn-submit-query"
-                      @click="createQuery(field.id)"
-                    >
-                      Submit Query
-                    </button>
-                  </div>
-
-                  <!-- Open/Reopened Query State -->
-                  <div
-                    v-else-if="
-                      getQueryStatus(field.id) === 'OPEN' ||
-                      getQueryStatus(field.id) === 'REOPENED'
-                    "
-                    class="query-details"
-                  >
-                    <div
-                      class="query-status-badge"
-                      :class="`badge-${getQueryStatus(field.id).toLowerCase()}`"
-                    >
-                      Status: {{ getQueryStatus(field.id) }}
-                    </div>
-                    <p class="query-current-msg">
-                      <strong>Discrepancy:</strong>
-                      {{ store.formQueries[field.id].message }}
-                    </p>
-                    <p class="query-meta">
-                      Raised by:
-                      {{ store.formQueries[field.id].createdBy || "System" }} on
-                      {{ store.formQueries[field.id].createdAt }}
-                    </p>
-                    <div class="query-respond-section" style="margin-top: 12px">
-                      <div class="form-group">
-                        <label :for="`query-response-${field.id}`"
-                          >Your Response</label
-                        >
-                        <textarea
-                          :id="`query-response-${field.id}`"
-                          v-model="queryResponses[field.id]"
-                          placeholder="Enter clinical justification or resolution explanation..."
-                          required
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        class="btn-respond-query"
-                        @click="respondQuery(field.id)"
-                      >
-                        Submit Response
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- Answered Query State -->
-                  <div
-                    v-else-if="getQueryStatus(field.id) === 'ANSWERED'"
-                    class="query-details"
-                  >
-                    <div class="query-status-badge badge-answered">
-                      Status: ANSWERED
-                    </div>
-                    <p class="query-current-msg">
-                      <strong>Discrepancy:</strong>
-                      {{ store.formQueries[field.id].message }}
-                    </p>
-                    <p class="query-response-msg">
-                      <strong>Response:</strong>
-                      {{ store.formQueries[field.id].response }}
-                    </p>
-                    <p class="query-meta">
-                      Responded by:
-                      {{ store.formQueries[field.id].respondedBy }} on
-                      {{ store.formQueries[field.id].respondedAt }}
-                    </p>
-                    <div
-                      class="query-actions-section"
-                      style="margin-top: 12px; display: flex; gap: 8px"
-                    >
-                      <button
-                        type="button"
-                        class="btn-close-query"
-                        @click="closeQuery(field.id)"
-                      >
-                        Close Query (Resolve)
-                      </button>
-                      <button
-                        type="button"
-                        class="btn-reopen-query"
-                        @click="reopenQuery(field.id)"
-                      >
-                        Reopen Query
-                      </button>
-                    </div>
-                  </div>
-
-                  <!-- Closed Query State -->
-                  <div
-                    v-else-if="getQueryStatus(field.id) === 'CLOSED'"
-                    class="query-details"
-                  >
-                    <div class="query-status-badge badge-closed">
-                      Status: CLOSED
-                    </div>
-                    <p class="query-current-msg">
-                      <strong>Discrepancy:</strong>
-                      {{ store.formQueries[field.id].message }}
-                    </p>
-                    <p class="query-response-msg">
-                      <strong>Response:</strong>
-                      {{ store.formQueries[field.id].response }}
-                    </p>
-                    <p class="query-meta">
-                      Closed by: {{ store.formQueries[field.id].closedBy }} on
-                      {{ store.formQueries[field.id].closedAt }}
-                    </p>
-                    <p class="query-history-info">
-                      This query is permanently resolved and closed.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </fieldset>
-          </template>
+          <ClinicalFormField
+            v-for="field in store.ecrfFields"
+            v-show="store.fieldVisibility[field.id] !== false"
+            :key="field.id"
+            :field="field"
+            :model-value="store.formValues[field.id]"
+            :query="store.formQueries[field.id]"
+            :error="getValidationError(field)"
+            :lookup-status="lookupStatuses[field.id]"
+            @update:model-value="store.formValues[field.id] = $event"
+            @input="handleLookupInput(field, $event)"
+            @change="(val, target) => handleFieldChange(field, val, target)"
+            @create-query="createQuery(field.id, $event)"
+            @respond-query="respondQuery(field.id, $event)"
+            @close-query="closeQuery(field.id)"
+            @reopen-query="reopenQuery(field.id)"
+          />
         </form>
 
         <div class="form-actions">
@@ -1036,6 +415,8 @@ import { soaClient } from "../api/soaClient";
 import { validateField } from "../../index";
 import { debounce } from "ui";
 import { terminologyClient } from "../api/terminologyClient";
+import ClinicalFormField from "../components/clinical/ClinicalFormField.vue";
+
 const store = useClinicalStore();
 const authStore = useAuthStore();
 
@@ -1118,16 +499,6 @@ function getConceptStatusText(fieldId) {
 const requestCounters = reactive({});
 const conceptStatuses = reactive({});
 const conceptMessages = reactive({});
-
-/*
-function getStatusIcon(status) {
-  if (status === "loading") return "⏳";
-  if (status === "valid") return "✅";
-  if (status === "invalid") return "❌";
-  if (status === "degraded") return "⚠️";
-  return "";
-}
-*/
 
 const debouncedValidate = debounce(async (fieldId, value) => {
   if (!value || !value.trim()) {
@@ -1286,27 +657,6 @@ function handleLookupInput(field, value) {
   }, 300);
 }
 
-function getLookupStatusClass(fieldId) {
-  const item = lookupStatuses.value[fieldId];
-  if (!item) return "";
-  return `lookup-${item.status}`;
-}
-
-function getLookupStatusIcon(fieldId) {
-  const item = lookupStatuses.value[fieldId];
-  if (!item) return "";
-  if (item.status === "loading") return "⏳";
-  if (item.status === "valid") return "✅";
-  if (item.status === "invalid") return "❌";
-  if (item.status === "degraded") return "⚠️";
-  return "";
-}
-
-// UI States
-const activeQueryPanels = reactive({});
-const queryInputs = reactive({});
-const queryResponses = reactive({});
-
 // Reason Modal States
 const showReasonModal = ref(false);
 const selectedReason = ref("Initial Entry");
@@ -1343,19 +693,10 @@ const validSigningReasons = [
   "COMPLIANCE_ATTESTATION",
 ];
 
-function getQueryStatus(fieldId) {
-  const query = store.formQueries[fieldId];
-  return query ? query.status : "NONE";
-}
-
 function getValidationError(field) {
   const value = store.formValues[field.id];
   const res = validateField(field, value, store.formValues);
   return res.valid ? null : res.message;
-}
-
-function toggleQueryPanel(fieldId) {
-  activeQueryPanels[fieldId] = !activeQueryPanels[fieldId];
 }
 
 // Reason Modal logic
@@ -1381,7 +722,7 @@ function handleFieldChange(field, newValue, targetEl) {
 function cancelChange() {
   if (pendingValueChange.value && pendingValueChange.value.targetEl) {
     if (pendingValueChange.value.targetEl.type === "radio") {
-      // Vue handles radio binding automatically, but let's force re-sync if needed
+      // Vue handles radio binding automatically
     } else {
       pendingValueChange.value.targetEl.value =
         pendingValueChange.value.oldValue;
@@ -1426,8 +767,8 @@ function commitChange(field, oldValue, newValue, reason) {
 }
 
 // Query Operations
-function createQuery(fieldId) {
-  const msg = (queryInputs[fieldId] || "").trim();
+function createQuery(fieldId, msgFromComponent = null) {
+  const msg = msgFromComponent !== null ? msgFromComponent : (queryInputs[fieldId] || "").trim();
   if (!msg) {
     alert("Please enter a discrepancy message!");
     return;
@@ -1441,7 +782,6 @@ function createQuery(fieldId) {
   };
 
   store.formQueries[fieldId] = queryObj;
-  queryInputs[fieldId] = "";
   store.addLedgerBlock(
     "QUERY_CREATE",
     { fieldId, query: queryObj },
@@ -1449,8 +789,8 @@ function createQuery(fieldId) {
   );
 }
 
-function respondQuery(fieldId) {
-  const resp = (queryResponses[fieldId] || "").trim();
+function respondQuery(fieldId, respFromComponent = null) {
+  const resp = respFromComponent !== null ? respFromComponent : (queryResponses[fieldId] || "").trim();
   if (!resp) {
     alert("Please enter a response!");
     return;
@@ -1462,7 +802,6 @@ function respondQuery(fieldId) {
   queryObj.respondedBy = "Clinical Investigator (Offline Client)";
   queryObj.respondedAt = new Date().toISOString().slice(0, 10);
 
-  queryResponses[fieldId] = "";
   store.addLedgerBlock(
     "QUERY_RESPOND",
     { fieldId, query: queryObj },
