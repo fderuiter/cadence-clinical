@@ -1718,17 +1718,21 @@ async def test_qualify_catalog_cutover_and_extension_persistence():
     # @req:PRD-TMF-002
     # @req:Trace-5
     client = TestClient(app)
-    headers = get_auth_headers(roles="admin", change_reason="Qualifying catalog cutover")
+    headers = get_auth_headers(
+        roles="admin", change_reason="Qualifying catalog cutover"
+    )
 
     # 1. Valid artifact from v3.2.0-complete (active default)
     payload_complete = {
         "study_id": "study_cutover_test",
-        "artifact_type": "Investigator CV", # Under Zone 5, Section 05.02 in v3.2.0-complete
+        "artifact_type": "Investigator CV",  # Under Zone 5, Section 05.02 in v3.2.0-complete
         "filename": "cv.pdf",
         "content": "CV of PI Dr. John",
-        "mime_type": "application/pdf"
+        "mime_type": "application/pdf",
     }
-    resp_complete = client.post("/api/v1/etmf/ingest", json=payload_complete, headers=headers)
+    resp_complete = client.post(
+        "/api/v1/etmf/ingest", json=payload_complete, headers=headers
+    )
     assert resp_complete.status_code == 201
     data_complete = resp_complete.json()
     assert data_complete["zone"] == 5
@@ -1739,13 +1743,15 @@ async def test_qualify_catalog_cutover_and_extension_persistence():
     # 2. Extension artifact from v3.2.0-extended via explicit taxonomy_version
     payload_extension = {
         "study_id": "study_cutover_test",
-        "artifact_type": "Cadence Investigator Portal Training Certificate", # 05.02.99
+        "artifact_type": "Cadence Investigator Portal Training Certificate",  # 05.02.99
         "filename": "cert.pdf",
         "content": "Certificate of training",
         "mime_type": "application/pdf",
-        "taxonomy_version": "v3.2.0-extended"
+        "taxonomy_version": "v3.2.0-extended",
     }
-    resp_ext = client.post("/api/v1/etmf/ingest", json=payload_extension, headers=headers)
+    resp_ext = client.post(
+        "/api/v1/etmf/ingest", json=payload_extension, headers=headers
+    )
     assert resp_ext.status_code == 201
     data_ext = resp_ext.json()
     assert data_ext["zone"] == 5
@@ -1759,9 +1765,11 @@ async def test_qualify_catalog_cutover_and_extension_persistence():
         "artifact_type": "Totally Fake Artifact Not Registered",
         "filename": "fake.pdf",
         "content": "Some fake content",
-        "mime_type": "application/pdf"
+        "mime_type": "application/pdf",
     }
-    resp_unknown = client.post("/api/v1/etmf/ingest", json=payload_unknown, headers=headers)
+    resp_unknown = client.post(
+        "/api/v1/etmf/ingest", json=payload_unknown, headers=headers
+    )
     assert resp_unknown.status_code == 422
 
     # 4. Negative-path: mismatched hierarchy
@@ -1771,10 +1779,12 @@ async def test_qualify_catalog_cutover_and_extension_persistence():
         "filename": "cv.pdf",
         "content": "Mismatched content",
         "mime_type": "application/pdf",
-        "zone": 1, # Investigator CV belongs to zone 5, not zone 1
-        "section": "01.01"
+        "zone": 1,  # Investigator CV belongs to zone 5, not zone 1
+        "section": "01.01",
     }
-    resp_mismatch = client.post("/api/v1/etmf/ingest", json=payload_mismatch, headers=headers)
+    resp_mismatch = client.post(
+        "/api/v1/etmf/ingest", json=payload_mismatch, headers=headers
+    )
     assert resp_mismatch.status_code == 422
 
 
@@ -1787,7 +1797,9 @@ async def test_explicit_and_default_taxonomy_version_roundtrip_and_legacy_interp
     """
     # @req:PRD-TMF-003
     client = TestClient(app)
-    headers = get_auth_headers(roles="admin", change_reason="Testing legacy interpretability")
+    headers = get_auth_headers(
+        roles="admin", change_reason="Testing legacy interpretability"
+    )
 
     # 1. Ingest under explicit "v3.2.0"
     payload_legacy = {
@@ -1796,9 +1808,11 @@ async def test_explicit_and_default_taxonomy_version_roundtrip_and_legacy_interp
         "filename": "protocol_legacy.pdf",
         "content": "Legacy protocol",
         "mime_type": "application/pdf",
-        "taxonomy_version": "v3.2.0"
+        "taxonomy_version": "v3.2.0",
     }
-    resp_legacy = client.post("/api/v1/etmf/ingest", json=payload_legacy, headers=headers)
+    resp_legacy = client.post(
+        "/api/v1/etmf/ingest", json=payload_legacy, headers=headers
+    )
     assert resp_legacy.status_code == 201
     doc_id_legacy = resp_legacy.json()["document_id"]
 
@@ -1808,9 +1822,11 @@ async def test_explicit_and_default_taxonomy_version_roundtrip_and_legacy_interp
         "artifact_type": "Clinical Trial Protocol",
         "filename": "protocol_complete.pdf",
         "content": "Complete protocol",
-        "mime_type": "application/pdf"
+        "mime_type": "application/pdf",
     }
-    resp_complete = client.post("/api/v1/etmf/ingest", json=payload_complete, headers=headers)
+    resp_complete = client.post(
+        "/api/v1/etmf/ingest", json=payload_complete, headers=headers
+    )
     assert resp_complete.status_code == 201
     doc_id_complete = resp_complete.json()["document_id"]
 
@@ -1821,7 +1837,9 @@ async def test_explicit_and_default_taxonomy_version_roundtrip_and_legacy_interp
     assert doc_legacy_data["taxonomy_version"] == "v3.2.0"
     assert doc_legacy_data["artifact_code"] == "01.01.01"
 
-    get_complete = client.get(f"/api/v1/etmf/documents/{doc_id_complete}", headers=headers)
+    get_complete = client.get(
+        f"/api/v1/etmf/documents/{doc_id_complete}", headers=headers
+    )
     assert get_complete.status_code == 200
     doc_complete_data = get_complete.json()
     assert doc_complete_data["taxonomy_version"] == "v3.2.0-complete"
@@ -1829,6 +1847,7 @@ async def test_explicit_and_default_taxonomy_version_roundtrip_and_legacy_interp
 
     # 4. Assert a legacy v3.2.0-tagged document remains resolvable via resolve_artifact
     from tmf_reference_model import resolve_artifact
+
     resolved_legacy = resolve_artifact(version="v3.2.0", code="01.01.01")
     assert resolved_legacy["artifact"].name == "Clinical Trial Protocol"
     assert resolved_legacy["version"] == "v3.2.0"
@@ -1843,7 +1862,9 @@ async def test_completeness_from_catalog_across_versions():
     """
     # @req:PRD-TMF-004
     client = TestClient(app)
-    admin_headers = get_auth_headers(roles="admin", change_reason="Preparing completeness mixed versions")
+    admin_headers = get_auth_headers(
+        roles="admin", change_reason="Preparing completeness mixed versions"
+    )
     inspector_headers = get_auth_headers(roles="regulatory_inspector")
 
     study_id = "study_completeness_mixed"
@@ -1864,7 +1885,7 @@ async def test_completeness_from_catalog_across_versions():
         "filename": "protocol_legacy.pdf",
         "content": "Protocol Content Legacy",
         "mime_type": "application/pdf",
-        "taxonomy_version": "v3.2.0"
+        "taxonomy_version": "v3.2.0",
     }
     client.post("/api/v1/etmf/ingest", json=payload_prot_legacy, headers=admin_headers)
 
@@ -1890,7 +1911,7 @@ async def test_completeness_from_catalog_across_versions():
         "artifact_type": "Blank CRF",
         "filename": "crf.xml",
         "content": "Blank CRF Content",
-        "mime_type": "application/xml"
+        "mime_type": "application/xml",
     }
     client.post("/api/v1/etmf/ingest", json=payload_crf, headers=admin_headers)
 
@@ -1901,7 +1922,7 @@ async def test_completeness_from_catalog_across_versions():
         "filename": "define.xml",
         "content": "Define XML Content",
         "mime_type": "application/xml",
-        "taxonomy_version": "v3.2.0"
+        "taxonomy_version": "v3.2.0",
     }
     client.post("/api/v1/etmf/ingest", json=payload_define, headers=admin_headers)
 

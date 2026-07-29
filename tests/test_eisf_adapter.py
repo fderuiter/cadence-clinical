@@ -319,6 +319,7 @@ def test_eisf_resolve_known_extension_artifact():
     results in an artifact with is_extension=True.
     """
     from tmf_reference_model import resolve_artifact
+
     resolved = resolve_artifact("v3.2.0-extended", code="05.02.99")
     artifact = resolved["artifact"]
     assert artifact.code == "05.02.99"

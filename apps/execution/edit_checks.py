@@ -176,9 +176,7 @@ def extract_fields_from_dict(node: dict) -> list:
 
 
 async def resolve_authored_rule_context(
-    session: AsyncSession,
-    observation: ClinicalObservation,
-    condition: dict
+    session: AsyncSession, observation: ClinicalObservation, condition: dict
 ) -> tuple[Optional[dict], Optional[str]]:
     """
     Resolves the data context for an authored rule's condition.
@@ -194,7 +192,9 @@ async def resolve_authored_rule_context(
         )
         current_visit = v_res.scalars().first()
 
-    current_visit_name = current_visit.visit_name.upper() if current_visit else "UNKNOWN"
+    current_visit_name = (
+        current_visit.visit_name.upper() if current_visit else "UNKNOWN"
+    )
     current_idx = (
         VISIT_SEQUENCE.index(current_visit_name)
         if current_visit_name in VISIT_SEQUENCE
@@ -273,7 +273,11 @@ async def resolve_authored_rule_context(
             observation.visit_id == target_visit.id
             and observation.test_code.upper() == field_id.upper()
         ):
-            val = observation.value if observation.value is not None else observation.value_string
+            val = (
+                observation.value
+                if observation.value is not None
+                else observation.value_string
+            )
             context[context_key] = val
             continue
 
@@ -296,7 +300,11 @@ async def resolve_authored_rule_context(
             context[context_key] = None
             continue
 
-        val = target_obs.value if target_obs.value is not None else target_obs.value_string
+        val = (
+            target_obs.value
+            if target_obs.value is not None
+            else target_obs.value_string
+        )
         if val is None and is_prior:
             return None, "PENDING_PREDECESSOR"
 
@@ -338,7 +346,9 @@ class AuthoredCrossFormRule(EditCheckRule):
         return None
 
 
-async def load_active_authored_rules(session: AsyncSession, study_id: str) -> List[AuthoredCrossFormRule]:
+async def load_active_authored_rules(
+    session: AsyncSession, study_id: str
+) -> List[AuthoredCrossFormRule]:
     stmt = select(StudyAuthoredRule).where(
         StudyAuthoredRule.study_id == study_id,
         StudyAuthoredRule.is_active.is_(True),
@@ -564,7 +574,9 @@ async def run_asynchronous_edit_checks(
                 await resolve_pending_predecessor_checks(session, observation)
 
                 # 3. Load active authored rules for the study and combine with static ones
-                authored_rules = await load_active_authored_rules(session, observation.study_id)
+                authored_rules = await load_active_authored_rules(
+                    session, observation.study_id
+                )
                 combined_rules = list(CROSS_FORM_LONGITUDINAL_RULES) + authored_rules
 
                 # 4. Evaluate each rule
@@ -839,11 +851,7 @@ async def resolve_pending_predecessor_checks_for_form(
 
                     # Find the rule
                     rule = next(
-                        (
-                            r
-                            for r in combined_rules
-                            if r.rule_id == pending.rule_id
-                        ),
+                        (r for r in combined_rules if r.rule_id == pending.rule_id),
                         None,
                     )
                     if not rule:

@@ -61,9 +61,23 @@ repos:
         entry: python3 scripts/validate_markdown.py
         language: system
         files: \.md$
+
       - id: deid-compliance-scan
         name: DEID Compliance Scan
         entry: uv run python -m packages.deid.cli
         language: system
         files: \.(py|js|ts|tsx|jsx|json|md|log|txt)$
         pass_filenames: true
+
+      # -----------------------------------------------------------------------
+      # GxP RTM Staleness Check (pre-push only)
+      # Validates that docs/SDLC/ is in sync with the committed test suite.
+      # Run 'make sync-gxp' or 'pnpm sync-gxp' to regenerate if this fails.
+      # Skip for a single push with: SKIP=gxp-rtm-validate git push
+      # -----------------------------------------------------------------------
+      - id: gxp-rtm-validate
+        name: GxP RTM Staleness Check
+        entry: uv run python scripts/generate_rtm.py --validate
+        language: system
+        pass_filenames: false
+        stages: [pre-push]

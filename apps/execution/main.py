@@ -242,7 +242,11 @@ async def study_published(
     change_reason = current_change_reason.get()
 
     # Extract study-level cross_form_check rules if present
-    cross_form_rules = event.payload.get("cross_form_check") or event.payload.get("cross_form_checks") or []
+    cross_form_rules = (
+        event.payload.get("cross_form_check")
+        or event.payload.get("cross_form_checks")
+        or []
+    )
     if cross_form_rules:
         u_id = user_id or "system"
         reason = change_reason or "Ingest published cross-form rules"
@@ -250,13 +254,10 @@ async def study_published(
             async with db_manager.get_session_maker()() as session:
                 async with session.begin():
                     # Deactivate/supersede the prior active rule set for the study
-                    stmt = (
-                        select(StudyAuthoredRule)
-                        .where(
-                            StudyAuthoredRule.study_id == event.study_id,
-                            StudyAuthoredRule.is_active.is_(True),
-                            StudyAuthoredRule.is_deleted.is_(False),
-                        )
+                    stmt = select(StudyAuthoredRule).where(
+                        StudyAuthoredRule.study_id == event.study_id,
+                        StudyAuthoredRule.is_active.is_(True),
+                        StudyAuthoredRule.is_deleted.is_(False),
                     )
                     res = await session.execute(stmt)
                     prior_rules = res.scalars().all()

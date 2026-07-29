@@ -22,6 +22,7 @@ the top-level structure of the delivered JSON payload includes:
     * `query_message` (str): The discrepancy/query message template to be raised.
     * `version_index` (int): Chronological version index of the rule.
 """
+
 import os
 import time
 from datetime import datetime

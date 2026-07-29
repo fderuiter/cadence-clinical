@@ -409,19 +409,21 @@ async def test_authored_cross_form_rule_lifecycle() -> None:
                             "operands": [
                                 {
                                     "type": "field_ref",
-                                    "field_ref": {"field_id": "VSDPB"}
+                                    "field_ref": {"field_id": "VSDPB"},
                                 },
                                 {
                                     "type": "field_ref",
-                                    "field_ref": {"field_id": "VSSBP"}
-                                }
-                            ]
-                        }
+                                    "field_ref": {"field_id": "VSSBP"},
+                                },
+                            ],
+                        },
                     }
-                ]
-            }
+                ],
+            },
         }
-        pub_resp = await client.post("/events/study-published", json=published_payload, headers=headers)
+        pub_resp = await client.post(
+            "/events/study-published", json=published_payload, headers=headers
+        )
         assert pub_resp.status_code == 200
 
         # Wait for background task of process_translation to complete/settle
@@ -493,7 +495,10 @@ async def test_authored_cross_form_rule_lifecycle() -> None:
         # Check audit trail of the query for Part 11 compliant change reason propagation
         assert len(query["history"]) == 1
         assert query["history"][0]["user_id"] == "dm_user_100"
-        assert query["history"][0]["change_reason"] == "Publish and test authored cross-form check rules"
+        assert (
+            query["history"][0]["change_reason"]
+            == "Publish and test authored cross-form check rules"
+        )
 
         # 5. Submit corrected observations (VSDPB = 80, VSSBP = 110)
         # Since VSDPB = 80 is not > 110, the check passes, and query must auto-resolve
@@ -518,7 +523,8 @@ async def test_authored_cross_form_rule_lifecycle() -> None:
         # Verify query is now CLOSED and auto-resolved
         queries_resp2 = await client.get("/api/v1/execution/queries", headers=headers)
         closed_queries = [
-            q for q in queries_resp2.json()
+            q
+            for q in queries_resp2.json()
             if q["rule_id"] == "AUTH_RULE_VSDPB_VSSBP" and q["status"] == "CLOSED"
         ]
         assert len(closed_queries) == 1
@@ -556,7 +562,7 @@ async def test_authored_longitudinal_predecessor_handling() -> None:
                             "operands": [
                                 {
                                     "type": "field_ref",
-                                    "field_ref": {"field_id": "VSDPB"}
+                                    "field_ref": {"field_id": "VSDPB"},
                                 },
                                 {
                                     "type": "comparison",
@@ -564,21 +570,23 @@ async def test_authored_longitudinal_predecessor_handling() -> None:
                                     "operands": [
                                         {
                                             "type": "field_ref",
-                                            "field_ref": {"field_id": "VSDPB", "visit_relative": "previous"}
+                                            "field_ref": {
+                                                "field_id": "VSDPB",
+                                                "visit_relative": "previous",
+                                            },
                                         },
-                                        {
-                                            "type": "constant",
-                                            "value": 50.0
-                                        }
-                                    ]
-                                }
-                            ]
-                        }
+                                        {"type": "constant", "value": 50.0},
+                                    ],
+                                },
+                            ],
+                        },
                     }
-                ]
-            }
+                ],
+            },
         }
-        pub_resp = await client.post("/events/study-published", json=published_payload, headers=headers)
+        pub_resp = await client.post(
+            "/events/study-published", json=published_payload, headers=headers
+        )
         assert pub_resp.status_code == 200
 
         # Wait for background task of process_translation to complete/settle
