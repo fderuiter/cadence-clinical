@@ -27,9 +27,10 @@ When starting a new issue or feature, create a branch from the up-to-date `main`
    git checkout -b feature/cad-XXX-my-feature
    ```
 3. **Local Setup & Development:** Develop locally on your host environment or inside the containerized sandbox (see [Local Development Environment Guide](docs/LOCAL_DEV_ENVIRONMENT.md)).
-4. **Local Verification:** Run all formatting, linting, tests, link checks, and ADR validations before making a pull request:
+4. **Local Verification:** Run all formatting, linting, secret audits, link checks, and ADR validations before making a pull request:
    ```bash
-   pnpm check
+   pnpm check      # Fast pre-flight quality gates (formatting, linting, secrets, ADRs, links)
+   pnpm verify     # Full verification (pnpm check + unit & integration test suites)
    ```
 5. **Git Commit & Push:** Commit your staged changes with a descriptive commit message and push to GitHub:
    ```bash
@@ -117,11 +118,18 @@ Ensure you have the Python host environment properly configured, and run:
 ```bash
 pre-commit install
 ```
-This binds git hooks to run formatting check triggers (`prettier`, `ruff`), security scanners (`bandit`, `detect-secrets`), and internal documentation checks on `git commit`.
+This binds git hooks to run formatting check triggers (`prettier`, `ruff`), security scanners (`bandit`, `detect-secrets`), and internal documentation checks on `git commit` and `git push`.
 
 If you need to run pre-commit checks manually on all files without committing, run:
 ```bash
 uv run pre-commit run --all-files
+```
+*Note: All hooks are registered across `pre-commit`, `pre-push`, and `manual` stages so manual runs succeed cleanly without missing-stage errors.*
+
+### Synchronizing GxP Compliance Reports
+When adding new requirements or updating tests, regenerate the GxP Requirements Traceability Matrix locally before submitting a PR:
+```bash
+python3 scripts/generate_rtm.py --validate
 ```
 
 For a comprehensive system setup, port allocation map, and service directory, refer to the [Local Development Environment Guide](docs/LOCAL_DEV_ENVIRONMENT.md).
