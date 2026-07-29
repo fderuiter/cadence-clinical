@@ -1,100 +1,340 @@
 # Agent Guidelines: Cadence Clinical Platform
 
 ## Product Mission
-Cadence Clinical is a unified, standalone eClinical platform synthesizing upstream Clinical Metadata Management (MDR) with downstream Electronic Data Capture (EDC) into an automated Digital Data Flow (DDF) platform.
+
+Cadence Clinical is a unified, standalone eClinical platform synthesising
+upstream Clinical Metadata Management (MDR) with downstream Electronic Data
+Capture (EDC) into an automated Digital Data Flow (DDF) platform.
 
 ---
 
 ## Technical Stack & Standards
 
-- **Language & Runtime:** Python 3.11+
-- **Frameworks:** FastAPI, Pydantic v2 (strict typing required), HTTPX (async REST)
-- **Code Style:** Black formatting, Ruff linting
-- **Database Access:**
-  - `apps/designer`: Async Neo4j Python Driver
-  - `apps/execution`: Async SQLAlchemy / SQLModel for PostgreSQL
-- **Standards:** CDISC USDM (v3.0/v4.0), CDISC ODM XML/JSON, 21 CFR Part 11 compliant audit fields (`created_at`, `created_by`, `reason_for_change`, `version_index`).
+| Concern | Technology |
+|---|---|
+| Language & Runtime | Python 3.11+ |
+| Web Framework | FastAPI |
+| Data Validation | Pydantic v2 (strict typing required — no `Any` shortcuts) |
+| Async HTTP | HTTPX |
+| Code Style | **Ruff** (lint + format); replaces Black. Run `uv run ruff format .` |
+| Designer DB | Async Neo4j Python Driver (`apps/designer/`) |
+| Execution DB | Async SQLAlchemy + SQLModel for PostgreSQL (`apps/execution/`) |
+| Clinical Standards | CDISC USDM v3.0/v4.0, CDISC ODM XML/JSON |
+| GxP Audit Fields | `created_at`, `created_by`, `reason_for_change`, `version_index` (21 CFR Part 11) |
 
 ---
 
 ## Directory Target Rules for Generated Code
 
-- Data models & CDISC schemas ──► `apps/designer/` and `apps/execution/`
-- Study authoring / MDR logic ──► `apps/designer/`
-- Data capture / eCRF logic ──► `apps/execution/`
-- OIDC Auth & Routers ──► `apps/gateway/`
-- Stack orchestration ──► `docker/`
+| Code type | Target directory |
+|---|---|
+| Data models & CDISC schemas | `apps/designer/` **and** `apps/execution/` |
+| Study authoring / MDR logic | `apps/designer/` |
+| Data capture / eCRF logic | `apps/execution/` |
+| OIDC Auth & API routers | `apps/gateway/` |
+| Stack orchestration | `docker/` |
+| Automation & helper scripts | `scripts/` |
+| Unit & integration tests | `tests/` |
+| Architecture Decision Records | `docs/adr/` |
+| GxP compliance docs | `docs/SDLC/` (never edit manually — always via `scripts/generate_rtm.py`) |
+
+---
+
+## Critical Coding Patterns
+
+### Import Ordering (I001)
+
+Ruff enforces isort-style import ordering. **Violations are a blocking CI error.**
+Agents must always write imports in the following order, with each group
+alphabetically sorted:
+
+```python
+# 1. Standard library — alphabetical
+import copy
+import logging
+from datetime import datetime
+from typing import Any, List, Optional   # ← names inside also alphabetical
+
+# 2. Third-party — alphabetical
+from fastapi import Depends, HTTPException
+from sqlalchemy import select
+
+# 3. First-party — alphabetical by module path, names inside alphabetical
+from apps.execution.database.models import (
+    ClinicalObservation,    # ← A before F before S
+    FormSubmission,
+    StudyAuthoredRule,      # ← NEVER append new symbols at the end
+)
+```
+
+**When adding a new symbol to an existing import block, insert it in
+alphabetical position — never append it at the bottom of the list.**
+
+To auto-fix after the fact: `uv run ruff check . --fix`
+
+---
+
+### SQLAlchemy Boolean Filter Pattern (E712)
+
+> **GxP-critical.** Using Python `==` in a SQLAlchemy `.where()` clause emits
+> `col = 1` SQL, which is semantically different from `col IS TRUE` and may
+> silently return wrong result sets on nullable boolean columns.
+
+```python
+# ✘ WRONG — triggers ruff E712 and produces incorrect SQL
+stmt = select(StudyAuthoredRule).where(
+    StudyAuthoredRule.is_active == True,       # noqa won't save you here
+    StudyAuthoredRule.is_deleted == False,
+)
+
+# ✔ CORRECT — emits IS TRUE / IS FALSE SQL via SQLAlchemy ORM
+stmt = select(StudyAuthoredRule).where(
+    StudyAuthoredRule.is_active.is_(True),
+    StudyAuthoredRule.is_deleted.is_(False),
+)
+```
+
+This pattern applies to **every** SQLAlchemy `.where()`, `.filter()`, and
+`.having()` call that tests a boolean column.
+
+---
+
+### models.py Exclusion
+
+`apps/execution/database/models.py` is excluded from all ruff checks — both
+via the CLI `--exclude` flag **and** via `[tool.ruff.lint.per-file-ignores]`
+in `pyproject.toml`. **Do not add `# noqa` directives to that file; the
+exclusion is global.**
+
+---
+
+## GxP Compliance Sync Protocol
+
+The CI `compliance` job regenerates the RTM docs and diffs them against the
+checked-in files. If they diverge, CI fails with:
+
+```
+GxP compliance documentation is out of sync with the current system state!
+```
+
+### When agents must run the sync
+
+Agents **must** run the GxP sync after any of the following:
+- Adding, renaming, or removing test functions.
+- Adding or changing requirement IDs in test docstrings.
+- Any change that alters test pass/fail counts.
+
+### The correct single command
+
+```bash
+uv run python scripts/sync_gxp.py
+```
+
+This script automates the full three-step workflow:
+
+| Step | Action |
+|---|---|
+| 1 | `uv run pytest -n auto --junitxml=report.xml` |
+| 2 | `uv run python scripts/generate_rtm.py` |
+| 3 | `git add docs/SDLC/Requirements_Traceability_Matrix.md docs/SDLC/IQ_OQ_PQ_Execution_Report.md` |
+
+Then commit the staged files:
+
+```bash
+git commit -m "docs(rtm): sync GxP compliance docs with current test state"
+```
+
+### Script flags
+
+| Flag | Behaviour |
+|---|---|
+| *(none)* | Full sync — runs tests, generates RTM, stages docs |
+| `--dry-run` | Validate only — no test run, no file changes, exits 1 if stale |
+| `--commit` | Full sync + auto-commit (do not use in interactive agent sessions) |
+
+### Deprecated approach — do not use
+
+The old manual three-step sequence that AGENTS.md previously described is now
+encapsulated by `sync_gxp.py`. **Never instruct a human or another agent to
+run the three steps individually.**
+
+```bash
+# ✘ OLD — do not use
+uv run pytest --junitxml=report.xml
+python scripts/generate_rtm.py
+git add docs/SDLC/
+```
 
 ---
 
 ## Issue-to-Documentation Synchronization Protocol
 
-To keep requirements, specifications, decisions, and tests aligned across 100+ GitHub issues, agents must follow the **3-Tier Cascade Protocol**:
+To keep requirements, specifications, decisions, and tests aligned, agents must
+follow the **3-Tier Cascade Protocol** on every PR:
 
-1. **Requirement Level (`PRD` / `SRS`)**:
-   - Updates to scope or functionality must update `docs/SDLC/01_Product_Requirements_Document_PRD.md` or `docs/SRS.md` and reference a unique Requirement ID (`PRD-SYS-xxx` or `Trace-x`).
-2. **Architecture & Decision Level (`ADR`)**:
-   - Architectural or design changes require scaffolding a new ADR using the CLI helper:
-     ```bash
-     python3 scripts/create_adr.py --title "Short Title" --domain "core-platform" --req "PRD-SYS-xxx"
-     ```
-3. **Traceability Level (`RTM`)**:
-   - Unit and integration tests must reference requirement IDs (`PRD-SYS-xxx`).
-   - Run `node scripts/build-docs.js` to compile the portal and refresh the Requirements Traceability Matrix.
+### Tier 1 — Requirements (`PRD` / `SRS`)
+
+Updates to scope or user-facing functionality must update
+`docs/SDLC/01_Product_Requirements_Document_PRD.md` or `docs/SRS.md` and
+reference a unique Requirement ID (`PRD-SYS-xxx` or `Trace-x`).
+
+### Tier 2 — Architecture & Decision (`ADR`)
+
+Architectural or design changes require scaffolding a new ADR:
+
+```bash
+python3 scripts/create_adr.py --title "Short Title" --domain "core-platform" --req "PRD-SYS-xxx"
+```
+
+This creates `docs/adr/YYYY-MM-DD-short-title.md` and auto-indexes it in
+`docs/adr/index.md`.
+
+**An ADR is required when:**
+- Adding a new third-party dependency or database engine.
+- Modifying inter-service data contracts or introducing new API gateways.
+- Changing data storage models (Neo4j graph nodes or PostgreSQL schema migrations).
+
+### Tier 3 — Traceability (`RTM`)
+
+Tests must reference requirement IDs in their docstrings:
+
+```python
+async def test_enrollment_state_transition():
+    """Validate subject state machine advances on enrollment trigger.
+
+    Requirements: PRD-SYS-042
+    """
+    ...
+```
+
+After updating tests, run `uv run python scripts/sync_gxp.py` to regenerate
+and commit the RTM (see [GxP Compliance Sync Protocol](#gxp-compliance-sync-protocol) above).
 
 ---
 
-## Pull Request & Contribution Verification Standards
+## CI Failure Runbook for Agents
 
-To maintain code health, architectural transparency, and GxP audit readiness across the **Cadence Clinical** monorepo, every Pull Request (PR) must satisfy three mandatory verification gates before being merged into `main`.
+When CI fails, use this table to identify the root cause and exact fix:
 
-### Gate 1: Comprehensive Documentation & Docstrings
-Every new module, class, function, and public API endpoint must be thoroughly documented.
-* **Python Codebases (`apps/`, `packages/`):** All functions and classes must include clear docstrings following Google or NumPy style guidelines. Complex business logic (such as USDM-to-ODM transformers or state transition machines) must include inline comments explaining *why* a specific transformation pattern is applied.
-* **Workspace Documentation (`docs/`):** If a PR introduces a new service boundary or changes an existing data flow, the corresponding Markdown documents (`docs/SRS.md`, `docs/SDLC/04_Data_Standards_Interoperability_Blueprint.md`, etc.) must be updated to reflect the new state.
-
-### Gate 2: Architecture Decision Records (ADRs)
-Cadence Clinical enforces a strict **"Code + Context"** design policy. Any PR that introduces significant architectural changes must include an Architecture Decision Record.
-* **When is an ADR required?**
-  * Adding a new third-party dependency or database engine.
-  * Modifying inter-service data contracts or introducing new API gateways.
-  * Changing data storage models (e.g., Neo4j graph nodes or PostgreSQL schema migrations).
-* **Where do ADRs live & how to scaffold?**
-  * Use the ADR helper tool: `python3 scripts/create_adr.py --title "..." --domain "..." --req "PRD-..."`
-  * This creates `docs/adr/` files following the pattern `YYYY-MM-DD-short-title.md` and automatically indexes it under the correct domain in `docs/adr/index.md`.
-
-### Gate 3: Mandatory Test Coverage & Verification Passes
-No code is merged untested. Every feature, bug fix, or data transformation must be accompanied by automated tests.
-* **Test Location:** All unit and integration tests must reside inside the `tests/` directory (e.g., `tests/test_transformers.py`).
-* **Framework Requirements:**
-  * Tests must run successfully using `pytest` and `pytest-asyncio`.
-  * Integration tests must mock database interactions or spin up test containers where appropriate.
-* **Automated Validation:** CI/CD execution environments will automatically execute `uv run pytest` and linting checks (`uv run ruff check`) prior to opening a Pull Request. Any test failures or un-typed functions will block the merge queue.
+| CI Error | Root Cause | Agent Action |
+|---|---|---|
+| `I001 Import block is un-sorted or un-formatted` | New symbol inserted at wrong position in import block | `uv run ruff check . --fix` then verify the block is alphabetical |
+| `E712 Avoid equality comparisons to True/False` | Used `col == True` in SQLAlchemy `.where()` | Replace with `col.is_(True)` / `col.is_(False)` — see [pattern above](#sqlalchemy-boolean-filter-pattern-e712) |
+| `GxP compliance documentation is out of sync` | RTM docs not regenerated after test changes | `uv run python scripts/sync_gxp.py` then commit `docs/SDLC/` |
+| `Would reformat: <file>` (ruff format check) | Code not formatted | `uv run ruff format .` |
+| `Coverage < 80%` | New code paths not covered | Add tests for the uncovered lines in the coverage report |
+| `ADR validation failed` | Architectural change without a matching ADR | `python3 scripts/create_adr.py ...` — fill in rationale |
+| `Bandit: high severity issue` | Security-sensitive pattern in code | Fix the flagged pattern; if intentional add `# nosec B<code>: <justification>` |
+| `Secret detected` | Credential or token in source | Remove the secret; update `.secrets.baseline` with `detect-secrets scan` |
 
 ---
 
-## Developer Experience & Agent Pain Point Prevention Standards
+## Pull Request Verification Standards
 
-To prevent recurring development bottlenecks and maintain CI/CD stability:
+Every PR must satisfy **three mandatory gates** before merging into `main`.
 
-1. **Script Signature Stability & Backward Compatibility**:
-   - When modifying utility functions or automation scripts (e.g. `scripts/post_pr_comment.py`), maintain default parameter values (`repo="owner/repo"`, `pr_number="123"`) so existing test suites (`tests/test_pr_comment.py`) do not break.
-2. **Binary File Hygiene (`.docx` Templates)**:
-   - Do NOT track binary `.docx` files in git history. They must remain gitignored. Use `python3 scripts/regenerate_templates.py` to compile protocol templates dynamically on demand.
-3. **Requirements Traceability Matrix (RTM) Synchronization**:
-   - Whenever test cases are added or updated, execute `pnpm rtm` to regenerate `docs/SDLC/Requirements_Traceability_Matrix.md` and `docs/SDLC/IQ_OQ_PQ_Execution_Report.md`.
-4. **CI Permission Drift Handling**:
-   - Scripts interacting with GitHub APIs (such as `scripts/sync_ruleset.py`) must log non-blocking warnings on HTTP 403 permission errors unless strict mode (`FAIL_ON_RULESET_SYNC_ERROR="true"`) is explicitly set.
+### Gate 1 — Comprehensive Documentation & Docstrings
+
+- All public functions, classes, and API endpoints: Google-style docstrings.
+- Docstrings must state *what* the callable does, *args*, *returns*, and
+  *raises*.
+- Complex business logic (USDM-to-ODM transformers, state machines): inline
+  comments explaining *why* a transformation is structured as it is.
+- If the PR introduces a new service boundary or changes an existing data flow,
+  update the corresponding `docs/SDLC/` Markdown documents.
+
+### Gate 2 — Architecture Decision Records
+
+See [Tier 2](#tier-2--architecture--decision-adr) above.
+
+### Gate 3 — Mandatory Test Coverage
+
+- Tests live in `tests/` (e.g., `tests/test_transformers.py`).
+- Must run under `pytest` + `pytest-asyncio`. Minimum **80%** total coverage.
+- Integration tests must mock database interactions or use test containers.
+- CI runs: `uv run pytest -n auto --cov=apps --cov=packages --cov-fail-under=80`
+
+---
+
+## Developer Experience & Agent Pain Point Prevention
+
+### 1. Script Signature Stability
+
+When modifying utility scripts (e.g., `scripts/post_pr_comment.py`), maintain
+default parameter values so existing test suites (`tests/test_pr_comment.py`)
+do not break:
+
+```python
+def post_comment(repo: str = "owner/repo", pr_number: str = "123") -> None:
+```
+
+### 2. Binary File Hygiene
+
+Never commit `.docx` files — they are gitignored. Rebuild protocol templates
+dynamically:
+
+```bash
+python3 scripts/regenerate_templates.py
+```
+
+### 3. RTM Synchronization (updated)
+
+The legacy `pnpm rtm` command only *validates* the RTM (read-only). To
+**regenerate** and **commit** updated docs, always use:
+
+```bash
+uv run python scripts/sync_gxp.py   # or: pnpm sync-gxp / make sync-gxp
+```
+
+### 4. CI Permission Drift
+
+Scripts interacting with GitHub APIs (`scripts/sync_ruleset.py`) must output
+non-blocking `WARNING` log lines on HTTP 403 errors unless
+`FAIL_ON_RULESET_SYNC_ERROR="true"` is explicitly set in the environment.
+
+### 5. Import Block Maintenance
+
+When adding a new import symbol, always insert it in **alphabetical position**
+within its group. Running `uv run ruff check . --fix` after every write session
+prevents I001 errors from accumulating.
+
+### 6. No Bare Boolean Comparisons in ORM Queries
+
+See [SQLAlchemy Boolean Filter Pattern](#sqlalchemy-boolean-filter-pattern-e712).
+This rule is enforced by ruff E712 and must never be suppressed with `# noqa`
+in ORM query code — use `.is_(True)` / `.is_(False)` instead.
+
+---
+
+## Available Developer Tools
+
+Agents may invoke these tools directly when needed:
+
+| Command | Purpose |
+|---|---|
+| `uv run ruff check . --fix` | Auto-fix all fixable lint errors (I001, F-strings, etc.) |
+| `uv run ruff format .` | Auto-format all Python files |
+| `uv run python scripts/sync_gxp.py` | Full GxP compliance sync (tests → RTM → stage) |
+| `uv run python scripts/generate_rtm.py --validate` | Validate RTM without modifying files |
+| `python3 scripts/create_adr.py --title "..." --domain "..." --req "PRD-SYS-xxx"` | Scaffold ADR |
+| `python3 scripts/validate_adrs.py --fix-index` | Rebuild the ADR index |
+| `python3 scripts/validate_markdown.py` | Check all Markdown link integrity |
+| `uv run pytest -n auto --cov=apps --cov=packages` | Run full test suite with coverage |
+| `uv run bandit -c pyproject.toml -ll -ii -r apps packages` | Static security analysis |
 
 ---
 
 ## Summary Checklist for Pull Requests
 
-Before submitting a PR, verify it meets this checklist:
+Before submitting a PR, verify all items:
 
-* [ ] Code is fully typed with strict Python type hints.
-* [ ] Comprehensive docstrings are included on all public functions and classes.
-* [ ] Unit and/or integration tests are added under `tests/`.
-* [ ] An Architectural Decision Record (ADR) is added to `docs/adr/` if introducing major new design patterns.
-* [ ] All local checks (`pnpm verify` or `uv run pytest`, `uv run ruff check`) pass successfully.
-* [ ] GxP compliance reports are synchronized via `pnpm rtm`.
+* [ ] All Python code is fully typed with strict type hints — no bare `Any`.
+* [ ] All public functions and classes have Google-style docstrings.
+* [ ] Imports are alphabetically ordered within each group (run `uv run ruff check . --fix`).
+* [ ] SQLAlchemy boolean filters use `.is_(True)` / `.is_(False)` — not `== True` / `== False`.
+* [ ] Unit and/or integration tests added under `tests/` with requirement IDs in docstrings.
+* [ ] An ADR added to `docs/adr/` if the PR introduces a significant architectural change.
+* [ ] All local checks pass: `uv run ruff check .` and `uv run ruff format --check .`
+* [ ] GxP compliance docs are up to date: `uv run python scripts/sync_gxp.py` run and committed.
+* [ ] `docs/SDLC/` Markdown docs updated if a service boundary or data flow changed.
+* [ ] No binary `.docx` files, `report.xml`, or secrets are staged.
