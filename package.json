@@ -15,6 +15,7 @@
     "db-reset": "uv run python scripts/reset_db.py",
     "check": "concurrently --kill-others-on-fail false -n \"format,lint,secrets,adr,markdown,security,imports\" -c \"magenta,blue,yellow,cyan,gray,red,white\" \"pnpm format\" \"pnpm lint\" \"uv run pre-commit run detect-secrets --all-files\" \"python3 scripts/validate_adrs.py\" \"python3 scripts/validate_markdown.py\" \"uv run bandit -c pyproject.toml -ll -ii -r apps packages\" \"python3 scripts/validate_imports.py\"",
     "verify": "pnpm check && pnpm test",
+    "rtm": "python3 scripts/generate_rtm.py --validate",
     "setup:dev": "uv sync --python 3.11 --all-extras && uv run playwright install chromium",
     "ports:check": "python3 scripts/check_ports.py",
     "openapi:export": "uv run python scripts/validate_schemas.py --export-dir docs/openapi",

@@ -73,6 +73,21 @@ No code is merged untested. Every feature, bug fix, or data transformation must 
 
 ---
 
+## Developer Experience & Agent Pain Point Prevention Standards
+
+To prevent recurring development bottlenecks and maintain CI/CD stability:
+
+1. **Script Signature Stability & Backward Compatibility**:
+   - When modifying utility functions or automation scripts (e.g. `scripts/post_pr_comment.py`), maintain default parameter values (`repo="owner/repo"`, `pr_number="123"`) so existing test suites (`tests/test_pr_comment.py`) do not break.
+2. **Binary File Hygiene (`.docx` Templates)**:
+   - Do NOT track binary `.docx` files in git history. They must remain gitignored. Use `python3 scripts/regenerate_templates.py` to compile protocol templates dynamically on demand.
+3. **Requirements Traceability Matrix (RTM) Synchronization**:
+   - Whenever test cases are added or updated, execute `pnpm rtm` to regenerate `docs/SDLC/Requirements_Traceability_Matrix.md` and `docs/SDLC/IQ_OQ_PQ_Execution_Report.md`.
+4. **CI Permission Drift Handling**:
+   - Scripts interacting with GitHub APIs (such as `scripts/sync_ruleset.py`) must log non-blocking warnings on HTTP 403 permission errors unless strict mode (`FAIL_ON_RULESET_SYNC_ERROR="true"`) is explicitly set.
+
+---
+
 ## Summary Checklist for Pull Requests
 
 Before submitting a PR, verify it meets this checklist:
@@ -81,4 +96,5 @@ Before submitting a PR, verify it meets this checklist:
 * [ ] Comprehensive docstrings are included on all public functions and classes.
 * [ ] Unit and/or integration tests are added under `tests/`.
 * [ ] An Architectural Decision Record (ADR) is added to `docs/adr/` if introducing major new design patterns.
-* [ ] All local checks (`uv run pytest`, `uv run ruff check`) pass successfully.
+* [ ] All local checks (`pnpm verify` or `uv run pytest`, `uv run ruff check`) pass successfully.
+* [ ] GxP compliance reports are synchronized via `pnpm rtm`.

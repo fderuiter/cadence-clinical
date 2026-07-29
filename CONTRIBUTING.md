@@ -129,7 +129,14 @@ uv run pre-commit run --all-files
 ### Synchronizing GxP Compliance Reports
 When adding new requirements or updating tests, regenerate the GxP Requirements Traceability Matrix locally before submitting a PR:
 ```bash
-python3 scripts/generate_rtm.py --validate
+pnpm rtm
+# Or directly: python3 scripts/generate_rtm.py --validate
 ```
+
+### Developer & AI Agent Pain Point Prevention
+To maintain developer velocity and prevent recurring workspace errors:
+- **Binary File Hygiene (`.docx`)**: Never commit binary `.docx` files to git. Use `python3 scripts/regenerate_templates.py` to rebuild protocol templates dynamically.
+- **Script Backward Compatibility**: Maintain parameter defaults when modifying script signatures (e.g. `scripts/post_pr_comment.py`) so existing unit tests do not break.
+- **CI Permission Drift**: GitHub API scripts output non-blocking warnings on HTTP 403 unless `FAIL_ON_RULESET_SYNC_ERROR="true"` is explicitly set.
 
 For a comprehensive system setup, port allocation map, and service directory, refer to the [Local Development Environment Guide](docs/LOCAL_DEV_ENVIRONMENT.md).
