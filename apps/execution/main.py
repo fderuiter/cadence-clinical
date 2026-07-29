@@ -44,7 +44,7 @@ from apps.execution.cdisc_validator import validate_cdisc_xml_structure
 from apps.execution.coding import match_verbatim_term
 from apps.execution.coding.importer import process_dictionary_import
 from apps.execution.coding.parsers import MedDRAParser, WHODrugParser
-from apps.execution.database.context import current_change_reason, current_user_id
+from apps.execution.database.context import current_change_reason, current_user_id, audit_context
 from apps.execution.database.core import db_manager
 from apps.execution.database.middleware import ContextResetMiddleware
 from apps.execution.database.models import (
@@ -65,6 +65,7 @@ from apps.execution.database.models import (
     SubjectRandomization,
     TranslationJob,
     TSDVConfig,
+    StudyAuthoredRule,
 )
 from apps.execution.database.models import (
     DictionaryType as DBDictionaryType,
@@ -235,6 +236,46 @@ async def study_published(
     """
     user_id = current_user_id.get()
     change_reason = current_change_reason.get()
+
+    # Extract study-level cross_form_check rules if present
+    cross_form_rules = event.payload.get("cross_form_check") or event.payload.get("cross_form_checks") or []
+    if cross_form_rules:
+        u_id = user_id or "system"
+        reason = change_reason or "Ingest published cross-form rules"
+        with audit_context(u_id, reason):
+            async with db_manager.get_session_maker()() as session:
+                async with session.begin():
+                    # Deactivate/supersede the prior active rule set for the study
+                    stmt = (
+                        select(StudyAuthoredRule)
+                        .where(
+                            StudyAuthoredRule.study_id == event.study_id,
+                            StudyAuthoredRule.is_active == True,
+                            StudyAuthoredRule.is_deleted == False,
+                        )
+                    )
+                    res = await session.execute(stmt)
+                    prior_rules = res.scalars().all()
+                    for r in prior_rules:
+                        r.is_active = False
+                        r.version += 1
+                        session.add(r)
+
+                    # Insert the new rules as active
+                    pub_ver = str(event.payload.get("version") or "1.0")
+                    for r_data in cross_form_rules:
+                        new_rule = StudyAuthoredRule(
+                            study_id=event.study_id,
+                            rule_id=r_data["id"],
+                            rule_type=r_data.get("type") or "cross_form_check",
+                            condition=r_data["condition"],
+                            query_message=r_data["query_message"],
+                            message=r_data["query_message"],
+                            publication_version=pub_ver,
+                            is_active=True,
+                        )
+                        session.add(new_rule)
+
     job_id = str(uuid.uuid4())
     background_tasks.add_task(
         process_translation,

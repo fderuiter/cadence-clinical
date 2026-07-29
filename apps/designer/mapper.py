@@ -114,6 +114,7 @@ def map_study_to_usdm(study_data: Dict[str, Any]) -> Dict[str, Any]:
 
     # Map rules to top-level study rules list
     mapped_rules = []
+    cross_form_rules = []
     for rule in active_rules:
         mapped_rules.append(
             {
@@ -128,6 +129,16 @@ def map_study_to_usdm(study_data: Dict[str, Any]) -> Dict[str, Any]:
                 "version_index": rule.get("version_index", 1),
             }
         )
+        if rule.get("type") == "cross_form_check":
+            cross_form_rules.append(
+                {
+                    "id": rule["id"],
+                    "type": rule["type"],
+                    "condition": rule["condition"],
+                    "query_message": rule.get("query_message"),
+                    "version_index": rule.get("version_index", 1),
+                }
+            )
 
     eligibility_criteria = []
     for crit in study_data.get("eligibility_criteria", []):
@@ -493,6 +504,8 @@ def map_study_to_usdm(study_data: Dict[str, Any]) -> Dict[str, Any]:
         "description": study_data.get("desc"),
         "arms": arms,
         "rules": mapped_rules,
+        "cross_form_check": cross_form_rules,
+        "cross_form_checks": cross_form_rules,
         "eligibility_criteria": eligibility_criteria,
         "blocks": legacy_flat_blocks,
         # Standard Canonical USDM v3 Structure
