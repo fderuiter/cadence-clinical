@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1188
-- **Passed:** 1188 🟢
+- **Total Automated Test Cases Run:** 1193
+- **Passed:** 1193 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -432,9 +432,12 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_orchestrate_internal_to_usdm_to_internal_lossless` | `tests.test_designer_roundtrip` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_orchestrate_stochastic_operator_lossy` | `tests.test_designer_roundtrip` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_orchestrate_usdm_to_internal_to_usdm_lossless` | `tests.test_designer_roundtrip` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_compiler_agreement_all_functions` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_detect_circular_dependencies` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_detect_unknown_fields` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_invalid_comparison_arity` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_invalid_indexed_repeat_arity_rejection` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_invalid_is_empty_arity_rejection` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_invalid_logical_not_arity` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_invalid_skip_logic_schema_missing_fields` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_map_study_to_usdm_with_rules` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -442,8 +445,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_neo4j_delete_rule` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_neo4j_get_rules` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_neo4j_update_rule` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_python_evaluator_indexed_repeat_and_arity_mismatch` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_rules_auth_gateways` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_rules_crud_endpoints` | `tests.test_designer_rules` | Trace-11 | 🟢 PASSED | < 1s |
+| `test_valid_indexed_repeat_schema_and_compile` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_valid_skip_logic_schema` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_xpath_compile_logical_and_functions` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_xpath_compile_simple` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |

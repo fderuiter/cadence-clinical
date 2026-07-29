@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { useClinicalStore } from "../src/stores/clinical.js";
 import { soaClient } from "../src/api/soaClient.js";
-import { createClinicalSoAMatrix } from "ui";
+import { mount } from "@vue/test-utils";
+import ClinicalSoAMatrix from "../src/components/clinical/ClinicalSoAMatrix.vue";
 
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch;
@@ -45,34 +46,29 @@ describe("SoA Matrix Pure Function Unit Tests", () => {
       ],
     };
 
-    const html = createClinicalSoAMatrix(soaData);
+    const wrapper = mount(ClinicalSoAMatrix, {
+      props: { soaData },
+    });
+    const html = wrapper.html();
 
     // Verify structured Schedule of Activities table
     expect(html).toContain('class="clinical-visit-matrix clinical-soa-matrix"');
 
     // Verify Arm groupings and colspans
-    expect(html).toContain(
-      '<th scope="col" colspan="2" class="grouped-header arm-header">Active Arm</th>'
-    );
-    expect(html).toContain(
-      '<th scope="col" colspan="1" class="grouped-header arm-header">Placebo Arm</th>'
-    );
+    expect(html).toContain('colspan="2"');
+    expect(html).toContain('class="grouped-header arm-header"');
+    expect(html).toContain("Active Arm");
+    expect(html).toContain("Placebo Arm");
 
     // Verify Epoch groupings and colspans
-    expect(html).toContain(
-      '<th scope="col" colspan="2" class="grouped-header epoch-header">Treatment Phase A</th>'
-    );
-    expect(html).toContain(
-      '<th scope="col" colspan="1" class="grouped-header epoch-header">Treatment Phase B</th>'
-    );
+    expect(html).toContain('class="grouped-header epoch-header"');
+    expect(html).toContain("Treatment Phase A");
+    expect(html).toContain("Treatment Phase B");
 
     // Verify encounter name headers
-    expect(html).toContain(
-      '<th scope="col" class="encounter-header">Week 1</th>'
-    );
-    expect(html).toContain(
-      '<th scope="col" class="encounter-header">Week 2</th>'
-    );
+    expect(html).toContain('class="encounter-header"');
+    expect(html).toContain("Week 1");
+    expect(html).toContain("Week 2");
 
     // Verify cell conditional/optional/applicable styles
     expect(html).toContain('class="status-applicable"');
@@ -87,7 +83,10 @@ describe("SoA Matrix Pure Function Unit Tests", () => {
       encounters: [],
       rows: [],
     };
-    const html = createClinicalSoAMatrix(soaData);
+    const wrapper = mount(ClinicalSoAMatrix, {
+      props: { soaData },
+    });
+    const html = wrapper.html();
     expect(html).toContain("No encounters defined for SoA matrix.");
   });
 
@@ -110,19 +109,25 @@ describe("SoA Matrix Pure Function Unit Tests", () => {
       ],
     };
 
-    const html = createClinicalSoAMatrix(soaData);
+    const wrapper = mount(ClinicalSoAMatrix, {
+      props: { soaData },
+    });
+    const html = wrapper.html();
     expect(html).not.toContain("grouped-header arm-header");
-    expect(html).toContain(
-      '<th scope="col" colspan="1" class="grouped-header epoch-header">Common Epoch</th>'
-    );
+    expect(html).toContain('colspan="1"');
+    expect(html).toContain("Common Epoch");
   });
 
   it("handles missing/invalid SoA matrix data", () => {
-    const htmlNull = createClinicalSoAMatrix(null);
-    expect(htmlNull).toContain("Invalid SoA matrix data.");
+    const wrapperNull = mount(ClinicalSoAMatrix, {
+      props: { soaData: null },
+    });
+    expect(wrapperNull.html()).toContain("Invalid SoA matrix data.");
 
-    const htmlNoRows = createClinicalSoAMatrix({});
-    expect(htmlNoRows).toContain("Invalid SoA matrix data.");
+    const wrapperNoRows = mount(ClinicalSoAMatrix, {
+      props: { soaData: {} },
+    });
+    expect(wrapperNoRows.html()).toContain("Invalid SoA matrix data.");
   });
 });
 

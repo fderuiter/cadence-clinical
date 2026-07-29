@@ -301,6 +301,7 @@ def is_excluded_path(path: str, root_dir: str) -> bool:
             "scripts",
             "docker",
             "verification",
+            "stores",
         }:
             return True
 

@@ -78,7 +78,7 @@ describe("FDA 21 CFR Part 11 Sync Ledger Store", () => {
     expect(store.ledgerBlocks[0].action).toBe("QUERY_RESPOND");
   });
 
-  it("background sync worker successfully transmits unsynced blocks to execution sync gateway", async () => {
+  it("background sync worker successfully transmits unsynced blocks using apiClient and executionService without browser signatures", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ status: "success", processed_blocks: 1 }),
@@ -98,17 +98,29 @@ describe("FDA 21 CFR Part 11 Sync Ledger Store", () => {
 
     expect(store.ledgerBlocks[0].synced).toBe(false);
 
-    // Run sync
+    // Run sync without a step-up token
     await store.syncUnsyncedBlocks();
 
-    // Verify fetch was called with Gateway v2 signature and re-authentication tokens
+    // Verify fetch was called
     expect(mockFetch).toHaveBeenCalledTimes(1);
     const [url, options] = mockFetch.mock.calls[0];
     expect(url).toContain("/api/v1/execution/queries/sync");
     expect(options.method).toBe("POST");
-    expect(options.headers["X-Signature-Version"]).toBe("2");
-    expect(options.headers["X-Sig-Token"]).toBeDefined();
-    expect(options.headers["X-Gateway-Signature"]).toBeDefined();
+
+    // X-Change-Reason should be propagated
+    expect(options.headers["X-Change-Reason"]).toBe(
+      "Background sync of clinical query ledger blocks"
+    );
+
+    // X-Sig-Token should NOT be present (since we didn't pass one)
+    expect(options.headers["X-Sig-Token"]).toBeUndefined();
+
+    // Browser-side trusted gateway headers should NOT be present
+    expect(options.headers["X-Signature-Version"]).toBeUndefined();
+    expect(options.headers["X-Gateway-Signature"]).toBeUndefined();
+    expect(options.headers["X-Gateway-Timestamp"]).toBeUndefined();
+    expect(options.headers["X-User-Id"]).toBeUndefined();
+    expect(options.headers["X-User-Roles"]).toBeUndefined();
 
     // Verify local block synced flag is set to true
     expect(store.ledgerBlocks[0].synced).toBe(true);
@@ -118,7 +130,36 @@ describe("FDA 21 CFR Part 11 Sync Ledger Store", () => {
     expect(savedBlocks[0].synced).toBe(true);
   });
 
-  it("handles fetch network failure gracefully without dropping unsynced transactions", async () => {
+  it("propagates step-up token as X-Sig-Token when passed to syncUnsyncedBlocks", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ status: "success", processed_blocks: 1 }),
+    });
+
+    const store = useClinicalStore();
+
+    // Add block
+    await store.addLedgerBlock(
+      "QUERY_CREATE",
+      {
+        fieldId: "vssbp",
+        query: { status: "OPEN", message: "High BP" },
+      },
+      "Create query"
+    );
+
+    // Run sync with step-up token
+    await store.syncUnsyncedBlocks("mock-gateway-issued-token");
+
+    // Verify fetch was called
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const [, options] = mockFetch.mock.calls[0];
+
+    // X-Sig-Token should be passed
+    expect(options.headers["X-Sig-Token"]).toBe("mock-gateway-issued-token");
+  });
+
+  it("handles fetch network failure gracefully without dropping unsynced transactions and surfaces the error", async () => {
     mockFetch.mockRejectedValueOnce(new Error("Network disconnect"));
 
     const store = useClinicalStore();
@@ -134,8 +175,8 @@ describe("FDA 21 CFR Part 11 Sync Ledger Store", () => {
 
     expect(store.ledgerBlocks[0].synced).toBe(false);
 
-    // Run sync (which catches and logs error)
-    await store.syncUnsyncedBlocks();
+    // Run sync (which catches, logs, and rethrows the error)
+    await expect(store.syncUnsyncedBlocks()).rejects.toThrow("Network disconnect");
 
     // Transaction is not dropped and synced flag remains false
     expect(store.ledgerBlocks[0].synced).toBe(false);

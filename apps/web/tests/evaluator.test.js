@@ -268,4 +268,77 @@ describe("Client-side AST Evaluator & Cascading Nullification", () => {
       expect(res.message).toBe("Height must be strictly greater than zero.");
     });
   });
+
+  describe("Function Arity and Indexed Repeat Parity", () => {
+    it("handles valid indexed-repeat with exactly 3 operands", () => {
+      const node = {
+        type: "function",
+        operator: "indexed-repeat",
+        operands: [
+          { type: "field_ref", field_ref: { field_id: "vssbp" } },
+          { type: "field_ref", field_ref: { field_id: "repeating_vs" } },
+          { type: "constant", value: 2 },
+        ],
+      };
+
+      const context = {
+        "repeating_vs[1]/vssbp": 110,
+        "repeating_vs[2]/vssbp": 130,
+      };
+
+      expect(evaluateAST(node, context)).toBe(130);
+    });
+
+    it("returns null for indexed-repeat with invalid operand arity", () => {
+      // 2 operands
+      const node2 = {
+        type: "function",
+        operator: "indexed-repeat",
+        operands: [
+          { type: "field_ref", field_ref: { field_id: "vssbp" } },
+          { type: "field_ref", field_ref: { field_id: "repeating_vs" } },
+        ],
+      };
+
+      // 4 operands
+      const node4 = {
+        type: "function",
+        operator: "indexed-repeat",
+        operands: [
+          { type: "field_ref", field_ref: { field_id: "vssbp" } },
+          { type: "field_ref", field_ref: { field_id: "repeating_vs" } },
+          { type: "constant", value: 2 },
+          { type: "constant", value: 4 },
+        ],
+      };
+
+      const context = {
+        "repeating_vs[1]/vssbp": 110,
+        "repeating_vs[2]/vssbp": 130,
+      };
+
+      expect(evaluateAST(node2, context)).toBeNull();
+      expect(evaluateAST(node4, context)).toBeNull();
+    });
+
+    it("returns null for empty/is_empty/is_not_empty with invalid arity", () => {
+      const isEmptyInvalid = {
+        type: "function",
+        operator: "is_empty",
+        operands: [
+          { type: "field_ref", field_ref: { field_id: "comment" } },
+          { type: "field_ref", field_ref: { field_id: "vssbp" } },
+        ],
+      };
+
+      const isNotEmptyInvalid = {
+        type: "function",
+        operator: "is_not_empty",
+        operands: [],
+      };
+
+      expect(evaluateAST(isEmptyInvalid, { comment: "", vssbp: 120 })).toBeNull();
+      expect(evaluateAST(isNotEmptyInvalid, {})).toBeNull();
+    });
+  });
 });
