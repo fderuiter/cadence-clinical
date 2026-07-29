@@ -5,7 +5,6 @@ import { createRouter, createWebHistory } from "vue-router";
 import AuditView from "../src/views/AuditView.vue";
 import { auditorService } from "../src/api/auditor";
 import { etmfService } from "../src/api/etmf";
-import { useAuthStore } from "../src/stores/auth";
 
 // Setup router for testing
 const router = createRouter({
