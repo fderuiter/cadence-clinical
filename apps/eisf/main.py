@@ -13,7 +13,10 @@ from apps.eisf.database import db_manager
 from apps.eisf.models import Base, ISFAuditLog, ISFDocument
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
-from packages.security.rbac import get_normalized_roles, verify_not_auditor
+from packages.security.rbac import (
+    get_normalized_roles,
+    require_permission,
+)
 
 DATABASE_URL = os.getenv("EISF_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
@@ -383,7 +386,7 @@ async def list_documents(
 async def create_document(
     request: Request,
     payload: DocumentCreate,
-    _not_auditor=Depends(verify_not_auditor),
+    _not_auditor=Depends(require_permission("eisf_document:create")),
     session: AsyncSession = Depends(get_db_session),
 ):
     user_id = getattr(request.state, "user_id", "system")
@@ -472,7 +475,7 @@ async def create_document(
 async def ingest_document(
     request: Request,
     payload: EISFIngestionRequest,
-    _not_auditor=Depends(verify_not_auditor),
+    _not_auditor=Depends(require_permission("eisf_document:create")),
     session: AsyncSession = Depends(get_db_session),
 ):
     user_id = getattr(request.state, "user_id", "system")
@@ -667,7 +670,7 @@ async def update_document(
     request: Request,
     document_id: str,
     payload: DocumentUpdate,
-    _not_auditor=Depends(verify_not_auditor),
+    _not_auditor=Depends(require_permission("eisf_document:update")),
     session: AsyncSession = Depends(get_db_session),
 ):
     user_id = getattr(request.state, "user_id", "system")
@@ -728,7 +731,7 @@ async def delete_document(
     reason_for_change: str = Query(
         ..., min_length=10, max_length=1000, description="Part 11 reason for change"
     ),
-    _not_auditor=Depends(verify_not_auditor),
+    _not_auditor=Depends(require_permission("eisf_document:delete")),
     session: AsyncSession = Depends(get_db_session),
 ):
     user_id = getattr(request.state, "user_id", "system")
@@ -973,7 +976,7 @@ async def propagate_to_etmf(
 async def sync_documents(
     request: Request,
     payload: EISFSyncRequest,
-    _not_auditor=Depends(verify_not_auditor),
+    _not_auditor=Depends(require_permission("eisf_document:sync")),
     session: AsyncSession = Depends(get_db_session),
 ):
     import logging

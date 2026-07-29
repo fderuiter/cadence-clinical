@@ -23,6 +23,7 @@ from apps.org.models import (
     Organization,
     OrgAuditLog,
     Personnel,
+    PersonnelAssignment,
     Site,
 )
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
@@ -82,6 +83,63 @@ class OrganizationResponse(BaseModel):
     created_by: str
     reason_for_change: str
     version_index: int
+
+
+class PersonnelAssignmentCreate(BaseModel):
+    site_id: str = Field(..., description="The clinical site ID")
+    study_id: str = Field(..., description="The clinical study ID")
+    is_active: bool = Field(True, description="Whether the assignment is active")
+    reason_for_change: str = Field(
+        ..., description="Part 11 change justification reason"
+    )
+
+    @field_validator("reason_for_change")
+    @classmethod
+    def validate_reason(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError(
+                "Reason for change cannot be empty or consist only of whitespace."
+            )
+        return v
+
+
+class PersonnelAssignmentUpdate(BaseModel):
+    site_id: Optional[str] = Field(None, description="Updated clinical site ID")
+    study_id: Optional[str] = Field(None, description="Updated clinical study ID")
+    is_active: Optional[bool] = Field(None, description="Updated active status")
+    reason_for_change: str = Field(
+        ..., description="Part 11 change justification reason"
+    )
+
+    @field_validator("reason_for_change")
+    @classmethod
+    def validate_reason(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError(
+                "Reason for change cannot be empty or consist only of whitespace."
+            )
+        return v
+
+
+class PersonnelAssignmentResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    personnel_id: str
+    site_id: str
+    study_id: str
+    is_active: bool
+    created_at: datetime
+    created_by: str
+    reason_for_change: str
+    version_index: int
+
+
+class AssignmentResolutionResponse(BaseModel):
+    personnel_id: str
+    roles: List[str]
+    assigned_sites: List[str]
+    assigned_studies: List[str]
 
 
 class SiteCreate(BaseModel):
@@ -1265,6 +1323,24 @@ async def create_personnel(
     user_id, user_role, change_reason = get_user_context(request)
     change_reason = change_reason or payload.reason_for_change
 
+    if payload.role.value == "External Monitor":
+        if not payload.organization_id:
+            raise HTTPException(
+                status_code=400,
+                detail="External Monitor must be affiliated to a CRO organization.",
+            )
+        stmt_org = (
+            select(Organization)
+            .where(Organization.id == payload.organization_id)
+            .order_by(desc(Organization.version_index))
+        )
+        org = (await session.execute(stmt_org)).scalars().first()
+        if not org or org.org_type != "CRO":
+            raise HTTPException(
+                status_code=400,
+                detail="External Monitor must be affiliated to a CRO organization.",
+            )
+
     person = Personnel(
         id=str(uuid.uuid4()),
         keycloak_user_id=payload.keycloak_user_id,
@@ -1426,6 +1502,30 @@ async def update_personnel(
     if not latest_person:
         raise HTTPException(status_code=404, detail="Personnel not found")
 
+    target_role = payload.role.value if payload.role is not None else latest_person.role
+    target_org_id = (
+        payload.organization_id
+        if payload.organization_id is not None
+        else latest_person.organization_id
+    )
+    if target_role == "External Monitor":
+        if not target_org_id:
+            raise HTTPException(
+                status_code=400,
+                detail="External Monitor must be affiliated to a CRO organization.",
+            )
+        stmt_org = (
+            select(Organization)
+            .where(Organization.id == target_org_id)
+            .order_by(desc(Organization.version_index))
+        )
+        org = (await session.execute(stmt_org)).scalars().first()
+        if not org or org.org_type != "CRO":
+            raise HTTPException(
+                status_code=400,
+                detail="External Monitor must be affiliated to a CRO organization.",
+            )
+
     new_person = Personnel(
         id=id,
         keycloak_user_id=payload.keycloak_user_id
@@ -1501,3 +1601,268 @@ async def get_personnel_history(
     )
 
     return history
+
+
+@app.post(
+    "/api/v1/org/personnel/{personnel_id}/assignments",
+    response_model=PersonnelAssignmentResponse,
+    status_code=201,
+)
+async def create_personnel_assignment(
+    request: Request,
+    personnel_id: str,
+    payload: PersonnelAssignmentCreate,
+    session: AsyncSession = Depends(get_db_session),
+) -> PersonnelAssignmentResponse:
+    user_id, user_role, change_reason = get_user_context(request)
+    change_reason = change_reason or payload.reason_for_change
+
+    stmt_person = (
+        select(Personnel)
+        .where(Personnel.id == personnel_id)
+        .order_by(desc(Personnel.version_index))
+    )
+    person = (await session.execute(stmt_person)).scalars().first()
+    if not person:
+        raise HTTPException(status_code=404, detail="Personnel not found")
+
+    if person.role == "External Monitor":
+        if not person.organization_id:
+            raise HTTPException(
+                status_code=400,
+                detail="External Monitor must be affiliated to a CRO organization.",
+            )
+        stmt_org = (
+            select(Organization)
+            .where(Organization.id == person.organization_id)
+            .order_by(desc(Organization.version_index))
+        )
+        org = (await session.execute(stmt_org)).scalars().first()
+        if not org or org.org_type != "CRO":
+            raise HTTPException(
+                status_code=400,
+                detail="External Monitor must be affiliated to a CRO organization.",
+            )
+
+    assignment = PersonnelAssignment(
+        id=str(uuid.uuid4()),
+        personnel_id=personnel_id,
+        site_id=payload.site_id,
+        study_id=payload.study_id,
+        is_active=payload.is_active,
+        created_by=user_id,
+        reason_for_change=change_reason,
+        version_index=1,
+    )
+    session.add(assignment)
+    await session.flush()
+
+    await write_audit_log(
+        session=session,
+        actor_id=user_id,
+        actor_role=user_role,
+        action="PERSONNEL_ASSIGNMENT_CREATE",
+        record_id=assignment.id,
+        details=f"Created assignment for personnel ID '{personnel_id}' at site '{payload.site_id}' and study '{payload.study_id}'.",
+        reason_for_change=change_reason,
+    )
+
+    return assignment
+
+
+@app.get(
+    "/api/v1/org/personnel/{personnel_id}/assignments",
+    response_model=List[PersonnelAssignmentResponse],
+)
+async def list_personnel_assignments(
+    request: Request,
+    personnel_id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> List[PersonnelAssignmentResponse]:
+    user_id, user_role, change_reason = get_user_context(request)
+
+    stmt = (
+        select(PersonnelAssignment)
+        .where(PersonnelAssignment.personnel_id == personnel_id)
+        .order_by(PersonnelAssignment.id, desc(PersonnelAssignment.version_index))
+    )
+    res = await session.execute(stmt)
+    all_assigns = res.scalars().all()
+
+    latest_assigns = {}
+    for a in all_assigns:
+        if a.id not in latest_assigns:
+            latest_assigns[a.id] = a
+
+    await write_audit_log(
+        session=session,
+        actor_id=user_id,
+        actor_role=user_role,
+        action="PERSONNEL_ASSIGNMENT_LIST",
+        details=f"Listed assignments for personnel ID '{personnel_id}'.",
+        reason_for_change=change_reason or "Standard query access",
+    )
+
+    return list(latest_assigns.values())
+
+
+@app.put(
+    "/api/v1/org/personnel/assignments/{id}", response_model=PersonnelAssignmentResponse
+)
+async def update_personnel_assignment(
+    request: Request,
+    id: str,
+    payload: PersonnelAssignmentUpdate,
+    session: AsyncSession = Depends(get_db_session),
+) -> PersonnelAssignmentResponse:
+    user_id, user_role, change_reason = get_user_context(request)
+    change_reason = change_reason or payload.reason_for_change
+
+    stmt = (
+        select(PersonnelAssignment)
+        .where(PersonnelAssignment.id == id)
+        .order_by(desc(PersonnelAssignment.version_index))
+    )
+    latest_assign = (await session.execute(stmt)).scalars().first()
+    if not latest_assign:
+        raise HTTPException(status_code=404, detail="Personnel assignment not found")
+
+    new_assign = PersonnelAssignment(
+        id=id,
+        personnel_id=latest_assign.personnel_id,
+        site_id=payload.site_id
+        if payload.site_id is not None
+        else latest_assign.site_id,
+        study_id=payload.study_id
+        if payload.study_id is not None
+        else latest_assign.study_id,
+        is_active=payload.is_active
+        if payload.is_active is not None
+        else latest_assign.is_active,
+        created_by=user_id,
+        reason_for_change=change_reason,
+        version_index=latest_assign.version_index + 1,
+    )
+    session.add(new_assign)
+    await session.flush()
+
+    await write_audit_log(
+        session=session,
+        actor_id=user_id,
+        actor_role=user_role,
+        action="PERSONNEL_ASSIGNMENT_UPDATE",
+        record_id=id,
+        details=f"Updated personnel assignment ID '{id}' to version {new_assign.version_index}.",
+        reason_for_change=change_reason,
+    )
+
+    return new_assign
+
+
+@app.get(
+    "/api/v1/org/personnel/assignments/{id}/history",
+    response_model=List[PersonnelAssignmentResponse],
+)
+async def get_personnel_assignment_history(
+    request: Request,
+    id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> List[PersonnelAssignmentResponse]:
+    user_id, user_role, change_reason = get_user_context(request)
+
+    stmt = (
+        select(PersonnelAssignment)
+        .where(PersonnelAssignment.id == id)
+        .order_by(desc(PersonnelAssignment.version_index))
+    )
+    res = await session.execute(stmt)
+    history = res.scalars().all()
+    if not history:
+        raise HTTPException(
+            status_code=404, detail="Personnel assignment history not found"
+        )
+
+    await write_audit_log(
+        session=session,
+        actor_id=user_id,
+        actor_role=user_role,
+        action="PERSONNEL_ASSIGNMENT_HISTORY",
+        record_id=id,
+        details=f"Retrieved history for personnel assignment ID '{id}'.",
+        reason_for_change=change_reason or "Standard history query",
+    )
+
+    return history
+
+
+@app.get("/api/v1/org/assignments/resolve", response_model=AssignmentResolutionResponse)
+async def resolve_assignments(
+    request: Request,
+    keycloak_user_id: str = Query(..., description="The Keycloak user ID to resolve"),
+    session: AsyncSession = Depends(get_db_session),
+) -> AssignmentResolutionResponse:
+    """
+    Gateway-authenticated service-to-service endpoint to resolve active site and study assignments for personnel.
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+
+    stmt = (
+        select(Personnel)
+        .where(Personnel.keycloak_user_id == keycloak_user_id)
+        .order_by(desc(Personnel.version_index))
+    )
+    person = (await session.execute(stmt)).scalars().first()
+    if not person:
+        raise HTTPException(
+            status_code=404, detail="Personnel not found for keycloak_user_id"
+        )
+
+    # Fetch all assignments and extract latest active ones
+    stmt_assign = (
+        select(PersonnelAssignment)
+        .where(PersonnelAssignment.personnel_id == person.id)
+        .order_by(PersonnelAssignment.id, desc(PersonnelAssignment.version_index))
+    )
+    res = await session.execute(stmt_assign)
+    all_assigns = res.scalars().all()
+
+    latest_assigns = {}
+    for a in all_assigns:
+        if a.id not in latest_assigns:
+            latest_assigns[a.id] = a
+
+    active_assigns = [a for a in latest_assigns.values() if a.is_active]
+
+    assigned_sites = sorted(list(set(a.site_id for a in active_assigns)))
+    assigned_studies = sorted(list(set(a.study_id for a in active_assigns)))
+
+    # Also include singular study/site fields if present
+    if person.site_id and person.site_id not in assigned_sites:
+        assigned_sites.append(person.site_id)
+    if person.study_id and person.study_id not in assigned_studies:
+        assigned_studies.append(person.study_id)
+
+    await write_audit_log(
+        session=session,
+        actor_id=user_id,
+        actor_role=user_role,
+        action="PERSONNEL_ASSIGNMENT_RESOLVE",
+        details=f"Resolved assignments for keycloak_user_id '{keycloak_user_id}'. Found {len(assigned_sites)} sites, {len(assigned_studies)} studies.",
+        reason_for_change=change_reason or "Internal resolution",
+    )
+
+    role_mapping = {
+        "Principal Investigator": "investigator",
+        "Sub-Investigator": "investigator",
+        "CRC": "crc",
+        "CRA/Monitor": "cra",
+        "External Monitor": "external_monitor",
+    }
+    resolved_role = role_mapping.get(person.role, person.role.lower().replace(" ", "_"))
+
+    return AssignmentResolutionResponse(
+        personnel_id=person.id,
+        roles=[resolved_role],
+        assigned_sites=assigned_sites,
+        assigned_studies=assigned_studies,
+    )

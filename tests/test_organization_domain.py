@@ -33,6 +33,7 @@ def test_clinical_staff_role_values():
     assert ClinicalStaffRole.SUB_INVESTIGATOR == "Sub-Investigator"
     assert ClinicalStaffRole.CRC == "CRC"
     assert ClinicalStaffRole.CRA_MONITOR == "CRA/Monitor"
+    assert ClinicalStaffRole.EXTERNAL_MONITOR == "External Monitor"
 
 
 def test_trial_duty_values():

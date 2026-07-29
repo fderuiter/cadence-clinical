@@ -25,9 +25,16 @@ ROLE_CRC = "crc"
 ROLE_CRA_CANONICAL = "cra"
 ROLE_SUBJECT = "subject"
 ROLE_AUDITOR_CANONICAL = "auditor"
+ROLE_EXTERNAL_MONITOR = "external_monitor"
 
 
 ROLE_ALIASES = {
+    "external monitor": ROLE_EXTERNAL_MONITOR,
+    "external_monitor": ROLE_EXTERNAL_MONITOR,
+    "external-monitor": ROLE_EXTERNAL_MONITOR,
+    "cro monitor": ROLE_EXTERNAL_MONITOR,
+    "cro_monitor": ROLE_EXTERNAL_MONITOR,
+    "cro-monitor": ROLE_EXTERNAL_MONITOR,
     "sysadmin": ROLE_SYSADMIN,
     "system administrator": ROLE_SYSADMIN,
     "system_admin": ROLE_SYSADMIN,
@@ -126,6 +133,8 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         # Quality
         "quality_event": {"create", "read", "update", "delete", "investigate"},
         "quality_audit_logs": {"read"},
+        # eISF
+        "eisf_document": {"create", "read", "update", "delete", "sync"},
     },
     ROLE_SPONSOR_DESIGNER: {
         "study_design": {"create", "read", "update", "delete"},
@@ -169,6 +178,8 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         # Quality
         "quality_event": {"create", "read", "update", "delete", "investigate"},
         "quality_audit_logs": {"read"},
+        # eISF
+        "eisf_document": {"create", "read", "update", "delete", "sync"},
     },
     ROLE_SPONSOR_MM: {
         "study_design": {"read"},
@@ -177,11 +188,13 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "query_lifecycle": {"create", "read", "update"},
         "system_audit_logs": {"read"},
         "export_masked": {"read"},
+        "eisf_document": {"read"},
     },
     ROLE_SPONSOR_STATISTICIAN: {
         "study_design": {"read"},
         "system_audit_logs": {"read"},
         "export_masked": {"create", "read", "update"},
+        "eisf_document": {"read"},
     },
     ROLE_INVESTIGATOR: {
         "study_design": {"read"},
@@ -204,6 +217,8 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "etmf_edl": {"read"},
         # Quality
         "quality_event": {"read"},
+        # eISF
+        "eisf_document": {"create", "read", "update", "delete", "sync"},
     },
     ROLE_CRC: {
         "study_design": {"read"},
@@ -226,6 +241,8 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "etmf_edl": {"read"},
         # Quality
         "quality_event": {"read"},
+        # eISF
+        "eisf_document": {"create", "read", "update", "delete", "sync"},
     },
     ROLE_CRA_CANONICAL: {
         "study_design": {"read"},
@@ -248,6 +265,8 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "etmf_edl": {"read", "create"},
         # Quality
         "quality_event": {"create", "read", "update"},
+        # eISF
+        "eisf_document": {"create", "read", "update", "delete", "sync"},
     },
     "monitor": {
         "study_design": {"read"},
@@ -265,6 +284,8 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "etmf_edl": {"read", "create"},
         # Quality
         "quality_event": {"create", "read", "update"},
+        # eISF
+        "eisf_document": {"create", "read", "update", "delete", "sync"},
     },
     ROLE_SUBJECT: {
         "ecrf_data_entry": {"create", "update"},  # 'Diary' maps to create/update
@@ -291,6 +312,14 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         # Quality read-only
         "quality_event": {"read"},
         "quality_audit_logs": {"read"},
+        # eISF
+        "eisf_document": {"read"},
+    },
+    ROLE_EXTERNAL_MONITOR: {
+        "etmf_document": {"read"},
+        "etmf_edl": {"read"},
+        "etmf_audit_logs": {"read"},
+        "eisf_document": {"read"},
     },
     "grants manager": {
         "ctms_study": {"create", "read"},
@@ -302,6 +331,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "etmf_document": {"create", "read", "redact", "sign"},
         "etmf_edl": {"read"},
         "quality_event": {"create", "read", "update"},
+        "eisf_document": {"create", "read", "update", "delete", "sync"},
     },
     "grants_manager": {
         "ctms_study": {"create", "read"},
@@ -313,6 +343,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "etmf_document": {"create", "read", "redact", "sign"},
         "etmf_edl": {"read"},
         "quality_event": {"create", "read", "update"},
+        "eisf_document": {"create", "read", "update", "delete", "sync"},
     },
     "sponsor_clinical": {
         "etmf_document": {
@@ -362,6 +393,8 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         # Quality
         "quality_event": {"create", "read", "update", "delete", "investigate"},
         "quality_audit_logs": {"read"},
+        # eISF
+        "eisf_document": {"create", "read", "update", "delete", "sync"},
     },
     "quality_manager": {
         "quality_event": {"create", "read", "update", "delete", "investigate"},
@@ -393,6 +426,8 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "etmf_audit_logs": {"read"},
         "quality_event": {"create", "read", "update", "delete", "investigate"},
         "quality_audit_logs": {"read"},
+        # eISF
+        "eisf_document": {"create", "read", "update", "delete", "sync"},
     },
     "anonymous": {
         "ctms_study": {"read"},
@@ -405,6 +440,8 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "etmf_document": {"read"},
         "etmf_edl": {"read"},
         "quality_event": {"read"},
+        # eISF
+        "eisf_document": {"read"},
     },
 }
 
@@ -427,6 +464,7 @@ class Principal(BaseModel):
     user_id: str
     roles: List[str]  # Normalized canonical roles
     assigned_sites: List[str] = Field(default_factory=list)
+    assigned_studies: List[str] = Field(default_factory=list)
     unblinded_access: bool = False
     change_reason: Optional[str] = None
     raw_roles: List[str] = Field(default_factory=list)
@@ -472,7 +510,13 @@ def can_access_site(principal: Principal, site_id: str) -> bool:
     Site-scoped users are restricted to their assigned_sites.
     Sponsor/SysAdmin users with empty assigned_sites are allowed global access.
     """
-    site_scoped_roles = {ROLE_INVESTIGATOR, ROLE_CRC}
+    site_scoped_roles = {
+        ROLE_INVESTIGATOR,
+        ROLE_CRC,
+        ROLE_CRA_CANONICAL,
+        "monitor",
+        ROLE_EXTERNAL_MONITOR,
+    }
     user_site_roles = [r for r in principal.roles if r in site_scoped_roles]
 
     if user_site_roles:
@@ -481,6 +525,18 @@ def can_access_site(principal: Principal, site_id: str) -> bool:
     if principal.assigned_sites:
         return site_id in principal.assigned_sites
 
+    return True
+
+
+def can_access_study(principal: Principal, study_id: str) -> bool:
+    """
+    Checks if the principal has access to a specific study.
+    Study-scoped users are restricted to their assigned_studies.
+    """
+    if "external_monitor" in principal.roles:
+        return study_id in principal.assigned_studies
+    if principal.assigned_studies:
+        return study_id in principal.assigned_studies
     return True
 
 
@@ -520,6 +576,12 @@ def get_principal_sync(request: Request) -> Principal:
         raw_roles_list = []
 
     normalized_roles = [normalize_role(r) for r in raw_roles]
+
+    if ROLE_EXTERNAL_MONITOR in normalized_roles:
+        raise HTTPException(
+            status_code=500,
+            detail="External Monitor principal must be resolved via the async get_principal path to allow directory enrichment.",
+        )
 
     # 3. Assigned Sites
     site_id_val = None
@@ -609,7 +671,117 @@ async def get_principal(request: Request) -> Principal:
     """
     import json
 
-    principal = get_principal_sync(request)
+    # Bypass sync exception if we are inside get_principal by extracting manually
+    user_id = ""
+    if hasattr(request, "state"):
+        user_id = getattr(request.state, "user_id", None) or ""
+    if not user_id and hasattr(request, "headers"):
+        user_id = (
+            request.headers.get("X-User-Id") or request.headers.get("x-user-id") or ""
+        )
+
+    roles_val = None
+    if hasattr(request, "state"):
+        roles_val = getattr(request.state, "roles", None)
+    if roles_val is None and hasattr(request, "headers"):
+        roles_val = (
+            request.headers.get("X-User-Roles")
+            or request.headers.get("x-user-roles")
+            or ""
+        )
+
+    if isinstance(roles_val, str):
+        raw_roles = [r.strip().lower() for r in roles_val.split(",") if r.strip()]
+        raw_roles_list = [r.strip() for r in roles_val.split(",") if r.strip()]
+    elif isinstance(roles_val, list):
+        raw_roles = [str(r).strip().lower() for r in roles_val if str(r).strip()]
+        raw_roles_list = [str(r).strip() for r in roles_val if str(r).strip()]
+    else:
+        raw_roles = []
+        raw_roles_list = []
+
+    normalized_roles = [normalize_role(r) for r in raw_roles]
+
+    site_id_val = None
+    if hasattr(request, "state"):
+        site_id_val = getattr(request.state, "site_id", None)
+    if site_id_val is None and hasattr(request, "headers"):
+        site_id_val = (
+            request.headers.get("X-Site-Id")
+            or request.headers.get("x-site-id")
+            or request.headers.get("X-User-Site")
+            or ""
+        )
+
+    assigned_sites = []
+    if site_id_val:
+        assigned_sites = [s.strip() for s in site_id_val.split(",") if s.strip()]
+
+    unblinded_access = False
+    if hasattr(request, "headers"):
+        unblinded_header = (
+            request.headers.get("X-Unblinded-Access")
+            or request.headers.get("x-unblinded-access")
+            or ""
+        )
+        if unblinded_header.lower() in ("true", "1", "yes"):
+            unblinded_access = True
+    if (
+        not unblinded_access
+        and hasattr(request, "state")
+        and hasattr(request.state, "unblinded_access")
+    ):
+        unblinded_access = bool(request.state.unblinded_access)
+
+    change_reason = None
+    if hasattr(request, "state"):
+        change_reason = getattr(request.state, "change_reason", None) or getattr(
+            request.state, "reason_for_change", None
+        )
+        if change_reason:
+            change_reason = str(change_reason).strip()
+
+    if not change_reason:
+        try:
+            if hasattr(request, "query_params") and request.query_params:
+                for key in ("change_reason", "reason_for_change", "reason"):
+                    val = request.query_params.get(key)
+                    if val and str(val).strip():
+                        change_reason = str(val).strip()
+                        break
+        except Exception:
+            pass
+
+    if not change_reason and hasattr(request, "headers") and request.headers:
+        for key in (
+            "X-Change-Reason",
+            "x-change-reason",
+            "X-Reason-For-Change",
+            "x-reason-for-change",
+            "Reason-For-Change",
+            "reason-for-change",
+        ):
+            val = request.headers.get(key)
+            if val and str(val).strip():
+                change_reason = str(val).strip()
+                break
+
+    principal = Principal(
+        user_id=user_id,
+        roles=normalized_roles,
+        assigned_sites=assigned_sites,
+        unblinded_access=unblinded_access,
+        change_reason=change_reason,
+        raw_roles=raw_roles_list,
+    )
+
+    if ROLE_EXTERNAL_MONITOR in principal.roles:
+        from packages.security.org_client import resolve_personnel_assignments
+
+        res = await resolve_personnel_assignments(principal.user_id)
+        if res:
+            principal.assigned_sites = res.get("assigned_sites", [])
+            principal.assigned_studies = res.get("assigned_studies", [])
 
     # If change_reason is not found yet, and it is a write operation, check body
     if (
@@ -807,6 +979,14 @@ ROLE_EXPANSIONS = {
     "cra": {"cra"},
     "auditor": {"auditor", "inspector", "regulatory_inspector"},
     "sponsor admin": {"sponsor admin", "sponsor_admin", "admin"},
+    "external_monitor": {
+        "external_monitor",
+        "external monitor",
+        "external-monitor",
+        "cro monitor",
+        "cro_monitor",
+        "cro-monitor",
+    },
 }
 
 

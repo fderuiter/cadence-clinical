@@ -28,6 +28,26 @@ def receive_before_flush(session: Session, flush_context, instances):
     if not session.is_modified:
         return
 
+    # Propagate thread-safe context variables into PostgreSQL session if database trigger is active
+    if session.bind and session.bind.dialect.name == "postgresql":
+        try:
+            from sqlalchemy import text
+
+            user_id_val = current_user_id.get()
+            reason_val = current_change_reason.get()
+            session.connection().execute(
+                text("SELECT set_config('cadence.current_user_id', :user_id, true);"),
+                {"user_id": user_id_val or "system"},
+            )
+            session.connection().execute(
+                text(
+                    "SELECT set_config('cadence.current_change_reason', :reason, true);"
+                ),
+                {"reason": reason_val or "system_operation"},
+            )
+        except Exception:
+            pass
+
     # If the session contains eTMF, Interop, CTMS, Quality, eISF, or Notifications objects, skip execution auditing
     for obj in list(session.new) + list(session.dirty) + list(session.deleted):
         if hasattr(obj, "__tablename__") and obj.__tablename__ in (
@@ -70,6 +90,7 @@ def receive_before_flush(session: Session, flush_context, instances):
             "organizations",
             "sites",
             "personnel",
+            "personnel_assignments",
             "delegations_of_authority",
             "org_audit_logs",
             "safety_cases",

@@ -686,3 +686,236 @@ async def test_gxp_audit_logging_and_actor_context(db_session_fixture) -> None:
         assert create_log["action"] == "ORGANIZATION_CREATE"
         assert create_log["record_id"] == org_id
         assert create_log["reason_for_change"] == "System setup auditing test"
+
+
+# ==========================================
+# External Monitor & Personnel Assignments Tests
+# ==========================================
+
+
+@pytest.mark.asyncio
+async def test_cro_affiliation_validation(db_session_fixture) -> None:
+    """Verify CRO affiliation validation on Personnel creation and Assignment creation."""
+    with TestClient(app) as client:
+        # Create non-CRO org (e.g., site)
+        org_headers = get_auth_headers("admin_user_001", "admin")
+        non_cro_resp = client.post(
+            "/api/v1/org/organizations",
+            json={
+                "name": "Site Org",
+                "org_type": "site",
+                "reason_for_change": "Initial site org setup",
+            },
+            headers=org_headers,
+        )
+        non_cro_id = non_cro_resp.json()["id"]
+
+        # Try to create External Monitor with non-CRO organization_id -> Should fail
+        p_headers = get_auth_headers(
+            "admin_user_001", "admin", "Creating external monitor"
+        )
+        payload_fail = {
+            "keycloak_user_id": "kc-user-mon-fail",
+            "first_name": "John",
+            "last_name": "Doe",
+            "email": "john.doe@cro.org",
+            "role": "External Monitor",
+            "organization_id": non_cro_id,
+            "reason_for_change": "Onboarding external monitor fail",
+        }
+        fail_resp = client.post(
+            "/api/v1/org/personnel", json=payload_fail, headers=p_headers
+        )
+        assert fail_resp.status_code == 400
+        assert "CRO organization" in fail_resp.json()["detail"]
+
+        # Create valid CRO org
+        cro_resp = client.post(
+            "/api/v1/org/organizations",
+            json={
+                "name": "CRO Org",
+                "org_type": "CRO",
+                "reason_for_change": "Initial CRO org setup",
+            },
+            headers=org_headers,
+        )
+        cro_id = cro_resp.json()["id"]
+
+        # Create External Monitor with valid CRO organization_id -> Should succeed
+        payload_success = {
+            "keycloak_user_id": "kc-user-mon-success",
+            "first_name": "Jane",
+            "last_name": "Smith",
+            "email": "jane.smith@cro.org",
+            "role": "External Monitor",
+            "organization_id": cro_id,
+            "reason_for_change": "Onboarding external monitor success",
+        }
+        success_resp = client.post(
+            "/api/v1/org/personnel", json=payload_success, headers=p_headers
+        )
+        assert success_resp.status_code == 201
+
+
+@pytest.mark.asyncio
+async def test_personnel_assignments_crud(db_session_fixture) -> None:
+    """Verify that multiple Personnel assignments can be created, updated, and retrieved with version history."""
+    with TestClient(app) as client:
+        # Onboard personnel first (e.g. CRC)
+        org_headers = get_auth_headers("admin_user_001", "admin")
+        org_resp = client.post(
+            "/api/v1/org/organizations",
+            json={
+                "name": "Sponsor Org",
+                "org_type": "sponsor",
+                "reason_for_change": "Initial sponsor setup",
+            },
+            headers=org_headers,
+        )
+        org_id = org_resp.json()["id"]
+
+        p_headers = get_auth_headers("admin_user_001", "admin")
+        p_resp = client.post(
+            "/api/v1/org/personnel",
+            json={
+                "first_name": "CRC_Jane",
+                "last_name": "Doe",
+                "email": "crc_jane@sponsor.com",
+                "role": "CRC",
+                "organization_id": org_id,
+                "reason_for_change": "Onboarding Jane",
+            },
+            headers=p_headers,
+        )
+        personnel_id = p_resp.json()["id"]
+
+        # Create assignment 1 (site_A, study_1)
+        assign_headers = get_auth_headers("admin_user_001", "admin", "Adding site A")
+        create_payload = {
+            "site_id": "site_A",
+            "study_id": "study_1",
+            "is_active": True,
+            "reason_for_change": "Assigning to site A and study 1",
+        }
+        create_resp = client.post(
+            f"/api/v1/org/personnel/{personnel_id}/assignments",
+            json=create_payload,
+            headers=assign_headers,
+        )
+        assert create_resp.status_code == 201
+        assign_data = create_resp.json()
+        assert assign_data["site_id"] == "site_A"
+        assert assign_data["study_id"] == "study_1"
+        assert assign_data["is_active"] is True
+        assign_id = assign_data["id"]
+
+        # Create assignment 2 (site_B, study_1)
+        create_resp2 = client.post(
+            f"/api/v1/org/personnel/{personnel_id}/assignments",
+            json={
+                "site_id": "site_B",
+                "study_id": "study_1",
+                "is_active": True,
+                "reason_for_change": "Assigning to site B and study 1",
+            },
+            headers=assign_headers,
+        )
+        assert create_resp2.status_code == 201
+
+        # List assignments for jane
+        list_resp = client.get(
+            f"/api/v1/org/personnel/{personnel_id}/assignments",
+            headers=get_auth_headers("viewer_001", "viewer"),
+        )
+        assert list_resp.status_code == 200
+        assert len(list_resp.json()) == 2
+
+        # Update assignment 1 to be inactive
+        update_resp = client.put(
+            f"/api/v1/org/personnel/assignments/{assign_id}",
+            json={
+                "is_active": False,
+                "reason_for_change": "Removing assignment from site A",
+            },
+            headers=get_auth_headers("admin_user_001", "admin"),
+        )
+        assert update_resp.status_code == 200
+        assert update_resp.json()["is_active"] is False
+        assert update_resp.json()["version_index"] == 2
+
+        # History of assignment 1
+        history_resp = client.get(
+            f"/api/v1/org/personnel/assignments/{assign_id}/history",
+            headers=get_auth_headers("viewer_001", "viewer"),
+        )
+        assert history_resp.status_code == 200
+        assert len(history_resp.json()) == 2
+        assert history_resp.json()[0]["version_index"] == 2
+        assert history_resp.json()[1]["version_index"] == 1
+
+
+@pytest.mark.asyncio
+async def test_resolve_assignments_endpoint(db_session_fixture) -> None:
+    """Verify that resolution endpoint accurately resolves active sites/studies by keycloak_user_id."""
+    with TestClient(app) as client:
+        # Create CRO and External Monitor
+        org_headers = get_auth_headers("admin_user_001", "admin")
+        cro_resp = client.post(
+            "/api/v1/org/organizations",
+            json={
+                "name": "CRO Team",
+                "org_type": "CRO",
+                "reason_for_change": "CRO setup",
+            },
+            headers=org_headers,
+        )
+        cro_id = cro_resp.json()["id"]
+
+        p_resp = client.post(
+            "/api/v1/org/personnel",
+            json={
+                "keycloak_user_id": "kc-ext-monitor-1",
+                "first_name": "Steve",
+                "last_name": "Monitor",
+                "email": "steve@cro.com",
+                "role": "External Monitor",
+                "organization_id": cro_id,
+                "reason_for_change": "Onboarding Steve",
+            },
+            headers=org_headers,
+        )
+        personnel_id = p_resp.json()["id"]
+
+        # Create two assignments
+        client.post(
+            f"/api/v1/org/personnel/{personnel_id}/assignments",
+            json={
+                "site_id": "site_alpha",
+                "study_id": "study_x",
+                "is_active": True,
+                "reason_for_change": " Steve study x site alpha",
+            },
+            headers=org_headers,
+        )
+        client.post(
+            f"/api/v1/org/personnel/{personnel_id}/assignments",
+            json={
+                "site_id": "site_beta",
+                "study_id": "study_y",
+                "is_active": True,
+                "reason_for_change": "Steve study y site beta",
+            },
+            headers=org_headers,
+        )
+
+        # Call resolve endpoint
+        resolve_resp = client.get(
+            "/api/v1/org/assignments/resolve?keycloak_user_id=kc-ext-monitor-1",
+            headers=get_auth_headers("admin_user_001", "admin"),
+        )
+        assert resolve_resp.status_code == 200
+        data = resolve_resp.json()
+        assert data["personnel_id"] == personnel_id
+        assert data["roles"] == ["external_monitor"]
+        assert sorted(data["assigned_sites"]) == ["site_alpha", "site_beta"]
+        assert sorted(data["assigned_studies"]) == ["study_x", "study_y"]
