@@ -661,6 +661,7 @@ class SubjectUnblindResponse(BaseModel):
 async def unblind_subject(
     subject_id: str,
     request: Request,
+    background_tasks: BackgroundTasks,
     principal: Principal = Depends(get_principal),
     roles: list[str] = Depends(require_roles(ROLE_SITE_INVESTIGATOR, "investigator")),
 ) -> SubjectUnblindResponse:
@@ -686,6 +687,32 @@ async def unblind_subject(
 
         await session.commit()
         await session.refresh(subject)
+
+        # Compose message_content from non-sensitive fields only
+        msg_parts = [
+            f"Emergency unblinding alert for Subject {subject.subject_id}.",
+            f"Status: {subject.status}",
+            f"Unblinded By: {subject.unblinded_by}",
+            f"Unblinded At: {subject.unblinded_at.isoformat() if subject.unblinded_at else 'N/A'}",
+            f"Reason: {change_reason}",
+        ]
+        message_text = "\n".join(msg_parts)
+
+        # Helper/task to be dispatched after commit
+        def dispatch_unblind_notification(subj_id: str, msg: str):
+            from apps.execution.trial_lock import NotificationRouter
+            router = NotificationRouter()
+            router.send_dashboard_notification(
+                recipients=[],
+                payload={
+                    "event_type": "emergency-unblinding",
+                    "recipient_roles": ["Sponsor Safety Lead", "Lead CRA", "IDMC"],
+                    "subject_id": subj_id,
+                    "message": msg,
+                }
+            )
+
+        background_tasks.add_task(dispatch_unblind_notification, subject.subject_id, message_text)
 
         # Determine unmasked treatment_arm and drug_code values
         unmasked_treatment_arm = "Active Treatment Arm"
