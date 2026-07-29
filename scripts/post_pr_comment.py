@@ -181,11 +181,18 @@ def summarize_components(changed_files: list[str]) -> str:
         "apps/designer": "`apps/designer/` (Study Designer & Clinical MDR)",
         "apps/gateway": "`apps/gateway/` (API Gateway & OIDC Authentication)",
         "apps/web": "`apps/web/` (Frontend Vue 3 SPA)",
+        "apps/subject-portal": "`apps/subject-portal/` (Patient-Facing eCOA/ePRO Portal)",
         "apps/etmf": "`apps/etmf/` (eTMF Document Management)",
-        "apps/ctms": "`apps/ctms/` (Clinical Trial Management)",
+        "apps/ctms": "`apps/ctms/` (Clinical Trial Management System)",
         "apps/quality": "`apps/quality/` (Clinical Quality & CAPA Logging)",
+        "apps/interop": "`apps/interop/` (FHIR & Interoperability Gateway)",
+        "apps/notifications": "`apps/notifications/` (Notifications & Webhooks)",
+        "apps/tickets": "`apps/tickets/` (Clinical Queries & Issues)",
+        "apps/safety": "`apps/safety/` (Safety & ICSR / SAE Management)",
+        "apps/org": "`apps/org/` (Organization & Personnel Management)",
         "packages/security": "`packages/security/` (Security & RBAC Package)",
         "packages/ui": "`packages/ui/` (Shared UI Component Library)",
+        "packages/core-models": "`packages/core-models/` (CDISC USDM, ODM & SDTM Core Models)",
         "packages/deid": "`packages/deid/` (DEID Anonymization Service)",
         "docs": "`docs/` (Workspace Specifications & ADR Documentation)",
         "scripts": "`scripts/` (Automation, Validation & CI Tooling)",
@@ -374,12 +381,23 @@ Ensure your contribution strictly adheres to the **Cadence Clinical Platform** a
 *   **Stack & Guardrails:** Adhere strictly to language versions (Python 3.11+), core frameworks (FastAPI, Pydantic v2 strict typing), linters/formatters (Ruff/Black), and database patterns (SQLAlchemy/SQLModel for PostgreSQL, Neo4j Python Driver for Graph DB).
 *   **Compliance & GxP Standards:** Maintain CDISC USDM, CDISC ODM, and 21 CFR Part 11 compliant audit fields (`created_at`, `created_by`, `reason_for_change`, `version_index`).
 *   **Directory Routing Rules:**
-    *   Security, utilities, and global helpers ──► `packages/security/`
-    *   UI components, layout utilities, forms ──► `packages/ui/`
-    *   Study authoring & MDR validation logic ──► `apps/designer/`
-    *   Data capture, translation, & execution logic ──► `apps/execution/`
-    *   Gateway routers, OIDC auth controllers ──► `apps/gateway/`
-    *   Web User Interface application ──► `apps/web/`
+    *   Security, RBAC, cryptographic signing, audit context ──► `packages/security/`
+    *   Shared Vue 3 UI components, layout helpers, widgets ──► `packages/ui/`
+    *   CDISC USDM, ODM, SDTM schemas & domain models ──► `packages/core-models/`
+    *   Patient DEID anonymization & masking engine ──► `packages/deid/`
+    *   Study authoring, MDR & USDM graph logic ──► `apps/designer/`
+    *   eCRF Data capture, PostgreSQL audit ledger, TSDV, & SDTM mapping ──► `apps/execution/`
+    *   API Gateway routers & OIDC auth controllers ──► `apps/gateway/`
+    *   Web User Interface SPA application ──► `apps/web/`
+    *   Patient-facing eCOA/ePRO portal ──► `apps/subject-portal/`
+    *   eTMF document taxonomy & GCP archiving ──► `apps/etmf/`
+    *   CTMS site monitoring visits & trial tracking ──► `apps/ctms/`
+    *   Quality deviations & CAPA logging ──► `apps/quality/`
+    *   FHIR adapters & interop registries ──► `apps/interop/`
+    *   Notification dispatch & email relays ──► `apps/notifications/`
+    *   Clinical query tickets & site messaging ──► `apps/tickets/`
+    *   Safety SAE icsr XML rendering & validation ──► `apps/safety/`
+    *   Organization, site & personnel allocations ──► `apps/org/`
 
 ### Part 2: Pull Request Verification Gates
 Every Pull Request must satisfy three mandatory verification gates before merging:
