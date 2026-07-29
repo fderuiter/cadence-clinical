@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-07-29: Standardize PR Quality Gate Comments and Developer Verification Workflows](2026-07-29-standardize-pr-quality-gate-comments-and-developer-verification-workflows.md)
 
 - [2023-01-01: ADR 2023-01-01: Neo4j Graph Database for Clinical Metadata](2023-01-01-neo4j-graph-database.md)
 - [2023-01-02: ADR 2023-01-02: PostgreSQL Relational Database for Execution](2023-01-02-postgresql-relational-database.md)
