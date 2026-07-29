@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1235
-- **Passed:** 1235 🟢
+- **Total Automated Test Cases Run:** 1236
+- **Passed:** 1236 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -672,6 +672,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_signature_token_credentials_not_logged_or_returned` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_verification_invalid_credentials` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_verification_role_insufficient` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_signature_verification_study_designer_role_allowed` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_verification_success` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_verification_with_batch_id` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_token_invalid` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |

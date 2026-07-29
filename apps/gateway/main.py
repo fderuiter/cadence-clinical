@@ -612,6 +612,8 @@ AUTHORIZED_SIGNING_ROLES = {
     "sponsor_statistician",
     "sponsor designer",
     "sponsor_designer",
+    "study_designer",
+    "study designer",
     "sponsor admin",
     "sponsor_admin",
     "admin",

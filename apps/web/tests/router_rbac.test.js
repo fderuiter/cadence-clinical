@@ -43,7 +43,17 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
       const authStore = useAuthStore();
       authStore.isAuthenticated = true;
       authStore.isDemoMode = true;
-      authStore.rawRoles = ["Study Designer"]; // maps to sponsor_designer & designer
+      authStore.rawRoles = ["Study Designer"]; // maps to sponsor_designer
+
+      await router.push("/mdr");
+      expect(router.currentRoute.value.path).toBe("/mdr");
+    });
+
+    it("should allow navigation to /mdr if the user has Sponsor Designer role", async () => {
+      const authStore = useAuthStore();
+      authStore.isAuthenticated = true;
+      authStore.isDemoMode = true;
+      authStore.rawRoles = ["Sponsor Designer"]; // maps to sponsor_designer
 
       await router.push("/mdr");
       expect(router.currentRoute.value.path).toBe("/mdr");

@@ -995,13 +995,11 @@ const mockStudyFields = [
 
 // Authorization gating
 const hasEditAccess = computed(() => {
-  // Check if user has study_designer role or sponsor_admin / admin privileges
+  // Check if user has sponsor_designer role or sponsor_admin / admin privileges
   return authStore.normalizedRoles.some(
     (role) =>
-      role === "study_designer" ||
       role === "sponsor_designer" ||
       role === "sponsor_admin" ||
-      role === "designer" ||
       role === "admin"
   );
 });

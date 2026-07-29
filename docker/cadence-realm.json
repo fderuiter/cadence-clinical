@@ -10,6 +10,10 @@
         "description": "Sponsor Administrator with full oversight over studies."
       },
       {
+        "name": "Sponsor Designer",
+        "description": "Sponsor Study Designer responsible for designing and authoring study structures and eligibility criteria."
+      },
+      {
         "name": "CRA",
         "description": "Clinical Research Associate responsible for monitoring sites."
       },
@@ -61,6 +65,25 @@
       ],
       "webOrigins": [
         "*"
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "designer_demo",
+      "enabled": true,
+      "email": "designer_demo@example.com",
+      "firstName": "Designer",
+      "lastName": "Demo",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "Sponsor Designer"
       ]
     }
   ]

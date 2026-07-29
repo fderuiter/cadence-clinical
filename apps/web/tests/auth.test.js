@@ -130,6 +130,31 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
       ]);
     });
 
+    it("normalizes Sponsor Designer, study_designer, and designer roles into the canonical sponsor_designer token", () => {
+      const authStore = useAuthStore();
+
+      const mockKeycloak = {
+        authenticated: true,
+        tokenParsed: {
+          realm_access: {
+            roles: [
+              "Sponsor Designer",
+              "study_designer",
+              "designer",
+            ],
+          },
+        },
+      };
+
+      authStore.setAuth(mockKeycloak);
+
+      expect(authStore.normalizedRoles).toEqual([
+        "sponsor_designer",
+        "sponsor_designer",
+        "sponsor_designer",
+      ]);
+    });
+
     it("resets authentication state when setAuth is called with a falsy or unauthenticated object", () => {
       const authStore = useAuthStore();
 

@@ -1,14 +1,22 @@
 import { defineStore } from "pinia";
 
 /**
- * Seeding Gap Documentation:
- * In the Keycloak realm configuration (`cadence-realm.json`), there is a role-seeding gap:
- * The "Study Designer" (or `sponsor_designer`) role required by the backend/designer
- * microservice is missing from the realm roles definition.
- *
- * Future deployments should add the `sponsor_designer` (or `Study Designer`) role to Keycloak
- * and map it accordingly in this normalizer.
+ * Seeding Gap Documentation Resolved:
+ * The "Sponsor Designer" role has been successfully seeded in the Keycloak realm configuration
+ * (`cadence-realm.json`) and is centrally mapped in the OIDC normalizer.
  */
+export const ROLE_ALIASES = {
+  crc: ["site_investigator", "crc"],
+  site_investigator: ["site_investigator", "crc"],
+  cra: ["cra", "monitor"],
+  monitor: ["cra", "monitor"],
+  auditor: ["auditor", "tmf_auditor"],
+  tmf_auditor: ["auditor", "tmf_auditor"],
+  designer: ["sponsor_designer"],
+  sponsor_designer: ["sponsor_designer"],
+  study_designer: ["sponsor_designer"],
+};
+
 export const useAuthStore = defineStore("auth", {
   state: () => ({
     isAuthenticated: false,
@@ -43,10 +51,18 @@ export const useAuthStore = defineStore("auth", {
       return state.rawRoles.map((role) => {
         // Map Keycloak realm roles to standard UI roles (lowercase with underscores)
         // E.g. "Sponsor Admin" -> "sponsor_admin", "Data Manager" -> "data_manager"
-        return role
+        const normalized = role
           .trim()
           .toLowerCase()
           .replace(/[\s-_]+/g, "_");
+        if (
+          normalized === "study_designer" ||
+          normalized === "designer" ||
+          normalized === "sponsor_designer"
+        ) {
+          return "sponsor_designer";
+        }
+        return normalized;
       });
     },
   },
@@ -90,6 +106,7 @@ export const useAuthStore = defineStore("auth", {
         // Seed default roles so the offline UI is functional
         this.rawRoles = [
           "Sponsor Admin",
+          "Sponsor Designer",
           "CRA",
           "Data Manager",
           "Site Investigator",

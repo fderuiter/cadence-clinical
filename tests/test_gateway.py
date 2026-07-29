@@ -657,6 +657,39 @@ def test_signature_verification_role_insufficient(
         assert response.json()["detail"] == "ROLE_INSUFFICIENT"
 
 
+def test_signature_verification_study_designer_role_allowed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Test re-authentication for a user with study_designer/sponsor_designer roles.
+    """
+    monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
+
+    for designer_role in ["study_designer", "sponsor_designer"]:
+        token = jwt.encode(
+            {
+                "sub": "user1",
+                "preferred_username": "user1",
+                "realm_access": {"roles": [designer_role]},
+            },
+            "test_secret",
+            algorithm="HS256",
+        )
+
+        with TestClient(app) as client:
+            response = client.post(
+                "/api/v1/auth/signature-verification",
+                headers={"Authorization": f"Bearer {token}"},
+                json={
+                    "username": "user1",
+                    "password": "correct_password",  # pragma: allowlist secret
+                    "action": "/api/v1/execution/form-submissions/123/approve",
+                },
+            )
+            assert response.status_code == 200
+            assert "sig_token" in response.json()
+
+
 def test_signature_gated_mutation_enforcement(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     Test that signature-gated mutations require a valid sig_token.

@@ -85,7 +85,7 @@ The local containerized cluster orchestrates **13 primary services** defined in 
 | :--- | :--- | :--- | :--- | :--- |
 | **`postgres`** | `5432:5432` | N/A (Docker volume `postgres_data`) | PostgreSQL | Global relational storage for active operational data, clinical subject records, and audit logs. |
 | **`neo4j`** | `7474:7474` (HTTP)<br>`7687:7687` (Bolt) | N/A (Docker volume `neo4j_data`) | Neo4j Graph DB | Powering the Metadata Repository (MDR). Models CDISC USDM study design entities and path branching. |
-| **`keycloak`** | `8080:8080` | `docker/` (config) | Relational (internal) | Identity and Access Management (IAM). Restores realm role definitions (e.g., Sponsor Admin, Auditor, CRA). |
+| **`keycloak`** | `8080:8080` | `docker/` (config) | Relational (internal) | Identity and Access Management (IAM). Restores realm role definitions (e.g., Sponsor Admin, Sponsor Designer, Auditor, CRA). |
 | **`designer`** | `8001:8001` | `apps/designer/` | Connected to `neo4j` | Core Python service (FastAPI) responsible for clinical trial structure and CDISC schema definition. |
 | **`execution`** | `8002:8002` | `apps/execution/` | Connected to `postgres` | Electronic Data Capture (EDC) engine overseeing trial workflows, subject progression, and database-level audits. |
 | **`etmf`** | `8003:8003` | `apps/etmf/` | Shared workspace: `/app/tmf.db` (SQLite) | Electronic Trial Master File system managing GCP document structures, files, metadata taxonomy, and workflows. |
@@ -96,6 +96,14 @@ The local containerized cluster orchestrates **13 primary services** defined in 
 | **`notifications`** | `8006:8006` | `apps/notifications/` | Shared workspace: `/app/notifications.db` (SQLite) | Dispatches emails/alerts, maps notification templates, and provides webhook relays. |
 | **`gateway`** | `8000:8000` | `apps/gateway/` | N/A | Central routing reverse-proxy exposing unified endpoint routing to individual backend APIs. |
 | **`subject-portal`** | `5174:5174` | `apps/subject-portal/` | N/A | Patient-facing SPA (Vue and Node.js) for completing diaries, surveys, and reviewing profile metrics. |
+
+### Keycloak Local Demo Accounts
+
+To facilitate local development, the following demo account is pre-seeded into Keycloak:
+
+| Username | Password | Realm Roles | Description |
+| :--- | :--- | :--- | :--- |
+| `designer_demo` | `password` | `Sponsor Designer` | Demo user with clinical study designer privileges. |
 
 ---
 

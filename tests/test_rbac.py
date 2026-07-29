@@ -426,6 +426,7 @@ def test_role_aliases_normalization() -> None:
     from packages.security.rbac import (
         ROLE_CRA_CANONICAL,
         ROLE_INVESTIGATOR,
+        ROLE_SPONSOR_DESIGNER,
         ROLE_SPONSOR_DM,
         ROLE_SYSADMIN,
         normalize_role,
@@ -439,6 +440,8 @@ def test_role_aliases_normalization() -> None:
     assert normalize_role("principal investigator") == ROLE_INVESTIGATOR
     assert normalize_role("cra_monitor") == ROLE_CRA_CANONICAL
     assert normalize_role("unknown_role") == "unknown_role"
+    assert normalize_role("study_designer") == ROLE_SPONSOR_DESIGNER
+    assert normalize_role("sponsor designer") == ROLE_SPONSOR_DESIGNER
 
 
 def test_has_permission() -> None:
@@ -449,14 +452,17 @@ def test_has_permission() -> None:
         ROLE_SPONSOR_DM,
         Principal,
         has_permission,
+        normalize_role,
     )
 
     designer = Principal(user_id="d1", roles=[ROLE_SPONSOR_DESIGNER])
+    study_designer = Principal(user_id="d2", roles=[normalize_role("study_designer")])
     dm = Principal(user_id="dm1", roles=[ROLE_SPONSOR_DM])
     crc = Principal(user_id="crc1", roles=[ROLE_CRC])
 
     # Designer has read/write on study_design
     assert has_permission(designer, "study_design:create") is True
+    assert has_permission(study_designer, "study_design:create") is True
     assert has_permission(designer, "study_design:read") is True
     assert has_permission(designer, "study_design:update") is True
     assert has_permission(designer, "study_design:delete") is True
