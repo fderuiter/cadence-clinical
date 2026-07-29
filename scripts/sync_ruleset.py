@@ -129,7 +129,11 @@ def sync_ruleset():
                 "Skipping automated ruleset sync for this run."
             )
             return
-        if os.environ.get("GITHUB_ACTIONS") == "true" and os.environ.get("FAIL_ON_RULESET_SYNC_ERROR") == "true" and not os.environ.get("TEST_SUITE_RUN"):
+        if (
+            os.environ.get("GITHUB_ACTIONS") == "true"
+            and os.environ.get("FAIL_ON_RULESET_SYNC_ERROR") == "true"
+            and not os.environ.get("TEST_SUITE_RUN")
+        ):
             print(
                 "Error: Running in GitHub Actions with FAIL_ON_RULESET_SYNC_ERROR=true, but gh api returned empty output."
             )

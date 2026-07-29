@@ -147,7 +147,9 @@ def prompt_interactive() -> tuple[str, str, str]:
     print("=====================================================")
 
     try:
-        title = input("\nEnter ADR Title (e.g. 'Audit Log Hash Chain Verification'): ").strip()
+        title = input(
+            "\nEnter ADR Title (e.g. 'Audit Log Hash Chain Verification'): "
+        ).strip()
         while not title:
             title = input("Title cannot be empty. Please enter title: ").strip()
 
@@ -165,7 +167,10 @@ def prompt_interactive() -> tuple[str, str, str]:
 
         domain_key = DOMAIN_CHOICES[choice_idx][0]
 
-        req = input("\nEnter Requirement ID (default 'PRD-SYS-001'): ").strip() or "PRD-SYS-001"
+        req = (
+            input("\nEnter Requirement ID (default 'PRD-SYS-001'): ").strip()
+            or "PRD-SYS-001"
+        )
 
         return title, domain_key, req
     except KeyboardInterrupt:

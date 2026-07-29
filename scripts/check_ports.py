@@ -38,8 +38,12 @@ def main():
 
     print("\n--- Summary ---")
     if collisions:
-        print(f"Warning: {len(collisions)} port(s) currently bound by active processes.")
-        print("Running tests or dev servers on these ports will cause 'address already in use' errors.")
+        print(
+            f"Warning: {len(collisions)} port(s) currently bound by active processes."
+        )
+        print(
+            "Running tests or dev servers on these ports will cause 'address already in use' errors."
+        )
     else:
         print("All microservice ports are free and ready for local development!")
 
