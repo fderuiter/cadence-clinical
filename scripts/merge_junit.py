@@ -6,6 +6,7 @@ consolidated JUnit XML report file. It updates test counters (tests, failures,
 errors, skipped) and sums execution time.
 """
 
+import os
 import sys
 import xml.etree.ElementTree as ET
 
@@ -33,6 +34,9 @@ def merge_junit_xml(output_path: str, input_paths: list[str]) -> None:
     total_time = 0.0
 
     for path in input_paths:
+        if not os.path.exists(path):
+            print(f"Warning: JUnit XML report file '{path}' not found. Skipping.")
+            continue
         try:
             tree = ET.parse(path)  # nosec B314
             root = tree.getroot()

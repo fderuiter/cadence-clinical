@@ -23,7 +23,8 @@
     "build": "pnpm --filter web build",
     "docs:dev": "vitepress dev docs",
     "docs:build": "node scripts/build-docs.js",
-    "build:docs": "node scripts/build-docs.js"
+    "build:docs": "node scripts/build-docs.js",
+    "project:sync": "python3 scripts/sync_github_project.py"
   },
   "repository": {
     "type": "git",

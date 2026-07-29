@@ -17,14 +17,14 @@ repos:
       - id: bandit
         args: ["-c", "pyproject.toml", "-ll", "-ii"]
         additional_dependencies: ["bandit[toml]"]
-        stages: [pre-push]
+        stages: [pre-commit, pre-push, manual]
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.5.0
     hooks:
       - id: detect-secrets
         args: ['--baseline', '.secrets.baseline']
         exclude: 'pnpm-lock.yaml|uv.lock'
-        stages: [pre-push]
+        stages: [pre-commit, pre-push, manual]
 
   - repo: local
     hooks:

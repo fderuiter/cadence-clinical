@@ -41,7 +41,23 @@ When starting a new issue or feature, create a branch from the up-to-date `main`
 
 ---
 
-## 2. Issue-to-Documentation Synchronization Workflow
+## 2. Issue Lifecycle, Parallel Work Streams & GitHub Project Automation
+
+To maintain parallel developer efficiency across microservices and eClinical modules, all issues follow the standardized framework detailed in **[Issue Structure, Work Streams & Project Board Guide](docs/SDLC/ISSUE_STRUCTURE_GUIDE.md)**:
+
+### Filing a New Issue
+1. **Use Issue Templates**: Choose from `.github/ISSUE_TEMPLATE/actionable_leaf_task.yml` or `epic_parent.yml`.
+2. **Assign Work Stream**: Select one of the 8 parallel work streams (`Stream 1: eTMF`, `Stream 2: RTSM`, `Stream 3: Study Designer/eCRF`, `Stream 4: eCOA/ePRO`, `Stream 5: Frontend Vue 3 SPA`, `Stream 6: Security & RBAC`, `Stream 7: Biostatistics`, `Stream 8: Clinical Ops`).
+3. **Specify Target Files**: List exact module paths (`apps/...`, `packages/...`).
+4. **Automated Workflow**: Upon filing, `.github/workflows/project-automation.yml` will automatically:
+   * Format the issue header with readiness badges (🟢 `READY FOR DEV`, 🔴 `BLOCKED`, 🔵 `PARENT EPIC`).
+   * Import the issue to **GitHub Project Board 17 (`Cadence-Clinical`)**.
+   * Calculate module `Size` (`XS` to `XL`) and set `Priority` (`P0`, `P1`, `P2`).
+   * Route the issue to `Ready` or `Backlog`.
+
+---
+
+## 3. Issue-to-Documentation Synchronization Workflow
 
 When addressing open GitHub issues or modifying system functionality, follow the 3-tier documentation cascade to keep specifications and tests in sync:
 

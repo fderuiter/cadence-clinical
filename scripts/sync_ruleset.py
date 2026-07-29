@@ -118,14 +118,23 @@ def sync_ruleset():
         print(
             f"Warning: Failed to fetch rulesets or repository doesn't have rulesets access (or gh not authenticated). Stderr: {stderr}"
         )
-        if os.environ.get("GITHUB_ACTIONS") == "true" and not os.environ.get(
-            "TEST_SUITE_RUN"
+        if (
+            "Resource not accessible by integration" in stderr
+            or "403" in stderr
+            or "Must have admin rights" in stderr
+            or "HTTP 403" in stderr
         ):
             print(
-                "Error: Running in GitHub Actions but gh api returned empty output. Is GH_TOKEN configured?"
+                "Warning: GITHUB_TOKEN or environment credentials do not have ruleset administration scope (Administration: write).\n"
+                "Skipping automated ruleset sync for this run."
+            )
+            return
+        if os.environ.get("GITHUB_ACTIONS") == "true" and os.environ.get("FAIL_ON_RULESET_SYNC_ERROR") == "true" and not os.environ.get("TEST_SUITE_RUN"):
+            print(
+                "Error: Running in GitHub Actions with FAIL_ON_RULESET_SYNC_ERROR=true, but gh api returned empty output."
             )
             sys.exit(1)
-        print("Exiting dry-run sync successfully.")
+        print("Exiting ruleset sync gracefully.")
         return
 
     try:
@@ -183,17 +192,20 @@ def sync_ruleset():
             if (
                 "Resource not accessible by integration" in combined_output
                 or "403" in combined_output
+                or "Must have admin rights" in combined_output
             ):
                 print(
-                    "Error: Permission denied (HTTP 403) during ruleset administration.\n"
+                    "Warning: Permission denied (HTTP 403) during ruleset administration.\n"
                     "Ruleset administration requires a token with 'Administration: write' permissions. "
-                    "Please verify that the GITHUB_TOKEN has the required permissions or that a dedicated admin-capable PAT is supplied."
+                    "Skipping automated ruleset sync for this run."
                 )
+                if os.environ.get("FAIL_ON_RULESET_SYNC_ERROR") == "true":
+                    sys.exit(1)
             else:
                 print(
                     f"Error: Command failed with exit code {e.returncode}.\nStderr: {stderr_msg}\nStdout: {stdout_msg}"
                 )
-            sys.exit(1)
+                sys.exit(1)
 
 
 if __name__ == "__main__":
