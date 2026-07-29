@@ -506,6 +506,28 @@ async def evaluate_and_transition_screening(
     change_reason = request.headers.get("X-Change-Reason", "")
 
     async with db_manager.get_session_maker()() as session:
+        # Propagate context variables into database session for PostgreSQL triggers
+        try:
+            user_val = current_user_id.get()
+        except LookupError:
+            user_val = "system"
+        try:
+            reason_val = current_change_reason.get()
+        except LookupError:
+            reason_val = change_reason or "system_operation"
+
+        await session.execute(
+            text("SELECT set_config('cadence.current_user_id', :user_id, true);"),
+            {"user_id": user_val},
+        )
+        await session.execute(
+            text("SELECT set_config('cadence.current_change_reason', :reason, true);"),
+            {"reason": reason_val},
+        )
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', true);")
+        )
+
         stmt_subj = select(ClinicalSubject).where(
             (ClinicalSubject.subject_id == subject_id)
             | (ClinicalSubject.id == subject_id)
