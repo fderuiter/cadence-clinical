@@ -2,6 +2,13 @@
   "name": "main-branch-protection",
   "target": "branch",
   "enforcement": "active",
+  "bypass_actors": [
+    {
+      "actor_id": 5,
+      "actor_type": "RepositoryRole",
+      "bypass_mode": "always"
+    }
+  ],
   "conditions": {
     "ref_name": {
       "include": [
@@ -22,10 +29,9 @@
       "parameters": {
         "required_approving_review_count": 1,
         "dismiss_stale_reviews_on_push": false,
-        "require_code_owner_review": false,
+        "require_code_owner_review": true,
         "require_last_push_approval": false,
-        "required_review_thread_resolution": false,
-        "automatic_copilot_approval_allowed": false
+        "required_review_thread_resolution": false
       }
     },
     {
