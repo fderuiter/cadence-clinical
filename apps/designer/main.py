@@ -1,4 +1,27 @@
 # ruff: noqa: E402
+"""
+Cadence Clinical - Designer (MDR/SDR)
+
+This module handles the design and management of clinical studies and MDR components.
+
+Payload Contract for Study Publication Event:
+---------------------------------------------
+When a clinical study is published, the event is delivered to the Execution engine's
+endpoint: `POST /events/study-published`.
+
+The payload contains the canonical USDM and legacy structures. Specifically,
+the top-level structure of the delivered JSON payload includes:
+- `id` (str): The unique ID of the study.
+- `name` (str): The study title.
+- `version` (str): The current study version.
+- `cross_form_check` (list[dict]): A collection of study-level authored cross-form/longitudinal rules.
+  Each item in this collection preserves the following keys:
+    * `id` (str): The authored ID of the rule, utilized downstream as the deterministic `rule_id`.
+    * `type` (str): Set to "cross_form_check".
+    * `condition` (dict): The structured JSON condition expression tree.
+    * `query_message` (str): The discrepancy/query message template to be raised.
+    * `version_index` (int): Chronological version index of the rule.
+"""
 import os
 import time
 from datetime import datetime

@@ -378,3 +378,318 @@ async def test_deferred_predecessor_checks() -> None:
             # It should be soft deleted
             assert len([p for p in all_pending if not p.is_deleted]) == 0
             assert len([p for p in all_pending if p.is_deleted]) == 1
+
+
+@pytest.mark.asyncio
+async def test_authored_cross_form_rule_lifecycle() -> None:
+    """Test Task 4: Ingestion and lifecycle evaluation of published authored cross_form_check rules."""
+    headers = get_v2_auth_headers(
+        user_id="dm_user_100",
+        roles="Data Manager",
+        change_reason="Publish and test authored cross-form check rules",
+    )
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # 1. Publish the study-level authored cross_form_check rule
+        study_id = "STUDY-AUTH-001"
+        published_payload = {
+            "study_id": study_id,
+            "payload": {
+                "version": "1.2",
+                "cross_form_check": [
+                    {
+                        "id": "AUTH_RULE_VSDPB_VSSBP",
+                        "type": "cross_form_check",
+                        "query_message": "Custom Authored Check failed: diastolic cannot exceed systolic BP.",
+                        "condition": {
+                            "type": "comparison",
+                            "operator": ">",
+                            "operands": [
+                                {
+                                    "type": "field_ref",
+                                    "field_ref": {"field_id": "VSDPB"}
+                                },
+                                {
+                                    "type": "field_ref",
+                                    "field_ref": {"field_id": "VSSBP"}
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+        pub_resp = await client.post("/events/study-published", json=published_payload, headers=headers)
+        assert pub_resp.status_code == 200
+
+        # Wait for background task of process_translation to complete/settle
+        await asyncio.sleep(0.2)
+
+        # 2. Setup subject and visit
+        await client.post(
+            "/api/v1/execution/subjects",
+            json={"subject_id": "SUBJ-AUTH-1", "study_id": study_id},
+            headers=headers,
+        )
+
+        v_resp = await client.post(
+            "/api/v1/execution/visits",
+            json={
+                "subject_id": "SUBJ-AUTH-1",
+                "visit_name": "BASELINE",
+                "study_id": study_id,
+            },
+            headers=headers,
+        )
+        visit_id = v_resp.json()["id"]
+
+        # 3. Post observations that VIOLATE the check (VSDPB = 120, VSSBP = 110)
+        # Post VSSBP = 110 first
+        await client.post(
+            "/api/v1/execution/observations",
+            json={
+                "subject_id": "SUBJ-AUTH-1",
+                "study_id": study_id,
+                "visit_id": visit_id,
+                "domain": "VS",
+                "test_code": "VSSBP",
+                "test_name": "Systolic Blood Pressure",
+                "value": 110.0,
+                "unit": "mmHg",
+            },
+            headers=headers,
+        )
+        # Post VSDPB = 120 (violates VSDPB > VSSBP)
+        await client.post(
+            "/api/v1/execution/observations",
+            json={
+                "subject_id": "SUBJ-AUTH-1",
+                "study_id": study_id,
+                "visit_id": visit_id,
+                "domain": "VS",
+                "test_code": "VSDPB",
+                "test_name": "Diastolic Blood Pressure",
+                "value": 120.0,
+                "unit": "mmHg",
+            },
+            headers=headers,
+        )
+
+        # Wait for background async check
+        await asyncio.sleep(0.2)
+
+        # 4. Assert exactly one ClinicalQuery opens with the authored rule_id and SYSTEM origin
+        queries_resp = await client.get("/api/v1/execution/queries", headers=headers)
+        queries = queries_resp.json()
+        rule_queries = [q for q in queries if q["rule_id"] == "AUTH_RULE_VSDPB_VSSBP"]
+        assert len(rule_queries) == 1
+        query = rule_queries[0]
+        assert query["status"] == "OPEN"
+        assert query["origin"] == "SYSTEM"
+        assert "diastolic cannot exceed systolic BP" in query["message"]
+
+        # Check audit trail of the query for Part 11 compliant change reason propagation
+        assert len(query["history"]) == 1
+        assert query["history"][0]["user_id"] == "dm_user_100"
+        assert query["history"][0]["change_reason"] == "Publish and test authored cross-form check rules"
+
+        # 5. Submit corrected observations (VSDPB = 80, VSSBP = 110)
+        # Since VSDPB = 80 is not > 110, the check passes, and query must auto-resolve
+        await client.post(
+            "/api/v1/execution/observations",
+            json={
+                "subject_id": "SUBJ-AUTH-1",
+                "study_id": study_id,
+                "visit_id": visit_id,
+                "domain": "VS",
+                "test_code": "VSDPB",
+                "test_name": "Diastolic Blood Pressure",
+                "value": 80.0,
+                "unit": "mmHg",
+            },
+            headers=headers,
+        )
+
+        # Wait for background async check
+        await asyncio.sleep(0.2)
+
+        # Verify query is now CLOSED and auto-resolved
+        queries_resp2 = await client.get("/api/v1/execution/queries", headers=headers)
+        closed_queries = [
+            q for q in queries_resp2.json()
+            if q["rule_id"] == "AUTH_RULE_VSDPB_VSSBP" and q["status"] == "CLOSED"
+        ]
+        assert len(closed_queries) == 1
+        closed_q = closed_queries[0]
+        assert closed_q["resolver"] == "SYSTEM"
+        assert "Auto-resolved" in closed_q["response"]
+
+
+@pytest.mark.asyncio
+async def test_authored_longitudinal_predecessor_handling() -> None:
+    """Test Task 4: Ingestion and evaluation of published longitudinal authored rule using PendingPredecessorCheck."""
+    headers = get_v2_auth_headers(
+        user_id="dm_user_200",
+        roles="Data Manager",
+        change_reason="Publish and test authored predecessor longitudinal check rules",
+    )
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # 1. Publish the study-level longitudinal authored cross_form_check rule
+        study_id = "STUDY-AUTH-LONG"
+        published_payload = {
+            "study_id": study_id,
+            "payload": {
+                "version": "1.3",
+                "cross_form_check": [
+                    {
+                        "id": "AUTH_LONG_RULE",
+                        "type": "cross_form_check",
+                        "query_message": "Authored rule failed: diastolic increased by over 50 compared to predecessor.",
+                        "condition": {
+                            "type": "comparison",
+                            "operator": ">",
+                            "operands": [
+                                {
+                                    "type": "field_ref",
+                                    "field_ref": {"field_id": "VSDPB"}
+                                },
+                                {
+                                    "type": "comparison",
+                                    "operator": "+",
+                                    "operands": [
+                                        {
+                                            "type": "field_ref",
+                                            "field_ref": {"field_id": "VSDPB", "visit_relative": "previous"}
+                                        },
+                                        {
+                                            "type": "constant",
+                                            "value": 50.0
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+        pub_resp = await client.post("/events/study-published", json=published_payload, headers=headers)
+        assert pub_resp.status_code == 200
+
+        # Wait for background task of process_translation to complete/settle
+        await asyncio.sleep(0.2)
+
+        # 2. Setup subject and visits
+        await client.post(
+            "/api/v1/execution/subjects",
+            json={"subject_id": "SUBJ-AUTH-LONG-1", "study_id": study_id},
+            headers=headers,
+        )
+
+        base_visit_resp = await client.post(
+            "/api/v1/execution/visits",
+            json={
+                "subject_id": "SUBJ-AUTH-LONG-1",
+                "visit_name": "BASELINE",
+                "study_id": study_id,
+            },
+            headers=headers,
+        )
+        base_visit_id = base_visit_resp.json()["id"]
+
+        screen_visit_resp = await client.post(
+            "/api/v1/execution/visits",
+            json={
+                "subject_id": "SUBJ-AUTH-LONG-1",
+                "visit_name": "SCREENING",
+                "study_id": study_id,
+            },
+            headers=headers,
+        )
+        screen_visit_id = screen_visit_resp.json()["id"]
+
+        # 3. Post observation at BASELINE. SCREENING weight is missing, so weight comparison is deferred!
+        await client.post(
+            "/api/v1/execution/observations",
+            json={
+                "subject_id": "SUBJ-AUTH-LONG-1",
+                "study_id": study_id,
+                "visit_id": base_visit_id,
+                "domain": "VS",
+                "test_code": "VSDPB",
+                "test_name": "Diastolic Blood Pressure",
+                "value": 110.0,
+                "unit": "mmHg",
+            },
+            headers=headers,
+        )
+
+        # Wait briefly
+        await asyncio.sleep(0.2)
+
+        # Verify no query is opened yet since predecessor (SCREENING) VSDPB is missing
+        queries_resp = await client.get("/api/v1/execution/queries", headers=headers)
+        assert (
+            len([q for q in queries_resp.json() if q["rule_id"] == "AUTH_LONG_RULE"])
+            == 0
+        )
+
+        # Verify that a PendingPredecessorCheck was created in database
+        async with db_manager.get_session_maker()() as session:
+            stmt = select(PendingPredecessorCheck).where(
+                PendingPredecessorCheck.subject_id == "SUBJ-AUTH-LONG-1",
+                PendingPredecessorCheck.rule_id == "AUTH_LONG_RULE",
+                PendingPredecessorCheck.is_deleted.is_(False),
+            )
+            res = await session.execute(stmt)
+            pending_list = res.scalars().all()
+            assert len(pending_list) == 1
+            assert pending_list[0].predecessor_visit_name == "SCREENING"
+
+        # 4. Submit observation at SCREENING = 50.0.
+        # Predecessor is now completed. 110.0 is > 50.0 + 50.0 (100.0), so check fails and query opens on BASELINE!
+        await client.post(
+            "/api/v1/execution/observations",
+            json={
+                "subject_id": "SUBJ-AUTH-LONG-1",
+                "study_id": study_id,
+                "visit_id": screen_visit_id,
+                "domain": "VS",
+                "test_code": "VSDPB",
+                "test_name": "Diastolic Blood Pressure",
+                "value": 50.0,
+                "unit": "mmHg",
+            },
+            headers=headers,
+        )
+
+        # Wait briefly for background resolution
+        await asyncio.sleep(0.2)
+
+        # Verify query was opened on BASELINE visit's VSDPB
+        queries_resp2 = await client.get("/api/v1/execution/queries", headers=headers)
+        long_queries = [
+            q for q in queries_resp2.json() if q["rule_id"] == "AUTH_LONG_RULE"
+        ]
+        assert len(long_queries) == 1
+        assert long_queries[0]["status"] == "OPEN"
+        assert (
+            "diastolic increased by over 50 compared to predecessor"
+            in long_queries[0]["message"]
+        )
+
+        # Verify the PendingPredecessorCheck was soft-deleted (is_deleted = True)
+        async with db_manager.get_session_maker()() as session:
+            stmt = select(PendingPredecessorCheck).where(
+                PendingPredecessorCheck.subject_id == "SUBJ-AUTH-LONG-1",
+                PendingPredecessorCheck.rule_id == "AUTH_LONG_RULE",
+            )
+            res = await session.execute(stmt)
+            all_pending = res.scalars().all()
+            assert len([p for p in all_pending if not p.is_deleted]) == 0
+            assert len([p for p in all_pending if p.is_deleted]) == 1
