@@ -34,6 +34,7 @@ from packages.security.rbac import (
     ROLE_SYSADMIN,
     Principal,
     can_access_site,
+    can_access_study,
     get_normalized_roles,
     get_principal,
     has_permission,
@@ -99,5 +100,6 @@ __all__ = [
     "require_permission",
     "has_permission",
     "can_access_site",
+    "can_access_study",
     "mask_payload",
 ]

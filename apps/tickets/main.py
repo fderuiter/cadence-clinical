@@ -29,6 +29,7 @@ from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.rbac import (
     Principal,
     can_access_site,
+    can_access_study,
     get_principal,
     verify_not_auditor,
 )
@@ -430,16 +431,22 @@ async def list_tickets(
         stmt = stmt.where(Ticket.is_deleted.is_(False))
 
     # Scope-awareness
-    site_scoped_roles = {"investigator", "crc", "cra"}
+    site_scoped_roles = {"investigator", "crc", "cra", "external_monitor"}
     is_site_scoped = any(role in site_scoped_roles for role in principal.roles)
 
-    if is_site_scoped or principal.assigned_sites:
-        if principal.assigned_sites:
-            stmt = stmt.where(Ticket.site_id.in_(principal.assigned_sites))
-        else:
-            stmt = stmt.where(1 == 0)
+    if is_site_scoped or principal.assigned_sites or principal.assigned_studies:
+        if is_site_scoped or principal.assigned_sites:
+            if principal.assigned_sites:
+                stmt = stmt.where(Ticket.site_id.in_(principal.assigned_sites))
+            else:
+                stmt = stmt.where(1 == 0)
+        if "external_monitor" in principal.roles or principal.assigned_studies:
+            if principal.assigned_studies:
+                stmt = stmt.where(Ticket.study_id.in_(principal.assigned_studies))
+            else:
+                stmt = stmt.where(1 == 0)
 
-    # For other/any users, if site_id filter is supplied, verify access against assigned_sites if restricted
+    # For other/any users, if site_id/study_id filter is supplied, verify access against assigned_sites/assigned_studies if restricted
     if site_id:
         if principal.assigned_sites and site_id not in principal.assigned_sites:
             raise HTTPException(
@@ -447,6 +454,14 @@ async def list_tickets(
                 detail="Forbidden: Insufficient scope access for this site.",
             )
         stmt = stmt.where(Ticket.site_id == site_id)
+
+    if study_id:
+        if principal.assigned_studies and study_id not in principal.assigned_studies:
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: Insufficient scope access for this study.",
+            )
+        stmt = stmt.where(Ticket.study_id == study_id)
 
     # Composable filters
     if status:
@@ -560,6 +575,11 @@ async def get_ticket(
             status_code=403,
             detail="Forbidden: Insufficient scope access for this site.",
         )
+    if ticket.study_id and not can_access_study(principal, ticket.study_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Insufficient scope access for this study.",
+        )
 
     await write_ticket_audit_log(
         session=session,
@@ -613,6 +633,11 @@ async def update_ticket(
         raise HTTPException(
             status_code=403,
             detail="Forbidden: Insufficient scope access for this site.",
+        )
+    if ticket.study_id and not can_access_study(principal, ticket.study_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Insufficient scope access for this study.",
         )
 
     # Check optimistic locking
@@ -733,6 +758,11 @@ async def transition_ticket(
             status_code=403,
             detail="Forbidden: Insufficient scope access for this site.",
         )
+    if ticket.study_id and not can_access_study(principal, ticket.study_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Insufficient scope access for this study.",
+        )
 
     # Check optimistic locking
     check_optimistic_locking(ticket, payload.version_index, request)
@@ -819,6 +849,11 @@ async def assign_ticket(
         raise HTTPException(
             status_code=403,
             detail="Forbidden: Insufficient scope access for this site.",
+        )
+    if ticket.study_id and not can_access_study(principal, ticket.study_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Insufficient scope access for this study.",
         )
 
     # Check optimistic locking

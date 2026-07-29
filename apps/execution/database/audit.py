@@ -70,6 +70,7 @@ def receive_before_flush(session: Session, flush_context, instances):
             "organizations",
             "sites",
             "personnel",
+            "personnel_assignments",
             "delegations_of_authority",
             "org_audit_logs",
             "safety_cases",

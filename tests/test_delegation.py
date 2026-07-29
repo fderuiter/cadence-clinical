@@ -241,3 +241,12 @@ def test_delegation_target_from_body() -> None:
     response = client.post("/test-delegation", json=payload, headers=headers)
     assert response.status_code == 200
     assert response.json()["status"] == "success"
+
+
+def test_external_monitor_delegation_exclusion() -> None:
+    """Verify that External Monitor role is explicitly excluded from Delegation-of-Authority flows."""
+    for role_name in ["external monitor", "external_monitor", "cro monitor"]:
+        with pytest.raises(HTTPException) as exc_info:
+            normalize_and_validate_staff_role(role_name)
+        assert exc_info.value.status_code == 400
+        assert "Invalid clinical staff role" in exc_info.value.detail

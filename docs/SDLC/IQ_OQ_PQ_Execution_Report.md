@@ -9,11 +9,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1207
-- **Passed:** 1207 🟢
-- **Failed/Errors:** 0 🔴
+- **Total Automated Test Cases Run:** 1197
+- **Passed:** 1192 🟢
+- **Failed/Errors:** 5 🔴
 - **Skipped:** 0 ⚪
-- **Overall Operational Pass Rate:** 100.00%
+- **Overall Operational Pass Rate:** 99.58%
 
 ## 2. Installation Qualification (IQ)
 
@@ -377,6 +377,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_delegation_missing_target_context` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_delegation_successful_pi_matching_scope` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_delegation_target_from_body` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_external_monitor_delegation_exclusion` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_normalize_and_validate_staff_role_invalid` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_normalize_and_validate_staff_role_valid` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validate_request_staff_roles_empty` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -743,11 +744,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_lab_reference_range_audit_and_triggers` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_lab_reference_range_crud_and_precision` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_schema_evolution_migration_upgrade` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
-| `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_scrambled_sequence` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_valid` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | 🔴 FAILED | < 1s |
+| `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | 🔴 FAILED | < 1s |
+| `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | 🔴 FAILED | < 1s |
+| `test_layout_validation_scrambled_sequence` | `tests.test_layout_validator` | *Regression/Helper* | 🔴 FAILED | < 1s |
+| `test_layout_validation_valid` | `tests.test_layout_validator` | *Regression/Helper* | 🔴 FAILED | < 1s |
 | `test_ledger_sealing_and_validation` | `tests.test_ledger_and_triggers` | PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_out_of_band_update_triggers_audit_entry` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_prevent_audit_ledger_seals_mutation` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -860,6 +861,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_notifications_health_check` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_webhook_delivery_channel_failure_and_retry_backoff` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_webhook_delivery_channel_success` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cro_affiliation_validation` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_delegation_of_authority_flow` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gxp_audit_logging_and_actor_context` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_health_endpoint` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -867,7 +869,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_organization_and_site_relationship` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_organization_crud_api` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_personnel_and_sitestaff_alias` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_personnel_assignments_crud` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_personnel_crud_api` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_resolve_assignments_endpoint` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_site_crud_api` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_fields_change_reason_validation[   ]` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_fields_change_reason_validation[\n]` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -960,6 +964,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_execution_observation_creation_auditor_forbidden` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_execution_subject_creation_auditor_forbidden` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_execution_visit_creation_auditor_forbidden` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_external_monitor_aliases` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_external_monitor_eisf_denies_writes_allows_reads` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_external_monitor_permissions_matrix` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_external_monitor_principal_resolution` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_principal_from_request` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_has_permission` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_mask_payload_recursive` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1363,24 +1371,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_environment_integrity` | `tests.validation.environment_integrity_tests` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_site_level_data_isolation` | `tests.validation.environment_integrity_tests` | PRD-SYS-004 | 🟢 PASSED | < 1s |
 | `test_gxp_compliance_drifts_identified` | `tests.validation.gxp_compliance_suite` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_blinding_constraints_on_ui_data_rendering` | `tests.validation.prd_compliance_traceability_tests` | PRD-MDR-006 | 🟢 PASSED | < 1s |
-| `test_ecrf_version_control_history` | `tests.validation.prd_compliance_traceability_tests` | PRD-EDC-005 | 🟢 PASSED | < 1s |
-| `test_edc_archival_integration` | `tests.validation.prd_compliance_traceability_tests` | PRD-EDC-010 | 🟢 PASSED | < 1s |
-| `test_edc_audit_trail_and_signatures` | `tests.validation.prd_compliance_traceability_tests` | PRD-EDC-006 | 🟢 PASSED | < 1s |
-| `test_edc_concurrent_review_locks` | `tests.validation.prd_compliance_traceability_tests` | PRD-EDC-009 | 🟢 PASSED | < 1s |
-| `test_edc_electronic_signatures` | `tests.validation.prd_compliance_traceability_tests` | PRD-EDC-007 | 🟢 PASSED | < 1s |
-| `test_edc_reconsent_and_versioning` | `tests.validation.prd_compliance_traceability_tests` | PRD-EDC-008 | 🟢 PASSED | < 1s |
-| `test_fda_compliant_pdf_generation` | `tests.validation.prd_compliance_traceability_tests` | PRD-SUB-007 | 🟢 PASSED | < 1s |
-| `test_field_level_ingestion_validations` | `tests.validation.prd_compliance_traceability_tests` | PRD-EDC-002 | 🟢 PASSED | < 1s |
-| `test_ie_criteria_logical_mapping_to_ecrf` | `tests.validation.prd_compliance_traceability_tests` | PRD-MDR-007 | 🟢 PASSED | < 1s |
-| `test_query_lifecycle_states` | `tests.validation.prd_compliance_traceability_tests` | PRD-QRY-001 | 🟢 PASSED | < 1s |
-| `test_spreadsheet_ingestion_sheet_structure` | `tests.validation.prd_compliance_traceability_tests` | PRD-EDC-001 | 🟢 PASSED | < 1s |
-| `test_submission_archival_integration` | `tests.validation.prd_compliance_traceability_tests` | PRD-SUB-006 | 🟢 PASSED | < 1s |
-| `test_submission_audit_trail` | `tests.validation.prd_compliance_traceability_tests` | PRD-SUB-004 | 🟢 PASSED | < 1s |
-| `test_submission_e_signatures` | `tests.validation.prd_compliance_traceability_tests` | PRD-SUB-003 | 🟢 PASSED | < 1s |
-| `test_submission_locks` | `tests.validation.prd_compliance_traceability_tests` | PRD-SUB-005 | 🟢 PASSED | < 1s |
-| `test_submission_version_control` | `tests.validation.prd_compliance_traceability_tests` | PRD-SUB-002 | 🟢 PASSED | < 1s |
-| `test_system_generated_validation_queries` | `tests.validation.prd_compliance_traceability_tests` | PRD-QRY-002 | 🟢 PASSED | < 1s |
 
 ## 4. Performance Qualification (PQ) & Scenario Validation
 
