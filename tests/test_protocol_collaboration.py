@@ -45,8 +45,13 @@ def clean_collaboration_stores():
     MOCK_COLLABORATION_DATA["transitions"].clear()
 
 
-def get_auth_headers(user_id="user_admin", roles="sponsor_designer", change_reason="REST Collaboration Action"):
+def get_auth_headers(
+    user_id="user_admin",
+    roles="sponsor_designer",
+    change_reason="REST Collaboration Action",
+):
     import time
+
     timestamp = str(time.time())
     secret = b"internal-gateway-secret-12345"
     sig = generate_gateway_signature(
@@ -70,6 +75,7 @@ def get_auth_headers(user_id="user_admin", roles="sponsor_designer", change_reas
 # 1. Section Review Transition State Machine & RBAC Tests
 # =====================================================================
 
+
 @pytest.mark.asyncio
 async def test_section_review_transitions_lifecycle():
     study_id = "study_collab_1"
@@ -92,19 +98,29 @@ async def test_section_review_transitions_lifecycle():
 
     # Transition: DRAFT -> IN_REVIEW
     t1 = await transition_section_status(
-        None, study_id, section_id, SectionReviewStatus.IN_REVIEW,
-        actor_id="designer_1", actor_role="sponsor_designer",
-        reason_for_change="Ready for collaborative review by medical monitors."
+        None,
+        study_id,
+        section_id,
+        SectionReviewStatus.IN_REVIEW,
+        actor_id="designer_1",
+        actor_role="sponsor_designer",
+        reason_for_change="Ready for collaborative review by medical monitors.",
     )
     assert t1.from_status == SectionReviewStatus.DRAFT
     assert t1.to_status == SectionReviewStatus.IN_REVIEW
-    assert (await get_section_status(None, study_id, section_id)) == SectionReviewStatus.IN_REVIEW
+    assert (
+        await get_section_status(None, study_id, section_id)
+    ) == SectionReviewStatus.IN_REVIEW
 
     # Transition: IN_REVIEW -> LOCKED
     t2 = await transition_section_status(
-        None, study_id, section_id, SectionReviewStatus.LOCKED,
-        actor_id="designer_1", actor_role="sponsor_designer",
-        reason_for_change="Comments resolved. Ready for formal approval and signing."
+        None,
+        study_id,
+        section_id,
+        SectionReviewStatus.LOCKED,
+        actor_id="designer_1",
+        actor_role="sponsor_designer",
+        reason_for_change="Comments resolved. Ready for formal approval and signing.",
     )
     assert t2.from_status == SectionReviewStatus.IN_REVIEW
     assert t2.to_status == SectionReviewStatus.LOCKED
@@ -116,19 +132,27 @@ async def test_section_review_transitions_lifecycle():
         "signing_reason": "Approve rationale section",
     }
     t3 = await transition_section_status(
-        None, study_id, section_id, SectionReviewStatus.APPROVED,
-        actor_id="pi_1", actor_role="sponsor_designer",
+        None,
+        study_id,
+        section_id,
+        SectionReviewStatus.APPROVED,
+        actor_id="pi_1",
+        actor_role="sponsor_designer",
         reason_for_change="Approve rational and design description section.",
-        signature_manifestation=sig_manifestation
+        signature_manifestation=sig_manifestation,
     )
     assert t3.from_status == SectionReviewStatus.LOCKED
     assert t3.to_status == SectionReviewStatus.APPROVED
 
     # Transition: APPROVED -> DRAFT (revert/unlock with justification)
     t4 = await transition_section_status(
-        None, study_id, section_id, SectionReviewStatus.DRAFT,
-        actor_id="designer_1", actor_role="sponsor_designer",
-        reason_for_change="Unlock section for clinical amendment updates."
+        None,
+        study_id,
+        section_id,
+        SectionReviewStatus.DRAFT,
+        actor_id="designer_1",
+        actor_role="sponsor_designer",
+        reason_for_change="Unlock section for clinical amendment updates.",
     )
     assert t4.from_status == SectionReviewStatus.APPROVED
     assert t4.to_status == SectionReviewStatus.DRAFT
@@ -137,15 +161,20 @@ async def test_section_review_transitions_lifecycle():
     # Attempting to go DRAFT -> APPROVED directly should fail
     with pytest.raises(ValueError):
         await transition_section_status(
-            None, study_id, section_id, SectionReviewStatus.APPROVED,
-            actor_id="designer_1", actor_role="sponsor_designer",
-            reason_for_change="Invalid skip transition attempt."
+            None,
+            study_id,
+            section_id,
+            SectionReviewStatus.APPROVED,
+            actor_id="designer_1",
+            actor_role="sponsor_designer",
+            reason_for_change="Invalid skip transition attempt.",
         )
 
 
 # =====================================================================
 # 2. Block Mutation Locking & Rejection Tests
 # =====================================================================
+
 
 @pytest.mark.asyncio
 async def test_block_mutation_locks_enforcement():
@@ -165,37 +194,61 @@ async def test_block_mutation_locks_enforcement():
 
     # Create block in DRAFT section (unlocked)
     b_id = await create_block(
-        None, study_id, "user_1", "Initial add", "block_test",
-        {"block_type": "narrative", "order": 1, "text": "Intro", "section_id": section_id}
+        None,
+        study_id,
+        "user_1",
+        "Initial add",
+        "block_test",
+        {
+            "block_type": "narrative",
+            "order": 1,
+            "text": "Intro",
+            "section_id": section_id,
+        },
     )
     assert b_id == "block_test"
 
     # Mutate section status -> LOCKED
     await transition_section_status(
-        None, study_id, section_id, SectionReviewStatus.LOCKED,
-        actor_id="designer_1", actor_role="sponsor_designer",
-        reason_for_change="Lock section for regulatory review."
+        None,
+        study_id,
+        section_id,
+        SectionReviewStatus.LOCKED,
+        actor_id="designer_1",
+        actor_role="sponsor_designer",
+        reason_for_change="Lock section for regulatory review.",
     )
 
     # Attempt to CREATE another block under the locked section should fail
     with pytest.raises(ImmutabilityViolationError):
         await create_block(
-            None, study_id, "user_1", "Try write locked", "block_fail",
-            {"block_type": "narrative", "order": 2, "text": "Blocked", "section_id": section_id}
+            None,
+            study_id,
+            "user_1",
+            "Try write locked",
+            "block_fail",
+            {
+                "block_type": "narrative",
+                "order": 2,
+                "text": "Blocked",
+                "section_id": section_id,
+            },
         )
 
     # Attempt to UPDATE existing block in the locked section should fail
     with pytest.raises(ImmutabilityViolationError):
         await update_block(
-            None, study_id, "user_1", "Try update locked", "block_test",
-            {"text": "Attempted edit text"}
+            None,
+            study_id,
+            "user_1",
+            "Try update locked",
+            "block_test",
+            {"text": "Attempted edit text"},
         )
 
     # Attempt to DELETE existing block in the locked section should fail
     with pytest.raises(ImmutabilityViolationError):
-        await delete_block(
-            None, study_id, "user_1", "Try delete locked", "block_test"
-        )
+        await delete_block(None, study_id, "user_1", "Try delete locked", "block_test")
 
     # Attempt to REORDER blocks containing locked sections should fail
     with pytest.raises(ImmutabilityViolationError):
@@ -207,6 +260,7 @@ async def test_block_mutation_locks_enforcement():
 # =====================================================================
 # 3. Block-Anchored Comment Threads & Comments
 # =====================================================================
+
 
 @pytest.mark.asyncio
 async def test_comments_and_threads_lifecycle():
@@ -226,15 +280,27 @@ async def test_comments_and_threads_lifecycle():
 
     # Create block to anchor thread to
     await create_block(
-        None, study_id, "user_1", "Setup block", block_id,
-        {"block_type": "narrative", "order": 1, "text": "Anchor Text", "section_id": section_id}
+        None,
+        study_id,
+        "user_1",
+        "Setup block",
+        block_id,
+        {
+            "block_type": "narrative",
+            "order": 1,
+            "text": "Anchor Text",
+            "section_id": section_id,
+        },
     )
 
     # Create thread with initial comment
     thread = await create_comment_thread(
-        None, study_id, section_id, block_id,
+        None,
+        study_id,
+        section_id,
+        block_id,
         text="Is this wording medically accurate?",
-        created_by="reviewer_1"
+        created_by="reviewer_1",
     )
     assert thread.status == "open"
     assert thread.block_version_index == 1
@@ -248,9 +314,11 @@ async def test_comments_and_threads_lifecycle():
 
     # Add comment to thread
     updated_thread = await add_comment_to_thread(
-        None, study_id, thread.thread_id,
+        None,
+        study_id,
+        thread.thread_id,
         text="Yes, it matches FDA guidance exactly.",
-        created_by="designer_1"
+        created_by="designer_1",
     )
     assert len(updated_thread.comments) == 2
     assert updated_thread.comments[1].text == "Yes, it matches FDA guidance exactly."
@@ -263,6 +331,7 @@ async def test_comments_and_threads_lifecycle():
 # =====================================================================
 # 4. Suggestions, Acceptance, & GxP Stale-Version Gating
 # =====================================================================
+
 
 @pytest.mark.asyncio
 async def test_suggestions_decision_and_stale_rejection():
@@ -282,16 +351,27 @@ async def test_suggestions_decision_and_stale_rejection():
 
     # Create initial block
     await create_block(
-        None, study_id, "user_1", "Setup block", block_id,
-        {"block_type": "narrative", "order": 1, "text": "Treatment with 10mg", "section_id": section_id}
+        None,
+        study_id,
+        "user_1",
+        "Setup block",
+        block_id,
+        {
+            "block_type": "narrative",
+            "order": 1,
+            "text": "Treatment with 10mg",
+            "section_id": section_id,
+        },
     )
 
     # Propose suggestion on block version 1
     s1 = await create_suggestion(
-        None, study_id, block_id,
+        None,
+        study_id,
+        block_id,
         suggested_text="Treatment with 20mg dose",
         reason="Update protocol to match revised investigator brochure.",
-        created_by="reviewer_1"
+        created_by="reviewer_1",
     )
     assert s1.status == SuggestionStatus.PENDING
     assert s1.block_version_index == 1
@@ -303,8 +383,12 @@ async def test_suggestions_decision_and_stale_rejection():
 
     # Mutate the block so its version advances (making version 1 stale)
     await update_block(
-        None, study_id, "designer_1", "Direct revision", block_id,
-        {"text": "Treatment with 15mg"}
+        None,
+        study_id,
+        "designer_1",
+        "Direct revision",
+        block_id,
+        {"text": "Treatment with 15mg"},
     )
     current_block = await get_block(None, study_id, block_id)
     assert current_block["version_index"] == 2
@@ -312,18 +396,22 @@ async def test_suggestions_decision_and_stale_rejection():
     # Attempt to ACCEPT suggestion s1 (which was based on version 1) should raise ConcurrentLockingError
     with pytest.raises(ConcurrentLockingError):
         await decide_suggestion(
-            None, study_id, s1.suggestion_id,
+            None,
+            study_id,
+            s1.suggestion_id,
             decision="accept",
             decided_by="designer_1",
-            decision_reason="Approve dosage increase"
+            decision_reason="Approve dosage increase",
         )
 
     # Rejecting the suggestion should still succeed even if stale
     s1_rejected = await decide_suggestion(
-        None, study_id, s1.suggestion_id,
+        None,
+        study_id,
+        s1.suggestion_id,
         decision="reject",
         decided_by="designer_1",
-        decision_reason="Dosage has already been modified to 15mg."
+        decision_reason="Dosage has already been modified to 15mg.",
     )
     assert s1_rejected.status == SuggestionStatus.REJECTED
 
@@ -331,6 +419,7 @@ async def test_suggestions_decision_and_stale_rejection():
 # =====================================================================
 # 5. REST API Controller / Gateway Routing Tests
 # =====================================================================
+
 
 def test_api_section_collaboration_gates():
     client = TestClient(app)
@@ -365,13 +454,23 @@ def test_api_section_collaboration_gates():
                 "section_id": section_id,
             }
         },
-        "arms": {}, "epochs": {}, "visits": {}, "procedures": {}, "forms": {}, "timing_windows": {}, "links": [], "actions": []
+        "arms": {},
+        "epochs": {},
+        "visits": {},
+        "procedures": {},
+        "forms": {},
+        "timing_windows": {},
+        "links": [],
+        "actions": [],
     }
 
     # 1. Transition: Unauthenticated request should fail with 403
     resp = client.post(
         f"/api/v1/studies/{study_id}/sections/{section_id}/transition",
-        json={"to_status": "IN_REVIEW", "reason_for_change": "Collaborative study review."}
+        json={
+            "to_status": "IN_REVIEW",
+            "reason_for_change": "Collaborative study review.",
+        },
     )
     assert resp.status_code == 403
 
@@ -379,7 +478,10 @@ def test_api_section_collaboration_gates():
     headers = get_auth_headers(roles="sponsor_designer")
     resp = client.post(
         f"/api/v1/studies/{study_id}/sections/{section_id}/transition",
-        json={"to_status": "IN_REVIEW", "reason_for_change": "Collaborative study review rationale."},
+        json={
+            "to_status": "IN_REVIEW",
+            "reason_for_change": "Collaborative study review rationale.",
+        },
         headers=headers,
     )
     assert resp.status_code == 200

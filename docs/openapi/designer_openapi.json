@@ -452,6 +452,490 @@
         }
       }
     },
+    "/api/v1/studies/{study_id}/sections/{section_id}/transition": {
+      "post": {
+        "summary": "Transition Section",
+        "operationId": "transition_section_api_v1_studies__study_id__sections__section_id__transition_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "section_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Section Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SectionTransitionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SectionReviewTransition"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/studies/{study_id}/sections/{section_id}/status": {
+      "get": {
+        "summary": "Get Section Review Status",
+        "operationId": "get_section_review_status_api_v1_studies__study_id__sections__section_id__status_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "section_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Section Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/studies/{study_id}/sections/{section_id}/threads": {
+      "post": {
+        "summary": "Create Thread Endpoint",
+        "operationId": "create_thread_endpoint_api_v1_studies__study_id__sections__section_id__threads_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "section_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Section Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommentThreadCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentThread"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Get Threads Endpoint",
+        "operationId": "get_threads_endpoint_api_v1_studies__study_id__sections__section_id__threads_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "section_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Section Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CommentThread"
+                  },
+                  "title": "Response Get Threads Endpoint Api V1 Studies  Study Id  Sections  Section Id  Threads Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/studies/{study_id}/threads/{thread_id}/comments": {
+      "post": {
+        "summary": "Add Comment Endpoint",
+        "operationId": "add_comment_endpoint_api_v1_studies__study_id__threads__thread_id__comments_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "thread_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Thread Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommentCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentThread"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/studies/{study_id}/threads/{thread_id}/resolve": {
+      "post": {
+        "summary": "Resolve Thread Endpoint",
+        "operationId": "resolve_thread_endpoint_api_v1_studies__study_id__threads__thread_id__resolve_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "thread_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Thread Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentThread"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/studies/{study_id}/blocks/{block_id}/suggestions": {
+      "post": {
+        "summary": "Create Suggestion Endpoint",
+        "operationId": "create_suggestion_endpoint_api_v1_studies__study_id__blocks__block_id__suggestions_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "block_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Block Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuggestionCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Suggestion"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Get Suggestions Endpoint",
+        "operationId": "get_suggestions_endpoint_api_v1_studies__study_id__blocks__block_id__suggestions_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "block_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Block Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Suggestion"
+                  },
+                  "title": "Response Get Suggestions Endpoint Api V1 Studies  Study Id  Blocks  Block Id  Suggestions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/studies/{study_id}/suggestions/{suggestion_id}/decision": {
+      "post": {
+        "summary": "Decide Suggestion Endpoint",
+        "operationId": "decide_suggestion_endpoint_api_v1_studies__study_id__suggestions__suggestion_id__decision_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "suggestion_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Suggestion Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuggestionDecisionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Suggestion"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/designer/ingestion/upload": {
       "post": {
         "summary": "Upload Protocol Ingestion",
@@ -5292,6 +5776,160 @@
         "title": "CodeValidationState",
         "description": "Validation state of a controlled terminology concept code."
       },
+      "Comment": {
+        "properties": {
+          "comment_id": {
+            "type": "string",
+            "title": "Comment Id",
+            "description": "Unique comment identifier."
+          },
+          "thread_id": {
+            "type": "string",
+            "title": "Thread Id",
+            "description": "Linked thread identifier."
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "description": "Comment text body."
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Author user ID."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Creation timestamp."
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At",
+            "description": "Optional modification timestamp."
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "description": "Sequential version index for GxP auditing.",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "required": [
+          "comment_id",
+          "thread_id",
+          "text",
+          "created_by"
+        ],
+        "title": "Comment",
+        "description": "Represent an individual block-anchored user review comment."
+      },
+      "CommentCreate": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "CommentCreate"
+      },
+      "CommentThread": {
+        "properties": {
+          "thread_id": {
+            "type": "string",
+            "title": "Thread Id",
+            "description": "Unique thread identifier."
+          },
+          "block_id": {
+            "type": "string",
+            "title": "Block Id",
+            "description": "Anchor block identifier."
+          },
+          "section_id": {
+            "type": "string",
+            "title": "Section Id",
+            "description": "Anchor section identifier."
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Associated study identifier."
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Thread resolution status (open, resolved).",
+            "default": "open"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Thread creator user ID."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Creation timestamp."
+          },
+          "block_version_index": {
+            "type": "integer",
+            "title": "Block Version Index",
+            "description": "The block's version_index at the time of thread creation."
+          },
+          "comments": {
+            "items": {
+              "$ref": "#/components/schemas/Comment"
+            },
+            "type": "array",
+            "title": "Comments",
+            "description": "Ordered list of comments."
+          }
+        },
+        "type": "object",
+        "required": [
+          "thread_id",
+          "block_id",
+          "section_id",
+          "study_id",
+          "created_by",
+          "block_version_index"
+        ],
+        "title": "CommentThread",
+        "description": "Represents a collection of ordered review comments anchored to a specific block and section."
+      },
+      "CommentThreadCreate": {
+        "properties": {
+          "block_id": {
+            "type": "string",
+            "title": "Block Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "block_id",
+          "text"
+        ],
+        "title": "CommentThreadCreate"
+      },
       "ConceptDetail": {
         "properties": {
           "id": {
@@ -7278,6 +7916,127 @@
         "title": "RulePreviewResponse",
         "description": "Response for rule preview/validation request."
       },
+      "SectionReviewStatus": {
+        "type": "string",
+        "enum": [
+          "DRAFT",
+          "IN_REVIEW",
+          "LOCKED",
+          "APPROVED"
+        ],
+        "title": "SectionReviewStatus",
+        "description": "Standard review statuses representing the lifecycle of an ICH section."
+      },
+      "SectionReviewTransition": {
+        "properties": {
+          "transition_id": {
+            "type": "string",
+            "title": "Transition Id",
+            "description": "Unique transition tracking identifier."
+          },
+          "section_id": {
+            "type": "string",
+            "title": "Section Id",
+            "description": "Anchor section identifier."
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Associated study identifier."
+          },
+          "from_status": {
+            "$ref": "#/components/schemas/SectionReviewStatus",
+            "description": "Source review status."
+          },
+          "to_status": {
+            "$ref": "#/components/schemas/SectionReviewStatus",
+            "description": "Destination review status."
+          },
+          "actor_id": {
+            "type": "string",
+            "title": "Actor Id",
+            "description": "User ID executing status transition."
+          },
+          "actor_role": {
+            "type": "string",
+            "title": "Actor Role",
+            "description": "Role string used to authorize status transition."
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Part 11 change reason justification."
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp",
+            "description": "Transition timestamp."
+          }
+        },
+        "type": "object",
+        "required": [
+          "transition_id",
+          "section_id",
+          "study_id",
+          "from_status",
+          "to_status",
+          "actor_id",
+          "actor_role",
+          "reason_for_change"
+        ],
+        "title": "SectionReviewTransition",
+        "description": "Represents an immutable, audited, Part 11 compliant transition of a section review status."
+      },
+      "SectionTransitionRequest": {
+        "properties": {
+          "to_status": {
+            "$ref": "#/components/schemas/SectionReviewStatus"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
+          },
+          "signing_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SigningReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "to_status",
+          "reason_for_change"
+        ],
+        "title": "SectionTransitionRequest"
+      },
       "SigningReason": {
         "type": "string",
         "enum": [
@@ -7759,6 +8518,167 @@
         ],
         "title": "StudyTerminologyValidationReport",
         "description": "Aggregated terminology validation report for an entire study structure."
+      },
+      "Suggestion": {
+        "properties": {
+          "suggestion_id": {
+            "type": "string",
+            "title": "Suggestion Id",
+            "description": "Unique suggestion identifier."
+          },
+          "block_id": {
+            "type": "string",
+            "title": "Block Id",
+            "description": "Anchor block identifier."
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Associated study identifier."
+          },
+          "suggested_text": {
+            "type": "string",
+            "title": "Suggested Text",
+            "description": "Proposed replacement text."
+          },
+          "original_text": {
+            "type": "string",
+            "title": "Original Text",
+            "description": "Original block text at proposed time."
+          },
+          "status": {
+            "$ref": "#/components/schemas/SuggestionStatus",
+            "description": "Current suggestion status.",
+            "default": "pending"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Proposer user ID."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "Creation timestamp."
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason",
+            "description": "Rationale for the suggestion."
+          },
+          "decision_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Reason",
+            "description": "Rationale for acceptance or rejection."
+          },
+          "decided_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided By",
+            "description": "User ID of decider."
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At",
+            "description": "Timestamp of decision."
+          },
+          "block_version_index": {
+            "type": "integer",
+            "title": "Block Version Index",
+            "description": "The block's version_index at the time of proposing."
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "description": "Sequential version index.",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "required": [
+          "suggestion_id",
+          "block_id",
+          "study_id",
+          "suggested_text",
+          "original_text",
+          "created_by",
+          "reason",
+          "block_version_index"
+        ],
+        "title": "Suggestion",
+        "description": "Represents a proposed collaborative content replacement suggestion for a block."
+      },
+      "SuggestionCreate": {
+        "properties": {
+          "suggested_text": {
+            "type": "string",
+            "title": "Suggested Text"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "suggested_text",
+          "reason"
+        ],
+        "title": "SuggestionCreate"
+      },
+      "SuggestionDecisionRequest": {
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "accept",
+              "reject"
+            ],
+            "title": "Decision"
+          },
+          "decision_reason": {
+            "type": "string",
+            "title": "Decision Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "decision",
+          "decision_reason"
+        ],
+        "title": "SuggestionDecisionRequest"
+      },
+      "SuggestionStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "accepted",
+          "rejected"
+        ],
+        "title": "SuggestionStatus",
+        "description": "Statuses for suggestion workflows."
       },
       "TerminologyConcept": {
         "properties": {

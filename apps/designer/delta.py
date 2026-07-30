@@ -2378,41 +2378,58 @@ async def link_epoch_to_visit(
 # =====================================================================
 
 MOCK_COLLABORATION_DATA = {
-    "section_statuses": {},      # (study_version_id, section_id) -> SectionReviewStatus
-    "threads": {},               # thread_id -> CommentThread
-    "suggestions": {},           # suggestion_id -> Suggestion
-    "transitions": [],           # list of SectionReviewTransition
+    "section_statuses": {},  # (study_version_id, section_id) -> SectionReviewStatus
+    "threads": {},  # thread_id -> CommentThread
+    "suggestions": {},  # suggestion_id -> Suggestion
+    "transitions": [],  # list of SectionReviewTransition
 }
 
 SECTION_ALLOWED_TRANSITIONS = {
-    SectionReviewStatus.DRAFT: {SectionReviewStatus.IN_REVIEW, SectionReviewStatus.LOCKED},
-    SectionReviewStatus.IN_REVIEW: {SectionReviewStatus.LOCKED, SectionReviewStatus.DRAFT},
-    SectionReviewStatus.LOCKED: {SectionReviewStatus.APPROVED, SectionReviewStatus.DRAFT},
+    SectionReviewStatus.DRAFT: {
+        SectionReviewStatus.IN_REVIEW,
+        SectionReviewStatus.LOCKED,
+    },
+    SectionReviewStatus.IN_REVIEW: {
+        SectionReviewStatus.LOCKED,
+        SectionReviewStatus.DRAFT,
+    },
+    SectionReviewStatus.LOCKED: {
+        SectionReviewStatus.APPROVED,
+        SectionReviewStatus.DRAFT,
+    },
     SectionReviewStatus.APPROVED: {SectionReviewStatus.DRAFT},
 }
 
 
-async def get_section_status(driver, study_version_id: str, section_id: str) -> SectionReviewStatus:
+async def get_section_status(
+    driver, study_version_id: str, section_id: str
+) -> SectionReviewStatus:
     """
     Retrieves the current review status of an ICH section.
     """
     if driver is None:
         key = (study_version_id, section_id)
-        return MOCK_COLLABORATION_DATA["section_statuses"].get(key, SectionReviewStatus.DRAFT)
+        return MOCK_COLLABORATION_DATA["section_statuses"].get(
+            key, SectionReviewStatus.DRAFT
+        )
 
     query = """
     MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_SECTION_STATUS]->(ss:SectionStatus {section_id: $section_id})
     RETURN ss.status as status
     """
     async with driver.session() as session:
-        res = await session.run(query, study_version_id=study_version_id, section_id=section_id)
+        res = await session.run(
+            query, study_version_id=study_version_id, section_id=section_id
+        )
         record = await res.single()
         if record:
             return SectionReviewStatus(record["status"])
         return SectionReviewStatus.DRAFT
 
 
-async def assert_section_not_locked(driver, study_version_id: str, section_id: Optional[str]):
+async def assert_section_not_locked(
+    driver, study_version_id: str, section_id: Optional[str]
+):
     """
     Raises ImmutabilityViolationError if the target section is in a locked or approved state.
     """
@@ -2420,7 +2437,9 @@ async def assert_section_not_locked(driver, study_version_id: str, section_id: O
         return
     status = await get_section_status(driver, study_version_id, section_id)
     if status in (SectionReviewStatus.LOCKED, SectionReviewStatus.APPROVED):
-        raise ImmutabilityViolationError(f"IMMUTABILITY_VIOLATION: Section '{section_id}' is locked (status: {status.value}).")
+        raise ImmutabilityViolationError(
+            f"IMMUTABILITY_VIOLATION: Section '{section_id}' is locked (status: {status.value})."
+        )
 
 
 async def transition_section_status(
@@ -2462,6 +2481,7 @@ async def transition_section_status(
         MOCK_COLLABORATION_DATA["transitions"].append(transition)
     else:
         import json
+
         query = """
         MATCH (sv:StudyVersion {id: $study_version_id})
         MERGE (sv)-[:HAS_SECTION_STATUS]->(ss:SectionStatus {section_id: $section_id})
@@ -2484,7 +2504,9 @@ async def transition_section_status(
                 study_version_id=study_version_id,
                 section_id=section_id,
                 to_status=to_status.value,
-                sig_json=json.dumps(signature_manifestation) if signature_manifestation else None,
+                sig_json=json.dumps(signature_manifestation)
+                if signature_manifestation
+                else None,
                 transition_id=transition_id,
                 from_status=current_status.value,
                 actor_id=actor_id,
@@ -2495,13 +2517,16 @@ async def transition_section_status(
     return transition
 
 
-async def get_section_transitions(driver, study_version_id: str, section_id: str) -> List[SectionReviewTransition]:
+async def get_section_transitions(
+    driver, study_version_id: str, section_id: str
+) -> List[SectionReviewTransition]:
     """
     Retrieves the chronological audit log of all transitions for a section.
     """
     if driver is None:
         return [
-            t for t in MOCK_COLLABORATION_DATA["transitions"]
+            t
+            for t in MOCK_COLLABORATION_DATA["transitions"]
             if t.study_id == study_version_id and t.section_id == section_id
         ]
 
@@ -2511,7 +2536,9 @@ async def get_section_transitions(driver, study_version_id: str, section_id: str
     ORDER BY t.timestamp ASC
     """
     async with driver.session() as session:
-        res = await session.run(query, study_version_id=study_version_id, section_id=section_id)
+        res = await session.run(
+            query, study_version_id=study_version_id, section_id=section_id
+        )
         records = await res.all()
         transitions = []
         for r in records:
@@ -2520,18 +2547,22 @@ async def get_section_transitions(driver, study_version_id: str, section_id: str
             if hasattr(timestamp_val, "to_native"):
                 dt_obj = timestamp_val.to_native()
             else:
-                dt_obj = dt.datetime.fromisoformat(str(timestamp_val).replace("Z", "+00:00"))
-            transitions.append(SectionReviewTransition(
-                transition_id=props["id"],
-                section_id=props["section_id"],
-                study_id=study_version_id,
-                from_status=SectionReviewStatus(props["from_status"]),
-                to_status=SectionReviewStatus(props["to_status"]),
-                actor_id=props["actor_id"],
-                actor_role=props["actor_role"],
-                reason_for_change=props["reason_for_change"],
-                timestamp=dt_obj,
-            ))
+                dt_obj = dt.datetime.fromisoformat(
+                    str(timestamp_val).replace("Z", "+00:00")
+                )
+            transitions.append(
+                SectionReviewTransition(
+                    transition_id=props["id"],
+                    section_id=props["section_id"],
+                    study_id=study_version_id,
+                    from_status=SectionReviewStatus(props["from_status"]),
+                    to_status=SectionReviewStatus(props["to_status"]),
+                    actor_id=props["actor_id"],
+                    actor_role=props["actor_role"],
+                    reason_for_change=props["reason_for_change"],
+                    timestamp=dt_obj,
+                )
+            )
         return transitions
 
 
@@ -2619,13 +2650,16 @@ async def create_comment_thread(
     return thread
 
 
-async def get_comment_threads(driver, study_version_id: str, section_id: str) -> List[CommentThread]:
+async def get_comment_threads(
+    driver, study_version_id: str, section_id: str
+) -> List[CommentThread]:
     """
     Lists all comment threads and comments for a specific section.
     """
     if driver is None:
         return [
-            t for t in MOCK_COLLABORATION_DATA["threads"].values()
+            t
+            for t in MOCK_COLLABORATION_DATA["threads"].values()
             if t.study_id == study_version_id and t.section_id == section_id
         ]
 
@@ -2635,7 +2669,9 @@ async def get_comment_threads(driver, study_version_id: str, section_id: str) ->
     RETURN properties(th) as th_props, collect(properties(co)) as comments_list
     """
     async with driver.session() as session:
-        res = await session.run(query, study_version_id=study_version_id, section_id=section_id)
+        res = await session.run(
+            query, study_version_id=study_version_id, section_id=section_id
+        )
         records = await res.all()
         threads = []
         for r in records:
@@ -2649,33 +2685,41 @@ async def get_comment_threads(driver, study_version_id: str, section_id: str) ->
                 if hasattr(c_created, "to_native"):
                     c_dt = c_created.to_native()
                 else:
-                    c_dt = dt.datetime.fromisoformat(str(c_created).replace("Z", "+00:00"))
-                parsed_comments.append(Comment(
-                    comment_id=c_prop["id"],
-                    thread_id=c_prop["thread_id"],
-                    text=c_prop["text"],
-                    created_by=c_prop["created_by"],
-                    created_at=c_dt,
-                    version_index=c_prop.get("version_index", 1),
-                ))
+                    c_dt = dt.datetime.fromisoformat(
+                        str(c_created).replace("Z", "+00:00")
+                    )
+                parsed_comments.append(
+                    Comment(
+                        comment_id=c_prop["id"],
+                        thread_id=c_prop["thread_id"],
+                        text=c_prop["text"],
+                        created_by=c_prop["created_by"],
+                        created_at=c_dt,
+                        version_index=c_prop.get("version_index", 1),
+                    )
+                )
 
             th_created = th_props.get("created_at")
             if hasattr(th_created, "to_native"):
                 th_dt = th_created.to_native()
             else:
-                th_dt = dt.datetime.fromisoformat(str(th_created).replace("Z", "+00:00"))
+                th_dt = dt.datetime.fromisoformat(
+                    str(th_created).replace("Z", "+00:00")
+                )
 
-            threads.append(CommentThread(
-                thread_id=th_props["id"],
-                block_id=th_props["block_id"],
-                section_id=th_props["section_id"],
-                study_id=study_version_id,
-                status=th_props["status"],
-                created_by=th_props["created_by"],
-                created_at=th_dt,
-                block_version_index=th_props["block_version_index"],
-                comments=parsed_comments,
-            ))
+            threads.append(
+                CommentThread(
+                    thread_id=th_props["id"],
+                    block_id=th_props["block_id"],
+                    section_id=th_props["section_id"],
+                    study_id=study_version_id,
+                    status=th_props["status"],
+                    created_by=th_props["created_by"],
+                    created_at=th_dt,
+                    block_version_index=th_props["block_version_index"],
+                    comments=parsed_comments,
+                )
+            )
         return threads
 
 
@@ -2693,13 +2737,17 @@ async def add_comment_to_thread(
     if driver is None:
         thread = MOCK_COLLABORATION_DATA["threads"].get(thread_id)
     else:
-        query_find = "MATCH (th:CommentThread {id: $thread_id}) RETURN properties(th) as props"
+        query_find = (
+            "MATCH (th:CommentThread {id: $thread_id}) RETURN properties(th) as props"
+        )
         async with driver.session() as session:
             res_find = await session.run(query_find, thread_id=thread_id)
             rec_find = await res_find.single()
             if rec_find:
                 th_props = dict(rec_find["props"])
-                threads_list = await get_comment_threads(driver, study_version_id, th_props["section_id"])
+                threads_list = await get_comment_threads(
+                    driver, study_version_id, th_props["section_id"]
+                )
                 for t in threads_list:
                     if t.thread_id == thread_id:
                         thread = t
@@ -2762,13 +2810,17 @@ async def resolve_comment_thread(
     if driver is None:
         thread = MOCK_COLLABORATION_DATA["threads"].get(thread_id)
     else:
-        query_find = "MATCH (th:CommentThread {id: $thread_id}) RETURN properties(th) as props"
+        query_find = (
+            "MATCH (th:CommentThread {id: $thread_id}) RETURN properties(th) as props"
+        )
         async with driver.session() as session:
             res_find = await session.run(query_find, thread_id=thread_id)
             rec_find = await res_find.single()
             if rec_find:
                 th_props = dict(rec_find["props"])
-                threads_list = await get_comment_threads(driver, study_version_id, th_props["section_id"])
+                threads_list = await get_comment_threads(
+                    driver, study_version_id, th_props["section_id"]
+                )
                 for t in threads_list:
                     if t.thread_id == thread_id:
                         thread = t
@@ -2782,7 +2834,9 @@ async def resolve_comment_thread(
     if driver is None:
         thread.status = "resolved"
     else:
-        query_res = "MATCH (th:CommentThread {id: $thread_id}) SET th.status = 'resolved'"
+        query_res = (
+            "MATCH (th:CommentThread {id: $thread_id}) SET th.status = 'resolved'"
+        )
         async with driver.session() as session:
             await session.run(query_res, thread_id=thread_id)
         thread.status = "resolved"
@@ -2860,13 +2914,16 @@ async def create_suggestion(
     return suggestion
 
 
-async def get_suggestions(driver, study_version_id: str, block_id: str) -> List[Suggestion]:
+async def get_suggestions(
+    driver, study_version_id: str, block_id: str
+) -> List[Suggestion]:
     """
     Retrieves all suggestions anchored to a block.
     """
     if driver is None:
         return [
-            s for s in MOCK_COLLABORATION_DATA["suggestions"].values()
+            s
+            for s in MOCK_COLLABORATION_DATA["suggestions"].values()
             if s.study_id == study_version_id and s.block_id == block_id
         ]
 
@@ -2875,7 +2932,9 @@ async def get_suggestions(driver, study_version_id: str, block_id: str) -> List[
     RETURN properties(su) as props
     """
     async with driver.session() as session:
-        res = await session.run(query, study_version_id=study_version_id, block_id=block_id)
+        res = await session.run(
+            query, study_version_id=study_version_id, block_id=block_id
+        )
         records = await res.all()
         suggestions = []
         for r in records:
@@ -2884,7 +2943,9 @@ async def get_suggestions(driver, study_version_id: str, block_id: str) -> List[
             if hasattr(created_val, "to_native"):
                 created_dt = created_val.to_native()
             else:
-                created_dt = dt.datetime.fromisoformat(str(created_val).replace("Z", "+00:00"))
+                created_dt = dt.datetime.fromisoformat(
+                    str(created_val).replace("Z", "+00:00")
+                )
 
             decided_dt = None
             decided_val = props.get("decided_at")
@@ -2892,24 +2953,28 @@ async def get_suggestions(driver, study_version_id: str, block_id: str) -> List[
                 if hasattr(decided_val, "to_native"):
                     decided_dt = decided_val.to_native()
                 else:
-                    decided_dt = dt.datetime.fromisoformat(str(decided_val).replace("Z", "+00:00"))
+                    decided_dt = dt.datetime.fromisoformat(
+                        str(decided_val).replace("Z", "+00:00")
+                    )
 
-            suggestions.append(Suggestion(
-                suggestion_id=props["id"],
-                block_id=props["block_id"],
-                study_id=study_version_id,
-                suggested_text=props["suggested_text"],
-                original_text=props["original_text"],
-                status=SuggestionStatus(props["status"]),
-                created_by=props["created_by"],
-                created_at=created_dt,
-                reason=props["reason"],
-                decision_reason=props.get("decision_reason"),
-                decided_by=props.get("decided_by"),
-                decided_at=decided_dt,
-                block_version_index=props["block_version_index"],
-                version_index=props.get("version_index", 1),
-            ))
+            suggestions.append(
+                Suggestion(
+                    suggestion_id=props["id"],
+                    block_id=props["block_id"],
+                    study_id=study_version_id,
+                    suggested_text=props["suggested_text"],
+                    original_text=props["original_text"],
+                    status=SuggestionStatus(props["status"]),
+                    created_by=props["created_by"],
+                    created_at=created_dt,
+                    reason=props["reason"],
+                    decision_reason=props.get("decision_reason"),
+                    decided_by=props.get("decided_by"),
+                    decided_at=decided_dt,
+                    block_version_index=props["block_version_index"],
+                    version_index=props.get("version_index", 1),
+                )
+            )
         return suggestions
 
 
@@ -2928,13 +2993,17 @@ async def decide_suggestion(
     if driver is None:
         suggestion = MOCK_COLLABORATION_DATA["suggestions"].get(suggestion_id)
     else:
-        query_find = "MATCH (su:Suggestion {id: $suggestion_id}) RETURN properties(su) as props"
+        query_find = (
+            "MATCH (su:Suggestion {id: $suggestion_id}) RETURN properties(su) as props"
+        )
         async with driver.session() as session:
             res_find = await session.run(query_find, suggestion_id=suggestion_id)
             rec_find = await res_find.single()
             if rec_find:
                 su_props = dict(rec_find["props"])
-                s_list = await get_suggestions(driver, study_version_id, su_props["block_id"])
+                s_list = await get_suggestions(
+                    driver, study_version_id, su_props["block_id"]
+                )
                 for s in s_list:
                     if s.suggestion_id == suggestion_id:
                         suggestion = s
@@ -2957,11 +3026,19 @@ async def decide_suggestion(
     if decision == "accept":
         # Check stale-version
         if suggestion.block_version_index != block.get("version_index", 1):
-            raise ConcurrentLockingError("CONCURRENT_LOCKING_CONFLICT: Suggestion was made on a stale block version.")
+            raise ConcurrentLockingError(
+                "CONCURRENT_LOCKING_CONFLICT: Suggestion was made on a stale block version."
+            )
 
         # Mutate the block text!
         properties = dict(block)
-        for k in ("id", "version_index", "created_by", "created_at", "reason_for_change"):
+        for k in (
+            "id",
+            "version_index",
+            "created_by",
+            "created_at",
+            "reason_for_change",
+        ):
             properties.pop(k, None)
         properties["text"] = suggestion.suggested_text
 
@@ -3716,7 +3793,9 @@ async def create_block(
     block_id: str,
     properties: Dict[str, Any],
 ) -> str:
-    await assert_section_not_locked(driver, study_version_id, properties.get("section_id"))
+    await assert_section_not_locked(
+        driver, study_version_id, properties.get("section_id")
+    )
     if driver is None:
         assert_mock_study_version_mutable(study_version_id)
         _init_mock_soa(study_version_id)
@@ -3808,8 +3887,12 @@ async def update_block(
 ) -> str:
     existing_block = await get_block(driver, study_version_id, block_id)
     if existing_block:
-        await assert_section_not_locked(driver, study_version_id, existing_block.get("section_id"))
-    await assert_section_not_locked(driver, study_version_id, properties.get("section_id"))
+        await assert_section_not_locked(
+            driver, study_version_id, existing_block.get("section_id")
+        )
+    await assert_section_not_locked(
+        driver, study_version_id, properties.get("section_id")
+    )
     if driver is None:
         assert_mock_study_version_mutable(study_version_id)
         _init_mock_soa(study_version_id)
@@ -3902,7 +3985,9 @@ async def delete_block(
 ) -> str:
     existing_block = await get_block(driver, study_version_id, block_id)
     if existing_block:
-        await assert_section_not_locked(driver, study_version_id, existing_block.get("section_id"))
+        await assert_section_not_locked(
+            driver, study_version_id, existing_block.get("section_id")
+        )
     if driver is None:
         assert_mock_study_version_mutable(study_version_id)
         _init_mock_soa(study_version_id)
@@ -4049,7 +4134,9 @@ async def reorder_blocks(
     for b_id in block_ids_ordered:
         existing_block = await get_block(driver, study_version_id, b_id)
         if existing_block:
-            await assert_section_not_locked(driver, study_version_id, existing_block.get("section_id"))
+            await assert_section_not_locked(
+                driver, study_version_id, existing_block.get("section_id")
+            )
     # 1. Perform mock path reorder
     if driver is None:
         assert_mock_study_version_mutable(study_version_id)

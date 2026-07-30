@@ -233,8 +233,9 @@
     "/api/v1/execution/subjects/{subject_id}/consent": {
       "post": {
         "summary": "Record Subject Consent",
-        "description": "Record or update subject consent for a specific protocol version.",
+        "description": "Record or update subject consent for a specific protocol version.\n\n[Deprecated] This is the legacy execution-side local recording endpoint.\nNew integrations should capture consent canonically via the eConsent service.",
         "operationId": "record_subject_consent_api_v1_execution_subjects__subject_id__consent_post",
+        "deprecated": true,
         "parameters": [
           {
             "name": "subject_id",

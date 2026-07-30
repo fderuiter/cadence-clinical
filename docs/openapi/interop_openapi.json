@@ -69,6 +69,45 @@
         }
       }
     },
+    "/api/v1/interop/fhir/pre-screen": {
+      "post": {
+        "summary": "Fhir Pre Screen",
+        "description": "Advisory FHIR eligibility pre-screening endpoint. Orchestrates projection,\nMDR criteria retrieval, kleene AST evaluation, and non-PHI audit logging.\nStrictly isolated from clinical subject execution data mutations.",
+        "operationId": "fhir_pre_screen_api_v1_interop_fhir_pre_screen_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FHIRPreScreenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FHIRPreScreenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/interop/epro/submit": {
       "post": {
         "summary": "Epro Submit",
@@ -644,6 +683,44 @@
         "title": "ConflictStrategy",
         "description": "Explicit validated conflict resolution strategies."
       },
+      "CriterionExplanation": {
+        "properties": {
+          "criterion_id": {
+            "type": "string",
+            "title": "Criterion Id",
+            "description": "The ID of the criterion evaluated."
+          },
+          "criterion_type": {
+            "type": "string",
+            "title": "Criterion Type",
+            "description": "inclusion or exclusion."
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Human-readable text of the criterion."
+          },
+          "is_met": {
+            "type": "boolean",
+            "title": "Is Met",
+            "description": "Indicates if the subject satisfies this criterion."
+          },
+          "is_indeterminate": {
+            "type": "boolean",
+            "title": "Is Indeterminate",
+            "description": "Indicates if evaluation was indeterminate."
+          }
+        },
+        "type": "object",
+        "required": [
+          "criterion_id",
+          "criterion_type",
+          "description",
+          "is_met",
+          "is_indeterminate"
+        ],
+        "title": "CriterionExplanation"
+      },
       "EPROSubmissionPayload": {
         "properties": {
           "subject_id": {
@@ -683,6 +760,70 @@
         ],
         "title": "EPROSubmissionPayload",
         "description": "A single participant ePRO/eCOA diary submission."
+      },
+      "FHIRPreScreenRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Unique identifier of the clinical study"
+          },
+          "bundle": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Bundle",
+            "description": "The standard FHIR Bundle JSON payload"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "bundle"
+        ],
+        "title": "FHIRPreScreenRequest",
+        "description": "Payload for advisory FHIR eligibility pre-screening."
+      },
+      "FHIRPreScreenResponse": {
+        "properties": {
+          "eligible": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eligible",
+            "description": "Aggregated eligibility. True if all criteria met, False if any failed, None if indeterminate."
+          },
+          "failed_criteria": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Failed Criteria",
+            "description": "List of criterion IDs that failed."
+          },
+          "indeterminate_criteria": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Indeterminate Criteria",
+            "description": "List of criterion IDs that were indeterminate."
+          },
+          "criteria_explanations": {
+            "items": {
+              "$ref": "#/components/schemas/CriterionExplanation"
+            },
+            "type": "array",
+            "title": "Criteria Explanations",
+            "description": "Detailed list of criterion-level explanations."
+          }
+        },
+        "type": "object",
+        "title": "FHIRPreScreenResponse"
       },
       "FHIRPrefillRequest": {
         "properties": {

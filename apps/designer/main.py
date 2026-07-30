@@ -804,16 +804,21 @@ async def transition_section(
     if target_status == SectionReviewStatus.APPROVED:
         signer_id = principal.user_id
         from datetime import datetime, timezone
+
         signature_manifestation = {
             "signer_id": signer_id,
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "signing_reason": payload.signing_reason.value if payload.signing_reason else "Section Approval",
+            "signing_reason": payload.signing_reason.value
+            if payload.signing_reason
+            else "Section Approval",
             "ip_address": request.client.host if request.client else "127.0.0.1",
             "user_agent": request.headers.get("user-agent", "Metadata Designer"),
         }
 
     try:
-        actor_role = ",".join(principal.roles) if principal.roles else "sponsor_designer"
+        actor_role = (
+            ",".join(principal.roles) if principal.roles else "sponsor_designer"
+        )
         transition = await transition_section_status(
             driver=driver,
             study_version_id=study_id,
