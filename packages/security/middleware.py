@@ -204,13 +204,16 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
                 content={"detail": "Change reason exceeds 255 characters"},
             )
 
-        # Retrieve optional scope headers from API gateway
-        site_id = request.headers.get("X-Site-Id")
-        sponsor_id = request.headers.get("X-Sponsor-Id")
-        unblinded_header = request.headers.get("X-Unblinded-Access", "")
-        unblinded_access = False
-        if unblinded_header.lower() in ("true", "1", "yes"):
-            unblinded_access = True
+        # Retrieve optional scope headers from API gateway and normalize them using the shared helper
+        from packages.security.signing import normalize_scope_values
+
+        raw_site_id = request.headers.get("X-Site-Id")
+        raw_sponsor_id = request.headers.get("X-Sponsor-Id")
+        raw_unblinded = request.headers.get("X-Unblinded-Access")
+
+        site_id, sponsor_id, unblinded_access = normalize_scope_values(
+            raw_site_id, raw_sponsor_id, raw_unblinded
+        )
 
         # Extract tenant identity and apply least-privilege migration policy (default to tenant_default)
         tenant_id = request.headers.get("X-Tenant-Id")

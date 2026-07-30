@@ -1,7 +1,8 @@
 import time
 from typing import Optional
 
-from fastapi import FastAPI
+import pytest
+from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 from jose import jwt
 
@@ -800,6 +801,71 @@ def test_verify_gateway_signature_scope_fallback_restrictions() -> None:
         is True
     )
 
+    # 5. Case D: A no-scope 7-field signature is generated
+    no_scope_sig = generate_gateway_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        secret=secret,
+        change_reason=change_reason,
+        site_id=None,
+        sponsor_id=None,
+        unblinded_access=False,
+        tenant_id=None,
+    )
+    # Rejects if any one scope is injected or altered relative to the signature
+    assert (
+        verify_gateway_signature(
+            user_id=user_id,
+            roles=roles,
+            timestamp=timestamp,
+            signature=no_scope_sig,
+            secret=secret,
+            change_reason=change_reason,
+            site_id="site_active_01",
+            sponsor_id=None,
+            unblinded_access=False,
+        )
+        is False
+    )
+    assert (
+        verify_gateway_signature(
+            user_id=user_id,
+            roles=roles,
+            timestamp=timestamp,
+            signature=no_scope_sig,
+            secret=secret,
+            change_reason=change_reason,
+            site_id=None,
+            sponsor_id="sponsor_active_01",
+            unblinded_access=False,
+        )
+        is False
+    )
+    assert (
+        verify_gateway_signature(
+            user_id=user_id,
+            roles=roles,
+            timestamp=timestamp,
+            signature=no_scope_sig,
+            secret=secret,
+            change_reason=change_reason,
+            site_id=None,
+            sponsor_id=None,
+            unblinded_access=True,
+        )
+        is False
+    )
+
+
+@test_app.get("/verify-context-scope")
+async def verify_context_scope(request: Request):
+    return {
+        "site_id": getattr(request.state, "site_id", None),
+        "sponsor_id": getattr(request.state, "sponsor_id", None),
+        "unblinded_access": getattr(request.state, "unblinded_access", False),
+    }
+
 
 # Add endpoint to verify context propagation under test_app
 @test_app.get("/verify-context-tenant")
@@ -1048,3 +1114,49 @@ def test_verify_sig_token_helper_scenarios() -> None:
     )
     assert success is False
     assert "already been used" in err.lower()
+
+
+@pytest.mark.parametrize(
+    "header_val,expected_bool",
+    [
+        ("true", True),
+        ("TRUE", True),
+        ("1", True),
+        ("yes", True),
+        ("YeS", True),
+        ("false", False),
+        ("0", False),
+        ("no", False),
+        ("", False),
+        ("random", False),
+    ],
+)
+def test_middleware_unblinded_access_parametrization(header_val, expected_bool) -> None:
+    client = TestClient(test_app)
+    timestamp = str(time.time())
+    user_id = "test_user"
+    roles = "sponsor_designer"
+    change_reason = "gxp signoff"
+
+    sig = generate_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        version="2",
+        change_reason=change_reason,
+        unblinded_access=expected_bool,
+    )
+
+    headers = {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": sig,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": change_reason,
+        "X-Unblinded-Access": header_val,
+    }
+
+    response = client.get("/verify-context-scope", headers=headers)
+    assert response.status_code == 200
+    assert response.json()["unblinded_access"] is expected_bool

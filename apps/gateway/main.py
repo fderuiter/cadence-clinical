@@ -1098,28 +1098,22 @@ async def proxy_requests(request: Request, path: str) -> Response:
             )
         headers["X-Change-Reason"] = change_reason
 
-    # Extract site lists, sponsor_id, and unblinded_access from the claims/JWT payload
-    site_id_val = payload.get("site_id", "")
-    # Check if list and convert to comma-separated string
-    if isinstance(site_id_val, list):
-        site_id_val = ",".join(str(s) for s in site_id_val)
-    elif site_id_val is None:
-        site_id_val = ""
-    else:
-        site_id_val = str(site_id_val)
-
     custom_attrs = payload.get("custom_attributes") or {}
-    sponsor_id_val = ""
+
+    raw_site_id = payload.get("site_id")
+    raw_sponsor_id = ""
     if isinstance(custom_attrs, dict):
-        sponsor_id_val = custom_attrs.get("sponsor_id") or ""
+        raw_sponsor_id = custom_attrs.get("sponsor_id") or ""
+    if not raw_sponsor_id:
+        raw_sponsor_id = payload.get("sponsor_id")
 
-    if not sponsor_id_val:
-        sponsor_id_val = payload.get("sponsor_id", "")
+    raw_unblinded_access = payload.get("unblinded_access", False)
 
-    if sponsor_id_val is None:
-        sponsor_id_val = ""
-    else:
-        sponsor_id_val = str(sponsor_id_val)
+    from packages.security.signing import normalize_scope_values
+
+    site_id_val, sponsor_id_val, unblinded_access_val = normalize_scope_values(
+        raw_site_id, raw_sponsor_id, raw_unblinded_access
+    )
 
     # Extract tenant identity and apply least-privilege migration policy (default to tenant_default)
     tenant_id_val = ""
@@ -1133,11 +1127,6 @@ async def proxy_requests(request: Request, path: str) -> Response:
         tenant_id_val = "tenant_default"
     else:
         tenant_id_val = str(tenant_id_val).strip()
-
-    unblinded_access_claim = payload.get("unblinded_access", False)
-    unblinded_access_val = False
-    if unblinded_access_claim in (True, "true", "True", 1, "1"):
-        unblinded_access_val = True
 
     timestamp = str(time.time())
     signature = generate_signature(
