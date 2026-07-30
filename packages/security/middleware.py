@@ -62,7 +62,7 @@ def verify_sig_token(
 
     try:
         sig_payload = jwt.decode(
-            sig_token, secret, algorithms=["HS256"], options={"verify_exp": False}
+            sig_token, secret, algorithms=["HS256"]
         )
     except JWTError as e:
         print(f"VERIFY_SIG_TOKEN: Failed to decode: {e}")

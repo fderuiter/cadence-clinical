@@ -3,6 +3,7 @@
 * **Status:** Accepted
 * **Date:** 2026-08-22
 * **Authors:** Jules
+* **Deciders:** @fderuiter
 
 ---
 
@@ -12,7 +13,7 @@ Prior to this ADR, step-up re-authentication under 21 CFR Part 11 and EU Annex 1
 2. Suffered from architectural drift between API gateway and downstream service middlewares.
 3. Left body-driven mutations outside the scope of regulatory compliance signature gates.
 
-This ADR resolves these issues by implementing a unified, shared semantic regulated-action contract across all services, and links to issue #689.
+This ADR resolves these issues by implementing a unified, shared semantic regulated-action contract across all services, implementing requirements under PRD-SYS-001.
 
 ## 2. Decision Drivers & Constraints
 * **GxP 21 CFR Part 11 Compliance:** Require double-keying re-authentication for all critical approval and closure actions, including those defined within HTTP bodies.
@@ -39,9 +40,9 @@ We adopted Option 2. A central module `packages/security/regulated_actions.py` d
   * Strict Part 11 compliance for body-driven mutations in Quality and CTMS modules.
   * Eliminates drift between gateway and downstream middlewares.
   * Preserves frictionless non-regulated updates.
-* **Negative Impact:**
+* **Negative Impact / Technical Debt:**
   * Increased validation overhead, requiring request body buffering and parsing (handled highly efficiently via Starlette request body caching).
 
-## 6. Related Work
-* **ADR-062:** Gateway Step-Up Re-Authentication and Signature Token Issuance.
-* **Blocks/Coordinated with:** Issue #689 (Signing eCRF, Quality, and CTMS events).
+## 6. Implementation & Verification
+* **Affected Repositories / Services:** API Gateway, Quality & CAPA, CTMS, Security package.
+* **Verification Plan:** Verify implementation using unit/integration tests in tests/test_gateway.py, tests/test_security_middleware.py, tests/test_quality_workflow.py, and tests/test_ctms.py.

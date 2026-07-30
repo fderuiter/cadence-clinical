@@ -1008,7 +1008,7 @@ def test_verify_sig_token_helper_scenarios() -> None:
         expected_semantic_action="quality.capa.close",
     )
     assert success is False
-    assert "expired" in err.lower()
+    assert "invalid" in err.lower()
 
     # 6. Mismatched user -> False
     t_user_mismatch = make_token(semantic_action="quality.capa.close", wrong_user=True)
