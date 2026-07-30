@@ -783,3 +783,247 @@ async def test_external_monitor_principal_resolution(monkeypatch) -> None:
     assert can_access_site(principal, "site_gamma") is False
     assert can_access_study(principal, "study_x") is True
     assert can_access_study(principal, "study_z") is False
+
+
+def test_rtsm_role_aliases_normalization() -> None:
+    """Verify normalization of all new RTSM role synonym aliases."""
+    from packages.security.rbac import (
+        ROLE_EMERGENCY_UNBLINDER,
+        ROLE_IDMC,
+        ROLE_PHARMACIST,
+        ROLE_UNBLINDED_STATISTICIAN,
+        normalize_role,
+    )
+
+    assert normalize_role("unblinded statistician") == ROLE_UNBLINDED_STATISTICIAN
+    assert normalize_role("lead unblinded statistician") == ROLE_UNBLINDED_STATISTICIAN
+    assert normalize_role("idmc") == ROLE_IDMC
+    assert normalize_role("dsmb") == ROLE_IDMC
+    assert normalize_role("unblinded pharmacist") == ROLE_PHARMACIST
+    assert normalize_role("emergency unblinder") == ROLE_EMERGENCY_UNBLINDER
+
+
+def test_rtsm_role_permissions() -> None:
+    """Verify that rtsm resource permissions are mapped correctly for new RTSM roles."""
+    from packages.security.rbac import (
+        ROLE_CRA_CANONICAL,
+        ROLE_EMERGENCY_UNBLINDER,
+        ROLE_IDMC,
+        ROLE_PHARMACIST,
+        ROLE_UNBLINDED_STATISTICIAN,
+        Principal,
+        has_permission,
+    )
+
+    stat = Principal(user_id="s1", roles=[ROLE_UNBLINDED_STATISTICIAN])
+    idmc = Principal(user_id="i1", roles=[ROLE_IDMC])
+    pharm = Principal(user_id="p1", roles=[ROLE_PHARMACIST])
+    emerg = Principal(user_id="e1", roles=[ROLE_EMERGENCY_UNBLINDER])
+    cra = Principal(user_id="c1", roles=[ROLE_CRA_CANONICAL])
+
+    assert has_permission(stat, "rtsm_allocation:read") is True
+    assert has_permission(idmc, "rtsm_allocation:read") is True
+    assert has_permission(pharm, "rtsm_supply:write") is True
+    assert has_permission(emerg, "rtsm_unblind:write") is True
+
+    # Blinded roles (CRA, etc.) must not receive allocation-read grants
+    assert has_permission(cra, "rtsm_allocation:read") is False
+
+
+def test_rtsm_role_aware_masking() -> None:
+    """Verify that mask_payload applies role-conditioned unmasking for RTSM unblinded roles."""
+    from packages.security.rbac import (
+        ROLE_CRA_CANONICAL,
+        ROLE_PHARMACIST,
+        ROLE_UNBLINDED_STATISTICIAN,
+        Principal,
+        mask_payload,
+    )
+
+    payload = {
+        "treatment_arm": "Active Arm",
+        "randomization_seed": 12345,
+        "kit_reference": "KIT-XYZ",
+        "drug_code": "DRUG-123",
+    }
+
+    # CRA/blinded role -> fully masked
+    cra_p = Principal(user_id="c1", roles=[ROLE_CRA_CANONICAL], unblinded_access=False)
+    masked_cra = mask_payload(payload, cra_p)
+    assert masked_cra["treatment_arm"] == "BLINDED"
+    assert masked_cra["randomization_seed"] == "MASKED"
+    assert masked_cra["kit_reference"] == "Obfuscated Kit"
+    assert masked_cra["drug_code"] == "Obfuscated Kit"
+
+    # Statistician -> sees allocation fields but NOT drug code / kit reference
+    stat_p = Principal(
+        user_id="s1", roles=[ROLE_UNBLINDED_STATISTICIAN], unblinded_access=False
+    )
+    masked_stat = mask_payload(payload, stat_p)
+    assert masked_stat["treatment_arm"] == "Active Arm"
+    assert masked_stat["randomization_seed"] == 12345
+    assert masked_stat["kit_reference"] == "Obfuscated Kit"
+    assert masked_stat["drug_code"] == "Obfuscated Kit"
+
+    # Pharmacist -> sees drug/kit details but NOT treatment arm / seed
+    pharm_p = Principal(user_id="p1", roles=[ROLE_PHARMACIST], unblinded_access=False)
+    masked_pharm = mask_payload(payload, pharm_p)
+    assert masked_pharm["treatment_arm"] == "BLINDED"
+    assert masked_pharm["randomization_seed"] == "MASKED"
+    assert masked_pharm["kit_reference"] == "KIT-XYZ"
+    assert masked_pharm["drug_code"] == "DRUG-123"
+
+
+# ==========================================
+# Integration Tests for RTSM Authorization
+# ==========================================
+
+
+@pytest.mark.asyncio
+async def test_cross_site_unblind_denied_with_alert(monkeypatch) -> None:
+    """Verify cross-site unblinding returns 403 and triggers an access violation alert."""
+    import httpx
+
+    from apps.execution.database.core import db_manager as exec_db_mgr
+    from apps.execution.database.models import ClinicalSubject
+    from tests.test_emergency_unblinding import get_sig_token
+
+    # Create subject in site_boston
+    async with exec_db_mgr.get_session_maker()() as session:
+        subj = ClinicalSubject(
+            subject_id="SUBJ-BOSTON",
+            study_id="STUDY-1",
+            site_id="site_boston",
+        )
+        session.add(subj)
+        await session.flush()
+        subj.status = "ENROLLED"
+        await session.flush()
+        subj.status = "RANDOMIZED"
+        await session.commit()
+
+    # Access using investigator scoped to site_chicago (cross-site)
+    timestamp = str(time.time())
+    sig = generate_signature(
+        user_id="test_inv",
+        roles="site investigator",
+        timestamp=timestamp,
+        version="2",
+        change_reason="Emergency unblinding requested",
+        site_id="site_chicago",
+        tenant_id="tenant_default",
+    )
+    headers = {
+        "X-User-Id": "test_inv",
+        "X-User-Roles": "site investigator",
+        "X-Site-Id": "site_chicago",
+        "X-Tenant-Id": "tenant_default",
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": sig,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": "Emergency unblinding requested",
+        "X-Sig-Token": get_sig_token(),
+    }
+
+    # Monkeypatch publish_notification to capture the dispatched security alert
+    captured_payloads = []
+
+    async def mock_publish(payload):
+        captured_payloads.append(payload)
+        return True
+
+    import apps.execution.notifications_client
+    import apps.execution.rtsm_authz
+
+    monkeypatch.setattr(
+        apps.execution.notifications_client, "publish_notification", mock_publish
+    )
+    monkeypatch.setattr(apps.execution.rtsm_authz, "publish_notification", mock_publish)
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=exec_app), base_url="http://test"
+    ) as client:
+        res = await client.post(
+            "/api/v1/execution/subjects/SUBJ-BOSTON/unblind", headers=headers
+        )
+        assert res.status_code == 403
+        assert "access restricted to your assigned site(s)" in res.json()["detail"]
+
+    # Verify that a security alert was dispatched to appropriate roles
+    assert len(captured_payloads) > 0
+    assert any(
+        p["category"] == "ALERTS"
+        and p["related_entity_type"] == "rtsm-access-violation"
+        for p in captured_payloads
+    )
+
+
+@pytest.mark.asyncio
+async def test_cross_site_query_read_isolation() -> None:
+    """Verify single query GET returns 403 on cross-site, and list queries narrows results."""
+    import httpx
+
+    from apps.execution.database.core import db_manager as exec_db_mgr
+    from apps.execution.database.models import ClinicalQuery
+
+    # Create queries across different sites
+    async with exec_db_mgr.get_session_maker()() as session:
+        q_boston = ClinicalQuery(
+            study_id="STUDY-1",
+            site_id="site_boston",
+            subject_id="SUBJ-B",
+            test_code="SYSBP",
+            status="OPEN",
+            explanation="Check value",
+        )
+        q_chicago = ClinicalQuery(
+            study_id="STUDY-1",
+            site_id="site_chicago",
+            subject_id="SUBJ-C",
+            test_code="SYSBP",
+            status="OPEN",
+            explanation="Check value",
+        )
+        session.add(q_boston)
+        session.add(q_chicago)
+        await session.commit()
+        await session.refresh(q_boston)
+        await session.refresh(q_chicago)
+
+    # Chicago Investigator credentials
+    timestamp = str(time.time())
+    sig = generate_signature(
+        user_id="test_inv",
+        roles="site investigator",
+        timestamp=timestamp,
+        version="2",
+        change_reason="Query check",
+        site_id="site_chicago",
+        tenant_id="tenant_default",
+    )
+    headers = {
+        "X-User-Id": "test_inv",
+        "X-User-Roles": "site investigator",
+        "X-Site-Id": "site_chicago",
+        "X-Tenant-Id": "tenant_default",
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": sig,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": "Query check",
+    }
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=exec_app), base_url="http://test"
+    ) as client:
+        # Single record cross-site read -> 403 Forbidden
+        res_single = await client.get(
+            f"/api/v1/execution/queries/{q_boston.id}", headers=headers
+        )
+        assert res_single.status_code == 403
+
+        # List read -> filters and returns ONLY site_chicago queries
+        res_list = await client.get("/api/v1/execution/queries", headers=headers)
+        assert res_list.status_code == 200
+        queries = res_list.json()
+        assert len(queries) == 1
+        assert queries[0]["id"] == q_chicago.id

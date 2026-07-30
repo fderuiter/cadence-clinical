@@ -13,6 +13,8 @@ Based on the executed automated verification suite, the platform meets all prede
 - **Passed:** 1347 🟢
 - **Total Automated Test Cases Run:** 1293
 - **Passed:** 1293 🟢
+- **Total Automated Test Cases Run:** 1291
+- **Passed:** 1291 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1004,6 +1006,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_randomization_entities_hard_delete_prevented` | `tests.test_randomization_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_randomization_entities_trial_lock_conformity` | `tests.test_randomization_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_can_access_site` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cross_site_query_read_isolation` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cross_site_unblind_denied_with_alert` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_etmf_audit_logs_gated_to_auditors` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_etmf_document_transition_auditor_forbidden` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_etmf_edl_creation_auditor_forbidden` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1023,6 +1027,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_role_aliases_normalization` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_role_normalization_list` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_role_normalization_string` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_rtsm_role_aliases_normalization` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_rtsm_role_aware_masking` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_rtsm_role_permissions` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_is_auditor_allows_auditors` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_is_auditor_denies_non_auditors` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_not_auditor_allows_others` | `tests.test_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |

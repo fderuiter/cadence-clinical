@@ -90,6 +90,7 @@ from apps.execution.edit_checks import (
 )
 from apps.execution.outliers import recalculate_cohort_outliers
 from apps.execution.query_service import QueryService, StateTransitionError
+from apps.execution.rtsm_authz import redact_response, verify_site_access
 from apps.execution.rtsm_supply import (
     InsufficientStockError,
     SiteInventoryNotFoundError,
@@ -109,11 +110,11 @@ from packages.security import (
     Principal,
     get_normalized_roles,
     get_principal,
-    mask_payload,
     require_roles,
     verify_not_auditor,
 )
 from packages.security.middleware import GatewayAuthMiddleware
+from packages.security.rbac import can_access_study
 from packages.security.signing import generate_canonical_signature
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
@@ -795,6 +796,13 @@ async def unblind_subject(
         if not subject:
             raise HTTPException(status_code=404, detail="Subject not found")
 
+        verify_site_access(
+            principal,
+            subject.site_id,
+            study_id=subject.study_id,
+            subject_id=subject.subject_id,
+        )
+
         # Perform the transition inside a try-except to catch transition errors
         try:
             subject.unblind(unblinded_by=principal.user_id, reason=change_reason)
@@ -873,7 +881,7 @@ async def unblind_subject(
         }
 
         # Apply masking dynamically based on the principal's access level
-        masked_response = mask_payload(response_dict, principal)
+        masked_response = redact_response(response_dict, principal)
         return SubjectUnblindResponse(**masked_response)
 
 
@@ -2787,6 +2795,7 @@ async def list_queries(
     subject_id: Optional[str] = None,
     visit_id: Optional[str] = None,
     status: Optional[str] = None,
+    principal: Principal = Depends(get_principal),
 ) -> List[ClinicalQueryResponse]:
     """Retrieve a list of clinical queries with optional filtering.
 
@@ -2799,6 +2808,9 @@ async def list_queries(
     Returns:
         List[ClinicalQueryResponse]: List of matching queries including audit history.
     """
+    if study_id and not can_access_study(principal, study_id):
+        return []
+
     async with db_manager.get_session_maker()() as session:
         stmt = select(ClinicalQuery).where(ClinicalQuery.is_deleted.is_(False))
         if study_id:
@@ -2810,6 +2822,20 @@ async def list_queries(
         if status:
             stmt = stmt.where(ClinicalQuery.status == status)
 
+        site_scoped_roles = {
+            "investigator",
+            "crc",
+            "cra",
+            "monitor",
+            "external_monitor",
+        }
+        user_site_roles = [r for r in principal.roles if r in site_scoped_roles]
+        if user_site_roles or principal.assigned_sites:
+            stmt = stmt.where(ClinicalQuery.site_id.in_(principal.assigned_sites))
+
+        if principal.assigned_studies:
+            stmt = stmt.where(ClinicalQuery.study_id.in_(principal.assigned_studies))
+
         res = await session.execute(stmt)
         queries = res.scalars().all()
 
@@ -2817,42 +2843,48 @@ async def list_queries(
         for q in queries:
             history = await fetch_history(session, q.id)
             responses.append(
-                ClinicalQueryResponse(
-                    id=q.id,
-                    study_id=q.study_id,
-                    subject_id=q.subject_id,
-                    visit_id=q.visit_id,
-                    domain=q.domain,
-                    test_code=q.test_code,
-                    status=q.status,
-                    explanation=q.explanation,
-                    response=q.response,
-                    created_at=q.created_at,
-                    updated_at=q.updated_at,
-                    history=history,
-                    observation_id=q.observation_id,
-                    field_link=q.field_link,
-                    message=q.message,
-                    origin=q.origin,
-                    priority=q.priority,
-                    rule_id=q.rule_id,
-                    created_by=q.created_by,
-                    responder=q.responder,
-                    resolver=q.resolver,
-                    resolved_at=q.resolved_at,
-                    cancellation_reason=q.cancellation_reason,
-                    escalated_at=q.escalated_at,
-                    form_id=q.form_id,
-                    field_id=q.field_id,
-                    query_type=q.query_type,
-                    action_required=q.action_required,
+                redact_response(
+                    ClinicalQueryResponse(
+                        id=q.id,
+                        study_id=q.study_id,
+                        subject_id=q.subject_id,
+                        visit_id=q.visit_id,
+                        domain=q.domain,
+                        test_code=q.test_code,
+                        status=q.status,
+                        explanation=q.explanation,
+                        response=q.response,
+                        created_at=q.created_at,
+                        updated_at=q.updated_at,
+                        history=history,
+                        observation_id=q.observation_id,
+                        field_link=q.field_link,
+                        message=q.message,
+                        origin=q.origin,
+                        priority=q.priority,
+                        rule_id=q.rule_id,
+                        created_by=q.created_by,
+                        responder=q.responder,
+                        resolver=q.resolver,
+                        resolved_at=q.resolved_at,
+                        cancellation_reason=q.cancellation_reason,
+                        escalated_at=q.escalated_at,
+                        form_id=q.form_id,
+                        field_id=q.field_id,
+                        query_type=q.query_type,
+                        action_required=q.action_required,
+                    ),
+                    principal,
                 )
             )
         return responses
 
 
 @app.get("/api/v1/execution/queries/{query_id}", response_model=ClinicalQueryResponse)
-async def get_query(query_id: str) -> ClinicalQueryResponse:
+async def get_query(
+    query_id: str,
+    principal: Principal = Depends(get_principal),
+) -> ClinicalQueryResponse:
     """Query a single clinical query by ID, returning its full audit history.
 
     Args:
@@ -2870,36 +2902,43 @@ async def get_query(query_id: str) -> ClinicalQueryResponse:
         if not q:
             raise HTTPException(status_code=404, detail="Clinical query not found")
 
+        verify_site_access(
+            principal, q.site_id, study_id=q.study_id, subject_id=q.subject_id
+        )
+
         history = await fetch_history(session, q.id)
-        return ClinicalQueryResponse(
-            id=q.id,
-            study_id=q.study_id,
-            subject_id=q.subject_id,
-            visit_id=q.visit_id,
-            domain=q.domain,
-            test_code=q.test_code,
-            status=q.status,
-            explanation=q.explanation,
-            response=q.response,
-            created_at=q.created_at,
-            updated_at=q.updated_at,
-            history=history,
-            observation_id=q.observation_id,
-            field_link=q.field_link,
-            message=q.message,
-            origin=q.origin,
-            priority=q.priority,
-            rule_id=q.rule_id,
-            created_by=q.created_by,
-            responder=q.responder,
-            resolver=q.resolver,
-            resolved_at=q.resolved_at,
-            cancellation_reason=q.cancellation_reason,
-            escalated_at=q.escalated_at,
-            form_id=q.form_id,
-            field_id=q.field_id,
-            query_type=q.query_type,
-            action_required=q.action_required,
+        return redact_response(
+            ClinicalQueryResponse(
+                id=q.id,
+                study_id=q.study_id,
+                subject_id=q.subject_id,
+                visit_id=q.visit_id,
+                domain=q.domain,
+                test_code=q.test_code,
+                status=q.status,
+                explanation=q.explanation,
+                response=q.response,
+                created_at=q.created_at,
+                updated_at=q.updated_at,
+                history=history,
+                observation_id=q.observation_id,
+                field_link=q.field_link,
+                message=q.message,
+                origin=q.origin,
+                priority=q.priority,
+                rule_id=q.rule_id,
+                created_by=q.created_by,
+                responder=q.responder,
+                resolver=q.resolver,
+                resolved_at=q.resolved_at,
+                cancellation_reason=q.cancellation_reason,
+                escalated_at=q.escalated_at,
+                form_id=q.form_id,
+                field_id=q.field_id,
+                query_type=q.query_type,
+                action_required=q.action_required,
+            ),
+            principal,
         )
 
 
@@ -3898,8 +3937,12 @@ async def list_form_submissions(
     subject_id: Optional[str] = None,
     visit_id: Optional[str] = None,
     form_id: Optional[str] = None,
+    principal: Principal = Depends(get_principal),
 ) -> List[FormSubmissionResponse]:
     """List form submissions with filters."""
+    if study_id and not can_access_study(principal, study_id):
+        return []
+
     async with db_manager.get_session_maker()() as session:
         stmt = select(FormSubmission).where(FormSubmission.is_deleted.is_(False))
         if study_id:
@@ -3911,10 +3954,66 @@ async def list_form_submissions(
         if form_id:
             stmt = stmt.where(FormSubmission.form_id == form_id)
 
+        site_scoped_roles = {
+            "investigator",
+            "crc",
+            "cra",
+            "monitor",
+            "external_monitor",
+        }
+        user_site_roles = [r for r in principal.roles if r in site_scoped_roles]
+        if user_site_roles or principal.assigned_sites:
+            stmt = stmt.where(FormSubmission.site_id.in_(principal.assigned_sites))
+
+        if principal.assigned_studies:
+            stmt = stmt.where(FormSubmission.study_id.in_(principal.assigned_studies))
+
         res = await session.execute(stmt)
         subs = res.scalars().all()
 
         return [
+            redact_response(
+                FormSubmissionResponse(
+                    id=sub.id,
+                    study_id=sub.study_id,
+                    site_id=sub.site_id,
+                    subject_id=sub.subject_id,
+                    visit_id=sub.visit_id,
+                    form_id=sub.form_id,
+                    status=sub.status,
+                    version=sub.version,
+                    is_deleted=sub.is_deleted,
+                    signature_manifest=sub.signature_manifest,
+                ),
+                principal,
+            )
+            for sub in subs
+        ]
+
+
+@app.get(
+    "/api/v1/execution/form-submissions/{submission_id}",
+    response_model=FormSubmissionResponse,
+)
+async def get_form_submission(
+    submission_id: str,
+    principal: Principal = Depends(get_principal),
+) -> FormSubmissionResponse:
+    """Retrieve a single form submission by ID."""
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(FormSubmission).where(
+            FormSubmission.id == submission_id, FormSubmission.is_deleted.is_(False)
+        )
+        res = await session.execute(stmt)
+        sub = res.scalars().first()
+        if not sub:
+            raise HTTPException(status_code=404, detail="Form submission not found")
+
+        verify_site_access(
+            principal, sub.site_id, study_id=sub.study_id, subject_id=sub.subject_id
+        )
+
+        return redact_response(
             FormSubmissionResponse(
                 id=sub.id,
                 study_id=sub.study_id,
@@ -3926,37 +4025,8 @@ async def list_form_submissions(
                 version=sub.version,
                 is_deleted=sub.is_deleted,
                 signature_manifest=sub.signature_manifest,
-            )
-            for sub in subs
-        ]
-
-
-@app.get(
-    "/api/v1/execution/form-submissions/{submission_id}",
-    response_model=FormSubmissionResponse,
-)
-async def get_form_submission(submission_id: str) -> FormSubmissionResponse:
-    """Retrieve a single form submission by ID."""
-    async with db_manager.get_session_maker()() as session:
-        stmt = select(FormSubmission).where(
-            FormSubmission.id == submission_id, FormSubmission.is_deleted.is_(False)
-        )
-        res = await session.execute(stmt)
-        sub = res.scalars().first()
-        if not sub:
-            raise HTTPException(status_code=404, detail="Form submission not found")
-
-        return FormSubmissionResponse(
-            id=sub.id,
-            study_id=sub.study_id,
-            site_id=sub.site_id,
-            subject_id=sub.subject_id,
-            visit_id=sub.visit_id,
-            form_id=sub.form_id,
-            status=sub.status,
-            version=sub.version,
-            is_deleted=sub.is_deleted,
-            signature_manifest=sub.signature_manifest,
+            ),
+            principal,
         )
 
 
