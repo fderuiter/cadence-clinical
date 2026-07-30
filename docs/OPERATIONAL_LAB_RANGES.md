@@ -53,6 +53,8 @@ The API Gateway and Execution service strictly enforce logical and arithmetic bo
 8. **Boundary Alignment Constraints:**
    - If present, `critical_low` must be $\le$ `low_bound`.
    - If present, `critical_high` must be $\ge$ `high_bound`.
+9. **Global Central Ranges Invariant:**
+   - If `source` is `CENTRAL`, `site_id` must be exactly `None` (null). Non-null values for `site_id` are strictly prohibited for global central ranges.
 
 Any violation of these constraints will result in an immediate `HTTP 400 Bad Request` with structured validation detail logs.
 

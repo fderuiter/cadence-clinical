@@ -1367,6 +1367,12 @@ def validate_lab_range_payload(data: dict) -> None:
         )
     data["source"] = source_upper
 
+    if source_upper == "CENTRAL" and "site_id" in data and data["site_id"] is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="CENTRAL reference ranges are global and must have site_id = None.",
+        )
+
     sex_upper = str(data["sex_applicability"]).strip().upper()
     if sex_upper not in ("M", "F", "ALL", "U"):
         raise HTTPException(
@@ -1661,46 +1667,25 @@ async def update_lab_range(
                     status_code=404, detail="LabReferenceRange not found"
                 )
 
+            update_dict = payload.model_dump(exclude_unset=True)
             merged_data = {
-                "study_id": payload.study_id
-                if payload.study_id is not None
-                else r.study_id,
-                "test_code": payload.test_code
-                if payload.test_code is not None
-                else r.test_code,
-                "test_name": payload.test_name
-                if payload.test_name is not None
-                else r.test_name,
-                "source": payload.source if payload.source is not None else r.source,
-                "site_id": payload.site_id
-                if payload.site_id is not None
-                else r.site_id,
-                "unit": payload.unit if payload.unit is not None else r.unit,
-                "normalized_unit": payload.normalized_unit
-                if payload.normalized_unit is not None
-                else r.normalized_unit,
-                "sex_applicability": payload.sex_applicability
-                if payload.sex_applicability is not None
-                else r.sex_applicability,
-                "age_low": payload.age_low
-                if payload.age_low is not None
-                else r.age_low,
-                "age_high": payload.age_high
-                if payload.age_high is not None
-                else r.age_high,
-                "low_bound": payload.low_bound
-                if payload.low_bound is not None
-                else r.low_bound,
-                "high_bound": payload.high_bound
-                if payload.high_bound is not None
-                else r.high_bound,
-                "critical_low": payload.critical_low
-                if payload.critical_low is not None
-                else r.critical_low,
-                "critical_high": payload.critical_high
-                if payload.critical_high is not None
-                else r.critical_high,
+                "study_id": r.study_id,
+                "test_code": r.test_code,
+                "test_name": r.test_name,
+                "source": r.source,
+                "site_id": r.site_id,
+                "unit": r.unit,
+                "normalized_unit": r.normalized_unit,
+                "sex_applicability": r.sex_applicability,
+                "age_low": r.age_low,
+                "age_high": r.age_high,
+                "low_bound": r.low_bound,
+                "high_bound": r.high_bound,
+                "critical_low": r.critical_low,
+                "critical_high": r.critical_high,
             }
+            for key, val in update_dict.items():
+                merged_data[key] = val
 
             validate_lab_range_payload(merged_data)
 
