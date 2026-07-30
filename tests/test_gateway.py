@@ -1197,6 +1197,118 @@ def test_gateway_startup_development_with_bypass_configs() -> None:
     assert result.returncode == 0
 
 
+def test_gateway_tenant_claim_extraction(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Validate that the gateway successfully extracts tenant claims, enforces default fallback migration, and signs them.
+
+    Requirements: PRD-SYS-001
+    """
+    monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
+
+    # Mock send downstream
+    mock_send = AsyncMock()
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.content = b'{"status": "ok"}'
+    mock_resp.headers = {"content-type": "application/json"}
+    mock_send.return_value = mock_resp
+    monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
+
+    # 1. Custom attributes tenant_id extraction
+    token_nested = jwt.encode(
+        {
+            "sub": "user_nested",
+            "roles": ["sponsor_designer"],
+            "custom_attributes": {"tenant_id": "tenant_pfizer_123"},
+        },
+        "test_secret",
+        algorithm="HS256",
+    )
+
+    with TestClient(app) as client:
+        res = client.get(
+            "/designer/test",
+            headers={"Authorization": f"Bearer {token_nested}"},
+        )
+        assert res.status_code == 200
+        sent_request = mock_send.call_args.args[0]
+        assert sent_request.headers.get("X-Tenant-Id") == "tenant_pfizer_123"
+
+        # 2. Fallback to top-level tenant_id claim
+        token_fallback = jwt.encode(
+            {
+                "sub": "user_fallback",
+                "roles": ["sponsor_designer"],
+                "tenant_id": "tenant_roche_456",
+            },
+            "test_secret",
+            algorithm="HS256",
+        )
+        res_fb = client.get(
+            "/designer/test",
+            headers={"Authorization": f"Bearer {token_fallback}"},
+        )
+        assert res_fb.status_code == 200
+        sent_request_fb = mock_send.call_args.args[0]
+        assert sent_request_fb.headers.get("X-Tenant-Id") == "tenant_roche_456"
+
+        # 3. Default fallback (migration policy) when no tenant_id exists
+        token_default = jwt.encode(
+            {
+                "sub": "user_default",
+                "roles": ["sponsor_designer"],
+            },
+            "test_secret",
+            algorithm="HS256",
+        )
+        res_def = client.get(
+            "/designer/test",
+            headers={"Authorization": f"Bearer {token_default}"},
+        )
+        assert res_def.status_code == 200
+        sent_request_def = mock_send.call_args.args[0]
+        assert sent_request_def.headers.get("X-Tenant-Id") == "tenant_default"
+
+
+def test_gateway_tenant_spoofing_prevention(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Validate that the gateway sanitizes/strips incoming X-Tenant-Id and establishes identity from claims.
+
+    Requirements: PRD-SYS-001
+    """
+    monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
+
+    # Mock send downstream
+    mock_send = AsyncMock()
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.content = b'{"status": "ok"}'
+    mock_resp.headers = {"content-type": "application/json"}
+    mock_send.return_value = mock_resp
+    monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
+
+    token = jwt.encode(
+        {
+            "sub": "user_nested",
+            "roles": ["sponsor_designer"],
+            "custom_attributes": {"tenant_id": "tenant_pfizer_123"},
+        },
+        "test_secret",
+        algorithm="HS256",
+    )
+
+    with TestClient(app) as client:
+        res = client.get(
+            "/designer/test",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "X-Tenant-Id": "spoofed_tenant_id_hacker",
+            },
+        )
+        assert res.status_code == 200
+        sent_request = mock_send.call_args.args[0]
+        # Should be completely overridden by the claims-derived tenant!
+        assert sent_request.headers.get("X-Tenant-Id") == "tenant_pfizer_123"
+
+
 def test_gateway_startup_production_no_bypass_configs() -> None:
     """
     Test that the gateway successfully completes initialization in production when no test bypass

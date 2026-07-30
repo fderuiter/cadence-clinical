@@ -277,6 +277,7 @@ def generate_signature(
     site_id: Optional[str] = None,
     sponsor_id: Optional[str] = None,
     unblinded_access: bool = False,
+    tenant_id: Optional[str] = None,
 ) -> str:
     """
     Generate an HMAC-SHA256 signature for identity and scope headers.
@@ -303,6 +304,7 @@ def generate_signature(
         site_id=site_id,
         sponsor_id=sponsor_id,
         unblinded_access=unblinded_access,
+        tenant_id=tenant_id,
     )
 
 
@@ -1046,6 +1048,7 @@ async def proxy_requests(request: Request, path: str) -> Response:
             "x-site-id",
             "x-sponsor-id",
             "x-unblinded-access",
+            "x-tenant-id",
         ):
             headers.pop(k, None)
 
@@ -1081,6 +1084,19 @@ async def proxy_requests(request: Request, path: str) -> Response:
     else:
         sponsor_id_val = str(sponsor_id_val)
 
+    # Extract tenant identity and apply least-privilege migration policy (default to tenant_default)
+    tenant_id_val = ""
+    if isinstance(custom_attrs, dict):
+        tenant_id_val = custom_attrs.get("tenant_id") or ""
+
+    if not tenant_id_val:
+        tenant_id_val = payload.get("tenant_id", "")
+
+    if tenant_id_val is None or not str(tenant_id_val).strip():
+        tenant_id_val = "tenant_default"
+    else:
+        tenant_id_val = str(tenant_id_val).strip()
+
     unblinded_access_claim = payload.get("unblinded_access", False)
     unblinded_access_val = False
     if unblinded_access_claim in (True, "true", "True", 1, "1"):
@@ -1096,6 +1112,7 @@ async def proxy_requests(request: Request, path: str) -> Response:
         site_id=site_id_val if site_id_val else None,
         sponsor_id=sponsor_id_val if sponsor_id_val else None,
         unblinded_access=unblinded_access_val,
+        tenant_id=tenant_id_val,
     )
 
     headers["X-User-Id"] = user_id
@@ -1103,6 +1120,7 @@ async def proxy_requests(request: Request, path: str) -> Response:
     headers["X-Gateway-Timestamp"] = timestamp
     headers["X-Gateway-Signature"] = signature
     headers["X-Signature-Version"] = "2"
+    headers["X-Tenant-Id"] = tenant_id_val
     if site_id_val:
         headers["X-Site-Id"] = site_id_val
     if sponsor_id_val:

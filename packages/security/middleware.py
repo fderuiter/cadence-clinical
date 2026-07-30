@@ -138,6 +138,13 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
         if unblinded_header.lower() in ("true", "1", "yes"):
             unblinded_access = True
 
+        # Extract tenant identity and apply least-privilege migration policy (default to tenant_default)
+        tenant_id = request.headers.get("X-Tenant-Id")
+        if tenant_id is None or not str(tenant_id).strip():
+            tenant_id = "tenant_default"
+        else:
+            tenant_id = str(tenant_id).strip()
+
         if version in ("2", "v2"):
             from packages.security.signing import verify_gateway_signature
 
@@ -151,6 +158,7 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
                 site_id=site_id,
                 sponsor_id=sponsor_id,
                 unblinded_access=unblinded_access,
+                tenant_id=tenant_id,
             )
         else:
             # Version 1/v1 (legacy colon concatenated format) - doesn't support scope
@@ -265,6 +273,7 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
         request.state.site_id = site_id
         request.state.sponsor_id = sponsor_id
         request.state.unblinded_access = unblinded_access
+        request.state.tenant_id = tenant_id
 
         # Extract IP address for context injection
         ip_address = request.headers.get(
@@ -276,6 +285,7 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
         from packages.security.context import (
             current_site_id,
             current_sponsor_id,
+            current_tenant_id,
             current_unblinded_access,
         )
 
@@ -289,6 +299,7 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
         site_token = current_site_id.set(site_id)
         sponsor_token = current_sponsor_id.set(sponsor_id)
         unblinded_token = current_unblinded_access.set(unblinded_access)
+        tenant_token = current_tenant_id.set(tenant_id)
 
         try:
             return await call_next(request)
@@ -301,3 +312,4 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
             current_site_id.reset(site_token)
             current_sponsor_id.reset(sponsor_token)
             current_unblinded_access.reset(unblinded_token)
+            current_tenant_id.reset(tenant_token)

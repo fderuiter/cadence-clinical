@@ -53,7 +53,7 @@ alphabetically sorted:
 import copy
 import logging
 from datetime import datetime
-from typing import Any, List, Optional   # ← names inside also alphabetical
+from typing import Any, List, Optional  # ← names inside also alphabetical
 
 # 2. Third-party — alphabetical
 from fastapi import Depends, HTTPException
@@ -61,9 +61,9 @@ from sqlalchemy import select
 
 # 3. First-party — alphabetical by module path, names inside alphabetical
 from apps.execution.database.models import (
-    ClinicalObservation,    # ← A before F before S
+    ClinicalObservation,  # ← A before F before S
     FormSubmission,
-    StudyAuthoredRule,      # ← NEVER append new symbols at the end
+    StudyAuthoredRule,  # ← NEVER append new symbols at the end
 )
 ```
 
@@ -83,7 +83,7 @@ To auto-fix after the fact: `uv run ruff check . --fix`
 ```python
 # ✘ WRONG — triggers ruff E712 and produces incorrect SQL
 stmt = select(StudyAuthoredRule).where(
-    StudyAuthoredRule.is_active == True,       # noqa won't save you here
+    StudyAuthoredRule.is_active == True,  # noqa won't save you here
     StudyAuthoredRule.is_deleted == False,
 )
 

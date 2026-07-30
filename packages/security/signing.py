@@ -22,6 +22,7 @@ def generate_gateway_signature(
     site_id: Optional[str] = None,
     sponsor_id: Optional[str] = None,
     unblinded_access: bool = False,
+    tenant_id: Optional[str] = None,
 ) -> str:
     """Generates an HMAC-SHA256 signature for API Gateway identity and scope headers."""
     payload = {
@@ -32,6 +33,7 @@ def generate_gateway_signature(
         "site_id": site_id if site_id is not None else "",
         "sponsor_id": sponsor_id if sponsor_id is not None else "",
         "unblinded_access": unblinded_access,
+        "tenant_id": tenant_id if tenant_id is not None else "",
     }
     serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return hmac.new(secret, serialized.encode("utf-8"), hashlib.sha256).hexdigest()
@@ -47,9 +49,10 @@ def verify_gateway_signature(
     site_id: Optional[str] = None,
     sponsor_id: Optional[str] = None,
     unblinded_access: bool = False,
+    tenant_id: Optional[str] = None,
 ) -> bool:
     """Verifies an HMAC-SHA256 signature for API Gateway identity and scope headers."""
-    # 1. Verify with the full 7-field scope-aware payload
+    # 1. Verify with the full 8-field scope-aware payload (includes tenant_id)
     expected = generate_gateway_signature(
         user_id=user_id,
         roles=roles,
@@ -59,14 +62,30 @@ def verify_gateway_signature(
         site_id=site_id,
         sponsor_id=sponsor_id,
         unblinded_access=unblinded_access,
+        tenant_id=tenant_id,
     )
     if hmac.compare_digest(expected, signature):
         return True
 
-    # Fallback 1: The sender generated the signature using generate_signature/generate_gateway_signature
-    # but did not pass site_id/sponsor_id/unblinded_access to the generator (treating them as default/empty/None).
-    # Thus, the signature was generated with site_id=None, sponsor_id=None, unblinded_access=False.
-    if site_id or sponsor_id or unblinded_access:
+    # Fallback 1: Try verifying with tenant_id=None as compatibility for requests
+    # signed before tenant propagation was introduced.
+    if tenant_id:
+        fallback_tenant_expected = generate_gateway_signature(
+            user_id=user_id,
+            roles=roles,
+            timestamp=timestamp,
+            secret=secret,
+            change_reason=change_reason,
+            site_id=site_id,
+            sponsor_id=sponsor_id,
+            unblinded_access=unblinded_access,
+            tenant_id=None,
+        )
+        if hmac.compare_digest(fallback_tenant_expected, signature):
+            return True
+
+    # Fallback 2: The sender generated the signature but did not pass site_id/sponsor_id/unblinded_access/tenant_id to the generator.
+    if site_id or sponsor_id or unblinded_access or tenant_id:
         fallback_expected = generate_gateway_signature(
             user_id=user_id,
             roles=roles,
@@ -76,15 +95,16 @@ def verify_gateway_signature(
             site_id=None,
             sponsor_id=None,
             unblinded_access=False,
+            tenant_id=None,
         )
         if hmac.compare_digest(fallback_expected, signature):
             return True
 
     # 2. Compatibility check: Fallbacks are ONLY permitted if no scope fields are present/active.
-    # If any scope values are present, they are scope-bearing requests and must verify using the 7-field payload.
-    has_scopes = bool(site_id or sponsor_id or unblinded_access)
+    # If any scope values are present, they are scope-bearing requests and must verify using the payload.
+    has_scopes = bool(site_id or sponsor_id or unblinded_access or tenant_id)
     if not has_scopes:
-        # Fallback 1: Verify as if scope fields were omitted from the signature generation (e.g., site_id=None, sponsor_id=None)
+        # Fallback 1: Verify as if scope fields were omitted from the signature generation
         no_scope_expected = generate_gateway_signature(
             user_id=user_id,
             roles=roles,
@@ -94,6 +114,7 @@ def verify_gateway_signature(
             site_id=None,
             sponsor_id=None,
             unblinded_access=False,
+            tenant_id=None,
         )
         if hmac.compare_digest(no_scope_expected, signature):
             return True
