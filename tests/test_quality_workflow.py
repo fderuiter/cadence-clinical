@@ -11,6 +11,35 @@ from apps.quality.models import (
 )
 
 
+def make_step_up_token(
+    user_id: str,
+    action: str,
+    semantic_action: str,
+    secret: str = "internal-gateway-secret-12345",
+    expired: bool = False,
+    wrong_user: bool = False,
+    wrong_action: bool = False,
+    wrong_semantic: bool = False,
+) -> str:
+    import time
+
+    from jose import jwt
+
+    now = time.time()
+    payload = {
+        "sub": "wrong_user" if wrong_user else user_id,
+        "username": "test_signer",
+        "action": "/api/v1/wrong_path" if wrong_action else action,
+        "roles": ["admin"],
+        "iat": now - 100 if expired else now,
+        "exp": now - 40 if expired else now + 60,
+        "jti": f"jti_test_{user_id}_{now}",
+        "semantic_action": "wrong_semantic" if wrong_semantic else semantic_action,
+        "sig_ver": "v3",
+    }
+    return jwt.encode(payload, secret, algorithm="HS256")
+
+
 @pytest.fixture(autouse=True)
 async def setup_quality_db():
     """
@@ -291,10 +320,18 @@ def test_capa_lifecycle_transitions():
     assert trans_res3.json()["version_index"] == 4
 
     # 6. Transition: EFFECTIVENESS_CHECK -> CLOSED (Legal)
+    action_path = f"/api/v1/quality/capas/{capa_id}/transition"
+    sig_token = make_step_up_token(
+        user_id="quality_test_user",
+        action=action_path,
+        semantic_action="quality.capa.close",
+    )
+    headers_gated = headers.copy()
+    headers_gated["X-Sig-Token"] = sig_token
     trans_res4 = client.post(
         f"/api/v1/quality/capas/{capa_id}/transition",
         json={"to_status": "CLOSED", "version_index": 4},
-        headers=headers,
+        headers=headers_gated,
     )
     assert trans_res4.status_code == 200
     assert trans_res4.json()["status"] == "CLOSED"
@@ -380,10 +417,18 @@ def test_capa_updates_and_concurrency():
         json={"to_status": "EFFECTIVENESS_CHECK", "version_index": 4},
         headers=headers,
     )
+    action_path = f"/api/v1/quality/capas/{capa_id}/transition"
+    sig_token = make_step_up_token(
+        user_id="quality_test_user",
+        action=action_path,
+        semantic_action="quality.capa.close",
+    )
+    headers_gated = headers.copy()
+    headers_gated["X-Sig-Token"] = sig_token
     client.post(
         f"/api/v1/quality/capas/{capa_id}/transition",
         json={"to_status": "CLOSED", "version_index": 5},
-        headers=headers,
+        headers=headers_gated,
     )
 
     # 5. Try updating details of a closed CAPA (Illegal -> 422)
@@ -533,23 +578,39 @@ def test_capa_approval_closure_requires_quality_oversight():
     )
     assert trans_res3.status_code == 200
 
-    # Try transitioning to CLOSED (closure) via general write role (cra) - should fail with 403
+    # Try transitioning to CLOSED (closure) via general write role (cra) - should fail with 403 (with valid sig-token)
+    action_path = f"/api/v1/quality/capas/{capa_id}/transition"
+    sig_token_cra = make_step_up_token(
+        user_id="quality_test_user",
+        action=action_path,
+        semantic_action="quality.capa.close",
+    )
+    cra_headers_gated = cra_headers.copy()
+    cra_headers_gated["X-Sig-Token"] = sig_token_cra
     trans_res4_fail = client.post(
         f"/api/v1/quality/capas/{capa_id}/transition",
         json={"to_status": "CLOSED", "version_index": 4},
-        headers=cra_headers,
+        headers=cra_headers_gated,
     )
     assert trans_res4_fail.status_code == 403
     assert "Quality oversight role required" in trans_res4_fail.json()["detail"]
 
-    # Successfully transition to CLOSED using a quality oversight role (e.g. quality_manager)
+    # Successfully transition to CLOSED using a quality oversight role (e.g. quality_manager) with valid sig_token
     qm_headers = get_auth_headers(
         roles="quality_manager", change_reason="Closing CAPA and deviation"
     )
+    action_path = f"/api/v1/quality/capas/{capa_id}/transition"
+    sig_token = make_step_up_token(
+        user_id="quality_test_user",
+        action=action_path,
+        semantic_action="quality.capa.close",
+    )
+    qm_headers_gated = qm_headers.copy()
+    qm_headers_gated["X-Sig-Token"] = sig_token
     trans_res4_success = client.post(
         f"/api/v1/quality/capas/{capa_id}/transition",
         json={"to_status": "CLOSED", "version_index": 4},
-        headers=qm_headers,
+        headers=qm_headers_gated,
     )
     assert trans_res4_success.status_code == 200
     assert trans_res4_success.json()["status"] == "CLOSED"
@@ -695,3 +756,127 @@ def test_permission_failure_leaves_no_misleading_audit_entry():
         log["action"] == "DEVIATION_CREATE" and "Forbidden deviation" in log["details"]
         for log in final_logs
     )
+
+
+def test_transition_capa_sig_token_matrix():
+    """
+    Test missing, valid, mismatched, expired, and replayed tokens for CAPA status transitions.
+    """
+    client = TestClient(app)
+    headers = get_auth_headers(
+        roles="quality_manager", change_reason="Capa transition signature validation"
+    )
+
+    # 1. Create parent deviation
+    dev_payload = {
+        "study_id": "study_123",
+        "title": "Deviation for Matrix Test",
+        "description": "Base description",
+        "severity": "MINOR",
+        "type": "OTHER",
+    }
+    dev_res = client.post(
+        "/api/v1/quality/deviations", json=dev_payload, headers=headers
+    )
+    dev_id = dev_res.json()["id"]
+
+    # 2. Create CAPA
+    capa_payload = {
+        "deviation_id": dev_id,
+        "capa_type": "CORRECTIVE",
+        "action_plan": "Action plan",
+    }
+    capa_res = client.post("/api/v1/quality/capas", json=capa_payload, headers=headers)
+    capa_id = capa_res.json()["id"]
+
+    # Transition to UNDER_REVIEW, then IMPLEMENTATION, then EFFECTIVENESS_CHECK (not gated)
+    client.post(
+        f"/api/v1/quality/capas/{capa_id}/transition",
+        json={"to_status": "UNDER_REVIEW", "version_index": 1},
+        headers=headers,
+    )
+    client.post(
+        f"/api/v1/quality/capas/{capa_id}/transition",
+        json={"to_status": "IMPLEMENTATION", "version_index": 2},
+        headers=headers,
+    )
+    client.post(
+        f"/api/v1/quality/capas/{capa_id}/transition",
+        json={"to_status": "EFFECTIVENESS_CHECK", "version_index": 3},
+        headers=headers,
+    )
+
+    action_path = f"/api/v1/quality/capas/{capa_id}/transition"
+
+    # Test missing token
+    res_missing = client.post(
+        action_path, json={"to_status": "CLOSED", "version_index": 4}, headers=headers
+    )
+    assert res_missing.status_code == 401
+
+    # Test expired token
+    t_expired = make_step_up_token(
+        user_id="quality_test_user",
+        action=action_path,
+        semantic_action="quality.capa.close",
+        expired=True,
+    )
+    headers_expired = headers.copy()
+    headers_expired["X-Sig-Token"] = t_expired
+    res_expired = client.post(
+        action_path,
+        json={"to_status": "CLOSED", "version_index": 4},
+        headers=headers_expired,
+    )
+    assert res_expired.status_code == 401
+
+    # Test mismatched semantic action (CANCEL instead of CLOSE)
+    t_mismatched_semantic = make_step_up_token(
+        user_id="quality_test_user",
+        action=action_path,
+        semantic_action="quality.capa.cancel",
+    )
+    headers_mismatched_semantic = headers.copy()
+    headers_mismatched_semantic["X-Sig-Token"] = t_mismatched_semantic
+    res_mismatched_semantic = client.post(
+        action_path,
+        json={"to_status": "CLOSED", "version_index": 4},
+        headers=headers_mismatched_semantic,
+    )
+    assert res_mismatched_semantic.status_code == 401
+
+    # Test mismatched user
+    t_mismatched_user = make_step_up_token(
+        user_id="wrong_user", action=action_path, semantic_action="quality.capa.close"
+    )
+    headers_mismatched_user = headers.copy()
+    headers_mismatched_user["X-Sig-Token"] = t_mismatched_user
+    res_mismatched_user = client.post(
+        action_path,
+        json={"to_status": "CLOSED", "version_index": 4},
+        headers=headers_mismatched_user,
+    )
+    assert res_mismatched_user.status_code == 401
+
+    # Test valid token
+    t_valid = make_step_up_token(
+        user_id="quality_test_user",
+        action=action_path,
+        semantic_action="quality.capa.close",
+    )
+    headers_valid = headers.copy()
+    headers_valid["X-Sig-Token"] = t_valid
+    res_valid = client.post(
+        action_path,
+        json={"to_status": "CLOSED", "version_index": 4},
+        headers=headers_valid,
+    )
+    assert res_valid.status_code == 200
+
+    # Test replayed token (resubmit with same token)
+    res_replayed = client.post(
+        action_path,
+        json={"to_status": "CLOSED", "version_index": 4},
+        headers=headers_valid,
+    )
+    assert res_replayed.status_code == 401

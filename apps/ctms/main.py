@@ -1818,6 +1818,31 @@ async def update_grant(
         grant.currency = payload.currency
     if payload.status is not None:
         if payload.status.upper() == "APPROVED" and grant.status != "APPROVED":
+            # Enforce step-up gating
+            from packages.security.middleware import (
+                downstream_replay_cache,
+                verify_sig_token,
+            )
+            from packages.security.regulated_actions import SemanticAction
+
+            sig_token = request.headers.get("X-Sig-Token") or request.headers.get(
+                "x-sig-token"
+            )
+            secret = os.getenv(
+                "GATEWAY_SECRET", "internal-gateway-secret-12345"
+            ).encode()
+
+            success, result = verify_sig_token(
+                sig_token=sig_token,
+                user_id=principal.user_id,
+                request_path=request.url.path,
+                secret=secret,
+                replay_cache=downstream_replay_cache,
+                expected_semantic_action=SemanticAction.GRANT_APPROVE,
+                check_replay=False,
+            )
+            if not success:
+                raise HTTPException(status_code=401, detail="REAUTHENTICATION_REQUIRED")
             grant.status = "APPROVED"
             trigger_approval = True
         else:

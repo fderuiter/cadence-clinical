@@ -1,4 +1,5 @@
 import time
+from typing import Optional
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -925,3 +926,125 @@ def test_middleware_tenant_signature_tampering_rejected() -> None:
     response = client.get("/verify-context-tenant", headers=headers)
     assert response.status_code == 401
     assert "Invalid gateway signature" in response.json()["detail"]
+
+
+def test_verify_sig_token_helper_scenarios() -> None:
+    """
+    Test various verification outcomes directly using the extracted verify_sig_token helper.
+    """
+    from packages.security.middleware import downstream_replay_cache, verify_sig_token
+
+    secret = b"test-secret-12345"
+    user_id = "user_test_99"
+    path = "/api/v1/quality/capas/123/transition"
+
+    # 1. Helper to construct tokens easily
+    def make_token(
+        semantic_action: Optional[str] = None,
+        expired: bool = False,
+        wrong_action: bool = False,
+        wrong_user: bool = False,
+    ) -> str:
+        now = time.time()
+        payload = {
+            "sub": "wrong_user" if wrong_user else user_id,
+            "username": "test_username",
+            "action": "/api/v1/wrong_path" if wrong_action else path,
+            "roles": ["investigator"],
+            "iat": now - 100 if expired else now,
+            "exp": now - 40 if expired else now + 60,
+            "jti": f"jti_test_{user_id}_{now}",
+        }
+        if semantic_action:
+            payload["semantic_action"] = semantic_action
+            payload["sig_ver"] = "v3"
+        return jwt.encode(payload, secret, algorithm="HS256")
+
+    # 2. Valid token with semantic action matching expected
+    t_valid = make_token(semantic_action="quality.capa.close")
+    success, res = verify_sig_token(
+        sig_token=t_valid,
+        user_id=user_id,
+        request_path=path,
+        secret=secret,
+        replay_cache=downstream_replay_cache,
+        expected_semantic_action="quality.capa.close",
+    )
+    assert success is True
+    assert isinstance(res, dict)
+
+    # 3. Missing token -> False
+    success, err = verify_sig_token(
+        sig_token=None,
+        user_id=user_id,
+        request_path=path,
+        secret=secret,
+        replay_cache=downstream_replay_cache,
+    )
+    assert success is False
+    assert "Re-authentication is required" in err
+
+    # 4. Mismatched semantic action -> False
+    t_mismatched = make_token(semantic_action="quality.capa.cancel")
+    success, err = verify_sig_token(
+        sig_token=t_mismatched,
+        user_id=user_id,
+        request_path=path,
+        secret=secret,
+        replay_cache=downstream_replay_cache,
+        expected_semantic_action="quality.capa.close",
+    )
+    assert success is False
+    assert "semantic action mismatch" in err
+
+    # 5. Expired token -> False
+    t_expired = make_token(semantic_action="quality.capa.close", expired=True)
+    success, err = verify_sig_token(
+        sig_token=t_expired,
+        user_id=user_id,
+        request_path=path,
+        secret=secret,
+        replay_cache=downstream_replay_cache,
+        expected_semantic_action="quality.capa.close",
+    )
+    assert success is False
+    assert "invalid" in err.lower()
+
+    # 6. Mismatched user -> False
+    t_user_mismatch = make_token(semantic_action="quality.capa.close", wrong_user=True)
+    success, err = verify_sig_token(
+        sig_token=t_user_mismatch,
+        user_id=user_id,
+        request_path=path,
+        secret=secret,
+        replay_cache=downstream_replay_cache,
+        expected_semantic_action="quality.capa.close",
+    )
+    assert success is False
+    assert "user mismatch" in err.lower()
+
+    # 7. Replayed token -> False
+    # Clear the replay cache first to be independent
+    downstream_replay_cache.used_tokens.clear()
+    t_replay = make_token(semantic_action="quality.capa.close")
+    # First verify passes
+    success, _ = verify_sig_token(
+        sig_token=t_replay,
+        user_id=user_id,
+        request_path=path,
+        secret=secret,
+        replay_cache=downstream_replay_cache,
+        expected_semantic_action="quality.capa.close",
+    )
+    assert success is True
+    # Second verify fails (replayed)
+    success, err = verify_sig_token(
+        sig_token=t_replay,
+        user_id=user_id,
+        request_path=path,
+        secret=secret,
+        replay_cache=downstream_replay_cache,
+        expected_semantic_action="quality.capa.close",
+    )
+    assert success is False
+    assert "already been used" in err.lower()

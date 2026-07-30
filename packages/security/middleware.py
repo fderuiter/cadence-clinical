@@ -3,7 +3,7 @@ import hashlib
 import hmac
 import os
 import time
-from typing import Awaitable, Callable
+from typing import Any, Awaitable, Callable, Optional, Union
 
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
@@ -34,6 +34,82 @@ class DownstreamReplayCache:
 
 
 downstream_replay_cache = DownstreamReplayCache()
+
+
+def verify_sig_token(
+    sig_token: Optional[str],
+    user_id: str,
+    request_path: str,
+    secret: bytes,
+    replay_cache: Any,
+    expected_semantic_action: Optional[str] = None,
+    check_replay: bool = True,
+) -> tuple[bool, Union[dict, str]]:
+    """
+    Standalone function to verify a signature token (JWT).
+    Validates presence, signature, expiration, identity binding, action/semantic_action binding,
+    and single-use replay protection.
+
+    Returns:
+        tuple[bool, Union[dict, str]]: (True, sig_payload) on success, or (False, error_message) on failure.
+    """
+    print(
+        f"VERIFY_SIG_TOKEN: sig_token={sig_token[:20] if sig_token else None}, user_id={user_id}, request_path={request_path}, expected_semantic={expected_semantic_action}"
+    )
+    if not sig_token:
+        print("VERIFY_SIG_TOKEN: Failed on missing token")
+        return False, "21 CFR Part 11 mandate: Re-authentication is required."
+
+    try:
+        sig_payload = jwt.decode(
+            sig_token, secret, algorithms=["HS256"]
+        )
+    except JWTError as e:
+        print(f"VERIFY_SIG_TOKEN: Failed to decode: {e}")
+        return False, "Invalid signature token."
+
+    # Check expiration
+    if sig_payload.get("exp", 0) < time.time():
+        print("VERIFY_SIG_TOKEN: Failed on expiration")
+        return False, "Signature token has expired."
+
+    # Check user binding
+    if sig_payload.get("sub") != user_id:
+        print(
+            f"VERIFY_SIG_TOKEN: Failed on user mismatch: sub={sig_payload.get('sub')} vs {user_id}"
+        )
+        return False, "Signature token user mismatch."
+
+    # Validate semantic action binding if expected & present in token
+    token_semantic = sig_payload.get("semantic_action")
+    if expected_semantic_action and token_semantic:
+        if token_semantic != expected_semantic_action:
+            print(
+                f"VERIFY_SIG_TOKEN: Failed on semantic mismatch: {token_semantic} vs {expected_semantic_action}"
+            )
+            return False, "Signature token semantic action mismatch."
+
+    # Check loose path binding (always checked for baseline safety)
+    bound_action = sig_payload.get("action", "")
+    if (
+        request_path != bound_action
+        and bound_action not in request_path
+        and request_path not in bound_action
+    ):
+        print(
+            f"VERIFY_SIG_TOKEN: Failed on path mismatch: bound_action={bound_action} vs request_path={request_path}"
+        )
+        return False, "Signature token action mismatch."
+
+    # Check replay attack
+    if check_replay:
+        jti = sig_payload.get("jti")
+        if replay_cache.is_replayed(sig_token, sig_payload.get("exp", 0), jti):
+            print("VERIFY_SIG_TOKEN: Failed on replay check")
+            return False, "Signature token has already been used."
+
+    print("VERIFY_SIG_TOKEN: SUCCESS")
+    return True, sig_payload
 
 
 class GatewayAuthMiddleware(BaseHTTPMiddleware):
@@ -174,165 +250,118 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
                 status_code=status_code, content={"detail": "Invalid gateway signature"}
             )
 
-        # Check if request is signature-gated
-        from packages.security.gating import is_path_signature_gated
+        body_json = None
+        if is_mutation:
+            body_bytes = await request.body()
+            if body_bytes:
+                try:
+                    import json
 
+                    body_json = json.loads(body_bytes)
+                except Exception:
+                    pass
+
+                # Restore body receive for Starlette downstream
+                async def receive():
+                    return {
+                        "type": "http.request",
+                        "body": body_bytes,
+                        "more_body": False,
+                    }
+
+                request._receive = receive
+
+        from packages.security.gating import is_path_signature_gated
+        from packages.security.regulated_actions import resolve_regulated_action
+
+        expected_semantic = resolve_regulated_action(
+            request.method, request.url.path, body_json
+        )
         path_lower = request.url.path.lower()
-        is_signature_gated = is_path_signature_gated(path_lower)
+        is_signature_gated = (expected_semantic is not None) or is_path_signature_gated(
+            path_lower
+        )
 
         if is_signature_gated and is_mutation:
             sig_token = request.headers.get("X-Sig-Token")
-            if not sig_token:
+            success, result = verify_sig_token(
+                sig_token=sig_token,
+                user_id=user_id,
+                request_path=request.url.path,
+                secret=self.gateway_secret,
+                replay_cache=downstream_replay_cache,
+                expected_semantic_action=expected_semantic.value
+                if expected_semantic
+                else None,
+            )
+            if not success:
                 return JSONResponse(
                     status_code=401,
                     content={
                         "detail": "REAUTHENTICATION_REQUIRED",
                         "error": "REAUTHENTICATION_REQUIRED",
-                        "message": "21 CFR Part 11 mandate: Re-authentication is required.",
+                        "message": str(result),
                     },
                 )
-            try:
-                sig_payload = jwt.decode(
-                    sig_token, self.gateway_secret, algorithms=["HS256"]
-                )
 
-                # Check expiration
-                if sig_payload.get("exp", 0) < time.time():
+            sig_payload = result
+
+            # Check batch binding if path is batch-sign-off or if token contains batch_id
+            token_batch_id = sig_payload.get("batch_id")
+            if "batch-sign-off" in path_lower:
+                if not token_batch_id:
                     return JSONResponse(
                         status_code=401,
                         content={
                             "detail": "REAUTHENTICATION_REQUIRED",
                             "error": "REAUTHENTICATION_REQUIRED",
-                            "message": "Signature token has expired.",
+                            "message": "Signature token is not bound to a batch.",
                         },
                     )
 
-                # Check user binding
-                if sig_payload.get("sub") != user_id:
-                    return JSONResponse(
-                        status_code=401,
-                        content={
-                            "detail": "REAUTHENTICATION_REQUIRED",
-                            "error": "REAUTHENTICATION_REQUIRED",
-                            "message": "Signature token user mismatch.",
-                        },
-                    )
+                req_study_id = body_json.get("study_id")
+                req_target_type = body_json.get("target_type")
+                req_target_ids = body_json.get("target_ids")
+                req_signing_reason = body_json.get("signing_reason")
 
-                # Check action binding
-                bound_action = sig_payload.get("action", "")
-                request_path = request.url.path
-                if (
-                    request_path != bound_action
-                    and bound_action not in request_path
-                    and request_path not in bound_action
+                if not all(
+                    [
+                        req_study_id,
+                        req_target_type,
+                        req_target_ids is not None,
+                        req_signing_reason,
+                    ]
                 ):
                     return JSONResponse(
-                        status_code=401,
+                        status_code=400,
                         content={
                             "detail": "REAUTHENTICATION_REQUIRED",
                             "error": "REAUTHENTICATION_REQUIRED",
-                            "message": "Signature token action mismatch.",
+                            "message": "Missing batch sign-off fields for validation.",
                         },
                     )
 
-                # Check batch binding if path is batch-sign-off or if token contains batch_id
-                token_batch_id = sig_payload.get("batch_id")
-                if "batch-sign-off" in path_lower:
-                    if not token_batch_id:
-                        return JSONResponse(
-                            status_code=401,
-                            content={
-                                "detail": "REAUTHENTICATION_REQUIRED",
-                                "error": "REAUTHENTICATION_REQUIRED",
-                                "message": "Signature token is not bound to a batch.",
-                            },
-                        )
+                # Compute canonical batch binding
+                norm_study = str(req_study_id).strip()
+                norm_type = str(req_target_type).strip().upper()
+                sorted_ids = sorted([str(tid).strip() for tid in req_target_ids])
+                norm_ids = ",".join(sorted_ids)
+                norm_reason = str(req_signing_reason).strip()
 
-                    # Read request body safely
-                    body_bytes = await request.body()
-                    try:
-                        import json
+                binding_str = f"{norm_study}:{norm_type}:{norm_ids}:{norm_reason}"
+                computed_batch_id = hashlib.sha256(
+                    binding_str.encode("utf-8")
+                ).hexdigest()
 
-                        body_json = json.loads(body_bytes)
-                    except Exception:
-                        body_json = {}
-
-                    # Restore body receive for Starlette downstream
-                    async def receive():
-                        return {
-                            "type": "http.request",
-                            "body": body_bytes,
-                            "more_body": False,
-                        }
-
-                    request._receive = receive
-
-                    req_study_id = body_json.get("study_id")
-                    req_target_type = body_json.get("target_type")
-                    req_target_ids = body_json.get("target_ids")
-                    req_signing_reason = body_json.get("signing_reason")
-
-                    if not all(
-                        [
-                            req_study_id,
-                            req_target_type,
-                            req_target_ids is not None,
-                            req_signing_reason,
-                        ]
-                    ):
-                        return JSONResponse(
-                            status_code=400,
-                            content={
-                                "detail": "REAUTHENTICATION_REQUIRED",
-                                "error": "REAUTHENTICATION_REQUIRED",
-                                "message": "Missing batch sign-off fields for validation.",
-                            },
-                        )
-
-                    # Compute canonical batch binding
-                    norm_study = str(req_study_id).strip()
-                    norm_type = str(req_target_type).strip().upper()
-                    sorted_ids = sorted([str(tid).strip() for tid in req_target_ids])
-                    norm_ids = ",".join(sorted_ids)
-                    norm_reason = str(req_signing_reason).strip()
-
-                    binding_str = f"{norm_study}:{norm_type}:{norm_ids}:{norm_reason}"
-                    computed_batch_id = hashlib.sha256(
-                        binding_str.encode("utf-8")
-                    ).hexdigest()
-
-                    if token_batch_id != computed_batch_id:
-                        return JSONResponse(
-                            status_code=401,
-                            content={
-                                "detail": "REAUTHENTICATION_REQUIRED",
-                                "error": "REAUTHENTICATION_REQUIRED",
-                                "message": "Signature token batch binding mismatch.",
-                            },
-                        )
-
-                # Check replay attack
-                jti = sig_payload.get("jti")
-                if downstream_replay_cache.is_replayed(
-                    sig_token, sig_payload.get("exp", 0), jti
-                ):
+                if token_batch_id != computed_batch_id:
                     return JSONResponse(
                         status_code=401,
                         content={
                             "detail": "REAUTHENTICATION_REQUIRED",
                             "error": "REAUTHENTICATION_REQUIRED",
-                            "message": "Signature token has already been used.",
+                            "message": "Signature token batch binding mismatch.",
                         },
                     )
-            except JWTError:
-                return JSONResponse(
-                    status_code=401,
-                    content={
-                        "detail": "REAUTHENTICATION_REQUIRED",
-                        "error": "REAUTHENTICATION_REQUIRED",
-                        "message": "Invalid signature token.",
-                    },
-                )
 
         request.state.user_id = user_id
         request.state.roles = roles

@@ -599,6 +599,7 @@ class SignatureVerificationRequest(BaseModel):
     totp: Optional[str] = None
     action: str
     batch_id: Optional[str] = None
+    semantic_action: Optional[str] = None
 
 
 AUTHORIZED_SIGNING_ROLES = {
@@ -629,6 +630,7 @@ def generate_sig_token(
     action: str,
     roles: list[str],
     batch_id: Optional[str] = None,
+    semantic_action: Optional[str] = None,
 ) -> str:
     """
     Generate a short-lived signature token (JWT) valid for 60 seconds.
@@ -645,6 +647,9 @@ def generate_sig_token(
     }
     if batch_id:
         payload["batch_id"] = batch_id
+    if semantic_action:
+        payload["semantic_action"] = semantic_action
+        payload["sig_ver"] = "v3"
     return jwt.encode(payload, GATEWAY_SECRET, algorithm="HS256")
 
 
@@ -731,6 +736,18 @@ async def signature_verification(request: Request, body: SignatureVerificationRe
         if body.totp and ("invalid" in body.totp or "wrong" in body.totp):
             raise HTTPException(status_code=401, detail="Invalid credentials")
 
+    # Derive Semantic Action
+    derived_semantic = body.semantic_action
+    if not derived_semantic and body.action:
+        from packages.security.regulated_actions import resolve_regulated_action_by_path
+
+        # Try resolving across methods to see if path is regulated
+        for method in ["POST", "PUT", "PATCH", "DELETE"]:
+            resolved = resolve_regulated_action_by_path(method, body.action)
+            if resolved:
+                derived_semantic = resolved.value
+                break
+
     # Generate Short-Lived Sig Token
     sig_token = generate_sig_token(
         user_id=token_user_id,
@@ -738,6 +755,7 @@ async def signature_verification(request: Request, body: SignatureVerificationRe
         action=body.action,
         roles=normalized_roles,
         batch_id=body.batch_id,
+        semantic_action=derived_semantic,
     )
     return {"sig_token": sig_token}
 
@@ -836,82 +854,46 @@ async def proxy_requests(request: Request, path: str) -> Response:
 
     # Enforce sig_token validation for signature-gated mutations
     is_mutation = request.method in ("POST", "PUT", "DELETE", "PATCH")
-    from packages.security.gating import is_path_signature_gated
+    body_bytes = await request.body()
+    body_json = None
+    if body_bytes:
+        try:
+            import json
 
+            body_json = json.loads(body_bytes)
+        except Exception:
+            pass
+
+    from packages.security.gating import is_path_signature_gated
+    from packages.security.regulated_actions import resolve_regulated_action
+
+    resolved_action = resolve_regulated_action(request.method, path, body_json)
     path_lower = path.lower()
-    is_signature_gated = is_path_signature_gated(path_lower)
+    is_signature_gated = (resolved_action is not None) or is_path_signature_gated(
+        path_lower
+    )
 
     if is_signature_gated and is_mutation:
-        sig_token = request.headers.get("x-sig-token")
-        if not sig_token:
+        sig_token = request.headers.get("x-sig-token") or request.headers.get(
+            "X-Sig-Token"
+        )
+        from packages.security.middleware import verify_sig_token
+
+        success, result = verify_sig_token(
+            sig_token=sig_token,
+            user_id=user_id,
+            request_path=request.url.path,
+            secret=GATEWAY_SECRET.encode(),
+            replay_cache=replay_cache,
+            expected_semantic_action=resolved_action.value if resolved_action else None,
+        )
+        if not success:
             return JSONResponse(
                 status_code=401,
                 content={
                     "detail": "REAUTHENTICATION_REQUIRED",
                     "error": "REAUTHENTICATION_REQUIRED",
-                    "message": "21 CFR Part 11 mandate: Re-authentication is required.",
-                },
-            )
-        try:
-            sig_payload = jwt.decode(sig_token, GATEWAY_SECRET, algorithms=["HS256"])
-
-            # Check expiration
-            if sig_payload.get("exp", 0) < time.time():
-                return JSONResponse(
-                    status_code=401,
-                    content={
-                        "detail": "REAUTHENTICATION_REQUIRED",
-                        "error": "REAUTHENTICATION_REQUIRED",
-                        "message": "Signature token has expired.",
-                    },
-                )
-
-            # Check user binding
-            if sig_payload.get("sub") != user_id:
-                return JSONResponse(
-                    status_code=401,
-                    content={
-                        "detail": "REAUTHENTICATION_REQUIRED",
-                        "error": "REAUTHENTICATION_REQUIRED",
-                        "message": "Signature token user mismatch.",
-                    },
-                )
-
-            # Check action binding
-            bound_action = sig_payload.get("action", "")
-            request_path = request.url.path
-            if (
-                request_path != bound_action
-                and bound_action not in request_path
-                and request_path not in bound_action
-            ):
-                return JSONResponse(
-                    status_code=401,
-                    content={
-                        "detail": "REAUTHENTICATION_REQUIRED",
-                        "error": "REAUTHENTICATION_REQUIRED",
-                        "message": "Signature token action mismatch.",
-                    },
-                )
-
-            # Check replay attack
-            jti = sig_payload.get("jti")
-            if replay_cache.is_replayed(sig_token, sig_payload.get("exp", 0), jti):
-                return JSONResponse(
-                    status_code=401,
-                    content={
-                        "detail": "REAUTHENTICATION_REQUIRED",
-                        "error": "REAUTHENTICATION_REQUIRED",
-                        "message": "Signature token has already been used.",
-                    },
-                )
-        except JWTError:
-            return JSONResponse(
-                status_code=401,
-                content={
-                    "detail": "REAUTHENTICATION_REQUIRED",
-                    "error": "REAUTHENTICATION_REQUIRED",
-                    "message": "Invalid signature token.",
+                    "message": str(result),
                 },
             )
 

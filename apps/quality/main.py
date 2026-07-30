@@ -633,6 +633,35 @@ async def transition_capa(
     """
     if payload.to_status in (CAPAStatus.CLOSED, CAPAStatus.CANCELLED):
         authorize_quality_oversight(principal)
+
+        # Enforce semantic step-up authentication gating
+        from packages.security.middleware import (
+            downstream_replay_cache,
+            verify_sig_token,
+        )
+        from packages.security.regulated_actions import SemanticAction
+
+        sig_token = request.headers.get("X-Sig-Token") or request.headers.get(
+            "x-sig-token"
+        )
+        secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()
+        expected_semantic = (
+            SemanticAction.CAPA_CLOSE
+            if payload.to_status == CAPAStatus.CLOSED
+            else SemanticAction.CAPA_CANCEL
+        )
+
+        success, result = verify_sig_token(
+            sig_token=sig_token,
+            user_id=principal.user_id,
+            request_path=request.url.path,
+            secret=secret,
+            replay_cache=downstream_replay_cache,
+            expected_semantic_action=expected_semantic,
+            check_replay=False,
+        )
+        if not success:
+            raise HTTPException(status_code=401, detail="REAUTHENTICATION_REQUIRED")
     else:
         authorize_quality_write(principal)
 

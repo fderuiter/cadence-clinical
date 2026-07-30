@@ -1230,6 +1230,140 @@ def test_gateway_startup_development_with_bypass_configs() -> None:
     assert result.returncode == 0
 
 
+def test_gateway_semantic_action_issuance_and_enforcement(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Test issuance and gateway body-driven semantic gating enforcement for CAPA close transition.
+    """
+    monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
+    token = jwt.encode(
+        {
+            "sub": "user1",
+            "preferred_username": "user1",
+            "realm_access": {"roles": ["investigator"]},
+        },
+        "test_secret",
+        algorithm="HS256",
+    )
+
+    mock_send = AsyncMock()
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.content = b'{"status": "ok"}'
+    mock_resp.headers = {"content-type": "application/json"}
+    mock_send.return_value = mock_resp
+    monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
+
+    with TestClient(app) as client:
+        # 1. Request sig_token with semantic_action explicitly
+        reauth_resp = client.post(
+            "/api/v1/auth/signature-verification",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "username": "user1",
+                "password": "correct_password",  # pragma: allowlist secret
+                "action": "/api/v1/quality/capas/123/transition",
+                "semantic_action": "quality.capa.close",
+            },
+        )
+        assert reauth_resp.status_code == 200
+        sig_token = reauth_resp.json()["sig_token"]
+
+        # Decode sig_token to verify claims
+        from apps.gateway.main import GATEWAY_SECRET
+
+        sig_payload = jwt.decode(sig_token, GATEWAY_SECRET, algorithms=["HS256"])
+        assert sig_payload.get("semantic_action") == "quality.capa.close"
+        assert sig_payload.get("sig_ver") == "v3"
+
+        # 2. Body-driven regulated transition request (CLOSED) with valid sig_token -> 200
+        res_valid = client.post(
+            "/api/v1/quality/capas/123/transition",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "X-Sig-Token": sig_token,
+                "X-Change-Reason": "Closing CAPA",
+            },
+            json={"to_status": "CLOSED"},
+        )
+        assert res_valid.status_code == 200
+
+        # 3. Request CLOSED transition with missing sig_token -> 401
+        res_missing = client.post(
+            "/api/v1/quality/capas/123/transition",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "X-Change-Reason": "Closing CAPA",
+            },
+            json={"to_status": "CLOSED"},
+        )
+        assert res_missing.status_code == 401
+
+        # 4. Request CLOSED transition with mismatched semantic action -> 401
+        # Get token bound to cancel
+        reauth_cancel = client.post(
+            "/api/v1/auth/signature-verification",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "username": "user1",
+                "password": "correct_password",  # pragma: allowlist secret
+                "action": "/api/v1/quality/capas/123/transition",
+                "semantic_action": "quality.capa.cancel",
+            },
+        )
+        sig_token_cancel = reauth_cancel.json()["sig_token"]
+        res_mismatched_semantic = client.post(
+            "/api/v1/quality/capas/123/transition",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "X-Sig-Token": sig_token_cancel,
+                "X-Change-Reason": "Closing CAPA",
+            },
+            json={"to_status": "CLOSED"},
+        )
+        assert res_mismatched_semantic.status_code == 401
+
+        # 5. Request CLOSED transition with expired token -> 401
+        expired_payload = sig_payload.copy()
+        expired_payload["exp"] = time.time() - 10.0
+        expired_token = jwt.encode(expired_payload, GATEWAY_SECRET, algorithm="HS256")
+        res_expired = client.post(
+            "/api/v1/quality/capas/123/transition",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "X-Sig-Token": expired_token,
+                "X-Change-Reason": "Closing CAPA",
+            },
+            json={"to_status": "CLOSED"},
+        )
+        assert res_expired.status_code == 401
+
+        # 6. Request CLOSED transition with replayed token -> 401
+        # Reuse first sig_token, but it is already replayed (already added to cache in gateway in test 2)
+        res_replayed = client.post(
+            "/api/v1/quality/capas/123/transition",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "X-Sig-Token": sig_token,
+                "X-Change-Reason": "Closing CAPA",
+            },
+            json={"to_status": "CLOSED"},
+        )
+        assert res_replayed.status_code == 401
+
+        # 7. Non-terminal / un-regulated transition (e.g. to_status="UNDER_REVIEW") should be ungated -> 200
+        res_ungated = client.post(
+            "/api/v1/quality/capas/123/transition",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "X-Change-Reason": "Reviewing CAPA",
+            },
+            json={"to_status": "UNDER_REVIEW"},
+        )
+        assert res_ungated.status_code == 200
+
+
 def test_gateway_tenant_claim_extraction(monkeypatch: pytest.MonkeyPatch) -> None:
     """Validate that the gateway successfully extracts tenant claims, enforces default fallback migration, and signs them.
 

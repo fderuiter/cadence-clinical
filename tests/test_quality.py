@@ -24,6 +24,35 @@ from apps.quality.models import (
 )
 
 
+def make_step_up_token(
+    user_id: str,
+    action: str,
+    semantic_action: str,
+    secret: str = "internal-gateway-secret-12345",
+    expired: bool = False,
+    wrong_user: bool = False,
+    wrong_action: bool = False,
+    wrong_semantic: bool = False,
+) -> str:
+    import time
+
+    from jose import jwt
+
+    now = time.time()
+    payload = {
+        "sub": "wrong_user" if wrong_user else user_id,
+        "username": "test_signer",
+        "action": "/api/v1/wrong_path" if wrong_action else action,
+        "roles": ["admin"],
+        "iat": now - 100 if expired else now,
+        "exp": now - 40 if expired else now + 60,
+        "jti": f"jti_test_{user_id}_{now}",
+        "semantic_action": "wrong_semantic" if wrong_semantic else semantic_action,
+        "sig_ver": "v3",
+    }
+    return jwt.encode(payload, secret, algorithm="HS256")
+
+
 @pytest_asyncio.fixture(autouse=True)
 async def setup_quality_db():
     """
@@ -527,10 +556,18 @@ def test_capa_creation_validations_and_closed_deviation():
         json={"to_status": "EFFECTIVENESS_CHECK", "version_index": 3},
         headers=qo_headers,
     )
+    action_path = f"/api/v1/quality/capas/{capa_id}/transition"
+    sig_token = make_step_up_token(
+        user_id="quality_test_user",
+        action=action_path,
+        semantic_action="quality.capa.close",
+    )
+    qo_headers_gated = qo_headers.copy()
+    qo_headers_gated["X-Sig-Token"] = sig_token
     client.post(
         f"/api/v1/quality/capas/{capa_id}/transition",
         json={"to_status": "CLOSED", "version_index": 4},
-        headers=qo_headers,
+        headers=qo_headers_gated,
     )
 
     # Now the parent deviation is CLOSED. Let's try creating a new CAPA on this CLOSED deviation
