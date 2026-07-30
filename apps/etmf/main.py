@@ -340,6 +340,50 @@ class ManualRedactResponse(BaseModel):
     )
 
 
+class StudyArchiveRequest(BaseModel):
+    """
+    Payload to request bulk study-level document archival.
+    """
+
+    reason_for_change: str = Field(
+        ...,
+        min_length=10,
+        max_length=1000,
+        description="Part 11 change justification reason for bulk study archive",
+    )
+    all_or_nothing: bool = Field(
+        True,
+        description="If True, rolling back the entire operation if any eligible document fails to transition.",
+    )
+
+
+class StudyArchiveItemResult(BaseModel):
+    """
+    Detailed result for an individual document's archival attempt.
+    """
+
+    document_id: str
+    filename: str
+    from_status: str
+    to_status: str
+    status: str  # "success", "skipped", "failed"
+    error_message: Optional[str] = None
+
+
+class StudyArchiveResponse(BaseModel):
+    """
+    Response model for bulk study archive operation.
+    """
+
+    status: str  # "success", "partial_success", "failed"
+    study_id: str
+    total_processed: int
+    successful_count: int
+    failed_count: int
+    skipped_count: int
+    results: List[StudyArchiveItemResult]
+
+
 class TransitionRequest(BaseModel):
     """
     Payload to request a secure 21 CFR Part 11 compliant QC transition on a document.
@@ -2580,6 +2624,151 @@ async def export_regulatory_binder(
         content=zip_bytes,
         media_type="application/zip",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@app.post(
+    "/api/v1/etmf/studies/{study_id}/archive",
+    response_model=StudyArchiveResponse,
+    status_code=200,
+)
+async def bulk_archive_study_documents(
+    request: Request,
+    study_id: str,
+    payload: StudyArchiveRequest,
+    session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
+) -> StudyArchiveResponse:
+    """
+    Perform authorized bulk study-level document archival transitioning eligible eTMF documents to
+    the terminal ARCHIVED status under 21 CFR Part 11 requirements.
+    """
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
+
+    # Require transition_archived permission
+    if not has_permission(principal, "etmf_document:transition_archived"):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Caller lacks the required etmf_document:transition_archived permission.",
+        )
+
+    # Fetch all documents under the specified study
+    stmt = select(TMFDocument).where(TMFDocument.study_id == study_id)
+    result = await session.execute(stmt)
+    documents = result.scalars().all()
+
+    if not documents:
+        # Repeating an already-completed archive request (or an empty study) is safe and observable
+        return StudyArchiveResponse(
+            status="success",
+            study_id=study_id,
+            total_processed=0,
+            successful_count=0,
+            failed_count=0,
+            skipped_count=0,
+            results=[],
+        )
+
+    results: List[StudyArchiveItemResult] = []
+    successful_count = 0
+    failed_count = 0
+    skipped_count = 0
+
+    # Execute inside a nested transaction (savepoint) to allow rollback on failure
+    async with session.begin_nested() as nested_tx:
+        failed = False
+        first_error = None
+        for doc in documents:
+            from_status = doc.status or "DRAFT"
+
+            # Skip if already ARCHIVED
+            if from_status == "ARCHIVED":
+                skipped_count += 1
+                results.append(
+                    StudyArchiveItemResult(
+                        document_id=doc.id,
+                        filename=doc.filename,
+                        from_status=from_status,
+                        to_status="ARCHIVED",
+                        status="skipped",
+                    )
+                )
+                continue
+
+            try:
+                # Transition using the state machine which saves a DocumentQCTransition
+                await validate_and_transition_document_status(
+                    session=session,
+                    document=doc,
+                    to_status="ARCHIVED",
+                    actor_id=user_id,
+                    actor_role=user_roles,
+                    reason_for_change=payload.reason_for_change,
+                )
+                successful_count += 1
+                results.append(
+                    StudyArchiveItemResult(
+                        document_id=doc.id,
+                        filename=doc.filename,
+                        from_status=from_status,
+                        to_status="ARCHIVED",
+                        status="success",
+                    )
+                )
+            except Exception as e:
+                failed_count += 1
+                results.append(
+                    StudyArchiveItemResult(
+                        document_id=doc.id,
+                        filename=doc.filename,
+                        from_status=from_status,
+                        to_status="ARCHIVED",
+                        status="failed",
+                        error_message=str(e),
+                    )
+                )
+                if payload.all_or_nothing:
+                    failed = True
+                    first_error = str(e)
+                    break
+
+        if failed and payload.all_or_nothing:
+            await nested_tx.rollback()
+            raise HTTPException(
+                status_code=400,
+                detail=f"All-or-nothing validation failure: Archival aborted because document transition failed. Error: {first_error}",
+            )
+
+    # Log overall study-level archival results to audit trail
+    overall_status = "success"
+    if failed_count > 0:
+        if successful_count > 0:
+            overall_status = "partial_success"
+        else:
+            overall_status = "failed"
+
+    details_msg = (
+        f"Bulk study archive completed for study '{study_id}'. "
+        f"Status: {overall_status}. Successful: {successful_count}, Failed: {failed_count}, Skipped: {skipped_count}."
+    )
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="STUDY_ARCHIVE",
+        document_id=None,
+        details=details_msg,
+    )
+
+    return StudyArchiveResponse(
+        status=overall_status,
+        study_id=study_id,
+        total_processed=len(documents),
+        successful_count=successful_count,
+        failed_count=failed_count,
+        skipped_count=skipped_count,
+        results=results,
     )
 
 
