@@ -856,6 +856,7 @@ async def list_documents(
     study_id: Optional[str] = Query(None, description="Filter by study ID"),
     zone: Optional[int] = Query(None, description="Filter by TMF Zone"),
     search: Optional[str] = Query(None, description="Search document content"),
+    status: Optional[str] = Query(None, description="Filter by status"),
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
 ) -> List[DocumentResponse]:
@@ -881,6 +882,8 @@ async def list_documents(
     if search:
         # Simple SQLite/Postgres text search indexing
         stmt = stmt.where(TMFDocument.content.contains(search))
+    if status:
+        stmt = stmt.where(TMFDocument.status == status)
 
     # Apply the query-filter helper (site scope + fail-closed + raw-original suppression for non-read_raw callers)
     stmt = apply_document_query_filter(stmt, principal)
@@ -1718,9 +1721,10 @@ async def redact_document_endpoint(
     # Enforce site visibility and study-level semantics
     enforce_document_site_visibility(source_doc, principal)
 
-    # Check if already signed
+    # Check if already signed or archived
     if (
         source_doc.status == "SIGNED"
+        or source_doc.status == "ARCHIVED"
         or source_doc.approval_status == "APPROVED"
         or source_doc.signature_manifestation is not None
     ):
@@ -1860,9 +1864,10 @@ async def auto_redact_document_endpoint(
     # Enforce site visibility and study-level semantics
     enforce_document_site_visibility(source_doc, principal)
 
-    # Check if already signed
+    # Check if already signed or archived
     if (
         source_doc.status == "SIGNED"
+        or source_doc.status == "ARCHIVED"
         or source_doc.approval_status == "APPROVED"
         or source_doc.signature_manifestation is not None
     ):
@@ -2055,9 +2060,10 @@ async def manual_redact_document_endpoint(
     # Enforce site visibility and study-level semantics
     enforce_document_site_visibility(source_doc, principal)
 
-    # Check if already signed
+    # Check if already signed or archived
     if (
         source_doc.status == "SIGNED"
+        or source_doc.status == "ARCHIVED"
         or source_doc.approval_status == "APPROVED"
         or source_doc.signature_manifestation is not None
     ):
@@ -2298,9 +2304,10 @@ async def transition_document_status_endpoint(
             detail=f"Invalid status: '{payload.to_status}'. Must be one of {sorted(list(valid_qc_statuses))}.",
         )
 
-    # Check if already signed
+    # Check if already signed or archived
     if (
         doc.status == "SIGNED"
+        or doc.status == "ARCHIVED"
         or doc.approval_status == "APPROVED"
         or doc.signature_manifestation is not None
     ):
@@ -2393,9 +2400,10 @@ async def update_document_expiration_endpoint(
             detail="Forbidden: Trial is currently locked in a read-only state due to a security violation.",
         )
 
-    # 4. Check if already signed
+    # 4. Check if already signed or archived
     if (
         doc.status == "SIGNED"
+        or doc.status == "ARCHIVED"
         or doc.approval_status == "APPROVED"
         or doc.signature_manifestation is not None
     ):
@@ -2494,9 +2502,10 @@ async def sign_document_endpoint(
     # Enforce site visibility and study-level semantics
     enforce_document_site_visibility(doc, principal)
 
-    # 2. Check if already signed/approved
+    # 2. Check if already signed/approved or archived
     if (
         doc.status == "SIGNED"
+        or doc.status == "ARCHIVED"
         or doc.approval_status == "APPROVED"
         or doc.signature_manifestation is not None
     ):

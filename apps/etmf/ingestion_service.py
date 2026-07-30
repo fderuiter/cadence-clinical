@@ -255,10 +255,11 @@ async def ingest_tmf_document(
     if existing_doc:
         if (
             existing_doc.status == "SIGNED"
+            or existing_doc.status == "ARCHIVED"
             or existing_doc.approval_status == "APPROVED"
             or existing_doc.signature_manifestation is not None
         ):
-            # Already signed. Reject with IMMUTABILITY_VIOLATION and write rejected audit log!
+            # Already signed or archived. Reject with IMMUTABILITY_VIOLATION and write rejected audit log!
             reject_log = TMFAuditLog(
                 user_id=created_by,
                 user_role=created_role,

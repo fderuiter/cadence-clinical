@@ -2188,3 +2188,365 @@ async def test_ordered_artifact_history_endpoint():
     assert history[1]["version_index"] == 2
     assert history[1]["reason_for_change"] == "Submitting Major protocol amendment"
     assert history[1]["protocol_version"]["version_tag"] == "2.0"
+
+
+@pytest.mark.asyncio
+async def test_archived_document_retrieval_and_immutability():
+    """
+    Verify and extend eTMF retrieval/export behavior so archived study records remain readable
+    and binder exports include all required archived documents and version history.
+    And verify post-archive immutability across all mutation endpoints.
+    """
+    client = TestClient(app)
+    admin_headers = get_auth_headers(roles="admin", change_reason="Archive test setup")
+    dm_headers = get_auth_headers(roles="sponsor_dm", change_reason="DM QC checks")
+    clinical_headers = get_auth_headers(
+        roles="sponsor_clinical", change_reason="Clinical review"
+    )
+
+    # 1. Ingest document (DRAFT)
+    payload = {
+        "study_id": "study_arch_test",
+        "artifact_type": "Clinical Trial Protocol",
+        "filename": "protocol_v1.pdf",
+        "content": "Protocol text content.",
+        "mime_type": "application/pdf",
+    }
+    resp = client.post("/api/v1/etmf/ingest", json=payload, headers=admin_headers)
+    assert resp.status_code == 201
+    doc_id = resp.json()["document_id"]
+
+    # Transition: DRAFT -> TECHNICAL_QC
+    resp = client.post(
+        f"/api/v1/etmf/documents/{doc_id}/transition",
+        json={
+            "to_status": "TECHNICAL_QC",
+            "reason_for_change": "Technical QC complete",
+        },
+        headers=dm_headers,
+    )
+    assert resp.status_code == 200
+
+    # Transition: TECHNICAL_QC -> CLINICAL_QC
+    resp = client.post(
+        f"/api/v1/etmf/documents/{doc_id}/transition",
+        json={"to_status": "CLINICAL_QC", "reason_for_change": "Clinical QC complete"},
+        headers=clinical_headers,
+    )
+    assert resp.status_code == 200
+
+    # Transition: CLINICAL_QC -> APPROVED
+    resp = client.post(
+        f"/api/v1/etmf/documents/{doc_id}/transition",
+        json={"to_status": "APPROVED", "reason_for_change": "Approvals obtained"},
+        headers=admin_headers,
+    )
+    assert resp.status_code == 200
+
+    # Transition: APPROVED -> ARCHIVED
+    resp = client.post(
+        f"/api/v1/etmf/documents/{doc_id}/transition",
+        json={"to_status": "ARCHIVED", "reason_for_change": "Closeout archive"},
+        headers=dm_headers,
+    )
+    assert resp.status_code == 200
+
+    # 2. Assert is returned by list_documents both with and without status filter
+    # List without filter (should return our archived document)
+    list_resp = client.get(
+        "/api/v1/etmf/documents?study_id=study_arch_test", headers=admin_headers
+    )
+    assert list_resp.status_code == 200
+    docs = list_resp.json()
+    assert len(docs) == 1
+    assert docs[0]["status"] == "ARCHIVED"
+
+    # List with status=ARCHIVED
+    list_arch_resp = client.get(
+        "/api/v1/etmf/documents?study_id=study_arch_test&status=ARCHIVED",
+        headers=admin_headers,
+    )
+    assert list_arch_resp.status_code == 200
+    assert len(list_arch_resp.json()) == 1
+
+    # List with status=DRAFT (should be empty)
+    list_draft_resp = client.get(
+        "/api/v1/etmf/documents?study_id=study_arch_test&status=DRAFT",
+        headers=admin_headers,
+    )
+    assert list_draft_resp.status_code == 200
+    assert len(list_draft_resp.json()) == 0
+
+    # Assert view_document works
+    view_resp = client.get(f"/api/v1/etmf/documents/{doc_id}", headers=admin_headers)
+    assert view_resp.status_code == 200
+    assert view_resp.json()["status"] == "ARCHIVED"
+
+    # 3. Post-archive immutability: redact, transition, expiration, sign-off, re-ingest
+    # Attempt: Standard redact
+    redact_payload = {
+        "redacted_content": "[REDACTED] Protocol text content.",
+        "manifest": {"signature": "sig-123", "redaction_metadata": {}},
+    }
+    resp_redact = client.post(
+        f"/api/v1/etmf/documents/{doc_id}/redact",
+        json=redact_payload,
+        headers=admin_headers,
+    )
+    assert resp_redact.status_code == 403
+    assert "IMMUTABILITY_VIOLATION" in resp_redact.json()["detail"]
+
+    # Attempt: Auto redact
+    resp_auto = client.post(
+        f"/api/v1/etmf/documents/{doc_id}/auto-redact",
+        json={"profile": "HIPAA"},
+        headers=admin_headers,
+    )
+    assert resp_auto.status_code == 403
+    assert "IMMUTABILITY_VIOLATION" in resp_auto.json()["detail"]
+
+    # Attempt: Manual redact
+    resp_manual = client.post(
+        f"/api/v1/etmf/documents/{doc_id}/manual-redact",
+        json={"terms": ["Protocol"]},
+        headers=admin_headers,
+    )
+    assert resp_manual.status_code == 403
+    assert "IMMUTABILITY_VIOLATION" in resp_manual.json()["detail"]
+
+    # Attempt: Transition status from ARCHIVED to DRAFT (disallowed state-machine transition and immutability violation)
+    resp_trans = client.post(
+        f"/api/v1/etmf/documents/{doc_id}/transition",
+        json={"to_status": "DRAFT", "reason_for_change": "Try to revert archive"},
+        headers=admin_headers,
+    )
+    assert resp_trans.status_code == 403
+    assert "IMMUTABILITY_VIOLATION" in resp_trans.json()["detail"]
+
+    # Attempt: Expiration update
+    resp_exp = client.put(
+        f"/api/v1/etmf/documents/{doc_id}/expiration",
+        json={
+            "issue_date": "2023-01-01",
+            "expiration_date": "2024-01-01",
+            "document_owner_id": "owner1",
+        },
+        headers=admin_headers,
+    )
+    assert resp_exp.status_code == 403
+    assert "IMMUTABILITY_VIOLATION" in resp_exp.json()["detail"]
+
+    # Attempt: Sign-off (using correct re-auth signature headers to pass 401 gate)
+    from jose import jwt
+
+    action_path = f"/api/v1/etmf/documents/{doc_id}/sign-off"
+    sig_payload = {
+        "sub": "test_user",
+        "username": "test_user",
+        "action": action_path,
+        "roles": ["admin"],
+        "iat": time.time(),
+        "exp": time.time() + 300.0,
+        "jti": f"jti-{time.time()}-{hash(action_path)}-{time.process_time()}",
+    }
+    sig_token = jwt.encode(
+        sig_payload, "internal-gateway-secret-12345", algorithm="HS256"
+    )
+    sig_headers = get_auth_headers(roles="admin", change_reason="Sign-off Form 1572")
+    sig_headers["X-Sig-Token"] = sig_token
+
+    resp_sign = client.post(
+        action_path, json={"signing_reason": "APPROVAL"}, headers=sig_headers
+    )
+    assert resp_sign.status_code == 403
+    assert "IMMUTABILITY_VIOLATION" in resp_sign.json()["detail"]
+
+    # Attempt: Ingest new version (re-ingest)
+    payload_v2 = {
+        "study_id": "study_arch_test",
+        "artifact_type": "Clinical Trial Protocol",
+        "filename": "protocol_v2.pdf",
+        "content": "Protocol version 2 text content.",
+        "mime_type": "application/pdf",
+    }
+    resp_v2 = client.post("/api/v1/etmf/ingest", json=payload_v2, headers=admin_headers)
+    assert resp_v2.status_code == 403
+    assert "IMMUTABILITY_VIOLATION" in resp_v2.json()["detail"]
+
+    # Verify that MUTATION_REJECTED was logged for each of these blocked attempts
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(TMFAuditLog).where(
+            TMFAuditLog.document_id == doc_id, TMFAuditLog.action == "MUTATION_REJECTED"
+        )
+        logs = (await session.execute(stmt)).scalars().all()
+        # Ensure we captured our attempts
+        assert len(logs) >= 5
+
+
+@pytest.mark.asyncio
+async def test_deterministic_and_complete_binder_export():
+    """
+    Construct a study with a mix of archived and non-archived documents, with multiple versions,
+    then assert the exported ZIP and manifest.json:
+    - Include both archived and non-archived content.
+    - Reflect the deterministic zone -> section -> artifact_code -> version_index ordering.
+    - Full version lineage is included when include_history=True.
+    """
+    client = TestClient(app)
+    admin_headers = get_auth_headers(roles="admin", change_reason="Export test setup")
+    dm_headers = get_auth_headers(roles="sponsor_dm", change_reason="DM QC checks")
+    auditor_headers = get_auth_headers(roles="regulatory_inspector")
+
+    study_id = "study_export_sort"
+
+    # 1. Ingest: Clinical Trial Protocol (Zone 1, Section 01.01, code 01.01.01) - Ingest 2 versions, version 1 is signed/approved, version 2 is DRAFT (non-archived)
+    p1 = {
+        "study_id": study_id,
+        "artifact_type": "Clinical Trial Protocol",
+        "filename": "protocol_v1.txt",
+        "content": "Protocol V1 text.",
+        "mime_type": "text/plain",
+    }
+    resp_p1 = client.post("/api/v1/etmf/ingest", json=p1, headers=admin_headers)
+    assert resp_p1.status_code == 201
+
+    # Transition p1 to TECHNICAL_QC so it's not a simple DRAFT.
+    doc_id_p1 = resp_p1.json()["document_id"]
+    client.post(
+        f"/api/v1/etmf/documents/{doc_id_p1}/transition",
+        json={
+            "to_status": "TECHNICAL_QC",
+            "reason_for_change": "Technical QC complete",
+        },
+        headers=dm_headers,
+    )
+
+    p2 = {
+        "study_id": study_id,
+        "artifact_type": "Clinical Trial Protocol",
+        "filename": "protocol_v2.txt",
+        "content": "Protocol V2 text.",
+        "mime_type": "text/plain",
+    }
+    resp_p2 = client.post("/api/v1/etmf/ingest", json=p2, headers=admin_headers)
+    assert resp_p2.status_code == 201
+
+    # Ingest: Define-XML Specifications (Zone 10, Section 10.01, code 10.01.01) - Transition to ARCHIVED
+    xml1 = {
+        "study_id": study_id,
+        "artifact_type": "Define-XML Specifications",
+        "filename": "define_v1.xml",
+        "content": "Define V1 XML.",
+        "mime_type": "application/xml",
+    }
+    resp_xml1 = client.post("/api/v1/etmf/ingest", json=xml1, headers=admin_headers)
+    assert resp_xml1.status_code == 201
+    doc_id_xml = resp_xml1.json()["document_id"]
+
+    # Transition Define-XML to ARCHIVED (DRAFT -> TECHNICAL_QC -> CLINICAL_QC -> APPROVED -> ARCHIVED)
+    client.post(
+        f"/api/v1/etmf/documents/{doc_id_xml}/transition",
+        json={"to_status": "TECHNICAL_QC", "reason_for_change": "Technical review"},
+        headers=dm_headers,
+    )
+    client.post(
+        f"/api/v1/etmf/documents/{doc_id_xml}/transition",
+        json={"to_status": "CLINICAL_QC", "reason_for_change": "Clinical review"},
+        headers=get_auth_headers(
+            roles="sponsor_clinical", change_reason="clinical review"
+        ),
+    )
+    client.post(
+        f"/api/v1/etmf/documents/{doc_id_xml}/transition",
+        json={"to_status": "APPROVED", "reason_for_change": "Approval complete"},
+        headers=admin_headers,
+    )
+    client.post(
+        f"/api/v1/etmf/documents/{doc_id_xml}/transition",
+        json={"to_status": "ARCHIVED", "reason_for_change": "Archived closeout"},
+        headers=dm_headers,
+    )
+
+    # 2. Trigger Export with include_history=False (latest only)
+    export_resp_latest = client.get(
+        f"/api/v1/etmf/studies/{study_id}/binder?include_history=false",
+        headers=auditor_headers,
+    )
+    assert export_resp_latest.status_code == 200
+
+    import io
+    import json
+    import zipfile
+
+    with zipfile.ZipFile(io.BytesIO(export_resp_latest.content)) as z:
+        manifest_text = z.read("manifest.json").decode("utf-8")
+        manifest_data = json.loads(manifest_text)
+        assert manifest_data["study_id"] == study_id
+
+        docs_list = manifest_data["documents"]
+        # In latest mode, we expect exactly 2 documents:
+        # - Clinical Trial Protocol version 2 (since version_index 2 is higher than 1)
+        # - Define-XML Specifications version 1 (status ARCHIVED)
+        assert len(docs_list) == 2
+
+        # Assert correct deterministic ordering in manifest array:
+        # Zone 1 (Protocol) -> Zone 10 (Define-XML)
+        assert docs_list[0]["artifact_code"] == "01.01.01"
+        assert docs_list[0]["version_index"] == 2
+        assert docs_list[0]["status"] == "DRAFT"
+
+        assert docs_list[1]["artifact_code"] == "10.01.02"
+        assert docs_list[1]["version_index"] == 1
+        assert docs_list[1]["status"] == "ARCHIVED"
+
+        # Assert ZIP file entries match the manifest deterministic order
+        zip_files = [
+            f for f in z.namelist() if f not in ("manifest.json", "audit_summary.json")
+        ]
+        assert len(zip_files) == 2
+        assert (
+            "Zone 01/01.01/protocol.txt" in zip_files[0]
+            or "protocol_v2" in zip_files[0]
+        )
+        assert "Zone 10/10.01/define_v1.xml" in zip_files[1] or "define" in zip_files[1]
+
+    # 3. Trigger Export with include_history=True (full lineage)
+    export_resp_hist = client.get(
+        f"/api/v1/etmf/studies/{study_id}/binder?include_history=true",
+        headers=auditor_headers,
+    )
+    assert export_resp_hist.status_code == 200
+
+    with zipfile.ZipFile(io.BytesIO(export_resp_hist.content)) as z:
+        manifest_text = z.read("manifest.json").decode("utf-8")
+        manifest_data = json.loads(manifest_text)
+
+        docs_list = manifest_data["documents"]
+        # In history mode, we expect exactly 3 documents:
+        # - Clinical Trial Protocol version 1 (TECHNICAL_QC)
+        # - Clinical Trial Protocol version 2 (DRAFT)
+        # - Define-XML Specifications version 1 (ARCHIVED)
+        assert len(docs_list) == 3
+
+        # Assert correct deterministic ordering:
+        # Zone 1, version 1 -> Zone 1, version 2 -> Zone 10, version 1
+        assert docs_list[0]["artifact_code"] == "01.01.01"
+        assert docs_list[0]["version_index"] == 1
+        assert docs_list[0]["status"] == "TECHNICAL_QC"
+
+        assert docs_list[1]["artifact_code"] == "01.01.01"
+        assert docs_list[1]["version_index"] == 2
+        assert docs_list[1]["status"] == "DRAFT"
+
+        assert docs_list[2]["artifact_code"] == "10.01.02"
+        assert docs_list[2]["version_index"] == 1
+        assert docs_list[2]["status"] == "ARCHIVED"
+
+        zip_files = [
+            f for f in z.namelist() if f not in ("manifest.json", "audit_summary.json")
+        ]
+        assert len(zip_files) == 3
+        # First two must be protocol versions, third must be define
+        assert "protocol_v1_v1.txt" in zip_files[0]
+        assert "protocol_v2_v2.txt" in zip_files[1]
+        assert "define_v1_v1.xml" in zip_files[2]
