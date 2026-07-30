@@ -575,7 +575,9 @@ async def test_batch_sign_off_all_locks() -> None:
         # 2. Visit Lock
         TrialLockManager.lock_visit("VISIT-001")
         try:
-            with pytest.raises(PermissionError, match="Visit VISIT-001 is currently locked"):
+            with pytest.raises(
+                PermissionError, match="Visit VISIT-001 is currently locked"
+            ):
                 await client.post(
                     action_path,
                     json=payload,
@@ -589,7 +591,9 @@ async def test_batch_sign_off_all_locks() -> None:
         # 3. Subject Lock
         TrialLockManager.lock_subject("SUBJ-001")
         try:
-            with pytest.raises(PermissionError, match="Subject SUBJ-001 is currently locked"):
+            with pytest.raises(
+                PermissionError, match="Subject SUBJ-001 is currently locked"
+            ):
                 await client.post(
                     action_path,
                     json=payload,
@@ -603,7 +607,9 @@ async def test_batch_sign_off_all_locks() -> None:
         # 4. Form Lock
         TrialLockManager.lock_form("FORM-001")
         try:
-            with pytest.raises(PermissionError, match="Form FORM-001 is currently locked"):
+            with pytest.raises(
+                PermissionError, match="Form FORM-001 is currently locked"
+            ):
                 await client.post(
                     action_path,
                     json=payload,
@@ -668,7 +674,9 @@ async def test_batch_sign_off_non_lock_rollback(monkeypatch) -> None:
                 raise ValueError("Simulated signature failure")
             return orig_gen_sig(binding, secret)
 
-        monkeypatch.setattr("apps.execution.main.generate_canonical_signature", mock_gen_sig)
+        monkeypatch.setattr(
+            "apps.execution.main.generate_canonical_signature", mock_gen_sig
+        )
 
         with pytest.raises(ValueError, match="Simulated signature failure"):
             await client.post(

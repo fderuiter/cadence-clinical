@@ -488,7 +488,7 @@ async def test_form_submission_approval_audit_manifestation() -> None:
                 .where(
                     AuditLog.table_name == "form_submissions",
                     AuditLog.record_id == str(submission_id),
-                    AuditLog.action == "UPDATE"
+                    AuditLog.action == "UPDATE",
                 )
                 .order_by(AuditLog.timestamp.desc())
             )
