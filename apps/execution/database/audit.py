@@ -99,6 +99,8 @@ def receive_before_flush(session: Session, flush_context, instances):
             "safety_cases",
             "safety_export_jobs",
             "safety_audit_logs",
+            "sae_reconciliation_runs",
+            "sae_discrepancies",
             "tickets",
             "ticket_audit_logs",
             "ticket_comments",

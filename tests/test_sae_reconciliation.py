@@ -21,6 +21,11 @@ from apps.safety.models import (
 )
 from apps.safety.reconciliation import compare_sae_records
 
+# Ensure all tests in this module run on the same xdist worker.
+# The db_manager singleton is reinitialised per-fixture; distributing tests
+# across workers risks a concurrent module reinitialising the engine mid-test.
+pytestmark = pytest.mark.xdist_group("sae_reconciliation")
+
 
 @pytest_asyncio.fixture(autouse=True)
 async def setup_reconciliation_db():
