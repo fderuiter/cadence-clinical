@@ -24,8 +24,6 @@ from packages.security.rbac import (
 DATABASE_URL = os.getenv("EISF_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 
-
-
 # Pydantic Schemas for eISF API Requests/Responses
 class DocumentCreate(BaseModel):
     study_id: str = Field(..., description="The clinical study ID")
@@ -42,8 +40,12 @@ class DocumentCreate(BaseModel):
         ..., min_length=10, max_length=1000, description="Part 11 reason for change"
     )
     issue_date: Optional[date] = Field(None, description="Optional document issue date")
-    expiration_date: Optional[date] = Field(None, description="Optional document expiration date")
-    document_owner_id: Optional[str] = Field(None, description="Optional document owner ID")
+    expiration_date: Optional[date] = Field(
+        None, description="Optional document expiration date"
+    )
+    document_owner_id: Optional[str] = Field(
+        None, description="Optional document owner ID"
+    )
 
     @model_validator(mode="after")
     def validate_dates(self) -> "DocumentCreate":
@@ -68,8 +70,12 @@ class DocumentUpdate(BaseModel):
         ..., min_length=10, max_length=1000, description="Part 11 reason for change"
     )
     issue_date: Optional[date] = Field(None, description="Optional document issue date")
-    expiration_date: Optional[date] = Field(None, description="Optional document expiration date")
-    document_owner_id: Optional[str] = Field(None, description="Optional document owner ID")
+    expiration_date: Optional[date] = Field(
+        None, description="Optional document expiration date"
+    )
+    document_owner_id: Optional[str] = Field(
+        None, description="Optional document owner ID"
+    )
 
     @model_validator(mode="after")
     def validate_dates(self) -> "DocumentUpdate":
@@ -100,8 +106,12 @@ class EISFIngestionRequest(BaseModel):
         None, min_length=10, max_length=1000, description="Part 11 reason for change"
     )
     issue_date: Optional[date] = Field(None, description="Optional document issue date")
-    expiration_date: Optional[date] = Field(None, description="Optional document expiration date")
-    document_owner_id: Optional[str] = Field(None, description="Optional document owner ID")
+    expiration_date: Optional[date] = Field(
+        None, description="Optional document expiration date"
+    )
+    document_owner_id: Optional[str] = Field(
+        None, description="Optional document owner ID"
+    )
 
     @classmethod
     @model_validator(mode="before")
@@ -143,8 +153,12 @@ class EISFSyncItem(BaseModel):
         "CLIENT_WINS", description="CLIENT_WINS, SERVER_WINS, or MERGE"
     )
     issue_date: Optional[date] = Field(None, description="Optional document issue date")
-    expiration_date: Optional[date] = Field(None, description="Optional document expiration date")
-    document_owner_id: Optional[str] = Field(None, description="Optional document owner ID")
+    expiration_date: Optional[date] = Field(
+        None, description="Optional document expiration date"
+    )
+    document_owner_id: Optional[str] = Field(
+        None, description="Optional document owner ID"
+    )
 
     @classmethod
     @model_validator(mode="before")
@@ -447,7 +461,11 @@ async def create_document(
     await enforce_site_isolation(request, payload.site_id, session)
 
     # Enforce manage_expiration permission if any expiration metadata is provided
-    if payload.issue_date is not None or payload.expiration_date is not None or payload.document_owner_id is not None:
+    if (
+        payload.issue_date is not None
+        or payload.expiration_date is not None
+        or payload.document_owner_id is not None
+    ):
         if not has_permission(principal, "etmf_document:manage_expiration"):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -548,7 +566,11 @@ async def ingest_document(
     await enforce_site_isolation(request, payload.site_id, session)
 
     # Enforce manage_expiration permission if any expiration metadata is provided
-    if payload.issue_date is not None or payload.expiration_date is not None or payload.document_owner_id is not None:
+    if (
+        payload.issue_date is not None
+        or payload.expiration_date is not None
+        or payload.document_owner_id is not None
+    ):
         if not has_permission(principal, "etmf_document:manage_expiration"):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

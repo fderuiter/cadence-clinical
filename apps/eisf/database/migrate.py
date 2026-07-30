@@ -31,9 +31,7 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
         lambda sc: inspect(sc).has_table("isf_documents")
     )
     if has_isf_docs:
-        cols = await conn.run_sync(
-            lambda sc: get_table_columns(sc, "isf_documents")
-        )
+        cols = await conn.run_sync(lambda sc: get_table_columns(sc, "isf_documents"))
 
         # Idempotently add missing columns
         if "issue_date" not in cols:
@@ -43,7 +41,9 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
             )
             try:
                 await conn.execute(
-                    text("CREATE INDEX IF NOT EXISTS ix_isf_documents_issue_date ON isf_documents (issue_date);")
+                    text(
+                        "CREATE INDEX IF NOT EXISTS ix_isf_documents_issue_date ON isf_documents (issue_date);"
+                    )
                 )
             except Exception:
                 pass
@@ -55,7 +55,9 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
             )
             try:
                 await conn.execute(
-                    text("CREATE INDEX IF NOT EXISTS ix_isf_documents_expiration_date ON isf_documents (expiration_date);")
+                    text(
+                        "CREATE INDEX IF NOT EXISTS ix_isf_documents_expiration_date ON isf_documents (expiration_date);"
+                    )
                 )
             except Exception:
                 pass
@@ -63,11 +65,15 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
         if "document_owner_id" not in cols:
             print("Adding missing column document_owner_id to isf_documents table...")
             await conn.execute(
-                text("ALTER TABLE isf_documents ADD COLUMN document_owner_id VARCHAR(255);")
+                text(
+                    "ALTER TABLE isf_documents ADD COLUMN document_owner_id VARCHAR(255);"
+                )
             )
             try:
                 await conn.execute(
-                    text("CREATE INDEX IF NOT EXISTS ix_isf_documents_document_owner_id ON isf_documents (document_owner_id);")
+                    text(
+                        "CREATE INDEX IF NOT EXISTS ix_isf_documents_document_owner_id ON isf_documents (document_owner_id);"
+                    )
                 )
             except Exception:
                 pass

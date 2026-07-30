@@ -179,8 +179,6 @@ def map_artifact_to_tmf(artifact_type: str) -> tuple[int, str]:
     return res["zone"].code, res["section"].code
 
 
-
-
 # Pydantic models for eTMF
 class IngestionRequest(BaseModel):
     """
@@ -212,8 +210,12 @@ class IngestionRequest(BaseModel):
         None, description="Optional shared protocol version reference"
     )
     issue_date: Optional[date] = Field(None, description="Optional document issue date")
-    expiration_date: Optional[date] = Field(None, description="Optional document expiration date")
-    document_owner_id: Optional[str] = Field(None, description="Optional document owner ID")
+    expiration_date: Optional[date] = Field(
+        None, description="Optional document expiration date"
+    )
+    document_owner_id: Optional[str] = Field(
+        None, description="Optional document owner ID"
+    )
 
     @model_validator(mode="after")
     def validate_dates(self) -> "IngestionRequest":
@@ -312,8 +314,12 @@ def to_document_response(doc: TMFDocument) -> DocumentResponse:
 
 class DocumentExpirationUpdate(BaseModel):
     issue_date: Optional[date] = Field(None, description="Optional document issue date")
-    expiration_date: Optional[date] = Field(None, description="Optional document expiration date")
-    document_owner_id: Optional[str] = Field(None, description="Optional document owner ID")
+    expiration_date: Optional[date] = Field(
+        None, description="Optional document expiration date"
+    )
+    document_owner_id: Optional[str] = Field(
+        None, description="Optional document owner ID"
+    )
 
     @model_validator(mode="after")
     def validate_dates(self) -> "DocumentExpirationUpdate":
@@ -691,7 +697,11 @@ async def ingest_document(
         )
 
     # Enforce manage_expiration permission if any expiration metadata is provided
-    if payload.issue_date is not None or payload.expiration_date is not None or payload.document_owner_id is not None:
+    if (
+        payload.issue_date is not None
+        or payload.expiration_date is not None
+        or payload.document_owner_id is not None
+    ):
         if not has_permission(principal, "etmf_document:manage_expiration"):
             raise HTTPException(
                 status_code=403,
@@ -2211,6 +2221,7 @@ async def update_document_expiration_endpoint(
 
     # 3. Verify trial lock status
     from apps.etmf.lock_client import verify_trial_lock_status
+
     if await verify_trial_lock_status():
         raise HTTPException(
             status_code=403,

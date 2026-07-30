@@ -33,8 +33,12 @@ class ISFDocument(Base):
 
     # Expiration metadata fields
     issue_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True, index=True)
-    expiration_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True, index=True)
-    document_owner_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
+    expiration_date: Mapped[Optional[date]] = mapped_column(
+        Date, nullable=True, index=True
+    )
+    document_owner_id: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True, index=True
+    )
 
     # Creator and Timestamps
     created_at: Mapped[datetime] = mapped_column(

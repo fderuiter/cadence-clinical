@@ -55,7 +55,12 @@ def get_auth_headers(
     """Helper to generate valid gateway V2 signed headers for testing."""
     timestamp = str(time.time())
     sig = generate_signature(
-        user_id, roles, timestamp, version="2", change_reason=change_reason, site_id=site_id
+        user_id,
+        roles,
+        timestamp,
+        version="2",
+        change_reason=change_reason,
+        site_id=site_id,
     )
     headers = {
         "X-User-Id": user_id,
@@ -78,16 +83,61 @@ def get_auth_headers(
 def test_manage_expiration_rbac_permissions() -> None:
     """Verify that only authorized roles have the manage_expiration permission."""
     # Authorized roles
-    assert has_permission(Principal(user_id="p1", roles=[ROLE_SPONSOR_DM]), "etmf_document:manage_expiration") is True
-    assert has_permission(Principal(user_id="p2", roles=[ROLE_SYSADMIN]), "etmf_document:manage_expiration") is True
-    assert has_permission(Principal(user_id="p3", roles=["admin"]), "etmf_document:manage_expiration") is True
-    assert has_permission(Principal(user_id="p4", roles=["system"]), "etmf_document:manage_expiration") is True
+    assert (
+        has_permission(
+            Principal(user_id="p1", roles=[ROLE_SPONSOR_DM]),
+            "etmf_document:manage_expiration",
+        )
+        is True
+    )
+    assert (
+        has_permission(
+            Principal(user_id="p2", roles=[ROLE_SYSADMIN]),
+            "etmf_document:manage_expiration",
+        )
+        is True
+    )
+    assert (
+        has_permission(
+            Principal(user_id="p3", roles=["admin"]), "etmf_document:manage_expiration"
+        )
+        is True
+    )
+    assert (
+        has_permission(
+            Principal(user_id="p4", roles=["system"]), "etmf_document:manage_expiration"
+        )
+        is True
+    )
 
     # Unauthorized roles
-    assert has_permission(Principal(user_id="p5", roles=[ROLE_CRC]), "etmf_document:manage_expiration") is False
-    assert has_permission(Principal(user_id="p6", roles=[ROLE_INVESTIGATOR]), "etmf_document:manage_expiration") is False
-    assert has_permission(Principal(user_id="p7", roles=[ROLE_CRA_CANONICAL]), "etmf_document:manage_expiration") is False
-    assert has_permission(Principal(user_id="p8", roles=[ROLE_AUDITOR_CANONICAL]), "etmf_document:manage_expiration") is False
+    assert (
+        has_permission(
+            Principal(user_id="p5", roles=[ROLE_CRC]), "etmf_document:manage_expiration"
+        )
+        is False
+    )
+    assert (
+        has_permission(
+            Principal(user_id="p6", roles=[ROLE_INVESTIGATOR]),
+            "etmf_document:manage_expiration",
+        )
+        is False
+    )
+    assert (
+        has_permission(
+            Principal(user_id="p7", roles=[ROLE_CRA_CANONICAL]),
+            "etmf_document:manage_expiration",
+        )
+        is False
+    )
+    assert (
+        has_permission(
+            Principal(user_id="p8", roles=[ROLE_AUDITOR_CANONICAL]),
+            "etmf_document:manage_expiration",
+        )
+        is False
+    )
 
 
 # ==========================================
@@ -122,7 +172,9 @@ def test_etmf_expiration_update_date_validation_rejected() -> None:
         "expiration_date": "2026-01-01",
     }
     resp = client.put(
-        "/api/v1/etmf/documents/doc123/expiration", json=payload, headers=get_auth_headers(roles="admin")
+        "/api/v1/etmf/documents/doc123/expiration",
+        json=payload,
+        headers=get_auth_headers(roles="admin"),
     )
     assert resp.status_code == 422
     assert "issue_date cannot be later than expiration_date" in resp.text
@@ -143,7 +195,9 @@ def test_eisf_creation_date_validation_rejected() -> None:
         "expiration_date": "2026-01-01",
     }
     resp = client.post(
-        "/api/v1/eisf/documents", json=payload, headers=get_auth_headers(roles="admin", site_id="site_boston")
+        "/api/v1/eisf/documents",
+        json=payload,
+        headers=get_auth_headers(roles="admin", site_id="site_boston"),
     )
     assert resp.status_code == 422
     assert "issue_date cannot be later than expiration_date" in resp.text
@@ -164,7 +218,9 @@ def test_eisf_update_date_validation_rejected() -> None:
         "expiration_date": "2026-01-01",
     }
     resp = client.put(
-        "/api/v1/eisf/documents/doc123", json=payload, headers=get_auth_headers(roles="admin", site_id="site_boston")
+        "/api/v1/eisf/documents/doc123",
+        json=payload,
+        headers=get_auth_headers(roles="admin", site_id="site_boston"),
     )
     assert resp.status_code == 422
     assert "issue_date cannot be later than expiration_date" in resp.text
@@ -191,13 +247,17 @@ def test_etmf_ingest_authorized_vs_unauthorized() -> None:
 
     # 1. Unauthorized investigator tries to ingest with expiration fields -> 403
     resp = client.post(
-        "/api/v1/etmf/ingest", json=payload, headers=get_auth_headers(roles="investigator")
+        "/api/v1/etmf/ingest",
+        json=payload,
+        headers=get_auth_headers(roles="investigator"),
     )
     assert resp.status_code == 403
 
     # 2. Authorized sponsor_dm ingests -> 201 Success
     resp = client.post(
-        "/api/v1/etmf/ingest", json=payload, headers=get_auth_headers(roles="sponsor_dm")
+        "/api/v1/etmf/ingest",
+        json=payload,
+        headers=get_auth_headers(roles="sponsor_dm"),
     )
     assert resp.status_code == 201
     doc_id = resp.json()["document_id"]
@@ -233,20 +293,25 @@ def test_eisf_create_authorized_vs_unauthorized() -> None:
     # Wait, cra might have create permission? Let's check: "manage_expiration" is only for sponsor_dm and admin.
     # Yes, cra is not in manage_expiration, so setting it should fail with 403.
     resp = client.post(
-        "/api/v1/eisf/documents", json=payload, headers=get_auth_headers(roles="cra", site_id="site_boston")
+        "/api/v1/eisf/documents",
+        json=payload,
+        headers=get_auth_headers(roles="cra", site_id="site_boston"),
     )
     assert resp.status_code == 403
 
     # 2. Authorized admin creates -> 201 Success
     resp = client.post(
-        "/api/v1/eisf/documents", json=payload, headers=get_auth_headers(roles="admin", site_id="site_boston")
+        "/api/v1/eisf/documents",
+        json=payload,
+        headers=get_auth_headers(roles="admin", site_id="site_boston"),
     )
     assert resp.status_code == 201
     doc_id = resp.json()["id"]
 
     # 3. Retrieve document and assert fields persist
     get_resp = client.get(
-        f"/api/v1/eisf/documents/{doc_id}", headers=get_auth_headers(roles="admin", site_id="site_boston")
+        f"/api/v1/eisf/documents/{doc_id}",
+        headers=get_auth_headers(roles="admin", site_id="site_boston"),
     )
     assert get_resp.status_code == 200
     get_data = get_resp.json()
@@ -273,7 +338,9 @@ def test_etmf_expiration_update_authorized_vs_unauthorized() -> None:
         "mime_type": "application/pdf",
     }
     ingest_resp = client.post(
-        "/api/v1/etmf/ingest", json=ingest_payload, headers=get_auth_headers(roles="admin")
+        "/api/v1/etmf/ingest",
+        json=ingest_payload,
+        headers=get_auth_headers(roles="admin"),
     )
     assert ingest_resp.status_code == 201
     doc_id = ingest_resp.json()["document_id"]
@@ -286,13 +353,17 @@ def test_etmf_expiration_update_authorized_vs_unauthorized() -> None:
 
     # 1. Unauthorized Investigator tries to update -> 403
     resp = client.put(
-        f"/api/v1/etmf/documents/{doc_id}/expiration", json=update_payload, headers=get_auth_headers(roles="investigator")
+        f"/api/v1/etmf/documents/{doc_id}/expiration",
+        json=update_payload,
+        headers=get_auth_headers(roles="investigator"),
     )
     assert resp.status_code == 403
 
     # 2. Authorized Sponsor DM updates -> 200 Success
     resp = client.put(
-        f"/api/v1/etmf/documents/{doc_id}/expiration", json=update_payload, headers=get_auth_headers(roles="sponsor_dm")
+        f"/api/v1/etmf/documents/{doc_id}/expiration",
+        json=update_payload,
+        headers=get_auth_headers(roles="sponsor_dm"),
     )
     assert resp.status_code == 200
     updated_data = resp.json()
@@ -317,7 +388,9 @@ def test_eisf_expiration_update_authorized_vs_unauthorized() -> None:
         "reason_for_change": "Initial CV upload",
     }
     resp = client.post(
-        "/api/v1/eisf/documents", json=payload, headers=get_auth_headers(roles="admin", site_id="site_boston")
+        "/api/v1/eisf/documents",
+        json=payload,
+        headers=get_auth_headers(roles="admin", site_id="site_boston"),
     )
     assert resp.status_code == 201
     doc_id = resp.json()["id"]
@@ -330,13 +403,17 @@ def test_eisf_expiration_update_authorized_vs_unauthorized() -> None:
 
     # 1. Investigator (unauthorized to set expiration fields) tries to update -> 403
     resp = client.put(
-        f"/api/v1/eisf/documents/{doc_id}", json=update_payload, headers=get_auth_headers(roles="investigator", site_id="site_boston")
+        f"/api/v1/eisf/documents/{doc_id}",
+        json=update_payload,
+        headers=get_auth_headers(roles="investigator", site_id="site_boston"),
     )
     assert resp.status_code == 403
 
     # 2. Admin (authorized) updates -> 200 Success
     resp = client.put(
-        f"/api/v1/eisf/documents/{doc_id}", json=update_payload, headers=get_auth_headers(roles="admin", site_id="site_boston")
+        f"/api/v1/eisf/documents/{doc_id}",
+        json=update_payload,
+        headers=get_auth_headers(roles="admin", site_id="site_boston"),
     )
     assert resp.status_code == 200
     updated_data = resp.json()
@@ -354,6 +431,7 @@ def test_eisf_expiration_update_authorized_vs_unauthorized() -> None:
 async def test_migration_adds_expiration_columns_idempotently() -> None:
     """Verify that eTMF/eISF database migration runners add the new columns idempotently."""
     import os
+
     db_file = "test_migrate.db"
     db_url = f"sqlite+aiosqlite:///{db_file}"
     if os.path.exists(db_file):
@@ -372,9 +450,11 @@ async def test_migration_adds_expiration_columns_idempotently() -> None:
 
         # 2. Inspect table structures to verify columns exist
         from sqlalchemy.ext.asyncio import create_async_engine
+
         engine = create_async_engine(db_url)
 
         async with engine.connect() as conn:
+
             def inspect_columns(sync_conn):
                 insp = inspect(sync_conn)
                 tmf_cols = [c["name"] for c in insp.get_columns("tmf_documents")]

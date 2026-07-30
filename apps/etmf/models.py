@@ -149,8 +149,12 @@ class TMFDocument(Base):
 
     # Expiration metadata fields
     issue_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True, index=True)
-    expiration_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True, index=True)
-    document_owner_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
+    expiration_date: Mapped[Optional[date]] = mapped_column(
+        Date, nullable=True, index=True
+    )
+    document_owner_id: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True, index=True
+    )
 
     # Change justification and shared protocol-version reference fields
     reason_for_change: Mapped[Optional[str]] = mapped_column(
@@ -300,13 +304,15 @@ $$ LANGUAGE plpgsql;
 """)
 
 trigger_update_pg = DDL("""
-CREATE TRIGGER IF NOT EXISTS tmf_document_qc_transitions_no_update
+DROP TRIGGER IF EXISTS tmf_document_qc_transitions_no_update ON tmf_document_qc_transitions;
+CREATE TRIGGER tmf_document_qc_transitions_no_update
 BEFORE UPDATE ON tmf_document_qc_transitions
 FOR EACH ROW EXECUTE FUNCTION block_qc_transition_mutation();
 """)
 
 trigger_delete_pg = DDL("""
-CREATE TRIGGER IF NOT EXISTS tmf_document_qc_transitions_no_delete
+DROP TRIGGER IF EXISTS tmf_document_qc_transitions_no_delete ON tmf_document_qc_transitions;
+CREATE TRIGGER tmf_document_qc_transitions_no_delete
 BEFORE DELETE ON tmf_document_qc_transitions
 FOR EACH ROW EXECUTE FUNCTION block_qc_transition_mutation();
 """)
