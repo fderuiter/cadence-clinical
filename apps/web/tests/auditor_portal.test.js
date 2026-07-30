@@ -37,6 +37,7 @@ vi.mock("../src/api/auditor", () => ({
 vi.mock("../src/api/etmf", () => ({
   etmfService: {
     getDocuments: vi.fn(),
+    getCompleteness: vi.fn(),
   },
 }));
 
@@ -101,6 +102,25 @@ describe("Auditor Portal - eTMF Inspection & Execution Sealing Integration", () 
         version_index: 1,
       },
     ]);
+
+    etmfService.getCompleteness.mockResolvedValue({
+      study_id: "study_001",
+      site_id: null,
+      milestone: "INITIATION",
+      is_complete: true,
+      scope: "study",
+      present_artifacts: ["FDA Form 1572"],
+      missing_artifacts: [],
+      per_artifact_detail: [
+        {
+          artifact_type: "FDA Form 1572",
+          scope: "study",
+          status: "SIGNED",
+          document_id: "doc-123",
+          version_index: 1,
+        },
+      ],
+    });
 
     // Stub out global fetch for document secure previews
     global.fetch = vi.fn().mockResolvedValue({
@@ -249,15 +269,51 @@ describe("Auditor Portal - eTMF Inspection & Execution Sealing Integration", () 
     expect(global.fetch).toHaveBeenCalled();
   });
 
-  it("isolates client-side Purge controls from server-side regulated operations", () => {
+  it("loads and displays eTMF completeness tracking results correctly in live-updating dashboard", async () => {
     const wrapper = mount(AuditView, {
       global: { plugins: [pinia, router] },
     });
 
-    expect(wrapper.text()).toContain(
-      "🧪 Sandbox / Non-Production Demo Status Controls"
+    // Wait for initial completeness auto-load
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(etmfService.getCompleteness).toHaveBeenCalledWith({
+      study_id: "study_001",
+      milestone: "INITIATION",
+    });
+
+    expect(wrapper.text()).toContain("eTMF Completeness Tracking & Verification");
+    expect(wrapper.text()).toContain("MILESTONE COMPLIANT");
+    expect(wrapper.text()).toContain("1 / 1 Artifacts Present");
+    expect(wrapper.text()).toContain("FDA Form 1572");
+    expect(wrapper.text()).toContain("SIGNED");
+  });
+
+  it("handles completeness tracking errors and shows standard error alert", async () => {
+    etmfService.getCompleteness.mockRejectedValueOnce(
+      new Error("Database connection timeout during EDL check")
     );
-    expect(wrapper.find("#btn-clear-ledger").exists()).toBe(true);
+
+    const wrapper = mount(AuditView, {
+      global: { plugins: [pinia, router] },
+    });
+
+    // Wait for completeness load to reject
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(wrapper.text()).toContain("Database connection timeout during EDL check");
+  });
+
+  it("ensures write and ledger purge controls are completely removed and unavailable to Auditor role", () => {
+    const wrapper = mount(AuditView, {
+      global: { plugins: [pinia, router] },
+    });
+
+    // Check that there is no purge control section anymore
+    expect(wrapper.text()).not.toContain(
+      "Sandbox / Non-Production Demo Status Controls"
+    );
+    expect(wrapper.find("#btn-clear-ledger").exists()).toBe(false);
   });
 });
 
