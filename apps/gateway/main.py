@@ -163,6 +163,7 @@ SERVICES = {
     "quality": os.getenv("QUALITY_URL", "http://localhost:8005"),
     "safety": os.getenv("SAFETY_URL", "http://localhost:8008"),
     "tickets": os.getenv("TICKETS_URL", "http://localhost:8009"),
+    "org": os.getenv("ORG_URL", "http://localhost:8010"),
 }
 
 jwks_cache: Optional[Dict[str, Any]] = None
@@ -450,6 +451,7 @@ async def get_openapi_json() -> Response:
         quality_spec,
         safety_spec,
         tickets_spec,
+        org_spec,
     ) = await asyncio.gather(
         fetch_service_openapi(SERVICES["designer"]),
         fetch_service_openapi(SERVICES["execution"]),
@@ -460,6 +462,7 @@ async def get_openapi_json() -> Response:
         fetch_service_openapi(SERVICES["quality"]),
         fetch_service_openapi(SERVICES["safety"]),
         fetch_service_openapi(SERVICES["tickets"]),
+        fetch_service_openapi(SERVICES["org"]),
     )
 
     if tickets_spec and is_valid_openapi_spec(tickets_spec):
@@ -471,6 +474,18 @@ async def get_openapi_json() -> Response:
                 tickets_spec.get("components", {}).get("schemas", {}).items()
             ):
                 merged["components"]["schemas"][f"Tickets_{schema_name}"] = schema_val
+        except Exception:
+            pass
+
+    if org_spec and is_valid_openapi_spec(org_spec):
+        try:
+            org_spec = rewrite_references(org_spec, "Org_")
+            for path_str, path_item in org_spec.get("paths", {}).items():
+                merged["paths"][f"/org{path_str}"] = path_item
+            for schema_name, schema_val in (
+                org_spec.get("components", {}).get("schemas", {}).items()
+            ):
+                merged["components"]["schemas"][f"Org_{schema_name}"] = schema_val
         except Exception:
             pass
 
@@ -1045,6 +1060,10 @@ async def proxy_requests(request: Request, path: str) -> Response:
         target_url = f"{SERVICES['quality']}/{path}"
     elif path.startswith("api/v1/safety"):
         target_url = f"{SERVICES['safety']}/{path}"
+    elif path.startswith("org/"):
+        target_url = f"{SERVICES['org']}/{path[len('org/') :]}"
+    elif path.startswith("api/v1/org"):
+        target_url = f"{SERVICES['org']}/{path}"
     elif path.startswith("api/v1/tickets"):
         target_url = f"{SERVICES['tickets']}/{path}"
     else:

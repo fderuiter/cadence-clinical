@@ -93,6 +93,22 @@ services:
       postgres:
         condition: service_healthy
 
+  org:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: cadence-org
+    command: ["uvicorn", "apps.org.main:app", "--host", "0.0.0.0", "--port", "8010", "--reload"]
+    volumes:
+      - ..:/app
+    environment:
+      - ORG_DATABASE_URL=postgresql+asyncpg://cadence:cadence_password@postgres:5432/cadence_edc
+    ports:
+      - "8010:8010"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   etmf:
     build:
       context: ..
@@ -249,6 +265,7 @@ services:
       - TICKETS_URL=http://tickets:8009
       - NOTIFICATIONS_URL=http://notifications:8006
       - SAFETY_URL=http://safety:8008
+      - ORG_URL=http://org:8010
     ports:
       - "8000:8000"
     depends_on:
@@ -269,6 +286,8 @@ services:
       notifications:
         condition: service_started
       safety:
+        condition: service_started
+      org:
         condition: service_started
       keycloak:
         condition: service_healthy
