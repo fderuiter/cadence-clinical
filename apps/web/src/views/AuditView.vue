@@ -335,6 +335,14 @@
                   Preview
                 </button>
                 <button
+                  v-if="doc.status !== 'SIGNED'"
+                  class="btn btn-primary btn-sign-doc"
+                  style="padding: 4px 8px; font-size: 11px; cursor: pointer"
+                  @click="openSignModal(doc)"
+                >
+                  Sign
+                </button>
+                <button
                   class="btn btn-secondary btn-download-watermarked"
                   style="padding: 4px 8px; font-size: 11px; cursor: pointer"
                   @click="downloadWatermarkedDoc(doc)"
@@ -429,6 +437,75 @@
             "
             >{{ previewContent }}</pre>
         </div>
+
+        <!-- Signature Manifestation Details -->
+        <div
+          v-if="previewDoc.signature_manifestation"
+          id="signature-manifestation-view"
+          style="
+            padding: 16px;
+            border-top: 1px solid var(--border);
+            background: #f8fafc;
+            font-size: 13px;
+          "
+        >
+          <div
+            style="
+              font-weight: 600;
+              margin-bottom: 8px;
+              color: var(--text);
+              display: flex;
+              align-items: center;
+              gap: 6px;
+            "
+          >
+            <span>🖋️</span> 21 CFR Part 11 Electronic Signature Manifestation
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
+            <div>
+              Signer:
+              <strong id="manifest-signer">{{
+                previewDoc.signature_manifestation.signer_id
+              }}</strong>
+            </div>
+            <div>
+              Date/Time (UTC):
+              <strong id="manifest-timestamp">{{
+                previewDoc.signature_manifestation.timestamp
+              }}</strong>
+            </div>
+            <div style="grid-column: span 2">
+              Reason:
+              <strong id="manifest-reason">{{
+                previewDoc.signature_manifestation.signing_reason
+              }}</strong>
+            </div>
+            <div
+              style="
+                grid-column: span 2;
+                font-size: 11px;
+                color: var(--text-muted);
+                word-break: break-all;
+              "
+            >
+              SHA-256 Hash:
+              <code>{{ previewDoc.signature_manifestation.sha256_hash }}</code>
+            </div>
+            <div
+              v-if="previewDoc.signature_manifestation.signature"
+              style="
+                grid-column: span 2;
+                font-size: 11px;
+                color: var(--text-muted);
+                word-break: break-all;
+              "
+            >
+              Signature:
+              <code>{{ previewDoc.signature_manifestation.signature }}</code>
+            </div>
+          </div>
+        </div>
+
         <div
           style="
             padding: 10px 16px;
@@ -778,6 +855,15 @@
         </button>
       </div>
     </div>
+
+    <!-- Signature Capture Modal Dialog -->
+    <SignatureCaptureModal
+      :is-open="showSignModal"
+      :username="currentUserId"
+      :action-url="signActionUrl"
+      @cancel="handleSignCancel"
+      @success="handleSignSuccess"
+    />
   </div>
 </template>
 
@@ -787,12 +873,52 @@ import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { auditorService } from "../api/auditor";
 import { etmfService } from "../api/etmf";
+import SignatureCaptureModal from "../components/SignatureCaptureModal.vue";
 
 const clinicalStore = useClinicalStore();
 const authStore = useAuthStore();
 
 // Global error alert state
 const globalError = ref("");
+
+// --- 4. eTMF Document Signature Modal State ---
+const showSignModal = ref(false);
+const docToSign = ref(null);
+const signActionUrl = computed(() => {
+  return docToSign.value
+    ? `/api/v1/etmf/documents/${docToSign.value.id}/sign-off`
+    : "";
+});
+
+function openSignModal(doc) {
+  docToSign.value = doc;
+  showSignModal.value = true;
+}
+
+function handleSignCancel() {
+  showSignModal.value = false;
+  docToSign.value = null;
+}
+
+async function handleSignSuccess(updatedDoc) {
+  showSignModal.value = false;
+  docToSign.value = null;
+
+  // Refresh the local document list
+  await fetchDocuments();
+
+  // If the signed document is currently previewed, update the preview reference
+  if (previewDoc.value && previewDoc.value.id === updatedDoc.id) {
+    previewDoc.value = updatedDoc;
+    // Re-fetch preview content to reflect updated state
+    await previewDocument(updatedDoc);
+  }
+
+  // Refresh audit logs to show SIGN & APPROVE events
+  await fetchAuditLogs();
+
+  alert("Document successfully signed and approved.");
+}
 
 // Current user computed metadata
 const currentUserId = computed(() => authStore.user_id || "demo_auditor");
