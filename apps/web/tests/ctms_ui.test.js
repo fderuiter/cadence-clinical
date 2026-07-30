@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { createCtmsMilestoneTable, createCtmsVisitTable } from "../index.js";
-import { renderCtms } from "../index.js";
+import { createCtmsMilestoneTable, createCtmsVisitTable } from "../src/lib/legacy_helpers.js";
+import { renderCtms } from "../src/lib/legacy_helpers.js";
 
 // Minimal stub for document and elements to run without browser/jsdom
 class ElementStub {
