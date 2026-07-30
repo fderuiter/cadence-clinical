@@ -412,7 +412,7 @@ import { ref, reactive, watch, onMounted } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { soaClient } from "../api/soaClient";
-import { validateField } from "../../index";
+import { validateField } from "../lib/legacy_helpers.js";
 import { debounce } from "ui";
 import { terminologyClient } from "../api/terminologyClient";
 import ClinicalFormField from "../components/clinical/ClinicalFormField.vue";

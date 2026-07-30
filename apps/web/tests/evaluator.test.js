@@ -5,7 +5,7 @@ import {
   compilerCache,
   getCompiledExpression,
   validateField,
-} from "../index.js";
+} from "../src/lib/legacy_helpers.js";
 import { useClinicalStore } from "../src/stores/clinical.js";
 
 describe("Client-side AST Evaluator & Cascading Nullification", () => {

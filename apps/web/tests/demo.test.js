@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateField, sha256, renderFormFromJSON } from "../index.js";
+import { validateField, sha256, renderFormFromJSON } from "../src/lib/legacy_helpers.js";
 
 describe("validateField", () => {
   it("returns valid: true if field has no validation rules", () => {
@@ -102,7 +102,7 @@ describe("renderFormFromJSON integration", () => {
   });
 });
 
-import { createConditionRow } from "../index.js";
+import { createConditionRow } from "../src/lib/legacy_helpers.js";
 
 describe("Visual Rules Editor Integration Tests", () => {
   const mockForms = [

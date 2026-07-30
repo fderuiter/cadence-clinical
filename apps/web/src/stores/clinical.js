@@ -599,8 +599,7 @@ export const useClinicalStore = defineStore("clinical", {
       try {
         const data = await soaClient.getSoAProjection(
           this.currentUsdm.studyId,
-          this.activeStudyVersionId,
-          { userId: "fderuiter", roles: "STUDY_DESIGNER" }
+          this.activeStudyVersionId
         );
         // Map fetched Neo4j projection structure back to our local currentUsdm state
         this.currentUsdm.epochs = data.epochs || [];
@@ -621,8 +620,6 @@ export const useClinicalStore = defineStore("clinical", {
       this.soaLoading = true;
       this.soaError = null;
       const opts = {
-        userId: "fderuiter",
-        roles: "STUDY_DESIGNER",
         changeReason,
       };
       try {
@@ -687,7 +684,7 @@ export const useClinicalStore = defineStore("clinical", {
           this.activeStudyVersionId,
           linkType,
           payload,
-          { userId: "fderuiter", roles: "STUDY_DESIGNER", changeReason }
+          { changeReason }
         );
         await this.addLedgerBlock(
           `SOA_LINK_${linkType.toUpperCase()}`,
