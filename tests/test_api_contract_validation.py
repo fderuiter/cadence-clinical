@@ -248,6 +248,8 @@ WHITELISTED_ROUTES = {
     ("get", "/api/v1/execution/lab-ranges"),
     ("get", "/api/v1/execution/lab-ranges/{range_id}"),
     ("get", "/api/v1/execution/locks"),
+    ("get", "/api/v1/execution/migration-rules"),
+    ("post", "/api/v1/execution/migration-rules"),
     ("get", "/api/v1/execution/queries"),
     ("get", "/api/v1/execution/queries/{query_id}"),
     ("get", "/api/v1/execution/translation/jobs"),

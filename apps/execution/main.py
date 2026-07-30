@@ -64,6 +64,7 @@ from apps.execution.database.models import (
     DictionaryImportJob,
     FormSubmission,
     ImportState,
+    MigrationRule,
     SDVSignOff,
     StudyAuthoredRule,
     SubjectConsent,
@@ -461,6 +462,8 @@ class VisitResponse(BaseModel):
     visit_name: str
     visit_date: datetime
     study_id: str
+    protocol_version_tag: Optional[str] = None
+    protocol_version_index: Optional[int] = None
 
 
 class ObservationCreate(BaseModel):
@@ -502,6 +505,31 @@ class ObservationResponse(BaseModel):
     lab_indicator: Optional[str] = None
     lab_out_of_range: Optional[bool] = None
     matched_normal_bounds: Optional[str] = None
+    protocol_version_tag: Optional[str] = None
+    protocol_version_index: Optional[int] = None
+
+
+class MigrationRuleCreate(BaseModel):
+    study_id: str
+    source_version: str
+    target_version: str
+    rule_type: str
+    source_field: Optional[str] = None
+    target_field: Optional[str] = None
+    default_value_string: Optional[str] = None
+    default_value_float: Optional[float] = None
+
+
+class MigrationRuleResponse(BaseModel):
+    id: str
+    study_id: str
+    source_version: str
+    target_version: str
+    rule_type: str
+    source_field: Optional[str] = None
+    target_field: Optional[str] = None
+    default_value_string: Optional[str] = None
+    default_value_float: Optional[float] = None
 
 
 @app.post("/api/v1/execution/subjects", response_model=SubjectResponse)
@@ -856,6 +884,22 @@ async def create_visit(
             visit_date=vdate,
             study_id=payload.study_id,
         )
+        # Stamping capture-time protocol-version identity
+        stmt_consent = (
+            select(SubjectConsent)
+            .where(
+                SubjectConsent.subject_id == payload.subject_id,
+                SubjectConsent.study_id == payload.study_id,
+                SubjectConsent.icf_signed.is_(True),
+            )
+            .order_by(SubjectConsent.version_index.desc())
+        )
+        res_consent = await session.execute(stmt_consent)
+        active_consent = res_consent.scalars().first()
+        if active_consent:
+            visit.protocol_version_tag = active_consent.version_tag
+            visit.protocol_version_index = active_consent.version_index
+
         session.add(visit)
         await session.commit()
         stmt = select(ClinicalVisit).where(ClinicalVisit.id == visit.id)
@@ -867,6 +911,8 @@ async def create_visit(
             visit_name=visit_db.visit_name,
             visit_date=visit_db.visit_date,
             study_id=visit_db.study_id,
+            protocol_version_tag=visit_db.protocol_version_tag,
+            protocol_version_index=visit_db.protocol_version_index,
         )
 
 
@@ -934,6 +980,24 @@ async def create_observation(
             norm_val, matched_range
         )
 
+        # Stamping capture-time protocol-version identity
+        protocol_version_tag = None
+        protocol_version_index = None
+        stmt_consent = (
+            select(SubjectConsent)
+            .where(
+                SubjectConsent.subject_id == payload.subject_id,
+                SubjectConsent.study_id == study_id,
+                SubjectConsent.icf_signed.is_(True),
+            )
+            .order_by(SubjectConsent.version_index.desc())
+        )
+        res_consent = await session.execute(stmt_consent)
+        active_consent = res_consent.scalars().first()
+        if active_consent:
+            protocol_version_tag = active_consent.version_tag
+            protocol_version_index = active_consent.version_index
+
         obs = ClinicalObservation(
             subject_id=payload.subject_id,
             study_id=study_id,
@@ -953,6 +1017,8 @@ async def create_observation(
             lab_indicator=indicator,
             lab_out_of_range=out_of_range,
             matched_normal_bounds=matched_bounds,
+            protocol_version_tag=protocol_version_tag,
+            protocol_version_index=protocol_version_index,
         )
         session.add(obs)
 
@@ -1155,6 +1221,8 @@ async def create_observation(
             lab_indicator=obs_db.lab_indicator,
             lab_out_of_range=obs_db.lab_out_of_range,
             matched_normal_bounds=obs_db.matched_normal_bounds,
+            protocol_version_tag=obs_db.protocol_version_tag,
+            protocol_version_index=obs_db.protocol_version_index,
         )
 
 
@@ -1853,10 +1921,29 @@ async def generate_cdisc_export_xml(study_id: str) -> str:
                 detail=f"No active observations found for study {study_id}",
             )
 
+        # Unpack observations and visit names
+        raw_obs = [row[0] for row in rows]
+        visit_names_by_obs_id = {
+            row[0].id: row[1] for row in rows if row[0].id is not None
+        }
+
+        # Dynamic non-destructive protocol reconciliation
+        from apps.execution.migration_rules import reconcile_observations
+
+        stmt_target_version = (
+            select(SubjectConsent.version_tag)
+            .where(SubjectConsent.study_id == study_id)
+            .order_by(SubjectConsent.version_index.desc())
+            .limit(1)
+        )
+        res_target = await session.execute(stmt_target_version)
+        target_version = res_target.scalar() or "1.0"
+        reconciled_obs = await reconcile_observations(session, raw_obs, target_version)
+
         subjects = {}
-        for obs, visit_name in rows:
+        for obs in reconciled_obs:
             subj_key = obs.subject_id
-            vname = visit_name or "Baseline"
+            vname = visit_names_by_obs_id.get(obs.id) or "Baseline"
             if subj_key not in subjects:
                 subjects[subj_key] = {"visits": {}}
             if vname not in subjects[subj_key]["visits"]:
@@ -5189,7 +5276,20 @@ async def run_sdtm_extraction(
         ClinicalObservation.is_deleted.is_(False),
     )
     res_obs = await session.execute(stmt_obs)
-    observations = res_obs.scalars().all()
+    observations = list(res_obs.scalars().all())
+
+    # Dynamic non-destructive protocol reconciliation
+    from apps.execution.migration_rules import reconcile_observations
+
+    stmt_target_version = (
+        select(SubjectConsent.version_tag)
+        .where(SubjectConsent.study_id == study_id)
+        .order_by(SubjectConsent.version_index.desc())
+        .limit(1)
+    )
+    res_target = await session.execute(stmt_target_version)
+    target_version = res_target.scalar() or "1.0"
+    observations = await reconcile_observations(session, observations, target_version)
 
     dom_upper = domain.strip().upper()
     records = []
@@ -5242,7 +5342,20 @@ async def run_adam_derivation(session, study_id: str, dataset: str) -> List[dict
         ClinicalObservation.is_deleted.is_(False),
     )
     res_obs = await session.execute(stmt_obs)
-    observations = res_obs.scalars().all()
+    observations = list(res_obs.scalars().all())
+
+    # Dynamic non-destructive protocol reconciliation
+    from apps.execution.migration_rules import reconcile_observations
+
+    stmt_target_version = (
+        select(SubjectConsent.version_tag)
+        .where(SubjectConsent.study_id == study_id)
+        .order_by(SubjectConsent.version_index.desc())
+        .limit(1)
+    )
+    res_target = await session.execute(stmt_target_version)
+    target_version = res_target.scalar() or "1.0"
+    observations = await reconcile_observations(session, observations, target_version)
 
     ds_upper = dataset.strip().upper()
     if ds_upper == "ADSL":
@@ -5338,6 +5451,80 @@ async def export_sdtm_domain(
             raise HTTPException(
                 status_code=500, detail=f"Export execution failed: {str(e)}"
             )
+
+
+@app.post(
+    "/api/v1/execution/migration-rules",
+    response_model=MigrationRuleResponse,
+    status_code=201,
+)
+async def create_migration_rule(
+    payload: MigrationRuleCreate,
+    roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER)),
+) -> MigrationRuleResponse:
+    """Create a new protocol version migration rule."""
+    async with db_manager.get_session_maker()() as session:
+        async with session.begin():
+            rule = MigrationRule(
+                study_id=payload.study_id,
+                source_version=payload.source_version,
+                target_version=payload.target_version,
+                rule_type=payload.rule_type,
+                source_field=payload.source_field,
+                target_field=payload.target_field,
+                default_value_string=payload.default_value_string,
+                default_value_float=payload.default_value_float,
+            )
+            session.add(rule)
+
+        # Retrieve
+        stmt = select(MigrationRule).where(MigrationRule.id == rule.id)
+        res = await session.execute(stmt)
+        saved = res.scalar_one()
+
+        return MigrationRuleResponse(
+            id=saved.id,
+            study_id=saved.study_id,
+            source_version=saved.source_version,
+            target_version=saved.target_version,
+            rule_type=saved.rule_type,
+            source_field=saved.source_field,
+            target_field=saved.target_field,
+            default_value_string=saved.default_value_string,
+            default_value_float=saved.default_value_float,
+        )
+
+
+@app.get(
+    "/api/v1/execution/migration-rules",
+    response_model=List[MigrationRuleResponse],
+)
+async def list_migration_rules(
+    study_id: str,
+    roles: list[str] = Depends(get_normalized_roles),
+) -> List[MigrationRuleResponse]:
+    """List migration rules for a clinical study."""
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(MigrationRule).where(
+            MigrationRule.study_id == study_id,
+            MigrationRule.is_deleted.is_(False),
+        )
+        res = await session.execute(stmt)
+        rules = res.scalars().all()
+        return [
+            MigrationRuleResponse(
+                id=r.id,
+                study_id=r.study_id,
+                source_version=r.source_version,
+                target_version=r.target_version,
+                rule_type=r.rule_type,
+                source_field=r.source_field,
+                target_field=r.target_field,
+                default_value_string=r.default_value_string,
+                default_value_float=r.default_value_float,
+            )
+            for r in rules
+        ]
 
 
 @app.get("/api/v1/execution/audit/integrity")

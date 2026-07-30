@@ -284,6 +284,12 @@ class ClinicalVisit(AuditedModel):
     site_id: Mapped[Optional[str]] = mapped_column(
         String(255), nullable=True, index=True
     )
+    protocol_version_tag: Mapped[Optional[str]] = mapped_column(
+        String(50), nullable=True
+    )
+    protocol_version_index: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True
+    )
 
 
 class ClinicalObservation(AuditedModel):
@@ -342,6 +348,12 @@ class ClinicalObservation(AuditedModel):
     lab_indicator: Mapped[str] = mapped_column(String(50), nullable=True)
     lab_out_of_range: Mapped[bool] = mapped_column(Boolean, nullable=True)
     matched_normal_bounds: Mapped[str] = mapped_column(String(255), nullable=True)
+    protocol_version_tag: Mapped[Optional[str]] = mapped_column(
+        String(50), nullable=True
+    )
+    protocol_version_index: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True
+    )
 
 
 class ClinicalQuery(AuditedModel):
@@ -1030,3 +1042,23 @@ class StudyAuthoredRule(AuditedModel):
     message: Mapped[str] = mapped_column(String(1000), nullable=False)
     publication_version: Mapped[str] = mapped_column(String(50), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+
+class MigrationRule(AuditedModel):
+    """Represents a protocol amendment migration rule.
+
+    Defines non-destructive transitions such as renamed, added, and removed fields between protocol versions.
+    """
+
+    __tablename__ = "migration_rules"
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    source_version: Mapped[str] = mapped_column(String(50), nullable=False)
+    target_version: Mapped[str] = mapped_column(String(50), nullable=False)
+    rule_type: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # "rename", "add", "remove"
+    source_field: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    target_field: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    default_value_string: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    default_value_float: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
