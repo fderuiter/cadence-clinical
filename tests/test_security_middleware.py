@@ -798,3 +798,130 @@ def test_verify_gateway_signature_scope_fallback_restrictions() -> None:
         )
         is True
     )
+
+
+# Add endpoint to verify context propagation under test_app
+@test_app.get("/verify-context-tenant")
+async def verify_context_tenant():
+    from packages.security.context import current_tenant_id
+
+    return {
+        "context_tenant_id": current_tenant_id.get(),
+    }
+
+
+def test_middleware_tenant_context_and_state() -> None:
+    """Validate that the security middleware correctly extracts, verifies, binds to contextvar, and attaches tenant_id.
+
+    Requirements: PRD-SYS-001
+    """
+    client = TestClient(test_app)
+    timestamp = str(time.time())
+    user_id = "tenant_user_01"
+    roles = "sponsor_designer"
+    change_reason = "Design custom validation rule"
+    tenant_id = "tenant_biotech_99"
+
+    # Generate V2 signature with tenant scope included
+    sig = generate_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        version="2",
+        change_reason=change_reason,
+        tenant_id=tenant_id,
+    )
+
+    headers = {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": sig,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": change_reason,
+        "X-Tenant-Id": tenant_id,
+    }
+
+    response = client.get("/verify-context-tenant", headers=headers)
+    assert response.status_code == 200
+    assert response.json() == {"context_tenant_id": "tenant_biotech_99"}
+
+    # Outside the request scope, the context variable should be reset to default (None)
+    from packages.security.context import current_tenant_id
+
+    assert current_tenant_id.get() is None
+
+
+def test_middleware_tenant_missing_fallback() -> None:
+    """Validate that when X-Tenant-Id is missing or empty, the middleware defaults it to 'tenant_default' and validates.
+
+    Requirements: PRD-SYS-001
+    """
+    client = TestClient(test_app)
+    timestamp = str(time.time())
+    user_id = "tenant_user_02"
+    roles = "sponsor_designer"
+    change_reason = "Design test case"
+    # Gateway generates signature with tenant_id="tenant_default" when missing from claim
+    expected_tenant = "tenant_default"
+
+    sig = generate_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        version="2",
+        change_reason=change_reason,
+        tenant_id=expected_tenant,
+    )
+
+    # Do not include X-Tenant-Id header to simulate legacy or missing claim requests
+    headers = {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": sig,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": change_reason,
+    }
+
+    response = client.get("/verify-context-tenant", headers=headers)
+    assert response.status_code == 200
+    assert response.json() == {"context_tenant_id": "tenant_default"}
+
+
+def test_middleware_tenant_signature_tampering_rejected() -> None:
+    """Validate that a request with tampered X-Tenant-Id header is rejected due to signature verification failure.
+
+    Requirements: PRD-SYS-001
+    """
+    client = TestClient(test_app)
+    timestamp = str(time.time())
+    user_id = "tenant_user_03"
+    roles = "sponsor_designer"
+    change_reason = "Form submission"
+    tenant_id = "tenant_legit_101"
+
+    # Sign for tenant_legit_101
+    sig = generate_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        version="2",
+        change_reason=change_reason,
+        tenant_id=tenant_id,
+    )
+
+    # Maliciously change X-Tenant-Id to another tenant ID (spoofing attempt)
+    headers = {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": sig,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": change_reason,
+        "X-Tenant-Id": "tenant_target_202",
+    }
+
+    response = client.get("/verify-context-tenant", headers=headers)
+    assert response.status_code == 401
+    assert "Invalid gateway signature" in response.json()["detail"]
