@@ -2393,7 +2393,9 @@ async def approve_study_version_delta(
                 ver_record = v
                 break
         if not ver_record:
-            raise ValueError(f"StudyVersion {version_id} not found under Study {study_id}")
+            raise ValueError(
+                f"StudyVersion {version_id} not found under Study {study_id}"
+            )
 
         # Check immutability
         status = ver_record.get("status")
@@ -2446,6 +2448,7 @@ async def approve_study_version_delta(
 
     # Neo4j implementation
     import json
+
     async with driver.session() as session:
         tx = await session.begin_transaction()
         async with tx:

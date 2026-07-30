@@ -56,6 +56,7 @@ def get_auth_headers(
         headers["X-Sig-Token"] = sig_token_custom
     elif action_path:
         from jose import jwt
+
         sig_payload = {
             "sub": user_id,
             "username": user_id,
@@ -706,10 +707,15 @@ async def test_api_protocol_approval_and_immutability():
         res_no_token = await client.post(
             f"/api/v1/studies/{study_id}/versions/{version_id}/approve",
             json={"signing_reason": "APPROVAL"},
-            headers=get_auth_headers(roles="STUDY_DESIGNER", change_reason="Try approve"),
+            headers=get_auth_headers(
+                roles="STUDY_DESIGNER", change_reason="Try approve"
+            ),
         )
         assert res_no_token.status_code == 401
-        assert "reauthentication" in res_no_token.json()["detail"].lower() or "re-authentication" in res_no_token.json()["message"].lower()
+        assert (
+            "reauthentication" in res_no_token.json()["detail"].lower()
+            or "re-authentication" in res_no_token.json()["message"].lower()
+        )
 
         # 3. Call with valid X-Sig-Token
         action_path = f"/api/v1/studies/{study_id}/versions/{version_id}/approve"
@@ -788,4 +794,6 @@ async def test_api_protocol_approval_and_immutability():
         approval_action = next(a for a in actions if a.get("type") == "APPROVAL")
         assert approval_action["user_id"] == "test_designer"
         assert approval_action["change_reason"] == "Approve oncology protocol"
-        assert approval_action["signature_manifestation"]["signer_id"] == "test_designer"
+        assert (
+            approval_action["signature_manifestation"]["signer_id"] == "test_designer"
+        )

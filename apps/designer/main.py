@@ -1248,6 +1248,7 @@ async def archive_approved_protocol_background_task(
     try:
         usdm_dict = map_study_to_usdm(study_data)
         from apps.designer.mapper import to_uuid
+
         usdm_dict["id"] = to_uuid(usdm_dict["id"], "study")
         study_obj = usdm_model.Study.model_validate(usdm_dict)
     except Exception as e:
@@ -1354,7 +1355,13 @@ async def approve_study_version_endpoint(
         else:
             roles_list.append(ROLE_ALIASES.get(norm_r, norm_r))
 
-    allowed_roles = {"sponsor_designer", "sponsor_dm", "sponsor_admin", "sysadmin", "study_designer"}
+    allowed_roles = {
+        "sponsor_designer",
+        "sponsor_dm",
+        "sponsor_admin",
+        "sysadmin",
+        "study_designer",
+    }
     if not any(role in allowed_roles for role in roles_list):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -1364,6 +1371,7 @@ async def approve_study_version_endpoint(
     # 3. Check if study version exists
     if driver is None:
         from apps.designer.db import MOCK_STUDY_VERSIONS, get_study_projection
+
         versions = MOCK_STUDY_VERSIONS.get(study_id, [])
         ver_record = None
         for v in versions:
@@ -1374,7 +1382,13 @@ async def approve_study_version_endpoint(
             raise HTTPException(status_code=404, detail="StudyVersion not found")
 
         # Check if already approved/signed
-        if ver_record.get("status") in ("APPROVED", "SIGNED", "LOCKED", "PUBLISHED", "ARCHIVED"):
+        if ver_record.get("status") in (
+            "APPROVED",
+            "SIGNED",
+            "LOCKED",
+            "PUBLISHED",
+            "ARCHIVED",
+        ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="IMMUTABILITY_VIOLATION: Version is already approved and locked.",
@@ -1386,12 +1400,20 @@ async def approve_study_version_endpoint(
             MATCH (s:Study {id: $study_id})-[:HAS_VERSION]->(sv:StudyVersion {id: $version_id})
             RETURN sv {.*} as version_props
             """
-            ver_res = await session.run(ver_query, study_id=study_id, version_id=version_id)
+            ver_res = await session.run(
+                ver_query, study_id=study_id, version_id=version_id
+            )
             record = await ver_res.single()
             if not record:
                 raise HTTPException(status_code=404, detail="StudyVersion not found")
             version_props = dict(record["version_props"])
-            if version_props.get("status") in ("APPROVED", "SIGNED", "LOCKED", "PUBLISHED", "ARCHIVED"):
+            if version_props.get("status") in (
+                "APPROVED",
+                "SIGNED",
+                "LOCKED",
+                "PUBLISHED",
+                "ARCHIVED",
+            ):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="IMMUTABILITY_VIOLATION: Version is already approved and locked.",
