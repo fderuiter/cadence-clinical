@@ -527,7 +527,10 @@ async def test_create_central_range_with_site_id_blocked() -> None:
             headers=headers,
         )
         assert res.status_code == 400
-        assert "CENTRAL reference ranges are global and must have site_id = None" in res.json()["detail"]
+        assert (
+            "CENTRAL reference ranges are global and must have site_id = None"
+            in res.json()["detail"]
+        )
 
 
 @pytest.mark.asyncio
@@ -591,7 +594,10 @@ async def test_update_local_to_central_invariant_enforcement() -> None:
             headers=headers,
         )
         assert res_update_invalid.status_code == 400
-        assert "CENTRAL reference ranges are global and must have site_id = None" in res_update_invalid.json()["detail"]
+        assert (
+            "CENTRAL reference ranges are global and must have site_id = None"
+            in res_update_invalid.json()["detail"]
+        )
 
         # 3. Update source to CENTRAL and set site_id to None
         res_update_valid = await client.put(
