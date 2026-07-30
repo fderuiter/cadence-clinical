@@ -10,6 +10,8 @@
 ## 1. Context & Problem Statement
 Under FDA 21 CFR Part 11 and clinical trial GxP requirements, all security-sensitive and record-access events within helpdesk ticketing operations must be auditable. In addition to write mutations, read events (such as viewing a ticket, listing tickets, viewing ticket comments, or listing the ticket audit trail logs) must be tracked within the append-only `TicketAuditLog` ledger to preserve complete chain-of-custody.
 
+This decision implements security and compliance requirements under PRD-SYS-001.
+
 However, logging every read event results in a growing audit trail. Returning the full list of audit logs in a single unpaginated API request could lead to performance bottlenecks, high memory consumption, and potential denial-of-service vectors as the system ages.
 
 ## 2. Decision Drivers & Constraints

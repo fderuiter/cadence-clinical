@@ -40,14 +40,21 @@ async def setup_tickets_db():
         await db_manager.close()
 
 
-def get_auth_headers(roles: str = "admin", change_reason: str = "", site_id: str = None) -> dict:
+def get_auth_headers(
+    roles: str = "admin", change_reason: str = "", site_id: str = None
+) -> dict:
     """
     Helper to generate valid gateway V2 signed headers for testing.
     """
     timestamp = str(time.time())
     user_id = "tickets_test_user"
     sig = generate_signature(
-        user_id, roles, timestamp, version="2", change_reason=change_reason, site_id=site_id
+        user_id,
+        roles,
+        timestamp,
+        version="2",
+        change_reason=change_reason,
+        site_id=site_id,
     )
     headers = {
         "X-User-Id": user_id,
@@ -880,12 +887,18 @@ async def test_tickets_unauthorized_site_scope_blocking():
     or list audit logs for a ticket outside of their scope.
     """
     client = TestClient(app)
-    admin_headers = get_auth_headers(roles="admin", change_reason="Setup ticket with site scope")
+    admin_headers = get_auth_headers(
+        roles="admin", change_reason="Setup ticket with site scope"
+    )
 
     # 1. Create a ticket scoped to SITE-X
     res_ticket = client.post(
         "/api/v1/tickets",
-        json={"title": "Site X Ticket", "description": "X Description", "site_id": "SITE-X"},
+        json={
+            "title": "Site X Ticket",
+            "description": "X Description",
+            "site_id": "SITE-X",
+        },
         headers=admin_headers,
     )
     assert res_ticket.status_code == 201
@@ -895,7 +908,7 @@ async def test_tickets_unauthorized_site_scope_blocking():
     investigator_y_headers = get_auth_headers(
         roles="investigator",
         change_reason="Investigator trying to post a comment",
-        site_id="SITE-Y"
+        site_id="SITE-Y",
     )
     res_comment_create = client.post(
         f"/api/v1/tickets/{ticket_id}/comments",
@@ -930,7 +943,9 @@ async def test_tickets_site_scope_filtering_audit_logs_unfiltered():
     Also verify deny-all if a site-scoped role has no assigned sites.
     """
     client = TestClient(app)
-    admin_headers = get_auth_headers(roles="admin", change_reason="Seed multi-site tickets")
+    admin_headers = get_auth_headers(
+        roles="admin", change_reason="Seed multi-site tickets"
+    )
 
     # Ticket A at SITE-A
     client.post(
@@ -946,7 +961,9 @@ async def test_tickets_site_scope_filtering_audit_logs_unfiltered():
     )
 
     # Investigator assigned to SITE-A tries to list all audit logs
-    investigator_a_headers = get_auth_headers(roles="investigator", change_reason="List logs", site_id="SITE-A")
+    investigator_a_headers = get_auth_headers(
+        roles="investigator", change_reason="List logs", site_id="SITE-A"
+    )
     res_logs = client.get("/api/v1/tickets/audit-logs", headers=investigator_a_headers)
     assert res_logs.status_code == 200
     items = res_logs.json()["items"]
@@ -954,7 +971,9 @@ async def test_tickets_site_scope_filtering_audit_logs_unfiltered():
     # Scoped user should only see logs for tickets that are in SITE-A (no SITE-B ticket logs)
     # Let's verify that none of the returned logs point to SITE-B's ticket.
     # Note: we need to fetch all tickets to map their site_ids.
-    res_tickets = client.get("/api/v1/tickets?include_deleted=true", headers=admin_headers)
+    res_tickets = client.get(
+        "/api/v1/tickets?include_deleted=true", headers=admin_headers
+    )
     tickets_map = {t["id"]: t["site_id"] for t in res_tickets.json()}
 
     for log in items:
@@ -963,9 +982,13 @@ async def test_tickets_site_scope_filtering_audit_logs_unfiltered():
             assert tickets_map[tid] == "SITE-A"
 
     # Site-scoped user with no assigned sites -> Deny all
-    investigator_no_site_headers = get_auth_headers(roles="investigator", change_reason="No site assigned", site_id=None)
+    investigator_no_site_headers = get_auth_headers(
+        roles="investigator", change_reason="No site assigned", site_id=None
+    )
     # Note: when site_id is None in get_auth_headers, it will not pass X-Site-Id, resulting in empty assigned_sites on Principal
-    res_deny_all = client.get("/api/v1/tickets/audit-logs", headers=investigator_no_site_headers)
+    res_deny_all = client.get(
+        "/api/v1/tickets/audit-logs", headers=investigator_no_site_headers
+    )
     assert res_deny_all.status_code == 200
     assert len(res_deny_all.json()["items"]) == 0
 
@@ -982,7 +1005,11 @@ async def test_tickets_auditor_comments_access():
     # 1. Create a ticket
     res_ticket = client.post(
         "/api/v1/tickets",
-        json={"title": "Auditor Test Ticket", "description": "Auditing comments", "priority": "LOW"},
+        json={
+            "title": "Auditor Test Ticket",
+            "description": "Auditing comments",
+            "priority": "LOW",
+        },
         headers=admin_headers,
     )
     assert res_ticket.status_code == 201
@@ -997,14 +1024,19 @@ async def test_tickets_auditor_comments_access():
     assert res_comment.status_code == 201
 
     # 3. Auditor persona attempts to create a comment -> 403 Forbidden
-    auditor_headers = get_auth_headers(roles="auditor", change_reason="Auditor trying to post")
+    auditor_headers = get_auth_headers(
+        roles="auditor", change_reason="Auditor trying to post"
+    )
     res_auditor_create = client.post(
         f"/api/v1/tickets/{ticket_id}/comments",
         json={"body": "I am an auditor"},
         headers=auditor_headers,
     )
     assert res_auditor_create.status_code == 403
-    assert "Auditor personas are restricted to read-only access" in res_auditor_create.json()["detail"]
+    assert (
+        "Auditor personas are restricted to read-only access"
+        in res_auditor_create.json()["detail"]
+    )
 
     # 4. Auditor persona attempts to list comments -> 200 OK
     res_auditor_list = client.get(
@@ -1024,12 +1056,18 @@ async def test_tickets_in_scope_success_and_self_audit():
     TICKET_AUDIT_LOG_LIST) appear correctly in the immutable TicketAuditLog.
     """
     client = TestClient(app)
-    headers = get_auth_headers(roles="admin", change_reason="Full in-scope lifecycle test")
+    headers = get_auth_headers(
+        roles="admin", change_reason="Full in-scope lifecycle test"
+    )
 
     # Create Ticket
     res_ticket = client.post(
         "/api/v1/tickets",
-        json={"title": "Self Audit Ticket", "description": "Auditing everything", "priority": "MEDIUM"},
+        json={
+            "title": "Self Audit Ticket",
+            "description": "Auditing everything",
+            "priority": "MEDIUM",
+        },
         headers=headers,
     )
     ticket_id = res_ticket.json()["id"]
@@ -1064,15 +1102,21 @@ async def test_tickets_in_scope_success_and_self_audit():
     assert "TICKET_AUDIT_LOG_LIST" in actions
 
     # Check details formatting
-    comment_create_log = next(log for log in logs if log["action"] == "TICKET_COMMENT_CREATE")
+    comment_create_log = next(
+        log for log in logs if log["action"] == "TICKET_COMMENT_CREATE"
+    )
     assert comment_create_log["ticket_id"] == ticket_id
     assert f"Added comment to ticket ID: {ticket_id}" in comment_create_log["details"]
 
-    comment_view_log = next(log for log in logs if log["action"] == "TICKET_COMMENTS_VIEW")
+    comment_view_log = next(
+        log for log in logs if log["action"] == "TICKET_COMMENTS_VIEW"
+    )
     assert comment_view_log["ticket_id"] == ticket_id
     assert f"Viewed comments for ticket ID: {ticket_id}" in comment_view_log["details"]
 
-    audit_list_log = next(log for log in logs if log["action"] == "TICKET_AUDIT_LOG_LIST")
+    audit_list_log = next(
+        log for log in logs if log["action"] == "TICKET_AUDIT_LOG_LIST"
+    )
     assert audit_list_log["ticket_id"] == ticket_id
     assert "Listed ticket audit logs" in audit_list_log["details"]
 
@@ -1091,7 +1135,11 @@ async def test_tickets_audit_logs_pagination():
     for i in range(5):
         res = client.post(
             "/api/v1/tickets",
-            json={"title": f"Pagination Ticket {i}", "description": "D", "priority": "LOW"},
+            json={
+                "title": f"Pagination Ticket {i}",
+                "description": "D",
+                "priority": "LOW",
+            },
             headers=headers,
         )
         ticket_ids.append(res.json()["id"])
@@ -1134,6 +1182,7 @@ async def test_tickets_audit_logs_time_filtering():
     around a known record's created_at, as well as a future window.
     """
     import datetime as dt
+
     client = TestClient(app)
     headers = get_auth_headers(roles="admin", change_reason="Time filtering setup")
 
@@ -1198,14 +1247,25 @@ async def test_tickets_audit_logs_query_boundaries():
     # limit=0 -> 422
     res_limit_zero = client.get("/api/v1/tickets/audit-logs?limit=0", headers=headers)
     assert res_limit_zero.status_code == 422
-    assert any("greater than or equal to 1" in err["msg"] for err in res_limit_zero.json()["detail"])
+    assert any(
+        "greater than or equal to 1" in err["msg"]
+        for err in res_limit_zero.json()["detail"]
+    )
 
     # limit=251 -> 422
-    res_limit_large = client.get("/api/v1/tickets/audit-logs?limit=251", headers=headers)
+    res_limit_large = client.get(
+        "/api/v1/tickets/audit-logs?limit=251", headers=headers
+    )
     assert res_limit_large.status_code == 422
-    assert any("less than or equal to 250" in err["msg"] for err in res_limit_large.json()["detail"])
+    assert any(
+        "less than or equal to 250" in err["msg"]
+        for err in res_limit_large.json()["detail"]
+    )
 
     # offset=-1 -> 422
     res_offset_neg = client.get("/api/v1/tickets/audit-logs?offset=-1", headers=headers)
     assert res_offset_neg.status_code == 422
-    assert any("greater than or equal to 0" in err["msg"] for err in res_offset_neg.json()["detail"])
+    assert any(
+        "greater than or equal to 0" in err["msg"]
+        for err in res_offset_neg.json()["detail"]
+    )

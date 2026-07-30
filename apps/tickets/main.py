@@ -522,13 +522,15 @@ async def list_ticket_audit_logs(
 
     actual_ticket_id = None
     if ticket_id:
-        ticket_stmt = select(Ticket).where((Ticket.id == ticket_id) | (Ticket.reference == ticket_id))
+        ticket_stmt = select(Ticket).where(
+            (Ticket.id == ticket_id) | (Ticket.reference == ticket_id)
+        )
         ticket_res = await session.execute(ticket_stmt)
         ticket = ticket_res.scalars().first()
         if not ticket:
             raise HTTPException(
                 status_code=404,
-                detail=f"Ticket with ID/reference '{ticket_id}' not found."
+                detail=f"Ticket with ID/reference '{ticket_id}' not found.",
             )
         actual_ticket_id = ticket.id
         # Apply site scope check
@@ -559,7 +561,9 @@ async def list_ticket_audit_logs(
 
         if is_site_scoped or principal.assigned_sites:
             if principal.assigned_sites:
-                subq = select(Ticket.id).where(Ticket.site_id.in_(principal.assigned_sites))
+                subq = select(Ticket.id).where(
+                    Ticket.site_id.in_(principal.assigned_sites)
+                )
                 filters.append(TicketAuditLog.ticket_id.in_(subq))
             else:
                 filters.append(1 == 0)

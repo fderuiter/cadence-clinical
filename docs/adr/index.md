@@ -142,3 +142,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-22: Shared AES-GCM Offline At-Rest Encryption and Key Derivation Contract](2026-08-22-aes-gcm-offline-at-rest-encryption.md)
 - [2026-08-22: Shared Semantic Regulated-Action Contract for Step-Up Re-Authentication](2026-08-22-move-to-shared-semantic-regulated-action-contract.md)
 - [2026-08-19: Structured Expiration Metadata and Migration Runners for eTMF/eISF](2026-08-19-etmf-eisf-structured-expiration-metadata-and-migrations.md)
+- [2026-08-23: Ticket Read Audit Policy and Paginated Audit Log Retrieval](2026-08-23-ticket-read-audit-policy-and-pagination.md)
