@@ -1,7 +1,7 @@
 import email.utils
 import os
 import time
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Dict, List, Optional
 
 from fastapi import (
@@ -13,7 +13,7 @@ from fastapi import (
 )
 from fastapi.responses import Response
 from protocol_version_ref import ProtocolVersionRef
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from signature import SigningReason
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -209,6 +209,20 @@ class IngestionRequest(BaseModel):
     protocol_version: Optional[ProtocolVersionRef] = Field(
         None, description="Optional shared protocol version reference"
     )
+    issue_date: Optional[date] = Field(None, description="Optional document issue date")
+    expiration_date: Optional[date] = Field(
+        None, description="Optional document expiration date"
+    )
+    document_owner_id: Optional[str] = Field(
+        None, description="Optional document owner ID"
+    )
+
+    @model_validator(mode="after")
+    def validate_dates(self) -> "IngestionRequest":
+        if self.issue_date and self.expiration_date:
+            if self.issue_date > self.expiration_date:
+                raise ValueError("issue_date cannot be later than expiration_date")
+        return self
 
 
 class DocumentResponse(BaseModel):
@@ -247,6 +261,72 @@ class DocumentResponse(BaseModel):
     # Extended justification and protocol amendment version references
     reason_for_change: Optional[str] = None
     protocol_version: Optional[ProtocolVersionRef] = None
+    issue_date: Optional[date] = None
+    expiration_date: Optional[date] = None
+    document_owner_id: Optional[str] = None
+
+
+def to_document_response(doc: TMFDocument) -> DocumentResponse:
+    return DocumentResponse(
+        id=doc.id,
+        study_id=doc.study_id,
+        site_id=doc.site_id,
+        zone=doc.zone,
+        section=doc.section,
+        artifact_type=doc.artifact_type,
+        filename=doc.filename,
+        mime_type=doc.mime_type,
+        created_at=doc.created_at.isoformat(),
+        created_by=doc.created_by,
+        version_index=doc.version_index,
+        status=doc.status,
+        taxonomy_version=doc.taxonomy_version,
+        artifact_code=doc.artifact_code,
+        metadata_json=doc.metadata_json,
+        document_type=doc.document_type,
+        approval_status=doc.approval_status,
+        signature_manifestation=doc.signature_manifestation,
+        signer=doc.signer,
+        signing_timestamp=(
+            doc.signing_timestamp.isoformat() if doc.signing_timestamp else None
+        ),
+        is_redacted=doc.is_redacted,
+        redaction_source_id=doc.redaction_source_id,
+        redaction_manifest_json=doc.redaction_manifest_json,
+        reason_for_change=doc.reason_for_change,
+        protocol_version=(
+            ProtocolVersionRef(
+                study_id=doc.study_id,
+                version_tag=doc.protocol_version_tag,
+                version_index=doc.protocol_version_index,
+                status=doc.protocol_version_status,
+            )
+            if doc.protocol_version_tag is not None
+            and doc.protocol_version_index is not None
+            and doc.protocol_version_status is not None
+            else None
+        ),
+        issue_date=doc.issue_date,
+        expiration_date=doc.expiration_date,
+        document_owner_id=doc.document_owner_id,
+    )
+
+
+class DocumentExpirationUpdate(BaseModel):
+    issue_date: Optional[date] = Field(None, description="Optional document issue date")
+    expiration_date: Optional[date] = Field(
+        None, description="Optional document expiration date"
+    )
+    document_owner_id: Optional[str] = Field(
+        None, description="Optional document owner ID"
+    )
+
+    @model_validator(mode="after")
+    def validate_dates(self) -> "DocumentExpirationUpdate":
+        if self.issue_date and self.expiration_date:
+            if self.issue_date > self.expiration_date:
+                raise ValueError("issue_date cannot be later than expiration_date")
+        return self
 
 
 class RedactRequest(BaseModel):
@@ -616,6 +696,18 @@ async def ingest_document(
             detail="Forbidden: Inspectors are restricted to read-only access.",
         )
 
+    # Enforce manage_expiration permission if any expiration metadata is provided
+    if (
+        payload.issue_date is not None
+        or payload.expiration_date is not None
+        or payload.document_owner_id is not None
+    ):
+        if not has_permission(principal, "etmf_document:manage_expiration"):
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: Lacks manage_expiration permission to set or change expiration metadata.",
+            )
+
     # Restrict affected trial to read-only state if trial is locked
     from apps.etmf.lock_client import verify_trial_lock_status
 
@@ -652,6 +744,9 @@ async def ingest_document(
             metadata_json=payload.metadata_json,
             reason_for_change=reason_for_change,
             protocol_version=payload.protocol_version,
+            issue_date=payload.issue_date,
+            expiration_date=payload.expiration_date,
+            document_owner_id=payload.document_owner_id,
         )
     except ValueError as e:
         raise HTTPException(
@@ -723,49 +818,7 @@ async def list_documents(
         details=f"Listed eTMF documents matching criteria: {search_criteria}.",
     )
 
-    return [
-        DocumentResponse(
-            id=doc.id,
-            study_id=doc.study_id,
-            site_id=doc.site_id,
-            zone=doc.zone,
-            section=doc.section,
-            artifact_type=doc.artifact_type,
-            filename=doc.filename,
-            mime_type=doc.mime_type,
-            created_at=doc.created_at.isoformat(),
-            created_by=doc.created_by,
-            version_index=doc.version_index,
-            status=doc.status,
-            taxonomy_version=doc.taxonomy_version,
-            artifact_code=doc.artifact_code,
-            metadata_json=doc.metadata_json,
-            document_type=doc.document_type,
-            approval_status=doc.approval_status,
-            signature_manifestation=doc.signature_manifestation,
-            signer=doc.signer,
-            signing_timestamp=(
-                doc.signing_timestamp.isoformat() if doc.signing_timestamp else None
-            ),
-            is_redacted=doc.is_redacted,
-            redaction_source_id=doc.redaction_source_id,
-            redaction_manifest_json=doc.redaction_manifest_json,
-            reason_for_change=doc.reason_for_change,
-            protocol_version=(
-                ProtocolVersionRef(
-                    study_id=doc.study_id,
-                    version_tag=doc.protocol_version_tag,
-                    version_index=doc.protocol_version_index,
-                    status=doc.protocol_version_status,
-                )
-                if doc.protocol_version_tag is not None
-                and doc.protocol_version_index is not None
-                and doc.protocol_version_status is not None
-                else None
-            ),
-        )
-        for doc in docs
-    ]
+    return [to_document_response(doc) for doc in docs]
 
 
 @app.get("/api/v1/etmf/documents/{document_id}", response_model=DocumentResponse)
@@ -815,46 +868,7 @@ async def view_document(
         details=f"Viewed metadata for eTMF document '{doc.filename}' (ID: {doc.id}).",
     )
 
-    return DocumentResponse(
-        id=doc.id,
-        study_id=doc.study_id,
-        site_id=doc.site_id,
-        zone=doc.zone,
-        section=doc.section,
-        artifact_type=doc.artifact_type,
-        filename=doc.filename,
-        mime_type=doc.mime_type,
-        created_at=doc.created_at.isoformat(),
-        created_by=doc.created_by,
-        version_index=doc.version_index,
-        status=doc.status,
-        taxonomy_version=doc.taxonomy_version,
-        artifact_code=doc.artifact_code,
-        metadata_json=doc.metadata_json,
-        document_type=doc.document_type,
-        approval_status=doc.approval_status,
-        signature_manifestation=doc.signature_manifestation,
-        signer=doc.signer,
-        signing_timestamp=(
-            doc.signing_timestamp.isoformat() if doc.signing_timestamp else None
-        ),
-        is_redacted=doc.is_redacted,
-        redaction_source_id=doc.redaction_source_id,
-        redaction_manifest_json=doc.redaction_manifest_json,
-        reason_for_change=doc.reason_for_change,
-        protocol_version=(
-            ProtocolVersionRef(
-                study_id=doc.study_id,
-                version_tag=doc.protocol_version_tag,
-                version_index=doc.protocol_version_index,
-                status=doc.protocol_version_status,
-            )
-            if doc.protocol_version_tag is not None
-            and doc.protocol_version_index is not None
-            and doc.protocol_version_status is not None
-            else None
-        ),
-    )
+    return to_document_response(doc)
 
 
 @app.get("/api/v1/etmf/documents/{document_id}/download")
@@ -1632,35 +1646,7 @@ async def redact_document_endpoint(
         details=details_str,
     )
 
-    return DocumentResponse(
-        id=redacted_doc.id,
-        study_id=redacted_doc.study_id,
-        site_id=redacted_doc.site_id,
-        zone=redacted_doc.zone,
-        section=redacted_doc.section,
-        artifact_type=redacted_doc.artifact_type,
-        filename=redacted_doc.filename,
-        mime_type=redacted_doc.mime_type,
-        created_at=redacted_doc.created_at.isoformat(),
-        created_by=redacted_doc.created_by,
-        version_index=redacted_doc.version_index,
-        status=redacted_doc.status,
-        taxonomy_version=redacted_doc.taxonomy_version,
-        artifact_code=redacted_doc.artifact_code,
-        metadata_json=redacted_doc.metadata_json,
-        document_type=redacted_doc.document_type,
-        approval_status=redacted_doc.approval_status,
-        signature_manifestation=redacted_doc.signature_manifestation,
-        signer=redacted_doc.signer,
-        signing_timestamp=(
-            redacted_doc.signing_timestamp.isoformat()
-            if redacted_doc.signing_timestamp
-            else None
-        ),
-        is_redacted=redacted_doc.is_redacted,
-        redaction_source_id=redacted_doc.redaction_source_id,
-        redaction_manifest_json=redacted_doc.redaction_manifest_json,
-    )
+    return to_document_response(redacted_doc)
 
 
 @app.post(
@@ -2198,6 +2184,100 @@ async def transition_document_status_endpoint(
     }
 
 
+@app.put(
+    "/api/v1/etmf/documents/{document_id}/expiration",
+    response_model=DocumentResponse,
+)
+async def update_document_expiration_endpoint(
+    request: Request,
+    document_id: str,
+    payload: DocumentExpirationUpdate,
+    session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
+) -> DocumentResponse:
+    """
+    Update expiration-related metadata for an eTMF document.
+    Enforces the etmf_document:manage_expiration permission and checks trial locks.
+    """
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
+
+    # 1. Fetch document by ID
+    stmt = select(TMFDocument).where(TMFDocument.id == document_id)
+    result = await session.execute(stmt)
+    doc = result.scalars().first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="eTMF Document not found")
+
+    # Enforce site visibility and study-level semantics
+    enforce_document_site_visibility(doc, principal)
+
+    # 2. Check permission
+    if not has_permission(principal, "etmf_document:manage_expiration"):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Lacks manage_expiration permission to set or change expiration metadata.",
+        )
+
+    # 3. Verify trial lock status
+    from apps.etmf.lock_client import verify_trial_lock_status
+
+    if await verify_trial_lock_status():
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Trial is currently locked in a read-only state due to a security violation.",
+        )
+
+    # 4. Check if already signed
+    if (
+        doc.status == "SIGNED"
+        or doc.approval_status == "APPROVED"
+        or doc.signature_manifestation is not None
+    ):
+        await write_audit_log(
+            session=session,
+            user_id=user_id,
+            user_role=user_roles,
+            action="MUTATION_REJECTED",
+            document_id=doc.id,
+            details=f"Rejected attempt to update expiration of signed document '{doc.filename}' (ID: {doc.id}). Error: IMMUTABILITY_VIOLATION.",
+        )
+        await session.commit()
+        raise HTTPException(
+            status_code=403,
+            detail="IMMUTABILITY_VIOLATION: Document is already signed and cannot be modified",
+        )
+
+    # 5. Mutate the fields and increment version index
+    doc.issue_date = payload.issue_date
+    doc.expiration_date = payload.expiration_date
+    doc.document_owner_id = payload.document_owner_id
+    doc.version_index += 1
+
+    # 6. Flush session
+    await session.flush()
+
+    # 7. Write audit log
+    details = f"Updated expiration metadata for document '{doc.filename}' (ID: {doc.id}): issue_date={payload.issue_date}, expiration_date={payload.expiration_date}, owner={payload.document_owner_id}."
+    reason_for_change = request.headers.get("X-Change-Reason", "").strip()
+    if not reason_for_change:
+        reason_for_change = getattr(request.state, "change_reason", "").strip()
+    if not reason_for_change:
+        reason_for_change = principal.change_reason or "System operation"
+    reason_for_change = reason_for_change.strip()
+
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="UPDATE_EXPIRATION",
+        document_id=doc.id,
+        details=details + f" Reason: {reason_for_change}",
+    )
+
+    return to_document_response(doc)
+
+
 @app.post(
     "/api/v1/etmf/documents/{document_id}/sign-off",
     response_model=DocumentResponse,
@@ -2384,31 +2464,7 @@ async def sign_document_endpoint(
 
     await session.flush()
 
-    return DocumentResponse(
-        id=doc.id,
-        study_id=doc.study_id,
-        site_id=doc.site_id,
-        zone=doc.zone,
-        section=doc.section,
-        artifact_type=doc.artifact_type,
-        filename=doc.filename,
-        mime_type=doc.mime_type,
-        created_at=doc.created_at.isoformat(),
-        created_by=doc.created_by,
-        version_index=doc.version_index,
-        status=doc.status,
-        taxonomy_version=doc.taxonomy_version,
-        artifact_code=doc.artifact_code,
-        metadata_json=doc.metadata_json,
-        document_type=doc.document_type,
-        approval_status=doc.approval_status,
-        signature_manifestation=doc.signature_manifestation,
-        signer=doc.signer,
-        signing_timestamp=doc.signing_timestamp.isoformat(),
-        is_redacted=doc.is_redacted,
-        redaction_source_id=doc.redaction_source_id,
-        redaction_manifest_json=doc.redaction_manifest_json,
-    )
+    return to_document_response(doc)
 
 
 @app.get(
@@ -2466,49 +2522,7 @@ async def get_artifact_history(
         details=f"Viewed artifact history for study '{study_id}', artifact_type '{artifact_type}'.",
     )
 
-    return [
-        DocumentResponse(
-            id=doc.id,
-            study_id=doc.study_id,
-            site_id=doc.site_id,
-            zone=doc.zone,
-            section=doc.section,
-            artifact_type=doc.artifact_type,
-            filename=doc.filename,
-            mime_type=doc.mime_type,
-            created_at=doc.created_at.isoformat(),
-            created_by=doc.created_by,
-            version_index=doc.version_index,
-            status=doc.status,
-            taxonomy_version=doc.taxonomy_version,
-            artifact_code=doc.artifact_code,
-            metadata_json=doc.metadata_json,
-            document_type=doc.document_type,
-            approval_status=doc.approval_status,
-            signature_manifestation=doc.signature_manifestation,
-            signer=doc.signer,
-            signing_timestamp=(
-                doc.signing_timestamp.isoformat() if doc.signing_timestamp else None
-            ),
-            is_redacted=doc.is_redacted,
-            redaction_source_id=doc.redaction_source_id,
-            redaction_manifest_json=doc.redaction_manifest_json,
-            reason_for_change=doc.reason_for_change,
-            protocol_version=(
-                ProtocolVersionRef(
-                    study_id=doc.study_id,
-                    version_tag=doc.protocol_version_tag,
-                    version_index=doc.protocol_version_index,
-                    status=doc.protocol_version_status,
-                )
-                if doc.protocol_version_tag is not None
-                and doc.protocol_version_index is not None
-                and doc.protocol_version_status is not None
-                else None
-            ),
-        )
-        for doc in docs
-    ]
+    return [to_document_response(doc) for doc in docs]
 
 
 @app.get(

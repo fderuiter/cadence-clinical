@@ -1,8 +1,8 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Dict, Optional
 
-from sqlalchemy import JSON, DateTime, Integer, String, func
+from sqlalchemy import JSON, Date, DateTime, Integer, String, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -30,6 +30,15 @@ class ISFDocument(Base):
     content: Mapped[str] = mapped_column(String, nullable=False)
     mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    # Expiration metadata fields
+    issue_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True, index=True)
+    expiration_date: Mapped[Optional[date]] = mapped_column(
+        Date, nullable=True, index=True
+    )
+    document_owner_id: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True, index=True
+    )
 
     # Creator and Timestamps
     created_at: Mapped[datetime] = mapped_column(

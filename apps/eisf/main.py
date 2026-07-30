@@ -1,11 +1,11 @@
 import hashlib
 import os
 import time
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, status
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,7 +14,10 @@ from apps.eisf.models import Base, ISFAuditLog, ISFDocument
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.rbac import (
+    Principal,
     get_normalized_roles,
+    get_principal,
+    has_permission,
     require_permission,
 )
 
@@ -36,6 +39,20 @@ class DocumentCreate(BaseModel):
     reason_for_change: str = Field(
         ..., min_length=10, max_length=1000, description="Part 11 reason for change"
     )
+    issue_date: Optional[date] = Field(None, description="Optional document issue date")
+    expiration_date: Optional[date] = Field(
+        None, description="Optional document expiration date"
+    )
+    document_owner_id: Optional[str] = Field(
+        None, description="Optional document owner ID"
+    )
+
+    @model_validator(mode="after")
+    def validate_dates(self) -> "DocumentCreate":
+        if self.issue_date and self.expiration_date:
+            if self.issue_date > self.expiration_date:
+                raise ValueError("issue_date cannot be later than expiration_date")
+        return self
 
 
 class DocumentUpdate(BaseModel):
@@ -52,6 +69,20 @@ class DocumentUpdate(BaseModel):
     reason_for_change: str = Field(
         ..., min_length=10, max_length=1000, description="Part 11 reason for change"
     )
+    issue_date: Optional[date] = Field(None, description="Optional document issue date")
+    expiration_date: Optional[date] = Field(
+        None, description="Optional document expiration date"
+    )
+    document_owner_id: Optional[str] = Field(
+        None, description="Optional document owner ID"
+    )
+
+    @model_validator(mode="after")
+    def validate_dates(self) -> "DocumentUpdate":
+        if self.issue_date and self.expiration_date:
+            if self.issue_date > self.expiration_date:
+                raise ValueError("issue_date cannot be later than expiration_date")
+        return self
 
 
 class EISFIngestionRequest(BaseModel):
@@ -74,6 +105,13 @@ class EISFIngestionRequest(BaseModel):
     reason_for_change: Optional[str] = Field(
         None, min_length=10, max_length=1000, description="Part 11 reason for change"
     )
+    issue_date: Optional[date] = Field(None, description="Optional document issue date")
+    expiration_date: Optional[date] = Field(
+        None, description="Optional document expiration date"
+    )
+    document_owner_id: Optional[str] = Field(
+        None, description="Optional document owner ID"
+    )
 
     @classmethod
     @model_validator(mode="before")
@@ -88,6 +126,13 @@ class EISFIngestionRequest(BaseModel):
             if not bc:
                 data["binder_classification"] = at
         return data
+
+    @model_validator(mode="after")
+    def validate_dates(self) -> "EISFIngestionRequest":
+        if self.issue_date and self.expiration_date:
+            if self.issue_date > self.expiration_date:
+                raise ValueError("issue_date cannot be later than expiration_date")
+        return self
 
 
 class EISFSyncItem(BaseModel):
@@ -107,6 +152,13 @@ class EISFSyncItem(BaseModel):
     conflict_policy: str = Field(
         "CLIENT_WINS", description="CLIENT_WINS, SERVER_WINS, or MERGE"
     )
+    issue_date: Optional[date] = Field(None, description="Optional document issue date")
+    expiration_date: Optional[date] = Field(
+        None, description="Optional document expiration date"
+    )
+    document_owner_id: Optional[str] = Field(
+        None, description="Optional document owner ID"
+    )
 
     @classmethod
     @model_validator(mode="before")
@@ -117,6 +169,13 @@ class EISFSyncItem(BaseModel):
             if not cp and cs:
                 data["conflict_policy"] = cs
         return data
+
+    @model_validator(mode="after")
+    def validate_dates(self) -> "EISFSyncItem":
+        if self.issue_date and self.expiration_date:
+            if self.issue_date > self.expiration_date:
+                raise ValueError("issue_date cannot be later than expiration_date")
+        return self
 
 
 class EISFSyncRequest(BaseModel):
@@ -147,6 +206,11 @@ class DocumentResponse(BaseModel):
     content_checksum: Optional[str] = None
     sync_status: str
     source_system: str
+    issue_date: Optional[date] = None
+    expiration_date: Optional[date] = None
+    document_owner_id: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class BinderSectionStatus(BaseModel):
@@ -388,12 +452,25 @@ async def create_document(
     payload: DocumentCreate,
     _not_auditor=Depends(require_permission("eisf_document:create")),
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ):
     user_id = getattr(request.state, "user_id", "system")
     roles = get_normalized_roles(request)
 
     # Enforce site isolation
     await enforce_site_isolation(request, payload.site_id, session)
+
+    # Enforce manage_expiration permission if any expiration metadata is provided
+    if (
+        payload.issue_date is not None
+        or payload.expiration_date is not None
+        or payload.document_owner_id is not None
+    ):
+        if not has_permission(principal, "etmf_document:manage_expiration"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: Lacks manage_expiration permission to set or change expiration metadata.",
+            )
 
     # Calculate deterministic content checksum
     checksum = (
@@ -444,6 +521,9 @@ async def create_document(
         content_checksum=checksum,
         source_system=payload.source_system,
         sync_status="PENDING",
+        issue_date=payload.issue_date,
+        expiration_date=payload.expiration_date,
+        document_owner_id=payload.document_owner_id,
     )
     session.add(doc)
     await session.flush()
@@ -477,12 +557,25 @@ async def ingest_document(
     payload: EISFIngestionRequest,
     _not_auditor=Depends(require_permission("eisf_document:create")),
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ):
     user_id = getattr(request.state, "user_id", "system")
     roles = get_normalized_roles(request)
 
     # Enforce site isolation
     await enforce_site_isolation(request, payload.site_id, session)
+
+    # Enforce manage_expiration permission if any expiration metadata is provided
+    if (
+        payload.issue_date is not None
+        or payload.expiration_date is not None
+        or payload.document_owner_id is not None
+    ):
+        if not has_permission(principal, "etmf_document:manage_expiration"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: Lacks manage_expiration permission to set or change expiration metadata.",
+            )
 
     # Determine reason for change
     change_reason = (
@@ -553,6 +646,9 @@ async def ingest_document(
         content_checksum=checksum,
         source_system=payload.source_system,
         sync_status="PENDING",
+        issue_date=payload.issue_date,
+        expiration_date=payload.expiration_date,
+        document_owner_id=payload.document_owner_id,
     )
     session.add(doc)
     await session.flush()
@@ -672,6 +768,7 @@ async def update_document(
     payload: DocumentUpdate,
     _not_auditor=Depends(require_permission("eisf_document:update")),
     session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
 ):
     user_id = getattr(request.state, "user_id", "system")
     roles = get_normalized_roles(request)
@@ -690,6 +787,19 @@ async def update_document(
     await enforce_site_isolation(request, doc.site_id, session)
     await enforce_site_isolation(request, payload.site_id, session)
 
+    # Enforce manage_expiration permission if any expiration metadata is set or changed
+    is_expiration_metadata_changing = (
+        payload.issue_date != doc.issue_date
+        or payload.expiration_date != doc.expiration_date
+        or payload.document_owner_id != doc.document_owner_id
+    )
+    if is_expiration_metadata_changing:
+        if not has_permission(principal, "etmf_document:manage_expiration"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: Lacks manage_expiration permission to set or change expiration metadata.",
+            )
+
     # Update document properties
     doc.study_id = payload.study_id
     doc.site_id = payload.site_id
@@ -705,6 +815,9 @@ async def update_document(
     )
     doc.source_system = payload.source_system
     doc.version_index += 1
+    doc.issue_date = payload.issue_date
+    doc.expiration_date = payload.expiration_date
+    doc.document_owner_id = payload.document_owner_id
 
     await session.flush()
 

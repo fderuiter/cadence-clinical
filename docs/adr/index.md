@@ -140,3 +140,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-20: Codebase Cleanup, Test Pipeline Fixes, and Documentation Preflight Standardization](2026-08-20-codebase-cleanup-and-test-pipeline-fixes.md)
 - [2026-08-22: Shared AES-GCM Offline At-Rest Encryption and Key Derivation Contract](2026-08-22-aes-gcm-offline-at-rest-encryption.md)
 - [2026-08-22: Shared Semantic Regulated-Action Contract for Step-Up Re-Authentication](2026-08-22-move-to-shared-semantic-regulated-action-contract.md)
+- [2026-08-19: Structured Expiration Metadata and Migration Runners for eTMF/eISF](2026-08-19-etmf-eisf-structured-expiration-metadata-and-migrations.md)

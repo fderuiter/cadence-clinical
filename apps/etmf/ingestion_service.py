@@ -1,6 +1,6 @@
 import base64
 import hashlib
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from cryptography import x509
@@ -44,6 +44,9 @@ async def ingest_tmf_document(
     audit_details: Optional[str] = None,
     reason_for_change: Optional[str] = None,
     protocol_version: Optional[ProtocolVersionRef] = None,
+    issue_date: Optional[date] = None,
+    expiration_date: Optional[date] = None,
+    document_owner_id: Optional[str] = None,
 ) -> TMFDocument:
     """Service layer workflow for eTMF document ingestion.
 
@@ -305,6 +308,9 @@ async def ingest_tmf_document(
                 protocol_version_status=protocol_version.status.value
                 if protocol_version
                 else None,
+                issue_date=issue_date,
+                expiration_date=expiration_date,
+                document_owner_id=document_owner_id,
             )
 
             session.add(doc)

@@ -11,6 +11,8 @@ Based on the executed automated verification suite, the platform meets all prede
 ### Validation Result Summary
 - **Total Automated Test Cases Run:** 1262
 - **Passed:** 1262 🟢
+- **Total Automated Test Cases Run:** 1268
+- **Passed:** 1268 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -581,6 +583,16 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_signature_extraction_formats` | `tests.test_etmf_compliance` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_requirement_rules` | `tests.test_etmf_compliance` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_tampering_detection_and_lockout_propagation` | `tests.test_etmf_compliance` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_eisf_create_authorized_vs_unauthorized` | `tests.test_etmf_eisf_expiration_metadata` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_eisf_creation_date_validation_rejected` | `tests.test_etmf_eisf_expiration_metadata` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_eisf_expiration_update_authorized_vs_unauthorized` | `tests.test_etmf_eisf_expiration_metadata` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_eisf_update_date_validation_rejected` | `tests.test_etmf_eisf_expiration_metadata` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_etmf_expiration_update_authorized_vs_unauthorized` | `tests.test_etmf_eisf_expiration_metadata` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_etmf_expiration_update_date_validation_rejected` | `tests.test_etmf_eisf_expiration_metadata` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_etmf_ingest_authorized_vs_unauthorized` | `tests.test_etmf_eisf_expiration_metadata` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_etmf_ingest_date_validation_rejected` | `tests.test_etmf_eisf_expiration_metadata` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_manage_expiration_rbac_permissions` | `tests.test_etmf_eisf_expiration_metadata` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_migration_adds_expiration_columns_idempotently` | `tests.test_etmf_eisf_expiration_metadata` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_idempotency` | `tests.test_etmf_inbound_email` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_immutability_violation_inbound_email` | `tests.test_etmf_inbound_email` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_invalid_signature_rejection` | `tests.test_etmf_inbound_email` | *Regression/Helper* | 🟢 PASSED | < 1s |
