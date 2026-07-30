@@ -238,6 +238,7 @@ WHITELISTED_ROUTES = {
     ("get", "/api/v1/dictionaries/whodrug/code"),
     ("get", "/api/v1/execution/biostat/adam/{dataset}"),
     ("get", "/api/v1/execution/biostat/bundle"),
+    ("get", "/api/v1/execution/audit/integrity"),
     ("get", "/api/v1/execution/biostat/sdtm/{domain}"),
     ("get", "/api/v1/execution/coding/assignments"),
     ("get", "/api/v1/execution/coding/assignments/{assignment_id}"),
