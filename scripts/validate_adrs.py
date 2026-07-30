@@ -109,6 +109,12 @@ def get_closest_local_branch_point() -> str:
     Dynamically calculates the closest local merge base across all local branches
     to find the exact branch point without network dependencies or hardcoded branch names.
     """
+    gh_base_ref = os.environ.get("GITHUB_BASE_REF")
+    if gh_base_ref and "PYTEST_CURRENT_TEST" not in os.environ:
+        gh_base_ref = gh_base_ref.strip()
+        if gh_base_ref:
+            return f"origin/{gh_base_ref}"
+
     # Get current branch name
     current_branch, _ = run_git_command(["git", "rev-parse", "--abbrev-ref", "HEAD"])
     current_branch = current_branch.strip()
@@ -139,6 +145,13 @@ def get_closest_local_branch_point() -> str:
             # Ignore current branch or remote tracking of current branch
             if branch == current_branch or branch == f"origin/{current_branch}":
                 continue
+
+            # In GitHub Actions, ignore the source PR branch/HEAD ref to prevent comparing against merge commit
+            gh_head_ref = os.environ.get("GITHUB_HEAD_REF")
+            if gh_head_ref:
+                gh_head_ref = gh_head_ref.strip()
+                if gh_head_ref and (gh_head_ref in branch):
+                    continue
 
             if branch not in local_branches:
                 local_branches.append(branch)
