@@ -423,26 +423,49 @@ class ConsentSignatureResponse(AuditFields):
 
 
 class SubjectConsentCaptureRequest(BaseModel):
-    subject_pseudonym: str = Field(..., description="Pseudonym identifier of the subject")
+    subject_pseudonym: str = Field(
+        ..., description="Pseudonym identifier of the subject"
+    )
     site_id: str = Field(..., description="Unique clinical site identifier")
-    device_timestamp: Optional[datetime] = Field(None, description="Device-side timestamp")
-    source_content_identity: str = Field(..., description="Hash/clause-set identifier at capture time")
-    reason_for_change: str = Field(..., description="Part 11 rationale/change justification")
+    device_timestamp: Optional[datetime] = Field(
+        None, description="Device-side timestamp"
+    )
+    source_content_identity: str = Field(
+        ..., description="Hash/clause-set identifier at capture time"
+    )
+    reason_for_change: str = Field(
+        ..., description="Part 11 rationale/change justification"
+    )
 
 
 class SubjectConsentResponse(AuditFields):
     model_config = ConfigDict(from_attributes=True)
 
     id: str = Field(..., description="Unique generated UUID of this consent record")
-    subject_pseudonym: str = Field(..., description="Pseudonym identifier of the subject")
+    subject_pseudonym: str = Field(
+        ..., description="Pseudonym identifier of the subject"
+    )
     study_id: str = Field(..., description="Unique clinical study identifier")
     site_id: str = Field(..., description="Unique clinical site identifier")
-    template_id: str = Field(..., description="The template identifier used for consent")
-    protocol_version: str = Field(..., description="Associated clinical protocol version snapshot")
-    source_content_identity: str = Field(..., description="Hash/clause-set identifier at capture time")
-    server_timestamp: datetime = Field(..., description="Server-side chronological capture timestamp")
-    device_timestamp: Optional[datetime] = Field(None, description="Device-side capture timestamp")
-    signature_manifest: dict = Field(..., description="Detailed signature manifestation, canonical hmac signature, and payload hash")
+    template_id: str = Field(
+        ..., description="The template identifier used for consent"
+    )
+    protocol_version: str = Field(
+        ..., description="Associated clinical protocol version snapshot"
+    )
+    source_content_identity: str = Field(
+        ..., description="Hash/clause-set identifier at capture time"
+    )
+    server_timestamp: datetime = Field(
+        ..., description="Server-side chronological capture timestamp"
+    )
+    device_timestamp: Optional[datetime] = Field(
+        None, description="Device-side capture timestamp"
+    )
+    signature_manifest: dict = Field(
+        ...,
+        description="Detailed signature manifestation, canonical hmac signature, and payload hash",
+    )
 
 
 class SubjectConsentStatusResponse(BaseModel):
@@ -927,8 +950,10 @@ async def capture_subject_consent(
             detail="REAUTHENTICATION_REQUIRED",
         )
 
-    from jose import JWTError, jwt
     import time
+
+    from jose import JWTError, jwt
+
     secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()
     try:
         sig_payload = jwt.decode(sig_token, secret, algorithms=["HS256"])
@@ -964,7 +989,12 @@ async def capture_subject_consent(
         )
 
     # 4. Generate canonical payload and compute canonical HMAC signature
-    from packages.security.signing import canonical_serialize, generate_canonical_signature, compute_sha256_hash
+    from packages.security.signing import (
+        canonical_serialize,
+        compute_sha256_hash,
+        generate_canonical_signature,
+    )
+
     server_timestamp = datetime.utcnow()
 
     def normalize_timestamp_str(dt) -> Optional[str]:
@@ -975,6 +1005,7 @@ async def capture_subject_consent(
         if isinstance(dt, str):
             try:
                 from dateutil.parser import parse
+
                 return parse(dt).strftime("%Y-%m-%dT%H:%M:%S")
             except Exception:
                 return dt
@@ -998,6 +1029,7 @@ async def capture_subject_consent(
 
     # 5. Build SignatureManifestation
     from signature import SignatureManifestation, SigningReason
+
     manifest = SignatureManifestation(
         signer_id=user_id,
         timestamp=server_timestamp,

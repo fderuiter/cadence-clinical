@@ -84,7 +84,9 @@ class EConsentClient:
 
         try:
             if client is not None:
-                response = await client.get(url, headers=headers, params=params, timeout=self.timeout)
+                response = await client.get(
+                    url, headers=headers, params=params, timeout=self.timeout
+                )
             else:
                 async with httpx.AsyncClient(timeout=self.timeout) as cli:
                     response = await cli.get(url, headers=headers, params=params)
@@ -99,7 +101,8 @@ class EConsentClient:
 
         except httpx.RequestError as e:
             logger.error(
-                "Failed to connect to eConsent service for subject consent status: %s", e
+                "Failed to connect to eConsent service for subject consent status: %s",
+                e,
             )
             raise HTTPException(
                 status_code=502,

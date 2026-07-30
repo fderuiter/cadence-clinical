@@ -1,25 +1,23 @@
-import os
-import time
-import hmac
 import hashlib
+import hmac
 import json
-from datetime import datetime, timezone
-from typing import Optional, Any
+import time
+from datetime import datetime
+from typing import Any, Optional
 
 import httpx
 import pytest
 import pytest_asyncio
-from sqlalchemy import select
 from jose import jwt
+from sqlalchemy import select
 
 from apps.econsent.database import db_manager
 from apps.econsent.main import app
 from apps.econsent.models import (
     Base,
-    ConsentTemplate,
     ComprehensionResult,
+    ConsentTemplate,
     SubjectConsent,
-    ConsentAuditLog,
 )
 from packages.security.signing import verify_canonical_signature
 
@@ -128,8 +126,12 @@ async def test_happy_path_capture_and_status() -> None:
             await session.commit()
 
         # 2. Capture Consent
-        sig_token = get_sig_token(user_id="test_patient", roles="patient", action="capture-consent")
-        headers = get_gateway_headers(user_id="test_patient", roles="patient", sig_token=sig_token)
+        sig_token = get_sig_token(
+            user_id="test_patient", roles="patient", action="capture-consent"
+        )
+        headers = get_gateway_headers(
+            user_id="test_patient", roles="patient", sig_token=sig_token
+        )
 
         payload = {
             "subject_pseudonym": "SUBJ-001",
@@ -292,7 +294,9 @@ async def test_capture_rejections() -> None:
 
         # 5. Reject on wrong user
         sig_token_wrong_user = get_sig_token(user_id="another_user")
-        headers_wrong_user = get_gateway_headers(user_id="test_patient", sig_token=sig_token_wrong_user)
+        headers_wrong_user = get_gateway_headers(
+            user_id="test_patient", sig_token=sig_token_wrong_user
+        )
         res = await client.post(
             "/api/v1/econsent/templates/template-pub/versions/1/capture-consent",
             json=payload,
@@ -382,6 +386,7 @@ async def test_signature_tamper_detection() -> None:
             if isinstance(dt, str):
                 try:
                     from dateutil.parser import parse
+
                     return parse(dt).strftime("%Y-%m-%dT%H:%M:%S")
                 except Exception:
                     return dt
@@ -403,17 +408,25 @@ async def test_signature_tamper_detection() -> None:
         secret = b"internal-gateway-secret-12345"
 
         # Verify authentic signature succeeds
-        assert verify_canonical_signature(canonical_payload, canonical_sig, secret) is True
+        assert (
+            verify_canonical_signature(canonical_payload, canonical_sig, secret) is True
+        )
 
         # TAMPER matching field -> signature check must fail
         tampered_payload_1 = canonical_payload.copy()
         tampered_payload_1["subject_pseudonym"] = "SUBJ-MALICIOUS"
-        assert verify_canonical_signature(tampered_payload_1, canonical_sig, secret) is False
+        assert (
+            verify_canonical_signature(tampered_payload_1, canonical_sig, secret)
+            is False
+        )
 
         # TAMPER version field -> signature check must fail
         tampered_payload_2 = canonical_payload.copy()
         tampered_payload_2["version_index"] = 2
-        assert verify_canonical_signature(tampered_payload_2, canonical_sig, secret) is False
+        assert (
+            verify_canonical_signature(tampered_payload_2, canonical_sig, secret)
+            is False
+        )
 
 
 @pytest.mark.asyncio
@@ -466,7 +479,9 @@ async def test_append_only_audit_history() -> None:
                 "source_content_identity": "hash-v1",
                 "reason_for_change": "First signature",
             },
-            headers=get_gateway_headers(sig_token=sig_token_1, change_reason="First signature"),
+            headers=get_gateway_headers(
+                sig_token=sig_token_1, change_reason="First signature"
+            ),
         )
         assert res_1.status_code == 201
         sc1_id = res_1.json()["id"]
@@ -481,7 +496,9 @@ async def test_append_only_audit_history() -> None:
                 "source_content_identity": "hash-v1",
                 "reason_for_change": "Second signature",
             },
-            headers=get_gateway_headers(sig_token=sig_token_2, change_reason="Second signature"),
+            headers=get_gateway_headers(
+                sig_token=sig_token_2, change_reason="Second signature"
+            ),
         )
         assert res_2.status_code == 201
         sc2_id = res_2.json()["id"]
@@ -490,7 +507,11 @@ async def test_append_only_audit_history() -> None:
 
         # Verify they are stored as separate rows and both exist intact in database
         async with db_manager.get_session_maker()() as session:
-            stmt = select(SubjectConsent).where(SubjectConsent.subject_pseudonym == "SUBJ-001").order_by(SubjectConsent.created_at.asc())
+            stmt = (
+                select(SubjectConsent)
+                .where(SubjectConsent.subject_pseudonym == "SUBJ-001")
+                .order_by(SubjectConsent.created_at.asc())
+            )
             results = (await session.execute(stmt)).scalars().all()
 
             assert len(results) == 2
@@ -522,15 +543,20 @@ async def test_execution_consumption_integration(monkeypatch) -> None:
         class MockResponse:
             status_code = 200
             text = "OK"
+
             def json(self):
                 return mock_status_response
+
         return MockResponse()
 
     # Apply mock to httpx.AsyncClient.get inside execution/econsent_client.py
     monkeypatch.setattr(httpx.AsyncClient, "get", mock_get)
 
     from apps.execution.econsent_client import fetch_subject_consent_status
-    status = await fetch_subject_consent_status(subject_pseudonym="SUBJ-001", study_id="STUDY-123")
+
+    status = await fetch_subject_consent_status(
+        subject_pseudonym="SUBJ-001", study_id="STUDY-123"
+    )
 
     assert status["signed"] is True
     assert status["version_index"] == 1

@@ -28,6 +28,17 @@ def receive_before_flush(session: Session, flush_context, instances):
     if not session.is_modified:
         return
 
+    # Restrict execution auditing to Sessions containing clinical execution objects
+    is_execution_session = False
+    for obj in list(session.new) + list(session.dirty) + list(session.deleted):
+        module_name = getattr(obj.__class__, "__module__", "")
+        if "apps.execution" in module_name or "execution" in module_name:
+            is_execution_session = True
+            break
+
+    if not is_execution_session:
+        return
+
     # Propagate thread-safe context variables into PostgreSQL session if database trigger is active
     if session.bind and session.bind.dialect.name == "postgresql":
         try:

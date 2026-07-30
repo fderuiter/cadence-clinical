@@ -58,7 +58,9 @@ class SubjectConsent(Base):
     server_timestamp: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), nullable=False
     )
-    device_timestamp: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    device_timestamp: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, nullable=True
+    )
     signature_manifest: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
 
     # 21 CFR Part 11 Compliance Auditing Metadata
