@@ -414,13 +414,20 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
 
             # Attempt to add check constraint if missing
             try:
-                await conn.execute(
+                res_const = await conn.execute(
                     text("""
-                    ALTER TABLE tmf_documents
-                    ADD CONSTRAINT chk_tmf_document_status
-                    CHECK (status IN ('DRAFT', 'TECHNICAL_QC', 'CLINICAL_QC', 'APPROVED', 'ARCHIVED', 'REJECTED', 'SIGNED'));
+                    SELECT 1 FROM pg_constraint
+                    WHERE conname = 'chk_tmf_document_status';
                 """)
                 )
+                if not res_const.fetchone():
+                    await conn.execute(
+                        text("""
+                        ALTER TABLE tmf_documents
+                        ADD CONSTRAINT chk_tmf_document_status
+                        CHECK (status IN ('DRAFT', 'TECHNICAL_QC', 'CLINICAL_QC', 'APPROVED', 'ARCHIVED', 'REJECTED', 'SIGNED'));
+                    """)
+                    )
             except Exception:
                 pass
 
@@ -549,25 +556,39 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
 
             # Add foreign key constraint if missing
             try:
-                await conn.execute(
+                res_fk = await conn.execute(
                     text("""
-                    ALTER TABLE tmf_document_qc_transitions
-                    ADD CONSTRAINT fk_tmf_document_qc_transitions_document_id
-                    FOREIGN KEY (document_id) REFERENCES tmf_documents(id) ON DELETE CASCADE;
+                    SELECT 1 FROM pg_constraint
+                    WHERE conname = 'fk_tmf_document_qc_transitions_document_id';
                 """)
                 )
+                if not res_fk.fetchone():
+                    await conn.execute(
+                        text("""
+                        ALTER TABLE tmf_document_qc_transitions
+                        ADD CONSTRAINT fk_tmf_document_qc_transitions_document_id
+                        FOREIGN KEY (document_id) REFERENCES tmf_documents(id) ON DELETE CASCADE;
+                    """)
+                    )
             except Exception:
                 pass
 
             # Add UniqueConstraint
             try:
-                await conn.execute(
+                res_uq = await conn.execute(
                     text("""
-                    ALTER TABLE tmf_document_qc_transitions
-                    ADD CONSTRAINT uq_document_transition_sequence
-                    UNIQUE (document_id, transition_sequence);
+                    SELECT 1 FROM pg_constraint
+                    WHERE conname = 'uq_document_transition_sequence';
                 """)
                 )
+                if not res_uq.fetchone():
+                    await conn.execute(
+                        text("""
+                        ALTER TABLE tmf_document_qc_transitions
+                        ADD CONSTRAINT uq_document_transition_sequence
+                        UNIQUE (document_id, transition_sequence);
+                    """)
+                    )
             except Exception:
                 pass
 
