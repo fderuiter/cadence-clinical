@@ -976,8 +976,11 @@ async def test_grant_approve_sig_token_matrix():
     Test missing, valid, mismatched, expired, and replayed tokens for CTMS grant approval status transitions.
     """
     from jose import jwt
+
     client = TestClient(app)
-    gm_headers = get_auth_headers(roles="Grants Manager", change_reason="Grant validation testing")
+    gm_headers = get_auth_headers(
+        roles="Grants Manager", change_reason="Grant validation testing"
+    )
 
     # Create Grant
     payload = {
@@ -993,7 +996,12 @@ async def test_grant_approve_sig_token_matrix():
     action_path = f"/api/v1/ctms/grants/{grant_id}"
 
     # Helper to build step-up tokens
-    def make_ctms_step_up_token(semantic_action: str, expired: bool = False, wrong_user: bool = False, wrong_action: bool = False) -> str:
+    def make_ctms_step_up_token(
+        semantic_action: str,
+        expired: bool = False,
+        wrong_user: bool = False,
+        wrong_action: bool = False,
+    ) -> str:
         now = time.time()
         payload = {
             "sub": "wrong_user" if wrong_user else "test_user",
@@ -1009,42 +1017,58 @@ async def test_grant_approve_sig_token_matrix():
         return jwt.encode(payload, "internal-gateway-secret-12345", algorithm="HS256")
 
     # 1. Missing token -> 401
-    res_missing = client.put(action_path, json={"status": "APPROVED"}, headers=gm_headers)
+    res_missing = client.put(
+        action_path, json={"status": "APPROVED"}, headers=gm_headers
+    )
     assert res_missing.status_code == 401
 
     # 2. Expired token -> 401
-    t_expired = make_ctms_step_up_token(semantic_action="ctms.grant.approve", expired=True)
+    t_expired = make_ctms_step_up_token(
+        semantic_action="ctms.grant.approve", expired=True
+    )
     headers_expired = gm_headers.copy()
     headers_expired["X-Sig-Token"] = t_expired
-    res_expired = client.put(action_path, json={"status": "APPROVED"}, headers=headers_expired)
+    res_expired = client.put(
+        action_path, json={"status": "APPROVED"}, headers=headers_expired
+    )
     assert res_expired.status_code == 401
 
     # 3. Mismatched semantic action -> 401
     t_mismatched = make_ctms_step_up_token(semantic_action="quality.capa.close")
     headers_mismatched = gm_headers.copy()
     headers_mismatched["X-Sig-Token"] = t_mismatched
-    res_mismatched = client.put(action_path, json={"status": "APPROVED"}, headers=headers_mismatched)
+    res_mismatched = client.put(
+        action_path, json={"status": "APPROVED"}, headers=headers_mismatched
+    )
     assert res_mismatched.status_code == 401
 
     # 4. Mismatched user -> 401
-    t_mismatched_user = make_ctms_step_up_token(semantic_action="ctms.grant.approve", wrong_user=True)
+    t_mismatched_user = make_ctms_step_up_token(
+        semantic_action="ctms.grant.approve", wrong_user=True
+    )
     headers_mismatched_user = gm_headers.copy()
     headers_mismatched_user["X-Sig-Token"] = t_mismatched_user
-    res_mismatched_user = client.put(action_path, json={"status": "APPROVED"}, headers=headers_mismatched_user)
+    res_mismatched_user = client.put(
+        action_path, json={"status": "APPROVED"}, headers=headers_mismatched_user
+    )
     assert res_mismatched_user.status_code == 401
 
     # 5. Valid token -> 200
     t_valid = make_ctms_step_up_token(semantic_action="ctms.grant.approve")
     headers_valid = gm_headers.copy()
     headers_valid["X-Sig-Token"] = t_valid
-    res_valid = client.put(action_path, json={"status": "APPROVED"}, headers=headers_valid)
+    res_valid = client.put(
+        action_path, json={"status": "APPROVED"}, headers=headers_valid
+    )
     print("DEBUG RES_VALID:", res_valid.status_code, res_valid.json())
     assert res_valid.status_code == 200
     assert res_valid.json()["status"] == "APPROVED"
 
     # 6. Replayed token -> 401
     # Try using the same valid token on another APPROVED transition attempt (which is locked anyway but check returns 401 first)
-    res_replayed = client.put(action_path, json={"status": "APPROVED"}, headers=headers_valid)
+    res_replayed = client.put(
+        action_path, json={"status": "APPROVED"}, headers=headers_valid
+    )
     assert res_replayed.status_code == 401
 
 

@@ -1,6 +1,7 @@
 import re
 from enum import Enum
-from typing import Optional, List, Dict, Any, Union
+from typing import Any, Dict, List, Optional, Union
+
 
 class SemanticAction(str, Enum):
     # Coordinated semantic action identifiers with #689
@@ -16,6 +17,7 @@ class SemanticAction(str, Enum):
     EXEC_QUERIES_SYNC = "execution.queries.sync"
     GENERIC_CLOSE = "generic.close"
 
+
 class DetectionRule:
     def __init__(
         self,
@@ -23,7 +25,7 @@ class DetectionRule:
         methods: List[str],
         path_pattern: str,
         is_regex: bool = False,
-        body_conditions: Optional[Dict[str, Union[Any, List[Any]]]] = None
+        body_conditions: Optional[Dict[str, Union[Any, List[Any]]]] = None,
     ):
         self.action = action
         self.methods = [m.upper() for m in methods]
@@ -59,6 +61,7 @@ class DetectionRule:
                     return False
         return True
 
+
 # Stable detection rules mapping
 DETECTION_RULES: List[DetectionRule] = [
     # Body-driven rules
@@ -67,63 +70,65 @@ DETECTION_RULES: List[DetectionRule] = [
         methods=["POST", "PUT"],
         path_pattern=r"quality/capas/[^/]+/transition",
         is_regex=True,
-        body_conditions={"to_status": ["CLOSED", "Closed", "closed"]}
+        body_conditions={"to_status": ["CLOSED", "Closed", "closed"]},
     ),
     DetectionRule(
         action=SemanticAction.CAPA_CANCEL,
         methods=["POST", "PUT"],
         path_pattern=r"quality/capas/[^/]+/transition",
         is_regex=True,
-        body_conditions={"to_status": ["CANCELLED", "Cancelled", "cancelled"]}
+        body_conditions={"to_status": ["CANCELLED", "Cancelled", "cancelled"]},
     ),
     DetectionRule(
         action=SemanticAction.GRANT_APPROVE,
         methods=["PUT", "PATCH", "POST"],
         path_pattern=r"ctms/grants/[^/]+$",
         is_regex=True,
-        body_conditions={"status": ["APPROVED", "Approved", "approved"]}
+        body_conditions={"status": ["APPROVED", "Approved", "approved"]},
     ),
-
     # Path-only/substring rules
     DetectionRule(
         action=SemanticAction.EXEC_FORM_APPROVE,
         methods=["POST", "PUT", "PATCH", "DELETE"],
         path_pattern="approve",
-        is_regex=False
+        is_regex=False,
     ),
     DetectionRule(
         action=SemanticAction.EXEC_FORM_SIGNOFF,
         methods=["POST", "PUT", "PATCH", "DELETE"],
         path_pattern="sign-off",
-        is_regex=False
+        is_regex=False,
     ),
     DetectionRule(
         action=SemanticAction.EXEC_SUBJECT_UNBLIND,
         methods=["POST", "PUT", "PATCH", "DELETE"],
         path_pattern="unblind",
-        is_regex=False
+        is_regex=False,
     ),
     DetectionRule(
         action=SemanticAction.EXEC_SUBJECT_RANDOMIZE,
         methods=["POST", "PUT", "PATCH", "DELETE"],
         path_pattern="randomize",
-        is_regex=False
+        is_regex=False,
     ),
     DetectionRule(
         action=SemanticAction.EXEC_QUERIES_SYNC,
         methods=["POST", "PUT", "PATCH", "DELETE"],
         path_pattern="queries/sync",
-        is_regex=False
+        is_regex=False,
     ),
     DetectionRule(
         action=SemanticAction.GENERIC_CLOSE,
         methods=["POST", "PUT", "PATCH", "DELETE"],
         path_pattern="close",
-        is_regex=False
+        is_regex=False,
     ),
 ]
 
-def resolve_regulated_action(method: str, path: str, body: Optional[dict]) -> Optional[SemanticAction]:
+
+def resolve_regulated_action(
+    method: str, path: str, body: Optional[dict]
+) -> Optional[SemanticAction]:
     """
     Pure resolver function to determine the semantic regulated action based on HTTP method, path, and parsed body.
     """
@@ -147,7 +152,10 @@ def resolve_regulated_action(method: str, path: str, body: Optional[dict]) -> Op
 
     return None
 
-def resolve_regulated_action_by_path(method: str, path: str) -> Optional[SemanticAction]:
+
+def resolve_regulated_action_by_path(
+    method: str, path: str
+) -> Optional[SemanticAction]:
     """
     Path-only variant of resolver for fast middleware pre-checks where parsed body is not yet available.
     """

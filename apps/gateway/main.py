@@ -740,6 +740,7 @@ async def signature_verification(request: Request, body: SignatureVerificationRe
     derived_semantic = body.semantic_action
     if not derived_semantic and body.action:
         from packages.security.regulated_actions import resolve_regulated_action_by_path
+
         # Try resolving across methods to see if path is regulated
         for method in ["POST", "PUT", "PATCH", "DELETE"]:
             resolved = resolve_regulated_action_by_path(method, body.action)
@@ -858,17 +859,22 @@ async def proxy_requests(request: Request, path: str) -> Response:
     if body_bytes:
         try:
             import json
+
             body_json = json.loads(body_bytes)
         except Exception:
             pass
 
     from packages.security.regulated_actions import resolve_regulated_action
+
     resolved_action = resolve_regulated_action(request.method, path, body_json)
-    is_signature_gated = (resolved_action is not None)
+    is_signature_gated = resolved_action is not None
 
     if is_signature_gated and is_mutation:
-        sig_token = request.headers.get("x-sig-token") or request.headers.get("X-Sig-Token")
+        sig_token = request.headers.get("x-sig-token") or request.headers.get(
+            "X-Sig-Token"
+        )
         from packages.security.middleware import verify_sig_token
+
         success, result = verify_sig_token(
             sig_token=sig_token,
             user_id=user_id,
