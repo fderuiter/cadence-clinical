@@ -338,35 +338,34 @@ async def run_reconciliation(
         meddra_version=meddra_version,
     )
 
-    # 6. Persist results inside transaction
-    async with session.begin_nested():
-        run = SAEReconciliationRun(
-            study_id=study_id,
+    # 6. Persist results directly in the session
+    run = SAEReconciliationRun(
+        study_id=study_id,
+        created_by=created_by,
+        reason_for_change=reason_for_change,
+        version_index=1,
+    )
+    session.add(run)
+    await session.flush()
+
+    persisted_discrepancies = []
+    for d in raw_discrepancies:
+        disc = SAEDiscrepancy(
+            run_id=run.id,
+            source=d["source"],
+            case_event_key=d["case_event_key"],
+            field_name=d["field_name"],
+            expected_value=d["expected_value"],
+            actual_value=d["actual_value"],
+            meddra_version=d["meddra_version"],
             created_by=created_by,
             reason_for_change=reason_for_change,
             version_index=1,
         )
-        session.add(run)
-        await session.flush()
+        session.add(disc)
+        persisted_discrepancies.append(disc)
 
-        persisted_discrepancies = []
-        for d in raw_discrepancies:
-            disc = SAEDiscrepancy(
-                run_id=run.id,
-                source=d["source"],
-                case_event_key=d["case_event_key"],
-                field_name=d["field_name"],
-                expected_value=d["expected_value"],
-                actual_value=d["actual_value"],
-                meddra_version=d["meddra_version"],
-                created_by=created_by,
-                reason_for_change=reason_for_change,
-                version_index=1,
-            )
-            session.add(disc)
-            persisted_discrepancies.append(disc)
-
-        await session.flush()
+    await session.flush()
 
     return {
         "run": run,

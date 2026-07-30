@@ -11,7 +11,7 @@ from apps.gateway.main import generate_signature
 from apps.safety.adapter import SafetyDatabaseAdapter
 from apps.safety.database import db_manager
 from apps.safety.execution_client import ExecutionClient
-from apps.safety.main import app
+from apps.safety.main import app, get_db_session
 from apps.safety.models import (
     Base,
     SAEDiscrepancy,
@@ -21,7 +21,7 @@ from apps.safety.models import (
 from apps.safety.reconciliation import compare_sae_records
 
 
-@pytest_asyncio.fixture(autouse=True)
+@pytest.fixture(autouse=True)
 def cleanup_httpx_client():
     """
     Saves and restores app.state.test_httpx_client to prevent state pollution.
@@ -30,6 +30,22 @@ def cleanup_httpx_client():
     app.state.test_httpx_client = None
     yield
     app.state.test_httpx_client = original
+
+
+@pytest.fixture(autouse=True)
+def override_database_dependency():
+    """
+    Ensures that both the app and tests share the exact same database session/connection.
+    """
+
+    async def _override():
+        async with db_manager.get_session_maker()() as session:
+            yield session
+            await session.commit()
+
+    app.dependency_overrides[get_db_session] = _override
+    yield
+    app.dependency_overrides.pop(get_db_session, None)
 
 
 @pytest_asyncio.fixture(autouse=True)
