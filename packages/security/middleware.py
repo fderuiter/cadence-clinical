@@ -127,9 +127,11 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
             app: The ASGI application to wrap.
         """
         super().__init__(app)
-        self.gateway_secret = os.getenv(
-            "GATEWAY_SECRET", "internal-gateway-secret-12345"
-        ).encode()
+
+    @property
+    def gateway_secret(self) -> bytes:
+        """Dynamically resolve gateway secret from environment to support runtime configuration and test overrides."""
+        return os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()
 
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]

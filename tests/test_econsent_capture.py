@@ -21,12 +21,15 @@ from apps.econsent.models import (
 )
 from packages.security.signing import verify_canonical_signature
 
+TEST_GATEWAY_SECRET = "test-econsent-gateway-secret-key-12345"
+
 
 def get_sig_token(
     user_id: str = "test_patient",
     roles: str = "patient",
     action: str = "capture-consent",
     expired: bool = False,
+    secret: str = TEST_GATEWAY_SECRET,
 ) -> str:
     """Generate a 21 CFR Part 11 compliant re-authentication token."""
     payload = {
@@ -37,7 +40,7 @@ def get_sig_token(
         "iat": time.time(),
         "exp": time.time() - 100.0 if expired else time.time() + 300.0,
     }
-    return jwt.encode(payload, "internal-gateway-secret-12345", algorithm="HS256")
+    return jwt.encode(payload, secret, algorithm="HS256")
 
 
 def get_gateway_headers(
@@ -45,6 +48,7 @@ def get_gateway_headers(
     roles: str = "patient",
     sig_token: Optional[str] = None,
     change_reason: str = "test consent capture",
+    secret: str = TEST_GATEWAY_SECRET,
 ) -> dict:
     """Generate gateway v2 signed headers for eConsent testing."""
     timestamp = str(time.time())
@@ -55,9 +59,7 @@ def get_gateway_headers(
         "user_id": user_id,
     }
     serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
-    sig = hmac.new(
-        b"internal-gateway-secret-12345", serialized.encode(), hashlib.sha256
-    ).hexdigest()
+    sig = hmac.new(secret.encode(), serialized.encode(), hashlib.sha256).hexdigest()
     headers = {
         "X-User-Id": user_id,
         "X-User-Roles": roles,
@@ -72,8 +74,9 @@ def get_gateway_headers(
 
 
 @pytest_asyncio.fixture(autouse=True)
-async def setup_test_db():
+async def setup_test_db(monkeypatch: pytest.MonkeyPatch):
     """Setup in-memory SQLite database before each test and clear down after."""
+    monkeypatch.setenv("GATEWAY_SECRET", TEST_GATEWAY_SECRET)
     db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -405,7 +408,7 @@ async def test_signature_tamper_detection() -> None:
             "device_timestamp": normalize_timestamp_str(sc_data["device_timestamp"]),
         }
 
-        secret = b"internal-gateway-secret-12345"
+        secret = TEST_GATEWAY_SECRET.encode()
 
         # Verify authentic signature succeeds
         assert (
