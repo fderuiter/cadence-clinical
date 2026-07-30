@@ -414,7 +414,7 @@ export async function encryptAESGCM(payload, rawKey, version = 1, aad = null) {
 
   const encryptParams = {
     name: "AES-GCM",
-    iv: nonce
+    iv: nonce,
   };
   if (aad) {
     encryptParams.additionalData = aad;
@@ -446,7 +446,12 @@ export async function encryptAESGCM(payload, rawKey, version = 1, aad = null) {
  * @param {Uint8Array|null} [aad=null] - Authenticated Additional Data.
  * @returns {Promise<Object>} Decrypted payload object.
  */
-export async function decryptAESGCM(encryptedStr, rawKey, expectedVersion = 1, aad = null) {
+export async function decryptAESGCM(
+  encryptedStr,
+  rawKey,
+  expectedVersion = 1,
+  aad = null
+) {
   let packedBytes;
   try {
     packedBytes = base64ToUint8Array(encryptedStr);
@@ -477,7 +482,7 @@ export async function decryptAESGCM(encryptedStr, rawKey, expectedVersion = 1, a
 
   const decryptParams = {
     name: "AES-GCM",
-    iv: nonce
+    iv: nonce,
   };
   if (aad) {
     decryptParams.additionalData = aad;
@@ -491,7 +496,9 @@ export async function decryptAESGCM(encryptedStr, rawKey, expectedVersion = 1, a
       ciphertextAndTag
     );
   } catch (err) {
-    throw new Error("Decryption failed: tampered ciphertext, nonce, or AAD", { cause: err });
+    throw new Error("Decryption failed: tampered ciphertext, nonce, or AAD", {
+      cause: err,
+    });
   }
 
   const decryptedStr = new TextDecoder().decode(decryptedBuffer);
@@ -512,7 +519,10 @@ export async function decryptAESGCM(encryptedStr, rawKey, expectedVersion = 1, a
  */
 export async function deriveSessionKey(sessionMaterial, salt, info) {
   const encoder = new TextEncoder();
-  const materialBytes = typeof sessionMaterial === "string" ? encoder.encode(sessionMaterial) : sessionMaterial;
+  const materialBytes =
+    typeof sessionMaterial === "string"
+      ? encoder.encode(sessionMaterial)
+      : sessionMaterial;
   const saltBytes = typeof salt === "string" ? encoder.encode(salt) : salt;
   const infoBytes = typeof info === "string" ? encoder.encode(info) : info;
 
@@ -529,7 +539,7 @@ export async function deriveSessionKey(sessionMaterial, salt, info) {
       name: "HKDF",
       hash: "SHA-256",
       salt: saltBytes,
-      info: infoBytes
+      info: infoBytes,
     },
     baseKey,
     256

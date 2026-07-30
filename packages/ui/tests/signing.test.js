@@ -8,11 +8,7 @@ import {
   verifyGatewaySignature,
   sha256,
 } from "../index.js";
-import {
-  encryptAESGCM,
-  decryptAESGCM,
-  deriveSessionKey,
-} from "../signing.js";
+import { encryptAESGCM, decryptAESGCM, deriveSessionKey } from "../signing.js";
 
 describe("canonicalSerialize", () => {
   it("serializes primitives identically to Python", () => {
@@ -211,7 +207,9 @@ describe("cross-language parity", () => {
   it("JS can decrypt a Python-produced AES-GCM envelope", async () => {
     const rawKey = new Uint8Array(32);
     for (let i = 0; i < 32; i++) rawKey[i] = i;
-    const hexKey = Array.from(rawKey).map(b => b.toString(16).padStart(2, '0')).join('');
+    const hexKey = Array.from(rawKey)
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
 
     const payload = { hello: "world", count: 42 };
     const aad = "my_aad_data";
@@ -223,21 +221,40 @@ payload = {'hello': 'world', 'count': 42}
 aad = '${aad}'.encode('utf-8')
 print(encrypt(payload, key, 1, aad))
 "`;
-    const pythonEnvelope = execSync(pythonCmd, { env: { ...process.env, PYTHONPATH: "/app" } }).toString().trim();
+    const pythonEnvelope = execSync(pythonCmd, {
+      env: { ...process.env, PYTHONPATH: "/app" },
+    })
+      .toString()
+      .trim();
 
-    const decrypted = await decryptAESGCM(pythonEnvelope, rawKey, 1, new TextEncoder().encode(aad));
+    const decrypted = await decryptAESGCM(
+      pythonEnvelope,
+      rawKey,
+      1,
+      new TextEncoder().encode(aad)
+    );
     expect(decrypted).toEqual(payload);
   });
 
   it("Python can decrypt a JS-produced AES-GCM envelope", async () => {
     const rawKey = new Uint8Array(32);
     for (let i = 0; i < 32; i++) rawKey[i] = i + 10;
-    const hexKey = Array.from(rawKey).map(b => b.toString(16).padStart(2, '0')).join('');
+    const hexKey = Array.from(rawKey)
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
 
-    const payload = { msg: "from javascript to python with love", success: true };
+    const payload = {
+      msg: "from javascript to python with love",
+      success: true,
+    };
     const aad = "another_aad";
 
-    const jsEnvelope = await encryptAESGCM(payload, rawKey, 1, new TextEncoder().encode(aad));
+    const jsEnvelope = await encryptAESGCM(
+      payload,
+      rawKey,
+      1,
+      new TextEncoder().encode(aad)
+    );
 
     const pythonCmd = `uv run python -c "
 import json
@@ -247,7 +264,11 @@ aad = '${aad}'.encode('utf-8')
 decrypted = decrypt('${jsEnvelope}', key, 1, aad)
 print(json.dumps(decrypted))
 "`;
-    const pythonOutput = execSync(pythonCmd, { env: { ...process.env, PYTHONPATH: "/app" } }).toString().trim();
+    const pythonOutput = execSync(pythonCmd, {
+      env: { ...process.env, PYTHONPATH: "/app" },
+    })
+      .toString()
+      .trim();
     const parsedOutput = JSON.parse(pythonOutput);
     expect(parsedOutput).toEqual(payload);
   });
@@ -258,14 +279,20 @@ print(json.dumps(decrypted))
     const info = "info_456";
 
     const jsDerived = await deriveSessionKey(material, salt, info);
-    const jsHex = Array.from(jsDerived).map(b => b.toString(16).padStart(2, '0')).join('');
+    const jsHex = Array.from(jsDerived)
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
 
     const pythonCmd = `uv run python -c "
 from packages.security.encryption import derive_session_key
 derived = derive_session_key(b'${material}', b'${salt}', b'${info}')
 print(derived.hex())
 "`;
-    const pythonHex = execSync(pythonCmd, { env: { ...process.env, PYTHONPATH: "/app" } }).toString().trim();
+    const pythonHex = execSync(pythonCmd, {
+      env: { ...process.env, PYTHONPATH: "/app" },
+    })
+      .toString()
+      .trim();
     expect(jsHex).toBe(pythonHex);
   });
 });
