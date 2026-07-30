@@ -21,6 +21,8 @@ Based on the executed automated verification suite, the platform meets all prede
 - **Passed:** 1318 🟢
 - **Total Automated Test Cases Run:** 1381
 - **Passed:** 1381 🟢
+- **Total Automated Test Cases Run:** 1325
+- **Passed:** 1325 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -785,6 +787,13 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_structural_conflict_on_missing_target` | `tests.test_interop_defeated` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_submit_with_invalid_signature_fails` | `tests.test_interop_defeated` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_submit_with_valid_signature` | `tests.test_interop_defeated` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_build_ecrf_context_mapping` | `tests.test_interop_prescreen` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_build_ecrf_context_multiple_and_missing` | `tests.test_interop_prescreen` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_no_edc_mutation_boundary` | `tests.test_interop_prescreen` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_pre_screen_audit_evidence_non_phi` | `tests.test_interop_prescreen` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_pre_screen_eligible` | `tests.test_interop_prescreen` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_pre_screen_indeterminate` | `tests.test_interop_prescreen` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_pre_screen_ineligible` | `tests.test_interop_prescreen` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_circular_skip_logic_rules_raises_value_error` | `tests.test_inverse_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_inverse_mapping_valid_round_trip` | `tests.test_inverse_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_missing_required_fields_raises_value_error` | `tests.test_inverse_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
