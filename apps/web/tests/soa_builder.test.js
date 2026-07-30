@@ -175,7 +175,7 @@ describe("SoA Builder Store Integration", () => {
     );
 
     expect(apiClient.post).toHaveBeenCalledTimes(1);
-    const [path, body, opts] = apiClient.post.mock.calls[0];
+    const [path, , opts] = apiClient.post.mock.calls[0];
 
     expect(path).toBe("/api/v1/studies/STUDY-USDM-001/versions/v_draft_01/arms");
     expect(opts.changeReason).toBe("Configure arm");

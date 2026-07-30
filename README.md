@@ -118,7 +118,7 @@ This monorepo leverages `pnpm` workspace management for the frontend and `uv` wo
 | **`apps/org`** | Cadence Clinical - Organization Directory | Directory for Organizations, Sites, Personnel, and Delegations of Authority. *No business logic routes are currently routed; exposes health check only.* | **In Progress** |
 | **`apps/econsent`** | Cadence Clinical - eConsent | Template compilation, digital signatures, and consent audit ledgers. *Not yet routed through the central gateway proxy.* | **In Progress** |
 | **`apps/eisf`** | Cadence Clinical - eISF Service | Site-scoped investigator site files and binder section browser. *Not yet routed through the central gateway proxy.* | **In Progress** |
-| **`apps/web`** | Vue 3 SPA Sandbox & Legacy Engine | Primary frontend SPA with Keycloak authentication. *Features a legacy vanilla-JS layout parser (index.js) coexisting during migration to Vue 3 (src/App.vue) per ADR-052.* | **In Progress** |
+| **`apps/web`** | Vue 3 SPA Sandbox & Legacy Engine | Primary frontend SPA with Keycloak authentication. *Features a legacy layout parser (apps/web/src/utils/legacy_helpers.js) coexisting during migration to Vue 3 (src/App.vue) per ADR-052.* | **In Progress** |
 | **`apps/subject-portal`** | Offline-First eCOA/ePRO PWA | Mobile-optimized Progressive Web App (PWA) running on port 5174. Includes IndexedDB offline queues and sync exception panels. | **Supported** |
 | **`packages/security`** | Cryptography & Security Library | Shared libraries for HMAC signature generation, security context variables, and Keycloak auth validation helpers. | **Supported** |
 | **`packages/ui`** | Shared UI & Signing Library | UI component framework and browser signing helpers. Exported via pnpm. | **Supported** |
@@ -133,7 +133,7 @@ This monorepo leverages `pnpm` workspace management for the frontend and `uv` wo
 During the current active development phase, several known discrepancies exist within the repository:
 1. **Gateway Proxy Exclusions:** The `org`, `econsent`, and `eisf` services operate independently on their local database backends but are not yet registered in the gateway `SERVICES` map inside `apps/gateway/main.py`. This means direct API requests to these routes bypass central authorization proxies.
 2. **Organization Service Routing:** The Organization Directory service (`apps/org`) maintains a complete relational GxP database schema (with Organizations, Sites, Staff, DoA), but its `main.py` currently exposes only a standard `/health` check without operational CRUD endpoints.
-3. **Web Frontend Migration:** Per **ADR-052**, `apps/web` is undergoing an active migration. Standard web client operations rely on a modern Vue 3 SPA architecture (`src/App.vue`), but legacy vanilla-JS layout and sign-off rendering engines (`index.js`) still coexist inside the workspace, occasionally leading to mixed validation patterns.
+3. **Web Frontend Migration:** Per **ADR-052**, `apps/web` is undergoing an active migration. Standard web client operations rely on a modern Vue 3 SPA architecture (`src/App.vue`), but legacy layout and sign-off rendering engines (`apps/web/src/utils/legacy_helpers.js`) still coexist inside the workspace, occasionally leading to mixed validation patterns.
 
 ---
 
@@ -234,7 +234,7 @@ We track our live feature backlog and feature requests via the live [GitHub Issu
 Strategic backlog priorities and technical debt resolutions currently planned (TBD) include:
 - [ ] Route the Organization Directory (`apps/org`), eConsent (`apps/econsent`), and eISF (`apps/eisf`) microservices through the API Gateway `SERVICES` mapping.
 - [ ] Implement full operational CRUD routes for Site personnel and Delegations of Authority within `apps/org`.
-- [ ] Complete the migration of legacy vanilla-JS layout scripts (`apps/web/index.js`) into native Vue 3 components (`src/views/`).
+- [ ] Complete the migration of legacy layout scripts (`apps/web/src/utils/legacy_helpers.js`) into native Vue 3 components (`src/views/`).
 - [ ] Establish automated E2B(R3) validator checks for suspect drug ingredient alignments using WHODrug hierarchies.
 - [ ] Integrate automatic document QC status transitions within the eTMF indexing module.
 
