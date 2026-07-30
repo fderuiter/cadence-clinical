@@ -50,6 +50,10 @@ def receive_before_flush(session: Session, flush_context, instances):
 
     # If the session contains eTMF, Interop, CTMS, Quality, eISF, or Notifications objects, skip execution auditing
     for obj in list(session.new) + list(session.dirty) + list(session.deleted):
+        module_name = getattr(obj.__class__, "__module__", "")
+        if "apps.econsent" in module_name:
+            return
+
         if hasattr(obj, "__tablename__") and obj.__tablename__ in (
             "tmf_documents",
             "tmf_audit_logs",

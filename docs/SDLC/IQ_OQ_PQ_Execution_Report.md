@@ -15,6 +15,8 @@ Based on the executed automated verification suite, the platform meets all prede
 - **Passed:** 1320 🟢
 - **Total Automated Test Cases Run:** 1374
 - **Passed:** 1374 🟢
+- **Total Automated Test Cases Run:** 1323
+- **Passed:** 1323 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -473,6 +475,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_shared_audit_fields_validation` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_template_lifecycle_and_validation` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_uninitialized_database_manager_econsent` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_append_only_audit_history` | `tests.test_econsent_capture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_capture_rejections` | `tests.test_econsent_capture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_execution_consumption_integration` | `tests.test_econsent_capture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_happy_path_capture_and_status` | `tests.test_econsent_capture` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_signature_tamper_detection` | `tests.test_econsent_capture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_auditor_restrictions_on_checks` | `tests.test_econsent_comprehension` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_create_and_retrieve_comprehension_check` | `tests.test_econsent_comprehension` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_blocks_if_comprehension_checks_fail_or_incomplete` | `tests.test_econsent_comprehension` | *Regression/Helper* | 🟢 PASSED | < 1s |

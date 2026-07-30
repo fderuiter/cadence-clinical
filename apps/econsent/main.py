@@ -28,6 +28,7 @@ from apps.econsent.models import (
     ConsentSignature,
     ConsentTemplate,
     ConsentTranslation,
+    SubjectConsent,
 )
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
@@ -419,6 +420,63 @@ class ConsentSignatureResponse(AuditFields):
     subject_pseudonym: str
     signature_data: Optional[str]
     signed_at: datetime
+
+
+class SubjectConsentCaptureRequest(BaseModel):
+    subject_pseudonym: str = Field(
+        ..., description="Pseudonym identifier of the subject"
+    )
+    site_id: str = Field(..., description="Unique clinical site identifier")
+    device_timestamp: Optional[datetime] = Field(
+        None, description="Device-side timestamp"
+    )
+    source_content_identity: str = Field(
+        ..., description="Hash/clause-set identifier at capture time"
+    )
+    reason_for_change: str = Field(
+        ..., description="Part 11 rationale/change justification"
+    )
+
+
+class SubjectConsentResponse(AuditFields):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str = Field(..., description="Unique generated UUID of this consent record")
+    subject_pseudonym: str = Field(
+        ..., description="Pseudonym identifier of the subject"
+    )
+    study_id: str = Field(..., description="Unique clinical study identifier")
+    site_id: str = Field(..., description="Unique clinical site identifier")
+    template_id: str = Field(
+        ..., description="The template identifier used for consent"
+    )
+    protocol_version: str = Field(
+        ..., description="Associated clinical protocol version snapshot"
+    )
+    source_content_identity: str = Field(
+        ..., description="Hash/clause-set identifier at capture time"
+    )
+    server_timestamp: datetime = Field(
+        ..., description="Server-side chronological capture timestamp"
+    )
+    device_timestamp: Optional[datetime] = Field(
+        None, description="Device-side capture timestamp"
+    )
+    signature_manifest: dict = Field(
+        ...,
+        description="Detailed signature manifestation, canonical hmac signature, and payload hash",
+    )
+
+
+class SubjectConsentStatusResponse(BaseModel):
+    subject_pseudonym: str
+    study_id: str
+    site_id: str
+    template_id: str
+    version_index: int
+    protocol_version: str
+    signed: bool
+    comprehension_passed: bool
 
 
 DATABASE_URL = os.getenv("ECONSENT_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
@@ -832,6 +890,245 @@ async def create_consent_template(
     )
 
     return template
+
+
+@app.post(
+    "/api/v1/econsent/templates/{template_id}/versions/{version_index}/capture-consent",
+    response_model=SubjectConsentResponse,
+    status_code=201,
+)
+async def capture_subject_consent(
+    request: Request,
+    template_id: str,
+    version_index: int,
+    payload: SubjectConsentCaptureRequest,
+    _auth=Depends(verify_not_auditor),
+    session: AsyncSession = Depends(get_db_session),
+) -> SubjectConsentResponse:
+    """
+    Canonically capture electronic signed subject consent after re-authentication.
+    Enforces that template version exists and is published, comprehension checks passed,
+    and step-up X-Sig-Token re-authentication was successfully processed.
+    """
+    user_id = getattr(request.state, "user_id", "patient")
+    user_role = getattr(request.state, "roles", "patient")
+    change_reason = getattr(request.state, "change_reason", payload.reason_for_change)
+
+    # 1. Validate template exists and is published
+    stmt_tpl = select(ConsentTemplate).where(
+        ConsentTemplate.template_id == template_id,
+        ConsentTemplate.version_index == version_index,
+    )
+    res_tpl = await session.execute(stmt_tpl)
+    template = res_tpl.scalars().first()
+    if not template or not template.is_published:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Template '{template_id}' version {version_index} does not exist or is not published.",
+        )
+
+    # 2. Require a passing ComprehensionResult for this exact subject pseudonym and template version
+    stmt_result = select(ComprehensionResult).where(
+        ComprehensionResult.template_id == template_id,
+        ComprehensionResult.version_index == version_index,
+        ComprehensionResult.subject_pseudonym == payload.subject_pseudonym,
+        ComprehensionResult.passed.is_(True),
+    )
+    res_result = await session.execute(stmt_result)
+    passing_result = res_result.scalars().first()
+    if not passing_result:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot capture consent. Comprehension checks have not been completed or passed for this template version.",
+        )
+
+    # 3. Enforce step-up re-authentication
+    sig_token = request.headers.get("X-Sig-Token")
+    if not sig_token:
+        raise HTTPException(
+            status_code=401,
+            detail="REAUTHENTICATION_REQUIRED",
+        )
+
+    import time
+
+    from jose import JWTError, jwt
+
+    secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()
+    try:
+        sig_payload = jwt.decode(sig_token, secret, algorithms=["HS256"])
+    except JWTError:
+        raise HTTPException(
+            status_code=401,
+            detail="REAUTHENTICATION_REQUIRED",
+        )
+
+    if sig_payload.get("exp", 0) < time.time():
+        raise HTTPException(
+            status_code=401,
+            detail="REAUTHENTICATION_REQUIRED",
+        )
+
+    if sig_payload.get("sub") != user_id:
+        raise HTTPException(
+            status_code=401,
+            detail="REAUTHENTICATION_REQUIRED",
+        )
+
+    bound_action = sig_payload.get("action", "")
+    request_path = request.url.path
+    if (
+        "capture-consent" not in bound_action
+        and request_path != bound_action
+        and bound_action not in request_path
+        and request_path not in bound_action
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="REAUTHENTICATION_REQUIRED",
+        )
+
+    # 4. Generate canonical payload and compute canonical HMAC signature
+    from packages.security.signing import (
+        canonical_serialize,
+        compute_sha256_hash,
+        generate_canonical_signature,
+    )
+
+    server_timestamp = datetime.utcnow()
+
+    def normalize_timestamp_str(dt) -> Optional[str]:
+        if not dt:
+            return None
+        if isinstance(dt, datetime):
+            return dt.strftime("%Y-%m-%dT%H:%M:%S")
+        if isinstance(dt, str):
+            try:
+                from dateutil.parser import parse
+
+                return parse(dt).strftime("%Y-%m-%dT%H:%M:%S")
+            except Exception:
+                return dt
+        return str(dt)
+
+    canonical_payload = {
+        "subject_pseudonym": payload.subject_pseudonym,
+        "study_id": template.study_id,
+        "site_id": payload.site_id,
+        "template_id": template_id,
+        "version_index": version_index,
+        "protocol_version": template.protocol_version,
+        "source_content_identity": payload.source_content_identity,
+        "server_timestamp": normalize_timestamp_str(server_timestamp),
+        "device_timestamp": normalize_timestamp_str(payload.device_timestamp),
+    }
+
+    canonical_bytes = canonical_serialize(canonical_payload)
+    canonical_hash = compute_sha256_hash(canonical_bytes)
+    hmac_sig = generate_canonical_signature(canonical_payload, secret)
+
+    # 5. Build SignatureManifestation
+    from signature import SignatureManifestation, SigningReason
+
+    manifest = SignatureManifestation(
+        signer_id=user_id,
+        timestamp=server_timestamp,
+        signing_reason=SigningReason.APPROVAL,
+        ip_address=request.client.host if request.client else "127.0.0.1",
+        user_agent=request.headers.get("user-agent") or "Unknown",
+        sha256_hash=canonical_hash,
+    )
+
+    signature_manifest_data = {
+        "signature_manifestation": manifest.model_dump(mode="json"),
+        "canonical_signature": hmac_sig,
+        "canonical_payload_hash": canonical_hash,
+    }
+
+    # 6. Persist immutable SubjectConsent record
+    sc = SubjectConsent(
+        subject_pseudonym=payload.subject_pseudonym,
+        study_id=template.study_id,
+        site_id=payload.site_id,
+        template_id=template_id,
+        version_index=version_index,
+        protocol_version=template.protocol_version,
+        source_content_identity=payload.source_content_identity,
+        server_timestamp=server_timestamp,
+        device_timestamp=payload.device_timestamp,
+        signature_manifest=signature_manifest_data,
+        created_by=user_id,
+        reason_for_change=change_reason,
+    )
+    session.add(sc)
+    await session.flush()
+
+    # 7. Write audit log
+    await write_audit_log(
+        session=session,
+        actor_id=user_id,
+        actor_role=str(user_role),
+        action="CAPTURE_CONSENT",
+        document_id=sc.id,
+        details=f"Canonically captured signed subject consent for template '{template_id}' version {version_index}.",
+        reason_for_change=change_reason,
+    )
+
+    return SubjectConsentResponse(
+        id=sc.id,
+        subject_pseudonym=sc.subject_pseudonym,
+        study_id=sc.study_id,
+        site_id=sc.site_id,
+        template_id=sc.template_id,
+        version_index=sc.version_index,
+        protocol_version=sc.protocol_version,
+        source_content_identity=sc.source_content_identity,
+        server_timestamp=sc.server_timestamp,
+        device_timestamp=sc.device_timestamp,
+        signature_manifest=sc.signature_manifest,
+        created_at=sc.created_at,
+        created_by=sc.created_by,
+        reason_for_change=sc.reason_for_change,
+    )
+
+
+@app.get(
+    "/api/v1/econsent/subjects/{subject_pseudonym}/consent-status",
+    response_model=SubjectConsentStatusResponse,
+)
+async def get_subject_consent_status_endpoint(
+    subject_pseudonym: str,
+    study_id: Optional[str] = None,
+    session: AsyncSession = Depends(get_db_session),
+) -> SubjectConsentStatusResponse:
+    """
+    Retrieve the latest, highest-version signed SubjectConsent status for Execution gating.
+    """
+    stmt = select(SubjectConsent).where(
+        SubjectConsent.subject_pseudonym == subject_pseudonym
+    )
+    if study_id:
+        stmt = stmt.where(SubjectConsent.study_id == study_id)
+    stmt = stmt.order_by(desc(SubjectConsent.version_index))
+    result = await session.execute(stmt)
+    sc = result.scalars().first()
+
+    if not sc:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No signed consent found for subject '{subject_pseudonym}'.",
+        )
+
+    return SubjectConsentStatusResponse(
+        subject_pseudonym=sc.subject_pseudonym,
+        study_id=sc.study_id,
+        site_id=sc.site_id,
+        template_id=sc.template_id,
+        version_index=sc.version_index,
+        protocol_version=sc.protocol_version,
+        signed=True,
+        comprehension_passed=True,
+    )
 
 
 @app.post(
