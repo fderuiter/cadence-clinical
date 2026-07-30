@@ -120,6 +120,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-18: Document Redaction Architecture, Regulatory Data-Handling, and Compliance Profiles](2026-08-18-document-redaction-architecture.md)
 
 ### 6. Frontend & Design System
+- [2026-07-30: eConsent Visual Editor and Subject Consent Portal UI Architecture](2026-07-30-econsent-visual-editor-and-subject-consent-portal-ui-architecture.md)
 
 - [2026-07-22: ADR 2026-07-22: Modular pnpm Workspace for Frontend Development](2026-07-22-pnpm-frontend-workspace.md)
 - [2026-07-28: Hybrid ESLint and In-Memory Accessibility Auditing](2026-07-28-hybrid-eslint-and-in-memory-accessibility-auditing.md)

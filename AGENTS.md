@@ -309,7 +309,7 @@ in ORM query code — use `.is_(True)` / `.is_(False)` instead.
 
 ### 7. Module Import Tracking Verification on Refactoring
 
-When deleting or replacing legacy entry points (e.g. replacing legacy web helpers in favor of `apps/web/src/lib/legacy_helpers.js`), verify that all newly created helper modules are explicitly tracked and committed in git before opening a PR. Always verify `pnpm run build` locally.
+When deleting or replacing legacy entry points (e.g. replacing legacy web helpers in favor of modular components under `apps/web/src/views/`), verify that all newly created helper modules are explicitly tracked and committed in git before opening a PR. Always verify `pnpm run build` locally.
 
 ### 8. OpenAPI Schema Export & Parity Synchronization
 
