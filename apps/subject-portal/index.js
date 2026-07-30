@@ -311,7 +311,10 @@ function renderTasks() {
   if (state.tasksError || state.assignmentsError) {
     if (failureEl) {
       failureEl.style.display = "block";
-      if (errorMsgEl) errorMsgEl.textContent = state.tasksError || "We are unable to connect to the study servers right now.";
+      if (errorMsgEl)
+        errorMsgEl.textContent =
+          state.tasksError ||
+          "We are unable to connect to the study servers right now.";
     }
     // Populate container with error content so tests can inspect innerHTML,
     // but keep it visually hidden behind the failure overlay.
@@ -349,12 +352,20 @@ function renderTasks() {
 
   container.innerHTML = activeTasks
     .map((task) => {
-      const instName = (state.instruments && state.instruments[task.instrument_id]?.name) || task.instrument_name || "Assigned Instrument";
+      const instName =
+        (state.instruments && state.instruments[task.instrument_id]?.name) ||
+        task.instrument_name ||
+        "Assigned Instrument";
       const isCompleted = task.status === "COMPLETED" || task.version_index > 1;
-      const isOverdue = !isCompleted && (task.status === "OVERDUE" || (task.due_at && new Date(task.due_at) < new Date()));
+      const isOverdue =
+        !isCompleted &&
+        (task.status === "OVERDUE" ||
+          (task.due_at && new Date(task.due_at) < new Date()));
       const statusClass = isOverdue ? "overdue" : "pending";
       const statusLabel = isOverdue ? "Overdue" : "Pending";
-      const dueText = task.due_at ? new Date(task.due_at).toLocaleString() : "—";
+      const dueText = task.due_at
+        ? new Date(task.due_at).toLocaleString()
+        : "—";
 
       return `
         <div class="task-item" id="task-card-${task.id}">
@@ -391,7 +402,9 @@ async function startQuestionnaire(assignmentId) {
       instrument = await fetchInstrument(assignment.instrument_id);
       state.instruments[assignment.instrument_id] = instrument;
     } catch (err) {
-      alert("Failed to retrieve questionnaire definition: " + (err.message || err));
+      alert(
+        "Failed to retrieve questionnaire definition: " + (err.message || err)
+      );
       return;
     }
   }
@@ -649,22 +662,33 @@ function renderCompliance() {
     }).length;
     overdue = state.assignments.filter((a) => {
       const isCompleted = a.status === "COMPLETED" || a.version_index > 1;
-      return !isCompleted && (a.status === "OVERDUE" || (a.due_at && new Date(a.due_at) < new Date()));
+      return (
+        !isCompleted &&
+        (a.status === "OVERDUE" ||
+          (a.due_at && new Date(a.due_at) < new Date()))
+      );
     }).length;
     pending = total - completed - overdue;
     rate = total > 0 ? Math.round((completed / total) * 100) : 100;
 
     historyList = state.assignments.map((item) => {
       const isCompleted = item.status === "COMPLETED" || item.version_index > 1;
-      const isOverdue = !isCompleted && (item.status === "OVERDUE" || (item.due_at && new Date(item.due_at) < new Date()));
-      const status = isCompleted ? "COMPLETED" : (isOverdue ? "OVERDUE" : "PENDING");
+      const isOverdue =
+        !isCompleted &&
+        (item.status === "OVERDUE" ||
+          (item.due_at && new Date(item.due_at) < new Date()));
+      const status = isCompleted
+        ? "COMPLETED"
+        : isOverdue
+          ? "OVERDUE"
+          : "PENDING";
       return {
         instrument_id: item.instrument_id,
         instrument_name: item.instrument_name,
         due_at: item.due_at,
         end_date: item.end_date,
         submitted_at: item.submitted_at,
-        status: status
+        status: status,
       };
     });
   }
@@ -696,7 +720,9 @@ function renderCompliance() {
 
   tbody.innerHTML = sorted
     .map((item) => {
-      const scheduledText = item.due_at ? new Date(item.due_at).toLocaleDateString() : "—";
+      const scheduledText = item.due_at
+        ? new Date(item.due_at).toLocaleDateString()
+        : "—";
       const submittedText = item.submitted_at
         ? new Date(item.submitted_at).toLocaleString()
         : "—";
@@ -714,7 +740,10 @@ function renderCompliance() {
         statusLabel = "Overdue";
       }
 
-      const instName = item.instrument_name || (state.instruments && state.instruments[item.instrument_id]?.name) || "Assigned Instrument";
+      const instName =
+        item.instrument_name ||
+        (state.instruments && state.instruments[item.instrument_id]?.name) ||
+        "Assigned Instrument";
 
       return `
         <tr>
@@ -820,11 +849,14 @@ async function acknowledgeNotification(notificationId) {
 
   if (isAuthenticatedSession()) {
     try {
-      const updatedNotif = await dispatchApi(`notifications/${notificationId}/acknowledge`, {
-        method: "POST",
-        body: JSON.stringify({ reason_for_change: actionReason }),
-        change_reason: actionReason,
-      });
+      const updatedNotif = await dispatchApi(
+        `notifications/${notificationId}/acknowledge`,
+        {
+          method: "POST",
+          body: JSON.stringify({ reason_for_change: actionReason }),
+          change_reason: actionReason,
+        }
+      );
 
       // Update state notification on success
       const idx = state.notifications.findIndex((n) => n.id === notificationId);
@@ -897,9 +929,10 @@ async function renderSyncQueueList() {
 
   listEl.innerHTML = all
     .map((item) => {
-      const instName = (state.instruments && state.instruments[item.diary_id]?.name) ||
-                       (!isAuthenticatedSession() && MOCK_INSTRUMENTS[item.diary_id]?.name) ||
-                       item.diary_id;
+      const instName =
+        (state.instruments && state.instruments[item.diary_id]?.name) ||
+        (!isAuthenticatedSession() && MOCK_INSTRUMENTS[item.diary_id]?.name) ||
+        item.diary_id;
       const submittedTime = new Date(item.device_timestamp).toLocaleString();
 
       let badgeClass = "pending";

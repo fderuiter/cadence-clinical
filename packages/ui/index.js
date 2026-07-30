@@ -26,4 +26,7 @@ export {
   sha256,
   validateField,
   buildLedgerBlock,
+  encryptAESGCM,
+  decryptAESGCM,
+  deriveSessionKey,
 } from "./signing.js";

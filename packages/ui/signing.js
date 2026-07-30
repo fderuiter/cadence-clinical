@@ -355,3 +355,195 @@ export async function buildLedgerBlock(
     hash,
   };
 }
+
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+function base64ToUint8Array(base64) {
+  const binaryString = atob(base64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function intTo4BytesBigEndian(value) {
+  const bytes = new Uint8Array(4);
+  bytes[0] = (value >> 24) & 0xff;
+  bytes[1] = (value >> 16) & 0xff;
+  bytes[2] = (value >> 8) & 0xff;
+  bytes[3] = value & 0xff;
+  return bytes;
+}
+
+function bytesToIntBigEndian(bytes) {
+  return (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
+}
+
+/**
+ * Encrypts a payload dictionary using AES-GCM and packages it in a versioned envelope.
+ * Produces base64(version(4B, big-endian) || nonce(12B) || ciphertext+tag).
+ *
+ * @param {Object} payload - The payload to encrypt.
+ * @param {Uint8Array} rawKey - The 256-bit symmetric key.
+ * @param {number} [version=1] - Envelope version.
+ * @param {Uint8Array|null} [aad=null] - Authenticated Additional Data.
+ * @returns {Promise<string>} Base64-encoded envelope.
+ */
+export async function encryptAESGCM(payload, rawKey, version = 1, aad = null) {
+  const serialized = canonicalSerialize(payload);
+  const plaintextBytes = new TextEncoder().encode(serialized);
+
+  // 12-byte random nonce
+  const nonce = globalThis.crypto.getRandomValues(new Uint8Array(12));
+
+  const cryptoKey = await globalThis.crypto.subtle.importKey(
+    "raw",
+    rawKey,
+    { name: "AES-GCM" },
+    false,
+    ["encrypt"]
+  );
+
+  const encryptParams = {
+    name: "AES-GCM",
+    iv: nonce,
+  };
+  if (aad) {
+    encryptParams.additionalData = aad;
+  }
+
+  const encryptedBuffer = await globalThis.crypto.subtle.encrypt(
+    encryptParams,
+    cryptoKey,
+    plaintextBytes
+  );
+
+  const ciphertextAndTag = new Uint8Array(encryptedBuffer);
+
+  const versionBytes = intTo4BytesBigEndian(version);
+  const packed = new Uint8Array(4 + 12 + ciphertextAndTag.length);
+  packed.set(versionBytes, 0);
+  packed.set(nonce, 4);
+  packed.set(ciphertextAndTag, 16);
+
+  return arrayBufferToBase64(packed);
+}
+
+/**
+ * Decrypts a versioned AES-GCM envelope and returns the parsed JSON payload.
+ *
+ * @param {string} encryptedStr - Base64-encoded envelope.
+ * @param {Uint8Array} rawKey - The 256-bit symmetric key.
+ * @param {number} [expectedVersion=1] - Expected envelope version.
+ * @param {Uint8Array|null} [aad=null] - Authenticated Additional Data.
+ * @returns {Promise<Object>} Decrypted payload object.
+ */
+export async function decryptAESGCM(
+  encryptedStr,
+  rawKey,
+  expectedVersion = 1,
+  aad = null
+) {
+  let packedBytes;
+  try {
+    packedBytes = base64ToUint8Array(encryptedStr);
+  } catch (err) {
+    throw new Error("Invalid base64 payload", { cause: err });
+  }
+
+  if (packedBytes.length < 16) {
+    throw new Error("Invalid envelope format: payload too short");
+  }
+
+  const versionBytes = packedBytes.slice(0, 4);
+  const version = bytesToIntBigEndian(versionBytes);
+  if (version !== expectedVersion) {
+    throw new Error(`Unrecognized version marker: ${version}`);
+  }
+
+  const nonce = packedBytes.slice(4, 16);
+  const ciphertextAndTag = packedBytes.slice(16);
+
+  const cryptoKey = await globalThis.crypto.subtle.importKey(
+    "raw",
+    rawKey,
+    { name: "AES-GCM" },
+    false,
+    ["decrypt"]
+  );
+
+  const decryptParams = {
+    name: "AES-GCM",
+    iv: nonce,
+  };
+  if (aad) {
+    decryptParams.additionalData = aad;
+  }
+
+  let decryptedBuffer;
+  try {
+    decryptedBuffer = await globalThis.crypto.subtle.decrypt(
+      decryptParams,
+      cryptoKey,
+      ciphertextAndTag
+    );
+  } catch (err) {
+    throw new Error("Decryption failed: tampered ciphertext, nonce, or AAD", {
+      cause: err,
+    });
+  }
+
+  const decryptedStr = new TextDecoder().decode(decryptedBuffer);
+  try {
+    return JSON.parse(decryptedStr);
+  } catch (err) {
+    throw new Error("Deserialization failed: invalid JSON", { cause: err });
+  }
+}
+
+/**
+ * Derives a 256-bit session key using HKDF-SHA256.
+ *
+ * @param {string|Uint8Array} sessionMaterial - Input session keying material.
+ * @param {string|Uint8Array} salt - HKDF salt.
+ * @param {string|Uint8Array} info - HKDF info payload.
+ * @returns {Promise<Uint8Array>} 256-bit derived key bytes.
+ */
+export async function deriveSessionKey(sessionMaterial, salt, info) {
+  const encoder = new TextEncoder();
+  const materialBytes =
+    typeof sessionMaterial === "string"
+      ? encoder.encode(sessionMaterial)
+      : sessionMaterial;
+  const saltBytes = typeof salt === "string" ? encoder.encode(salt) : salt;
+  const infoBytes = typeof info === "string" ? encoder.encode(info) : info;
+
+  const baseKey = await globalThis.crypto.subtle.importKey(
+    "raw",
+    materialBytes,
+    "HKDF",
+    false,
+    ["deriveBits"]
+  );
+
+  const derivedBits = await globalThis.crypto.subtle.deriveBits(
+    {
+      name: "HKDF",
+      hash: "SHA-256",
+      salt: saltBytes,
+      info: infoBytes,
+    },
+    baseKey,
+    256
+  );
+
+  return new Uint8Array(derivedBits);
+}

@@ -506,91 +506,97 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       expect(syncList.innerHTML).toContain("QUEUED");
     });
 
-  it("asserts Bearer token is attached and gateway headers are absent when authenticated", async () => {
-    const portal = await import("../index.js");
-    portal.state.session.isDemoMode = false;
-    portal.state.session.isOfflineMode = false;
-    portal.state.session.token = "valid_test_token_abc123";
+    it("asserts Bearer token is attached and gateway headers are absent when authenticated", async () => {
+      const portal = await import("../index.js");
+      portal.state.session.isDemoMode = false;
+      portal.state.session.isOfflineMode = false;
+      portal.state.session.token = "valid_test_token_abc123";
 
-    globalThis.fetch = vi.fn().mockImplementation(() =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({ status: "success" }),
-      })
-    );
+      globalThis.fetch = vi.fn().mockImplementation(() =>
+        Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ status: "success" }),
+        })
+      );
 
-    await portal.dispatchApi("epro/sync", {
-      method: "POST",
-      body: JSON.stringify({ test: "data" }),
+      await portal.dispatchApi("epro/sync", {
+        method: "POST",
+        body: JSON.stringify({ test: "data" }),
+      });
+
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+      const lastCall = globalThis.fetch.mock.calls[0];
+      const headers = lastCall[1].headers;
+
+      // Bearer token present and well-formed
+      expect(headers["Authorization"]).toBe("Bearer valid_test_token_abc123");
+
+      // Gateway client-side signing headers strictly absent
+      expect(headers["X-Gateway-Signature"]).toBeUndefined();
+      expect(headers["X-User-Id"]).toBeUndefined();
+      expect(headers["X-User-Roles"]).toBeUndefined();
+      expect(headers["X-Gateway-Timestamp"]).toBeUndefined();
+      expect(headers["X-Signature-Version"]).toBeUndefined();
     });
 
-    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
-    const lastCall = globalThis.fetch.mock.calls[0];
-    const headers = lastCall[1].headers;
+    it("asserts no Authorization header is emitted when no token is present", async () => {
+      const portal = await import("../index.js");
+      portal.state.session.isDemoMode = false;
+      portal.state.session.isOfflineMode = false;
+      portal.state.session.token = null;
 
-    // Bearer token present and well-formed
-    expect(headers["Authorization"]).toBe("Bearer valid_test_token_abc123");
+      globalThis.fetch = vi.fn().mockImplementation(() =>
+        Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ status: "success" }),
+        })
+      );
 
-    // Gateway client-side signing headers strictly absent
-    expect(headers["X-Gateway-Signature"]).toBeUndefined();
-    expect(headers["X-User-Id"]).toBeUndefined();
-    expect(headers["X-User-Roles"]).toBeUndefined();
-    expect(headers["X-Gateway-Timestamp"]).toBeUndefined();
-    expect(headers["X-Signature-Version"]).toBeUndefined();
-  });
+      await portal.dispatchApi("epro/sync", {
+        method: "POST",
+        body: JSON.stringify({ test: "data" }),
+      });
 
-  it("asserts no Authorization header is emitted when no token is present", async () => {
-    const portal = await import("../index.js");
-    portal.state.session.isDemoMode = false;
-    portal.state.session.isOfflineMode = false;
-    portal.state.session.token = null;
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+      const lastCall = globalThis.fetch.mock.calls[0];
+      const headers = lastCall[1].headers;
 
-    globalThis.fetch = vi.fn().mockImplementation(() =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({ status: "success" }),
-      })
-    );
-
-    await portal.dispatchApi("epro/sync", {
-      method: "POST",
-      body: JSON.stringify({ test: "data" }),
+      expect(headers["Authorization"]).toBeUndefined();
     });
 
-    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
-    const lastCall = globalThis.fetch.mock.calls[0];
-    const headers = lastCall[1].headers;
+    it("surfaces an error state on authenticated (non-demo) dispatch failures instead of falling back silently to mocks", async () => {
+      const portal = await import("../index.js");
+      portal.state.session.isDemoMode = false;
+      portal.state.session.isOfflineMode = false;
+      portal.state.session.token = "some_token";
 
-    expect(headers["Authorization"]).toBeUndefined();
-  });
+      // Mock fetch rejection
+      globalThis.fetch = vi
+        .fn()
+        .mockImplementation(() =>
+          Promise.reject(new Error("Unreachable network"))
+        );
 
-  it("surfaces an error state on authenticated (non-demo) dispatch failures instead of falling back silently to mocks", async () => {
-    const portal = await import("../index.js");
-    portal.state.session.isDemoMode = false;
-    portal.state.session.isOfflineMode = false;
-    portal.state.session.token = "some_token";
+      // Initialize application under non-demo, online authenticated context
+      await portal.initializeApp();
 
-    // Mock fetch rejection
-    globalThis.fetch = vi.fn().mockImplementation(() =>
-      Promise.reject(new Error("Unreachable network"))
-    );
+      // Verify mocks were NOT loaded
+      expect(portal.state.assignments).toEqual([]);
+      expect(portal.state.notifications).toEqual([]);
 
-    // Initialize application under non-demo, online authenticated context
-    await portal.initializeApp();
+      // Tasks list and inbox list contain error/failure UI state instead of mocks
+      const tasksList = document.getElementById("tasks-list-container");
+      expect(tasksList.innerHTML).toContain("Error loading tasks");
+      expect(tasksList.innerHTML).not.toContain(
+        "Daily Health &amp; Vital Diary"
+      );
 
-    // Verify mocks were NOT loaded
-    expect(portal.state.assignments).toEqual([]);
-    expect(portal.state.notifications).toEqual([]);
-
-    // Tasks list and inbox list contain error/failure UI state instead of mocks
-    const tasksList = document.getElementById("tasks-list-container");
-    expect(tasksList.innerHTML).toContain("Error loading tasks");
-    expect(tasksList.innerHTML).not.toContain("Daily Health &amp; Vital Diary");
-
-    const inboxList = document.getElementById("inbox-container");
-    expect(inboxList.innerHTML).toContain("Error loading notifications");
-    expect(inboxList.innerHTML).not.toContain("Reminder: Daily Health &amp; Vital Diary");
-  });
+      const inboxList = document.getElementById("inbox-container");
+      expect(inboxList.innerHTML).toContain("Error loading notifications");
+      expect(inboxList.innerHTML).not.toContain(
+        "Reminder: Daily Health &amp; Vital Diary"
+      );
+    });
 
     it("displays conflict resolution outcomes (MERGED, IGNORED_SERVER_WINS) cleanly without discarding", async () => {
       const portal = await import("../index.js");
@@ -679,8 +685,8 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
         created_at: "2026-01-01T00:00:00Z",
         created_by: "system",
         reason_for_change: "Initial",
-        version_index: 1
-      }
+        version_index: 1,
+      },
     ];
 
     const serverInstruments = [
@@ -694,16 +700,16 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
             type: "numeric",
             required: true,
             min: 1,
-            max: 10
-          }
+            max: 10,
+          },
         },
         response_types: {},
         scoring_metadata: {},
         created_at: "2026-01-01T00:00:00Z",
         created_by: "system",
         reason_for_change: "Initial",
-        version_index: 1
-      }
+        version_index: 1,
+      },
     ];
 
     const serverCompliance = {
@@ -720,9 +726,9 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
           status: "PENDING",
           due_at: new Date(Date.now() + 4 * 3600 * 1000).toISOString(),
           end_date: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
-          submitted_at: null
-        }
-      ]
+          submitted_at: null,
+        },
+      ],
     };
 
     const serverNotifications = [
@@ -738,8 +744,8 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
         read_at: null,
         created_at: "2026-01-01T00:00:00Z",
         created_by: "system",
-        reason_for_change: "Initial"
-      }
+        reason_for_change: "Initial",
+      },
     ];
 
     it("authenticates and loads data from server-shaped payloads correctly", async () => {
@@ -753,16 +759,28 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       // Mock fetch for the specific endpoints
       globalThis.fetch = vi.fn().mockImplementation((url) => {
         if (url.includes("assignments/subject/")) {
-          return Promise.resolve({ ok: true, json: () => Promise.resolve(serverAssignments) });
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(serverAssignments),
+          });
         }
         if (url.includes("/instruments")) {
-          return Promise.resolve({ ok: true, json: () => Promise.resolve(serverInstruments) });
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(serverInstruments),
+          });
         }
         if (url.includes("/compliance")) {
-          return Promise.resolve({ ok: true, json: () => Promise.resolve(serverCompliance) });
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(serverCompliance),
+          });
         }
         if (url.includes("/notifications")) {
-          return Promise.resolve({ ok: true, json: () => Promise.resolve(serverNotifications) });
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(serverNotifications),
+          });
         }
         return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
       });
@@ -771,18 +789,28 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
 
       // Assert tasks render from server data
       portal.renderTasks();
-      const tasksHtml = document.getElementById("tasks-list-container").innerHTML;
+      const tasksHtml = document.getElementById(
+        "tasks-list-container"
+      ).innerHTML;
       expect(tasksHtml).toContain("Server Instrument Name");
 
       // Assert compliance render from server compliance data
       portal.renderCompliance();
-      expect(document.getElementById("compliance-rate-pct").textContent).toBe("86%"); // 85.5 rounded to 86
-      expect(document.getElementById("compliance-completed-count").textContent).toBe("5");
+      expect(document.getElementById("compliance-rate-pct").textContent).toBe(
+        "86%"
+      ); // 85.5 rounded to 86
+      expect(
+        document.getElementById("compliance-completed-count").textContent
+      ).toBe("5");
 
       // Assert questionnaire displays server instrument definitions
       await portal.startQuestionnaire("serv_assign_01");
-      expect(document.getElementById("questionnaire-title").textContent).toBe("Server Instrument Name");
-      expect(document.getElementById("questionnaire-form-container").innerHTML).toContain("Server Field Label");
+      expect(document.getElementById("questionnaire-title").textContent).toBe(
+        "Server Instrument Name"
+      );
+      expect(
+        document.getElementById("questionnaire-form-container").innerHTML
+      ).toContain("Server Field Label");
     });
 
     it("shows loading, empty, and failure states on tasks, inbox, and compliance with retry actions", async () => {
@@ -793,40 +821,64 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       portal.state.session.isOfflineMode = false;
 
       // Simulate failures for all
-      globalThis.fetch = vi.fn().mockImplementation(() =>
-        Promise.resolve({ ok: false, status: 500 })
-      );
+      globalThis.fetch = vi
+        .fn()
+        .mockImplementation(() => Promise.resolve({ ok: false, status: 500 }));
 
       await portal.initializeApp();
 
       // Verify tasks failure state
       portal.renderTasks();
-      expect(document.getElementById("tasks-failure").style.display).toBe("block");
-      expect(document.getElementById("tasks-list-container").style.display).toBe("none");
+      expect(document.getElementById("tasks-failure").style.display).toBe(
+        "block"
+      );
+      expect(
+        document.getElementById("tasks-list-container").style.display
+      ).toBe("none");
 
       // Verify compliance failure state
       portal.renderCompliance();
-      expect(document.getElementById("compliance-failure").style.display).toBe("block");
-      expect(document.querySelector("#view-compliance .grid-layout").style.display).toBe("none");
+      expect(document.getElementById("compliance-failure").style.display).toBe(
+        "block"
+      );
+      expect(
+        document.querySelector("#view-compliance .grid-layout").style.display
+      ).toBe("none");
 
       // Verify inbox failure state
       portal.renderInbox();
-      expect(document.getElementById("inbox-failure").style.display).toBe("block");
-      expect(document.getElementById("inbox-container").style.display).toBe("none");
+      expect(document.getElementById("inbox-failure").style.display).toBe(
+        "block"
+      );
+      expect(document.getElementById("inbox-container").style.display).toBe(
+        "none"
+      );
 
       // Test retry triggers refetching and rendering
       globalThis.fetch = vi.fn().mockImplementation((url) => {
         if (url.includes("assignments/subject/")) {
-          return Promise.resolve({ ok: true, json: () => Promise.resolve(serverAssignments) });
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(serverAssignments),
+          });
         }
         if (url.includes("/instruments")) {
-          return Promise.resolve({ ok: true, json: () => Promise.resolve(serverInstruments) });
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(serverInstruments),
+          });
         }
         if (url.includes("/compliance")) {
-          return Promise.resolve({ ok: true, json: () => Promise.resolve(serverCompliance) });
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(serverCompliance),
+          });
         }
         if (url.includes("/notifications")) {
-          return Promise.resolve({ ok: true, json: () => Promise.resolve(serverNotifications) });
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(serverNotifications),
+          });
         }
         return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
       });
@@ -835,14 +887,22 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       document.getElementById("btn-retry-tasks").click();
       // Wait for the async click handler to complete
       await new Promise((resolve) => setTimeout(resolve, 50));
-      expect(document.getElementById("tasks-failure").style.display).toBe("none");
-      expect(document.getElementById("tasks-list-container").innerHTML).toContain("Server Instrument Name");
+      expect(document.getElementById("tasks-failure").style.display).toBe(
+        "none"
+      );
+      expect(
+        document.getElementById("tasks-list-container").innerHTML
+      ).toContain("Server Instrument Name");
 
       // Simulate clicking retry on compliance
       document.getElementById("btn-retry-compliance").click();
       await new Promise((resolve) => setTimeout(resolve, 50));
-      expect(document.getElementById("compliance-failure").style.display).toBe("none");
-      expect(document.getElementById("compliance-rate-pct").textContent).toBe("86%");
+      expect(document.getElementById("compliance-failure").style.display).toBe(
+        "none"
+      );
+      expect(document.getElementById("compliance-rate-pct").textContent).toBe(
+        "86%"
+      );
     });
 
     it("prevents changing notification state on failed server acknowledgement, but updates on success", async () => {
@@ -859,24 +919,30 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
           message: "Server Reminder",
           due_at: "2026-01-01T12:00:00Z",
           channel: "IN_APP",
-          is_read: false
-        }
+          is_read: false,
+        },
       ];
 
       portal.renderInbox();
-      expect(String(document.getElementById("unread-count").textContent)).toBe("1");
+      expect(String(document.getElementById("unread-count").textContent)).toBe(
+        "1"
+      );
 
       // Mock failure response for acknowledgement
-      globalThis.fetch = vi.fn().mockImplementation(() =>
-        Promise.resolve({ ok: false, status: 500 })
-      );
+      globalThis.fetch = vi
+        .fn()
+        .mockImplementation(() => Promise.resolve({ ok: false, status: 500 }));
 
       await portal.acknowledgeNotification("serv_notif_01");
 
       // Since it failed, the notification is still unread (1 unread)
-      expect(String(document.getElementById("unread-count").textContent)).toBe("1");
+      expect(String(document.getElementById("unread-count").textContent)).toBe(
+        "1"
+      );
       expect(portal.state.notifications[0].is_read).toBe(false);
-      expect(document.getElementById("inbox-failure").style.display).toBe("block");
+      expect(document.getElementById("inbox-failure").style.display).toBe(
+        "block"
+      );
 
       // Mock successful acknowledgement response
       const ackResponse = {
@@ -889,16 +955,23 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
         read_at: new Date().toISOString(),
         created_at: "2026-01-01T00:00:00Z",
         created_by: "system",
-        reason_for_change: "Initial"
+        reason_for_change: "Initial",
       };
-      globalThis.fetch = vi.fn().mockImplementation(() =>
-        Promise.resolve({ ok: true, json: () => Promise.resolve(ackResponse) })
-      );
+      globalThis.fetch = vi
+        .fn()
+        .mockImplementation(() =>
+          Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(ackResponse),
+          })
+        );
 
       await portal.acknowledgeNotification("serv_notif_01");
 
       // Successful ack updates state to read
-      expect(String(document.getElementById("unread-count").textContent)).toBe("0");
+      expect(String(document.getElementById("unread-count").textContent)).toBe(
+        "0"
+      );
       expect(portal.state.notifications[0].is_read).toBe(true);
     });
 
@@ -910,9 +983,9 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       portal.state.session.isOfflineMode = false;
 
       // Fail all fetches
-      globalThis.fetch = vi.fn().mockImplementation(() =>
-        Promise.resolve({ ok: false, status: 500 })
-      );
+      globalThis.fetch = vi
+        .fn()
+        .mockImplementation(() => Promise.resolve({ ok: false, status: 500 }));
 
       await portal.initializeApp();
 
@@ -925,7 +998,9 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       // Check compliance is null, and renderCompliance handles error
       expect(portal.state.compliance).toBeNull();
       portal.renderCompliance();
-      expect(document.getElementById("compliance-failure").style.display).toBe("block");
+      expect(document.getElementById("compliance-failure").style.display).toBe(
+        "block"
+      );
     });
   });
 });
