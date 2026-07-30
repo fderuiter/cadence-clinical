@@ -239,7 +239,9 @@ async def ingest_tmf_document(
 
     # 5b. Idempotency Key check
     if idempotency_key:
-        stmt_idem = select(TMFDocument).where(TMFDocument.idempotency_key == idempotency_key)
+        stmt_idem = select(TMFDocument).where(
+            TMFDocument.idempotency_key == idempotency_key
+        )
         res_idem = await session.execute(stmt_idem)
         existing_idem = res_idem.scalars().first()
         if existing_idem:

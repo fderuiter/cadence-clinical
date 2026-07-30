@@ -63,9 +63,7 @@ class EtmfArchivalDelivery(Base):
     study_id: Mapped[str] = mapped_column(String(255), nullable=False)
     site_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     artifact_content: Mapped[str] = mapped_column(String, nullable=False)
-    etmf_document_id: Mapped[Optional[str]] = mapped_column(
-        String(36), nullable=True
-    )
+    etmf_document_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
 
     # 21 CFR Part 11 Compliance Auditing Metadata
     created_at: Mapped[datetime] = mapped_column(

@@ -431,6 +431,7 @@ class ArchivalDeliveryResponse(AuditFields):
     """
     Schema for retrieving the archival delivery status.
     """
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -531,7 +532,8 @@ async def poll_and_dispatch() -> None:
             .where(
                 EtmfArchivalDelivery.status.in_(("PENDING", "FAILED")),
                 EtmfArchivalDelivery.retry_eligible.is_(True),
-                (EtmfArchivalDelivery.next_retry_at.is_(None)) | (EtmfArchivalDelivery.next_retry_at <= now),
+                (EtmfArchivalDelivery.next_retry_at.is_(None))
+                | (EtmfArchivalDelivery.next_retry_at <= now),
             )
             .with_for_update()
         )
@@ -539,7 +541,10 @@ async def poll_and_dispatch() -> None:
         deliveries = res.scalars().all()
 
         for delivery in deliveries:
-            if delivery.status not in ("PENDING", "FAILED") or not delivery.retry_eligible:
+            if (
+                delivery.status not in ("PENDING", "FAILED")
+                or not delivery.retry_eligible
+            ):
                 continue
 
             try:
@@ -593,8 +598,10 @@ async def poll_and_dispatch() -> None:
                 if delivery.attempts >= attempt_cap:
                     delivery.retry_eligible = False
 
-                backoff_seconds = min(60, 2 ** delivery.attempts)
-                delivery.next_retry_at = datetime.utcnow() + timedelta(seconds=backoff_seconds)
+                backoff_seconds = min(60, 2**delivery.attempts)
+                delivery.next_retry_at = datetime.utcnow() + timedelta(
+                    seconds=backoff_seconds
+                )
 
                 await write_audit_log(
                     session=session,
@@ -620,7 +627,9 @@ async def dispatcher_lifecycle_worker() -> None:
         except asyncio.CancelledError:
             break
         except Exception as e:
-            logger.error("Error in eConsent archival dispatcher loop: %s", e, exc_info=True)
+            logger.error(
+                "Error in eConsent archival dispatcher loop: %s", e, exc_info=True
+            )
         await asyncio.sleep(poll_interval)
 
 
@@ -1678,12 +1687,14 @@ async def sign_consent_template_endpoint(
             clause_res = await session.execute(clause_stmt)
             clause = clause_res.scalars().first()
             if clause:
-                composed_clauses.append({
-                    "clause_id": clause.clause_id,
-                    "title": clause.title,
-                    "text": clause.text,
-                    "version_index": clause.version_index,
-                })
+                composed_clauses.append(
+                    {
+                        "clause_id": clause.clause_id,
+                        "title": clause.title,
+                        "text": clause.text,
+                        "version_index": clause.version_index,
+                    }
+                )
         composed_data = {
             "id": template.id,
             "template_id": template.template_id,
@@ -1702,10 +1713,12 @@ async def sign_consent_template_endpoint(
         "manifest": composed_data,
         "signature_metadata": {
             "subject_pseudonym": payload.subject_pseudonym,
-            "signed_at": sig.signed_at.isoformat() if sig.signed_at else datetime.utcnow().isoformat(),
+            "signed_at": sig.signed_at.isoformat()
+            if sig.signed_at
+            else datetime.utcnow().isoformat(),
             "created_by": user_id,
             "signature_data": payload.signature_data,
-        }
+        },
     }
     artifact_content = json.dumps(manifest_and_sig)
     correlation_id = f"{template_id}:{version_index}:{payload.subject_pseudonym}"
