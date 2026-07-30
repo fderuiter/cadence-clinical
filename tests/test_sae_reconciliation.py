@@ -649,9 +649,7 @@ def test_pure_function_normalize_external_icsr_to_saes():
             "transmission_date": "2026-08-26T10:00:00Z",
             "message_id": "MSG-999",
         },
-        "report_identifiers": {
-            "worldwide_unique_case_id": "WW-CASE-999"
-        },
+        "report_identifiers": {"worldwide_unique_case_id": "WW-CASE-999"},
         "patient": {"patient_id": "SUBJ-888", "sex": "M"},
         "reactions": [
             {
@@ -690,7 +688,9 @@ async def test_reconciliation_runs_read_endpoints():
     class MockAsyncClient:
         async def get(self, url, headers=None, params=None, timeout=10.0):
             if "sdtm/AE" in url:
-                return httpx.Response(status_code=200, json={"clinicalData": {"itemGroupData": {}}})
+                return httpx.Response(
+                    status_code=200, json={"clinicalData": {"itemGroupData": {}}}
+                )
             if "cases-mock" in url:
                 return httpx.Response(status_code=200, json=[])
             return httpx.Response(status_code=404)
@@ -699,13 +699,17 @@ async def test_reconciliation_runs_read_endpoints():
     app.state.test_httpx_client = mock_client
 
     client = TestClient(app)
-    headers = get_signed_headers(roles="sponsor_medical_monitor", change_reason="Retrieve reconciliation runs")
+    headers = get_signed_headers(
+        roles="sponsor_medical_monitor", change_reason="Retrieve reconciliation runs"
+    )
 
     res_list = client.get("/api/v1/safety/reconciliation/runs", headers=headers)
     assert res_list.status_code == 200
     assert isinstance(res_list.json(), list)
 
-    res_detail_404 = client.get(f"/api/v1/safety/reconciliation/runs/{uuid.uuid4()}", headers=headers)
+    res_detail_404 = client.get(
+        f"/api/v1/safety/reconciliation/runs/{uuid.uuid4()}", headers=headers
+    )
     assert res_detail_404.status_code == 404
     assert "not found" in res_detail_404.json()["detail"].lower()
 
@@ -720,14 +724,18 @@ async def test_reconciliation_jobs_read_endpoints_and_gating():
     assert res_list.status_code == 200
     assert isinstance(res_list.json(), list)
 
-    res_detail_404 = client.get(f"/api/v1/safety/reconciliation/jobs/{uuid.uuid4()}", headers=headers)
+    res_detail_404 = client.get(
+        f"/api/v1/safety/reconciliation/jobs/{uuid.uuid4()}", headers=headers
+    )
     assert res_detail_404.status_code == 404
 
-    gated_headers = get_signed_headers(roles="sponsor_statistician", change_reason="Trigger gated job")
+    gated_headers = get_signed_headers(
+        roles="sponsor_statistician", change_reason="Trigger gated job"
+    )
     res_post_gated = client.post(
         "/api/v1/safety/reconciliation/jobs",
         json={"study_id": "STUDY-GATED"},
-        headers=gated_headers
+        headers=gated_headers,
     )
     assert res_post_gated.status_code == 403
     assert "insufficient role" in res_post_gated.json()["detail"].lower()
@@ -757,7 +765,14 @@ async def test_reconciliation_version_index_increment():
                                     {"name": "AESER", "type": "string"},
                                 ],
                                 "itemData": [
-                                    ["STUDY-DOUBLE", "SUBJ-DOUBLE", "SEVERE HEADACHE", "2026-07-25", "SEVERE", "Y"]
+                                    [
+                                        "STUDY-DOUBLE",
+                                        "SUBJ-DOUBLE",
+                                        "SEVERE HEADACHE",
+                                        "2026-07-25",
+                                        "SEVERE",
+                                        "Y",
+                                    ]
                                 ],
                             }
                         },
@@ -766,7 +781,9 @@ async def test_reconciliation_version_index_increment():
                 return httpx.Response(status_code=200, json=mock_json)
 
             if "meddra/code" in url:
-                return httpx.Response(status_code=200, json={"status": "AUTO-CODED", "matches": []})
+                return httpx.Response(
+                    status_code=200, json={"status": "AUTO-CODED", "matches": []}
+                )
 
             if "cases-mock" in url:
                 return httpx.Response(status_code=200, json=[])
@@ -777,18 +794,24 @@ async def test_reconciliation_version_index_increment():
     app.state.test_httpx_client = mock_client
 
     client = TestClient(app)
-    headers = get_signed_headers(roles="safety_reviewer", change_reason="Run double reconciliation")
+    headers = get_signed_headers(
+        roles="safety_reviewer", change_reason="Run double reconciliation"
+    )
 
     payload = {"study_id": "STUDY-DOUBLE"}
 
-    res1 = client.post("/api/v1/safety/reconciliation/runs", json=payload, headers=headers)
+    res1 = client.post(
+        "/api/v1/safety/reconciliation/runs", json=payload, headers=headers
+    )
     assert res1.status_code == 201
     run1_data = res1.json()
     assert run1_data["version_index"] == 1
     for d in run1_data["discrepancies"]:
         assert d["version_index"] == 1
 
-    res2 = client.post("/api/v1/safety/reconciliation/runs", json=payload, headers=headers)
+    res2 = client.post(
+        "/api/v1/safety/reconciliation/runs", json=payload, headers=headers
+    )
     assert res2.status_code == 201
     run2_data = res2.json()
     assert run2_data["version_index"] == 2

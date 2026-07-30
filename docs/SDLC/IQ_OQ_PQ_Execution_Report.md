@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1439
-- **Passed:** 1439 🟢
+- **Total Automated Test Cases Run:** 1462
+- **Passed:** 1462 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1613,6 +1613,29 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_public_entry_point_whodrug` | `tests.test_whodrug_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_strict_referential_validation_triggers` | `tests.test_whodrug_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_whodrug_parser_init_validation` | `tests.test_whodrug_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cdisc_xml_structure_validation` | `tests.validation.environment_integrity_tests` | PRD-MDR-001 | 🟢 PASSED | < 1s |
+| `test_cryptographic_tamper_evident_safeguards` | `tests.validation.environment_integrity_tests` | PRD-SYS-003 | 🟢 PASSED | < 1s |
+| `test_environment_integrity` | `tests.validation.environment_integrity_tests` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_site_level_data_isolation` | `tests.validation.environment_integrity_tests` | PRD-SYS-004 | 🟢 PASSED | < 1s |
+| `test_gxp_compliance_drifts_identified` | `tests.validation.gxp_compliance_suite` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_blinding_constraints_on_ui_data_rendering` | `tests.validation.prd_compliance_traceability_tests` | PRD-MDR-006 | 🟢 PASSED | < 1s |
+| `test_ecrf_version_control_history` | `tests.validation.prd_compliance_traceability_tests` | PRD-EDC-005 | 🟢 PASSED | < 1s |
+| `test_edc_archival_integration` | `tests.validation.prd_compliance_traceability_tests` | PRD-EDC-010 | 🟢 PASSED | < 1s |
+| `test_edc_audit_trail_and_signatures` | `tests.validation.prd_compliance_traceability_tests` | PRD-EDC-006 | 🟢 PASSED | < 1s |
+| `test_edc_concurrent_review_locks` | `tests.validation.prd_compliance_traceability_tests` | PRD-EDC-009 | 🟢 PASSED | < 1s |
+| `test_edc_electronic_signatures` | `tests.validation.prd_compliance_traceability_tests` | PRD-EDC-007 | 🟢 PASSED | < 1s |
+| `test_edc_reconsent_and_versioning` | `tests.validation.prd_compliance_traceability_tests` | PRD-EDC-008 | 🟢 PASSED | < 1s |
+| `test_fda_compliant_pdf_generation` | `tests.validation.prd_compliance_traceability_tests` | PRD-SUB-007 | 🟢 PASSED | < 1s |
+| `test_field_level_ingestion_validations` | `tests.validation.prd_compliance_traceability_tests` | PRD-EDC-002 | 🟢 PASSED | < 1s |
+| `test_ie_criteria_logical_mapping_to_ecrf` | `tests.validation.prd_compliance_traceability_tests` | PRD-MDR-007 | 🟢 PASSED | < 1s |
+| `test_query_lifecycle_states` | `tests.validation.prd_compliance_traceability_tests` | PRD-QRY-001 | 🟢 PASSED | < 1s |
+| `test_spreadsheet_ingestion_sheet_structure` | `tests.validation.prd_compliance_traceability_tests` | PRD-EDC-001 | 🟢 PASSED | < 1s |
+| `test_submission_archival_integration` | `tests.validation.prd_compliance_traceability_tests` | PRD-SUB-006 | 🟢 PASSED | < 1s |
+| `test_submission_audit_trail` | `tests.validation.prd_compliance_traceability_tests` | PRD-SUB-004 | 🟢 PASSED | < 1s |
+| `test_submission_e_signatures` | `tests.validation.prd_compliance_traceability_tests` | PRD-SUB-003 | 🟢 PASSED | < 1s |
+| `test_submission_locks` | `tests.validation.prd_compliance_traceability_tests` | PRD-SUB-005 | 🟢 PASSED | < 1s |
+| `test_submission_version_control` | `tests.validation.prd_compliance_traceability_tests` | PRD-SUB-002 | 🟢 PASSED | < 1s |
+| `test_system_generated_validation_queries` | `tests.validation.prd_compliance_traceability_tests` | PRD-QRY-002 | 🟢 PASSED | < 1s |
 
 ## 4. Performance Qualification (PQ) & Scenario Validation
 

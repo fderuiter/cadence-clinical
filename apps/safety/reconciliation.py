@@ -343,6 +343,7 @@ async def run_reconciliation(
     # 6. Persist results inside transaction
     async with session.begin_nested():
         from sqlalchemy import func, select
+
         # Query max run version index
         stmt_run_max = select(func.max(SAEReconciliationRun.version_index)).where(
             SAEReconciliationRun.study_id == study_id
@@ -365,7 +366,7 @@ async def run_reconciliation(
             # Query max discrepancy version index
             stmt_disc_max = select(func.max(SAEDiscrepancy.version_index)).where(
                 SAEDiscrepancy.case_event_key == d["case_event_key"],
-                SAEDiscrepancy.field_name == d["field_name"]
+                SAEDiscrepancy.field_name == d["field_name"],
             )
             res_disc_max = await session.execute(stmt_disc_max)
             max_disc_idx = res_disc_max.scalar() or 0

@@ -419,7 +419,14 @@ class MockAsyncClientForAlertFailure:
                                 {"name": "AESER", "type": "string"},
                             ],
                             "itemData": [
-                                ["STUDY-FAIL-ALERT", "SUBJ-DOUBLE", "SEVERE HEADACHE", "2026-07-25", "SEVERE", "Y"]
+                                [
+                                    "STUDY-FAIL-ALERT",
+                                    "SUBJ-DOUBLE",
+                                    "SEVERE HEADACHE",
+                                    "2026-07-25",
+                                    "SEVERE",
+                                    "Y",
+                                ]
                             ],
                         }
                     },
@@ -428,7 +435,9 @@ class MockAsyncClientForAlertFailure:
             return httpx.Response(status_code=200, json=mock_json)
 
         if "meddra/code" in url:
-            return httpx.Response(status_code=200, json={"status": "AUTO-CODED", "matches": []})
+            return httpx.Response(
+                status_code=200, json={"status": "AUTO-CODED", "matches": []}
+            )
 
         if "cases-mock" in url:
             mock_cases = [
@@ -472,7 +481,9 @@ class MockAsyncClientForAlertFailure:
         if "api/v1/notifications" in url:
             if self.simulate_exception:
                 raise httpx.ConnectError("Simulated transport exception")
-            return httpx.Response(status_code=500, text="Internal Server Error in Notifications")
+            return httpx.Response(
+                status_code=500, text="Internal Server Error in Notifications"
+            )
         return httpx.Response(status_code=404)
 
 
@@ -496,12 +507,16 @@ async def test_alert_dispatch_failure_non_2xx():
     assert response.status_code == 202
     job_id = response.json()["id"]
 
-    poll_res = client.get(f"/api/v1/safety/reconciliation/jobs/{job_id}", headers=headers)
+    poll_res = client.get(
+        f"/api/v1/safety/reconciliation/jobs/{job_id}", headers=headers
+    )
     assert poll_res.status_code == 200
     assert poll_res.json()["status"] == "COMPLETED"
 
     async with db_manager.get_session_maker()() as session:
-        stmt = select(SafetyAuditLog).where(SafetyAuditLog.action == "RECONCILIATION_ALERT_FAILED")
+        stmt = select(SafetyAuditLog).where(
+            SafetyAuditLog.action == "RECONCILIATION_ALERT_FAILED"
+        )
         res = await session.execute(stmt)
         logs = res.scalars().all()
         assert len(logs) == 1
@@ -528,12 +543,16 @@ async def test_alert_dispatch_failure_exception():
     assert response.status_code == 202
     job_id = response.json()["id"]
 
-    poll_res = client.get(f"/api/v1/safety/reconciliation/jobs/{job_id}", headers=headers)
+    poll_res = client.get(
+        f"/api/v1/safety/reconciliation/jobs/{job_id}", headers=headers
+    )
     assert poll_res.status_code == 200
     assert poll_res.json()["status"] == "COMPLETED"
 
     async with db_manager.get_session_maker()() as session:
-        stmt = select(SafetyAuditLog).where(SafetyAuditLog.action == "RECONCILIATION_ALERT_FAILED")
+        stmt = select(SafetyAuditLog).where(
+            SafetyAuditLog.action == "RECONCILIATION_ALERT_FAILED"
+        )
         res = await session.execute(stmt)
         logs = res.scalars().all()
         assert len(logs) == 1
