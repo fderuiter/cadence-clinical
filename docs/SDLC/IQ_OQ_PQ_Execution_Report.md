@@ -13,6 +13,8 @@ Based on the executed automated verification suite, the platform meets all prede
 - **Passed:** 1262 🟢
 - **Total Automated Test Cases Run:** 1268
 - **Passed:** 1268 🟢
+- **Total Automated Test Cases Run:** 1264
+- **Passed:** 1264 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1035,8 +1037,14 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_randomization_config_validation` | `tests.test_rtsm_algorithms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reproducibility_and_seeding` | `tests.test_rtsm_algorithms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_stratified_block_isolation` | `tests.test_rtsm_algorithms` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_evaluate_resupply_boundaries` | `tests.test_rtsm_supply` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_hard_delete_prevented_for_supply_entities` | `tests.test_rtsm_supply` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_insufficient_stock_rejection_and_rollback` | `tests.test_rtsm_supply` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_invalid_site_kit_relationship_rejection` | `tests.test_rtsm_supply` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_locked_site_rejection` | `tests.test_rtsm_supply` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_resupply_threshold_breach_and_deduplication` | `tests.test_rtsm_supply` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_site_inventory_unique_constraint` | `tests.test_rtsm_supply` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_successful_dispensation_endpoint` | `tests.test_rtsm_supply` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_supply_entities_audit_trail_and_soft_delete` | `tests.test_rtsm_supply` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_trial_locking_conformity` | `tests.test_rtsm_supply` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_icsr_version_metadata` | `tests.test_sae_icsr` | *Regression/Helper* | 🟢 PASSED | < 1s |

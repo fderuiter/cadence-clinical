@@ -90,6 +90,11 @@ from apps.execution.edit_checks import (
 )
 from apps.execution.outliers import recalculate_cohort_outliers
 from apps.execution.query_service import QueryService, StateTransitionError
+from apps.execution.rtsm_supply import (
+    InsufficientStockError,
+    SiteInventoryNotFoundError,
+    dispense_kit_transaction,
+)
 from apps.execution.subject_lifecycle import InvalidStateTransitionError
 from apps.execution.translator import process_translation
 from apps.execution.trial_lock import TrialLockManager
@@ -97,7 +102,9 @@ from apps.execution.tsdv import evaluate_tsdv_requirement
 from apps.execution.ucum import convert_unit, get_normalized_representation
 from packages.security import (
     ROLE_CRA,
+    ROLE_CRC,
     ROLE_DATA_MANAGER,
+    ROLE_INVESTIGATOR,
     ROLE_SITE_INVESTIGATOR,
     Principal,
     get_normalized_roles,
@@ -5451,6 +5458,118 @@ async def export_sdtm_domain(
             raise HTTPException(
                 status_code=500, detail=f"Export execution failed: {str(e)}"
             )
+
+
+# ==========================================
+# RTSM Supply Chain & Inventory Management API
+# ==========================================
+
+
+class DispenseRequest(BaseModel):
+    study_id: str
+    site_id: str
+    subject_id: str
+    visit_id: str
+    kit_id: str
+    quantity: int = Field(default=1, ge=1)
+
+
+class DispenseResponse(BaseModel):
+    status: str
+    message: str
+    resupply_triggered: bool
+
+
+@app.post(
+    "/api/v1/execution/rtsm/dispense",
+    response_model=DispenseResponse,
+    status_code=201,
+)
+async def dispense_kit_endpoint(
+    request: Request,
+    payload: DispenseRequest,
+    background_tasks: BackgroundTasks,
+    roles: list[str] = Depends(
+        require_roles(
+            ROLE_CRC,
+            ROLE_INVESTIGATOR,
+            ROLE_CRA,
+            detail="Forbidden: User role is not authorized for RTSM supply dispensation.",
+        )
+    ),
+) -> DispenseResponse:
+    """End-point to dispense investigational product (IP) kits against site inventory.
+
+    Checks site locks early, calls dispense_kit_transaction, and handles commits atomically.
+    Launches resupply alerts via fastapi background tasks post-commit if triggered.
+    """
+    # Proactively check site lock early
+    if TrialLockManager.is_site_locked(payload.site_id):
+        raise HTTPException(
+            status_code=423,
+            detail=f"Site {payload.site_id} is currently locked in a read-only state.",
+        )
+
+    # Standard async db session maker pattern
+    async with db_manager.get_session_maker()() as session:
+        try:
+            # Execute transactional kit dispensation logic
+            resupply_triggered = await dispense_kit_transaction(
+                session=session,
+                study_id=payload.study_id,
+                site_id=payload.site_id,
+                subject_id=payload.subject_id,
+                visit_id=payload.visit_id,
+                kit_id=payload.kit_id,
+                quantity=payload.quantity,
+            )
+
+            # Atomic commit of the session (saving KitDispensation, SiteInventory update, and ResupplyEvent)
+            await session.commit()
+
+        except SiteInventoryNotFoundError as e:
+            raise HTTPException(status_code=404, detail=str(e))
+        except InsufficientStockError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        except PermissionError as e:
+            raise HTTPException(status_code=423, detail=str(e))
+        except Exception as e:
+            await session.rollback()
+            raise HTTPException(
+                status_code=500, detail=f"Internal database error: {str(e)}"
+            )
+
+    # Schedule resupply notification post-commit if triggered
+    if resupply_triggered:
+
+        def dispatch_resupply_notification(
+            site_id: str, kit_id: str, requested_qty: int
+        ):
+            from apps.execution.trial_lock import NotificationRouter
+
+            router = NotificationRouter()
+            payload_notif = {
+                "message": f"Resupply triggered for site {site_id}, kit {kit_id}. Requested quantity: {requested_qty}",
+                "site_id": site_id,
+                "kit_id": kit_id,
+                "requested_qty": requested_qty,
+                "related_entity_type": "site-inventory",
+                "related_entity_id": f"{site_id}:{kit_id}",
+            }
+            router.send_dashboard_notification(["supply_manager"], payload_notif)
+
+        background_tasks.add_task(
+            dispatch_resupply_notification,
+            payload.site_id,
+            payload.kit_id,
+            20,  # default requested qty
+        )
+
+    return DispenseResponse(
+        status="success",
+        message=f"Successfully dispensed {payload.quantity} of kit {payload.kit_id} to subject {payload.subject_id}.",
+        resupply_triggered=resupply_triggered,
+    )
 
 
 @app.post(
