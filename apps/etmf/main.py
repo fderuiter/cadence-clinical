@@ -12,11 +12,11 @@ from tmf_reference_model import (
     get_active_catalog,
     get_mandatory_artifacts,
     resolve_artifact,
-    validate_hierarchy,
 )
 
 from apps.etmf.database import db_manager
 from apps.etmf.export import generate_binder_zip
+from apps.etmf.ingestion import ingest_document_service
 from apps.etmf.lifecycle import validate_and_transition_document_status
 from apps.etmf.models import (
     Base,
@@ -566,297 +566,42 @@ async def ingest_document(
             detail="Forbidden: Trial is currently locked in a read-only state due to a security violation.",
         )
 
-    # Determine TMF taxonomy version
-    taxonomy_version = payload.taxonomy_version or get_active_catalog().version
-
-    code_input = payload.artifact_code
-    name_input = payload.artifact_type
-
-    # Map/Normalize the document classification for FORM_1572, FINANCIAL_DISCLOSURE, and PROTOCOL_SIGNOFF
-    doc_type = None
-    if (
-        name_input == "FORM_1572"
-        or code_input == "05.02.01"
-        or name_input == "FDA Form 1572"
-    ):
-        doc_type = "FORM_1572"
-        name_input = "FDA Form 1572"
-        code_input = "05.02.01"
-    elif (
-        name_input == "FINANCIAL_DISCLOSURE"
-        or code_input == "05.02.02"
-        or name_input == "Financial Disclosure"
-    ):
-        doc_type = "FINANCIAL_DISCLOSURE"
-        name_input = "Financial Disclosure"
-        code_input = "05.02.02"
-    elif (
-        name_input == "PROTOCOL_SIGNOFF"
-        or code_input == "01.01.03"
-        or name_input == "Protocol Sign-off"
-    ):
-        doc_type = "PROTOCOL_SIGNOFF"
-        name_input = "Protocol Sign-off"
-        code_input = "01.01.03"
-
-    # Resolve artifact, section, and zone via the shared catalog API
     try:
-        # If artifact_code is not explicitly supplied, check if artifact_type is a code
-        if (
-            not code_input
-            and name_input
-            and name_input.strip().replace(".", "").isdigit()
-        ):
-            code_input = name_input.strip()
-            name_input = None
-
-        resolved = resolve_artifact(
-            version=taxonomy_version, code=code_input, name=name_input
+        doc = await ingest_document_service(
+            session=session,
+            study_id=payload.study_id,
+            site_id=payload.site_id,
+            artifact_type=payload.artifact_type,
+            filename=payload.filename,
+            content=payload.content,
+            mime_type=payload.mime_type,
+            user_id=user_id,
+            user_roles=user_roles,
+            assigned_sites=principal.assigned_sites,
+            zone=payload.zone,
+            section=payload.section,
+            artifact_code=payload.artifact_code,
+            taxonomy_version=payload.taxonomy_version,
+            metadata_json=payload.metadata_json,
         )
     except ValueError as e:
         raise HTTPException(
             status_code=422,
-            detail=f"Validation Error: {str(e)}",
+            detail=str(e),
         )
-
-    zone = resolved["zone"].code
-    section = resolved["section"].code
-    artifact_obj = resolved["artifact"]
-    artifact_code = artifact_obj.code
-    canonical_artifact_type = artifact_obj.name
-
-    # Validate and normalize site_id
-    site_id = payload.site_id
-    if site_id is not None:
-        site_id_stripped = site_id.strip()
-        if not site_id_stripped:
-            raise HTTPException(
-                status_code=422,
-                detail="Validation Error: site_id cannot be empty or whitespace-only",
-            )
-        site_id = site_id_stripped
-    else:
-        if is_site_level_artifact(canonical_artifact_type, artifact_code):
-            site_id = "QUARANTINED"
-
-    # Enforce site scope if the caller is site-scoped
-    is_site_scoped = len(principal.assigned_sites) > 0
-
-    if is_site_scoped:
-        if not site_id or site_id not in principal.assigned_sites:
-            raise HTTPException(
-                status_code=403,
-                detail="Forbidden: You can only ingest documents for your assigned site(s).",
-            )
-
-    # Validate hierarchy if user supplied specific zone/section hierarchy
-    supplied_zone = payload.zone
-    supplied_section = payload.section
-    if payload.metadata_json:
-        if supplied_zone is None:
-            supplied_zone = payload.metadata_json.get("zone")
-        if supplied_section is None:
-            supplied_section = payload.metadata_json.get("section")
-
-    if supplied_zone is not None or supplied_section is not None:
-        try:
-            validate_hierarchy(
-                version=taxonomy_version,
-                zone_code=supplied_zone if supplied_zone is not None else zone,
-                section_code=(
-                    supplied_section if supplied_section is not None else section
-                ),
-                artifact_code=artifact_code,
-            )
-        except ValueError as e:
-            raise HTTPException(
-                status_code=422,
-                detail=f"Validation Error: {str(e)}",
-            )
-
-    # Validate embedded X.509 signature
-    from apps.etmf.cryptography import (
-        extract_signature_from_content,
-        validate_document_signature,
-    )
-
-    is_valid, status_msg = validate_document_signature(
-        artifact_type=canonical_artifact_type,
-        content=payload.content,
-        metadata_json=payload.metadata_json,
-    )
-    if not is_valid:
+    except PermissionError as e:
         raise HTTPException(
-            status_code=422,
-            detail=f"Validation Error: {status_msg}",
+            status_code=403,
+            detail=str(e),
         )
-
-    # Extract signature to set signature verification status in metadata
-    cert_pem, sig_bytes, _ = extract_signature_from_content(payload.content)
-    if not cert_pem and payload.metadata_json:
-        for key in ["signature", "digital_signature", "x509_signature"]:
-            sig_obj = payload.metadata_json.get(key)
-            if isinstance(sig_obj, dict):
-                cert_pem = (
-                    sig_obj.get("certificate")
-                    or sig_obj.get("x509_certificate")
-                    or sig_obj.get("cert")
-                )
-                break
-
-    # Record verification status in metadata_json
-    metadata_json = dict(payload.metadata_json) if payload.metadata_json else {}
-    metadata_json["signature_verification_status"] = (
-        "VERIFIED" if cert_pem else "NOT_REQUIRED"
-    )
-
-    # Reconstruct signature manifestation if validated and present
-    import base64
-    import hashlib
-    from datetime import datetime, timezone
-
-    from cryptography import x509
-    from cryptography.hazmat.primitives import hashes
-    from cryptography.x509.oid import NameOID
-    from signature import SignatureManifestation, SigningReason
-
-    sig_b64 = None
-    if cert_pem and sig_bytes:
-        sig_b64 = base64.b64encode(sig_bytes).decode("utf-8")
-    elif payload.metadata_json:
-        for key in ["signature", "digital_signature", "x509_signature"]:
-            sig_obj = payload.metadata_json.get(key)
-            if isinstance(sig_obj, dict):
-                sig_val = sig_obj.get("signature_value") or sig_obj.get("signature")
-                if sig_val:
-                    sig_b64 = sig_val.strip()
-                    break
-
-    approval_status_val = "PENDING"
-    signature_manifestation_data = None
-    signer_val = None
-    signing_timestamp_val = None
-
-    if cert_pem and sig_b64:
-        # We have a valid validated signature!
-        # Compute hash of the payload content
-        content_hash = hashlib.sha256(payload.content.encode("utf-8")).hexdigest()
-
-        # Extract signer identity (CN) from cert_pem
-        signer_name = None
-        key_id = None
-        if "MOCK_SIGNATURE" in cert_pem:
-            signer_name = "Mock Signer"
-            key_id = "MOCK_KEY"
-        else:
-            try:
-                cert_obj = x509.load_pem_x509_certificate(cert_pem.encode("utf-8"))
-                cn_attr = cert_obj.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
-                if cn_attr:
-                    signer_name = cn_attr[0].value
-                key_id = cert_obj.fingerprint(hashes.SHA256()).hex()
-            except Exception:
-                pass
-
-        if not signer_name:
-            signer_name = user_id or "system"
-
-        now_utc = datetime.now(timezone.utc)
-        sig_man = SignatureManifestation(
-            signer_id=signer_name,
-            timestamp=now_utc,
-            signing_reason=SigningReason.APPROVAL,
-            ip_address="127.0.0.1",
-            user_agent="eTMF Ingest Service",
-            sha256_hash=content_hash,
-            signature=sig_b64,
-            certificate_pem=cert_pem,
-            key_identifier=key_id,
-        )
-        signature_manifestation_data = sig_man.model_dump(mode="json")
-        approval_status_val = "APPROVED"
-        signer_val = signer_name
-        signing_timestamp_val = now_utc
-
-    # Check if a document version already exists (for study_id + site_id + artifact_code)
-    stmt = (
-        select(TMFDocument)
-        .where(TMFDocument.study_id == payload.study_id)
-        .where(TMFDocument.artifact_code == artifact_code)
-    )
-    if site_id:
-        stmt = stmt.where(TMFDocument.site_id == site_id)
-    else:
-        stmt = stmt.where(TMFDocument.site_id.is_(None))
-
-    stmt = stmt.order_by(TMFDocument.version_index.desc())
-    result = await session.execute(stmt)
-    existing_doc = result.scalars().first()
-
-    new_version_index = 1
-    if existing_doc:
-        if (
-            existing_doc.status == "SIGNED"
-            or existing_doc.approval_status == "APPROVED"
-            or existing_doc.signature_manifestation is not None
-        ):
-            await write_audit_log(
-                session=session,
-                user_id=user_id,
-                user_role=user_roles,
-                action="MUTATION_REJECTED",
-                document_id=existing_doc.id,
-                details=f"Rejected attempt to ingest new version for signed document '{existing_doc.filename}' (ID: {existing_doc.id}). Error: IMMUTABILITY_VIOLATION.",
-            )
-            await session.commit()
-            raise HTTPException(
-                status_code=403,
-                detail="IMMUTABILITY_VIOLATION: Document is already signed and cannot be modified",
-            )
-        new_version_index = existing_doc.version_index + 1
-
-    doc = TMFDocument(
-        study_id=payload.study_id,
-        site_id=site_id,
-        zone=zone,
-        section=section,
-        artifact_type=canonical_artifact_type,
-        filename=payload.filename,
-        content=payload.content,
-        mime_type=payload.mime_type,
-        created_by=user_id,
-        version_index=new_version_index,
-        taxonomy_version=taxonomy_version,
-        artifact_code=artifact_code,
-        metadata_json=metadata_json,
-        document_type=doc_type,
-        approval_status=approval_status_val,
-        signature_manifestation=signature_manifestation_data,
-        signer=signer_val,
-        signing_timestamp=signing_timestamp_val,
-    )
-
-    session.add(doc)
-    await session.flush()
-
-    # Log action to immutable audit trail
-    await write_audit_log(
-        session=session,
-        user_id=user_id,
-        user_role=user_roles,
-        action="INGEST",
-        document_id=doc.id,
-        details=f"Ingested artifact type '{canonical_artifact_type}' for study '{payload.study_id}' as Version {new_version_index} (TMF Zone {zone}, Section {section}).",
-    )
-
     return {
         "status": "success",
         "document_id": doc.id,
-        "zone": zone,
-        "section": section,
-        "version_index": new_version_index,
-        "taxonomy_version": taxonomy_version,
-        "artifact_code": artifact_code,
+        "zone": doc.zone,
+        "section": doc.section,
+        "version_index": doc.version_index,
+        "taxonomy_version": doc.taxonomy_version,
+        "artifact_code": doc.artifact_code,
         "document_status": doc.status,
     }
 
