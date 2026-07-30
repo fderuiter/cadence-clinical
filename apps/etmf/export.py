@@ -69,6 +69,17 @@ async def generate_binder_zip(
     else:
         documents_to_export = all_docs
 
+    # Deterministically sort documents by zone -> section -> artifact_code -> version_index
+    documents_to_export = sorted(
+        documents_to_export,
+        key=lambda d: (
+            d.zone or 0,
+            d.section or "",
+            d.artifact_code or "",
+            d.version_index or 0,
+        ),
+    )
+
     # Create in-memory zip file
     zip_buffer = io.BytesIO()
     existing_paths = set()

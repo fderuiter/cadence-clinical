@@ -167,11 +167,11 @@ async def test_document_version_history_lineage():
     assert res_v1.status_code == 201
     v1_id = res_v1.json()["id"]
 
-    # Transition v1 status through QC states to ARCHIVED
+    # Transition v1 status through QC states to APPROVED (leaving it non-archived so we can ingest v2)
     headers_transition = get_auth_headers(
-        roles="admin,sponsor_dm", change_reason="Approve and archive"
+        roles="admin,sponsor_dm", change_reason="Approve v1"
     )
-    for s in ["TECHNICAL_QC", "CLINICAL_QC", "APPROVED", "ARCHIVED"]:
+    for s in ["TECHNICAL_QC", "CLINICAL_QC", "APPROVED"]:
         res_trans1 = client.post(
             f"/api/v1/etmf/documents/{v1_id}/transition",
             json={
@@ -212,7 +212,7 @@ async def test_document_version_history_lineage():
     assert v1_entry["filename"] == "protocol_v1.pdf"
     assert len(v1_entry["transitions"]) >= 1
     assert v1_entry["transitions"][0]["from_status"] == "DRAFT"
-    assert v1_entry["transitions"][-1]["to_status"] == "ARCHIVED"
+    assert v1_entry["transitions"][-1]["to_status"] == "APPROVED"
 
     assert v2_entry["id"] == v2_id
     assert v2_entry["version_index"] == 2
