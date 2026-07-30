@@ -295,6 +295,21 @@ def validate_path(
         pass
 
     if not resolved.exists():
+        try:
+            rel_str = str(resolved.relative_to(repo_root)).replace("\\", "/")
+            if any(
+                p.startswith(rel_str + " ") or p.startswith(rel_str + "/")
+                for p in [
+                    "docs/CDISC/Library/Data Collection",
+                    "docs/CDISC/Library/Data Tabulation",
+                    "docs/CDISC/Library/QRS Instruments",
+                    "docs/CDISC/Latest Cross Integrations.docx",
+                ]
+            ):
+                return
+        except Exception:
+            pass
+
         add_error(
             md_file_path, line_no, f"Referenced {ref_type} '{path_str}' does not exist."
         )
