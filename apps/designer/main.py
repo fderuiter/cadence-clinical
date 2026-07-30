@@ -96,6 +96,11 @@ from apps.designer.delta import (
     list_blocks,
     list_library_objects,
     reorder_blocks,
+    retire_arm_applicability_link,
+    retire_epoch_visit_link,
+    retire_soa_entity,
+    retire_timing_link,
+    retire_visit_procedure_link,
     update_block,
     update_eligibility_criterion,
     update_epoch,
@@ -105,11 +110,6 @@ from apps.designer.delta import (
     update_study_arm,
     update_timing_window,
     update_visit,
-    retire_soa_entity,
-    retire_epoch_visit_link,
-    retire_visit_procedure_link,
-    retire_timing_link,
-    retire_arm_applicability_link,
 )
 from apps.designer.evs_client import NCIEVSClient
 from apps.designer.library import (
@@ -189,23 +189,23 @@ class VersionDiffResponse(BaseModel):
 
 
 from apps.designer.soa_models import (
-    CreateStudyArmRequest,
-    UpdateStudyArmRequest,
     CreateEpochRequest,
-    UpdateEpochRequest,
-    CreateVisitRequest,
-    UpdateVisitRequest,
     CreateProcedureRequest,
-    UpdateProcedureRequest,
+    CreateStudyArmRequest,
     CreateTimingWindowRequest,
-    UpdateTimingWindowRequest,
+    CreateVisitRequest,
+    LinkArmApplicabilityRequest,
+    LinkEpochVisitRequest,
+    LinkTimingRequest,
+    LinkVisitProcedureRequest,
     SoAEntityCreatedResponse,
     SoAEntityDetail,
-    LinkEpochVisitRequest,
-    LinkVisitProcedureRequest,
-    LinkTimingRequest,
-    LinkArmApplicabilityRequest,
     SoALinkResponse,
+    UpdateEpochRequest,
+    UpdateProcedureRequest,
+    UpdateStudyArmRequest,
+    UpdateTimingWindowRequest,
+    UpdateVisitRequest,
 )
 
 
@@ -686,6 +686,7 @@ async def study_differences(
 
 # --- Retirement / Deletion Endpoints ---
 
+
 @app.delete(
     "/api/v1/studies/{study_id}/versions/{version_id}/arms/{arm_id}",
     response_model=SoAEntityCreatedResponse,
@@ -876,7 +877,9 @@ async def retire_visit_procedure_endpoint(
         procedure_id=payload.procedure_id,
     )
     if not success:
-        raise HTTPException(status_code=400, detail="Failed to retire visit-procedure link")
+        raise HTTPException(
+            status_code=400, detail="Failed to retire visit-procedure link"
+        )
     return SoALinkResponse()
 
 
@@ -904,7 +907,9 @@ async def retire_timing_endpoint(
         source_type=payload.source_type,
     )
     if not success:
-        raise HTTPException(status_code=400, detail="Failed to retire timing window link")
+        raise HTTPException(
+            status_code=400, detail="Failed to retire timing window link"
+        )
     return SoALinkResponse()
 
 
@@ -932,7 +937,9 @@ async def retire_arm_applicability_endpoint(
         target_type=payload.target_type,
     )
     if not success:
-        raise HTTPException(status_code=400, detail="Failed to retire arm applicability link")
+        raise HTTPException(
+            status_code=400, detail="Failed to retire arm applicability link"
+        )
     return SoALinkResponse()
 
 

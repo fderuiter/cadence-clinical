@@ -2584,38 +2584,72 @@ async def get_soa_matrix_projection(driver, study_version_id: str) -> Dict[str, 
         _init_mock_soa(study_version_id)
         data = MOCK_SOA_DATA[study_version_id]
 
-        raw_epochs = [ep for ep in data["epochs"].values() if not ep.get("is_retired") and not ep.get("is_deleted")]
-        raw_encounters = [v for v in data["visits"].values() if not v.get("is_retired") and not v.get("is_deleted")]
-        raw_procedures = [p for p in data["procedures"].values() if not p.get("is_retired") and not p.get("is_deleted")]
-        _raw_arms = [sa for sa in data["arms"].values() if not sa.get("is_retired") and not sa.get("is_deleted")]
+        raw_epochs = [
+            ep
+            for ep in data["epochs"].values()
+            if not ep.get("is_retired") and not ep.get("is_deleted")
+        ]
+        raw_encounters = [
+            v
+            for v in data["visits"].values()
+            if not v.get("is_retired") and not v.get("is_deleted")
+        ]
+        raw_procedures = [
+            p
+            for p in data["procedures"].values()
+            if not p.get("is_retired") and not p.get("is_deleted")
+        ]
+        _raw_arms = [
+            sa
+            for sa in data["arms"].values()
+            if not sa.get("is_retired") and not sa.get("is_deleted")
+        ]
 
         epoch_visit_links = [
             {"epoch_id": L["from_id"], "visit_id": L["to_id"]}
             for L in data["links"]
             if L["type"] == "epoch_visit"
-            and L["from_id"] in data["epochs"] and not data["epochs"][L["from_id"]].get("is_retired") and not data["epochs"][L["from_id"]].get("is_deleted")
-            and L["to_id"] in data["visits"] and not data["visits"][L["to_id"]].get("is_retired") and not data["visits"][L["to_id"]].get("is_deleted")
+            and L["from_id"] in data["epochs"]
+            and not data["epochs"][L["from_id"]].get("is_retired")
+            and not data["epochs"][L["from_id"]].get("is_deleted")
+            and L["to_id"] in data["visits"]
+            and not data["visits"][L["to_id"]].get("is_retired")
+            and not data["visits"][L["to_id"]].get("is_deleted")
         ]
         visit_proc_links = [
             {"visit_id": L["from_id"], "procedure_id": L["to_id"]}
             for L in data["links"]
             if L["type"] == "visit_procedure"
-            and L["from_id"] in data["visits"] and not data["visits"][L["from_id"]].get("is_retired") and not data["visits"][L["from_id"]].get("is_deleted")
-            and L["to_id"] in data["procedures"] and not data["procedures"][L["to_id"]].get("is_retired") and not data["procedures"][L["to_id"]].get("is_deleted")
+            and L["from_id"] in data["visits"]
+            and not data["visits"][L["from_id"]].get("is_retired")
+            and not data["visits"][L["from_id"]].get("is_deleted")
+            and L["to_id"] in data["procedures"]
+            and not data["procedures"][L["to_id"]].get("is_retired")
+            and not data["procedures"][L["to_id"]].get("is_deleted")
         ]
         visit_timing = [
             {"visit_id": L["from_id"], "timing_name": L["to_id"]}
             for L in data["links"]
-            if L["type"] == "timing" and L["source_type"] == "visit"
-            and L["from_id"] in data["visits"] and not data["visits"][L["from_id"]].get("is_retired") and not data["visits"][L["from_id"]].get("is_deleted")
-            and L["to_id"] in data["timing_windows"] and not data["timing_windows"][L["to_id"]].get("is_retired") and not data["timing_windows"][L["to_id"]].get("is_deleted")
+            if L["type"] == "timing"
+            and L["source_type"] == "visit"
+            and L["from_id"] in data["visits"]
+            and not data["visits"][L["from_id"]].get("is_retired")
+            and not data["visits"][L["from_id"]].get("is_deleted")
+            and L["to_id"] in data["timing_windows"]
+            and not data["timing_windows"][L["to_id"]].get("is_retired")
+            and not data["timing_windows"][L["to_id"]].get("is_deleted")
         ]
         proc_timing = [
             {"procedure_id": L["from_id"], "timing_name": L["to_id"]}
             for L in data["links"]
-            if L["type"] == "timing" and L["source_type"] == "procedure"
-            and L["from_id"] in data["procedures"] and not data["procedures"][L["from_id"]].get("is_retired") and not data["procedures"][L["from_id"]].get("is_deleted")
-            and L["to_id"] in data["timing_windows"] and not data["timing_windows"][L["to_id"]].get("is_retired") and not data["timing_windows"][L["to_id"]].get("is_deleted")
+            if L["type"] == "timing"
+            and L["source_type"] == "procedure"
+            and L["from_id"] in data["procedures"]
+            and not data["procedures"][L["from_id"]].get("is_retired")
+            and not data["procedures"][L["from_id"]].get("is_deleted")
+            and L["to_id"] in data["timing_windows"]
+            and not data["timing_windows"][L["to_id"]].get("is_retired")
+            and not data["timing_windows"][L["to_id"]].get("is_deleted")
         ]
         # Extracted arm applicability links
         arm_applicability_links = [
@@ -2626,7 +2660,9 @@ async def get_soa_matrix_projection(driver, study_version_id: str) -> Dict[str, 
             }
             for L in data["links"]
             if L["type"] == "arm_applicability"
-            and L["from_id"] in data["arms"] and not data["arms"][L["from_id"]].get("is_retired") and not data["arms"][L["from_id"]].get("is_deleted")
+            and L["from_id"] in data["arms"]
+            and not data["arms"][L["from_id"]].get("is_retired")
+            and not data["arms"][L["from_id"]].get("is_deleted")
         ]
     else:
         async with driver.session() as session:
@@ -2659,16 +2695,40 @@ async def get_soa_matrix_projection(driver, study_version_id: str) -> Dict[str, 
             if not record:
                 return {"epochs": [], "encounters": [], "rows": [], "arms": []}
 
-            raw_epochs = [e for e in (record.get("epochs") or []) if e and not e.get("is_retired") and not e.get("is_deleted")]
-            raw_encounters = [e for e in (record.get("encounters") or []) if e and not e.get("is_retired") and not e.get("is_deleted")]
-            raw_procedures = [e for e in (record.get("procedures") or []) if e and not e.get("is_retired") and not e.get("is_deleted")]
-            _raw_arms = [e for e in (record.get("arms") or []) if e and not e.get("is_retired") and not e.get("is_deleted")]
+            raw_epochs = [
+                e
+                for e in (record.get("epochs") or [])
+                if e and not e.get("is_retired") and not e.get("is_deleted")
+            ]
+            raw_encounters = [
+                e
+                for e in (record.get("encounters") or [])
+                if e and not e.get("is_retired") and not e.get("is_deleted")
+            ]
+            raw_procedures = [
+                e
+                for e in (record.get("procedures") or [])
+                if e and not e.get("is_retired") and not e.get("is_deleted")
+            ]
+            _raw_arms = [
+                e
+                for e in (record.get("arms") or [])
+                if e and not e.get("is_retired") and not e.get("is_deleted")
+            ]
 
             epoch_visit_links = record.get("epoch_visit_links") or []
             visit_proc_links = record.get("visit_proc_links") or []
 
-            visit_timing = [vt for vt in (record.get("visit_timing") or []) if vt and not vt.get("is_retired") and not vt.get("is_deleted")]
-            proc_timing = [pt for pt in (record.get("proc_timing") or []) if pt and not pt.get("is_retired") and not pt.get("is_deleted")]
+            visit_timing = [
+                vt
+                for vt in (record.get("visit_timing") or [])
+                if vt and not vt.get("is_retired") and not vt.get("is_deleted")
+            ]
+            proc_timing = [
+                pt
+                for pt in (record.get("proc_timing") or [])
+                if pt and not pt.get("is_retired") and not pt.get("is_deleted")
+            ]
 
             arm_applicability_links = record.get("applicability_links") or []
 

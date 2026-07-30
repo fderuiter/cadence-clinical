@@ -224,6 +224,15 @@ def loaded_specs():
 
 
 WHITELISTED_ROUTES = {
+    ("delete", "/api/v1/studies/{study_id}/versions/{version_id}/arms/{arm_id}"),
+    ("delete", "/api/v1/studies/{study_id}/versions/{version_id}/epochs/{epoch_id}"),
+    ("delete", "/api/v1/studies/{study_id}/versions/{version_id}/visits/{visit_id}"),
+    ("delete", "/api/v1/studies/{study_id}/versions/{version_id}/procedures/{procedure_id}"),
+    ("delete", "/api/v1/studies/{study_id}/versions/{version_id}/timing-windows/{timing_id}"),
+    ("delete", "/api/v1/studies/{study_id}/versions/{version_id}/links/epoch-visit"),
+    ("delete", "/api/v1/studies/{study_id}/versions/{version_id}/links/visit-procedure"),
+    ("delete", "/api/v1/studies/{study_id}/versions/{version_id}/links/timing"),
+    ("delete", "/api/v1/studies/{study_id}/versions/{version_id}/links/arm-applicability"),
     ("get", "/api/v1/studies/{study_id}/versions/{version_id}/blocks"),
     ("get", "/api/v1/studies/{study_id}/versions/{version_id}/blocks/{block_id}"),
     ("post", "/api/v1/studies/{study_id}/versions/{version_id}/blocks"),
