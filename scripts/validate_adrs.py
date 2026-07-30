@@ -110,7 +110,7 @@ def get_closest_local_branch_point() -> str:
     to find the exact branch point without network dependencies or hardcoded branch names.
     """
     gh_base_ref = os.environ.get("GITHUB_BASE_REF")
-    if gh_base_ref:
+    if gh_base_ref and "PYTEST_CURRENT_TEST" not in os.environ:
         gh_base_ref = gh_base_ref.strip()
         if gh_base_ref:
             return f"origin/{gh_base_ref}"
