@@ -4,7 +4,7 @@ import { createPinia, setActivePinia } from "pinia";
 import EcrfView from "../src/views/EcrfView.vue";
 import MdrView from "../src/views/MdrView.vue";
 import { terminologyClient } from "../src/api/terminologyClient.js";
-import { validateField } from "../src/lib/legacy_helpers.js";
+import { validateField } from "ui";
 
 // Mock the terminology client
 vi.mock("../src/api/terminologyClient.js", () => {
