@@ -184,6 +184,20 @@ class TicketAuditLogResponse(BaseModel):
     record_id: Optional[str] = None
 
 
+class PaginatedTicketAuditLogResponse(BaseModel):
+    """
+    Paginated representation of ticket audit trail logs.
+    """
+
+    items: List[TicketAuditLogResponse]
+    total_count: int
+    limit: int
+    offset: int
+    has_more: bool
+    next_page: Optional[str] = None
+    next_cursor: Optional[str] = None
+
+
 DATABASE_URL = os.getenv("TICKETS_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 
@@ -202,18 +216,6 @@ app.add_middleware(GatewayAuthMiddleware)
 
 # Dependable to obtain database session
 get_db_session = DatabaseSessionDependency(db_manager)
-
-
-def get_user_context(request: Request):
-    """
-    Helper to extract user identity headers parsed by GatewayAuthMiddleware.
-    """
-    user_id = getattr(request.state, "user_id", "system")
-    user_role = request.headers.get("X-User-Roles", "system")
-    change_reason = getattr(
-        request.state, "change_reason", None
-    ) or request.headers.get("X-Change-Reason")
-    return user_id, user_role, change_reason
 
 
 async def write_ticket_audit_log(
@@ -501,16 +503,40 @@ async def list_tickets(
 
 
 # Audit Logs Retrieval Endpoint
-@app.get("/api/v1/tickets/audit-logs", response_model=List[TicketAuditLogResponse])
+@app.get("/api/v1/tickets/audit-logs", response_model=PaginatedTicketAuditLogResponse)
 async def list_ticket_audit_logs(
     request: Request,
     ticket_id: Optional[str] = None,
+    limit: int = Query(50, ge=1, le=250),
+    offset: int = Query(0, ge=0),
+    start_time: Optional[datetime] = Query(None),
+    end_time: Optional[datetime] = Query(None),
+    principal: Principal = Depends(get_principal),
     session: AsyncSession = Depends(get_db_session),
-) -> List[TicketAuditLogResponse]:
+) -> PaginatedTicketAuditLogResponse:
     """
     Retrieve ticket audit logs in descending chronological order.
     """
-    user_id, user_role, change_reason = get_user_context(request)
+    user_id = principal.user_id
+    change_reason = principal.change_reason
+
+    actual_ticket_id = None
+    if ticket_id:
+        ticket_stmt = select(Ticket).where((Ticket.id == ticket_id) | (Ticket.reference == ticket_id))
+        ticket_res = await session.execute(ticket_stmt)
+        ticket = ticket_res.scalars().first()
+        if not ticket:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Ticket with ID/reference '{ticket_id}' not found."
+            )
+        actual_ticket_id = ticket.id
+        # Apply site scope check
+        if ticket.site_id and not can_access_site(principal, ticket.site_id):
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: Insufficient scope access for this site.",
+            )
 
     # Note: Recording self-auditing list action first so it is included in the query result.
     await write_ticket_audit_log(
@@ -518,20 +544,49 @@ async def list_ticket_audit_logs(
         user_id=user_id,
         action="TICKET_AUDIT_LOG_LIST",
         details="Listed ticket audit logs.",
-        ticket_id=ticket_id,
+        ticket_id=actual_ticket_id or ticket_id,
         change_reason=change_reason,
         version_index=1,
     )
 
+    # Build filters dynamically
+    filters = []
+    if actual_ticket_id:
+        filters.append(TicketAuditLog.ticket_id == actual_ticket_id)
+    else:
+        site_scoped_roles = {"investigator", "crc", "cra", "external_monitor"}
+        is_site_scoped = any(role in site_scoped_roles for role in principal.roles)
+
+        if is_site_scoped or principal.assigned_sites:
+            if principal.assigned_sites:
+                subq = select(Ticket.id).where(Ticket.site_id.in_(principal.assigned_sites))
+                filters.append(TicketAuditLog.ticket_id.in_(subq))
+            else:
+                filters.append(1 == 0)
+
+    if start_time:
+        filters.append(TicketAuditLog.created_at >= start_time)
+    if end_time:
+        filters.append(TicketAuditLog.created_at <= end_time)
+
+    # Count total matching rows
+    count_stmt = select(func.count(TicketAuditLog.id)).select_from(TicketAuditLog)
+    for f in filters:
+        count_stmt = count_stmt.where(f)
+    count_res = await session.execute(count_stmt)
+    total_count = count_res.scalar() or 0
+
+    # Retrieve paginated matching records
     stmt = select(TicketAuditLog)
-    if ticket_id:
-        stmt = stmt.where(TicketAuditLog.ticket_id == ticket_id)
-    stmt = stmt.order_by(TicketAuditLog.created_at.desc())
+    for f in filters:
+        stmt = stmt.where(f)
+    stmt = stmt.order_by(TicketAuditLog.created_at.desc(), TicketAuditLog.id.desc())
+    stmt = stmt.offset(offset).limit(limit)
 
     result = await session.execute(stmt)
     logs = result.scalars().all()
 
-    return [
+    items = [
         TicketAuditLogResponse(
             id=log.id,
             ticket_id=log.ticket_id,
@@ -545,6 +600,16 @@ async def list_ticket_audit_logs(
         )
         for log in logs
     ]
+
+    has_more = (offset + limit) < total_count
+
+    return PaginatedTicketAuditLogResponse(
+        items=items,
+        total_count=total_count,
+        limit=limit,
+        offset=offset,
+        has_more=has_more,
+    )
 
 
 @app.get("/api/v1/tickets/{id}", response_model=TicketResponse)
@@ -932,12 +997,15 @@ async def create_ticket_comment(
     request: Request,
     id: str,
     payload: CommentCreate,
+    principal: Principal = Depends(get_principal),
+    _not_auditor=Depends(verify_not_auditor),
     session: AsyncSession = Depends(get_db_session),
 ) -> CommentResponse:
     """
     Append an auditable comment/note to a specific ticket.
     """
-    user_id, user_role, change_reason = get_user_context(request)
+    user_id = principal.user_id
+    change_reason = principal.change_reason
     if not change_reason:
         raise HTTPException(
             status_code=403, detail="Missing change justification reason"
@@ -949,6 +1017,13 @@ async def create_ticket_comment(
     ticket = ticket_res.scalars().first()
     if not ticket:
         raise HTTPException(status_code=404, detail=f"Ticket with ID '{id}' not found.")
+
+    # Validate site scope access
+    if ticket.site_id and not can_access_site(principal, ticket.site_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Insufficient scope access for this site.",
+        )
 
     comment = TicketComment(
         ticket_id=id,
@@ -987,12 +1062,14 @@ async def create_ticket_comment(
 async def list_ticket_comments(
     request: Request,
     id: str,
+    principal: Principal = Depends(get_principal),
     session: AsyncSession = Depends(get_db_session),
 ) -> List[CommentResponse]:
     """
     Retrieve all comments for a specific ticket in ascending chronological order.
     """
-    user_id, user_role, change_reason = get_user_context(request)
+    user_id = principal.user_id
+    change_reason = principal.change_reason
 
     # Verify ticket exists
     ticket_stmt = select(Ticket).where(Ticket.id == id)
@@ -1000,6 +1077,13 @@ async def list_ticket_comments(
     ticket = ticket_res.scalars().first()
     if not ticket:
         raise HTTPException(status_code=404, detail=f"Ticket with ID '{id}' not found.")
+
+    # Validate site scope access
+    if ticket.site_id and not can_access_site(principal, ticket.site_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Insufficient scope access for this site.",
+        )
 
     stmt = (
         select(TicketComment)
