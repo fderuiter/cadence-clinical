@@ -996,7 +996,9 @@ async def test_ctms_sync_happy_path_and_reloads():
         "study_id": "study_sync_01",
         "status": "ACTIVE",
     }
-    client.post("/api/v1/ctms/cra-allocations", json=alloc_payload, headers=alloc_headers)
+    client.post(
+        "/api/v1/ctms/cra-allocations", json=alloc_payload, headers=alloc_headers
+    )
 
     response_create = client.post(
         "/api/v1/ctms/monitoring-visits", json=create_payload, headers=cra_headers
@@ -1021,10 +1023,8 @@ async def test_ctms_sync_happy_path_and_reloads():
             "sequence_number": 101,
             "client_id": "device_client_abc",
             "conflict_strategy": "CLIENT_WINS",
-            "timestamps": {
-                "actual_date": actual_date.isoformat()
-            }
-        }
+            "timestamps": {"actual_date": actual_date.isoformat()},
+        },
     }
 
     # Perform first sync
@@ -1038,7 +1038,8 @@ async def test_ctms_sync_happy_path_and_reloads():
     assert data["sync_status"] == "RESOLVED"
 
     # Verify database has been updated
-    from apps.ctms.models import MonitoringVisit, MonitoringVisitFinding, MonitoringVisitDefeated, CTMSClinicalQuery
+    from apps.ctms.models import MonitoringVisit, MonitoringVisitFinding
+
     async with db_manager.get_session_maker()() as session:
         stmt = select(MonitoringVisit).where(MonitoringVisit.id == visit_id)
         res = await session.execute(stmt)
@@ -1049,7 +1050,9 @@ async def test_ctms_sync_happy_path_and_reloads():
         assert v.offline_sync_markers["sequence_number"] == 101
 
         # Check findings
-        stmt_f = select(MonitoringVisitFinding).where(MonitoringVisitFinding.visit_id == visit_id)
+        stmt_f = select(MonitoringVisitFinding).where(
+            MonitoringVisitFinding.visit_id == visit_id
+        )
         res_f = await session.execute(stmt_f)
         findings = res_f.scalars().all()
         assert len(findings) == 1
@@ -1072,20 +1075,33 @@ async def test_ctms_sync_conflict_server_wins():
     Verify SERVER_WINS reconciliation outcomes and correct MonitoringVisitDefeated shadow table storage.
     """
     client = TestClient(app)
-    cra_headers = get_auth_headers(roles="CRA", change_reason="Offline sync conflict test")
+    cra_headers = get_auth_headers(
+        roles="CRA", change_reason="Offline sync conflict test"
+    )
 
     # Allocate CRA and schedule visit
     alloc_headers = get_auth_headers(roles="Sponsor Admin")
     client.post(
         "/api/v1/ctms/cra-allocations",
-        json={"cra_id": "test_user", "site_id": "site_sync_02", "study_id": "study_sync_02", "status": "ACTIVE"},
-        headers=alloc_headers
+        json={
+            "cra_id": "test_user",
+            "site_id": "site_sync_02",
+            "study_id": "study_sync_02",
+            "status": "ACTIVE",
+        },
+        headers=alloc_headers,
     )
 
     create_res = client.post(
         "/api/v1/ctms/monitoring-visits",
-        json={"study_id": "study_sync_02", "site_id": "site_sync_02", "cra_id": "test_user", "visit_type": "IMV", "scheduled_date": datetime.utcnow().isoformat()},
-        headers=cra_headers
+        json={
+            "study_id": "study_sync_02",
+            "site_id": "site_sync_02",
+            "cra_id": "test_user",
+            "visit_type": "IMV",
+            "scheduled_date": datetime.utcnow().isoformat(),
+        },
+        headers=cra_headers,
     )
     visit_id = create_res.json()["id"]
 
@@ -1102,9 +1118,9 @@ async def test_ctms_sync_conflict_server_wins():
                 "sequence_number": 201,
                 "client_id": "device_server",
                 "conflict_strategy": "CLIENT_WINS",
-            }
+            },
         },
-        headers=cra_headers
+        headers=cra_headers,
     )
 
     # Sync new completion with SERVER_WINS
@@ -1112,18 +1128,13 @@ async def test_ctms_sync_conflict_server_wins():
     sync_payload = {
         "visit_id": visit_id,
         "actual_date": actual_date_client.isoformat(),
-        "findings": [
-            {
-                "text": "Losing Finding",
-                "severity": "MINOR"
-            }
-        ],
+        "findings": [{"text": "Losing Finding", "severity": "MINOR"}],
         "device_timestamp": datetime.utcnow().isoformat(),
         "offline_sync_markers": {
             "sequence_number": 202,
             "client_id": "device_client_losing",
             "conflict_strategy": "SERVER_WINS",
-        }
+        },
     }
 
     resp = client.post(
@@ -1134,6 +1145,7 @@ async def test_ctms_sync_conflict_server_wins():
 
     # Verify visit retains server date and hasn't updated
     from apps.ctms.models import MonitoringVisit, MonitoringVisitDefeated
+
     async with db_manager.get_session_maker()() as session:
         stmt = select(MonitoringVisit).where(MonitoringVisit.id == visit_id)
         v = (await session.execute(stmt)).scalars().one()
@@ -1141,11 +1153,18 @@ async def test_ctms_sync_conflict_server_wins():
         assert v.actual_date.isoformat() == actual_date_server.isoformat()
 
         # Check defeated records
-        stmt_def = select(MonitoringVisitDefeated).where(MonitoringVisitDefeated.visit_id == visit_id)
+        stmt_def = select(MonitoringVisitDefeated).where(
+            MonitoringVisitDefeated.visit_id == visit_id
+        )
         defeated_records = (await session.execute(stmt_def)).scalars().all()
         assert len(defeated_records) == 1
-        assert defeated_records[0].status == "Defeated by online-merge conflict resolution"
-        assert defeated_records[0].offline_sync_markers["client_id"] == "device_client_losing"
+        assert (
+            defeated_records[0].status == "Defeated by online-merge conflict resolution"
+        )
+        assert (
+            defeated_records[0].offline_sync_markers["client_id"]
+            == "device_client_losing"
+        )
 
 
 @pytest.mark.asyncio
@@ -1160,14 +1179,25 @@ async def test_ctms_sync_conflict_merge():
     alloc_headers = get_auth_headers(roles="Sponsor Admin")
     client.post(
         "/api/v1/ctms/cra-allocations",
-        json={"cra_id": "test_user", "site_id": "site_sync_03", "study_id": "study_sync_03", "status": "ACTIVE"},
-        headers=alloc_headers
+        json={
+            "cra_id": "test_user",
+            "site_id": "site_sync_03",
+            "study_id": "study_sync_03",
+            "status": "ACTIVE",
+        },
+        headers=alloc_headers,
     )
 
     create_res = client.post(
         "/api/v1/ctms/monitoring-visits",
-        json={"study_id": "study_sync_03", "site_id": "site_sync_03", "cra_id": "test_user", "visit_type": "IMV", "scheduled_date": datetime.utcnow().isoformat()},
-        headers=cra_headers
+        json={
+            "study_id": "study_sync_03",
+            "site_id": "site_sync_03",
+            "cra_id": "test_user",
+            "visit_type": "IMV",
+            "scheduled_date": datetime.utcnow().isoformat(),
+        },
+        headers=cra_headers,
     )
     visit_id = create_res.json()["id"]
 
@@ -1184,12 +1214,10 @@ async def test_ctms_sync_conflict_merge():
                 "sequence_number": 301,
                 "client_id": "dev_initial",
                 "conflict_strategy": "CLIENT_WINS",
-                "timestamps": {
-                    "actual_date": date_initial.isoformat()
-                }
-            }
+                "timestamps": {"actual_date": date_initial.isoformat()},
+            },
         },
-        headers=cra_headers
+        headers=cra_headers,
     )
 
     # Merge sync with a newer actual_date
@@ -1203,10 +1231,8 @@ async def test_ctms_sync_conflict_merge():
             "sequence_number": 302,
             "client_id": "dev_merge",
             "conflict_strategy": "MERGE",
-            "timestamps": {
-                "actual_date": date_newer.isoformat()
-            }
-        }
+            "timestamps": {"actual_date": date_newer.isoformat()},
+        },
     }
 
     resp = client.post(
@@ -1222,7 +1248,9 @@ async def test_ctms_sync_structural_conflict():
     Verify structural conflicts create OPEN clinical queries and write to defeated shadow table.
     """
     client = TestClient(app)
-    cra_headers = get_auth_headers(roles="CRA", change_reason="Structural conflict test")
+    cra_headers = get_auth_headers(
+        roles="CRA", change_reason="Structural conflict test"
+    )
 
     non_existent_visit_id = "non-existent-visit-guid-123"
 
@@ -1236,8 +1264,8 @@ async def test_ctms_sync_structural_conflict():
         "offline_sync_markers": {
             "sequence_number": 999,
             "client_id": "device_lost",
-            "conflict_strategy": "CLIENT_WINS"
-        }
+            "conflict_strategy": "CLIENT_WINS",
+        },
     }
 
     resp = client.post(
@@ -1250,19 +1278,30 @@ async def test_ctms_sync_structural_conflict():
     assert "missing or deleted" in data["query"]["explanation"]
 
     # Verify query and defeated visit exist in DB
-    from apps.ctms.models import CTMSClinicalQuery, MonitoringVisitDefeated, CTMSAuditLog
+    from apps.ctms.models import (
+        CTMSAuditLog,
+        CTMSClinicalQuery,
+        MonitoringVisitDefeated,
+    )
+
     async with db_manager.get_session_maker()() as session:
-        stmt_q = select(CTMSClinicalQuery).where(CTMSClinicalQuery.visit_id == non_existent_visit_id)
+        stmt_q = select(CTMSClinicalQuery).where(
+            CTMSClinicalQuery.visit_id == non_existent_visit_id
+        )
         q = (await session.execute(stmt_q)).scalars().one()
         assert q.status == "OPEN"
         assert q.study_id == "study_missing"
 
-        stmt_def = select(MonitoringVisitDefeated).where(MonitoringVisitDefeated.visit_id == non_existent_visit_id)
+        stmt_def = select(MonitoringVisitDefeated).where(
+            MonitoringVisitDefeated.visit_id == non_existent_visit_id
+        )
         defeated_records = (await session.execute(stmt_def)).scalars().all()
         assert len(defeated_records) == 1
 
         # Check Audit Log action="MONITORING_VISIT_STRUCTURAL_CONFLICT"
-        stmt_audit = select(CTMSAuditLog).where(CTMSAuditLog.action == "MONITORING_VISIT_STRUCTURAL_CONFLICT")
+        stmt_audit = select(CTMSAuditLog).where(
+            CTMSAuditLog.action == "MONITORING_VISIT_STRUCTURAL_CONFLICT"
+        )
         audit_records = (await session.execute(stmt_audit)).scalars().all()
         assert len(audit_records) == 1
         assert "Target record missing or deleted" in audit_records[0].details
@@ -1274,7 +1313,9 @@ async def test_ctms_sync_rbac_denial():
     Verify RBAC denial for roles lacking ctms_monitoring_visit:sync permission (e.g. Site Investigator).
     """
     client = TestClient(app)
-    denied_headers = get_auth_headers(roles="Site Investigator", change_reason="Hacking sync")
+    denied_headers = get_auth_headers(
+        roles="Site Investigator", change_reason="Hacking sync"
+    )
 
     payload = {
         "visit_id": "some-visit-id",
@@ -1284,8 +1325,8 @@ async def test_ctms_sync_rbac_denial():
         "offline_sync_markers": {
             "sequence_number": 1,
             "client_id": "device_hacker",
-            "conflict_strategy": "CLIENT_WINS"
-        }
+            "conflict_strategy": "CLIENT_WINS",
+        },
     }
 
     resp = client.post(
