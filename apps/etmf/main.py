@@ -622,6 +622,73 @@ class CompletenessResponse(BaseModel):
     per_artifact_detail: List[ArtifactDetail]
 
 
+class BinderArtifactNode(BaseModel):
+    """
+    Representation of an artifact node in the binder structure.
+    """
+    artifact_code: str
+    artifact_name: str
+    status: str  # EXPECTED/PRESENT/MISSING
+    document_id: Optional[str] = None
+    version_index: Optional[int] = None
+
+
+class BinderSectionNode(BaseModel):
+    """
+    Representation of a section node in the binder structure.
+    """
+    section_code: str
+    section_name: str
+    artifacts: List[BinderArtifactNode]
+
+
+class BinderZoneNode(BaseModel):
+    """
+    Representation of a zone node in the binder structure.
+    """
+    zone_code: int
+    zone_name: str
+    sections: List[BinderSectionNode]
+
+
+class BinderStructureResponse(BaseModel):
+    """
+    Top-level binder structure response.
+    """
+    study_id: str
+    milestone: Optional[str] = None
+    site_id: Optional[str] = None
+    zones: List[BinderZoneNode]
+    present_artifacts: List[str]
+    missing_artifacts: List[str]
+
+
+class DocumentVersionEntry(BaseModel):
+    """
+    Representation of a specific document version lineage entry.
+    """
+    id: str
+    version_index: int
+    status: str
+    approval_status: str
+    created_at: str
+    created_by: str
+    filename: str
+    artifact_code: str
+    signer: Optional[str] = None
+    signing_timestamp: Optional[str] = None
+    transitions: List[TransitionResponse]
+
+
+class DocumentVersionsResponse(BaseModel):
+    """
+    Response containing all versions and transitions for a document's lineage.
+    """
+    study_id: str
+    artifact_code: str
+    versions: List[DocumentVersionEntry]
+
+
 # Helper to secure and log actions
 async def write_audit_log(
     session: AsyncSession,
@@ -869,6 +936,102 @@ async def view_document(
     )
 
     return to_document_response(doc)
+
+
+@app.get(
+    "/api/v1/etmf/documents/{document_id}/versions",
+    response_model=DocumentVersionsResponse,
+)
+async def get_document_versions(
+    request: Request,
+    document_id: str,
+    session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
+) -> DocumentVersionsResponse:
+    """
+    Retrieve all versions/revisions of a document's lineage and their QC transition histories.
+    """
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
+
+    stmt = select(TMFDocument).where(TMFDocument.id == document_id)
+    result = await session.execute(stmt)
+    doc = result.scalars().first()
+
+    if not doc:
+        raise HTTPException(status_code=404, detail="eTMF Document not found")
+
+    # Enforce site visibility and study-level semantics
+    enforce_document_site_visibility(doc, principal)
+
+    # Query the full lineage (all documents of same study and artifact code) sorted by version_index asc
+    stmt_lineage = (
+        select(TMFDocument)
+        .where(
+            TMFDocument.study_id == doc.study_id,
+            TMFDocument.artifact_code == doc.artifact_code,
+        )
+        .order_by(TMFDocument.version_index.asc())
+    )
+    res_lineage = await session.execute(stmt_lineage)
+    versions_docs = res_lineage.scalars().all()
+
+    versions_list = []
+    for v in versions_docs:
+        # For each version, fetch its QC transitions ordered chronologically by timestamp
+        stmt_transitions = (
+            select(DocumentQCTransition)
+            .where(DocumentQCTransition.document_id == v.id)
+            .order_by(DocumentQCTransition.timestamp.asc())
+        )
+        res_trans = await session.execute(stmt_transitions)
+        transitions = res_trans.scalars().all()
+
+        versions_list.append(
+            DocumentVersionEntry(
+                id=v.id,
+                version_index=v.version_index,
+                status=v.status,
+                approval_status=v.approval_status,
+                created_at=v.created_at.isoformat(),
+                created_by=v.created_by,
+                filename=v.filename,
+                artifact_code=v.artifact_code,
+                signer=v.signer,
+                signing_timestamp=(
+                    v.signing_timestamp.isoformat() if v.signing_timestamp else None
+                ),
+                transitions=[
+                    TransitionResponse(
+                        id=t.id,
+                        document_id=t.document_id,
+                        from_status=t.from_status,
+                        to_status=t.to_status,
+                        actor_id=t.actor_id,
+                        actor_role=t.actor_role,
+                        reason_for_change=t.reason_for_change,
+                        timestamp=t.timestamp.isoformat(),
+                    )
+                    for t in transitions
+                ],
+            )
+        )
+
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="VERSION_HISTORY_VIEW",
+        document_id=doc.id,
+        details=f"Viewed version history and QC transitions for document lineage (study: {doc.study_id}, artifact: {doc.artifact_code}).",
+    )
+    await session.commit()
+
+    return DocumentVersionsResponse(
+        study_id=doc.study_id,
+        artifact_code=doc.artifact_code,
+        versions=versions_list,
+    )
 
 
 @app.get("/api/v1/etmf/documents/{document_id}/download")
@@ -2802,6 +2965,188 @@ async def inbound_email_webhook(
         if isinstance(e, HTTPException):
             raise e
         raise HTTPException(status_code=500, detail="Internal processing failure")
+
+
+def build_binder_structure(
+    catalog,
+    archived_docs: List[TMFDocument],
+    expected_codes: set[str],
+    site_id: Optional[str] = None,
+    is_site_scoped: bool = False,
+    principal: Optional[Principal] = None,
+) -> tuple[List[BinderZoneNode], List[str], List[str]]:
+    """
+    Build the nested structure models.
+    """
+    highest_docs = {}  # artifact_code -> TMFDocument
+    for doc in archived_docs:
+        if not doc.artifact_code:
+            continue
+
+        if is_site_scoped and principal:
+            if not doc.site_id or doc.site_id not in principal.assigned_sites:
+                continue
+        elif site_id:
+            if doc.site_id != site_id:
+                continue
+        else:
+            if doc.site_id is not None:
+                continue
+
+        existing = highest_docs.get(doc.artifact_code)
+        if not existing or doc.version_index > existing.version_index:
+            highest_docs[doc.artifact_code] = doc
+
+    zones_list = []
+    present_artifacts = []
+    missing_artifacts = []
+
+    for z in catalog.zones:
+        zone = catalog.get_zone(z.code)
+        if not zone:
+            continue
+        sections_list = []
+        for s in zone.sections:
+            section = catalog.get_section(s.code)
+            if not section:
+                continue
+            artifacts_list = []
+            for artifact in section.artifacts:
+                doc = highest_docs.get(artifact.code)
+                if doc:
+                    status = "PRESENT"
+                    doc_id = doc.id
+                    v_idx = doc.version_index
+                    if artifact.name not in present_artifacts:
+                        present_artifacts.append(artifact.name)
+                else:
+                    doc_id = None
+                    v_idx = None
+                    if artifact.code in expected_codes:
+                        status = "MISSING"
+                        if artifact.name not in missing_artifacts:
+                            missing_artifacts.append(artifact.name)
+                    else:
+                        status = "EXPECTED"
+
+                artifacts_list.append(
+                    BinderArtifactNode(
+                        artifact_code=artifact.code,
+                        artifact_name=artifact.name,
+                        status=status,
+                        document_id=doc_id,
+                        version_index=v_idx,
+                    )
+                )
+            sections_list.append(
+                BinderSectionNode(
+                    section_code=section.code,
+                    section_name=section.name,
+                    artifacts=artifacts_list,
+                )
+            )
+        zones_list.append(
+            BinderZoneNode(
+                zone_code=zone.code,
+                zone_name=zone.name,
+                sections=sections_list,
+            )
+        )
+
+    return zones_list, present_artifacts, missing_artifacts
+
+
+@app.get("/api/v1/etmf/studies/{study_id}/binder/structure", response_model=BinderStructureResponse)
+async def get_binder_structure(
+    study_id: str,
+    milestone: Optional[str] = Query(None, description="Optional clinical study milestone"),
+    site_id: Optional[str] = Query(None, description="Optional clinical site ID"),
+    session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
+) -> BinderStructureResponse:
+    """
+    Expose the structured Zone -> Section -> Artifact tree for a study binder,
+    annotated with expected/present/missing status.
+    """
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
+
+    is_site_scoped = len(principal.assigned_sites) > 0
+
+    if is_site_scoped:
+        if not site_id or site_id not in principal.assigned_sites:
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: You can only view binder structure for your assigned site(s).",
+            )
+
+    version = get_active_catalog().version
+
+    milestone_normalized = None
+    if milestone:
+        milestone_normalized = normalize_milestone(milestone)
+        try:
+            get_mandatory_artifacts(milestone_normalized, version)
+        except ValueError as e:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown milestone. Supported: INITIATION, CONDUCT, CLOSEOUT. Error: {str(e)}",
+            )
+        await seed_default_edl(session, study_id, milestone_normalized)
+
+    stmt = select(ExpectedDocument).where(ExpectedDocument.study_id == study_id)
+    if milestone_normalized:
+        stmt = stmt.where(ExpectedDocument.milestone == milestone_normalized)
+    if site_id:
+        stmt = stmt.where(
+            (ExpectedDocument.site_id.is_(None)) | (ExpectedDocument.site_id == site_id)
+        )
+    else:
+        stmt = stmt.where(ExpectedDocument.site_id.is_(None))
+
+    result = await session.execute(stmt)
+    expected_docs = result.scalars().all()
+
+    stmt_docs = select(TMFDocument).where(TMFDocument.study_id == study_id)
+    result_docs = await session.execute(stmt_docs)
+    archived_docs = result_docs.scalars().all()
+
+    expected_codes = set()
+    for exp in expected_docs:
+        try:
+            resolved_exp = resolve_artifact(version, name=exp.artifact_type)
+            expected_codes.add(resolved_exp["artifact"].code)
+        except ValueError:
+            pass
+
+    catalog = get_active_catalog()
+    zones_list, present_artifacts, missing_artifacts = build_binder_structure(
+        catalog=catalog,
+        archived_docs=archived_docs,
+        expected_codes=expected_codes,
+        site_id=site_id,
+        is_site_scoped=is_site_scoped,
+        principal=principal,
+    )
+
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="BINDER_STRUCTURE_VIEW",
+        document_id=None,
+        details=f"Viewed binder structure for study '{study_id}', site '{site_id}', milestone '{milestone_normalized}'.",
+    )
+    await session.commit()
+
+    return BinderStructureResponse(
+        study_id=study_id,
+        milestone=milestone_normalized,
+        site_id=site_id,
+        zones=zones_list,
+        present_artifacts=present_artifacts,
+        missing_artifacts=missing_artifacts,
+    )
 
 
 @app.get("/api/v1/etmf/studies/{study_id}/binder")
