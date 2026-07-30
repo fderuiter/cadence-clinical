@@ -698,7 +698,7 @@ async def test_api_sdtm_export_with_supp_records(populate_test_data) -> None:
             stmt = select(BiostatExport).where(
                 BiostatExport.export_type == "SDTM",
                 BiostatExport.dataset_name == "AE",
-                BiostatExport.status == "SUCCESS"
+                BiostatExport.status == "SUCCESS",
             )
             db_res = await session.execute(stmt)
             export_log = db_res.scalars().first()
@@ -745,8 +745,7 @@ async def test_api_biostat_bundle_export_with_supp_records(populate_test_data) -
         # Ensure BiostatExport log has status SUCCESS
         async with db_manager.get_session_maker()() as session:
             stmt = select(BiostatExport).where(
-                BiostatExport.export_type == "BUNDLE",
-                BiostatExport.status == "SUCCESS"
+                BiostatExport.export_type == "BUNDLE", BiostatExport.status == "SUCCESS"
             )
             db_res = await session.execute(stmt)
             export_log = db_res.scalars().first()

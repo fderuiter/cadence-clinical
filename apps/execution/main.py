@@ -5056,7 +5056,9 @@ async def process_coding_action(
 # ==========================================
 
 
-async def run_sdtm_extraction(session, study_id: str, domain: str) -> tuple[List[dict], List[Any]]:
+async def run_sdtm_extraction(
+    session, study_id: str, domain: str
+) -> tuple[List[dict], List[Any]]:
     """Helper to retrieve and transform raw observations to SDTM records."""
     stmt_subj = select(ClinicalSubject).where(
         ClinicalSubject.study_id == study_id,
@@ -5172,7 +5174,9 @@ async def export_sdtm_domain(
 
     async with db_manager.get_session_maker()() as session:
         try:
-            records, supp_records = await run_sdtm_extraction(session, study_id, dom_upper)
+            records, supp_records = await run_sdtm_extraction(
+                session, study_id, dom_upper
+            )
             export_data = {dom_upper: records}
             if supp_records:
                 export_data[f"SUPP{dom_upper}"] = supp_records
@@ -5311,7 +5315,9 @@ async def export_biostat_bundle(
         try:
             bundle_data = {}
             for dom in ["DM", "AE", "VS", "LB", "MH", "CM"]:
-                records, supp_records = await run_sdtm_extraction(session, study_id, dom)
+                records, supp_records = await run_sdtm_extraction(
+                    session, study_id, dom
+                )
                 if records:
                     bundle_data[dom] = records
                 if supp_records:
