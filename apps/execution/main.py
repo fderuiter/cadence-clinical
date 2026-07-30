@@ -5056,7 +5056,7 @@ async def process_coding_action(
 # ==========================================
 
 
-async def run_sdtm_extraction(session, study_id: str, domain: str) -> List[dict]:
+async def run_sdtm_extraction(session, study_id: str, domain: str) -> tuple[List[dict], List[Any]]:
     """Helper to retrieve and transform raw observations to SDTM records."""
     stmt_subj = select(ClinicalSubject).where(
         ClinicalSubject.study_id == study_id,
@@ -5074,16 +5074,17 @@ async def run_sdtm_extraction(session, study_id: str, domain: str) -> List[dict]
 
     dom_upper = domain.strip().upper()
     records = []
+    supp_records = []
     if dom_upper == "DM":
         records = extract_dm(subjects, observations)
     elif dom_upper == "AE":
-        records, _ = extract_ae(subjects, observations)
+        records, supp_records = extract_ae(subjects, observations)
     elif dom_upper == "VS":
-        records, _ = extract_vs(subjects, observations)
+        records, supp_records = extract_vs(subjects, observations)
     elif dom_upper == "LB":
-        records, _ = extract_lb(subjects, observations)
+        records, supp_records = extract_lb(subjects, observations)
     elif dom_upper == "MH":
-        records, _ = extract_mh(subjects, observations)
+        records, supp_records = extract_mh(subjects, observations)
     elif dom_upper == "CM":
         from apps.execution.database.models import ClinicalVisit
         from apps.execution.sdtm_mapper import map_cm
@@ -5105,7 +5106,7 @@ async def run_sdtm_extraction(session, study_id: str, domain: str) -> List[dict]
     for r in records:
         if "DOMAIN" not in r:
             r["DOMAIN"] = dom_upper
-    return records
+    return records, supp_records
 
 
 async def run_adam_derivation(session, study_id: str, dataset: str) -> List[dict]:
@@ -5159,6 +5160,7 @@ async def export_sdtm_domain(
     - **Authorized Roles**: CRA, Data Manager, Sponsor Statistician.
     - **Validations**: Automatically validates schema, keys, and values before returning payload.
     - **Media Type Contract**: `application/json` conforming to CDISC Dataset-JSON 1.0.0.
+    - **Supplemental Contract**: Includes matching SUPP<domain> dataset alongside the parent dataset when supplemental records exist.
     """
     dom_upper = domain.strip().upper()
     valid_domains = {"DM", "AE", "VS", "LB", "MH", "CM"}
@@ -5170,9 +5172,12 @@ async def export_sdtm_domain(
 
     async with db_manager.get_session_maker()() as session:
         try:
-            records = await run_sdtm_extraction(session, study_id, dom_upper)
+            records, supp_records = await run_sdtm_extraction(session, study_id, dom_upper)
+            export_data = {dom_upper: records}
+            if supp_records:
+                export_data[f"SUPP{dom_upper}"] = supp_records
             dataset_json = serialize_to_dataset_json(
-                data={dom_upper: records}, study_id=study_id
+                data=export_data, study_id=study_id
             )
             validate_dataset_json(dataset_json)
 
@@ -5300,14 +5305,17 @@ async def export_biostat_bundle(
     - **Authorized Roles**: CRA, Data Manager, Sponsor Statistician.
     - **Validations**: Validates complete structural, domain-level, and cross-dataset referential consistency.
     - **Media Type Contract**: `application/json` conforming to CDISC Dataset-JSON 1.0.0.
+    - **Supplemental Contract**: Includes all generated SUPP-- datasets alongside their parent datasets in the bundle.
     """
     async with db_manager.get_session_maker()() as session:
         try:
             bundle_data = {}
             for dom in ["DM", "AE", "VS", "LB", "MH", "CM"]:
-                records = await run_sdtm_extraction(session, study_id, dom)
+                records, supp_records = await run_sdtm_extraction(session, study_id, dom)
                 if records:
                     bundle_data[dom] = records
+                if supp_records:
+                    bundle_data[f"SUPP{dom}"] = supp_records
             for ds in ["ADSL", "ADAE", "ADVS"]:
                 records = await run_adam_derivation(session, study_id, ds)
                 if records:
