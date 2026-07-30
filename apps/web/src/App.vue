@@ -141,6 +141,17 @@
                 </button>
               </router-link>
             </li>
+            <li
+              id="tab-btn-notifications"
+              class="nav-item"
+              :class="{ active: $route.name === 'notifications' }"
+            >
+              <router-link v-slot="{ navigate }" to="/notifications" custom>
+                <button type="button" @click="navigate">
+                  <span>🔔</span> Notifications
+                </button>
+              </router-link>
+            </li>
           </ul>
         </div>
         <div
