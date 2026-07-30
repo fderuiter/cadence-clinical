@@ -971,6 +971,372 @@ async def test_milestone_trigger_study_approved():
 
 
 @pytest.mark.asyncio
+async def test_ctms_sync_happy_path_and_reloads():
+    """
+    Verify successful offline completion/findings sync, version_index progression,
+    and exact-duplicate replay idempotency.
+    """
+    client = TestClient(app)
+    cra_headers = get_auth_headers(roles="CRA", change_reason="Offline sync test")
+
+    # 1. Schedule a Visit first so we have a target
+    scheduled_date = datetime.utcnow() + timedelta(days=5)
+    create_payload = {
+        "study_id": "study_sync_01",
+        "site_id": "site_sync_01",
+        "cra_id": "test_user",
+        "visit_type": "IMV",
+        "scheduled_date": scheduled_date.isoformat(),
+    }
+    # Pre-allocate CRA to bypass allocation checks
+    alloc_headers = get_auth_headers(roles="Sponsor Admin")
+    alloc_payload = {
+        "cra_id": "test_user",
+        "site_id": "site_sync_01",
+        "study_id": "study_sync_01",
+        "status": "ACTIVE",
+    }
+    client.post(
+        "/api/v1/ctms/cra-allocations", json=alloc_payload, headers=alloc_headers
+    )
+
+    response_create = client.post(
+        "/api/v1/ctms/monitoring-visits", json=create_payload, headers=cra_headers
+    )
+    assert response_create.status_code == 201
+    visit_id = response_create.json()["id"]
+
+    # 2. Sync Offline Completed Visit & Findings
+    actual_date = datetime.utcnow() - timedelta(hours=1)
+    sync_payload = {
+        "visit_id": visit_id,
+        "actual_date": actual_date.isoformat(),
+        "findings": [
+            {
+                "text": "Sync Finding 1",
+                "severity": "CRITICAL",
+                "resolution_status": "OPEN",
+            }
+        ],
+        "device_timestamp": datetime.utcnow().isoformat(),
+        "offline_sync_markers": {
+            "sequence_number": 101,
+            "client_id": "device_client_abc",
+            "conflict_strategy": "CLIENT_WINS",
+            "timestamps": {"actual_date": actual_date.isoformat()},
+        },
+    }
+
+    # Perform first sync
+    resp_sync = client.post(
+        "/api/v1/ctms/monitoring-visits/sync", json=sync_payload, headers=cra_headers
+    )
+    assert resp_sync.status_code == 200
+    data = resp_sync.json()
+    assert data["status"] == "CREATED"
+    assert data["version_index"] == 2
+    assert data["sync_status"] == "RESOLVED"
+
+    # Verify database has been updated
+    from apps.ctms.models import MonitoringVisit, MonitoringVisitFinding
+
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(MonitoringVisit).where(MonitoringVisit.id == visit_id)
+        res = await session.execute(stmt)
+        v = res.scalars().one()
+        assert v.status == "COMPLETED"
+        assert v.version_index == 2
+        assert v.offline_sync_markers is not None
+        assert v.offline_sync_markers["sequence_number"] == 101
+
+        # Check findings
+        stmt_f = select(MonitoringVisitFinding).where(
+            MonitoringVisitFinding.visit_id == visit_id
+        )
+        res_f = await session.execute(stmt_f)
+        findings = res_f.scalars().all()
+        assert len(findings) == 1
+        assert findings[0].text == "Sync Finding 1"
+
+    # 3. Exact Duplicate Replay Idempotency Check
+    # Resubmitting the same exact payload should return DUPLICATE_IGNORED and not bump version_index
+    resp_dup = client.post(
+        "/api/v1/ctms/monitoring-visits/sync", json=sync_payload, headers=cra_headers
+    )
+    assert resp_dup.status_code == 200
+    dup_data = resp_dup.json()
+    assert dup_data["status"] == "DUPLICATE_IGNORED"
+    assert dup_data["version_index"] == 2
+
+
+@pytest.mark.asyncio
+async def test_ctms_sync_conflict_server_wins():
+    """
+    Verify SERVER_WINS reconciliation outcomes and correct MonitoringVisitDefeated shadow table storage.
+    """
+    client = TestClient(app)
+    cra_headers = get_auth_headers(
+        roles="CRA", change_reason="Offline sync conflict test"
+    )
+
+    # Allocate CRA and schedule visit
+    alloc_headers = get_auth_headers(roles="Sponsor Admin")
+    client.post(
+        "/api/v1/ctms/cra-allocations",
+        json={
+            "cra_id": "test_user",
+            "site_id": "site_sync_02",
+            "study_id": "study_sync_02",
+            "status": "ACTIVE",
+        },
+        headers=alloc_headers,
+    )
+
+    create_res = client.post(
+        "/api/v1/ctms/monitoring-visits",
+        json={
+            "study_id": "study_sync_02",
+            "site_id": "site_sync_02",
+            "cra_id": "test_user",
+            "visit_type": "IMV",
+            "scheduled_date": datetime.utcnow().isoformat(),
+        },
+        headers=cra_headers,
+    )
+    visit_id = create_res.json()["id"]
+
+    # Sync complete first with CLIENT_WINS to set actual date
+    actual_date_server = datetime.utcnow() - timedelta(hours=5)
+    client.post(
+        "/api/v1/ctms/monitoring-visits/sync",
+        json={
+            "visit_id": visit_id,
+            "actual_date": actual_date_server.isoformat(),
+            "findings": [],
+            "device_timestamp": datetime.utcnow().isoformat(),
+            "offline_sync_markers": {
+                "sequence_number": 201,
+                "client_id": "device_server",
+                "conflict_strategy": "CLIENT_WINS",
+            },
+        },
+        headers=cra_headers,
+    )
+
+    # Sync new completion with SERVER_WINS
+    actual_date_client = datetime.utcnow() - timedelta(hours=1)
+    sync_payload = {
+        "visit_id": visit_id,
+        "actual_date": actual_date_client.isoformat(),
+        "findings": [{"text": "Losing Finding", "severity": "MINOR"}],
+        "device_timestamp": datetime.utcnow().isoformat(),
+        "offline_sync_markers": {
+            "sequence_number": 202,
+            "client_id": "device_client_losing",
+            "conflict_strategy": "SERVER_WINS",
+        },
+    }
+
+    resp = client.post(
+        "/api/v1/ctms/monitoring-visits/sync", json=sync_payload, headers=cra_headers
+    )
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "IGNORED_SERVER_WINS"
+
+    # Verify visit retains server date and hasn't updated
+    from apps.ctms.models import MonitoringVisit, MonitoringVisitDefeated
+
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(MonitoringVisit).where(MonitoringVisit.id == visit_id)
+        v = (await session.execute(stmt)).scalars().one()
+        # Dates will match when comparing iso strings
+        assert v.actual_date.isoformat() == actual_date_server.isoformat()
+
+        # Check defeated records
+        stmt_def = select(MonitoringVisitDefeated).where(
+            MonitoringVisitDefeated.visit_id == visit_id
+        )
+        defeated_records = (await session.execute(stmt_def)).scalars().all()
+        assert len(defeated_records) == 1
+        assert (
+            defeated_records[0].status == "Defeated by online-merge conflict resolution"
+        )
+        assert (
+            defeated_records[0].offline_sync_markers["client_id"]
+            == "device_client_losing"
+        )
+
+
+@pytest.mark.asyncio
+async def test_ctms_sync_conflict_merge():
+    """
+    Verify MERGE strategy results using SyncEngine reconciliation.
+    """
+    client = TestClient(app)
+    cra_headers = get_auth_headers(roles="CRA", change_reason="Offline merge sync")
+
+    # Allocate and schedule
+    alloc_headers = get_auth_headers(roles="Sponsor Admin")
+    client.post(
+        "/api/v1/ctms/cra-allocations",
+        json={
+            "cra_id": "test_user",
+            "site_id": "site_sync_03",
+            "study_id": "study_sync_03",
+            "status": "ACTIVE",
+        },
+        headers=alloc_headers,
+    )
+
+    create_res = client.post(
+        "/api/v1/ctms/monitoring-visits",
+        json={
+            "study_id": "study_sync_03",
+            "site_id": "site_sync_03",
+            "cra_id": "test_user",
+            "visit_type": "IMV",
+            "scheduled_date": datetime.utcnow().isoformat(),
+        },
+        headers=cra_headers,
+    )
+    visit_id = create_res.json()["id"]
+
+    # First completion
+    date_initial = datetime.utcnow() - timedelta(hours=10)
+    client.post(
+        "/api/v1/ctms/monitoring-visits/sync",
+        json={
+            "visit_id": visit_id,
+            "actual_date": date_initial.isoformat(),
+            "findings": [],
+            "device_timestamp": datetime.utcnow().isoformat(),
+            "offline_sync_markers": {
+                "sequence_number": 301,
+                "client_id": "dev_initial",
+                "conflict_strategy": "CLIENT_WINS",
+                "timestamps": {"actual_date": date_initial.isoformat()},
+            },
+        },
+        headers=cra_headers,
+    )
+
+    # Merge sync with a newer actual_date
+    date_newer = datetime.utcnow() - timedelta(hours=1)
+    payload_merge = {
+        "visit_id": visit_id,
+        "actual_date": date_newer.isoformat(),
+        "findings": [],
+        "device_timestamp": datetime.utcnow().isoformat(),
+        "offline_sync_markers": {
+            "sequence_number": 302,
+            "client_id": "dev_merge",
+            "conflict_strategy": "MERGE",
+            "timestamps": {"actual_date": date_newer.isoformat()},
+        },
+    }
+
+    resp = client.post(
+        "/api/v1/ctms/monitoring-visits/sync", json=payload_merge, headers=cra_headers
+    )
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "MERGED"
+
+
+@pytest.mark.asyncio
+async def test_ctms_sync_structural_conflict():
+    """
+    Verify structural conflicts create OPEN clinical queries and write to defeated shadow table.
+    """
+    client = TestClient(app)
+    cra_headers = get_auth_headers(
+        roles="CRA", change_reason="Structural conflict test"
+    )
+
+    non_existent_visit_id = "non-existent-visit-guid-123"
+
+    payload = {
+        "visit_id": non_existent_visit_id,
+        "study_id": "study_missing",
+        "site_id": "site_missing",
+        "actual_date": datetime.utcnow().isoformat(),
+        "findings": [],
+        "device_timestamp": datetime.utcnow().isoformat(),
+        "offline_sync_markers": {
+            "sequence_number": 999,
+            "client_id": "device_lost",
+            "conflict_strategy": "CLIENT_WINS",
+        },
+    }
+
+    resp = client.post(
+        "/api/v1/ctms/monitoring-visits/sync", json=payload, headers=cra_headers
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "STRUCTURAL_CONFLICT"
+    assert data["query"]["status"] == "OPEN"
+    assert "missing or deleted" in data["query"]["explanation"]
+
+    # Verify query and defeated visit exist in DB
+    from apps.ctms.models import (
+        CTMSAuditLog,
+        CTMSClinicalQuery,
+        MonitoringVisitDefeated,
+    )
+
+    async with db_manager.get_session_maker()() as session:
+        stmt_q = select(CTMSClinicalQuery).where(
+            CTMSClinicalQuery.visit_id == non_existent_visit_id
+        )
+        q = (await session.execute(stmt_q)).scalars().one()
+        assert q.status == "OPEN"
+        assert q.study_id == "study_missing"
+
+        stmt_def = select(MonitoringVisitDefeated).where(
+            MonitoringVisitDefeated.visit_id == non_existent_visit_id
+        )
+        defeated_records = (await session.execute(stmt_def)).scalars().all()
+        assert len(defeated_records) == 1
+
+        # Check Audit Log action="MONITORING_VISIT_STRUCTURAL_CONFLICT"
+        stmt_audit = select(CTMSAuditLog).where(
+            CTMSAuditLog.action == "MONITORING_VISIT_STRUCTURAL_CONFLICT"
+        )
+        audit_records = (await session.execute(stmt_audit)).scalars().all()
+        assert len(audit_records) == 1
+        assert "Target record missing or deleted" in audit_records[0].details
+
+
+@pytest.mark.asyncio
+async def test_ctms_sync_rbac_denial():
+    """
+    Verify RBAC denial for roles lacking ctms_monitoring_visit:sync permission (e.g. Site Investigator).
+    """
+    client = TestClient(app)
+    denied_headers = get_auth_headers(
+        roles="Site Investigator", change_reason="Hacking sync"
+    )
+
+    payload = {
+        "visit_id": "some-visit-id",
+        "actual_date": datetime.utcnow().isoformat(),
+        "findings": [],
+        "device_timestamp": datetime.utcnow().isoformat(),
+        "offline_sync_markers": {
+            "sequence_number": 1,
+            "client_id": "device_hacker",
+            "conflict_strategy": "CLIENT_WINS",
+        },
+    }
+
+    resp = client.post(
+        "/api/v1/ctms/monitoring-visits/sync", json=payload, headers=denied_headers
+    )
+    assert resp.status_code == 403
+    assert "Access denied" in resp.json()["detail"]
+
+
+@pytest.mark.asyncio
 async def test_grant_approve_sig_token_matrix():
     """
     Test missing, valid, mismatched, expired, and replayed tokens for CTMS grant approval status transitions.

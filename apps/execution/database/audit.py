@@ -77,6 +77,8 @@ def receive_before_flush(session: Session, flush_context, instances):
             "ctms_budget_line_items",
             "ctms_payment_milestones",
             "ctms_investigator_payables",
+            "ctms_clinical_queries",
+            "ctms_defeated_monitoring_visits",
             "quality_deviations",
             "quality_root_cause_analyses",
             "quality_capa_records",

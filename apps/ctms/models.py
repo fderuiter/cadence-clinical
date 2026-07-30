@@ -89,6 +89,13 @@ class MonitoringVisit(Base):
         DateTime, nullable=True
     )
 
+    offline_sync_markers: Mapped[Optional[Dict[str, Any]]] = mapped_column(
+        JSON, nullable=True
+    )
+    sync_status: Mapped[Optional[str]] = mapped_column(
+        String(50), default="RESOLVED", nullable=True
+    )
+
 
 class MonitoringVisitFinding(Base):
     """
@@ -108,6 +115,67 @@ class MonitoringVisitFinding(Base):
     resolution_status: Mapped[str] = mapped_column(
         String(50), default="OPEN", nullable=False
     )  # OPEN, RESOLVED
+
+    # Standard Part 11 Audit Fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    offline_sync_markers: Mapped[Optional[Dict[str, Any]]] = mapped_column(
+        JSON, nullable=True
+    )
+    sync_status: Mapped[Optional[str]] = mapped_column(
+        String(50), default="RESOLVED", nullable=True
+    )
+
+
+class MonitoringVisitDefeated(Base):
+    """
+    Represents a preserved/durable copy of a defeated monitoring visit payload
+    resulting from conflict resolution or structural sync conflicts.
+    """
+
+    __tablename__ = "ctms_defeated_monitoring_visits"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    visit_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    actual_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    findings: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    device_timestamp: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    offline_sync_markers: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(100),
+        default="Defeated by online-merge conflict resolution",
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+
+
+class CTMSClinicalQuery(Base):
+    """
+    Represents a clinical query state record for GxP data discrepancy tracking
+    resulting from sync conflicts or other site/visit level issues.
+    """
+
+    __tablename__ = "ctms_clinical_queries"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    visit_id: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True, index=True
+    )
+    status: Mapped[str] = mapped_column(String(50), default="OPEN", nullable=False)
+    explanation: Mapped[str] = mapped_column(String(1000), nullable=True)
 
     # Standard Part 11 Audit Fields
     created_at: Mapped[datetime] = mapped_column(

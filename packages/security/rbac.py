@@ -134,7 +134,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         # CTMS
         "ctms_study": {"create", "read"},
         "ctms_audit_logs": {"read"},
-        "ctms_monitoring_visit": {"create", "update", "read", "sign_off"},
+        "ctms_monitoring_visit": {"create", "update", "read", "sign_off", "sync"},
         "ctms_monitoring_letter": {"read", "read_type"},
         "ctms_recruitment": {"create", "read"},
         "ctms_site_milestone": {"create", "update", "read"},
@@ -196,7 +196,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         # CTMS
         "ctms_study": {"create", "read"},
         "ctms_audit_logs": {"read"},
-        "ctms_monitoring_visit": {"create", "update", "read", "sign_off"},
+        "ctms_monitoring_visit": {"create", "update", "read", "sign_off", "sync"},
         "ctms_monitoring_letter": {"read", "read_type"},
         "ctms_recruitment": {"create", "read"},
         "ctms_site_milestone": {"create", "update", "read"},
@@ -312,7 +312,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "training_log": {"create", "read", "sign"},
         # CTMS
         "ctms_study": {"create", "read"},
-        "ctms_monitoring_visit": {"create", "update", "read"},
+        "ctms_monitoring_visit": {"create", "update", "read", "sync"},
         "ctms_monitoring_letter": {"read", "read_type"},
         "ctms_recruitment": {"create", "read"},
         "ctms_site_milestone": {"create", "update", "read"},
@@ -333,7 +333,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "training_log": {"create", "read", "sign"},
         # CTMS
         "ctms_study": {"create", "read"},
-        "ctms_monitoring_visit": {"read", "sign_off"},
+        "ctms_monitoring_visit": {"read", "sign_off", "sync"},
         "ctms_monitoring_letter": {"read", "read_type"},
         "ctms_recruitment": {"create", "read"},
         "ctms_site_milestone": {"create", "update", "read"},
@@ -432,7 +432,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         # CTMS
         "ctms_study": {"create", "read"},
         "ctms_audit_logs": {"read"},
-        "ctms_monitoring_visit": {"create", "update", "read", "sign_off"},
+        "ctms_monitoring_visit": {"create", "update", "read", "sign_off", "sync"},
         "ctms_monitoring_letter": {"read", "read_type"},
         "ctms_recruitment": {"create", "read"},
         "ctms_site_milestone": {"create", "update", "read"},
@@ -480,7 +480,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
     "system": {
         "ctms_study": {"create", "read"},
         "ctms_audit_logs": {"read"},
-        "ctms_monitoring_visit": {"create", "update", "read", "sign_off"},
+        "ctms_monitoring_visit": {"create", "update", "read", "sign_off", "sync"},
         "ctms_monitoring_letter": {"read", "read_type"},
         "ctms_recruitment": {"create", "read"},
         "ctms_site_milestone": {"create", "update", "read"},
