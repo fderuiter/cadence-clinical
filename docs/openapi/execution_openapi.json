@@ -320,6 +320,46 @@
         }
       }
     },
+    "/api/v1/execution/subjects/{subject_id}/randomize": {
+      "post": {
+        "summary": "Randomize Subject Endpoint",
+        "description": "Execute GxP compliant subject randomization allocation and block-index advancement.",
+        "operationId": "randomize_subject_endpoint_api_v1_execution_subjects__subject_id__randomize_post",
+        "parameters": [
+          {
+            "name": "subject_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Subject Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubjectRandomizationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/execution/visits": {
       "post": {
         "summary": "Create Visit",
@@ -6702,6 +6742,64 @@
         ],
         "title": "SubjectCreate",
         "description": "Pydantic schema for creating a clinical subject pseudonymously."
+      },
+      "SubjectRandomizationResponse": {
+        "properties": {
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "stratum_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stratum Key"
+          },
+          "randomized_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Randomized At"
+          },
+          "kit_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kit Reference"
+          },
+          "treatment_arm": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Treatment Arm"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subject_id",
+          "status",
+          "randomized_at"
+        ],
+        "title": "SubjectRandomizationResponse",
+        "description": "Pydantic schema for returning blinded subject randomization details."
       },
       "SubjectResponse": {
         "properties": {

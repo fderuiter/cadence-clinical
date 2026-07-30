@@ -626,6 +626,7 @@ class BinderArtifactNode(BaseModel):
     """
     Representation of an artifact node in the binder structure.
     """
+
     artifact_code: str
     artifact_name: str
     status: str  # EXPECTED/PRESENT/MISSING
@@ -637,6 +638,7 @@ class BinderSectionNode(BaseModel):
     """
     Representation of a section node in the binder structure.
     """
+
     section_code: str
     section_name: str
     artifacts: List[BinderArtifactNode]
@@ -646,6 +648,7 @@ class BinderZoneNode(BaseModel):
     """
     Representation of a zone node in the binder structure.
     """
+
     zone_code: int
     zone_name: str
     sections: List[BinderSectionNode]
@@ -655,6 +658,7 @@ class BinderStructureResponse(BaseModel):
     """
     Top-level binder structure response.
     """
+
     study_id: str
     milestone: Optional[str] = None
     site_id: Optional[str] = None
@@ -667,6 +671,7 @@ class DocumentVersionEntry(BaseModel):
     """
     Representation of a specific document version lineage entry.
     """
+
     id: str
     version_index: int
     status: str
@@ -684,6 +689,7 @@ class DocumentVersionsResponse(BaseModel):
     """
     Response containing all versions and transitions for a document's lineage.
     """
+
     study_id: str
     artifact_code: str
     versions: List[DocumentVersionEntry]
@@ -827,6 +833,7 @@ async def ingest_document(
         )
     return {
         "status": "success",
+        "id": doc.id,
         "document_id": doc.id,
         "zone": doc.zone,
         "section": doc.section,
@@ -3056,10 +3063,15 @@ def build_binder_structure(
     return zones_list, present_artifacts, missing_artifacts
 
 
-@app.get("/api/v1/etmf/studies/{study_id}/binder/structure", response_model=BinderStructureResponse)
+@app.get(
+    "/api/v1/etmf/studies/{study_id}/binder/structure",
+    response_model=BinderStructureResponse,
+)
 async def get_binder_structure(
     study_id: str,
-    milestone: Optional[str] = Query(None, description="Optional clinical study milestone"),
+    milestone: Optional[str] = Query(
+        None, description="Optional clinical study milestone"
+    ),
     site_id: Optional[str] = Query(None, description="Optional clinical site ID"),
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),

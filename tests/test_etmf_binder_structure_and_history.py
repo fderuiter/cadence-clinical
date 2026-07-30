@@ -1,4 +1,5 @@
 import time
+
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
@@ -6,7 +7,7 @@ from sqlalchemy import select
 
 from apps.etmf.database import db_manager
 from apps.etmf.main import app
-from apps.etmf.models import Base, DocumentQCTransition, TMFAuditLog, TMFDocument
+from apps.etmf.models import Base, TMFAuditLog
 from apps.gateway.main import generate_signature
 
 
@@ -24,7 +25,9 @@ async def setup_db():
     await db_manager.close()
 
 
-def get_auth_headers(roles: str = "admin", change_reason: str = "", user_id: str = "test_user") -> dict:
+def get_auth_headers(
+    roles: str = "admin", change_reason: str = "", user_id: str = "test_user"
+) -> dict:
     """
     Helper to generate valid gateway V2 signed headers for testing.
     """
@@ -56,7 +59,7 @@ async def test_empty_binder_structure():
     # Fetch structure for fresh study with milestone INITIATION (will seed EDL)
     response = client.get(
         "/api/v1/etmf/studies/study_empty/binder/structure?milestone=INITIATION",
-        headers=headers
+        headers=headers,
     )
     assert response.status_code == 200
     data = response.json()
@@ -74,13 +77,17 @@ async def test_empty_binder_structure():
     # Verify that Zone 1, Section "01.01", Artifact "01.01.01" is marked as MISSING
     zone_1 = next(z for z in data["zones"] if z["zone_code"] == 1)
     sec_1_1 = next(s for s in zone_1["sections"] if s["section_code"] == "01.01")
-    art_1_1_1 = next(a for a in sec_1_1["artifacts"] if a["artifact_code"] == "01.01.01")
+    art_1_1_1 = next(
+        a for a in sec_1_1["artifacts"] if a["artifact_code"] == "01.01.01"
+    )
     assert art_1_1_1["status"] == "MISSING"
     assert art_1_1_1["document_id"] is None
     assert art_1_1_1["version_index"] is None
 
     # Other non-expected artifacts in Zone 1 (e.g. 01.01.02) should be EXPECTED (or not present/optional)
-    art_1_1_2 = next(a for a in sec_1_1["artifacts"] if a["artifact_code"] == "01.01.02")
+    art_1_1_2 = next(
+        a for a in sec_1_1["artifacts"] if a["artifact_code"] == "01.01.02"
+    )
     assert art_1_1_2["status"] == "EXPECTED"
 
     # Verify that BINDER_STRUCTURE_VIEW audit log is created
@@ -99,7 +106,7 @@ async def test_partial_binder_structure():
     Ingest a document, check that it is PRESENT, expected ones are MISSING, and other ones EXPECTED.
     """
     client = TestClient(app)
-    headers = get_auth_headers(roles="admin,sponsor_dm")
+    headers = get_auth_headers(roles="admin,sponsor_dm", change_reason="Ingest protocol document")
 
     # 1. Ingest Clinical Trial Protocol (01.01.01) for study_partial
     payload = {
@@ -117,7 +124,7 @@ async def test_partial_binder_structure():
     # 2. Query structure for milestone INITIATION
     response = client.get(
         "/api/v1/etmf/studies/study_partial/binder/structure?milestone=INITIATION",
-        headers=headers
+        headers=headers,
     )
     assert response.status_code == 200
     data = response.json()
@@ -129,7 +136,9 @@ async def test_partial_binder_structure():
     # Verify status is PRESENT for 01.01.01
     zone_1 = next(z for z in data["zones"] if z["zone_code"] == 1)
     sec_1_1 = next(s for s in zone_1["sections"] if s["section_code"] == "01.01")
-    art_1_1_1 = next(a for a in sec_1_1["artifacts"] if a["artifact_code"] == "01.01.01")
+    art_1_1_1 = next(
+        a for a in sec_1_1["artifacts"] if a["artifact_code"] == "01.01.01"
+    )
     assert art_1_1_1["status"] == "PRESENT"
     assert art_1_1_1["document_id"] == doc_id
     assert art_1_1_1["version_index"] == 1
@@ -156,14 +165,20 @@ async def test_document_version_history_lineage():
     assert res_v1.status_code == 201
     v1_id = res_v1.json()["id"]
 
-    # Transition v1 status to ARCHIVED (using valid headers with change reason)
-    headers_transition = get_auth_headers(roles="admin,sponsor_dm", change_reason="Approve and archive")
-    res_trans1 = client.post(
-        f"/api/v1/etmf/documents/{v1_id}/transition",
-        json={"from_status": "DRAFT", "to_status": "ARCHIVED", "reason_for_change": "Archive it"},
-        headers=headers_transition
+    # Transition v1 status through QC states to ARCHIVED
+    headers_transition = get_auth_headers(
+        roles="admin,sponsor_dm", change_reason="Approve and archive"
     )
-    assert res_trans1.status_code == 200
+    for s in ["TECHNICAL_QC", "CLINICAL_QC", "APPROVED", "ARCHIVED"]:
+        res_trans1 = client.post(
+            f"/api/v1/etmf/documents/{v1_id}/transition",
+            json={
+                "to_status": s,
+                "reason_for_change": f"Transitioning document to {s} status",
+            },
+            headers=headers_transition,
+        )
+        assert res_trans1.status_code == 200
 
     # 2. Ingest version 2
     payload_v2 = {
@@ -195,7 +210,7 @@ async def test_document_version_history_lineage():
     assert v1_entry["filename"] == "protocol_v1.pdf"
     assert len(v1_entry["transitions"]) >= 1
     assert v1_entry["transitions"][0]["from_status"] == "DRAFT"
-    assert v1_entry["transitions"][0]["to_status"] == "ARCHIVED"
+    assert v1_entry["transitions"][-1]["to_status"] == "ARCHIVED"
 
     assert v2_entry["id"] == v2_id
     assert v2_entry["version_index"] == 2
@@ -217,6 +232,8 @@ async def test_versions_404_not_found():
     """
     client = TestClient(app)
     headers = get_auth_headers(roles="admin,sponsor_dm")
-    response = client.get("/api/v1/etmf/documents/unknown_doc_id/versions", headers=headers)
+    response = client.get(
+        "/api/v1/etmf/documents/unknown_doc_id/versions", headers=headers
+    )
     assert response.status_code == 404
     assert response.json()["detail"] == "eTMF Document not found"

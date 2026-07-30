@@ -351,6 +351,7 @@ WHITELISTED_ROUTES = {
     ("post", "/api/v1/execution/sdv/signoff"),
     ("post", "/api/v1/execution/subjects"),
     ("post", "/api/v1/execution/subjects/{subject_id}/consent"),
+    ("post", "/api/v1/execution/subjects/{subject_id}/randomize"),
     ("post", "/api/v1/execution/subjects/{subject_id}/screening"),
     ("post", "/api/v1/execution/subjects/{subject_id}/unblind"),
     ("post", "/api/v1/execution/tsdv/config"),

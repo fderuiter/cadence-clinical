@@ -120,9 +120,9 @@ async def ingest_tmf_document(
         if is_site_level_artifact(canonical_artifact_type, resolved_artifact_code):
             resolved_site_id = "QUARANTINED"
 
-    # Enforce site scope if the caller is site-scoped
-    if assigned_sites and len(assigned_sites) > 0:
-        if not resolved_site_id or resolved_site_id not in assigned_sites:
+    # Enforce site scope if the caller is site-scoped and the document is site-scoped
+    if resolved_site_id and assigned_sites and len(assigned_sites) > 0:
+        if resolved_site_id not in assigned_sites:
             raise PermissionError(
                 "Forbidden: You can only ingest documents for your assigned site(s)."
             )

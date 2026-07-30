@@ -239,6 +239,46 @@
         }
       }
     },
+    "/api/v1/etmf/documents/{document_id}/versions": {
+      "get": {
+        "summary": "Get Document Versions",
+        "description": "Retrieve all versions/revisions of a document's lineage and their QC transition histories.",
+        "operationId": "get_document_versions_api_v1_etmf_documents__document_id__versions_get",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentVersionsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/etmf/documents/{document_id}/download": {
       "get": {
         "summary": "Download Document",
@@ -1204,6 +1244,82 @@
         }
       }
     },
+    "/api/v1/etmf/studies/{study_id}/binder/structure": {
+      "get": {
+        "summary": "Get Binder Structure",
+        "description": "Expose the structured Zone -> Section -> Artifact tree for a study binder,\nannotated with expected/present/missing status.",
+        "operationId": "get_binder_structure_api_v1_etmf_studies__study_id__binder_structure_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "milestone",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional clinical study milestone",
+              "title": "Milestone"
+            },
+            "description": "Optional clinical study milestone"
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional clinical site ID",
+              "title": "Site Id"
+            },
+            "description": "Optional clinical site ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BinderStructureResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/etmf/studies/{study_id}/binder": {
       "get": {
         "summary": "Export Regulatory Binder",
@@ -1550,6 +1666,166 @@
         ],
         "title": "AutomatedRedactResponse",
         "description": "Response detailing the automated redaction operation outcomes.\nCrucially, it never exposes raw matched PII/PHI identifiers."
+      },
+      "BinderArtifactNode": {
+        "properties": {
+          "artifact_code": {
+            "type": "string",
+            "title": "Artifact Code"
+          },
+          "artifact_name": {
+            "type": "string",
+            "title": "Artifact Name"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "version_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "artifact_code",
+          "artifact_name",
+          "status"
+        ],
+        "title": "BinderArtifactNode",
+        "description": "Representation of an artifact node in the binder structure."
+      },
+      "BinderSectionNode": {
+        "properties": {
+          "section_code": {
+            "type": "string",
+            "title": "Section Code"
+          },
+          "section_name": {
+            "type": "string",
+            "title": "Section Name"
+          },
+          "artifacts": {
+            "items": {
+              "$ref": "#/components/schemas/BinderArtifactNode"
+            },
+            "type": "array",
+            "title": "Artifacts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "section_code",
+          "section_name",
+          "artifacts"
+        ],
+        "title": "BinderSectionNode",
+        "description": "Representation of a section node in the binder structure."
+      },
+      "BinderStructureResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "milestone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Milestone"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          },
+          "zones": {
+            "items": {
+              "$ref": "#/components/schemas/BinderZoneNode"
+            },
+            "type": "array",
+            "title": "Zones"
+          },
+          "present_artifacts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Present Artifacts"
+          },
+          "missing_artifacts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing Artifacts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "zones",
+          "present_artifacts",
+          "missing_artifacts"
+        ],
+        "title": "BinderStructureResponse",
+        "description": "Top-level binder structure response."
+      },
+      "BinderZoneNode": {
+        "properties": {
+          "zone_code": {
+            "type": "integer",
+            "title": "Zone Code"
+          },
+          "zone_name": {
+            "type": "string",
+            "title": "Zone Name"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/BinderSectionNode"
+            },
+            "type": "array",
+            "title": "Sections"
+          }
+        },
+        "type": "object",
+        "required": [
+          "zone_code",
+          "zone_name",
+          "sections"
+        ],
+        "title": "BinderZoneNode",
+        "description": "Representation of a zone node in the binder structure."
       },
       "CompletenessResponse": {
         "properties": {
@@ -1899,6 +2175,112 @@
         ],
         "title": "DocumentResponse",
         "description": "Representation of an eTMF document."
+      },
+      "DocumentVersionEntry": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "approval_status": {
+            "type": "string",
+            "title": "Approval Status"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "artifact_code": {
+            "type": "string",
+            "title": "Artifact Code"
+          },
+          "signer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signer"
+          },
+          "signing_timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signing Timestamp"
+          },
+          "transitions": {
+            "items": {
+              "$ref": "#/components/schemas/TransitionResponse"
+            },
+            "type": "array",
+            "title": "Transitions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "version_index",
+          "status",
+          "approval_status",
+          "created_at",
+          "created_by",
+          "filename",
+          "artifact_code",
+          "transitions"
+        ],
+        "title": "DocumentVersionEntry",
+        "description": "Representation of a specific document version lineage entry."
+      },
+      "DocumentVersionsResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "artifact_code": {
+            "type": "string",
+            "title": "Artifact Code"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentVersionEntry"
+            },
+            "type": "array",
+            "title": "Versions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "artifact_code",
+          "versions"
+        ],
+        "title": "DocumentVersionsResponse",
+        "description": "Response containing all versions and transitions for a document's lineage."
       },
       "ExpectedDocumentCreate": {
         "properties": {
