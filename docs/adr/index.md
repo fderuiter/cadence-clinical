@@ -80,6 +80,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-14: Biostatistical Export Pipeline Interoperability and Architecture](2026-08-14-biostatistical-export-pipeline-interoperability.md)
 
 ### 4. Clinical Operations & Business Modules
+- [2026-08-23: Tickets-to-Notifications Integration Architecture](2026-08-23-tickets-notifications-integration.md)
 - [2026-07-30: Protocol Ingestion and CRF Draft Generation Workflow](2026-07-30-protocol-ingestion-and-crf-draft-generation-workflow.md)
 
 - [2026-07-25: ADR 2026-07-25: Data-Driven Expected Document Lists (EDLs) & Completeness Tracking](2026-07-25-data-driven-edl-model-and-completeness.md)

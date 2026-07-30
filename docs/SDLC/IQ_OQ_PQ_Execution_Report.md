@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1338
-- **Passed:** 1338 🟢
+- **Total Automated Test Cases Run:** 1347
+- **Passed:** 1347 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1329,6 +1329,15 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_validate_study_terminology_endpoint_not_found` | `tests.test_terminology_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validate_study_terminology_endpoint_success` | `tests.test_terminology_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validate_study_terminology_fully_valid` | `tests.test_terminology_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_publish_notification_non_2xx_failure` | `tests.test_tickets_notifications_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_publish_notification_success` | `tests.test_tickets_notifications_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_publish_notification_transport_exception` | `tests.test_tickets_notifications_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_notification_failure_isolation` | `tests.test_tickets_notifications_integration` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_notification_idempotency` | `tests.test_tickets_notifications_integration` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_ticket_assignment_notification` | `tests.test_tickets_notifications_integration` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_ticket_comment_notification` | `tests.test_tickets_notifications_integration` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_ticket_transition_notification` | `tests.test_tickets_notifications_integration` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_update_ticket_notifications` | `tests.test_tickets_notifications_integration` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_comments_creation_and_retrieval_scoped` | `tests.test_tickets_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_list_ticket_audit_logs_endpoint` | `tests.test_tickets_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_missing_change_reason_fails_mutations` | `tests.test_tickets_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
