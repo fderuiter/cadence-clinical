@@ -209,6 +209,12 @@ app = FastAPI(
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """
+    Convert request validation errors into a standardized HTTP 400 problem-details response.
+    
+    Returns:
+    	JSONResponse: A 400 response containing details for each invalid request parameter.
+    """
     validation_errors_list = []
     for err in exc.errors():
         loc_path = err.get("loc", [])
@@ -235,6 +241,16 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 @app.exception_handler(PermissionError)
 async def permission_error_handler(request: Request, exc: PermissionError):
+    """
+    Return a forbidden response for permission errors.
+    
+    Parameters:
+    	request (Request): The incoming request.
+    	exc (PermissionError): The permission error to include in the response.
+    
+    Returns:
+    	JSONResponse: A response with status code 403 and the error detail.
+    """
     return JSONResponse(
         status_code=403,
         content={"detail": str(exc)},
@@ -875,7 +891,16 @@ async def unblind_subject(
         )
     ),
 ) -> SubjectUnblindResponse:
-    """Execute emergency unblinding for a subject."""
+    """
+    Execute emergency unblinding for a randomized subject.
+    
+    Parameters:
+        subject_id (str): Identifier of the subject to unblind.
+        payload (UnblindRequest): Unblinding reason, justification, and custodian shares.
+    
+    Returns:
+        SubjectUnblindResponse: The subject's updated unblinding status and allocation details, filtered according to the caller's access.
+    """
     # Ensure change justification headers are present and valid
     verify_change_justification(request)
 
@@ -1005,6 +1030,13 @@ async def unblind_subject(
 
         # Helper/task to be dispatched after commit
         def dispatch_unblind_notification(subj_id: str, msg: str):
+            """
+            Send a critical emergency-unblinding notification for a subject.
+            
+            Parameters:
+            	subj_id (str): Identifier of the subject associated with the unblinding event.
+            	msg (str): Notification message describing the event.
+            """
             from apps.execution.trial_lock import NotificationRouter
 
             router = NotificationRouter()

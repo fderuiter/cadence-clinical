@@ -25,6 +25,18 @@ def get_primary_key(obj):
 
 @event.listens_for(Session, "before_flush")
 def receive_before_flush(session: Session, flush_context, instances):
+    """
+    Enforces write restrictions and records audited changes before a session flush.
+    
+    Parameters:
+        session (Session): SQLAlchemy session containing pending changes.
+        flush_context: SQLAlchemy flush context.
+        instances: Instances involved in the flush.
+    
+    Raises:
+        PermissionError: If the trial or referenced site, visit, subject, or form is locked, re-consent is required, or a prohibited unblinded-subject write is attempted.
+        ValueError: If a verified observation is modified without a meaningful change reason, or a protected record is hard-deleted.
+    """
     if not session.is_modified:
         return
 
