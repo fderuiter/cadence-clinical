@@ -1976,10 +1976,16 @@ class LabRangeRecalculateResponse(BaseModel):
 )
 async def trigger_lab_range_recalculation(
     payload: LabRangeRecalculateRequest,
+    roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER)),
+    _justification=Depends(verify_change_justification),
 ) -> LabRangeRecalculateResponse:
     """Trigger cohort-wide reference range evaluation and recalculation on-demand."""
     from apps.execution.lab_ranges import recalculate_range_flags
 
+    # Deliberately omitting audit_context(...) wrapper here since this endpoint
+    # executes inside the HTTP request lifecycle. GatewayAuthMiddleware and ContextResetMiddleware
+    # automatically capture and bind current_user_id and current_change_reason ContextVars
+    # before execution, allowing the before_flush event listener to log attributed updates.
     async with db_manager.get_session_maker()() as session:
         count = await recalculate_range_flags(
             session, payload.study_id, payload.test_code

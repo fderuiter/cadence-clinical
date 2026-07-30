@@ -176,6 +176,8 @@ X-Change-Reason: Manual revision of Hemoglobin bounds for STUDY-123
 
 #### 4. Cohort Recalculation
 - **Endpoint:** `POST /api/v1/execution/lab-ranges/recalculate`
+- **Authorized Roles:** `CRA` or `Data Manager` (consistent with §5.1)
+- **Change Reasons:** Since this is a mutating write action that updates active clinical observation records, it strictly requires a non-empty `X-Change-Reason` header.
 - **Request Body:**
   ```json
   {
