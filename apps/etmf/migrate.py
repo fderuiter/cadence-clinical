@@ -178,6 +178,10 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
                     taxonomy_version VARCHAR(50) NOT NULL,
                     artifact_code VARCHAR(50) NOT NULL,
                     metadata_json JSON,
+                    reason_for_change VARCHAR(1000),
+                    protocol_version_tag VARCHAR(50),
+                    protocol_version_index INTEGER,
+                    protocol_version_status VARCHAR(50),
                     document_type VARCHAR(50),
                     approval_status VARCHAR(50) NOT NULL,
                     signature_manifestation JSON,
@@ -212,6 +216,10 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
                 "taxonomy_version",
                 "artifact_code",
                 "metadata_json",
+                "reason_for_change",
+                "protocol_version_tag",
+                "protocol_version_index",
+                "protocol_version_status",
                 "document_type",
                 "approval_status",
                 "signature_manifestation",
@@ -244,7 +252,8 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
                 INSERT INTO tmf_documents_new (
                     id, study_id, site_id, zone, section, artifact_type, filename, content, mime_type,
                     created_at, created_by, version_index, status, taxonomy_version, artifact_code,
-                    metadata_json, document_type, approval_status, signature_manifestation, signer,
+                    metadata_json, reason_for_change, protocol_version_tag, protocol_version_index, protocol_version_status,
+                    document_type, approval_status, signature_manifestation, signer,
                     signing_timestamp, is_redacted, redaction_source_id, redaction_manifest_json
                 )
                 SELECT {select_sql}
@@ -305,6 +314,31 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
                 await conn.execute(
                     text(
                         "CREATE INDEX IF NOT EXISTS ix_tmf_documents_site_id ON tmf_documents (site_id);"
+                    )
+                )
+            except Exception:
+                pass
+
+            # Add reason_for_change and protocol_version columns to PostgreSQL table if missing
+            try:
+                await conn.execute(
+                    text(
+                        "ALTER TABLE tmf_documents ADD COLUMN IF NOT EXISTS reason_for_change VARCHAR(1000);"
+                    )
+                )
+                await conn.execute(
+                    text(
+                        "ALTER TABLE tmf_documents ADD COLUMN IF NOT EXISTS protocol_version_tag VARCHAR(50);"
+                    )
+                )
+                await conn.execute(
+                    text(
+                        "ALTER TABLE tmf_documents ADD COLUMN IF NOT EXISTS protocol_version_index INTEGER;"
+                    )
+                )
+                await conn.execute(
+                    text(
+                        "ALTER TABLE tmf_documents ADD COLUMN IF NOT EXISTS protocol_version_status VARCHAR(50);"
                     )
                 )
             except Exception:

@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes
 from cryptography.x509.oid import NameOID
+from protocol_version_ref import ProtocolVersionRef
 from signature import SignatureManifestation, SigningReason
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -40,6 +41,8 @@ async def ingest_document_service(
     metadata_json: Optional[Dict[str, Any]] = None,
     audit_action: str = "INGEST",
     audit_details: Optional[str] = None,
+    reason_for_change: Optional[str] = None,
+    protocol_version: Optional[ProtocolVersionRef] = None,
 ) -> TMFDocument:
     """Service layer workflow for eTMF document ingestion.
 
@@ -291,6 +294,16 @@ async def ingest_document_service(
                 signature_manifestation=signature_manifestation_data,
                 signer=signer_val,
                 signing_timestamp=signing_timestamp_val,
+                reason_for_change=reason_for_change,
+                protocol_version_tag=protocol_version.version_tag
+                if protocol_version
+                else None,
+                protocol_version_index=protocol_version.version_index
+                if protocol_version
+                else None,
+                protocol_version_status=protocol_version.status.value
+                if protocol_version
+                else None,
             )
 
             session.add(doc)

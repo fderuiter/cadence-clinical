@@ -146,6 +146,20 @@ class TMFDocument(Base):
     )
     metadata_json: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
 
+    # Change justification and shared protocol-version reference fields
+    reason_for_change: Mapped[Optional[str]] = mapped_column(
+        String(1000), nullable=True
+    )
+    protocol_version_tag: Mapped[Optional[str]] = mapped_column(
+        String(50), nullable=True
+    )
+    protocol_version_index: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True
+    )
+    protocol_version_status: Mapped[Optional[str]] = mapped_column(
+        String(50), nullable=True
+    )
+
     # Signature and lifecycle fields
     document_type: Mapped[Optional[str]] = mapped_column(
         String(50), nullable=True, index=True

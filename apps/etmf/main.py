@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import Response
+from protocol_version_ref import ProtocolVersionRef
 from pydantic import BaseModel, Field
 from signature import SigningReason
 from sqlalchemy import select
@@ -197,6 +198,9 @@ class IngestionRequest(BaseModel):
     metadata_json: Optional[Dict[str, Any]] = Field(
         None, description="Optional metadata fields"
     )
+    protocol_version: Optional[ProtocolVersionRef] = Field(
+        None, description="Optional shared protocol version reference"
+    )
 
 
 class DocumentResponse(BaseModel):
@@ -231,6 +235,10 @@ class DocumentResponse(BaseModel):
     is_redacted: bool = False
     redaction_source_id: Optional[str] = None
     redaction_manifest_json: Optional[Dict[str, Any]] = None
+
+    # Extended justification and protocol amendment version references
+    reason_for_change: Optional[str] = None
+    protocol_version: Optional[ProtocolVersionRef] = None
 
 
 class RedactRequest(BaseModel):
@@ -609,6 +617,14 @@ async def ingest_document(
             detail="Forbidden: Trial is currently locked in a read-only state due to a security violation.",
         )
 
+    # Extract change justification reason_for_change from request/state/principal
+    reason_for_change = request.headers.get("X-Change-Reason", "").strip()
+    if not reason_for_change:
+        reason_for_change = getattr(request.state, "change_reason", "").strip()
+    if not reason_for_change:
+        reason_for_change = principal.change_reason or "system_operation"
+    reason_for_change = reason_for_change.strip()
+
     try:
         doc = await ingest_document_service(
             session=session,
@@ -626,6 +642,8 @@ async def ingest_document(
             artifact_code=payload.artifact_code,
             taxonomy_version=payload.taxonomy_version,
             metadata_json=payload.metadata_json,
+            reason_for_change=reason_for_change,
+            protocol_version=payload.protocol_version,
         )
     except ValueError as e:
         raise HTTPException(
@@ -724,6 +742,19 @@ async def list_documents(
             is_redacted=doc.is_redacted,
             redaction_source_id=doc.redaction_source_id,
             redaction_manifest_json=doc.redaction_manifest_json,
+            reason_for_change=doc.reason_for_change,
+            protocol_version=(
+                ProtocolVersionRef(
+                    study_id=doc.study_id,
+                    version_tag=doc.protocol_version_tag,
+                    version_index=doc.protocol_version_index,
+                    status=doc.protocol_version_status,
+                )
+                if doc.protocol_version_tag is not None
+                and doc.protocol_version_index is not None
+                and doc.protocol_version_status is not None
+                else None
+            ),
         )
         for doc in docs
     ]
@@ -802,6 +833,19 @@ async def view_document(
         is_redacted=doc.is_redacted,
         redaction_source_id=doc.redaction_source_id,
         redaction_manifest_json=doc.redaction_manifest_json,
+        reason_for_change=doc.reason_for_change,
+        protocol_version=(
+            ProtocolVersionRef(
+                study_id=doc.study_id,
+                version_tag=doc.protocol_version_tag,
+                version_index=doc.protocol_version_index,
+                status=doc.protocol_version_status,
+            )
+            if doc.protocol_version_tag is not None
+            and doc.protocol_version_index is not None
+            and doc.protocol_version_status is not None
+            else None
+        ),
     )
 
 
@@ -2357,6 +2401,106 @@ async def sign_document_endpoint(
         redaction_source_id=doc.redaction_source_id,
         redaction_manifest_json=doc.redaction_manifest_json,
     )
+
+
+@app.get(
+    "/api/v1/etmf/studies/{study_id}/artifacts/{artifact_type}/history",
+    response_model=List[DocumentResponse],
+)
+async def get_artifact_history(
+    study_id: str,
+    artifact_type: str,
+    session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
+) -> List[DocumentResponse]:
+    """
+    Retrieve the chronological, ordered version history of a specific artifact type within a study.
+    All views are logged to the immutable audit trail.
+    """
+    user_id = principal.user_id
+    user_roles = ",".join(principal.raw_roles)
+
+    # Resolve active taxonomy/catalog to obtain the canonical artifact type if possible
+    from tmf_reference_model import get_active_catalog, resolve_artifact
+
+    version = get_active_catalog().version
+    canonical_name = artifact_type
+    try:
+        resolved = resolve_artifact(version=version, name=artifact_type)
+        canonical_name = resolved["artifact"].name
+    except ValueError:
+        pass
+
+    stmt = select(TMFDocument).where(
+        TMFDocument.study_id == study_id,
+        (TMFDocument.artifact_type == canonical_name)
+        | (TMFDocument.artifact_type == artifact_type),
+    )
+
+    # Order chronologically by version_index ascending
+    stmt = stmt.order_by(TMFDocument.version_index.asc())
+
+    # Enforce site visibility and study-level semantics
+    is_site_scoped = len(principal.assigned_sites) > 0
+    if is_site_scoped:
+        stmt = stmt.where(TMFDocument.site_id.in_(principal.assigned_sites))
+
+    result = await session.execute(stmt)
+    docs = result.scalars().all()
+
+    # Log action to immutable audit trail
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="HISTORY_VIEW",
+        document_id=None,
+        details=f"Viewed artifact history for study '{study_id}', artifact_type '{artifact_type}'.",
+    )
+
+    return [
+        DocumentResponse(
+            id=doc.id,
+            study_id=doc.study_id,
+            site_id=doc.site_id,
+            zone=doc.zone,
+            section=doc.section,
+            artifact_type=doc.artifact_type,
+            filename=doc.filename,
+            mime_type=doc.mime_type,
+            created_at=doc.created_at.isoformat(),
+            created_by=doc.created_by,
+            version_index=doc.version_index,
+            status=doc.status,
+            taxonomy_version=doc.taxonomy_version,
+            artifact_code=doc.artifact_code,
+            metadata_json=doc.metadata_json,
+            document_type=doc.document_type,
+            approval_status=doc.approval_status,
+            signature_manifestation=doc.signature_manifestation,
+            signer=doc.signer,
+            signing_timestamp=(
+                doc.signing_timestamp.isoformat() if doc.signing_timestamp else None
+            ),
+            is_redacted=doc.is_redacted,
+            redaction_source_id=doc.redaction_source_id,
+            redaction_manifest_json=doc.redaction_manifest_json,
+            reason_for_change=doc.reason_for_change,
+            protocol_version=(
+                ProtocolVersionRef(
+                    study_id=doc.study_id,
+                    version_tag=doc.protocol_version_tag,
+                    version_index=doc.protocol_version_index,
+                    status=doc.protocol_version_status,
+                )
+                if doc.protocol_version_tag is not None
+                and doc.protocol_version_index is not None
+                and doc.protocol_version_status is not None
+                else None
+            ),
+        )
+        for doc in docs
+    ]
 
 
 @app.get(

@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1273
-- **Passed:** 1273 🟢
+- **Total Automated Test Cases Run:** 1275
+- **Passed:** 1275 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -568,7 +568,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_etmf_qc_lifecycle_and_audit` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_explicit_and_default_taxonomy_version_roundtrip_and_legacy_interpretability` | `tests.test_etmf` | PRD-TMF-003 | 🟢 PASSED | < 1s |
 | `test_inspector_portal_read_only_access_limits` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_ordered_artifact_history_endpoint` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_placeholder_scripts` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_protocol_versioning_and_change_justification_ingestion` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_qualify_catalog_cutover_and_extension_persistence` | `tests.test_etmf` | PRD-TMF-002, Trace-5 | 🟢 PASSED | < 1s |
 | `test_regulatory_binder_export` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_service_caller_ingestion_immutability_violation` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
