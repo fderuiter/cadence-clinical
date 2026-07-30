@@ -18,10 +18,9 @@ from apps.designer.rendering import (
 )
 
 
-def get_custom_auth_headers(change_reason="system_operation"):
+def get_custom_auth_headers(change_reason="system_operation", roles="admin"):
     timestamp = str(time.time())
     user_id = "123"
-    roles = "admin"
     secret = "internal-gateway-secret-12345"  # pragma: allowlist secret
     payload = {
         "change_reason": change_reason,
@@ -376,3 +375,205 @@ def test_export_protocol_etmf_forwarding_strict_failure(client, monkeypatch):
     )
     assert response.status_code == 500
     assert "Strict Archival Failure" in response.json()["detail"]
+
+
+def test_export_protocol_unauthenticated(client):
+    """
+    Verify that calling the export endpoint with no gateway headers returns 401
+    and "Missing gateway authentication headers" detail.
+    """
+    response = client.get("/api/v1/studies/study_1/export?format=pdf")
+    assert response.status_code == 401
+    assert "Missing gateway authentication headers" in response.json()["detail"]
+
+
+def test_export_protocol_unauthorized_empty_roles(client):
+    """
+    Verify that calling the export endpoint with valid gateway headers but an empty/role-less
+    roles value returns 403 (unauthorized/forbidden).
+    """
+    headers = get_custom_auth_headers(roles=" ")
+    response = client.get(
+        "/api/v1/studies/study_1/export?format=pdf",
+        headers=headers,
+    )
+    assert response.status_code == 403
+    # Check detail covers role missing or permission forbidden
+    assert (
+        "Missing role credentials" in response.json()["detail"]
+        or "Forbidden" in response.json()["detail"]
+    )
+
+
+def _find_all_tables_in_docx(doc):
+    from docx.oxml.table import CT_Tbl
+    from docx.table import Table
+
+    tables = []
+    for child in doc.element.body.iter():
+        if isinstance(child, CT_Tbl):
+            tables.append(Table(child, doc.element.body))
+    return tables
+
+
+def test_render_protocol_to_docx_combined_structure():
+    """
+    Assert that combined DOCX output has the correct synopsis, narrative, and SoA table structure.
+    """
+    import io
+
+    from docx import Document
+
+    from apps.designer.rendering import render_protocol_to_docx
+
+    from .test_protocol_render import get_sample_rendered_document
+
+    doc_view = get_sample_rendered_document()
+    result = render_protocol_to_docx(doc_view, "combined")
+
+    assert result.content is not None
+    assert result.filename == "protocol_study_test_v2.docx"
+    assert (
+        result.media_type
+        == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
+
+    # Parse with python-docx
+    doc = Document(io.BytesIO(result.content))
+
+    # Extract all paragraph texts
+    all_paras = [p.text for p in doc.paragraphs]
+    full_text = "\n".join(all_paras)
+
+    # Assert synopsis and narrative elements exist in paragraphs
+    assert "CLINICAL STUDY PROTOCOL" in full_text
+    assert "Sponsor Corp" in full_text
+    assert "Introduction Section Title" in full_text
+    assert "Intro para text" in full_text
+
+    # Assert SoA table structure recursively
+    all_tables = _find_all_tables_in_docx(doc)
+    assert len(all_tables) >= 1
+    soa_table = all_tables[0]
+
+    # Assert row and column structure
+    # Header 1, Header 2 + 1 activity row = 3 rows
+    assert len(soa_table.rows) == 3
+    # 1 activity column + 1 encounter column = 2 columns
+    assert len(soa_table.columns) == 2
+
+    # Assert cell content
+    assert "Activity / Procedure" in soa_table.cell(0, 0).text
+    assert "Screening" in soa_table.cell(0, 1).text
+    assert "Visit 1" in soa_table.cell(1, 1).text
+    assert "Vitals Collection" in soa_table.cell(2, 0).text
+    assert "X" in soa_table.cell(2, 1).text
+    assert "Vitals detail" in soa_table.cell(2, 1).text
+
+
+def test_render_protocol_to_docx_gated_synopsis_only():
+    """
+    Assert that synopsis-only DOCX output omits narrative and SoA sections.
+    """
+    import io
+
+    from docx import Document
+
+    from apps.designer.rendering import render_protocol_to_docx
+
+    from .test_protocol_render import get_sample_rendered_document
+
+    doc_view = get_sample_rendered_document()
+    result = render_protocol_to_docx(doc_view, "synopsis")
+
+    doc = Document(io.BytesIO(result.content))
+    full_text = "\n".join([p.text for p in doc.paragraphs])
+
+    assert "PROTOCOL SYNOPSIS" in full_text
+    # Section 2 narrative should not be populated with text
+    assert "Introduction Section Title" not in full_text
+    assert "Intro para text" not in full_text
+
+    # The SoA table is omitted from view
+    all_tables = _find_all_tables_in_docx(doc)
+    assert "Schedule of Activities (SoA) omitted" in full_text or len(all_tables) == 0
+
+
+def test_render_protocol_to_docx_gated_narrative_only():
+    """
+    Assert that narrative-only DOCX output omits synopsis and SoA sections.
+    """
+    import io
+
+    from docx import Document
+
+    from apps.designer.rendering import render_protocol_to_docx
+
+    from .test_protocol_render import get_sample_rendered_document
+
+    doc_view = get_sample_rendered_document()
+    result = render_protocol_to_docx(doc_view, "narrative")
+
+    doc = Document(io.BytesIO(result.content))
+    full_text = "\n".join([p.text for p in doc.paragraphs])
+
+    # Synopsis fields should be omitted from body text
+    assert "PROTOCOL SYNOPSIS" not in full_text
+    assert "Introduction Section Title" in full_text
+    assert "Intro para text" in full_text
+    all_tables = _find_all_tables_in_docx(doc)
+    assert "Schedule of Activities (SoA) omitted" in full_text or len(all_tables) == 0
+
+
+def test_render_protocol_to_docx_gated_soa_only():
+    """
+    Assert that SoA-only DOCX output omits synopsis and narrative sections.
+    """
+    import io
+
+    from docx import Document
+
+    from apps.designer.rendering import render_protocol_to_docx
+
+    from .test_protocol_render import get_sample_rendered_document
+
+    doc_view = get_sample_rendered_document()
+    result = render_protocol_to_docx(doc_view, "soa")
+
+    doc = Document(io.BytesIO(result.content))
+    full_text = "\n".join([p.text for p in doc.paragraphs])
+
+    assert "PROTOCOL SYNOPSIS" not in full_text
+    assert "Introduction Section Title" not in full_text
+    assert "Intro para text" not in full_text
+    # SoA table should be present
+    all_tables = _find_all_tables_in_docx(doc)
+    assert len(all_tables) >= 1
+
+
+def test_production_template_immutability_integration(client):
+    """
+    Assert that invoking the export endpoint does not modify the checked-in controlled template.
+    """
+    import hashlib
+
+    from apps.designer.rendering import TEMPLATES_DIR
+
+    real_template_path = os.path.join(TEMPLATES_DIR, "protocol_template.docx")
+    assert os.path.exists(real_template_path)
+
+    # Compute initial hash of the real template file
+    with open(real_template_path, "rb") as f:
+        initial_hash = hashlib.sha256(f.read()).hexdigest()
+
+    # Call the export API
+    response = client.get(
+        "/api/v1/studies/study_1/export?format=docx",
+        headers=get_custom_auth_headers(),
+    )
+    assert response.status_code == 200
+
+    # Assert hash is unchanged
+    with open(real_template_path, "rb") as f:
+        after_hash = hashlib.sha256(f.read()).hexdigest()
+    assert after_hash == initial_hash

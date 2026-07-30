@@ -248,6 +248,22 @@ def build_soa_subdoc(subdoc: Any, soa_matrix: SoAMatrixView) -> None:
         row_idx += 1
 
 
+def render_protocol_to_html(
+    doc: RenderedProtocolDocument, output: str = "combined"
+) -> str:
+    """
+    Renders the RenderedProtocolDocument to an HTML string using Jinja2.
+    """
+    template = jinja_env.get_template("protocol_template.html")
+    return template.render(
+        metadata=doc.metadata,
+        synopsis=doc.synopsis,
+        narrative_sections=doc.narrative_sections,
+        soa_matrix=doc.soa_matrix,
+        output=output,
+    )
+
+
 def render_protocol_to_pdf(
     doc: RenderedProtocolDocument, output: str = "combined"
 ) -> RendererResult:
@@ -261,15 +277,7 @@ def render_protocol_to_pdf(
     try:
         from weasyprint import HTML
 
-        template = jinja_env.get_template("protocol_template.html")
-        # Render HTML template with model context
-        html_content = template.render(
-            metadata=doc.metadata,
-            synopsis=doc.synopsis,
-            narrative_sections=doc.narrative_sections,
-            soa_matrix=doc.soa_matrix,
-            output=output,
-        )
+        html_content = render_protocol_to_html(doc, output)
         # Generate PDF bytes via WeasyPrint
         pdf_bytes = HTML(string=html_content).write_pdf()
     except Exception as err:
