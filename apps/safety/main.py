@@ -1,4 +1,5 @@
 import copy
+import logging
 import os
 from typing import Any, Dict, List, Optional
 
@@ -9,9 +10,18 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.safety.database import db_manager
-from apps.safety.models import Base, SafetyAuditLog, SafetyCaseICSR, SafetyExportJob
+from apps.safety.models import (
+    Base,
+    SAEDiscrepancy,
+    SAEReconciliationRun,
+    SafetyAuditLog,
+    SafetyCaseICSR,
+    SafetyExportJob,
+)
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
+
+logger = logging.getLogger("safety-main")
 
 
 # Pydantic Schemas for Request/Response Validation
@@ -73,6 +83,40 @@ class SafetyAuditLogResponse(BaseModel):
     action: str
     details: str
     record_id: Optional[str] = None
+
+
+class SAEReconciliationRunRequest(BaseModel):
+    study_id: str = Field(..., description="The study identifier for reconciliation")
+
+
+class SAEDiscrepancyResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    run_id: str
+    source: str
+    case_event_key: str
+    field_name: str
+    expected_value: Optional[str] = None
+    actual_value: Optional[str] = None
+    meddra_version: Optional[str] = None
+    created_at: str
+    created_by: str
+    reason_for_change: str
+    version_index: int
+
+
+class SAEReconciliationRunResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    study_id: str
+    run_date: str
+    created_at: str
+    created_by: str
+    reason_for_change: str
+    version_index: int
+    discrepancies: List[SAEDiscrepancyResponse] = []
 
 
 DATABASE_URL = os.getenv("SAFETY_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
@@ -162,6 +206,35 @@ def map_job_to_response(job: SafetyExportJob) -> SafetyExportJobResponse:
         created_by=job.created_by,
         reason_for_change=job.reason_for_change,
         version_index=job.version_index,
+    )
+
+
+def map_run_to_response(run: SAEReconciliationRun, discrepancies: List[SAEDiscrepancy]) -> SAEReconciliationRunResponse:
+    return SAEReconciliationRunResponse(
+        id=run.id,
+        study_id=run.study_id,
+        run_date=run.run_date.isoformat(),
+        created_at=run.created_at.isoformat(),
+        created_by=run.created_by,
+        reason_for_change=run.reason_for_change,
+        version_index=run.version_index,
+        discrepancies=[
+            SAEDiscrepancyResponse(
+                id=d.id,
+                run_id=d.run_id,
+                source=d.source,
+                case_event_key=d.case_event_key,
+                field_name=d.field_name,
+                expected_value=d.expected_value,
+                actual_value=d.actual_value,
+                meddra_version=d.meddra_version,
+                created_at=d.created_at.isoformat(),
+                created_by=d.created_by,
+                reason_for_change=d.reason_for_change,
+                version_index=d.version_index,
+            )
+            for d in discrepancies
+        ],
     )
 
 
@@ -523,3 +596,147 @@ async def export_safety_case(
     )
 
     return map_job_to_response(job)
+
+
+# SAE Reconciliation runs endpoints
+@app.post(
+    "/api/v1/safety/reconciliation/runs",
+    response_model=SAEReconciliationRunResponse,
+    status_code=201,
+)
+async def trigger_sae_reconciliation(
+    request: Request,
+    payload: SAEReconciliationRunRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> SAEReconciliationRunResponse:
+    """
+    Triggers deterministic SAE reconciliation, comparing EDC observations
+    with external safety PV database, and persisting results safely (no direct patient PII).
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+    if not change_reason:
+        raise HTTPException(
+            status_code=403, detail="Missing change justification reason"
+        )
+
+    from apps.safety.reconciliation import run_reconciliation
+
+    # Resolve any mocked test HTTPX client
+    test_client = getattr(request.app.state, "test_httpx_client", None)
+
+    try:
+        results = await run_reconciliation(
+            study_id=payload.study_id,
+            session=session,
+            created_by=user_id,
+            reason_for_change=change_reason,
+            client=test_client,
+        )
+    except Exception as e:
+        logger.exception("SAE Reconciliation orchestrator failed: %s", e)
+        raise HTTPException(
+            status_code=502,
+            detail=f"SAE Reconciliation execution failure: {str(e)}",
+        )
+
+    run = results["run"]
+    discrepancies = results["discrepancies"]
+
+    # Commit the transaction so runs are permanently stored
+    await session.commit()
+
+    # Log action to immutable safety audit ledger (PII-free)
+    audit_details = f"Executed SAE reconciliation run ID '{run.id}' for study '{payload.study_id}'. Identified {len(discrepancies)} discrepancies."
+    await write_safety_audit_log(
+        session=session,
+        user_id=user_id,
+        action="SAE_RECONCILIATION_RUN",
+        details=audit_details,
+        record_id=run.id,
+        change_reason=change_reason,
+        version_index=1,
+    )
+    await session.commit()
+
+    return map_run_to_response(run, discrepancies)
+
+
+@app.get(
+    "/api/v1/safety/reconciliation/runs",
+    response_model=List[SAEReconciliationRunResponse],
+)
+async def list_reconciliation_runs(
+    request: Request,
+    session: AsyncSession = Depends(get_db_session),
+) -> List[SAEReconciliationRunResponse]:
+    """
+    List all safety reconciliation runs.
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+
+    stmt = select(SAEReconciliationRun)
+    result = await session.execute(stmt)
+    runs = result.scalars().all()
+
+    response_runs = []
+    for r in runs:
+        # Load related discrepancies
+        stmt_disc = select(SAEDiscrepancy).where(SAEDiscrepancy.run_id == r.id)
+        res_disc = await session.execute(stmt_disc)
+        discrepancies = list(res_disc.scalars().all())
+        response_runs.append(map_run_to_response(r, discrepancies))
+
+    # Log action
+    await write_safety_audit_log(
+        session=session,
+        user_id=user_id,
+        action="SAE_RECONCILIATION_RUN_LIST",
+        details="Listed SAE reconciliation runs.",
+        change_reason=change_reason,
+        version_index=1,
+    )
+    await session.commit()
+
+    return response_runs
+
+
+@app.get(
+    "/api/v1/safety/reconciliation/runs/{id}",
+    response_model=SAEReconciliationRunResponse,
+)
+async def get_reconciliation_run(
+    request: Request,
+    id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> SAEReconciliationRunResponse:
+    """
+    Retrieve a specific safety reconciliation run.
+    """
+    user_id, user_role, change_reason = get_user_context(request)
+
+    stmt = select(SAEReconciliationRun).where(SAEReconciliationRun.id == id)
+    result = await session.execute(stmt)
+    run = result.scalars().first()
+
+    if not run:
+        raise HTTPException(
+            status_code=404, detail=f"Reconciliation run with ID '{id}' not found."
+        )
+
+    stmt_disc = select(SAEDiscrepancy).where(SAEDiscrepancy.run_id == id)
+    res_disc = await session.execute(stmt_disc)
+    discrepancies = list(res_disc.scalars().all())
+
+    # Log action
+    await write_safety_audit_log(
+        session=session,
+        user_id=user_id,
+        action="SAE_RECONCILIATION_RUN_VIEW",
+        details=f"Viewed reconciliation run ID: {id}.",
+        record_id=id,
+        change_reason=change_reason,
+        version_index=run.version_index,
+    )
+    await session.commit()
+
+    return map_run_to_response(run, discrepancies)
