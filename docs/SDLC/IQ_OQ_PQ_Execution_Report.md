@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1314
-- **Passed:** 1314 🟢
+- **Total Automated Test Cases Run:** 1258
+- **Passed:** 1258 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -405,42 +405,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_create_study_root` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_study_differences` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_update_study_properties` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_age_derivation_boundary_dates[2000-05-14-2020-05-15-20]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_age_derivation_boundary_dates[2000-05-15-2020-05-15-20]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_age_derivation_boundary_dates[2000-05-15-None-None]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_age_derivation_boundary_dates[2000-05-15-invalid-observation-date-None]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_age_derivation_boundary_dates[2000-05-15T00:00:00Z-2020-05-15T12:00:00Z-20]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_age_derivation_boundary_dates[2000-05-16-2020-05-15-19]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_age_derivation_boundary_dates[2021-05-15-2020-05-15-None]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_age_derivation_boundary_dates[None-2020-05-15-None]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_age_derivation_boundary_dates[birthdate0-observation_date0-20]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_age_derivation_boundary_dates[birthdate14-observation_date14-None]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_age_derivation_boundary_dates[birthdate3-observation_date3-20]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_age_derivation_boundary_dates[birthdate5-observation_date5-19]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_age_derivation_boundary_dates[birthdate7-observation_date7-20]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_age_derivation_boundary_dates[birthdate8-observation_date8-21]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_age_derivation_boundary_dates[birthdate9-observation_date9-20]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_age_derivation_boundary_dates[invalid-date-string-2020-05-15-None]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_age_derivation_boundary_dates` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_demographics_encryption_decryption_roundtrip` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_gender_normalization[  female  -F]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_gender_normalization[  male  -M]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_gender_normalization[-U]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_gender_normalization[Alien/Unidentified-U]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_gender_normalization[F-F]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_gender_normalization[FEMALE-F]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_gender_normalization[Female-F]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_gender_normalization[M-M]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_gender_normalization[MALE-M]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_gender_normalization[Male-M]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_gender_normalization[None-U]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_gender_normalization[Other-U]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_gender_normalization[U-U]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_gender_normalization[Unknown-U]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_gender_normalization[boy-M]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_gender_normalization[girl-F]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_gender_normalization[man-M]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_gender_normalization[unspecified-U]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_gender_normalization[woman-F]` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gender_normalization` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_safe_demographics_failures_fail_safely` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_safe_demographics_valid_decryption` | `tests.test_demographics` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_study_differences_missing_version` | `tests.test_designer_differences` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -833,6 +800,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_multiple_colons` | `tests.test_mapping_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_valid_csv` | `tests.test_mapping_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_clean_token` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_func` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_html_comment_filtering` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_is_potential_path_ref` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_json_block_validation` | `tests.test_markdown_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -896,21 +864,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_cache_ttl_configuration` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cache_unavailability_graceful_degradation` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_meddra_matching_integration` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_normalize_term[Clinical history of hepatitises-clinic hepatitis]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_normalize_term[Mild headache-headache]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_normalize_term[Onset of acute gastritis-gastritis]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_normalize_term[Severe recurring pain, chronic-pain]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_normalize_term` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_similarity_computations` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_stem_word[allergies-allergy]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_stem_word[clinical-clinic]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_stem_word[headaches-headache]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_stem_word[hepatitises-hepatitis]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_stem_word[infected-infect]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_stem_word[meningitis-meningitis]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_stem_word[pain-pain]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_stem_word[severely-severe]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_stem_word[ss-ss]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_stem_word[vomiting-vomit]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_stem_word` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_token_cosine_similarity_empty` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_whodrug_matching_integration` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_main_cli` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -940,10 +896,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_personnel_crud_api` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_resolve_assignments_endpoint` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_site_crud_api` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_audit_fields_change_reason_validation[   ]` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_audit_fields_change_reason_validation[\n]` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_audit_fields_change_reason_validation[\t]` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_audit_fields_change_reason_validation[]` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_audit_fields_change_reason_validation` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_fields_instantiation` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_fields_reusability` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_clinical_staff_role_values` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -965,7 +918,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_reorder_blocks` | `tests.test_protocol_blocks` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_selective_lineage_propagation` | `tests.test_protocol_blocks` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_usdm_block_round_trip` | `tests.test_protocol_blocks` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_build_docx_template` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_ensure_docx_template_exists` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_protocol_as_docx_success` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_protocol_as_pdf_success` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_protocol_etmf_forwarding_best_effort` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -974,13 +927,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_export_protocol_invalid_output` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_protocol_not_found` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_protocol_outputs_rendering` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_export_protocol_template_unavailable_integration` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_protocol_unsupported_format` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_safe_filename` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_load_template_invalid` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_load_template_missing` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_sanitize_filename` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_template_immutability` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_metadata_invalid_version` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_metadata_missing_change_reason_on_version_bump` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_metadata_valid_initial` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -989,12 +938,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_rendered_protocol_document_with_usdm_study` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_soa_matrix_view` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_synopsis_view_parsing` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_protocol_version_ref_accepted_statuses[ACTIVE]` | `tests.test_protocol_version_ref` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_protocol_version_ref_accepted_statuses[ARCHIVED]` | `tests.test_protocol_version_ref` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_protocol_version_ref_accepted_statuses[DRAFT]` | `tests.test_protocol_version_ref` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_protocol_version_ref_accepted_statuses[FROZEN]` | `tests.test_protocol_version_ref` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_protocol_version_ref_accepted_statuses[LOCKED]` | `tests.test_protocol_version_ref` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_protocol_version_ref_accepted_statuses[PUBLISHED]` | `tests.test_protocol_version_ref` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_protocol_version_ref_accepted_statuses` | `tests.test_protocol_version_ref` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_protocol_version_ref_serialization` | `tests.test_protocol_version_ref` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_protocol_version_ref_valid_payload` | `tests.test_protocol_version_ref` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_protocol_version_ref_validation_blank_fields` | `tests.test_protocol_version_ref` | *Regression/Helper* | 🟢 PASSED | < 1s |
