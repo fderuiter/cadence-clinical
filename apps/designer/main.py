@@ -1394,7 +1394,10 @@ async def forward_to_etmf(
         resp.raise_for_status()
 
 
-@app.get("/api/v1/studies/{study_id}/export")
+@app.get(
+    "/api/v1/studies/{study_id}/export",
+    dependencies=[Depends(require_permission("study_design:read"))],
+)
 async def export_protocol(
     study_id: str,
     format: str = Query("pdf"),

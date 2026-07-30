@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1370
-- **Passed:** 1370 🟢
+- **Total Automated Test Cases Run:** 1381
+- **Passed:** 1381 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1000,10 +1000,17 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_export_protocol_not_found` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_protocol_outputs_rendering` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_protocol_template_unavailable_integration` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_export_protocol_unauthenticated` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_export_protocol_unauthorized_empty_roles` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_protocol_unsupported_format` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_safe_filename` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_load_template_invalid` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_load_template_missing` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_production_template_immutability_integration` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_render_protocol_to_docx_combined_structure` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_render_protocol_to_docx_gated_narrative_only` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_render_protocol_to_docx_gated_soa_only` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_render_protocol_to_docx_gated_synopsis_only` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_sanitize_filename` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_template_immutability` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_metadata_invalid_version` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1011,6 +1018,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_export_metadata_valid_initial` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_metadata_valid_version_bump` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_narrative_item_and_section_views` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_render_protocol_to_html_combined` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_render_protocol_to_html_narrative_only` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_render_protocol_to_html_soa_only` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_render_protocol_to_html_synopsis_only` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_rendered_protocol_document_with_usdm_study` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_soa_matrix_view` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_synopsis_view_parsing` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
