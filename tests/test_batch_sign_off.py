@@ -529,3 +529,237 @@ async def test_batch_sign_off_mismatched_bindings_and_no_write() -> None:
             sub_db = res_db.scalar_one()
             assert sub_db.status == "COMPLETED"
             assert sub_db.signature_manifest is None
+
+
+@pytest.mark.asyncio
+async def test_batch_sign_off_all_locks() -> None:
+    """Test that different lock levels (trial, visit, subject, form) reject sign-off write and roll back atomically."""
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # 1. Trial Lock
+        async with db_manager.get_session_maker()() as session:
+            sub = FormSubmission(
+                study_id="STUDY-001",
+                site_id="SITE-001",
+                subject_id="SUBJ-001",
+                visit_id="VISIT-001",
+                form_id="FORM-001",
+                status="COMPLETED",
+            )
+            session.add(sub)
+            await session.commit()
+            sub_id = sub.id
+
+        action_path = "/api/v1/execution/batch-sign-off"
+        payload = {
+            "study_id": "STUDY-001",
+            "target_type": "FORM",
+            "target_ids": [sub_id],
+            "signing_reason": "PI approval and sign-off.",
+        }
+
+        TrialLockManager.lock_trial("Security breach simulation")
+        try:
+            with pytest.raises(PermissionError, match="Trial is currently locked"):
+                await client.post(
+                    action_path,
+                    json=payload,
+                    headers=get_auth_headers(
+                        roles="pi", action=action_path, payload=payload
+                    ),
+                )
+        finally:
+            TrialLockManager.reset()
+
+        # 2. Visit Lock
+        TrialLockManager.lock_visit("VISIT-001")
+        try:
+            with pytest.raises(
+                PermissionError, match="Visit VISIT-001 is currently locked"
+            ):
+                await client.post(
+                    action_path,
+                    json=payload,
+                    headers=get_auth_headers(
+                        roles="pi", action=action_path, payload=payload
+                    ),
+                )
+        finally:
+            TrialLockManager.reset()
+
+        # 3. Subject Lock
+        TrialLockManager.lock_subject("SUBJ-001")
+        try:
+            with pytest.raises(
+                PermissionError, match="Subject SUBJ-001 is currently locked"
+            ):
+                await client.post(
+                    action_path,
+                    json=payload,
+                    headers=get_auth_headers(
+                        roles="pi", action=action_path, payload=payload
+                    ),
+                )
+        finally:
+            TrialLockManager.reset()
+
+        # 4. Form Lock
+        TrialLockManager.lock_form("FORM-001")
+        try:
+            with pytest.raises(
+                PermissionError, match="Form FORM-001 is currently locked"
+            ):
+                await client.post(
+                    action_path,
+                    json=payload,
+                    headers=get_auth_headers(
+                        roles="pi", action=action_path, payload=payload
+                    ),
+                )
+        finally:
+            TrialLockManager.reset()
+
+        # Verify that sub was NOT approved and proper rollback occurred across all tests
+        async with db_manager.get_session_maker()() as session:
+            stmt = select(FormSubmission).where(FormSubmission.id == sub_id)
+            res_db = await session.execute(stmt)
+            sub_db = res_db.scalar_one()
+            assert sub_db.status == "COMPLETED"
+
+
+@pytest.mark.asyncio
+async def test_batch_sign_off_non_lock_rollback(monkeypatch) -> None:
+    """Test that a non-lock exception raised during processing rolls back changes to all processed submissions."""
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        async with db_manager.get_session_maker()() as session:
+            sub1 = FormSubmission(
+                study_id="STUDY-001",
+                site_id="SITE-001",
+                subject_id="SUBJ-001",
+                visit_id="VISIT-001",
+                form_id="FORM-001",
+                status="COMPLETED",
+            )
+            sub2 = FormSubmission(
+                study_id="STUDY-001",
+                site_id="SITE-001",
+                subject_id="SUBJ-001",
+                visit_id="VISIT-001",
+                form_id="FORM-002",
+                status="COMPLETED",
+            )
+            session.add_all([sub1, sub2])
+            await session.commit()
+            id1, id2 = sub1.id, sub2.id
+
+        action_path = "/api/v1/execution/batch-sign-off"
+        payload = {
+            "study_id": "STUDY-001",
+            "target_type": "FORM",
+            "target_ids": [id1, id2],
+            "signing_reason": "PI approval and sign-off.",
+        }
+
+        # Mock generate_canonical_signature to raise ValueError on the second submission
+        call_count = 0
+        from apps.execution.main import generate_canonical_signature as orig_gen_sig
+
+        def mock_gen_sig(binding, secret):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 2:
+                raise ValueError("Simulated signature failure")
+            return orig_gen_sig(binding, secret)
+
+        monkeypatch.setattr(
+            "apps.execution.main.generate_canonical_signature", mock_gen_sig
+        )
+
+        with pytest.raises(ValueError, match="Simulated signature failure"):
+            await client.post(
+                action_path,
+                json=payload,
+                headers=get_auth_headers(
+                    roles="pi", action=action_path, payload=payload
+                ),
+            )
+
+        # Verify that both remain COMPLETED
+        async with db_manager.get_session_maker()() as session:
+            stmt = select(FormSubmission).where(FormSubmission.id.in_([id1, id2]))
+            res_db = await session.execute(stmt)
+            subs = {s.id: s for s in res_db.scalars().all()}
+            assert subs[id1].status == "COMPLETED"
+            assert subs[id2].status == "COMPLETED"
+
+
+@pytest.mark.asyncio
+async def test_batch_sign_off_audit_manifestation_capture() -> None:
+    """Test that batch sign-off captures signature manifestation and version details in database AuditLog records."""
+    from apps.execution.database.models import AuditLog
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        async with db_manager.get_session_maker()() as session:
+            sub = FormSubmission(
+                study_id="STUDY-001",
+                site_id="SITE-001",
+                subject_id="SUBJ-001",
+                visit_id="VISIT-001",
+                form_id="FORM-001",
+                status="COMPLETED",
+                version=1,
+            )
+            session.add(sub)
+            await session.commit()
+            sub_id = sub.id
+
+        action_path = "/api/v1/execution/batch-sign-off"
+        payload = {
+            "study_id": "STUDY-001",
+            "target_type": "FORM",
+            "target_ids": [sub_id],
+            "signing_reason": "PI approval and sign-off.",
+        }
+
+        res = await client.post(
+            action_path,
+            json=payload,
+            headers=get_auth_headers(
+                user_id="pi_user", roles="pi", action=action_path, payload=payload
+            ),
+        )
+        assert res.status_code == 200
+
+        async with db_manager.get_session_maker()() as session:
+            stmt = select(AuditLog).where(
+                AuditLog.table_name == "form_submissions",
+                AuditLog.record_id == str(sub_id),
+                AuditLog.action == "UPDATE",
+            )
+            res_db = await session.execute(stmt)
+            logs = res_db.scalars().all()
+
+            assert len(logs) == 1
+            audit_entry = logs[0]
+            assert audit_entry.user_id == "pi_user"
+            assert audit_entry.version_index == 2
+
+            new_vals = audit_entry.new_values
+            assert new_vals["status"] == "APPROVED"
+            assert "signature_manifest" in new_vals
+
+            manifest = new_vals["signature_manifest"]
+            assert manifest["signer_id"] == "pi_user"
+            assert manifest["signed_version"] == 2
+
+            assert "signature_manifestation" in manifest
+            manifestation = manifest["signature_manifestation"]
+            assert manifestation["signer_username"] == "pi_user"
+            assert manifestation["signing_reason_code"] == "PI_APPROVAL"
+            assert manifestation["record_id"] == sub_id
+            assert manifestation["record_version"] == 2

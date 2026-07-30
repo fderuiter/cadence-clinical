@@ -427,3 +427,82 @@ async def test_form_submission_audit_logging() -> None:
             assert logs[1].user_id == "user_coordinator"
             assert logs[1].change_reason == "Form data completed"
             assert logs[1].version_index == 2
+
+
+@pytest.mark.asyncio
+async def test_form_submission_approval_audit_manifestation() -> None:
+    """Verify that form submission approval captures signature manifest and version details in the database AuditLog."""
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # 1. Create form submission (default: DRAFT)
+        payload = {
+            "study_id": "STUDY-001",
+            "site_id": "SITE-001",
+            "subject_id": "SUBJ-101",
+            "visit_id": "VISIT-201",
+            "form_id": "FORM-301",
+        }
+        res = await client.post(
+            "/api/v1/execution/form-submissions",
+            json=payload,
+            headers=get_auth_headers(roles="coordinator"),
+        )
+        assert res.status_code == 201
+        submission_id = res.json()["id"]
+
+        # 2. Complete form submission (DRAFT -> COMPLETED)
+        res_comp = await client.post(
+            f"/api/v1/execution/form-submissions/{submission_id}/complete",
+            headers=get_auth_headers(roles="coordinator"),
+        )
+        assert res_comp.status_code == 200
+
+        # 3. Approve form submission (COMPLETED -> APPROVED) with details
+        signature_payload = {
+            "signer_id": "user_pi_1",
+            "signer_name": "Dr. Smith",
+            "signed_at": "2026-08-01T12:00:00Z",
+            "reason": "PI approval and sign-off.",
+        }
+        approve_payload = {
+            "signature_manifest": signature_payload,
+            "signing_reason": "PI approval and sign-off.",
+        }
+        res_app = await client.post(
+            f"/api/v1/execution/form-submissions/{submission_id}/approve",
+            json=approve_payload,
+            headers=get_auth_headers(
+                user_id="pi_user_99",
+                roles="investigator",
+                change_reason="Clinical verification",
+                action=f"/api/v1/execution/form-submissions/{submission_id}/approve",
+            ),
+        )
+        assert res_app.status_code == 200
+
+        # 4. Check database AuditLog
+        async with db_manager.get_session_maker()() as session:
+            stmt = (
+                select(AuditLog)
+                .where(
+                    AuditLog.table_name == "form_submissions",
+                    AuditLog.record_id == str(submission_id),
+                    AuditLog.action == "UPDATE",
+                )
+                .order_by(AuditLog.timestamp.desc())
+            )
+            result = await session.execute(stmt)
+            logs = result.scalars().all()
+
+            # The most recent update should be the APPROVED transition
+            assert len(logs) >= 2
+            app_log = logs[0]
+            assert app_log.user_id == "pi_user_99"
+            assert app_log.change_reason == "Clinical verification"
+            assert app_log.version_index == 3
+
+            new_vals = app_log.new_values
+            assert new_vals["status"] == "APPROVED"
+            assert "signature_manifest" in new_vals
+            assert new_vals["signature_manifest"] == signature_payload
