@@ -26,7 +26,11 @@ from tmf_reference_model import (
 from apps.etmf.database import db_manager
 from apps.etmf.export import generate_binder_zip
 from apps.etmf.ingestion_service import ingest_tmf_document
-from apps.etmf.lifecycle import validate_and_transition_document_status
+from apps.etmf.lifecycle import (
+    apply_document_query_filter,
+    authorize_document_read,
+    validate_and_transition_document_status,
+)
 from apps.etmf.models import (
     Base,
     DocumentQCTransition,
@@ -726,17 +730,18 @@ async def write_audit_log(
 def enforce_document_site_visibility(doc: TMFDocument, principal: Principal) -> None:
     """
     Enforces document-level site-scope visibility rules.
-    Site-scoped users are restricted to documents at their assigned sites and cannot see study-level documents (null site_id).
-    Sponsor/DM/Sysadmin users with global access can see all documents.
     """
-    is_site_scoped = len(principal.assigned_sites) > 0
-
-    if is_site_scoped:
-        if not doc.site_id or doc.site_id not in principal.assigned_sites:
-            raise HTTPException(
-                status_code=403,
-                detail="Forbidden: Access is restricted to documents at your assigned site(s).",
-            )
+    from packages.security.rbac import can_access_site, can_access_study
+    if not can_access_study(principal, doc.study_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Access is restricted to authorized studies.",
+        )
+    if not can_access_site(principal, doc.site_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Access is restricted to authorized sites.",
+        )
 
 
 @app.get("/health")
@@ -860,6 +865,13 @@ async def list_documents(
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
+    # Require etmf_document:read up front
+    if not has_permission(principal, "etmf_document:read"):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Insufficient permissions to read eTMF documents.",
+        )
+
     stmt = select(TMFDocument)
     if study_id:
         stmt = stmt.where(TMFDocument.study_id == study_id)
@@ -869,17 +881,20 @@ async def list_documents(
         # Simple SQLite/Postgres text search indexing
         stmt = stmt.where(TMFDocument.content.contains(search))
 
-    # Enforce site visibility and study-level semantics
-    is_site_scoped = len(principal.assigned_sites) > 0
-
-    if is_site_scoped:
-        if principal.assigned_sites:
-            stmt = stmt.where(TMFDocument.site_id.in_(principal.assigned_sites))
-        else:
-            stmt = stmt.where(TMFDocument.site_id == "NONE_ASSIGNED")
+    # Apply the query-filter helper (site scope + fail-closed + raw-original suppression for non-read_raw callers)
+    stmt = apply_document_query_filter(stmt, principal)
 
     result = await session.execute(stmt)
     docs = result.scalars().all()
+
+    # Apply the centralized read authorization for defense in depth
+    filtered_docs = []
+    for doc in docs:
+        try:
+            await authorize_document_read(principal, doc, session)
+            filtered_docs.append(doc)
+        except Exception:
+            continue
 
     # Log action to immutable audit trail
     search_criteria = f"study_id={study_id}, zone={zone}, search={search}"
@@ -892,7 +907,7 @@ async def list_documents(
         details=f"Listed eTMF documents matching criteria: {search_criteria}.",
     )
 
-    return [to_document_response(doc) for doc in docs]
+    return [to_document_response(doc) for doc in filtered_docs]
 
 
 @app.get("/api/v1/etmf/documents/{document_id}", response_model=DocumentResponse)
@@ -909,6 +924,13 @@ async def view_document(
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
+    # Require etmf_document:read up front
+    if not has_permission(principal, "etmf_document:read"):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Insufficient permissions to read eTMF documents.",
+        )
+
     stmt = select(TMFDocument).where(TMFDocument.id == document_id)
     result = await session.execute(stmt)
     doc = result.scalars().first()
@@ -916,21 +938,8 @@ async def view_document(
     if not doc:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
 
-    # Enforce site visibility and study-level semantics
-    enforce_document_site_visibility(doc, principal)
-
-    # Enforce raw-original authorization controls
-    if not doc.is_redacted:
-        stmt_redacted = select(TMFDocument).where(
-            TMFDocument.redaction_source_id == doc.id
-        )
-        res_redacted = await session.execute(stmt_redacted)
-        if res_redacted.scalars().first() is not None:
-            if not has_permission(principal, "etmf_document:read_raw"):
-                raise HTTPException(
-                    status_code=403,
-                    detail="Forbidden: Raw-original retrieval is restricted to privileged roles.",
-                )
+    # Centralized read-authorization policy
+    await authorize_document_read(principal, doc, session)
 
     # Log action to immutable audit trail
     await write_audit_log(
@@ -968,8 +977,8 @@ async def get_document_versions(
     if not doc:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
 
-    # Enforce site visibility and study-level semantics
-    enforce_document_site_visibility(doc, principal)
+    # Centralized read-authorization policy
+    await authorize_document_read(principal, doc, session)
 
     # Query the full lineage (all documents of same study and artifact code) sorted by version_index asc
     stmt_lineage = (
@@ -1076,21 +1085,8 @@ async def download_document(
     if not doc:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
 
-    # Enforce site visibility and study-level semantics
-    enforce_document_site_visibility(doc, principal)
-
-    # Enforce raw-original authorization controls
-    if not doc.is_redacted:
-        stmt_redacted = select(TMFDocument).where(
-            TMFDocument.redaction_source_id == doc.id
-        )
-        res_redacted = await session.execute(stmt_redacted)
-        if res_redacted.scalars().first() is not None:
-            if not has_permission(principal, "etmf_document:read_raw"):
-                raise HTTPException(
-                    status_code=403,
-                    detail="Forbidden: Raw-original retrieval is restricted to privileged roles.",
-                )
+    # Centralized read-authorization policy
+    await authorize_document_read(principal, doc, session)
 
     if should_watermark:
         from apps.etmf.watermark import apply_watermark
@@ -1154,21 +1150,8 @@ async def download_watermarked_document(
     if not doc:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
 
-    # Enforce site visibility and study-level semantics
-    enforce_document_site_visibility(doc, principal)
-
-    # Enforce raw-original authorization controls
-    if not doc.is_redacted:
-        stmt_redacted = select(TMFDocument).where(
-            TMFDocument.redaction_source_id == doc.id
-        )
-        res_redacted = await session.execute(stmt_redacted)
-        if res_redacted.scalars().first() is not None:
-            if not has_permission(principal, "etmf_document:read_raw"):
-                raise HTTPException(
-                    status_code=403,
-                    detail="Forbidden: Raw-original retrieval is restricted to privileged roles.",
-                )
+    # Centralized read-authorization policy
+    await authorize_document_read(principal, doc, session)
 
     from apps.etmf.watermark import apply_watermark
 
@@ -1533,15 +1516,25 @@ async def check_completeness(
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
-    # Enforce site isolation on completeness checking for site-scoped users
-    is_site_scoped = len(principal.assigned_sites) > 0
+    # Require etmf_document:read up front
+    if not has_permission(principal, "etmf_document:read"):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Insufficient permissions to read eTMF documents.",
+        )
 
-    if is_site_scoped:
-        if not site_id or site_id not in principal.assigned_sites:
-            raise HTTPException(
-                status_code=403,
-                detail="Forbidden: You can only check completeness for your assigned site(s).",
-            )
+    # Use can_access_site/can_access_study for site-scoped EDL/completeness filtering
+    from packages.security.rbac import can_access_site, can_access_study
+    if not can_access_study(principal, study_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: You cannot check completeness for this study.",
+        )
+    if not can_access_site(principal, site_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: You can only check completeness for your assigned site(s).",
+        )
 
     milestone_normalized = normalize_milestone(milestone)
 
@@ -2654,6 +2647,13 @@ async def get_artifact_history(
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
+    # Require etmf_document:read up front
+    if not has_permission(principal, "etmf_document:read"):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Insufficient permissions to read eTMF documents.",
+        )
+
     # Resolve active taxonomy/catalog to obtain the canonical artifact type if possible
     from tmf_reference_model import get_active_catalog, resolve_artifact
 
@@ -2674,13 +2674,20 @@ async def get_artifact_history(
     # Order chronologically by version_index ascending
     stmt = stmt.order_by(TMFDocument.version_index.asc())
 
-    # Enforce site visibility and study-level semantics
-    is_site_scoped = len(principal.assigned_sites) > 0
-    if is_site_scoped:
-        stmt = stmt.where(TMFDocument.site_id.in_(principal.assigned_sites))
+    # Apply the query-filter helper
+    stmt = apply_document_query_filter(stmt, principal)
 
     result = await session.execute(stmt)
     docs = result.scalars().all()
+
+    # Apply the centralized read authorization for defense in depth
+    filtered_docs = []
+    for doc in docs:
+        try:
+            await authorize_document_read(principal, doc, session)
+            filtered_docs.append(doc)
+        except Exception:
+            continue
 
     # Log action to immutable audit trail
     await write_audit_log(
@@ -2692,7 +2699,7 @@ async def get_artifact_history(
         details=f"Viewed artifact history for study '{study_id}', artifact_type '{artifact_type}'.",
     )
 
-    return [to_document_response(doc) for doc in docs]
+    return [to_document_response(doc) for doc in filtered_docs]
 
 
 @app.get(
@@ -2711,6 +2718,13 @@ async def get_document_transition_history(
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
+    # Require etmf_document:read up front
+    if not has_permission(principal, "etmf_document:read"):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Insufficient permissions to read eTMF documents.",
+        )
+
     # Verify document exists
     stmt_exist = select(TMFDocument).where(TMFDocument.id == document_id)
     res_exist = await session.execute(stmt_exist)
@@ -2718,8 +2732,8 @@ async def get_document_transition_history(
     if not doc_obj:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
 
-    # Enforce site visibility and study-level semantics
-    enforce_document_site_visibility(doc_obj, principal)
+    # Centralized read-authorization policy
+    await authorize_document_read(principal, doc_obj, session)
 
     stmt = (
         select(DocumentQCTransition)
@@ -2985,20 +2999,29 @@ def build_binder_structure(
     """
     Build the nested structure models.
     """
+    from packages.security.rbac import can_access_site, can_access_study
+
     highest_docs = {}  # artifact_code -> TMFDocument
     for doc in archived_docs:
         if not doc.artifact_code:
             continue
 
-        if is_site_scoped and principal:
-            if not doc.site_id or doc.site_id not in principal.assigned_sites:
+        if principal:
+            if not can_access_study(principal, doc.study_id):
                 continue
-        elif site_id:
-            if doc.site_id != site_id:
+            if not can_access_site(principal, doc.site_id):
+                continue
+            if site_id and doc.site_id != site_id:
+                continue
+            if not site_id and not is_site_scoped and doc.site_id is not None:
                 continue
         else:
-            if doc.site_id is not None:
-                continue
+            if site_id:
+                if doc.site_id != site_id:
+                    continue
+            else:
+                if doc.site_id is not None:
+                    continue
 
         existing = highest_docs.get(doc.artifact_code)
         if not existing or doc.version_index > existing.version_index:
@@ -3083,14 +3106,27 @@ async def get_binder_structure(
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
-    is_site_scoped = len(principal.assigned_sites) > 0
+    # Require etmf_document:read up front
+    if not has_permission(principal, "etmf_document:read"):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Insufficient permissions to read eTMF documents.",
+        )
 
-    if is_site_scoped:
-        if not site_id or site_id not in principal.assigned_sites:
-            raise HTTPException(
-                status_code=403,
-                detail="Forbidden: You can only view binder structure for your assigned site(s).",
-            )
+    # Use can_access_site/can_access_study for site-scoped EDL/completeness filtering
+    from packages.security.rbac import can_access_site, can_access_study
+    if not can_access_study(principal, study_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: You cannot view binder structure for this study.",
+        )
+    if not can_access_site(principal, site_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: You can only view binder structure for your assigned site(s).",
+        )
+
+    is_site_scoped = len(principal.assigned_sites) > 0
 
     version = get_active_catalog().version
 
@@ -3172,18 +3208,12 @@ async def export_regulatory_binder(
 ) -> Response:
     """
     Generate an inspection-ready ZIP binder for an eTMF study.
-    Restricted to authorized auditor roles.
     """
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
-    # Restrict access to authorized auditor roles
-    is_auditor = "auditor" in principal.roles or any(
-        r in {"auditor", "inspector", "regulatory_inspector"}
-        for r in principal.raw_roles
-    )
-
-    if not is_auditor:
+    # Require positive etmf_audit_logs:read authorization
+    if not has_permission(principal, "etmf_audit_logs:read"):
         raise HTTPException(
             status_code=403,
             detail="Forbidden: Access is restricted to authorized auditor/inspection roles.",
@@ -3379,6 +3409,13 @@ async def get_document_qc_history(
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
+    # Require etmf_document:read up front
+    if not has_permission(principal, "etmf_document:read"):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Insufficient permissions to read eTMF documents.",
+        )
+
     # Verify document exists
     stmt_exist = select(TMFDocument).where(TMFDocument.id == document_id)
     res_exist = await session.execute(stmt_exist)
@@ -3386,8 +3423,8 @@ async def get_document_qc_history(
     if not doc_obj:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
 
-    # Enforce site visibility and study-level semantics
-    enforce_document_site_visibility(doc_obj, principal)
+    # Centralized read-authorization policy
+    await authorize_document_read(principal, doc_obj, session)
 
     stmt = (
         select(DocumentQCTransition)
