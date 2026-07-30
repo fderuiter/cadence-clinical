@@ -896,7 +896,11 @@ async def randomize_subject_endpoint(
     subject_id: str,
     request: Request,
     principal: Principal = Depends(get_principal),
-    roles: list[str] = Depends(require_roles(ROLE_SITE_INVESTIGATOR, ROLE_INVESTIGATOR, ROLE_CRC, "investigator")),
+    roles: list[str] = Depends(
+        require_roles(
+            ROLE_SITE_INVESTIGATOR, ROLE_INVESTIGATOR, ROLE_CRC, "investigator"
+        )
+    ),
 ) -> SubjectRandomizationResponse:
     """Execute GxP compliant subject randomization allocation and block-index advancement."""
     # Ensure change justification headers are present and valid
@@ -913,8 +917,8 @@ async def randomize_subject_endpoint(
         study_id = subject.study_id
 
     # Execute randomization via service
-    from apps.execution.randomization_service import randomize_subject
     from apps.execution.cryptography import AllocationKeyManager
+    from apps.execution.randomization_service import randomize_subject
 
     try:
         assignment = await randomize_subject(

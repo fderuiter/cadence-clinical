@@ -1,9 +1,11 @@
+import asyncio
+import os
+import uuid
+
 import pytest
 import pytest_asyncio
-import asyncio
-import uuid
-from sqlalchemy import select
 from fastapi import HTTPException
+from sqlalchemy import select
 
 from apps.execution.cryptography import AllocationKeyManager
 from apps.execution.database.context import (
@@ -25,18 +27,16 @@ from apps.execution.randomization_service import randomize_subject
 
 @pytest_asyncio.fixture(autouse=True)
 async def setup_db():
-    import os
     from apps.execution.database.migrate import deploy_database_triggers
 
-    # Use a named in-memory SQLite database with shared cache
-    db_uri = f"sqlite+aiosqlite:///file:memdb_rand_{uuid.uuid4().hex}?mode=memory&cache=shared&uri=true"
+    # Use a real file-based SQLite database to ensure 100% transactional consistency across concurrent connections
+    db_file = f"rand_test_{uuid.uuid4().hex}.sqlite"
+    db_uri = f"sqlite+aiosqlite:///{db_file}"
     db_manager.init_db(db_uri, echo=False)
-
-    # Keep one connection open to prevent in-memory database from being closed/wiped
-    keepalive = await db_manager.engine.connect()
 
     async with db_manager.engine.begin() as conn:
         from sqlalchemy import text
+
         if db_manager.engine.dialect.name == "postgresql":
             await conn.execute(text("CREATE SCHEMA IF NOT EXISTS audit_schema;"))
         await conn.run_sync(Base.metadata.create_all)
@@ -47,8 +47,14 @@ async def setup_db():
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
 
-    await keepalive.close()
     await db_manager.close()
+
+    # Clean up the SQLite temp file
+    if os.path.exists(db_file):
+        try:
+            os.remove(db_file)
+        except Exception:
+            pass
 
 
 async def seed_randomization_data():
@@ -86,7 +92,7 @@ async def seed_randomization_data():
             study_id="STUDY_CONCURRENCY",
             stratum_key="gender=M",
             block_index=0,
-            encrypted_sequence=None
+            encrypted_sequence=None,
         )
         session.add(stratum)
 
@@ -122,7 +128,7 @@ async def test_concurrent_randomization_unique_and_monotonic():
             study_id="STUDY_CONCURRENCY",
             subject_id=f"SUBJ_{i:03d}",
             change_reason=f"Randomize subject {i}",
-            user_id="investigator_1"
+            user_id="investigator_1",
         )
         for i in range(2, 6)
     ]
@@ -140,15 +146,19 @@ async def test_concurrent_randomization_unique_and_monotonic():
         rands = res_rand.scalars().all()
         print(f"DEBUG: Found {len(rands)} subject randomizations:")
         for r in rands:
-            print(f"DEBUG: subject_id={r.subject_id}, stratum_key={r.stratum_key}, id={r.id}")
+            print(
+                f"DEBUG: subject_id={r.subject_id}, stratum_key={r.stratum_key}, id={r.id}"
+            )
 
         stmt = select(StratumState).where(
             StratumState.study_id == "STUDY_CONCURRENCY",
-            StratumState.stratum_key == "gender=M"
+            StratumState.stratum_key == "gender=M",
         )
         res = await session.execute(stmt)
         stratum = res.scalars().first()
-        print(f"DEBUG: StratumState block_index={stratum.block_index if stratum else 'None'}")
+        print(
+            f"DEBUG: StratumState block_index={stratum.block_index if stratum else 'None'}"
+        )
 
         assert stratum is not None
         # Since 4 subjects are randomized, block_index should be exactly 4
@@ -182,7 +192,7 @@ async def test_forced_failure_rolls_back_atomically():
     async with db_manager.get_session_maker()() as session:
         stmt = select(StratumState).where(
             StratumState.study_id == "STUDY_CONCURRENCY",
-            StratumState.stratum_key == "gender=M"
+            StratumState.stratum_key == "gender=M",
         )
         res = await session.execute(stmt)
         stratum = res.scalars().first()
@@ -195,7 +205,7 @@ async def test_forced_failure_rolls_back_atomically():
             study_id="STUDY_CONCURRENCY",
             subject_id="SUBJ_001",
             change_reason="Attempt invalid randomization",
-            user_id="investigator_1"
+            user_id="investigator_1",
         )
 
     # Now verify that:
@@ -204,7 +214,7 @@ async def test_forced_failure_rolls_back_atomically():
     async with db_manager.get_session_maker()() as session:
         stmt_stratum = select(StratumState).where(
             StratumState.study_id == "STUDY_CONCURRENCY",
-            StratumState.stratum_key == "gender=M"
+            StratumState.stratum_key == "gender=M",
         )
         res_stratum = await session.execute(stmt_stratum)
         stratum = res_stratum.scalars().first()

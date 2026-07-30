@@ -852,9 +852,7 @@ class StratumState(AuditedModel):
             "study_id", "stratum_key", name="uq_stratum_state_study_stratum"
         ),
     )
-    __mapper_args__ = {
-        "version_id_col": AuditedModel.version
-    }
+    __mapper_args__ = {"version_id_col": AuditedModel.version}
 
     study_id: Mapped[str] = mapped_column(String(255), nullable=False)
     stratum_key: Mapped[str] = mapped_column(
