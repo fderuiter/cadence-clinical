@@ -1,0 +1,498 @@
+{
+  "duplicates": [
+    {
+      "loc1": {
+        "file": "apps/etmf/main.py",
+        "start": 2581,
+        "end": 2596
+      },
+      "loc2": {
+        "file": "apps/designer/main.py",
+        "start": 2199,
+        "end": 2213
+      },
+      "preview": "    )\n    cert = (\n        x509.CertificateBuilder()\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/etmf/main.py",
+        "start": 2583,
+        "end": 2598
+      },
+      "loc2": {
+        "file": "apps/designer/main.py",
+        "start": 2200,
+        "end": 2215
+      },
+      "preview": "    cert = (\n        x509.CertificateBuilder()\n        .subject_name(subject)\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/etmf/main.py",
+        "start": 2584,
+        "end": 2599
+      },
+      "loc2": {
+        "file": "apps/designer/main.py",
+        "start": 2201,
+        "end": 2216
+      },
+      "preview": "        x509.CertificateBuilder()\n        .subject_name(subject)\n        .issuer_name(issuer)\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/etmf/main.py",
+        "start": 2585,
+        "end": 2600
+      },
+      "loc2": {
+        "file": "apps/designer/main.py",
+        "start": 2202,
+        "end": 2217
+      },
+      "preview": "        .subject_name(subject)\n        .issuer_name(issuer)\n        .public_key(private_key.public_key())\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/etmf/main.py",
+        "start": 2586,
+        "end": 2601
+      },
+      "loc2": {
+        "file": "apps/designer/main.py",
+        "start": 2203,
+        "end": 2218
+      },
+      "preview": "        .issuer_name(issuer)\n        .public_key(private_key.public_key())\n        .serial_number(x509.random_serial_number())\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/etmf/main.py",
+        "start": 2587,
+        "end": 2602
+      },
+      "loc2": {
+        "file": "apps/designer/main.py",
+        "start": 2204,
+        "end": 2219
+      },
+      "preview": "        .public_key(private_key.public_key())\n        .serial_number(x509.random_serial_number())\n        .not_valid_before(now_utc - timedelta(days=1))\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/etmf/main.py",
+        "start": 2588,
+        "end": 2604
+      },
+      "loc2": {
+        "file": "apps/designer/main.py",
+        "start": 2205,
+        "end": 2221
+      },
+      "preview": "        .serial_number(x509.random_serial_number())\n        .not_valid_before(now_utc - timedelta(days=1))\n        .not_valid_after(now_utc + timedelta(days=10))\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/etmf/main.py",
+        "start": 2589,
+        "end": 2607
+      },
+      "loc2": {
+        "file": "apps/designer/main.py",
+        "start": 2206,
+        "end": 2223
+      },
+      "preview": "        .not_valid_before(now_utc - timedelta(days=1))\n        .not_valid_after(now_utc + timedelta(days=10))\n        .add_extension(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/etmf/main.py",
+        "start": 2590,
+        "end": 2608
+      },
+      "loc2": {
+        "file": "apps/designer/main.py",
+        "start": 2207,
+        "end": 2224
+      },
+      "preview": "        .not_valid_after(now_utc + timedelta(days=10))\n        .add_extension(\n            x509.SubjectKeyIdentifier.from_public_key(private_key.public_key()),\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/etmf/main.py",
+        "start": 2591,
+        "end": 2609
+      },
+      "loc2": {
+        "file": "apps/designer/main.py",
+        "start": 2208,
+        "end": 2225
+      },
+      "preview": "        .add_extension(\n            x509.SubjectKeyIdentifier.from_public_key(private_key.public_key()),\n            critical=False,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/etmf/main.py",
+        "start": 2592,
+        "end": 2611
+      },
+      "loc2": {
+        "file": "apps/designer/main.py",
+        "start": 2209,
+        "end": 2227
+      },
+      "preview": "            x509.SubjectKeyIdentifier.from_public_key(private_key.public_key()),\n            critical=False,\n        )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/etmf/main.py",
+        "start": 2593,
+        "end": 2612
+      },
+      "loc2": {
+        "file": "apps/designer/main.py",
+        "start": 2210,
+        "end": 2228
+      },
+      "preview": "            critical=False,\n        )\n        .sign(private_key, hashes.SHA256())\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/etmf/main.py",
+        "start": 2594,
+        "end": 2613
+      },
+      "loc2": {
+        "file": "apps/designer/main.py",
+        "start": 2211,
+        "end": 2229
+      },
+      "preview": "        )\n        .sign(private_key, hashes.SHA256())\n    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/etmf/main.py",
+        "start": 2595,
+        "end": 2616
+      },
+      "loc2": {
+        "file": "apps/designer/main.py",
+        "start": 2212,
+        "end": 2232
+      },
+      "preview": "        .sign(private_key, hashes.SHA256())\n    )\n    private_key_pem = private_key.private_bytes(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/etmf/lock_client.py",
+        "start": 52,
+        "end": 68
+      },
+      "loc2": {
+        "file": "apps/execution/designer_client.py",
+        "start": 57,
+        "end": 74
+      },
+      "preview": "    timestamp = str(time.time())\n    signature = generate_gateway_signature(\n        user_id=user_id,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/etmf/lock_client.py",
+        "start": 52,
+        "end": 68
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 60,
+        "end": 77
+      },
+      "preview": "    timestamp = str(time.time())\n    signature = generate_gateway_signature(\n        user_id=user_id,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/etmf/lock_client.py",
+        "start": 52,
+        "end": 68
+      },
+      "loc2": {
+        "file": "apps/interop/designer_client.py",
+        "start": 90,
+        "end": 106
+      },
+      "preview": "    timestamp = str(time.time())\n    signature = generate_gateway_signature(\n        user_id=user_id,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 57,
+        "end": 74
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 60,
+        "end": 77
+      },
+      "preview": "        timestamp = str(time.time())\n        signature = generate_gateway_signature(\n            user_id=user_id,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 57,
+        "end": 74
+      },
+      "loc2": {
+        "file": "apps/interop/designer_client.py",
+        "start": 90,
+        "end": 106
+      },
+      "preview": "        timestamp = str(time.time())\n        signature = generate_gateway_signature(\n            user_id=user_id,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 60,
+        "end": 77
+      },
+      "loc2": {
+        "file": "apps/interop/designer_client.py",
+        "start": 90,
+        "end": 106
+      },
+      "preview": "        timestamp = str(time.time())\n        signature = generate_gateway_signature(\n            user_id=user_id,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 45,
+        "end": 62
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 48,
+        "end": 65
+      },
+      "preview": "        \"\"\"\n        gateway_secret_env = os.getenv(\n            \"GATEWAY_SECRET\", \"internal-gateway-secret-12345\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 46,
+        "end": 63
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 49,
+        "end": 66
+      },
+      "preview": "        gateway_secret_env = os.getenv(\n            \"GATEWAY_SECRET\", \"internal-gateway-secret-12345\"\n        )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 47,
+        "end": 64
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 50,
+        "end": 67
+      },
+      "preview": "            \"GATEWAY_SECRET\", \"internal-gateway-secret-12345\"\n        )\n        gateway_secret = (\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 48,
+        "end": 65
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 51,
+        "end": 68
+      },
+      "preview": "        )\n        gateway_secret = (\n            gateway_secret_env.encode(\"utf-8\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 49,
+        "end": 66
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 52,
+        "end": 69
+      },
+      "preview": "        gateway_secret = (\n            gateway_secret_env.encode(\"utf-8\")\n            if isinstance(gateway_secret_env, str)\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 50,
+        "end": 68
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 53,
+        "end": 71
+      },
+      "preview": "            gateway_secret_env.encode(\"utf-8\")\n            if isinstance(gateway_secret_env, str)\n            else gateway_secret_env\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 51,
+        "end": 69
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 54,
+        "end": 72
+      },
+      "preview": "            if isinstance(gateway_secret_env, str)\n            else gateway_secret_env\n        )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 52,
+        "end": 70
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 55,
+        "end": 73
+      },
+      "preview": "            else gateway_secret_env\n        )\n        user_id = \"execution-service\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 53,
+        "end": 71
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 56,
+        "end": 74
+      },
+      "preview": "        )\n        user_id = \"execution-service\"\n        roles = \"system\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 55,
+        "end": 72
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 58,
+        "end": 75
+      },
+      "preview": "        user_id = \"execution-service\"\n        roles = \"system\"\n        timestamp = str(time.time())\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 56,
+        "end": 73
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 59,
+        "end": 76
+      },
+      "preview": "        roles = \"system\"\n        timestamp = str(time.time())\n        signature = generate_gateway_signature(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/designer_client.py",
+        "start": 40,
+        "end": 54
+      },
+      "loc2": {
+        "file": "apps/designer/main.py",
+        "start": 2324,
+        "end": 2338
+      },
+      "preview": "    created_at = db_crit.get(\"created_at\")\n    if not created_at:\n        created_at = datetime.datetime.now(datetime.timezone.utc)\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/designer_client.py",
+        "start": 41,
+        "end": 55
+      },
+      "loc2": {
+        "file": "apps/designer/main.py",
+        "start": 2325,
+        "end": 2339
+      },
+      "preview": "    if not created_at:\n        created_at = datetime.datetime.now(datetime.timezone.utc)\n    elif isinstance(created_at, str):\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/designer_client.py",
+        "start": 42,
+        "end": 56
+      },
+      "loc2": {
+        "file": "apps/designer/main.py",
+        "start": 2326,
+        "end": 2340
+      },
+      "preview": "        created_at = datetime.datetime.now(datetime.timezone.utc)\n    elif isinstance(created_at, str):\n        try:\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/designer_client.py",
+        "start": 43,
+        "end": 57
+      },
+      "loc2": {
+        "file": "apps/designer/main.py",
+        "start": 2327,
+        "end": 2341
+      },
+      "preview": "    elif isinstance(created_at, str):\n        try:\n            created_at = datetime.datetime.fromisoformat(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/designer_client.py",
+        "start": 44,
+        "end": 58
+      },
+      "loc2": {
+        "file": "apps/designer/main.py",
+        "start": 2328,
+        "end": 2342
+      },
+      "preview": "        try:\n            created_at = datetime.datetime.fromisoformat(\n                created_at.replace(\"Z\", \"+00:00\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/designer_client.py",
+        "start": 45,
+        "end": 59
+      },
+      "loc2": {
+        "file": "apps/designer/main.py",
+        "start": 2329,
+        "end": 2343
+      },
+      "preview": "            created_at = datetime.datetime.fromisoformat(\n                created_at.replace(\"Z\", \"+00:00\")\n            )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/interop/designer_client.py",
+        "start": 46,
+        "end": 61
+      },
+      "loc2": {
+        "file": "apps/designer/main.py",
+        "start": 2330,
+        "end": 2345
+      },
+      "preview": "                created_at.replace(\"Z\", \"+00:00\")\n            )\n        except Exception:\n..."
+    }
+  ]
+}
