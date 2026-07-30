@@ -5,12 +5,14 @@ import json
 import os
 import zipfile
 from datetime import datetime, timezone
+from typing import Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.etmf.models import TMFAuditLog, TMFDocument
 from apps.etmf.watermark import apply_watermark
+from packages.security.rbac import Principal
 
 
 def deterministic_mask(val: str, secret: str = "internal-gateway-secret-12345") -> str:
@@ -30,6 +32,7 @@ async def generate_binder_zip(
     include_history: bool,
     requester_id: str,
     requester_role: str,
+    principal: Optional[Principal] = None,
 ) -> bytes:
     """
     Generates an inspection-ready ZIP binder for an eTMF study.
@@ -38,6 +41,17 @@ async def generate_binder_zip(
     """
     # 1. Query all documents for this study
     stmt_docs = select(TMFDocument).where(TMFDocument.study_id == study_id)
+    if principal:
+        # Enforce site visibility and study-level semantics
+        is_site_scoped = len(principal.assigned_sites) > 0
+        if is_site_scoped:
+            if principal.assigned_sites:
+                stmt_docs = stmt_docs.where(
+                    TMFDocument.site_id.in_(principal.assigned_sites)
+                )
+            else:
+                stmt_docs = stmt_docs.where(TMFDocument.site_id == "NONE_ASSIGNED")
+
     res_docs = await session.execute(stmt_docs)
     all_docs = res_docs.scalars().all()
 
@@ -120,6 +134,7 @@ async def generate_binder_zip(
                     "status": doc.status,
                     "zone": doc.zone,
                     "section": doc.section,
+                    "site_id": doc.site_id,
                     "is_redacted": doc.is_redacted,
                     "redaction_source_id": doc.redaction_source_id,
                     "archive_path": doc_paths[doc.id],

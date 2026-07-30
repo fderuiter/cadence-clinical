@@ -69,6 +69,38 @@ class DocumentStatus(str, enum.Enum):
     SIGNED = "SIGNED"
 
 
+def is_site_level_artifact(
+    artifact_type: str, artifact_code: Optional[str] = None
+) -> bool:
+    """
+    Determines if an eTMF artifact or code is expected at site-level (True) or study-level (False).
+    Used to prevent silent scope inference and properly quarantine unassigned legacy records.
+    """
+    site_artifacts = {
+        "fda form 1572",
+        "financial disclosure",
+        "investigator cv",
+        "delegation of authority log",
+        "site signature page",
+        "site feasibility survey",
+    }
+    site_codes_prefix = {
+        "05.02",
+        "04.01",
+        "05.01",
+    }  # Zone 5 Investigator Qualification, Zone 4 regulatory
+
+    art_lower = artifact_type.strip().lower()
+    if art_lower in site_artifacts:
+        return True
+    if artifact_code:
+        # Check if the code starts with any of our site prefixes
+        for prefix in site_codes_prefix:
+            if artifact_code.startswith(prefix):
+                return True
+    return False
+
+
 class TMFDocument(Base):
     """
     Represents an archived document in the electronic Trial Master File (eTMF)
@@ -91,6 +123,9 @@ class TMFDocument(Base):
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
     study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    site_id: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True, index=True
+    )
     zone: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
     section: Mapped[str] = mapped_column(String(255), nullable=False)
     artifact_type: Mapped[str] = mapped_column(String(255), nullable=False, index=True)

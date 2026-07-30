@@ -25,6 +25,7 @@ from apps.etmf.models import (
     ExpectedDocument,
     TMFAuditLog,
     TMFDocument,
+    is_site_level_artifact,
 )
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.deid.detector import DeidDetector
@@ -177,6 +178,7 @@ class IngestionRequest(BaseModel):
     """
 
     study_id: str = Field(..., description="Unique identifier of the clinical study")
+    site_id: Optional[str] = Field(None, description="Optional site identifier")
     artifact_type: str = Field(
         ..., description="Type of artifact (e.g. Approved Protocol, Define-XML)"
     )
@@ -205,6 +207,7 @@ class DocumentResponse(BaseModel):
 
     id: str
     study_id: str
+    site_id: Optional[str] = None
     zone: int
     section: str
     artifact_type: str
@@ -508,6 +511,22 @@ async def write_audit_log(
     await session.flush()
 
 
+def enforce_document_site_visibility(doc: TMFDocument, principal: Principal) -> None:
+    """
+    Enforces document-level site-scope visibility rules.
+    Site-scoped users are restricted to documents at their assigned sites and cannot see study-level documents (null site_id).
+    Sponsor/DM/Sysadmin users with global access can see all documents.
+    """
+    is_site_scoped = len(principal.assigned_sites) > 0
+
+    if is_site_scoped:
+        if not doc.site_id or doc.site_id not in principal.assigned_sites:
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: Access is restricted to documents at your assigned site(s).",
+            )
+
+
 @app.get("/health")
 async def health_check() -> dict[str, str]:
     """
@@ -605,6 +624,30 @@ async def ingest_document(
     artifact_obj = resolved["artifact"]
     artifact_code = artifact_obj.code
     canonical_artifact_type = artifact_obj.name
+
+    # Validate and normalize site_id
+    site_id = payload.site_id
+    if site_id is not None:
+        site_id_stripped = site_id.strip()
+        if not site_id_stripped:
+            raise HTTPException(
+                status_code=422,
+                detail="Validation Error: site_id cannot be empty or whitespace-only",
+            )
+        site_id = site_id_stripped
+    else:
+        if is_site_level_artifact(canonical_artifact_type, artifact_code):
+            site_id = "QUARANTINED"
+
+    # Enforce site scope if the caller is site-scoped
+    is_site_scoped = len(principal.assigned_sites) > 0
+
+    if is_site_scoped:
+        if not site_id or site_id not in principal.assigned_sites:
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: You can only ingest documents for your assigned site(s).",
+            )
 
     # Validate hierarchy if user supplied specific zone/section hierarchy
     supplied_zone = payload.zone
@@ -735,13 +778,18 @@ async def ingest_document(
         signer_val = signer_name
         signing_timestamp_val = now_utc
 
-    # Check if a document version already exists (for study_id + artifact_code)
+    # Check if a document version already exists (for study_id + site_id + artifact_code)
     stmt = (
         select(TMFDocument)
         .where(TMFDocument.study_id == payload.study_id)
         .where(TMFDocument.artifact_code == artifact_code)
-        .order_by(TMFDocument.version_index.desc())
     )
+    if site_id:
+        stmt = stmt.where(TMFDocument.site_id == site_id)
+    else:
+        stmt = stmt.where(TMFDocument.site_id.is_(None))
+
+    stmt = stmt.order_by(TMFDocument.version_index.desc())
     result = await session.execute(stmt)
     existing_doc = result.scalars().first()
 
@@ -769,6 +817,7 @@ async def ingest_document(
 
     doc = TMFDocument(
         study_id=payload.study_id,
+        site_id=site_id,
         zone=zone,
         section=section,
         artifact_type=canonical_artifact_type,
@@ -837,6 +886,15 @@ async def list_documents(
         # Simple SQLite/Postgres text search indexing
         stmt = stmt.where(TMFDocument.content.contains(search))
 
+    # Enforce site visibility and study-level semantics
+    is_site_scoped = len(principal.assigned_sites) > 0
+
+    if is_site_scoped:
+        if principal.assigned_sites:
+            stmt = stmt.where(TMFDocument.site_id.in_(principal.assigned_sites))
+        else:
+            stmt = stmt.where(TMFDocument.site_id == "NONE_ASSIGNED")
+
     result = await session.execute(stmt)
     docs = result.scalars().all()
 
@@ -855,6 +913,7 @@ async def list_documents(
         DocumentResponse(
             id=doc.id,
             study_id=doc.study_id,
+            site_id=doc.site_id,
             zone=doc.zone,
             section=doc.section,
             artifact_type=doc.artifact_type,
@@ -903,6 +962,9 @@ async def view_document(
     if not doc:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
 
+    # Enforce site visibility and study-level semantics
+    enforce_document_site_visibility(doc, principal)
+
     # Enforce raw-original authorization controls
     if not doc.is_redacted:
         stmt_redacted = select(TMFDocument).where(
@@ -929,6 +991,7 @@ async def view_document(
     return DocumentResponse(
         id=doc.id,
         study_id=doc.study_id,
+        site_id=doc.site_id,
         zone=doc.zone,
         section=doc.section,
         artifact_type=doc.artifact_type,
@@ -988,6 +1051,9 @@ async def download_document(
 
     if not doc:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
+
+    # Enforce site visibility and study-level semantics
+    enforce_document_site_visibility(doc, principal)
 
     # Enforce raw-original authorization controls
     if not doc.is_redacted:
@@ -1063,6 +1129,9 @@ async def download_watermarked_document(
 
     if not doc:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
+
+    # Enforce site visibility and study-level semantics
+    enforce_document_site_visibility(doc, principal)
 
     # Enforce raw-original authorization controls
     if not doc.is_redacted:
@@ -1440,6 +1509,16 @@ async def check_completeness(
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
+    # Enforce site isolation on completeness checking for site-scoped users
+    is_site_scoped = len(principal.assigned_sites) > 0
+
+    if is_site_scoped:
+        if not site_id or site_id not in principal.assigned_sites:
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: You can only check completeness for your assigned site(s).",
+            )
+
     milestone_normalized = normalize_milestone(milestone)
 
     # Validate milestone with catalog first. If unknown, raise 400 immediately.
@@ -1617,6 +1696,9 @@ async def redact_document_endpoint(
     if not source_doc:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
 
+    # Enforce site visibility and study-level semantics
+    enforce_document_site_visibility(source_doc, principal)
+
     # Check if already signed
     if (
         source_doc.status == "SIGNED"
@@ -1666,6 +1748,7 @@ async def redact_document_endpoint(
     # Build redacted document version
     redacted_doc = TMFDocument(
         study_id=source_doc.study_id,
+        site_id=source_doc.site_id,
         zone=source_doc.zone,
         section=source_doc.section,
         artifact_type=source_doc.artifact_type,
@@ -1712,6 +1795,7 @@ async def redact_document_endpoint(
     return DocumentResponse(
         id=redacted_doc.id,
         study_id=redacted_doc.study_id,
+        site_id=redacted_doc.site_id,
         zone=redacted_doc.zone,
         section=redacted_doc.section,
         artifact_type=redacted_doc.artifact_type,
@@ -1781,6 +1865,9 @@ async def auto_redact_document_endpoint(
     source_doc = result.scalars().first()
     if not source_doc:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
+
+    # Enforce site visibility and study-level semantics
+    enforce_document_site_visibility(source_doc, principal)
 
     # Check if already signed
     if (
@@ -1879,6 +1966,7 @@ async def auto_redact_document_endpoint(
 
     redacted_doc = TMFDocument(
         study_id=source_doc.study_id,
+        site_id=source_doc.site_id,
         zone=source_doc.zone,
         section=source_doc.section,
         artifact_type=source_doc.artifact_type,
@@ -1972,6 +2060,9 @@ async def manual_redact_document_endpoint(
     source_doc = result.scalars().first()
     if not source_doc:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
+
+    # Enforce site visibility and study-level semantics
+    enforce_document_site_visibility(source_doc, principal)
 
     # Check if already signed
     if (
@@ -2115,6 +2206,7 @@ async def manual_redact_document_endpoint(
 
     redacted_doc = TMFDocument(
         study_id=source_doc.study_id,
+        site_id=source_doc.site_id,
         zone=source_doc.zone,
         section=source_doc.section,
         artifact_type=source_doc.artifact_type,
@@ -2196,6 +2288,9 @@ async def transition_document_status_endpoint(
     doc = result.scalars().first()
     if not doc:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
+
+    # Enforce site visibility and study-level semantics
+    enforce_document_site_visibility(doc, principal)
 
     # Keep signing semantics out of manual QC transition input
     valid_qc_statuses = {
@@ -2310,6 +2405,9 @@ async def sign_document_endpoint(
     doc = result.scalars().first()
     if not doc:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
+
+    # Enforce site visibility and study-level semantics
+    enforce_document_site_visibility(doc, principal)
 
     # 2. Check if already signed/approved
     if (
@@ -2449,6 +2547,7 @@ async def sign_document_endpoint(
     return DocumentResponse(
         id=doc.id,
         study_id=doc.study_id,
+        site_id=doc.site_id,
         zone=doc.zone,
         section=doc.section,
         artifact_type=doc.artifact_type,
@@ -2491,8 +2590,12 @@ async def get_document_transition_history(
     # Verify document exists
     stmt_exist = select(TMFDocument).where(TMFDocument.id == document_id)
     res_exist = await session.execute(stmt_exist)
-    if not res_exist.scalars().first():
+    doc_obj = res_exist.scalars().first()
+    if not doc_obj:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
+
+    # Enforce site visibility and study-level semantics
+    enforce_document_site_visibility(doc_obj, principal)
 
     stmt = (
         select(DocumentQCTransition)
@@ -2573,6 +2676,7 @@ async def export_regulatory_binder(
         include_history=include_history,
         requester_id=user_id,
         requester_role=user_roles,
+        principal=principal,
     )
 
     filename = f"study_{study_id}_binder.zip"
@@ -2602,8 +2706,12 @@ async def get_document_qc_history(
     # Verify document exists
     stmt_exist = select(TMFDocument).where(TMFDocument.id == document_id)
     res_exist = await session.execute(stmt_exist)
-    if not res_exist.scalars().first():
+    doc_obj = res_exist.scalars().first()
+    if not doc_obj:
         raise HTTPException(status_code=404, detail="eTMF Document not found")
+
+    # Enforce site visibility and study-level semantics
+    enforce_document_site_visibility(doc_obj, principal)
 
     stmt = (
         select(DocumentQCTransition)

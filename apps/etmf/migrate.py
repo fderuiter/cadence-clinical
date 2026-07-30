@@ -164,6 +164,7 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
                 CREATE TABLE tmf_documents_new (
                     id VARCHAR(36) PRIMARY KEY,
                     study_id VARCHAR(255) NOT NULL,
+                    site_id VARCHAR(255),
                     zone INTEGER NOT NULL,
                     section VARCHAR(255) NOT NULL,
                     artifact_type VARCHAR(255) NOT NULL,
@@ -197,6 +198,7 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
             for col in [
                 "id",
                 "study_id",
+                "site_id",
                 "zone",
                 "section",
                 "artifact_type",
@@ -240,7 +242,7 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
             await conn.execute(
                 text(f"""
                 INSERT INTO tmf_documents_new (
-                    id, study_id, zone, section, artifact_type, filename, content, mime_type,
+                    id, study_id, site_id, zone, section, artifact_type, filename, content, mime_type,
                     created_at, created_by, version_index, status, taxonomy_version, artifact_code,
                     metadata_json, document_type, approval_status, signature_manifestation, signer,
                     signing_timestamp, is_redacted, redaction_source_id, redaction_manifest_json
@@ -259,6 +261,11 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
             await conn.execute(
                 text(
                     "CREATE INDEX IF NOT EXISTS ix_tmf_documents_study_id ON tmf_documents (study_id);"
+                )
+            )
+            await conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_tmf_documents_site_id ON tmf_documents (site_id);"
                 )
             )
             await conn.execute(
@@ -288,6 +295,21 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
             )
 
         elif dialect_name == "postgresql":
+            # Add site_id column to PostgreSQL table if missing
+            try:
+                await conn.execute(
+                    text(
+                        "ALTER TABLE tmf_documents ADD COLUMN IF NOT EXISTS site_id VARCHAR(255);"
+                    )
+                )
+                await conn.execute(
+                    text(
+                        "CREATE INDEX IF NOT EXISTS ix_tmf_documents_site_id ON tmf_documents (site_id);"
+                    )
+                )
+            except Exception:
+                pass
+
             # Attempt to add check constraint if missing
             try:
                 await conn.execute(
@@ -299,6 +321,26 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
                 )
             except Exception:
                 pass
+
+        # Idempotent backfill/quarantine strategy for legacy records:
+        # Scan legacy records with null site_id, classifying them using is_site_level_artifact.
+        # If site-level, update site_id to 'QUARANTINED' to prevent silent scope inference.
+        from apps.etmf.models import is_site_level_artifact
+
+        res_site_check = await conn.execute(
+            text(
+                "SELECT id, artifact_type, artifact_code FROM tmf_documents WHERE site_id IS NULL"
+            )
+        )
+        rows_site_check = res_site_check.fetchall()
+        for doc_id, art_type, art_code in rows_site_check:
+            if is_site_level_artifact(art_type, art_code):
+                await conn.execute(
+                    text(
+                        "UPDATE tmf_documents SET site_id = 'QUARANTINED' WHERE id = :id"
+                    ),
+                    {"id": doc_id},
+                )
 
     # 2. Upgrade and Backfill tmf_document_qc_transitions table
     trans_cols = await conn.run_sync(

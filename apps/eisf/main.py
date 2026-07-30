@@ -886,6 +886,7 @@ async def get_binder_completeness(
 
 async def propagate_to_etmf(
     study_id: str,
+    site_id: str,
     binder_classification: str,
     filename: str,
     content: str,
@@ -918,6 +919,7 @@ async def propagate_to_etmf(
     # 2. Build payload for eTMF IngestionRequest
     payload = {
         "study_id": study_id,
+        "site_id": site_id,
         "artifact_type": etmf_art_type,
         "filename": filename,
         "content": content,
@@ -1079,6 +1081,7 @@ async def sync_documents(
             if item.source_system != "eTMF":
                 await propagate_to_etmf(
                     study_id=item.study_id,
+                    site_id=item.site_id,
                     binder_classification=item.binder_classification,
                     filename=item.filename,
                     content=item.content,
@@ -1125,6 +1128,7 @@ async def sync_documents(
             if item.source_system != "eTMF":
                 await propagate_to_etmf(
                     study_id=item.study_id,
+                    site_id=item.site_id,
                     binder_classification=item.binder_classification,
                     filename=item.filename,
                     content=item.content,
@@ -1311,6 +1315,7 @@ async def sync_documents(
                 if item.source_system != "eTMF":
                     await propagate_to_etmf(
                         study_id=item.study_id,
+                        site_id=item.site_id,
                         binder_classification=item.binder_classification,
                         filename=merged_filename,
                         content=merged_content,

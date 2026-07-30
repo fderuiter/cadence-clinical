@@ -13,6 +13,8 @@ Based on the executed automated verification suite, the platform meets all prede
 - **Passed:** 1236 🟢
 - **Total Automated Test Cases Run:** 1188
 - **Passed:** 1188 🟢
+- **Total Automated Test Cases Run:** 1245
+- **Passed:** 1245 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -576,6 +578,16 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_etmf_post_signature_locking` | `tests.test_etmf_signing_lifecycle` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_etmf_signing_happy_path` | `tests.test_etmf_signing_lifecycle` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_etmf_signing_reauth_failures` | `tests.test_etmf_signing_lifecycle` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_auto_quarantine_site_level_no_site_id` | `tests.test_etmf_site_scope` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_completeness_site_isolation` | `tests.test_etmf_site_scope` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_eisf_to_etmf_sync_preserves_scope` | `tests.test_etmf_site_scope` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_is_site_level_artifact_helper` | `tests.test_etmf_site_scope` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_legacy_records_quarantine_policy` | `tests.test_etmf_site_scope` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_regulatory_binder_export_site_isolation` | `tests.test_etmf_site_scope` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_site_id_validation_empty_whitespace` | `tests.test_etmf_site_scope` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_site_scoped_users_read_isolation` | `tests.test_etmf_site_scope` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_site_scoped_write_restrictions` | `tests.test_etmf_site_scope` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_site_scoping_on_redactions_and_signatures` | `tests.test_etmf_site_scope` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_arithmetic_null_safety_and_bmi` | `tests.test_evaluator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_comparison_null_semantics` | `tests.test_evaluator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_comparison_operators` | `tests.test_evaluator` | *Regression/Helper* | 🟢 PASSED | < 1s |
