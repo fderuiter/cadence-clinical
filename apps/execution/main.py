@@ -107,6 +107,7 @@ from packages.security import (
     ROLE_DATA_MANAGER,
     ROLE_INVESTIGATOR,
     ROLE_SITE_INVESTIGATOR,
+    ROLE_SPONSOR_ADMIN,
     Principal,
     get_normalized_roles,
     get_principal,
@@ -2751,38 +2752,6 @@ class SyncRequest(BaseModel):
     blocks: list[LocalLedgerBlock]
 
 
-def _is_data_manager(roles_str: Any) -> bool:
-    """Check if the roles include Data Manager role variations."""
-    if isinstance(roles_str, str):
-        roles = [r.strip().lower() for r in roles_str.split(",")]
-    else:
-        roles = [str(r).strip().lower() for r in roles_str]
-    dm_roles = {
-        "data manager",
-        "data_manager",
-        "data-manager",
-        "sponsor_dm",
-        "dm",
-        "admin",
-    }
-    return any(r in dm_roles for r in roles)
-
-
-def _is_investigator(roles_str: Any) -> bool:
-    """Check if the roles include Investigator role variations."""
-    if isinstance(roles_str, str):
-        roles = [r.strip().lower() for r in roles_str.split(",")]
-    else:
-        roles = [str(r).strip().lower() for r in roles_str]
-    inv_roles = {
-        "investigator",
-        "site_investigator",
-        "site-investigator",
-        "investigator_user",
-    }
-    return any(r in inv_roles for r in roles)
-
-
 ALLOWED_TRANSITIONS = {
     "NONE": ["OPEN"],
     "OPEN": ["ANSWERED"],
@@ -2809,26 +2778,6 @@ def validate_transition(current_status: str, new_status: str) -> None:
         raise StateTransitionError(
             f"Invalid transition from {current_status} to {new_status}. Allowed transitions are: {allowed}"
         )
-
-
-def verify_roles(request: Request, allowed_roles: List[str]) -> None:
-    """Verify that the user possesses at least one of the allowed roles."""
-    roles_str = getattr(request.state, "roles", None) or request.headers.get(
-        "X-User-Roles", ""
-    )
-    if not roles_str:
-        raise HTTPException(status_code=403, detail="Missing role credentials.")
-
-    if "data_manager" in allowed_roles:
-        if _is_data_manager(roles_str):
-            return
-    if "investigator" in allowed_roles:
-        if _is_investigator(roles_str):
-            return
-
-    raise HTTPException(
-        status_code=403, detail="User role is not authorized for this action."
-    )
 
 
 async def fetch_history(session: Any, query_id: str) -> List[QueryHistoryItem]:
@@ -4813,7 +4762,7 @@ async def get_lock_status(
 async def lock_site_endpoint(
     site_id: str,
     request: Request,
-    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER)),
+    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER, ROLE_SPONSOR_ADMIN)),
 ) -> dict[str, str]:
     """Locks or freezes a specific site."""
     TrialLockManager.lock_site(site_id)
@@ -4825,7 +4774,7 @@ async def lock_site_endpoint(
 async def unlock_site_endpoint(
     site_id: str,
     request: Request,
-    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER)),
+    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER, ROLE_SPONSOR_ADMIN)),
 ) -> dict[str, str]:
     """Unlocks or unfreezes a specific site."""
     TrialLockManager.unlock_site(site_id)
@@ -4837,7 +4786,7 @@ async def unlock_site_endpoint(
 async def lock_visit_endpoint(
     visit_id: str,
     request: Request,
-    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER)),
+    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER, ROLE_SPONSOR_ADMIN)),
 ) -> dict[str, str]:
     """Locks or freezes a specific visit."""
     TrialLockManager.lock_visit(visit_id)
@@ -4849,7 +4798,7 @@ async def lock_visit_endpoint(
 async def unlock_visit_endpoint(
     visit_id: str,
     request: Request,
-    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER)),
+    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER, ROLE_SPONSOR_ADMIN)),
 ) -> dict[str, str]:
     """Unlocks or unfreezes a specific visit."""
     TrialLockManager.unlock_visit(visit_id)
@@ -4861,7 +4810,7 @@ async def unlock_visit_endpoint(
 async def lock_form_endpoint(
     form_id: str,
     request: Request,
-    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER)),
+    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER, ROLE_SPONSOR_ADMIN)),
 ) -> dict[str, str]:
     """Locks or freezes a specific form."""
     TrialLockManager.lock_form(form_id)
@@ -4873,7 +4822,7 @@ async def lock_form_endpoint(
 async def unlock_form_endpoint(
     form_id: str,
     request: Request,
-    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER)),
+    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER, ROLE_SPONSOR_ADMIN)),
 ) -> dict[str, str]:
     """Unlocks or unfreezes a specific form."""
     TrialLockManager.unlock_form(form_id)
@@ -4885,7 +4834,7 @@ async def unlock_form_endpoint(
 async def lock_subject_endpoint(
     subject_id: str,
     request: Request,
-    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER)),
+    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER, ROLE_SPONSOR_ADMIN)),
 ) -> dict[str, str]:
     """Locks or freezes a specific subject."""
     TrialLockManager.lock_subject(subject_id)
@@ -4897,7 +4846,7 @@ async def lock_subject_endpoint(
 async def unlock_subject_endpoint(
     subject_id: str,
     request: Request,
-    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER)),
+    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER, ROLE_SPONSOR_ADMIN)),
 ) -> dict[str, str]:
     """Unlocks or unfreezes a specific subject."""
     TrialLockManager.unlock_subject(subject_id)
@@ -4911,7 +4860,7 @@ async def unlock_subject_endpoint(
 @app.post("/api/v1/execution/locks/trial/freeze", status_code=200)
 async def lock_trial_endpoint(
     request: Request,
-    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER)),
+    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER, ROLE_SPONSOR_ADMIN)),
 ) -> dict[str, str]:
     """Locks or freezes the trial/study."""
     reason = request.headers.get("X-Change-Reason", "Sponsor Lock")
@@ -4923,7 +4872,7 @@ async def lock_trial_endpoint(
 @app.post("/api/v1/execution/locks/trial/unfreeze", status_code=200)
 async def unlock_trial_endpoint(
     request: Request,
-    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER)),
+    roles: list[str] = Depends(require_roles(ROLE_DATA_MANAGER, ROLE_SPONSOR_ADMIN)),
 ) -> dict[str, str]:
     """Unlocks or unfreezes the trial/study."""
     TrialLockManager.unlock_trial()

@@ -57,6 +57,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-15: Bidirectional API Contract Enforcement and Legacy Whitelisting](2026-08-15-bidirectional-api-contract-enforcement.md)
 - [2026-08-17: Centralized Permission-Based Authorization and Dynamic Mappings](2026-08-17-centralized-permission-auth.md)
 - [2026-08-21: eTMF Inbound-Email Webhook and Binder Routing](2026-08-21-etmf-inbound-email-webhook-and-binder-routing.md)
+- [2026-08-24: Role Authorization for Granular Data-Lock Actions and Trust Boundary Verification](2026-08-24-role-authorization-for-granular-data-lock-actions.md)
 
 ### 3. Clinical Data Interoperability & Standards
 
