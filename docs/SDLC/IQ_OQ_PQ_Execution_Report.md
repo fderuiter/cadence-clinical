@@ -17,6 +17,8 @@ Based on the executed automated verification suite, the platform meets all prede
 - **Passed:** 1291 🟢
 - **Total Automated Test Cases Run:** 1288
 - **Passed:** 1288 🟢
+- **Total Automated Test Cases Run:** 1291
+- **Passed:** 1291 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -906,6 +908,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_notifications_health_check` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_webhook_delivery_channel_failure_and_retry_backoff` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_webhook_delivery_channel_success` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_doa_signoff_automatic_archival_handoff` | `tests.test_org_integration_e2e` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_doa_signoff_tampered_payload_rejected` | `tests.test_org_integration_e2e` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_eisf_completeness_participation` | `tests.test_org_integration_e2e` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gateway_openapi_aggregation_with_org` | `tests.test_org_integration_e2e` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gateway_org_proxy_routing` | `tests.test_org_integration_e2e` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cro_affiliation_validation` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_delegation_of_authority_flow` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gxp_audit_logging_and_actor_context` | `tests.test_org_service` | *Regression/Helper* | 🟢 PASSED | < 1s |

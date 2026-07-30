@@ -51,6 +51,10 @@ The table below specifies how individual clinical domain entities are processed,
 | **Global Library Objects** | Designer | Neo4j/Mock DB | Graph node versioning via `PREVIOUS_VERSION` chains and metadata JSON serialization |
 | **Study Library Instances** | Designer | Neo4j/Mock DB | Copy-on-instantiation clones linked via `INSTANTIATED_FROM` with local overrides |
 | **Signature Manifestations** | Designer & eTMF Services | Neo4j & SQLite/PostgreSQL | On-the-fly transient RSA/X.509 cryptographic signing of canonical JSON payloads |
+| **Organizations** | Organization Service | PostgreSQL/SQLite | Explicit `OrgAuditLog` writes with Part 11 metadata |
+| **Clinical Sites** | Organization Service | PostgreSQL/SQLite | Explicit `OrgAuditLog` writes with Part 11 metadata |
+| **Personnel** | Organization Service | PostgreSQL/SQLite | Explicit `OrgAuditLog` writes with Part 11 metadata |
+| **Delegation of Authority** | Organization Service | PostgreSQL/SQLite | Explicit `OrgAuditLog` writes with Part 11 metadata & dual eISF/eTMF archival handoff |
 
 ---
 

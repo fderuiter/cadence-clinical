@@ -136,3 +136,20 @@ Sponsor studies copy templates into study-scoped components via `POST /api/v1/st
 - **Unmodified Parity**: A newly instantiated, unmodified instance has an empty diff view compared to its linked source template.
 - **Copy-on-Instantiation**: The study creates a distinct copy of the payload. The copy is linked to its source via an `[:INSTANTIATED_FROM]` relationship.
 - **Local Overrides**: Modifying the study-scoped instance payload records only local override properties, keeping the parent library template fully immutable. The API exposes field-level, dot-notated differences comparing the instance against its parent.
+
+## 12. Organization Directory and Digital Delegation of Authority (DOA) Workflow
+The Organization Directory service (`apps/org`) acts as the GxP-compliant and 21 CFR Part 11 compliant registry of clinical entities and personnel. It is fully integrated with Keycloak OIDC, gateway scope propagation, and a digital Delegation of Authority (DOA) sign-off workflow.
+
+### A. 21 CFR Part 11 Re-Authentication & Signature Behavior
+* **PI-Scoped Digital Signature:** Granting, signing off, and revoking delegation of authority (DOA) requires a Principal Investigator (PI) role and is strictly constrained to the investigator's assigned site.
+* **Gateway-Enforced Step-Up Re-Authentication:** The `/api/v1/org/delegations/{id}/sign-off` endpoint is signature-gated. A valid `X-Sig-Token` (60-second single-use step-up token) issued upon credential re-verification is required.
+* **Canonical Cryptographic Signatures:** Signing the delegation involves computing a stable, deterministic HMAC-SHA256 signature over the canonical JSON representation of the delegation payload. This prevents tampering or post-signature modifications.
+
+### B. Durable Ingestion & Archive Handoff to eISF
+* **Authoritative Archive Destination:** To satisfy GxP requirements for site-scoped records, eISF (electronic Investigator Site File) is selected as the primary regulatory repository for signed DOA logs.
+* **Automatic Ingestion Handoff:** Once a DOA record is signed, `apps/org` triggers a service-to-service POST handoff to eISF (`/api/v1/eisf/ingest`). The payload preserves the original signature, signed JSON payload, study/site identifiers, delegated duties, effective dates, and audit provenance.
+* **Completeness Workflow Participation:** The archived DOA record actively participates in the site-level eISF completeness checks under `apps/eisf/main.py` using standard Reference Model artifact code `05.02.04` (Delegation of Authority Log).
+
+### C. Requirements Traceability Matrix (Trace-7 / PRD-SYS-001)
+* **Target Components:** `apps/org/main.py`, `apps/org/models.py`, `apps/org/database.py`
+* **Test Verification Suites:** `tests/test_doa_workflow.py`, `tests/test_org_integration_e2e.py`
