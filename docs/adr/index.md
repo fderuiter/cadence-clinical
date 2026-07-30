@@ -138,3 +138,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-11: VitePress Workspace Documentation Portal](2026-08-11-vitepress-workspace-documentation-portal.md)
 - [2026-08-16: Parallel Continuous Integration Workflows and Local Concurrent Verification](2026-08-16-parallel-ci-workflows-and-local-concurrent-execution.md)
 - [2026-08-20: Codebase Cleanup, Test Pipeline Fixes, and Documentation Preflight Standardization](2026-08-20-codebase-cleanup-and-test-pipeline-fixes.md)
+- [2026-08-22: Shared AES-GCM Offline At-Rest Encryption and Key Derivation Contract](2026-08-22-aes-gcm-offline-at-rest-encryption.md)

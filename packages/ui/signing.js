@@ -451,7 +451,7 @@ export async function decryptAESGCM(encryptedStr, rawKey, expectedVersion = 1, a
   try {
     packedBytes = base64ToUint8Array(encryptedStr);
   } catch (err) {
-    throw new Error("Invalid base64 payload");
+    throw new Error("Invalid base64 payload", { cause: err });
   }
 
   if (packedBytes.length < 16) {
@@ -491,14 +491,14 @@ export async function decryptAESGCM(encryptedStr, rawKey, expectedVersion = 1, a
       ciphertextAndTag
     );
   } catch (err) {
-    throw new Error("Decryption failed: tampered ciphertext, nonce, or AAD");
+    throw new Error("Decryption failed: tampered ciphertext, nonce, or AAD", { cause: err });
   }
 
   const decryptedStr = new TextDecoder().decode(decryptedBuffer);
   try {
     return JSON.parse(decryptedStr);
   } catch (err) {
-    throw new Error("Deserialization failed: invalid JSON");
+    throw new Error("Deserialization failed: invalid JSON", { cause: err });
   }
 }
 
