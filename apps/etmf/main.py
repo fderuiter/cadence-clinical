@@ -4,8 +4,8 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import Response
-from pydantic import BaseModel, Field
 from protocol_version_ref import ProtocolVersionRef
+from pydantic import BaseModel, Field
 from signature import SigningReason
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -2422,6 +2422,7 @@ async def get_artifact_history(
 
     # Resolve active taxonomy/catalog to obtain the canonical artifact type if possible
     from tmf_reference_model import get_active_catalog, resolve_artifact
+
     version = get_active_catalog().version
     canonical_name = artifact_type
     try:
@@ -2432,7 +2433,8 @@ async def get_artifact_history(
 
     stmt = select(TMFDocument).where(
         TMFDocument.study_id == study_id,
-        (TMFDocument.artifact_type == canonical_name) | (TMFDocument.artifact_type == artifact_type),
+        (TMFDocument.artifact_type == canonical_name)
+        | (TMFDocument.artifact_type == artifact_type),
     )
 
     # Order chronologically by version_index ascending

@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes
 from cryptography.x509.oid import NameOID
+from protocol_version_ref import ProtocolVersionRef
 from signature import SignatureManifestation, SigningReason
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,8 +15,6 @@ from tmf_reference_model import (
     resolve_artifact,
     validate_hierarchy,
 )
-
-from protocol_version_ref import ProtocolVersionRef
 
 from apps.etmf.cryptography import (
     extract_signature_from_content,
@@ -296,9 +295,15 @@ async def ingest_document_service(
                 signer=signer_val,
                 signing_timestamp=signing_timestamp_val,
                 reason_for_change=reason_for_change,
-                protocol_version_tag=protocol_version.version_tag if protocol_version else None,
-                protocol_version_index=protocol_version.version_index if protocol_version else None,
-                protocol_version_status=protocol_version.status.value if protocol_version else None,
+                protocol_version_tag=protocol_version.version_tag
+                if protocol_version
+                else None,
+                protocol_version_index=protocol_version.version_index
+                if protocol_version
+                else None,
+                protocol_version_status=protocol_version.status.value
+                if protocol_version
+                else None,
             )
 
             session.add(doc)
