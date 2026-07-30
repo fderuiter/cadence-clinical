@@ -199,6 +199,24 @@ def get_changed_files() -> set[str]:
     branch_point = get_closest_local_branch_point()
 
     # 3. Collect modified files from commit history from branch_point to HEAD
+    # Direct diff between branch_point and HEAD to ensure merge commits don't omit files or ADRs
+    diff_out, _ = run_git_command(
+        ["git", "diff", "--name-only", f"{branch_point}..HEAD"]
+    )
+    if diff_out:
+        for line in diff_out.splitlines():
+            if line.strip():
+                changed_files.add(line.strip())
+
+    # Fallback diff against origin/main if available
+    diff_origin, _ = run_git_command(
+        ["git", "diff", "--name-only", "origin/main...HEAD"]
+    )
+    if diff_origin:
+        for line in diff_origin.splitlines():
+            if line.strip():
+                changed_files.add(line.strip())
+
     # Following first-parent lineage bypasses parents of merge commits (Requirement 4)
     stdout, _ = run_git_command(
         ["git", "rev-list", "--first-parent", f"{branch_point}..HEAD"]
