@@ -39,16 +39,16 @@ flowchart TD
 
 ```text
 docs/CDISC/
-├── README.md                          # (This File) Comprehensive CDISC Guide
-├── cdisc-library-api.json            # CDISC Library REST API Swagger/OpenAPI Spec
-├── Latest Cross Integrations.docx    # Reference Map for Cross-Standard Linkages
+├── README.md                           # (This File) Comprehensive CDISC Guide
+├── cdisc-library-api.json             # CDISC Library REST API Swagger/OpenAPI Spec
+├── Latest_Cross_Integrations.docx     # Reference Map for Cross-Standard Linkages
 └── Library/
-    ├── Data Collection/              # CDASHIG Models & Standard eCRFs
-    ├── Data Tabulation/              # SDTM & SDTMIG Data Models
-    ├── DataAnalysis/                 # ADaM & ADaMIG Statistical Models
-    ├── Integrated/                   # TIG (Therapeutic Area Integration Guides)
-    ├── QRS Instruments/              # Questionnaires, Ratings & Scales
-    └── Terminology/                  # Controlled Terminology (JSON & XLSX)
+    ├── Data_Collection/               # CDASHIG Models & Standard eCRFs
+    ├── Data_Tabulation/               # SDTM & SDTMIG Data Models
+    ├── DataAnalysis/                  # ADaM & ADaMIG Statistical Models
+    ├── Integrated/                    # TIG (Therapeutic Area Integration Guides)
+    ├── QRS_Instruments/               # Questionnaires, Ratings & Scales
+    └── Terminology/                   # Controlled Terminology (JSON & XLSX)
 ```
 
 ---
@@ -65,13 +65,13 @@ docs/CDISC/
 
 ### 2. Data Collection (CDASH & eCRFs)
 
-**Path**: `<docs/CDISC/Library/Data Collection/>`
+**Path**: `docs/CDISC/Library/Data_Collection/`
 
 - **Implementation Guides**:
   - `CDASHIG_v2.2.json`: CDASH Implementation Guide v2.2 specification.
   - `CDASHIG_v2.3.json`: CDASH Implementation Guide v2.3 specification.
 - **Standard eCRF Domain Templates**:
-  - Located under `<docs/CDISC/Library/Data Collection/eCRFs/>`. Contains standardized Case Report Forms organized across 20+ clinical domain subdirectories.
+  - Located under `docs/CDISC/Library/Data_Collection/eCRFs/`. Contains standardized Case Report Forms organized across 20+ clinical domain subdirectories.
   - **Formats Provided**: Each domain includes 5 interoperable representations:
     1. **JSON (`*_Excel.json`)**: Machine-readable eCRF schema for UI form generators.
     2. **Excel (`*_Excel.xlsx`)**: Tabular layout for clinical data managers (CDM).
@@ -81,30 +81,30 @@ docs/CDISC/
 
 #### Covered eCRF Clinical Domains
 
-| Domain Code | Domain Name | Description |
-|-------------|-------------|-------------|
-| **DM** | Demographics | Subject age, sex, race, ethnicity, and baseline characteristics |
-| **AE** | Adverse Events | Adverse event tracking, severity, seriousness, and causality |
-| **CM** | Concomitant Medications | Prior and concurrent medications, dosages, and indications |
-| **VS** | Vital Signs | Blood pressure, pulse, body temperature, height, and weight |
-| **MH** | Medical History | Pre-existing medical conditions and surgical history |
-| **EG** | Electrocardiogram | Central (`EG_CENTRAL`) and Local (`EG_LOCAL`) ECG readings |
-| **LB** | Laboratory Tests | Local laboratory readings (`LB_LOCAL`) and reference ranges |
-| **IE** | Inclusion / Exclusion | Protocol eligibility criteria fulfillment |
-| **DD** | Death Details | Cause of death, autopsy details, and terminal events |
-| **PE** | Physical Exam | System-by-system physical examination findings |
-| **CE** | Clinical Events | Protocol-defined clinical events and endpoints |
-| **SU** | Substance Use | Tobacco, alcohol, and substance use history |
-| **HO** | Healthcare Encounters | Inpatient, outpatient, and emergency room visits |
-| **RS** | Disease Response | Tumor assessment and therapeutic response evaluation |
-| **FA** | Findings About | Supplemental findings related to primary observations |
-| **TIG** | Tobacco Product Use | Specialized eCRFs for nicotine dependency & cessation |
+| Domain Code | Subdirectory Name | Domain Description |
+|-------------|-------------------|--------------------|
+| **DM** | `Demographics` | Subject age, sex, race, ethnicity, and baseline characteristics |
+| **AE** | `Adverse_Events` | Adverse event tracking, severity, seriousness, and causality |
+| **CM** | `Concomitant_Medications` | Prior and concurrent medications, dosages, and indications |
+| **VS** | `Vital_Signs` | Blood pressure, pulse, body temperature, height, and weight |
+| **MH** | `Medical_History` | Pre-existing medical conditions and surgical history |
+| **EG** | `ECG_Central_Reading`, `ECG_Local_Reading` | Central and Local ECG readings |
+| **LB** | `Lab_Central`, `Lab_Local` | Central and Local laboratory readings & reference ranges |
+| **IE** | `IE` | Protocol inclusion / exclusion criteria fulfillment |
+| **DD** | `Death_Details` | Cause of death, autopsy details, and terminal events |
+| **PE** | `Physical_Exam` | System-by-system physical examination findings |
+| **CE** | `Clinical_Events` | Protocol-defined clinical events and endpoints |
+| **SU** | `Substance_Use` | Tobacco, alcohol, and substance use history |
+| **HO** | `Healthcare_Encounters` | Inpatient, outpatient, and emergency room visits |
+| **RS** | `Disease Response` | Tumor assessment and therapeutic response evaluation |
+| **FA** | `Findings` | Supplemental findings related to primary observations |
+| **TIG** | `TIG` | Specialized eCRFs for nicotine dependency (`Med_Used`, `Medical_History`, `Informed_Consent`) |
 
 ---
 
 ### 3. Data Tabulation (SDTM)
 
-**Path**: `<docs/CDISC/Library/Data Tabulation/>`
+**Path**: `docs/CDISC/Library/Data_Tabulation/`
 
 - **Files**:
   - `SDTM_v2.0.json`: Study Data Tabulation Model v2.0 core structure.
@@ -132,7 +132,7 @@ docs/CDISC/
 
 ### 5. Questionnaire, Ratings & Scales (QRS Instruments)
 
-**Path**: `<docs/CDISC/Library/QRS Instruments/>`
+**Path**: `docs/CDISC/Library/QRS_Instruments/`
 
 Standardized clinical assessment supplements provided in structured JSON:
 
@@ -150,14 +150,14 @@ Standardized clinical assessment supplements provided in structured JSON:
 
 ### 6. Integrated & Therapeutic Area Standards (TIG)
 
-**Path**: `<docs/CDISC/Library/Integrated/>` & `<docs/CDISC/Latest Cross Integrations.docx>`
+**Path**: `docs/CDISC/Library/Integrated/` & `docs/CDISC/Latest_Cross_Integrations.docx`
 
 - **Files**:
   - `CDASH_for_TIG_v1.0.json`
   - `SDTM_for_TIG_v1.0.json`
   - `ADaM_for_TIG_v1.0.json`
   - `SEND_for_TIG_v1.0.json` (Standard for Exchange of Nonclinical Data)
-  - `Meta Data.docx` & `Latest Cross Integrations.docx`
+  - `Meta_Data.docx` & `Latest_Cross_Integrations.docx`
 - **Purpose**: Defines unified data mappings across therapeutic areas, connecting nonclinical, data collection, tabulation, and analysis layers.
 
 ---
@@ -188,7 +188,7 @@ import json
 from pathlib import Path
 
 # Load CDASH implementation guide
-cdash_path = Path("docs/CDISC/Library/Data Collection/CDASHIG_v2.3.json")
+cdash_path = Path("docs/CDISC/Library/Data_Collection/CDASHIG_v2.3.json")
 with open(cdash_path, "r", encoding="utf-8") as f:
     cdash_spec = json.load(f)
 
