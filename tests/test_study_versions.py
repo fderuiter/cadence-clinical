@@ -423,10 +423,9 @@ async def test_api_study_version_creation_and_guards():
 
 @pytest.mark.asyncio
 async def test_api_protocol_amendment_minor_and_major_bumps():
-    """
-    Validates minor clinical-amendment and major design-restructuring bumps.
-    Checks that predecessor/successor links are established, signatures are generated,
-    and the source graph remains unchanged.
+    """Validates minor clinical-amendment and major design-restructuring bumps.
+
+    Requirements: PRD-MDR-002
     """
     study_id = "amend_bump_test_study"
 
@@ -524,8 +523,9 @@ async def test_api_protocol_amendment_minor_and_major_bumps():
 
 @pytest.mark.asyncio
 async def test_api_protocol_amendment_invalid_signature_rejected():
-    """
-    Validates that missing or tampered signatures are rejected on load.
+    """Validates that missing or tampered signatures are rejected on load.
+
+    Requirements: PRD-MDR-002
     """
     study_id = "signature_rejection_test_study"
 
@@ -568,8 +568,9 @@ async def test_api_protocol_amendment_invalid_signature_rejected():
 
 @pytest.mark.asyncio
 async def test_api_protocol_amendment_concurrency_race():
-    """
-    Validates that concurrent amendments on the same study/protocol produce a conflict.
+    """Validates that concurrent amendments on the same study/protocol produce a conflict.
+
+    Requirements: PRD-MDR-002
     """
     study_id = "concurrency_race_test_study"
 
@@ -668,12 +669,9 @@ def test_verify_version_signature_edge_cases():
 
 @pytest.mark.asyncio
 async def test_api_protocol_approval_and_immutability():
-    """
-    Comprehensive integration test verifying:
-    - Re-authentication: Approval requires a step-up token (X-Sig-Token).
-    - Status transition: Successful approval changes status to APPROVED and populates SignatureManifestation.
-    - Immutability: Modifications (rules, blocks, or re-approval) on an APPROVED version are strictly blocked (403 IMMUTABILITY_VIOLATION).
-    - Tracer: Manifestation is archived in the append-only Action history.
+    """Comprehensive integration test verifying approval, immutability, and signatures.
+
+    Requirements: PRD-MDR-002
     """
     study_id = "approval_test_study"
     version_id = "v_approval"

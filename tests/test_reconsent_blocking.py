@@ -59,13 +59,9 @@ async def setup_test_db():
 
 @pytest.mark.asyncio
 async def test_subject_consent_blocking_and_reconsent_lifecycle() -> None:
-    """Verify that:
+    """Verify that subject consent blocks writes, newer protocol version with requires_reconsent=True blocks writes, and matching consent clears the gate.
 
-    1. Creating a subject initially is unblocked.
-    2. Activating a newer protocol version with requires_reconsent=True blocks writes.
-    3. An ICF for another version cannot unblock entry.
-    4. Recording matching consent successfully clears the gate.
-    5. Consent is auditable and standard version index increments are tracked.
+    Requirements: PRD-SUB-007
     """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"

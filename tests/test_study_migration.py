@@ -63,13 +63,9 @@ async def setup_test_db():
 
 @pytest.mark.asyncio
 async def test_protocol_capture_and_reconciliation_lifecycle() -> None:
-    """Verify that:
+    """Verify protocol capture and non-destructive reconciliation lifecycle.
 
-    1. Subject consent controls write capability (consent/re-consent precondition).
-    2. Captured visits and observations are automatically stamped with subject's active protocol version identity.
-    3. Running reconciliation does not mutate historical source observations.
-    4. Reconciled data is deterministic and carries source/target provenance (rename, add, remove).
-    5. Multi-hop recursive migration path transitions correctly.
+    Requirements: PRD-SYS-001
     """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
