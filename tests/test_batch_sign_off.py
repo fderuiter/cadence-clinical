@@ -22,6 +22,7 @@ def get_auth_headers(
     change_reason="system_operation",
     action=None,
     sig_token_custom=None,
+    payload=None,
 ):
     """Generate Gateway signature-compliant authentication headers."""
     import json
@@ -29,13 +30,13 @@ def get_auth_headers(
     from jose import jwt
 
     timestamp = str(time.time())
-    payload = {
+    header_payload = {
         "change_reason": change_reason,
         "roles": roles,
         "timestamp": timestamp,
         "user_id": user_id,
     }
-    serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    serialized = json.dumps(header_payload, sort_keys=True, separators=(",", ":"))
     signature = hmac.new(
         GATEWAY_SECRET.encode(), serialized.encode(), hashlib.sha256
     ).hexdigest()
@@ -58,6 +59,17 @@ def get_auth_headers(
             "iat": time.time(),
             "exp": time.time() + 300.0,
         }
+        if payload and "batch-sign-off" in action:
+            norm_study = str(payload.get("study_id")).strip()
+            norm_type = str(payload.get("target_type")).strip().upper()
+            sorted_ids = sorted(
+                [str(tid).strip() for tid in payload.get("target_ids", [])]
+            )
+            norm_ids = ",".join(sorted_ids)
+            norm_reason = str(payload.get("signing_reason")).strip()
+            binding_str = f"{norm_study}:{norm_type}:{norm_ids}:{norm_reason}"
+            batch_id = hashlib.sha256(binding_str.encode("utf-8")).hexdigest()
+            sig_payload["batch_id"] = batch_id
         sig_token = jwt.encode(sig_payload, GATEWAY_SECRET, algorithm="HS256")
         headers["X-Sig-Token"] = sig_token
     return headers
@@ -129,7 +141,7 @@ async def test_batch_sign_off_happy_path_form() -> None:
         res = await client.post(
             action_path,
             json=payload,
-            headers=get_auth_headers(roles="pi", action=action_path),
+            headers=get_auth_headers(roles="pi", action=action_path, payload=payload),
         )
         assert res.status_code == 200
         res_data = res.json()
@@ -155,6 +167,23 @@ async def test_batch_sign_off_happy_path_form() -> None:
             assert m1["signing_reason"] == "PI approval and sign-off."
             assert "canonical_signature_hash" in m1
             assert m1["signed_version"] == 2  # Incremented from 1
+
+            # Assert the new 21 CFR §11.50 compliant signature_manifestation structure
+            assert "signature_manifestation" in m1
+            manifestation = m1["signature_manifestation"]
+            assert manifestation["signer_username"] == "test_user"
+            assert manifestation["signer_full_name"] == "Test User"
+            assert manifestation["signing_timestamp_utc"].endswith("Z")
+            assert manifestation["signing_reason_code"] == "PI_APPROVAL"
+            assert (
+                manifestation["signing_reason_text"]
+                == "I approve this clinical record and confirm medical responsibility."
+            )
+            assert manifestation["record_id"] == id1
+            assert manifestation["record_version"] == 2
+            assert (
+                manifestation["signature_hash_sha256"] == m1["canonical_signature_hash"]
+            )
 
 
 @pytest.mark.asyncio
@@ -206,7 +235,7 @@ async def test_batch_sign_off_visit_resolution() -> None:
             action_path,
             json=payload,
             headers=get_auth_headers(
-                roles="principal investigator", action=action_path
+                roles="principal investigator", action=action_path, payload=payload
             ),
         )
         assert res.status_code == 200
@@ -266,7 +295,7 @@ async def test_batch_sign_off_subject_resolution() -> None:
         res = await client.post(
             action_path,
             json=payload,
-            headers=get_auth_headers(roles="pi", action=action_path),
+            headers=get_auth_headers(roles="pi", action=action_path, payload=payload),
         )
         assert res.status_code == 200
         res_data = res.json()
@@ -293,7 +322,9 @@ async def test_batch_sign_off_pi_only() -> None:
             res = await client.post(
                 action_path,
                 json=payload,
-                headers=get_auth_headers(roles=bad_role, action=action_path),
+                headers=get_auth_headers(
+                    roles=bad_role, action=action_path, payload=payload
+                ),
             )
             assert res.status_code == 403
             assert "Only a Principal Investigator" in res.json()["detail"]
@@ -316,6 +347,16 @@ async def test_batch_sign_off_token_replay() -> None:
         # Generate a standard token and use it once
         from jose import jwt
 
+        # Compute valid batch_id for the token
+        norm_study = "STUDY-001"
+        norm_type = "FORM"
+        norm_ids = ""
+        norm_reason = "PI approval and sign-off."
+        binding_str = f"{norm_study}:{norm_type}:{norm_ids}:{norm_reason}"
+        import hashlib
+
+        batch_id = hashlib.sha256(binding_str.encode("utf-8")).hexdigest()
+
         sig_payload = {
             "sub": "test_user",
             "username": "test_user",
@@ -324,6 +365,7 @@ async def test_batch_sign_off_token_replay() -> None:
             "iat": time.time(),
             "exp": time.time() + 300.0,
             "jti": "unique-replay-token-123",
+            "batch_id": batch_id,
         }
         sig_token = jwt.encode(sig_payload, GATEWAY_SECRET, algorithm="HS256")
 
@@ -384,7 +426,9 @@ async def test_batch_sign_off_locks_and_atomic_rollback() -> None:
             await client.post(
                 action_path,
                 json=payload,
-                headers=get_auth_headers(roles="pi", action=action_path),
+                headers=get_auth_headers(
+                    roles="pi", action=action_path, payload=payload
+                ),
             )
 
         # Verify that sub1 was NOT approved (proper rollback occurred!)
@@ -394,3 +438,94 @@ async def test_batch_sign_off_locks_and_atomic_rollback() -> None:
             subs = {s.id: s for s in res_db.scalars().all()}
             assert subs[id1].status == "COMPLETED"
             assert subs[id2].status == "COMPLETED"
+
+
+@pytest.mark.asyncio
+async def test_batch_sign_off_mismatched_bindings_and_no_write() -> None:
+    """Test that a batch sign-off with mismatched binding (study, type, targets, reason) is rejected and does not write/modify any data."""
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # 1. Pre-populate a completed form submission
+        async with db_manager.get_session_maker()() as session:
+            sub = FormSubmission(
+                study_id="STUDY-001",
+                site_id="SITE-001",
+                subject_id="SUBJ-001",
+                visit_id="VISIT-001",
+                form_id="FORM-001",
+                status="COMPLETED",
+            )
+            session.add(sub)
+            await session.commit()
+            sub_id = sub.id
+
+        action_path = "/api/v1/execution/batch-sign-off"
+
+        # Correct payload
+        correct_payload = {
+            "study_id": "STUDY-001",
+            "target_type": "FORM",
+            "target_ids": [sub_id],
+            "signing_reason": "PI approval and sign-off.",
+        }
+
+        # Case A: Token generated with a different study_id
+        payload_wrong_study = dict(correct_payload, study_id="STUDY-WRONG")
+        headers_wrong_study = get_auth_headers(
+            roles="pi", action=action_path, payload=payload_wrong_study
+        )
+        res_a = await client.post(
+            action_path, json=correct_payload, headers=headers_wrong_study
+        )
+        assert res_a.status_code == 401
+        assert "mismatch" in res_a.json()["message"]
+
+        # Case B: Token generated with a different target_type
+        payload_wrong_type = dict(correct_payload, target_type="VISIT")
+        headers_wrong_type = get_auth_headers(
+            roles="pi", action=action_path, payload=payload_wrong_type
+        )
+        res_b = await client.post(
+            action_path, json=correct_payload, headers=headers_wrong_type
+        )
+        assert res_b.status_code == 401
+
+        # Case C: Token generated with different target_ids
+        payload_wrong_ids = dict(correct_payload, target_ids=["different-id"])
+        headers_wrong_ids = get_auth_headers(
+            roles="pi", action=action_path, payload=payload_wrong_ids
+        )
+        res_c = await client.post(
+            action_path, json=correct_payload, headers=headers_wrong_ids
+        )
+        assert res_c.status_code == 401
+
+        # Case D: Token generated with a different signing_reason
+        payload_wrong_reason = dict(
+            correct_payload, signing_reason="Review and confirmation."
+        )
+        headers_wrong_reason = get_auth_headers(
+            roles="pi", action=action_path, payload=payload_wrong_reason
+        )
+        res_d = await client.post(
+            action_path, json=correct_payload, headers=headers_wrong_reason
+        )
+        assert res_d.status_code == 401
+
+        # Case E: Token not bound to a batch
+        headers_no_batch = get_auth_headers(
+            roles="pi", action=action_path
+        )  # no payload => no batch_id
+        res_e = await client.post(
+            action_path, json=correct_payload, headers=headers_no_batch
+        )
+        assert res_e.status_code == 401
+
+        # Verify that the form submission remains unchanged in the database (NO WRITE/MUTATION)
+        async with db_manager.get_session_maker()() as session:
+            stmt = select(FormSubmission).where(FormSubmission.id == sub_id)
+            res_db = await session.execute(stmt)
+            sub_db = res_db.scalar_one()
+            assert sub_db.status == "COMPLETED"
+            assert sub_db.signature_manifest is None

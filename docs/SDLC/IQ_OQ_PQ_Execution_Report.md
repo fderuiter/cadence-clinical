@@ -227,6 +227,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_update_generates_audit_log` | `tests.test_audit` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_batch_sign_off_happy_path_form` | `tests.test_batch_sign_off` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_batch_sign_off_locks_and_atomic_rollback` | `tests.test_batch_sign_off` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_batch_sign_off_mismatched_bindings_and_no_write` | `tests.test_batch_sign_off` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_batch_sign_off_pi_only` | `tests.test_batch_sign_off` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_batch_sign_off_subject_resolution` | `tests.test_batch_sign_off` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_batch_sign_off_token_replay` | `tests.test_batch_sign_off` | *Regression/Helper* | 🟢 PASSED | < 1s |

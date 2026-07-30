@@ -906,6 +906,28 @@ async function confirmReauth() {
     try {
       reauthError.value = "";
 
+      const studyId = store.currentUsdm.studyId || "STUDY-USDM-001";
+      const targetType = signoffTargetType.value;
+      const targetId =
+        signoffTargetId.value === "custom"
+          ? customTargetId.value
+          : signoffTargetId.value;
+      const targetIds = [targetId];
+      const signingReason = signoffReason.value;
+
+      // Compute canonical batch binding
+      const normStudy = studyId.trim();
+      const normType = targetType.trim().toUpperCase();
+      const normIds = [...targetIds].map(id => String(id).trim()).sort().join(",");
+      const normReason = signingReason.trim();
+      const bindingStr = `${normStudy}:${normType}:${normIds}:${normReason}`;
+
+      // Calculate SHA-256 batchId
+      const msgBuffer = new TextEncoder().encode(bindingStr);
+      const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const batchId = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+
       // 1. Obtain signature token
       const reauthRes = await soaClient.verifySignature(
         {
@@ -913,6 +935,7 @@ async function confirmReauth() {
           password,
           totp,
           action: "/api/v1/execution/batch-sign-off",
+          batchId,
         },
         authStore.accessToken
       );
@@ -920,21 +943,17 @@ async function confirmReauth() {
       const sigToken = reauthRes.sig_token;
 
       // 2. Call batch sign-off
-      const targetId =
-        signoffTargetId.value === "custom"
-          ? customTargetId.value
-          : signoffTargetId.value;
       const signoffRes = await soaClient.batchSignOff(
         {
-          studyId: store.currentUsdm.studyId || "STUDY-USDM-001",
-          targetType: signoffTargetType.value,
-          targetIds: [targetId],
-          signingReason: signoffReason.value,
+          studyId,
+          targetType,
+          targetIds,
+          signingReason,
         },
         {
           userId: username,
           roles: store.user.roles ? store.user.roles.join(",") : "investigator",
-          changeReason: signoffReason.value,
+          changeReason: signingReason,
           sigToken,
         },
         authStore.accessToken

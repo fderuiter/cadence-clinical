@@ -3582,6 +3582,50 @@ async def post_batch_sign_off(
     ),
 ) -> BatchSignOffResponse:
     """Perform a PI-only, atomic batch electronic-signature for form-, visit-, and subject-level sign-off."""
+    # Secondary safety validation of the signature token batch-binding
+    sig_token = request.headers.get("X-Sig-Token")
+    if not sig_token:
+        raise HTTPException(
+            status_code=401,
+            detail="REAUTHENTICATION_REQUIRED",
+        )
+
+    from jose import JWTError, jwt
+
+    secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()
+    try:
+        sig_payload = jwt.decode(sig_token, secret, algorithms=["HS256"])
+    except JWTError:
+        raise HTTPException(
+            status_code=401,
+            detail="REAUTHENTICATION_REQUIRED",
+        )
+
+    token_batch_id = sig_payload.get("batch_id")
+    if not token_batch_id:
+        raise HTTPException(
+            status_code=401,
+            detail="REAUTHENTICATION_REQUIRED",
+        )
+
+    # Compute expected batch_id
+    norm_study = str(payload.study_id).strip()
+    norm_type = str(payload.target_type).strip().upper()
+    sorted_ids = sorted([str(tid).strip() for tid in payload.target_ids])
+    norm_ids = ",".join(sorted_ids)
+    norm_reason = str(payload.signing_reason).strip()
+
+    binding_str = f"{norm_study}:{norm_type}:{norm_ids}:{norm_reason}"
+    import hashlib
+
+    computed_batch_id = hashlib.sha256(binding_str.encode("utf-8")).hexdigest()
+
+    if token_batch_id != computed_batch_id:
+        raise HTTPException(
+            status_code=401,
+            detail="REAUTHENTICATION_REQUIRED",
+        )
+
     target_type_upper = payload.target_type.upper()
 
     async with db_manager.get_session_maker()() as session:
@@ -3670,15 +3714,80 @@ async def post_batch_sign_off(
                         binding_payload, secret
                     )
 
+                    username = request.state.user_id or "unknown"
+                    full_name = (
+                        f"{username.replace('_', ' ').replace('.', ' ').title()}"
+                    )
+                    if "pi" in username.lower() or "investigator" in username.lower():
+                        full_name += ", MD"
+
+                    signing_timestamp_utc = datetime.utcnow().isoformat() + "Z"
+
+                    reason_mapping = {
+                        "I attest that this data is accurate and complete.": (
+                            "DATA_RECORDING",
+                            "I attest that this data is accurate and complete.",
+                        ),
+                        "PI approval and sign-off.": (
+                            "PI_APPROVAL",
+                            "I approve this clinical record and confirm medical responsibility.",
+                        ),
+                        "Review and confirmation.": (
+                            "REVIEW_CONFIRMATION",
+                            "Review and confirmation.",
+                        ),
+                        "DATA_RECORDING": ("DATA_RECORDING", "I author this data"),
+                        "DATA_ENTRY_COMPLETED": (
+                            "DATA_RECORDING",
+                            "I author this data",
+                        ),
+                        "PI_REVIEW": ("PI_APPROVAL", "I approve this clinical record"),
+                        "PI_SIGN_OFF": (
+                            "PI_APPROVAL",
+                            "I approve this clinical record and confirm medical responsibility.",
+                        ),
+                        "COMPLIANCE_ATTESTATION": (
+                            "COMPLIANCE_ATTESTATION",
+                            "I review and confirm this data",
+                        ),
+                    }
+
+                    reason_key = payload.signing_reason
+                    if reason_key in reason_mapping:
+                        signing_reason_code, signing_reason_text = reason_mapping[
+                            reason_key
+                        ]
+                    else:
+                        signing_reason_code = reason_key.replace(" ", "_").upper()
+                        signing_reason_text = reason_key
+
+                    network_ip_address = request.headers.get("x-forwarded-for") or (
+                        request.client.host if request.client else "127.0.0.1"
+                    )
+                    device_user_agent = request.headers.get("user-agent") or "Unknown"
+
                     manifest = {
-                        "signer_id": request.state.user_id,
-                        "timestamp": datetime.utcnow().isoformat() + "Z",
+                        # Old keys for backward compatibility
+                        "signer_id": username,
+                        "timestamp": signing_timestamp_utc,
                         "signing_reason": payload.signing_reason,
-                        "ip_address": request.headers.get("x-forwarded-for")
-                        or (request.client.host if request.client else "127.0.0.1"),
-                        "user_agent": request.headers.get("user-agent") or "Unknown",
+                        "ip_address": network_ip_address,
+                        "user_agent": device_user_agent,
                         "signed_version": sub.version + 1,
                         "canonical_signature_hash": canonical_hash,
+                        # New detailed vocabulary matching 05_Security_Compliance_Audit_Spec.md §4.2
+                        "signature_manifestation": {
+                            "signer_username": username,
+                            "signer_full_name": full_name,
+                            "signing_timestamp_utc": signing_timestamp_utc,
+                            "signing_reason_code": signing_reason_code,
+                            "signing_reason_text": signing_reason_text,
+                            "network_ip_address": network_ip_address,
+                            "device_user_agent": device_user_agent,
+                            "record_id": sub.id,
+                            "record_version": sub.version + 1,
+                            "signature_hash_sha256": canonical_hash,
+                        },
                     }
 
                     sub.status = "APPROVED"

@@ -110,6 +110,7 @@ describe("PI Sign-Off Worklist and Re-authentication Flow", () => {
         password: "valid_password", // pragma: allowlist secret
         totp: null,
         action: "/api/v1/execution/batch-sign-off",
+        batchId: expect.any(String),
       },
       authStore.accessToken
     );
