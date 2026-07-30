@@ -119,6 +119,14 @@ const routes = [
       requiresRole: ["data_manager", "sponsor_admin"],
     },
   },
+  {
+    path: "/notifications",
+    name: "notifications",
+    component: () => import("./views/NotificationsView.vue"),
+    meta: {
+      requiresAuth: true,
+    },
+  },
 ];
 
 export const router = createRouter({
