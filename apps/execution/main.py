@@ -25,7 +25,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from protocol_version_ref import ProtocolVersionRef
 from pydantic import BaseModel, Field, model_validator
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 
 from apps.execution.biostat import (
     DatasetJSONValidationError,
@@ -517,13 +517,23 @@ async def create_subject(
         )
 
     async with db_manager.get_session_maker()() as session:
-        subj = ClinicalSubject(
-            subject_id=payload.subject_id,
-            study_id=payload.study_id,
-            encrypted_demographics=encrypted_demo,
-        )
-        session.add(subj)
-        await session.commit()
+        async with session.begin():
+            # Query max enrollment_index for the study inside the active transaction
+            stmt_max = select(func.max(ClinicalSubject.enrollment_index)).where(
+                ClinicalSubject.study_id == payload.study_id
+            )
+            res_max = await session.execute(stmt_max)
+            max_idx = res_max.scalar()
+            new_idx = 0 if max_idx is None else max_idx + 1
+
+            subj = ClinicalSubject(
+                subject_id=payload.subject_id,
+                study_id=payload.study_id,
+                encrypted_demographics=encrypted_demo,
+                enrollment_index=new_idx,
+            )
+            session.add(subj)
+
         stmt = select(ClinicalSubject).where(ClinicalSubject.id == subj.id)
         res = await session.execute(stmt)
         subj_db = res.scalar_one()
@@ -3083,15 +3093,15 @@ async def evaluate_tsdv_rule(
         res_subj = await session.execute(stmt_subj)
         subjects = list(res_subj.scalars().all())
 
-        # Sort alphabetically by subject_id
+        # Sort alphabetically as a deterministic fallback only
         subjects_sorted = sorted(subjects, key=lambda s: s.subject_id)
 
         target_sub = None
-        resolved_index = None
+        fallback_index = None
         for idx, sub in enumerate(subjects_sorted):
             if sub.subject_id == subject_id or sub.id == subject_id:
                 target_sub = sub
-                resolved_index = idx
+                fallback_index = idx
                 break
 
         if target_sub is None:
@@ -3100,7 +3110,20 @@ async def evaluate_tsdv_rule(
                 detail=f"Subject {subject_id} not found in study {study_id}",
             )
 
-        if enrollment_index is None:
+        # Resolve persisted enrollment_index, with alphabetical as fallback if not backfilled yet
+        resolved_index = (
+            target_sub.enrollment_index
+            if target_sub.enrollment_index is not None
+            else fallback_index
+        )
+
+        if enrollment_index is not None:
+            if enrollment_index != resolved_index:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Conflicting enrollment_index {enrollment_index} supplied. Persisted index is {resolved_index}.",
+                )
+        else:
             enrollment_index = resolved_index
 
         subject_uuid = target_sub.id

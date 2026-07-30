@@ -484,3 +484,138 @@ async def test_api_tsdv_evaluation_integration_and_context_errors():
         assert resp.status_code == 200
         assert resp.json()["required"] is False
         assert "zero-SDV domain" in resp.json()["explanation"]
+
+
+@pytest.mark.asyncio
+async def test_api_tsdv_immutable_enrollment_index_stability():
+    # @req:PRD-QRY-007
+    """Verify that subject enrollment sequence is stable, immutable, and independent of alphabetical order.
+
+    This ensures that subsequent enrollments and non-lexical/non-sequential subject IDs cannot alter earlier
+    first-N decisions. Also checks that the API reports the correct index and rejects conflicting index parameters.
+
+    Requirements: PRD-QRY-007
+    """
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        study_id = "STUDY-IMMUTABLE"
+
+        # 1. Create TSDV config with initial_full_sdv_subject_count of 2
+        resp = await client.post(
+            "/api/v1/execution/tsdv/config",
+            json={
+                "study_id": study_id,
+                "sampling_model": "SUBJECT_BASED",
+                "initial_full_sdv_subject_count": 2,
+            },
+            headers=get_v2_auth_headers(),
+        )
+        assert resp.status_code == 201
+
+        # 2. Enroll first subject: Z-SUBJ-99 (Lexicographically last, but enrolled first)
+        resp = await client.post(
+            "/api/v1/execution/subjects",
+            json={
+                "subject_id": "Z-SUBJ-99",
+                "study_id": study_id,
+            },
+            headers=get_v2_auth_headers(),
+        )
+        assert resp.status_code == 200
+
+        # Evaluate TSDV for Z-SUBJ-99: enrollment_index must be 0, selected = True
+        resp = await client.get(
+            f"/api/v1/execution/tsdv/required?study_id={study_id}&subject_id=Z-SUBJ-99&domain=LB",
+            headers=get_v2_auth_headers(),
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["required"] is True
+        assert data["enrollment_index"] == 0
+        assert "within the first 2" in data["explanation"]
+
+        # 3. Enroll second subject: A-SUBJ-01 (Lexicographically first, but enrolled second)
+        resp = await client.post(
+            "/api/v1/execution/subjects",
+            json={
+                "subject_id": "A-SUBJ-01",
+                "study_id": study_id,
+            },
+            headers=get_v2_auth_headers(),
+        )
+        assert resp.status_code == 200
+
+        # Evaluate TSDV for A-SUBJ-01: enrollment_index must be 1, selected = True
+        resp = await client.get(
+            f"/api/v1/execution/tsdv/required?study_id={study_id}&subject_id=A-SUBJ-01&domain=LB",
+            headers=get_v2_auth_headers(),
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["required"] is True
+        assert data["enrollment_index"] == 1
+        assert "within the first 2" in data["explanation"]
+
+        # Evaluate TSDV for Z-SUBJ-99 again to prove addition of alphabetically prior subject did not change its index
+        resp = await client.get(
+            f"/api/v1/execution/tsdv/required?study_id={study_id}&subject_id=Z-SUBJ-99&domain=LB",
+            headers=get_v2_auth_headers(),
+        )
+        assert resp.status_code == 200
+        assert resp.json()["enrollment_index"] == 0
+        assert resp.json()["required"] is True
+
+        # 4. Enroll third subject: M-SUBJ-50
+        resp = await client.post(
+            "/api/v1/execution/subjects",
+            json={
+                "subject_id": "M-SUBJ-50",
+                "study_id": study_id,
+            },
+            headers=get_v2_auth_headers(),
+        )
+        assert resp.status_code == 200
+
+        # Evaluate TSDV for M-SUBJ-50: enrollment_index must be 2, selected = False (since count = 2)
+        resp = await client.get(
+            f"/api/v1/execution/tsdv/required?study_id={study_id}&subject_id=M-SUBJ-50&domain=LB",
+            headers=get_v2_auth_headers(),
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["required"] is False
+        assert data["enrollment_index"] == 2
+        assert "not selected" in data["explanation"]
+
+        # Re-verify that earlier decisions/indices for Z-SUBJ-99 (index 0) and A-SUBJ-01 (index 1) are untouched
+        resp_z = await client.get(
+            f"/api/v1/execution/tsdv/required?study_id={study_id}&subject_id=Z-SUBJ-99&domain=LB",
+            headers=get_v2_auth_headers(),
+        )
+        assert resp_z.json()["enrollment_index"] == 0
+        assert resp_z.json()["required"] is True
+
+        resp_a = await client.get(
+            f"/api/v1/execution/tsdv/required?study_id={study_id}&subject_id=A-SUBJ-01&domain=LB",
+            headers=get_v2_auth_headers(),
+        )
+        assert resp_a.json()["enrollment_index"] == 1
+        assert resp_a.json()["required"] is True
+
+        # 5. Validate/reject conflicting caller-supplied indexes
+        # If the caller supplies index 1 for Z-SUBJ-99, it should raise HTTP 400
+        resp_conflict = await client.get(
+            f"/api/v1/execution/tsdv/required?study_id={study_id}&subject_id=Z-SUBJ-99&domain=LB&enrollment_index=1",
+            headers=get_v2_auth_headers(),
+        )
+        assert resp_conflict.status_code == 400
+        assert "Conflicting enrollment_index" in resp_conflict.json()["detail"]
+
+        # If the caller supplies index 0 for Z-SUBJ-99 (which is correct), it should succeed
+        resp_correct = await client.get(
+            f"/api/v1/execution/tsdv/required?study_id={study_id}&subject_id=Z-SUBJ-99&domain=LB&enrollment_index=0",
+            headers=get_v2_auth_headers(),
+        )
+        assert resp_correct.status_code == 200
+        assert resp_correct.json()["enrollment_index"] == 0

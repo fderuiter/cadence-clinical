@@ -179,6 +179,7 @@ class ClinicalSubject(AuditedModel):
     withdrawal_reason: Mapped[str] = mapped_column(String(1000), nullable=True)
     randomization_id: Mapped[str] = mapped_column(String(36), nullable=True)
     kit_reference: Mapped[str] = mapped_column(String(255), nullable=True)
+    enrollment_index: Mapped[int] = mapped_column(Integer, nullable=True)
 
     @validates("status")
     def validate_status(self, key, value):
@@ -1008,7 +1009,9 @@ class StudyAuthoredRule(AuditedModel):
 
     study_id: Mapped[str] = mapped_column(String(255), nullable=False)
     rule_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    rule_type: Mapped[str] = mapped_column(String(50), default="cross_form_check", nullable=False)
+    rule_type: Mapped[str] = mapped_column(
+        String(50), default="cross_form_check", nullable=False
+    )
     condition: Mapped[dict] = mapped_column(JSON, nullable=False)
     query_message: Mapped[str] = mapped_column(String(1000), nullable=False)
     message: Mapped[str] = mapped_column(String(1000), nullable=False)

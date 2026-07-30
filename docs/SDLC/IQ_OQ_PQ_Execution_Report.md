@@ -9,11 +9,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1235
-- **Passed:** 1235 🟢
-- **Failed/Errors:** 0 🔴
+- **Total Automated Test Cases Run:** 1236
+- **Passed:** 1229 🟢
+- **Failed/Errors:** 7 🔴
 - **Skipped:** 0 ⚪
-- **Overall Operational Pass Rate:** 100.00%
+- **Overall Operational Pass Rate:** 99.43%
 
 ## 2. Installation Qualification (IQ)
 
@@ -753,11 +753,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_lab_reference_range_audit_and_triggers` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_lab_reference_range_crud_and_precision` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_schema_evolution_migration_upgrade` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
-| `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_scrambled_sequence` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_valid` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | 🔴 FAILED | < 1s |
+| `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | 🔴 FAILED | < 1s |
+| `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | 🔴 FAILED | < 1s |
+| `test_layout_validation_scrambled_sequence` | `tests.test_layout_validator` | *Regression/Helper* | 🔴 FAILED | < 1s |
+| `test_layout_validation_valid` | `tests.test_layout_validator` | *Regression/Helper* | 🔴 FAILED | < 1s |
 | `test_ledger_sealing_and_validation` | `tests.test_ledger_and_triggers` | PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_out_of_band_update_triggers_audit_entry` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_prevent_audit_ledger_seals_mutation` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -891,12 +891,12 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_clinical_staff_role_values` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_organization_type_values` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_trial_duty_values` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_build_comment_body` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_build_comment_body` | `tests.test_pr_comment` | *Regression/Helper* | 🔴 FAILED | < 1s |
 | `test_combined_audit_logic` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_status_emoji` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_merge_outcomes` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_parse_existing_outcomes` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_traceability_outcome_handling` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_traceability_outcome_handling` | `tests.test_pr_comment` | *Regression/Helper* | 🔴 FAILED | < 1s |
 | `test_api_block_crud_with_rbac` | `tests.test_protocol_blocks` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_arm_aware_soa_matrix_projection` | `tests.test_protocol_blocks` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_block_persistence_lifecycle` | `tests.test_protocol_blocks` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1287,6 +1287,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_api_tsdv_config_validation_rules` | `tests.test_tsdv` | PRD-QRY-007 | 🟢 PASSED | < 1s |
 | `test_api_tsdv_configuration_rbac` | `tests.test_tsdv` | PRD-QRY-007 | 🟢 PASSED | < 1s |
 | `test_api_tsdv_evaluation_integration_and_context_errors` | `tests.test_tsdv` | PRD-QRY-007 | 🟢 PASSED | < 1s |
+| `test_api_tsdv_immutable_enrollment_index_stability` | `tests.test_tsdv` | PRD-QRY-007 | 🟢 PASSED | < 1s |
 | `test_tsdv_pure_deterministic_sampling` | `tests.test_tsdv` | PRD-QRY-007 | 🟢 PASSED | < 1s |
 | `test_tsdv_pure_different_seeds_produce_different_values` | `tests.test_tsdv` | PRD-QRY-007 | 🟢 PASSED | < 1s |
 | `test_tsdv_pure_evaluation_sampling_models` | `tests.test_tsdv` | PRD-QRY-007 | 🟢 PASSED | < 1s |
