@@ -261,12 +261,13 @@ def get_gateway_headers(
     import time
 
     from packages.security.signing import generate_gateway_signature
+
     timestamp = str(time.time())
     sig = generate_gateway_signature(
         user_id=user_id,
         roles=roles,
         timestamp=timestamp,
-        secret="internal-gateway-secret-12345".encode(),
+        secret="internal-gateway-secret-12345".encode(),  # pragma: allowlist secret
         change_reason=change_reason,
     )
     return {
@@ -284,7 +285,9 @@ async def test_successful_dispensation_endpoint():
     """Verify successful kit dispensation decrements inventory, creates a KitDispensation, and commits atomically."""
     # Setup initial inventory Catalog
     async with db_manager.get_session_maker()() as session:
-        kit = IPKit(study_id="STUDY_123", kit_number="KIT-101", kit_type="A", description="desc")
+        kit = IPKit(
+            study_id="STUDY_123", kit_number="KIT-101", kit_type="A", description="desc"
+        )
         session.add(kit)
         inv = SiteInventory(
             study_id="STUDY_123",
@@ -297,7 +300,9 @@ async def test_successful_dispensation_endpoint():
         session.add(inv)
         await session.commit()
 
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
         headers = get_gateway_headers(roles="crc")
         payload = {
             "study_id": "STUDY_123",
@@ -307,7 +312,9 @@ async def test_successful_dispensation_endpoint():
             "kit_id": "KIT-101",
             "quantity": 3,
         }
-        response = await client.post("/api/v1/execution/rtsm/dispense", json=payload, headers=headers)
+        response = await client.post(
+            "/api/v1/execution/rtsm/dispense", json=payload, headers=headers
+        )
         assert response.status_code == 201
         data = response.json()
         assert data["status"] == "success"
@@ -316,13 +323,17 @@ async def test_successful_dispensation_endpoint():
     # Verify inventory was decremented and dispensation was committed
     async with db_manager.get_session_maker()() as session:
         # Check stock
-        res_inv = await session.execute(select(SiteInventory).where(SiteInventory.kit_id == "KIT-101"))
+        res_inv = await session.execute(
+            select(SiteInventory).where(SiteInventory.kit_id == "KIT-101")
+        )
         inv_db = res_inv.scalars().one()
         assert inv_db.on_hand_qty == 7
         assert inv_db.resupply_signal is False
 
         # Check dispensation
-        res_disp = await session.execute(select(KitDispensation).where(KitDispensation.subject_id == "SUBJ-001"))
+        res_disp = await session.execute(
+            select(KitDispensation).where(KitDispensation.subject_id == "SUBJ-001")
+        )
         disp_db = res_disp.scalars().one()
         assert disp_db.quantity == 3
         assert disp_db.site_id == "SITE-A"
@@ -333,7 +344,9 @@ async def test_insufficient_stock_rejection_and_rollback():
     """Verify that insufficient stock is rejected, inventory remains unchanged, and transaction rolls back."""
     # Setup initial inventory Catalog
     async with db_manager.get_session_maker()() as session:
-        kit = IPKit(study_id="STUDY_123", kit_number="KIT-102", kit_type="A", description="desc")
+        kit = IPKit(
+            study_id="STUDY_123", kit_number="KIT-102", kit_type="A", description="desc"
+        )
         session.add(kit)
         inv = SiteInventory(
             study_id="STUDY_123",
@@ -346,7 +359,9 @@ async def test_insufficient_stock_rejection_and_rollback():
         session.add(inv)
         await session.commit()
 
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
         headers = get_gateway_headers(roles="site investigator")
         payload = {
             "study_id": "STUDY_123",
@@ -354,36 +369,46 @@ async def test_insufficient_stock_rejection_and_rollback():
             "subject_id": "SUBJ-001",
             "visit_id": "VISIT-1",
             "kit_id": "KIT-102",
-            "quantity": 5, # Exceeds on-hand quantity of 2
+            "quantity": 5,  # Exceeds on-hand quantity of 2
         }
-        response = await client.post("/api/v1/execution/rtsm/dispense", json=payload, headers=headers)
+        response = await client.post(
+            "/api/v1/execution/rtsm/dispense", json=payload, headers=headers
+        )
         assert response.status_code == 400
         assert "Insufficient stock" in response.json()["detail"]
 
     # Verify inventory was NOT decremented and no dispensation was committed
     async with db_manager.get_session_maker()() as session:
-        res_inv = await session.execute(select(SiteInventory).where(SiteInventory.kit_id == "KIT-102"))
+        res_inv = await session.execute(
+            select(SiteInventory).where(SiteInventory.kit_id == "KIT-102")
+        )
         inv_db = res_inv.scalars().one()
         assert inv_db.on_hand_qty == 2
 
-        res_disp = await session.execute(select(KitDispensation).where(KitDispensation.kit_id == "KIT-102"))
+        res_disp = await session.execute(
+            select(KitDispensation).where(KitDispensation.kit_id == "KIT-102")
+        )
         assert res_disp.scalars().first() is None
 
 
 @pytest.mark.asyncio
 async def test_invalid_site_kit_relationship_rejection():
     """Verify that dispensation fails with 404 when no such site/kit relationship exists in inventory."""
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
         headers = get_gateway_headers(roles="cra")
         payload = {
             "study_id": "STUDY_123",
-            "site_id": "SITE-B", # Does not exist in SiteInventory
+            "site_id": "SITE-B",  # Does not exist in SiteInventory
             "subject_id": "SUBJ-001",
             "visit_id": "VISIT-1",
-            "kit_id": "KIT-999", # Does not exist
+            "kit_id": "KIT-999",  # Does not exist
             "quantity": 1,
         }
-        response = await client.post("/api/v1/execution/rtsm/dispense", json=payload, headers=headers)
+        response = await client.post(
+            "/api/v1/execution/rtsm/dispense", json=payload, headers=headers
+        )
         assert response.status_code == 404
         assert "No inventory record found" in response.json()["detail"]
 
@@ -408,8 +433,13 @@ async def test_resupply_threshold_breach_and_deduplication():
 
     # We mock send_dashboard_notification to verify it is called exactly once when first triggered
     from unittest.mock import patch
-    with patch("apps.execution.trial_lock.NotificationRouter.send_dashboard_notification") as mock_notif:
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+
+    with patch(
+        "apps.execution.trial_lock.NotificationRouter.send_dashboard_notification"
+    ) as mock_notif:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
             headers = get_gateway_headers(roles="crc")
             payload = {
                 "study_id": "STUDY_XYZ",
@@ -417,10 +447,12 @@ async def test_resupply_threshold_breach_and_deduplication():
                 "subject_id": "SUBJ-001",
                 "visit_id": "VISIT-1",
                 "kit_id": "KIT-200",
-                "quantity": 4, # Decrements from 6 to 2, which is <= 3 threshold -> triggers resupply
+                "quantity": 4,  # Decrements from 6 to 2, which is <= 3 threshold -> triggers resupply
             }
             # 1. First trigger: triggers resupply event + notification
-            response1 = await client.post("/api/v1/execution/rtsm/dispense", json=payload, headers=headers)
+            response1 = await client.post(
+                "/api/v1/execution/rtsm/dispense", json=payload, headers=headers
+            )
             assert response1.status_code == 201
             assert response1.json()["resupply_triggered"] is True
 
@@ -435,9 +467,11 @@ async def test_resupply_threshold_breach_and_deduplication():
                 "subject_id": "SUBJ-001",
                 "visit_id": "VISIT-2",
                 "kit_id": "KIT-200",
-                "quantity": 1, # Decrements from 2 to 1 -> still below threshold but dedups PENDING
+                "quantity": 1,  # Decrements from 2 to 1 -> still below threshold but dedups PENDING
             }
-            response2 = await client.post("/api/v1/execution/rtsm/dispense", json=payload2, headers=headers)
+            response2 = await client.post(
+                "/api/v1/execution/rtsm/dispense", json=payload2, headers=headers
+            )
             assert response2.status_code == 201
             assert response2.json()["resupply_triggered"] is False
 
@@ -489,7 +523,9 @@ async def test_locked_site_rejection():
     TrialLockManager.lock_site("SITE-LOCKED")
 
     try:
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
             headers = get_gateway_headers(roles="crc")
             payload = {
                 "study_id": "STUDY_XYZ",
@@ -499,14 +535,18 @@ async def test_locked_site_rejection():
                 "kit_id": "KIT-300",
                 "quantity": 1,
             }
-            response = await client.post("/api/v1/execution/rtsm/dispense", json=payload, headers=headers)
+            response = await client.post(
+                "/api/v1/execution/rtsm/dispense", json=payload, headers=headers
+            )
             # Early proactive check should reject with 423
             assert response.status_code == 423
             assert "locked" in response.json()["detail"]
 
         # Verify DB inventory did not change
         async with db_manager.get_session_maker()() as session:
-            res_inv = await session.execute(select(SiteInventory).where(SiteInventory.kit_id == "KIT-300"))
+            res_inv = await session.execute(
+                select(SiteInventory).where(SiteInventory.kit_id == "KIT-300")
+            )
             inv_db = res_inv.scalars().one()
             assert inv_db.on_hand_qty == 10
     finally:

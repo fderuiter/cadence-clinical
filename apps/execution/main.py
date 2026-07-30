@@ -5535,11 +5535,16 @@ async def dispense_kit_endpoint(
             raise HTTPException(status_code=423, detail=str(e))
         except Exception as e:
             await session.rollback()
-            raise HTTPException(status_code=500, detail=f"Internal database error: {str(e)}")
+            raise HTTPException(
+                status_code=500, detail=f"Internal database error: {str(e)}"
+            )
 
     # Schedule resupply notification post-commit if triggered
     if resupply_triggered:
-        def dispatch_resupply_notification(site_id: str, kit_id: str, requested_qty: int):
+
+        def dispatch_resupply_notification(
+            site_id: str, kit_id: str, requested_qty: int
+        ):
             from apps.execution.trial_lock import NotificationRouter
 
             router = NotificationRouter()

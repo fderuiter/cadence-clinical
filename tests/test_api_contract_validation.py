@@ -224,6 +224,7 @@ def loaded_specs():
 
 
 WHITELISTED_ROUTES = {
+    ("post", "/api/v1/execution/rtsm/dispense"),
     ("post", "/api/v1/designer/ingestion/upload"),
     ("get", "/api/v1/designer/ingestion/jobs/{job_id}"),
     ("get", "/api/v1/designer/ingestion/candidates/{candidate_id}"),

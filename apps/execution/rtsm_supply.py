@@ -11,11 +11,13 @@ from apps.execution.database.models import KitDispensation, ResupplyEvent, SiteI
 
 class SiteInventoryNotFoundError(Exception):
     """Raised when no inventory record exists for the given site and kit combination."""
+
     pass
 
 
 class InsufficientStockError(Exception):
     """Raised when the requested dispensation quantity exceeds on-hand site inventory."""
+
     pass
 
 
