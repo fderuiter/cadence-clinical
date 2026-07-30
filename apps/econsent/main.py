@@ -1,4 +1,7 @@
+import asyncio
+import logging
 import os
+import sys
 import uuid
 from datetime import datetime
 from typing import Optional
@@ -28,6 +31,7 @@ from apps.econsent.models import (
     ConsentSignature,
     ConsentTemplate,
     ConsentTranslation,
+    EtmfArchivalDelivery,
     SubjectConsent,
 )
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
@@ -405,6 +409,7 @@ class ConsentSignatureRequest(BaseModel):
         None, description="Electronic signature data (drawing or string)"
     )
     reason_for_change: str = Field(..., description="Change reason for signing")
+    site_id: Optional[str] = Field(None, description="Optional site identifier")
 
 
 class ConsentSignatureResponse(AuditFields):
@@ -420,6 +425,28 @@ class ConsentSignatureResponse(AuditFields):
     subject_pseudonym: str
     signature_data: Optional[str]
     signed_at: datetime
+
+
+class ArchivalDeliveryResponse(AuditFields):
+    """
+    Schema for retrieving the archival delivery status.
+    """
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    status: str
+    attempts: int
+    last_error: Optional[str] = None
+    next_retry_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    retry_eligible: bool
+    correlation_id: str
+    template_id: str
+    version_index: int
+    subject_pseudonym: str
+    study_id: str
+    site_id: Optional[str] = None
+    etmf_document_id: Optional[str] = None
 
 
 class SubjectConsentCaptureRequest(BaseModel):
@@ -481,6 +508,144 @@ class SubjectConsentStatusResponse(BaseModel):
 
 DATABASE_URL = os.getenv("ECONSENT_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
+logger = logging.getLogger("econsent-main")
+
+active_deliveries = []
+dispatcher_task = None
+
+
+async def poll_and_dispatch() -> None:
+    """
+    Queries, claims, and dispatches PENDING/FAILED eTMF archival delivery records.
+    Uses pessimistic locking (.with_for_update()) to avoid double delivery.
+    """
+    from datetime import datetime, timedelta
+
+    from apps.econsent.etmf_client import forward_icf_to_etmf
+
+    session_maker = db_manager.get_session_maker()
+    async with session_maker() as session:
+        now = datetime.utcnow()
+        stmt = (
+            select(EtmfArchivalDelivery)
+            .where(
+                EtmfArchivalDelivery.status.in_(("PENDING", "FAILED")),
+                EtmfArchivalDelivery.retry_eligible.is_(True),
+                (EtmfArchivalDelivery.next_retry_at.is_(None)) | (EtmfArchivalDelivery.next_retry_at <= now),
+            )
+            .with_for_update()
+        )
+        res = await session.execute(stmt)
+        deliveries = res.scalars().all()
+
+        for delivery in deliveries:
+            if delivery.status not in ("PENDING", "FAILED") or not delivery.retry_eligible:
+                continue
+
+            try:
+                # Retrieve template version protocol_version
+                stmt_tpl = select(ConsentTemplate).where(
+                    ConsentTemplate.template_id == delivery.template_id,
+                    ConsentTemplate.version_index == delivery.version_index,
+                )
+                res_tpl = await session.execute(stmt_tpl)
+                template = res_tpl.scalars().first()
+                protocol_version = template.protocol_version if template else "1.0"
+
+                filename = f"icf_{delivery.template_id}_{delivery.subject_pseudonym}_v{delivery.version_index}.json"
+
+                doc_id = await forward_icf_to_etmf(
+                    study_id=delivery.study_id,
+                    site_id=delivery.site_id,
+                    filename=filename,
+                    content=delivery.artifact_content,
+                    mime_type="application/json",
+                    protocol_version=protocol_version,
+                    metadata_json={
+                        "template_id": delivery.template_id,
+                        "version_index": delivery.version_index,
+                        "subject_pseudonym": delivery.subject_pseudonym,
+                    },
+                    idempotency_key=delivery.correlation_id,
+                )
+
+                delivery.status = "SUCCESS"
+                delivery.etmf_document_id = doc_id
+                delivery.completed_at = datetime.utcnow()
+                delivery.last_error = None
+
+                await write_audit_log(
+                    session=session,
+                    actor_id="system",
+                    actor_role="system",
+                    action="ARCHIVAL_ACCEPTED",
+                    document_id=delivery.id,
+                    details=f"ICF archival delivery accepted by eTMF. eTMF Document ID: {doc_id}. Correlation ID: {delivery.correlation_id}",
+                    reason_for_change="eConsent ICF Archival Dispatch success",
+                )
+
+            except Exception as e:
+                delivery.status = "FAILED"
+                delivery.attempts += 1
+                delivery.last_error = str(e)
+
+                attempt_cap = int(os.getenv("ECONSENT_ARCHIVAL_ATTEMPT_CAP", "5"))
+                if delivery.attempts >= attempt_cap:
+                    delivery.retry_eligible = False
+
+                backoff_seconds = min(60, 2 ** delivery.attempts)
+                delivery.next_retry_at = datetime.utcnow() + timedelta(seconds=backoff_seconds)
+
+                await write_audit_log(
+                    session=session,
+                    actor_id="system",
+                    actor_role="system",
+                    action="ARCHIVAL_FAILED",
+                    document_id=delivery.id,
+                    details=f"ICF archival delivery failed (Attempt {delivery.attempts}/{attempt_cap}). Error: {str(e)}. Correlation ID: {delivery.correlation_id}",
+                    reason_for_change="eConsent ICF Archival Dispatch failure",
+                )
+
+        await session.commit()
+
+
+async def dispatcher_lifecycle_worker() -> None:
+    """
+    Background worker loop that runs the dispatcher ticks.
+    """
+    poll_interval = float(os.getenv("ECONSENT_ARCHIVAL_POLL_INTERVAL_SECONDS", "5.0"))
+    while True:
+        try:
+            await poll_and_dispatch()
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            logger.error("Error in eConsent archival dispatcher loop: %s", e, exc_info=True)
+        await asyncio.sleep(poll_interval)
+
+
+def start_dispatcher():
+    """Starts the background dispatcher task."""
+    global dispatcher_task
+    if "pytest" in sys.modules or os.getenv("TESTING") == "true":
+        return
+    dispatcher_task = asyncio.create_task(dispatcher_lifecycle_worker())
+
+
+def stop_dispatcher():
+    """Stops the background dispatcher task."""
+    global dispatcher_task
+    if dispatcher_task:
+        dispatcher_task.cancel()
+
+
+async def econsent_startup() -> None:
+    start_dispatcher()
+
+
+async def econsent_shutdown() -> None:
+    stop_dispatcher()
+
 
 app = FastAPI(
     title="Cadence Clinical - eConsent",
@@ -489,6 +654,8 @@ app = FastAPI(
         db_manager=db_manager,
         database_url=DATABASE_URL,
         base_metadata=Base.metadata,
+        startup_hooks=[econsent_startup],
+        shutdown_hooks=[econsent_shutdown],
     ),
 )
 
@@ -890,6 +1057,74 @@ async def create_consent_template(
     )
 
     return template
+
+
+@app.get(
+    "/api/v1/econsent/archival-status/{correlation_id}",
+    response_model=ArchivalDeliveryResponse,
+)
+async def get_archival_status_endpoint(
+    correlation_id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> ArchivalDeliveryResponse:
+    """
+    Retrieve eTMF archival delivery status by correlation ID.
+    """
+    stmt = select(EtmfArchivalDelivery).where(
+        EtmfArchivalDelivery.correlation_id == correlation_id
+    )
+    result = await session.execute(stmt)
+    delivery = result.scalars().first()
+
+    if not delivery:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Archival delivery record for correlation ID '{correlation_id}' not found.",
+        )
+
+    return delivery
+
+
+@app.get(
+    "/api/v1/econsent/archival-status",
+    response_model=ArchivalDeliveryResponse,
+)
+async def get_archival_status_query_endpoint(
+    correlation_id: Optional[str] = None,
+    template_id: Optional[str] = None,
+    version_index: Optional[int] = None,
+    subject_pseudonym: Optional[str] = None,
+    session: AsyncSession = Depends(get_db_session),
+) -> ArchivalDeliveryResponse:
+    """
+    Retrieve eTMF archival delivery status by correlation ID, or by template_id, version_index, and subject_pseudonym.
+    """
+    if correlation_id:
+        stmt = select(EtmfArchivalDelivery).where(
+            EtmfArchivalDelivery.correlation_id == correlation_id
+        )
+    elif template_id and version_index is not None and subject_pseudonym:
+        stmt = select(EtmfArchivalDelivery).where(
+            EtmfArchivalDelivery.template_id == template_id,
+            EtmfArchivalDelivery.version_index == version_index,
+            EtmfArchivalDelivery.subject_pseudonym == subject_pseudonym,
+        )
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Must provide either correlation_id or all of (template_id, version_index, subject_pseudonym)",
+        )
+
+    result = await session.execute(stmt)
+    delivery = result.scalars().first()
+
+    if not delivery:
+        raise HTTPException(
+            status_code=404,
+            detail="Archival delivery record not found.",
+        )
+
+    return delivery
 
 
 @app.post(
@@ -1403,6 +1638,101 @@ async def sign_consent_template_endpoint(
         action="SIGN_CONSENT",
         document_id=sig.id,
         details=f"Subject '{payload.subject_pseudonym}' signed consent template '{template_id}' version {version_index}.",
+        reason_for_change=change_reason,
+    )
+
+    # Produce the durable signed-ICF artifact and persist archival delivery record (PENDING)
+    import json
+
+    # Find approved translation language or default to "en"
+    stmt_trans = (
+        select(ConsentTranslation.language_code)
+        .where(
+            ConsentTranslation.source_id == template_id,
+            ConsentTranslation.source_type == "template",
+            ConsentTranslation.source_version_index == version_index,
+            ConsentTranslation.status == "APPROVED",
+        )
+        .order_by(desc(ConsentTranslation.version_index))
+    )
+    res_trans = await session.execute(stmt_trans)
+    trans_lang = res_trans.scalars().first()
+    lang_code = trans_lang or "en"
+
+    try:
+        composed_data = await fetch_composed_translation_from_db(
+            template_id, version_index, lang_code, session
+        )
+    except Exception:
+        # Fallback composition
+        composed_clauses = []
+        for clause_id in template.clauses:
+            clause_stmt = (
+                select(ConsentClause)
+                .where(
+                    ConsentClause.clause_id == clause_id,
+                    ConsentClause.study_id == template.study_id,
+                )
+                .order_by(desc(ConsentClause.version_index))
+            )
+            clause_res = await session.execute(clause_stmt)
+            clause = clause_res.scalars().first()
+            if clause:
+                composed_clauses.append({
+                    "clause_id": clause.clause_id,
+                    "title": clause.title,
+                    "text": clause.text,
+                    "version_index": clause.version_index,
+                })
+        composed_data = {
+            "id": template.id,
+            "template_id": template.template_id,
+            "study_id": template.study_id,
+            "template_name": template.template_name,
+            "protocol_version": template.protocol_version,
+            "language_code": lang_code,
+            "is_published": template.is_published,
+            "requires_reconsent": template.requires_reconsent,
+            "version_index": template.version_index,
+            "clauses": composed_clauses,
+            "workflow_steps": template.workflow_steps,
+        }
+
+    manifest_and_sig = {
+        "manifest": composed_data,
+        "signature_metadata": {
+            "subject_pseudonym": payload.subject_pseudonym,
+            "signed_at": sig.signed_at.isoformat() if sig.signed_at else datetime.utcnow().isoformat(),
+            "created_by": user_id,
+            "signature_data": payload.signature_data,
+        }
+    }
+    artifact_content = json.dumps(manifest_and_sig)
+    correlation_id = f"{template_id}:{version_index}:{payload.subject_pseudonym}"
+
+    delivery = EtmfArchivalDelivery(
+        status="PENDING",
+        attempts=0,
+        correlation_id=correlation_id,
+        template_id=template_id,
+        version_index=version_index,
+        subject_pseudonym=payload.subject_pseudonym,
+        study_id=template.study_id,
+        site_id=payload.site_id,
+        artifact_content=artifact_content,
+        created_by=user_id,
+        reason_for_change=change_reason,
+    )
+    session.add(delivery)
+    await session.flush()
+
+    await write_audit_log(
+        session=session,
+        actor_id=user_id,
+        actor_role=str(user_role),
+        action="ARCHIVAL_QUEUED",
+        document_id=delivery.id,
+        details=f"Queued ICF archival delivery for template '{template_id}' version {version_index}, subject '{payload.subject_pseudonym}'. Correlation ID: {correlation_id}",
         reason_for_change=change_reason,
     )
 

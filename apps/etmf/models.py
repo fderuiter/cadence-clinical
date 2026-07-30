@@ -84,6 +84,7 @@ def is_site_level_artifact(
         "delegation of authority log",
         "site signature page",
         "site feasibility survey",
+        "informed consent form",
     }
     site_codes_prefix = {
         "05.02",
@@ -124,6 +125,9 @@ class TMFDocument(Base):
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
     study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    idempotency_key: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True, index=True
+    )
     site_id: Mapped[Optional[str]] = mapped_column(
         String(255), nullable=True, index=True
     )

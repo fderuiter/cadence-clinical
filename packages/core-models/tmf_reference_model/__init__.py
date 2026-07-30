@@ -222,6 +222,7 @@ DIA_V3_2_0_COMPLETE_RAW = {
                     ("05.02.02", "Financial Disclosure"),
                     ("05.02.03", "Investigator CV"),
                     ("05.02.04", "Delegation of Authority Log"),
+                    ("05.02.05", "Informed Consent Form"),
                 ],
             ),
             "05.03": (

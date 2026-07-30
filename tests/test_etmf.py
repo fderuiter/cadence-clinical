@@ -2188,3 +2188,53 @@ async def test_ordered_artifact_history_endpoint():
     assert history[1]["version_index"] == 2
     assert history[1]["reason_for_change"] == "Submitting Major protocol amendment"
     assert history[1]["protocol_version"]["version_tag"] == "2.0"
+
+
+def test_informed_consent_form_taxonomy_and_idempotency():
+    """
+    Assert resolve_artifact retrieves the correct "Informed Consent Form" taxonomy elements,
+    and verify that re-ingesting a document with the same idempotency_key is a no-op
+    returning the existing document.
+    """
+    from tmf_reference_model import resolve_artifact, get_active_catalog
+    from fastapi.testclient import TestClient
+    from apps.etmf.main import app
+
+    # 1. Assert taxonomy resolution of "Informed Consent Form"
+    active_version = get_active_catalog().version
+    res = resolve_artifact(version=active_version, name="Informed Consent Form")
+    assert res["artifact"].code == "05.02.05"
+    assert res["zone"].code == 5
+    assert res["section"].code == "05.02"
+
+    res_by_code = resolve_artifact(version=active_version, code="05.02.05")
+    assert res_by_code["artifact"].name == "Informed Consent Form"
+
+    # 2. Ingest first time with idempotency_key
+    client = TestClient(app)
+    headers = get_auth_headers(roles="admin", change_reason="Testing taxonomy and idempotency")
+
+    payload = {
+        "study_id": "study_idem_123",
+        "site_id": "site_idem_abc",
+        "artifact_type": "Informed Consent Form",
+        "filename": "icf_sign_999.json",
+        "content": "Informed Consent Content",
+        "mime_type": "application/json",
+        "idempotency_key": "stable-idempotency-key-xyz",
+    }
+
+    resp1 = client.post("/api/v1/etmf/ingest", json=payload, headers=headers)
+    assert resp1.status_code == 201
+    data1 = resp1.json()
+    assert data1["status"] == "success"
+    doc1_id = data1["document_id"]
+    assert data1["version_index"] == 1
+
+    # Ingest second time with the exact same idempotency_key
+    resp2 = client.post("/api/v1/etmf/ingest", json=payload, headers=headers)
+    assert resp2.status_code == 201
+    data2 = resp2.json()
+    assert data2["status"] == "success"
+    assert data2["document_id"] == doc1_id
+    assert data2["version_index"] == 1  # version should not have incremented!

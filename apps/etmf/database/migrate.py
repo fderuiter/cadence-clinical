@@ -28,6 +28,8 @@ on the target database:
      ALTER TABLE tmf_documents DROP COLUMN IF EXISTS issue_date;
      ALTER TABLE tmf_documents DROP COLUMN IF EXISTS expiration_date;
      ALTER TABLE tmf_documents DROP COLUMN IF EXISTS document_owner_id;
+     ALTER TABLE tmf_documents DROP COLUMN IF EXISTS idempotency_key;
+     DROP INDEX IF EXISTS ix_tmf_documents_idempotency_key;
    - For SQLite (Since SQLite does not support dropping columns directly, rebuild the table):
      CREATE TABLE tmf_document_qc_transitions_rollback (
          id VARCHAR(36) PRIMARY KEY,
@@ -167,6 +169,7 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
                 CREATE TABLE IF NOT EXISTS tmf_documents_new (
                     id VARCHAR(36) PRIMARY KEY,
                     study_id VARCHAR(255) NOT NULL,
+                    idempotency_key VARCHAR(255),
                     site_id VARCHAR(255),
                     zone INTEGER NOT NULL,
                     section VARCHAR(255) NOT NULL,
@@ -208,6 +211,7 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
             for col in [
                 "id",
                 "study_id",
+                "idempotency_key",
                 "site_id",
                 "zone",
                 "section",
@@ -259,7 +263,7 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
             await conn.execute(
                 text(f"""
                 INSERT INTO tmf_documents_new (
-                    id, study_id, site_id, zone, section, artifact_type, filename, content, mime_type,
+                    id, study_id, idempotency_key, site_id, zone, section, artifact_type, filename, content, mime_type,
                     created_at, created_by, version_index, status, taxonomy_version, artifact_code,
                     metadata_json, reason_for_change, protocol_version_tag, protocol_version_index, protocol_version_status,
                     document_type, approval_status, signature_manifestation, signer,
@@ -280,6 +284,11 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
             await conn.execute(
                 text(
                     "CREATE INDEX IF NOT EXISTS ix_tmf_documents_study_id ON tmf_documents (study_id);"
+                )
+            )
+            await conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_tmf_documents_idempotency_key ON tmf_documents (idempotency_key);"
                 )
             )
             await conn.execute(
@@ -339,6 +348,20 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
                 await conn.execute(
                     text(
                         "CREATE INDEX IF NOT EXISTS ix_tmf_documents_site_id ON tmf_documents (site_id);"
+                    )
+                )
+            except Exception:
+                pass
+
+            try:
+                await conn.execute(
+                    text(
+                        "ALTER TABLE tmf_documents ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR(255);"
+                    )
+                )
+                await conn.execute(
+                    text(
+                        "CREATE INDEX IF NOT EXISTS ix_tmf_documents_idempotency_key ON tmf_documents (idempotency_key);"
                     )
                 )
             except Exception:

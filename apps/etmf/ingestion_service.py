@@ -34,6 +34,7 @@ async def ingest_tmf_document(
     created_by: str,
     created_role: str,
     site_id: Optional[str] = None,
+    idempotency_key: Optional[str] = None,
     assigned_sites: Optional[List[str]] = None,
     zone: Optional[int] = None,
     section: Optional[str] = None,
@@ -236,6 +237,26 @@ async def ingest_tmf_document(
         signer_val = signer_name
         signing_timestamp_val = now_utc
 
+    # 5b. Idempotency Key check
+    if idempotency_key:
+        stmt_idem = select(TMFDocument).where(TMFDocument.idempotency_key == idempotency_key)
+        res_idem = await session.execute(stmt_idem)
+        existing_idem = res_idem.scalars().first()
+        if existing_idem:
+            log_entry = TMFAuditLog(
+                user_id=created_by,
+                user_role=created_role,
+                action="DEDUPLICATED",
+                document_id=existing_idem.id,
+                details=(
+                    f"Deduplicated ingestion request with idempotency_key '{idempotency_key}'. "
+                    f"Returned existing document ID '{existing_idem.id}' (Version {existing_idem.version_index}) as a no-op."
+                ),
+            )
+            session.add(log_entry)
+            await session.flush()
+            return existing_idem
+
     # 6. Check if a document version already exists (for study_id + artifact_code + site_id)
     stmt = (
         select(TMFDocument)
@@ -282,6 +303,7 @@ async def ingest_tmf_document(
             doc = TMFDocument(
                 study_id=study_id,
                 site_id=resolved_site_id,
+                idempotency_key=idempotency_key,
                 zone=res_zone,
                 section=res_section,
                 artifact_type=canonical_artifact_type,
