@@ -17,6 +17,8 @@ Based on the executed automated verification suite, the platform meets all prede
 - **Passed:** 1245 🟢
 - **Total Automated Test Cases Run:** 1183
 - **Passed:** 1183 🟢
+- **Total Automated Test Cases Run:** 1188
+- **Passed:** 1188 🟢
 - **Failed/Errors:** 0 🔴
 - **Passed:** 1229 🟢
 - **Total Automated Test Cases Run:** 1238
@@ -550,6 +552,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_uninitialized_database_manager` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_view_download_audit_logging` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_watermarked_document_viewing_and_download` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_bulk_archival_all_or_nothing_rollback` | `tests.test_etmf_bulk_archival` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_bulk_archival_authorization_and_rejections` | `tests.test_etmf_bulk_archival` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_bulk_archival_partial_success` | `tests.test_etmf_bulk_archival` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_bulk_archival_repeating_safe_and_observable` | `tests.test_etmf_bulk_archival` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_bulk_archival_successful_progression` | `tests.test_etmf_bulk_archival` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_actual_cryptographic_verification` | `tests.test_etmf_compliance` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_logs_group_sealing_and_chaining` | `tests.test_etmf_compliance` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_background_sealer_lifecycle` | `tests.test_etmf_compliance` | *Regression/Helper* | 🟢 PASSED | < 1s |
