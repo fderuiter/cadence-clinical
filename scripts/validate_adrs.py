@@ -70,6 +70,7 @@ def is_architectural_file(filepath: str) -> bool:
     # Exclude directories we don't treat as architectural logic
     if (
         filepath.startswith("tests/")
+        or "/tests/" in filepath
         or filepath.startswith("docs/")
         or filepath.startswith("scripts/")
         or filepath.startswith(".github/")
