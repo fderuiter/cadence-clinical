@@ -35,6 +35,46 @@ class ConsentDocument(Base):
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
 
 
+class EtmfArchivalDelivery(Base):
+    """
+    Represents an append-only, idempotent eTMF archival delivery record for signed ICFs.
+    Complies with FDA 21 CFR Part 11 auditing and tracking constraints.
+    """
+
+    __tablename__ = "etmf_archival_deliveries"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    status: Mapped[str] = mapped_column(String(50), default="PENDING", nullable=False)
+    attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_error: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    next_retry_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    retry_eligible: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    correlation_id: Mapped[str] = mapped_column(
+        String(255), unique=True, index=True, nullable=False
+    )
+    template_id: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    subject_pseudonym: Mapped[str] = mapped_column(
+        String(255), index=True, nullable=False
+    )
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    site_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    artifact_content: Mapped[str] = mapped_column(String, nullable=False)
+    etmf_document_id: Mapped[Optional[str]] = mapped_column(
+        String(36), nullable=True
+    )
+
+    # 21 CFR Part 11 Compliance Auditing Metadata
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+
+
 class SubjectConsent(Base):
     """
     Represents an append-only, immutable record of a subject's cryptographically signed consent.

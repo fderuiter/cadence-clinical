@@ -191,6 +191,9 @@ class IngestionRequest(BaseModel):
 
     study_id: str = Field(..., description="Unique identifier of the clinical study")
     site_id: Optional[str] = Field(None, description="Optional site identifier")
+    idempotency_key: Optional[str] = Field(
+        None, description="Optional idempotency key for deduplication"
+    )
     artifact_type: str = Field(
         ..., description="Type of artifact (e.g. Approved Protocol, Define-XML)"
     )
@@ -809,6 +812,7 @@ async def ingest_document(
             session=session,
             study_id=payload.study_id,
             site_id=payload.site_id,
+            idempotency_key=payload.idempotency_key,
             artifact_type=payload.artifact_type,
             filename=payload.filename,
             content=payload.content,

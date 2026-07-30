@@ -17,6 +17,8 @@ Based on the executed automated verification suite, the platform meets all prede
 - **Passed:** 1371 🟢
 - **Total Automated Test Cases Run:** 1368
 - **Passed:** 1368 🟢
+- **Total Automated Test Cases Run:** 1371
+- **Passed:** 1371 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -480,6 +482,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_shared_audit_fields_validation` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_template_lifecycle_and_validation` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_uninitialized_database_manager_econsent` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_archival_status_endpoints` | `tests.test_econsent_archival` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_icf_sign_and_archival_queueing` | `tests.test_econsent_archival` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_poll_and_dispatch_failure_and_retry_backoff` | `tests.test_econsent_archival` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_poll_and_dispatch_success` | `tests.test_econsent_archival` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_append_only_audit_history` | `tests.test_econsent_capture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_capture_rejections` | `tests.test_econsent_capture` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_execution_consumption_integration` | `tests.test_econsent_capture` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -574,6 +580,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_etmf_edge_cases_for_coverage` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_etmf_qc_lifecycle_and_audit` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_explicit_and_default_taxonomy_version_roundtrip_and_legacy_interpretability` | `tests.test_etmf` | PRD-TMF-003 | 🟢 PASSED | < 1s |
+| `test_informed_consent_form_taxonomy_and_idempotency` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_inspector_portal_read_only_access_limits` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ordered_artifact_history_endpoint` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_placeholder_scripts` | `tests.test_etmf` | *Regression/Helper* | 🟢 PASSED | < 1s |

@@ -80,4 +80,18 @@ export const etmfService = {
       }
     );
   },
+
+  /**
+   * Retrieves the status of an eConsent template version archival delivery to eTMF.
+   */
+  getArchivalStatus(correlationId, params = {}) {
+    if (correlationId) {
+      return apiClient.get(`/api/v1/econsent/archival-status/${correlationId}`);
+    }
+    const query = new URLSearchParams();
+    if (params.template_id) query.append("template_id", params.template_id);
+    if (params.version_index !== undefined) query.append("version_index", params.version_index);
+    if (params.subject_pseudonym) query.append("subject_pseudonym", params.subject_pseudonym);
+    return apiClient.get(`/api/v1/econsent/archival-status?${query.toString()}`);
+  },
 };
