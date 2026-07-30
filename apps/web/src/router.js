@@ -75,6 +75,15 @@ const routes = [
     },
   },
   {
+    path: "/econsent-authoring",
+    name: "econsent-authoring",
+    component: () => import("./views/ConsentAuthoringView.vue"),
+    meta: {
+      requiresAuth: true,
+      requiresRole: ["sponsor_designer", "data_manager", "sponsor_admin"],
+    },
+  },
+  {
     path: "/ecrf",
     name: "ecrf",
     component: () => import("./views/EcrfView.vue"),

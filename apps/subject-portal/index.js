@@ -1,4 +1,10 @@
-import { buildLedgerBlock, validateField } from "ui";
+import {
+  buildLedgerBlock,
+  validateField,
+  normalizeApprovedConsent,
+  shapeComprehensionAnswers,
+  interpretComprehensionResult,
+} from "ui";
 import {
   queueSubmission,
   getQueuedSubmissions,
@@ -144,6 +150,43 @@ const state = {
   complianceError: null,
   notificationsLoading: false,
   notificationsError: null,
+  consentLanguage: "en",
+  consentPassed: false,
+  consentSigned: false,
+  pendingSignableAction: null,
+  consentContent: null,
+  consentCheck: null,
+};
+
+const MOCK_APPROVED_CONTENT = {
+  template_id: "template-icf",
+  template_name: "Main Informed Consent Form",
+  study_id: "study_01",
+  protocol_version: "v1.0",
+  language_code: "en",
+  version_index: 1,
+  clauses: [
+    { clause_id: "clause-risk", title: "Risks & Side Effects", text: "There is a risk of mild temporary headache.", version_index: 1 },
+    { clause_id: "clause-benefit", title: "Expected Benefits", text: "You will receive expert medical monitoring and potential symptom improvement.", version_index: 1 }
+  ],
+  workflow_steps: [
+    { type: "comprehension_check" },
+    { type: "signature_placeholder" }
+  ]
+};
+
+const MOCK_COMPREHENSION_CHECK = {
+  template_id: "template-icf",
+  version_index: 1,
+  questions: [
+    { id: "q_headache", text: "What is a potential temporary side effect?", options: ["Headache", "Nausea", "Vision Loss"] },
+    { id: "q_withdraw", text: "Can you withdraw from the study at any time?", options: ["Yes", "No"] }
+  ],
+  expected_answers: {
+    q_headache: "Headache",
+    q_withdraw: "Yes"
+  },
+  threshold_policy: { min_correct: 2 }
 };
 
 // Auth Fetch Helpers
@@ -193,6 +236,13 @@ function showView(viewId) {
   } else if (viewId === "view-inbox") {
     const tab = document.getElementById("tab-btn-inbox");
     if (tab) tab.classList.add("active");
+  } else if (viewId === "view-consent") {
+    const tab = document.getElementById("tab-btn-consent");
+    if (tab) tab.classList.add("active");
+    // Hook fetch consent details when loading consent tab
+    if (typeof loadConsentDetails === "function") {
+      loadConsentDetails();
+    }
   }
 }
 
@@ -257,7 +307,17 @@ function renderLedger() {
 
 // API Call helper
 async function dispatchApi(endpoint, options = {}) {
-  const url = `http://localhost:8000/api/v1/interop/${endpoint}`; // Assume API Gateway defaults
+  let cleanEndpoint = endpoint;
+  if (cleanEndpoint.startsWith("/")) {
+    cleanEndpoint = cleanEndpoint.substring(1);
+  }
+
+  let url;
+  if (cleanEndpoint.startsWith("api/v1/")) {
+    url = `http://localhost:8000/${cleanEndpoint}`;
+  } else {
+    url = `http://localhost:8000/api/v1/interop/${cleanEndpoint}`;
+  }
 
   const defaultHeaders = {
     "Content-Type": "application/json",
@@ -265,6 +325,8 @@ async function dispatchApi(endpoint, options = {}) {
 
   if (options.change_reason) {
     defaultHeaders["X-Change-Reason"] = options.change_reason;
+  } else if (options.headers && (options.headers["X-Change-Reason"] || options.headers["x-change-reason"])) {
+    defaultHeaders["X-Change-Reason"] = options.headers["X-Change-Reason"] || options.headers["x-change-reason"];
   }
 
   if (state.session.token) {
@@ -278,7 +340,14 @@ async function dispatchApi(endpoint, options = {}) {
     });
 
     if (!res.ok) {
-      throw new Error(`HTTP Error ${res.status}`);
+      let errBody = "";
+      try {
+        const parsed = await res.json();
+        errBody = parsed.detail || parsed.message || "";
+      } catch {
+        // ignored
+      }
+      throw new Error(errBody || `HTTP Error ${res.status}`);
     }
     return await res.json();
   } catch (err) {
@@ -520,29 +589,64 @@ function markFieldInvalid(fieldId, msg) {
 }
 
 // Submit with 21 CFR PIN signature validation
-function openSignatureModal() {
+function openSignatureModal(actionType = "epro") {
+  state.pendingSignableAction = actionType;
   document.getElementById("sign-username").value = state.session.userId;
   document.getElementById("sign-password").value = "";
-  document.getElementById("sign-reason").value =
-    "Initial Questionnaire Completion";
+
+  const reasonSelect = document.getElementById("sign-reason");
+  const modalHeader = document.getElementById("portal-modal-title");
+  const errorBanner = document.getElementById("modal-error-banner");
+  if (errorBanner) errorBanner.style.display = "none";
+
+  if (actionType === "consent") {
+    if (modalHeader) modalHeader.textContent = "eConsent Electronic Signature Required";
+    reasonSelect.innerHTML = `
+      <option value="Enrollment Confirmation and Consent">Enrollment Confirmation and Consent</option>
+      <option value="Re-consent on amended protocol version">Re-consent on amended protocol version</option>
+      <option value="Other">Other (specify below)</option>
+    `;
+    reasonSelect.value = "Enrollment Confirmation and Consent";
+  } else {
+    if (modalHeader) modalHeader.textContent = "Electronic Signature Required";
+    reasonSelect.innerHTML = `
+      <option value="Initial Questionnaire Completion">Initial Questionnaire Completion</option>
+      <option value="Correction of previous entry">Correction of previous entry</option>
+      <option value="Requested update by study coordinator">Requested update by study coordinator</option>
+      <option value="Acknowledge important reminder">Acknowledge important reminder</option>
+      <option value="Other">Other (specify below)</option>
+    `;
+    reasonSelect.value = "Initial Questionnaire Completion";
+  }
+
   document.getElementById("sign-reason-custom").value = "";
   document.getElementById("portal-sign-modal").style.display = "flex";
 }
 
 function closeSignatureModal() {
+  // Credential hygiene: clear PIN / password from DOM immediately on cancel
+  document.getElementById("sign-password").value = "";
   document.getElementById("portal-sign-modal").style.display = "none";
 }
 
 async function verifyAndSubmitSignature() {
-  const username = document.getElementById("sign-username").value.trim();
-  const password = document.getElementById("sign-password").value;
+  const usernameInput = document.getElementById("sign-username");
+  const passwordInput = document.getElementById("sign-password");
+  const username = usernameInput.value.trim();
+  const password = passwordInput.value;
   const reasonSelect = document.getElementById("sign-reason").value;
-  const reasonCustom = document
-    .getElementById("sign-reason-custom")
-    .value.trim();
+  const reasonCustom = document.getElementById("sign-reason-custom").value.trim();
+  const errorBanner = document.getElementById("modal-error-banner");
+
+  if (errorBanner) errorBanner.style.display = "none";
 
   if (!username || !password) {
-    alert("Please enter both User ID and Security PIN/Password to sign.");
+    if (errorBanner) {
+      errorBanner.textContent = "Please enter both User ID and Security PIN/Password to sign.";
+      errorBanner.style.display = "block";
+    } else {
+      alert("Please enter both User ID and Security PIN/Password to sign.");
+    }
     return;
   }
 
@@ -551,59 +655,145 @@ async function verifyAndSubmitSignature() {
       ? reasonCustom
       : `${reasonSelect}${reasonCustom ? ": " + reasonCustom : ""}`;
 
-  closeSignatureModal();
+  // Preserve credentials into local variables and clear reactive DOM fields immediately before async call
+  const cleanUsername = username;
+  const cleanPassword = password;
 
-  const active = state.activeQuestionnaire;
-  if (!active) return;
+  // Clear the actual DOM element for credential hygiene
+  passwordInput.value = "";
 
-  // Queue submission locally inside IndexedDB
-  let queuedItem;
-  try {
-    queuedItem = await queueSubmission({
-      subject_id: state.session.userId,
-      diary_id: active.instrument.id,
-      assignment_id: active.assignment.id,
-      answers: active.answers,
-      change_reason: finalReason,
-      username: username,
-    });
-  } catch (err) {
-    console.error("Failed to write to offline queue IndexedDB:", err);
-    alert("Could not queue submission locally. Please try again.");
-    return;
+  const actionType = state.pendingSignableAction;
+
+  if (actionType === "consent") {
+    // eConsent GxP/Part 11 Step-up signature flow
+    if (isAuthenticatedSession()) {
+      try {
+        // Step 1: obtain short-lived sig_token
+        const tokenResponse = await dispatchApi("api/v1/auth/signature-verification", {
+          method: "POST",
+          body: JSON.stringify({
+            username: cleanUsername,
+            password: cleanPassword,
+            action: "SIGN_CONSENT",
+          }),
+        });
+
+        const sigToken = tokenResponse.sig_token;
+
+        // Step 2: Sign consent document
+        await dispatchApi("api/v1/econsent/templates/template-icf/versions/1/sign", {
+          method: "POST",
+          body: JSON.stringify({
+            subject_pseudonym: state.session.userId,
+            signature_data: cleanUsername,
+            reason_for_change: finalReason,
+          }),
+          headers: {
+            "X-Sig-Token": sigToken,
+          },
+        });
+
+        // Set local signed state
+        state.consentSigned = true;
+
+        // Write audit ledger record
+        await logAuditRecord(
+          "SIGN_CONSENT",
+          {
+            template_id: "template-icf",
+            version_index: 1,
+            subject_pseudonym: state.session.userId,
+          },
+          `Informed Consent Signed and Verified: "${cleanUsername}" with declaration: "${finalReason}"`
+        );
+
+        closeSignatureModal();
+        alert("Informed Consent successfully signed and archived!");
+        loadConsentDetails();
+      } catch (err) {
+        // Show in accessible error status banner and preserve credential hygiene
+        if (errorBanner) {
+          errorBanner.textContent = `Signature Verification Rejected: ${err.message}`;
+          errorBanner.style.display = "block";
+        } else {
+          alert(`Signature Verification Rejected: ${err.message}`);
+        }
+      }
+    } else {
+      // Sandbox fallback mode
+      state.consentSigned = true;
+
+      // Write audit ledger record
+      await logAuditRecord(
+        "SIGN_CONSENT",
+        {
+          template_id: "template-icf",
+          version_index: 1,
+          subject_pseudonym: state.session.userId,
+        },
+        `Informed Consent Signed and Verified: "${cleanUsername}" with declaration: "${finalReason}"`
+      );
+
+      closeSignatureModal();
+      alert("Informed Consent successfully signed and archived (Sandbox VM)!");
+      loadConsentDetails();
+    }
+  } else {
+    // Default ePRO questionnaire submission
+    closeSignatureModal();
+
+    const active = state.activeQuestionnaire;
+    if (!active) return;
+
+    // Queue submission locally inside IndexedDB
+    let queuedItem;
+    try {
+      queuedItem = await queueSubmission({
+        subject_id: state.session.userId,
+        diary_id: active.instrument.id,
+        assignment_id: active.assignment.id,
+        answers: active.answers,
+        change_reason: finalReason,
+        username: cleanUsername,
+      });
+    } catch (err) {
+      console.error("Failed to write to offline queue IndexedDB:", err);
+      alert("Could not queue submission locally. Please try again.");
+      return;
+    }
+
+    // Perform GxP audit logging locally
+    await logAuditRecord(
+      "EPRO_SUBMIT",
+      {
+        diary_id: active.instrument.id,
+        answers: active.answers,
+        assignment_id: active.assignment.id,
+        sequence_number: queuedItem.sequence_number,
+      },
+      `Verified Electronic Signature: "${cleanUsername}" with statement "${finalReason}"`
+    );
+
+    // Mark assignment complete
+    const foundAssign = state.assignments.find(
+      (a) => a.id === active.assignment.id
+    );
+    if (foundAssign) {
+      foundAssign.status = "COMPLETED";
+      foundAssign.submitted_at = queuedItem.device_timestamp;
+    }
+
+    state.activeQuestionnaire = null;
+    alert("Diary/Questionnaire successfully signed and submitted!");
+
+    // Recalculate and update views
+    renderTasks();
+    renderCompliance();
+    showView("view-tasks");
+
+    // Attempt sync immediately
+    await syncOfflineQueue();
   }
-
-  // Perform GxP audit logging locally
-  await logAuditRecord(
-    "EPRO_SUBMIT",
-    {
-      diary_id: active.instrument.id,
-      answers: active.answers,
-      assignment_id: active.assignment.id,
-      sequence_number: queuedItem.sequence_number,
-    },
-    `Verified Electronic Signature: "${username}" with statement "${finalReason}"`
-  );
-
-  // Mark assignment complete
-  const foundAssign = state.assignments.find(
-    (a) => a.id === active.assignment.id
-  );
-  if (foundAssign) {
-    foundAssign.status = "COMPLETED";
-    foundAssign.submitted_at = queuedItem.device_timestamp;
-  }
-
-  state.activeQuestionnaire = null;
-  alert("Diary/Questionnaire successfully signed and submitted!");
-
-  // Recalculate and update views
-  renderTasks();
-  renderCompliance();
-  showView("view-tasks");
-
-  // Attempt sync immediately
-  await syncOfflineQueue();
 }
 
 // 3. My Compliance
@@ -907,6 +1097,242 @@ async function acknowledgeNotification(notificationId) {
 
     // Refresh inbox & count badges
     renderInbox();
+  }
+}
+
+// 5. My Consent (eConsent ICF Review, Comprehension, and Signature)
+
+async function loadConsentDetails() {
+  const loadingEl = document.getElementById("consent-loading");
+  const failureEl = document.getElementById("consent-failure");
+  const contentEl = document.getElementById("consent-content-wrapper");
+  const errorMsgEl = document.getElementById("consent-error-msg");
+  const langSelector = document.getElementById("consent-lang-selector");
+
+  if (loadingEl) loadingEl.style.display = "block";
+  if (failureEl) failureEl.style.display = "none";
+  if (contentEl) contentEl.style.display = "none";
+
+  state.consentLanguage = langSelector ? langSelector.value : "en";
+
+  try {
+    if (isAuthenticatedSession()) {
+      // Fetch dynamic approved composed content from secure microservice
+      state.consentContent = await dispatchApi(
+        `api/v1/econsent/templates/template-icf/approved-content?language_code=${state.consentLanguage}`
+      );
+      state.consentCheck = await dispatchApi(
+        `api/v1/econsent/templates/template-icf/versions/1/comprehension-checks`
+      );
+    } else {
+      // Offline fallback using language matched mock structures
+      const localApproved = JSON.parse(JSON.stringify(MOCK_APPROVED_CONTENT));
+      localApproved.language_code = state.consentLanguage;
+      if (state.consentLanguage === "es") {
+        localApproved.template_name = "Formulario de Consentimiento Informado Principal";
+        localApproved.clauses = [
+          { clause_id: "clause-risk", title: "Riesgos y Efectos Secundarios", text: "Existe el riesgo de dolor de cabeza leve y temporal.", version_index: 1 },
+          { clause_id: "clause-benefit", title: "Beneficios Esperados", text: "Recibirá monitoreo médico experto y una posible mejoría de los síntomas.", version_index: 1 }
+        ];
+      }
+      state.consentContent = localApproved;
+      state.consentCheck = JSON.parse(JSON.stringify(MOCK_COMPREHENSION_CHECK));
+    }
+
+    renderConsentUI();
+  } catch (err) {
+    if (loadingEl) loadingEl.style.display = "none";
+    if (failureEl) {
+      failureEl.style.display = "block";
+      if (errorMsgEl) errorMsgEl.textContent = err.message || err;
+    }
+  }
+}
+
+function renderConsentUI() {
+  const loadingEl = document.getElementById("consent-loading");
+  const contentEl = document.getElementById("consent-content-wrapper");
+  const statusBadge = document.getElementById("consent-status-badge");
+
+  if (loadingEl) loadingEl.style.display = "none";
+  if (contentEl) contentEl.style.display = "block";
+
+  const tpl = state.consentContent;
+  const check = state.consentCheck;
+
+  // Render Status Badge
+  if (statusBadge) {
+    if (state.consentSigned) {
+      statusBadge.textContent = "Signed & Archived";
+      statusBadge.className = "status-pill completed";
+    } else if (state.consentPassed) {
+      statusBadge.textContent = "Check Passed";
+      statusBadge.className = "status-pill pending";
+    } else {
+      statusBadge.textContent = "Pending Check";
+      statusBadge.className = "status-pill overdue";
+    }
+  }
+
+  // 1. Render Metadata and Clauses (Informed Consent document)
+  document.getElementById("consent-template-title").textContent = tpl.template_name;
+
+  const metaDisplay = document.getElementById("consent-metadata-display");
+  metaDisplay.innerHTML = `
+    <span><strong>Study ID:</strong> ${tpl.study_id}</span> |
+    <span><strong>Protocol Version:</strong> ${tpl.protocol_version}</span> |
+    <span><strong>Version Index:</strong> ${tpl.version_index}</span> |
+    <span><strong>Language:</strong> ${tpl.language_code.toUpperCase()}</span>
+  `;
+
+  // Parse and order display sections using ui normalizer
+  const sections = normalizeApprovedConsent(tpl);
+  const clausesContainer = document.getElementById("consent-clauses-container");
+  clausesContainer.innerHTML = "";
+
+  const clauseSections = sections.filter(s => s.type === "clause");
+  clausesContainer.innerHTML = clauseSections.map(sec => `
+    <div class="clause-view-box" style="border: 1px solid var(--border-color); padding: 16px; border-radius: 6px; background: rgba(255,255,255,0.01);">
+      <h4 style="margin-top: 0; color: var(--primary-color); border-bottom: 1px dashed var(--border-color); padding-bottom: 6px;">${sec.title}</h4>
+      <p style="margin: 0; font-size: 14px;">${sec.content}</p>
+    </div>
+  `).join("");
+
+  // 2. Render Comprehension checks (Step 1)
+  const qContainer = document.getElementById("consent-questions-container");
+  qContainer.innerHTML = "";
+
+  if (state.consentSigned) {
+    document.getElementById("consent-comprehension-card").style.display = "none";
+    document.getElementById("consent-signature-card").style.display = "none";
+    return;
+  } else {
+    document.getElementById("consent-comprehension-card").style.display = "block";
+    document.getElementById("consent-signature-card").style.display = "block";
+  }
+
+  if (check && check.questions && check.questions.length > 0) {
+    let formHtml = `<div class="clinical-form-grid" style="gap: 16px;">`;
+    check.questions.forEach((q) => {
+      formHtml += createClinicalRadioGrid(
+        q.id,
+        q.text,
+        q.options || ["Yes", "No"],
+        "",
+        null,
+        12
+      );
+    });
+    formHtml += `</div>`;
+    qContainer.innerHTML = formHtml;
+  } else {
+    qContainer.innerHTML = `<div class="loading-state">No comprehension questions configured for this template.</div>`;
+  }
+
+  // Update signing button state
+  const btnSign = document.getElementById("btn-trigger-consent-sign");
+  if (btnSign) {
+    btnSign.disabled = !state.consentPassed;
+  }
+}
+
+async function submitConsentAnswers() {
+  const check = state.consentCheck;
+  if (!check) return;
+
+  const banner = document.getElementById("comprehension-status-banner");
+  if (banner) banner.style.display = "none";
+
+  let allValid = true;
+  const answers = {};
+
+  check.questions.forEach((q) => {
+    const val = document.querySelector(`input[name="${q.id}"]:checked`)?.value || "";
+
+    // Clear previous errors
+    const container = document.getElementById(`field-container-${q.id}`);
+    if (container) {
+      container.classList.remove("has-error");
+      const oldErr = container.querySelector(".validation-error-msg");
+      if (oldErr) oldErr.remove();
+    }
+
+    const fieldMeta = {
+      id: q.id,
+      label: q.text,
+      validation: { required: true }
+    };
+
+    const res = validateField(fieldMeta, val);
+    if (!res.valid) {
+      allValid = false;
+      markFieldInvalid(q.id, res.message);
+    }
+    answers[q.id] = val;
+  });
+
+  if (!allValid) {
+    alert("Please answer all comprehension questions before submitting.");
+    return;
+  }
+
+  // Shape submission payload using ui helper
+  const payload = shapeComprehensionAnswers(state.session.userId, answers, "Comprehension verification check submission");
+
+  try {
+    let resultResponse;
+
+    if (isAuthenticatedSession()) {
+      resultResponse = await dispatchApi(
+        "api/v1/econsent/templates/template-icf/versions/1/submit-answers",
+        {
+          method: "POST",
+          body: JSON.stringify(payload),
+        }
+      );
+    } else {
+      // Sandbox local evaluation
+      let correct = 0;
+      Object.entries(check.expected_answers).forEach(([qid, expected]) => {
+        if (answers[qid] === expected) {
+          correct += 1;
+        }
+      });
+      const minRequired = check.threshold_policy.min_correct;
+      const passed = correct >= minRequired;
+      resultResponse = {
+        passed,
+        score: (correct / check.questions.length) * 100,
+        next_step: passed ? "sign_consent" : "retry_checks",
+        message: passed
+          ? "Congratulations! You have passed the comprehension check and can proceed to sign the consent form."
+          : `You got ${correct} out of ${check.questions.length} questions correct. The passing threshold is ${minRequired}. Please review the material and try again.`
+      };
+    }
+
+    // Interpret using ui helper
+    const decision = interpretComprehensionResult(resultResponse);
+    state.consentPassed = decision.canSign;
+
+    // Display banner
+    if (banner) {
+      banner.textContent = decision.message;
+      banner.style.display = "block";
+      if (decision.canSign) {
+        banner.style.backgroundColor = "#ecfdf5";
+        banner.style.color = "#047857";
+        banner.style.border = "1px solid #a7f3d0";
+      } else {
+        banner.style.backgroundColor = "#fef2f2";
+        banner.style.color = "#b91c1c";
+        banner.style.border = "1px solid #fecaca";
+      }
+    }
+
+    // Refresh UI triggers
+    renderConsentUI();
+  } catch (err) {
+    alert("Answers submission failed: " + err.message);
   }
 }
 
@@ -1223,6 +1649,7 @@ async function initializeApp() {
   const btnTasks = document.getElementById("tab-btn-tasks");
   const btnCompliance = document.getElementById("tab-btn-compliance");
   const btnInbox = document.getElementById("tab-btn-inbox");
+  const btnConsent = document.getElementById("tab-btn-consent");
 
   if (btnTasks)
     btnTasks.addEventListener("click", () => showView("view-tasks"));
@@ -1230,6 +1657,8 @@ async function initializeApp() {
     btnCompliance.addEventListener("click", () => showView("view-compliance"));
   if (btnInbox)
     btnInbox.addEventListener("click", () => showView("view-inbox"));
+  if (btnConsent)
+    btnConsent.addEventListener("click", () => showView("view-consent"));
 
   const btnBack = document.getElementById("btn-back-to-tasks");
   if (btnBack)
@@ -1249,7 +1678,7 @@ async function initializeApp() {
   if (btnSubmit)
     btnSubmit.addEventListener("click", () => {
       if (validateActiveQuestionnaire()) {
-        openSignatureModal();
+        openSignatureModal("epro");
       } else {
         alert("Please fix all form errors before signing.");
       }
@@ -1263,6 +1692,35 @@ async function initializeApp() {
   const btnModalSign = document.getElementById("btn-modal-sign");
   if (btnModalSign)
     btnModalSign.addEventListener("click", verifyAndSubmitSignature);
+
+  // eConsent visual element binding
+  const langSelector = document.getElementById("consent-lang-selector");
+  if (langSelector) {
+    langSelector.addEventListener("change", () => {
+      loadConsentDetails();
+    });
+  }
+
+  const btnRetryConsent = document.getElementById("btn-retry-consent");
+  if (btnRetryConsent) {
+    btnRetryConsent.addEventListener("click", () => {
+      loadConsentDetails();
+    });
+  }
+
+  const btnSubmitAnswers = document.getElementById("btn-submit-consent-answers");
+  if (btnSubmitAnswers) {
+    btnSubmitAnswers.addEventListener("click", () => {
+      submitConsentAnswers();
+    });
+  }
+
+  const btnTriggerSign = document.getElementById("btn-trigger-consent-sign");
+  if (btnTriggerSign) {
+    btnTriggerSign.addEventListener("click", () => {
+      openSignatureModal("consent");
+    });
+  }
 
   // Retry Handlers
   async function retryTasks() {
@@ -1367,6 +1825,9 @@ export {
   renderTasks,
   renderCompliance,
   renderInbox,
+  loadConsentDetails,
+  renderConsentUI,
+  submitConsentAnswers,
 };
 
 function createClinicalInput(
