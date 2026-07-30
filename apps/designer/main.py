@@ -728,6 +728,347 @@ async def study_differences(
 
 
 # =====================================================================
+# Collaborative Review, Comments, Suggestions & Section Review Locking
+# =====================================================================
+
+from protocol_authoring.models import (
+    CommentThread,
+    SectionReviewStatus,
+    SectionReviewTransition,
+    Suggestion,
+)
+
+from apps.designer.delta import (
+    add_comment_to_thread,
+    create_comment_thread,
+    create_suggestion,
+    decide_suggestion,
+    get_comment_threads,
+    get_section_status,
+    get_section_transitions,
+    get_suggestions,
+    resolve_comment_thread,
+    transition_section_status,
+)
+from packages.security.rbac import Principal, get_principal, has_permission
+
+
+class SectionTransitionRequest(BaseModel):
+    to_status: SectionReviewStatus
+    reason_for_change: str
+    username: Optional[str] = None
+    password: Optional[str] = None
+    signing_reason: Optional[SigningReason] = None
+
+
+@app.post(
+    "/api/v1/studies/{study_id}/sections/{section_id}/transition",
+    response_model=SectionReviewTransition,
+    status_code=200,
+)
+async def transition_section(
+    study_id: str,
+    section_id: str,
+    payload: SectionTransitionRequest,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+) -> SectionReviewTransition:
+    driver = await get_neo4j_driver(request)
+
+    target_status = payload.to_status
+
+    # Check permission based on transition
+    permission_required = "protocol_section:read"
+    if target_status == SectionReviewStatus.IN_REVIEW:
+        permission_required = "protocol_section:review"
+    elif target_status == SectionReviewStatus.LOCKED:
+        permission_required = "protocol_section:lock"
+    elif target_status == SectionReviewStatus.APPROVED:
+        permission_required = "protocol_section:approve"
+    elif target_status == SectionReviewStatus.DRAFT:
+        permission_required = "protocol_section:unlock"
+
+    if not has_permission(principal, permission_required):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Forbidden: Insufficient permissions for {permission_required}.",
+        )
+
+    if not payload.reason_for_change or len(payload.reason_for_change.strip()) < 10:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Reason for change is mandatory and must be at least 10 characters long.",
+        )
+
+    signature_manifestation = None
+    if target_status == SectionReviewStatus.APPROVED:
+        signer_id = principal.user_id
+        from datetime import datetime, timezone
+        signature_manifestation = {
+            "signer_id": signer_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "signing_reason": payload.signing_reason.value if payload.signing_reason else "Section Approval",
+            "ip_address": request.client.host if request.client else "127.0.0.1",
+            "user_agent": request.headers.get("user-agent", "Metadata Designer"),
+        }
+
+    try:
+        actor_role = ",".join(principal.roles) if principal.roles else "sponsor_designer"
+        transition = await transition_section_status(
+            driver=driver,
+            study_version_id=study_id,
+            section_id=section_id,
+            to_status=target_status,
+            actor_id=principal.user_id,
+            actor_role=actor_role,
+            reason_for_change=payload.reason_for_change,
+            signature_manifestation=signature_manifestation,
+        )
+        return transition
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@app.get(
+    "/api/v1/studies/{study_id}/sections/{section_id}/status",
+    status_code=200,
+)
+async def get_section_review_status(
+    study_id: str,
+    section_id: str,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+):
+    if not has_permission(principal, "protocol_section:read"):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    driver = await get_neo4j_driver(request)
+    status_val = await get_section_status(driver, study_id, section_id)
+    history = await get_section_transitions(driver, study_id, section_id)
+
+    return {
+        "section_id": section_id,
+        "study_id": study_id,
+        "status": status_val,
+        "history": history,
+    }
+
+
+class CommentThreadCreate(BaseModel):
+    block_id: str
+    text: str
+
+
+class CommentCreate(BaseModel):
+    text: str
+
+
+@app.post(
+    "/api/v1/studies/{study_id}/sections/{section_id}/threads",
+    response_model=CommentThread,
+    status_code=201,
+)
+async def create_thread_endpoint(
+    study_id: str,
+    section_id: str,
+    payload: CommentThreadCreate,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+) -> CommentThread:
+    if not has_permission(principal, "protocol_section:review"):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    driver = await get_neo4j_driver(request)
+    try:
+        thread = await create_comment_thread(
+            driver=driver,
+            study_version_id=study_id,
+            section_id=section_id,
+            block_id=payload.block_id,
+            text=payload.text,
+            created_by=principal.user_id,
+        )
+        return thread
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ImmutabilityViolationError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@app.get(
+    "/api/v1/studies/{study_id}/sections/{section_id}/threads",
+    response_model=List[CommentThread],
+    status_code=200,
+)
+async def get_threads_endpoint(
+    study_id: str,
+    section_id: str,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+) -> List[CommentThread]:
+    if not has_permission(principal, "protocol_section:read"):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    driver = await get_neo4j_driver(request)
+    threads = await get_comment_threads(driver, study_id, section_id)
+    return threads
+
+
+@app.post(
+    "/api/v1/studies/{study_id}/threads/{thread_id}/comments",
+    response_model=CommentThread,
+    status_code=201,
+)
+async def add_comment_endpoint(
+    study_id: str,
+    thread_id: str,
+    payload: CommentCreate,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+) -> CommentThread:
+    if not has_permission(principal, "protocol_section:review"):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    driver = await get_neo4j_driver(request)
+    try:
+        thread = await add_comment_to_thread(
+            driver=driver,
+            study_version_id=study_id,
+            thread_id=thread_id,
+            text=payload.text,
+            created_by=principal.user_id,
+        )
+        return thread
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ImmutabilityViolationError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@app.post(
+    "/api/v1/studies/{study_id}/threads/{thread_id}/resolve",
+    response_model=CommentThread,
+    status_code=200,
+)
+async def resolve_thread_endpoint(
+    study_id: str,
+    thread_id: str,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+) -> CommentThread:
+    if not has_permission(principal, "protocol_section:review"):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    driver = await get_neo4j_driver(request)
+    try:
+        thread = await resolve_comment_thread(
+            driver=driver,
+            study_version_id=study_id,
+            thread_id=thread_id,
+        )
+        return thread
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ImmutabilityViolationError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+class SuggestionCreate(BaseModel):
+    suggested_text: str
+    reason: str
+
+
+class SuggestionDecisionRequest(BaseModel):
+    decision: Literal["accept", "reject"]
+    decision_reason: str
+
+
+@app.post(
+    "/api/v1/studies/{study_id}/blocks/{block_id}/suggestions",
+    response_model=Suggestion,
+    status_code=201,
+)
+async def create_suggestion_endpoint(
+    study_id: str,
+    block_id: str,
+    payload: SuggestionCreate,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+) -> Suggestion:
+    if not has_permission(principal, "protocol_section:review"):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    driver = await get_neo4j_driver(request)
+    try:
+        suggestion = await create_suggestion(
+            driver=driver,
+            study_version_id=study_id,
+            block_id=block_id,
+            suggested_text=payload.suggested_text,
+            reason=payload.reason,
+            created_by=principal.user_id,
+        )
+        return suggestion
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ImmutabilityViolationError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@app.get(
+    "/api/v1/studies/{study_id}/blocks/{block_id}/suggestions",
+    response_model=List[Suggestion],
+    status_code=200,
+)
+async def get_suggestions_endpoint(
+    study_id: str,
+    block_id: str,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+) -> List[Suggestion]:
+    if not has_permission(principal, "protocol_section:read"):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    driver = await get_neo4j_driver(request)
+    suggestions = await get_suggestions(driver, study_id, block_id)
+    return suggestions
+
+
+@app.post(
+    "/api/v1/studies/{study_id}/suggestions/{suggestion_id}/decision",
+    response_model=Suggestion,
+    status_code=200,
+)
+async def decide_suggestion_endpoint(
+    study_id: str,
+    suggestion_id: str,
+    payload: SuggestionDecisionRequest,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+) -> Suggestion:
+    if not has_permission(principal, "study_design:update"):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    driver = await get_neo4j_driver(request)
+    try:
+        suggestion = await decide_suggestion(
+            driver=driver,
+            study_version_id=study_id,
+            suggestion_id=suggestion_id,
+            decision=payload.decision,
+            decided_by=principal.user_id,
+            decision_reason=payload.decision_reason,
+        )
+        return suggestion
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ConcurrentLockingError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except ImmutabilityViolationError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+# =====================================================================
 # Protocol Ingestion / CRF Builder Endpoints (Phase 2 Ingestion)
 # =====================================================================
 
