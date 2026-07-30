@@ -1230,6 +1230,141 @@ def test_gateway_startup_development_with_bypass_configs() -> None:
     assert result.returncode == 0
 
 
+def test_gateway_scope_extraction_and_verification_integrity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Test that the gateway extracts claims (site_id, sponsor_id, unblinded_access) from JWT,
+    normalizes them, generates a valid V2 signature, and forwards them, and that if any forwarded
+    header is altered/injected, the downstream verification rejects the signature.
+    """
+    from packages.security.signing import (
+        normalize_scope_values,
+        verify_gateway_signature,
+    )
+
+    monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
+
+    # Mock send downstream
+    mock_send = AsyncMock()
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.content = b'{"status": "ok"}'
+    mock_resp.headers = {"content-type": "application/json"}
+    mock_send.return_value = mock_resp
+    monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
+
+    # JWT with site_id, sponsor_id, unblinded_access
+    token = jwt.encode(
+        {
+            "sub": "user_123",
+            "roles": ["sponsor_designer"],
+            "site_id": ["site_a", "site_b"],  # List test
+            "sponsor_id": "sponsor_999",
+            "unblinded_access": "yes",  # Coercion test ("yes" -> True)
+        },
+        "test_secret",
+        algorithm="HS256",
+    )
+
+    with TestClient(app) as client:
+        res = client.get(
+            "/designer/test",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert res.status_code == 200
+        sent_request = mock_send.call_args.args[0]
+
+        # Verify normalization consistent with shared helper (list joined by comma, "yes" coerced to "true")
+        assert sent_request.headers.get("X-Site-Id") == "site_a,site_b"
+        assert sent_request.headers.get("X-Sponsor-Id") == "sponsor_999"
+        assert sent_request.headers.get("X-Unblinded-Access") == "true"
+
+        # Verify that downstream verification succeeds with the unmodified headers and signature
+        user_id = sent_request.headers.get("X-User-Id")
+        roles = sent_request.headers.get("X-User-Roles")
+        timestamp = sent_request.headers.get("X-Gateway-Timestamp")
+        signature = sent_request.headers.get("X-Gateway-Signature")
+        tenant_id = sent_request.headers.get("X-Tenant-Id") or "tenant_default"
+
+        gateway_secret = b"internal-gateway-secret-12345"
+
+        # Run normalization on the forwarded headers
+        site_id, sponsor_id, unblinded_access = normalize_scope_values(
+            sent_request.headers.get("X-Site-Id"),
+            sent_request.headers.get("X-Sponsor-Id"),
+            sent_request.headers.get("X-Unblinded-Access"),
+        )
+
+        assert (
+            verify_gateway_signature(
+                user_id=user_id,
+                roles=roles,
+                timestamp=timestamp,
+                signature=signature,
+                secret=gateway_secret,
+                change_reason="",
+                site_id=site_id,
+                sponsor_id=sponsor_id,
+                unblinded_access=unblinded_access,
+                tenant_id=tenant_id,
+            )
+            is True
+        )
+
+        # Now test that downstream verification REJECTS if any scope header is altered/injected
+        # 1. Alter site_id
+        assert (
+            verify_gateway_signature(
+                user_id=user_id,
+                roles=roles,
+                timestamp=timestamp,
+                signature=signature,
+                secret=gateway_secret,
+                change_reason="",
+                site_id="site_a,site_b,site_c",  # altered
+                sponsor_id=sponsor_id,
+                unblinded_access=unblinded_access,
+                tenant_id=tenant_id,
+            )
+            is False
+        )
+
+        # 2. Alter sponsor_id
+        assert (
+            verify_gateway_signature(
+                user_id=user_id,
+                roles=roles,
+                timestamp=timestamp,
+                signature=signature,
+                secret=gateway_secret,
+                change_reason="",
+                site_id=site_id,
+                sponsor_id="sponsor_altered",  # altered
+                unblinded_access=unblinded_access,
+                tenant_id=tenant_id,
+            )
+            is False
+        )
+
+        # 3. Alter unblinded_access
+        assert (
+            verify_gateway_signature(
+                user_id=user_id,
+                roles=roles,
+                timestamp=timestamp,
+                signature=signature,
+                secret=gateway_secret,
+                change_reason="",
+                site_id=site_id,
+                sponsor_id=sponsor_id,
+                unblinded_access=False,  # altered
+                tenant_id=tenant_id,
+            )
+            is False
+        )
+
+
 def test_gateway_semantic_action_issuance_and_enforcement(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

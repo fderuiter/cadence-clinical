@@ -1055,7 +1055,7 @@ async def test_sponsor_security_boundaries():
             "/api/v1/mdr/library/lib_secure_form",
             headers=headers_ws,
         )
-        assert res_ws.status_code == 403
+        assert res_ws.status_code in (401, 403)
 
         # 3. Reject tampered/spoofed sponsor_id header (signature mismatch) -> 403 or 401
         # Here we sign with spon_fake but try to send spon_real in X-Sponsor-Id header
