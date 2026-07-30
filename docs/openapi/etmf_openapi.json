@@ -936,6 +936,56 @@
         }
       }
     },
+    "/api/v1/etmf/documents/{document_id}/expiration": {
+      "put": {
+        "summary": "Update Document Expiration Endpoint",
+        "description": "Update expiration-related metadata for an eTMF document.\nEnforces the etmf_document:manage_expiration permission and checks trial locks.",
+        "operationId": "update_document_expiration_endpoint_api_v1_etmf_documents__document_id__expiration_put",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentExpirationUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/etmf/documents/{document_id}/approve": {
       "post": {
         "summary": "Sign Document Endpoint",
@@ -1126,6 +1176,27 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/inbound-email": {
+      "post": {
+        "summary": "Inbound Email Webhook",
+        "description": "Inbound-email webhook that validates provider requests, resolves a target study/binder location,\nand routes message content and attachments into the shared eTMF ingestion service.",
+        "operationId": "inbound_email_webhook_api_v1_etmf_inbound_email_post",
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Inbound Email Webhook Api V1 Etmf Inbound Email Post"
                 }
               }
             }
@@ -1554,6 +1625,50 @@
         "title": "ComplianceProfile",
         "description": "Compliance profiles that govern which PII/PHI categories are active."
       },
+      "DocumentExpirationUpdate": {
+        "properties": {
+          "issue_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issue Date",
+            "description": "Optional document issue date"
+          },
+          "expiration_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiration Date",
+            "description": "Optional document expiration date"
+          },
+          "document_owner_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Owner Id",
+            "description": "Optional document owner ID"
+          }
+        },
+        "type": "object",
+        "title": "DocumentExpirationUpdate"
+      },
       "DocumentResponse": {
         "properties": {
           "id": {
@@ -1729,6 +1844,41 @@
                 "type": "null"
               }
             ]
+          },
+          "issue_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issue Date"
+          },
+          "expiration_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiration Date"
+          },
+          "document_owner_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Owner Id"
           }
         },
         "type": "object",
@@ -2051,6 +2201,44 @@
               }
             ],
             "description": "Optional shared protocol version reference"
+          },
+          "issue_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issue Date",
+            "description": "Optional document issue date"
+          },
+          "expiration_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiration Date",
+            "description": "Optional document expiration date"
+          },
+          "document_owner_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Owner Id",
+            "description": "Optional document owner ID"
           }
         },
         "type": "object",
@@ -2325,7 +2513,11 @@
           "TECHNICAL_QC",
           "CLINICAL_QC",
           "DATA_LOCK",
-          "SYSTEM_SEAL"
+          "SYSTEM_SEAL",
+          "PROTOCOL_APPROVAL",
+          "REGULATORY_FORM_SIGNATURE",
+          "TRAINING_ACKNOWLEDGEMENT",
+          "SITE_VISIT_SIGN_OFF"
         ],
         "title": "SigningReason",
         "description": "Controlled reasons for creating an electronic signature in compliance with 21 CFR Part 11."

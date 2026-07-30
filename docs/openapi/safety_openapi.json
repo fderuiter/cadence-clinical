@@ -378,6 +378,138 @@
         }
       }
     },
+    "/api/v1/safety/reconciliation/jobs": {
+      "post": {
+        "summary": "Trigger Sae Reconciliation Job",
+        "description": "Triggers asynchronous SAE reconciliation job. Returns HTTP 202 Accepted.\n\nGated to sponsor_medical_monitor or safety_reviewer roles per GxP RBAC policy.",
+        "operationId": "trigger_sae_reconciliation_job_api_v1_safety_reconciliation_jobs_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SAEReconciliationJobRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SAEReconciliationJobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List Reconciliation Jobs",
+        "description": "List safety reconciliation jobs with pagination.\n\nArgs:\n    limit: Maximum number of jobs to return (default 50).\n    offset: Number of jobs to skip (default 0).",
+        "operationId": "list_reconciliation_jobs_api_v1_safety_reconciliation_jobs_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SAEReconciliationJobResponse"
+                  },
+                  "title": "Response List Reconciliation Jobs Api V1 Safety Reconciliation Jobs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/safety/reconciliation/jobs/{job_id}": {
+      "get": {
+        "summary": "Get Reconciliation Job",
+        "description": "Retrieve a specific safety reconciliation job by ID (polling).\n\nArgs:\n    job_id: The UUID of the reconciliation job to retrieve.",
+        "operationId": "get_reconciliation_job_api_v1_safety_reconciliation_jobs__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SAEReconciliationJobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/safety/reconciliation/runs/{id}": {
       "get": {
         "summary": "Get Reconciliation Run",
@@ -985,6 +1117,97 @@
           "version_index"
         ],
         "title": "SAEDiscrepancyResponse"
+      },
+      "SAEReconciliationJobRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "The study identifier for reconciliation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id"
+        ],
+        "title": "SAEReconciliationJobRequest"
+      },
+      "SAEReconciliationJobResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "result_summary": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Summary"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "study_id",
+          "status",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "title": "SAEReconciliationJobResponse"
       },
       "SAEReconciliationRunRequest": {
         "properties": {

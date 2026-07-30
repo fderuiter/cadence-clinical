@@ -39,17 +39,19 @@ To determine the destination study and folder of an incoming email, the webhook 
 
 Addresses must follow this exact, canonical convention:
 
-$$\text{study-<STUDY\_ID>[+<binder-hint>]@<domain>}$$
+```
+study-<STUDY_ID>[+<binder-hint>]@<domain>
+```
 
-- **`<STUDY_ID>`:** Verbatim identifier of the clinical study (e.g., `study_abc`, `study_123`). Empty or whitespace-only tokens are rejected.
-- **`<binder-hint>`:** Optional taxonomy code or artifact name specifying the destination folder. If provided, the hint is parsed and resolved via the TMF Reference Model taxonomy.
+- **`STUDY_ID`:** Verbatim identifier of the clinical study (e.g., `study_abc`, `study_123`). Empty or whitespace-only tokens are rejected.
+- **`binder-hint`:** Optional taxonomy code or artifact name specifying the destination folder. If provided, the hint is parsed and resolved via the TMF Reference Model taxonomy.
   - *Example with hint (code):* `study-study_abc+05.02.01@cadenceclinical.com`
   - *Example with hint (name):* `study-study_abc+FDA Form 1572@cadenceclinical.com`
   - *Example with hint (alias):* `study-study_abc+FORM_1572@cadenceclinical.com`
 
 ### 3.2 Default Target Mapping
 
-If no `<binder-hint>` is supplied in the address (e.g., `study-study_abc@cadenceclinical.com`), the webhook uses the following default mapping:
+If no `binder-hint` is supplied in the address (e.g., `study-study_abc@cadenceclinical.com`), the webhook uses the following default mapping:
 - **Default Artifact:** `"Site Communication Log"` (TMF Code: `"05.04.01"`)
 - **Default Zone:** `5` (Investigator Site Management)
 - **Default Section:** `"04"` (Site Communications)

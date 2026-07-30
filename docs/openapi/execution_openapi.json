@@ -3311,6 +3311,45 @@
         }
       }
     },
+    "/api/v1/execution/rtsm/dispense": {
+      "post": {
+        "summary": "Dispense Kit Endpoint",
+        "description": "End-point to dispense investigational product (IP) kits against site inventory.\n\nChecks site locks early, calls dispense_kit_transaction, and handles commits atomically.\nLaunches resupply alerts via fastapi background tasks post-commit if triggered.",
+        "operationId": "dispense_kit_endpoint_api_v1_execution_rtsm_dispense_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DispenseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DispenseResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/execution/migration-rules": {
       "post": {
         "summary": "Create Migration Rule",
@@ -4190,6 +4229,68 @@
           "SNOMED"
         ],
         "title": "DictTypeEnum"
+      },
+      "DispenseRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "visit_id": {
+            "type": "string",
+            "title": "Visit Id"
+          },
+          "kit_id": {
+            "type": "string",
+            "title": "Kit Id"
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Quantity",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "subject_id",
+          "visit_id",
+          "kit_id"
+        ],
+        "title": "DispenseRequest"
+      },
+      "DispenseResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "resupply_triggered": {
+            "type": "boolean",
+            "title": "Resupply Triggered"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "message",
+          "resupply_triggered"
+        ],
+        "title": "DispenseResponse"
       },
       "FormSubmissionApprove": {
         "properties": {

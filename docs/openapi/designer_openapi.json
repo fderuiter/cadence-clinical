@@ -7289,7 +7289,11 @@
           "TECHNICAL_QC",
           "CLINICAL_QC",
           "DATA_LOCK",
-          "SYSTEM_SEAL"
+          "SYSTEM_SEAL",
+          "PROTOCOL_APPROVAL",
+          "REGULATORY_FORM_SIGNATURE",
+          "TRAINING_ACKNOWLEDGEMENT",
+          "SITE_VISIT_SIGN_OFF"
         ],
         "title": "SigningReason",
         "description": "Controlled reasons for creating an electronic signature in compliance with 21 CFR Part 11."
