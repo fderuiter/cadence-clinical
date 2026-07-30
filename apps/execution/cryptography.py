@@ -1,11 +1,13 @@
 import base64
 import hashlib
 import json
+import os
 import secrets
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Optional
 
 from cryptography.fernet import Fernet
+from sqlalchemy.ext.asyncio import AsyncSession
 
 """
 Module providing multi-party threshold cryptography for blinding keys.
@@ -54,12 +56,65 @@ class AllocationKeyManager:
         # We store keys historically for decryption, and use the latest for encryption
         self._keys: Dict[int, bytes] = {}
         self._current_version = 1
-        self._keys[self._current_version] = Fernet.generate_key()
+
+        # Default fallback salt for unit testing without database
+        default_salt = "default-v1-salt-for-bootstrap"
+        self._keys[self._current_version] = self._derive_key_from_secret_and_salt(default_salt)
+
         # Track when keys were created to enforce rotation
         self._key_creation_dates: Dict[int, datetime] = {
             self._current_version: datetime.now()
         }
         self._custody_versions = set()  # To track custody-restricted key versions
+
+    def _derive_key_from_secret_and_salt(self, salt: str) -> bytes:
+        """Derives a Fernet key deterministically from master secret + salt using PBKDF2/SHA256."""
+        master_secret = os.getenv("RTSM_MASTER_SECRET", "default-master-secret-change-me-in-production")
+        salt_bytes = salt.encode("utf-8")
+        derived = hashlib.pbkdf2_hmac(
+            "sha256",
+            master_secret.encode("utf-8"),
+            salt_bytes,
+            100000,
+            32
+        )
+        return base64.urlsafe_b64encode(derived)
+
+    async def load_from_db(self, session: AsyncSession) -> None:
+        """Loads all persisted salts/versions from the database and derives their keys."""
+        from sqlalchemy import select
+        from apps.execution.database.models import AllocationKeyMetadata
+
+        stmt = select(AllocationKeyMetadata).order_by(AllocationKeyMetadata.key_version.asc())
+        result = await session.execute(stmt)
+        metadatas = result.scalars().all()
+
+        if not metadatas:
+            # First time bootstrapping in DB context: generate random salt for version 1
+            v1_salt = secrets.token_hex(16)
+            self._keys[1] = self._derive_key_from_secret_and_salt(v1_salt)
+            self._key_creation_dates[1] = datetime.now()
+
+            v1_metadata = AllocationKeyMetadata(
+                key_version=1,
+                salt=v1_salt,
+                created_at=self._key_creation_dates[1]
+            )
+            session.add(v1_metadata)
+            await session.flush()
+        else:
+            for metadata in metadatas:
+                version = metadata.key_version
+                salt = metadata.salt
+                created_at = metadata.created_at
+
+                # Derive and store the key
+                derived_key = self._derive_key_from_secret_and_salt(salt)
+                self._keys[version] = derived_key
+                self._key_creation_dates[version] = created_at
+
+                if version > self._current_version:
+                    self._current_version = version
 
     def generate_master_key(self) -> int:
         """Generates a large integer master key for multi-share splitting."""
@@ -113,11 +168,28 @@ class AllocationKeyManager:
         created = self._key_creation_dates[self._current_version]
         return datetime.now() - created > timedelta(days=365)
 
-    def rotate_keys(self):
+    def rotate_keys(self, session: Optional[AsyncSession] = None):
         """Automatically rotates the encryption key."""
         self._current_version += 1
-        self._keys[self._current_version] = Fernet.generate_key()
+        salt = secrets.token_hex(16)
+        self._keys[self._current_version] = self._derive_key_from_secret_and_salt(salt)
         self._key_creation_dates[self._current_version] = datetime.now()
+
+        if session is None:
+            try:
+                from apps.execution.database.context import current_session
+                session = current_session.get()
+            except Exception:
+                pass
+
+        if session is not None:
+            from apps.execution.database.models import AllocationKeyMetadata
+            metadata = AllocationKeyMetadata(
+                key_version=self._current_version,
+                salt=salt,
+                created_at=self._key_creation_dates[self._current_version]
+            )
+            session.add(metadata)
 
     def derive_fernet_key(self, master_key: int) -> bytes:
         """Derives a Fernet key from a 127-bit master key using SHA-256."""
@@ -161,10 +233,10 @@ class AllocationKeyManager:
         ]
         return custody_shares
 
-    def encrypt(self, data: Dict[str, Any]) -> str:
+    def encrypt(self, data: Dict[str, Any], session: Optional[AsyncSession] = None) -> str:
         """Encrypts data using the current active key version."""
         if self.check_rotation_needed():
-            self.rotate_keys()
+            self.rotate_keys(session=session)
 
         f = Fernet(self._keys[self._current_version])
         payload = json.dumps(data).encode("utf-8")

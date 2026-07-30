@@ -852,6 +852,9 @@ class StratumState(AuditedModel):
             "study_id", "stratum_key", name="uq_stratum_state_study_stratum"
         ),
     )
+    __mapper_args__ = {
+        "version_id_col": AuditedModel.version
+    }
 
     study_id: Mapped[str] = mapped_column(String(255), nullable=False)
     stratum_key: Mapped[str] = mapped_column(
@@ -882,6 +885,21 @@ class SubjectRandomization(AuditedModel):
         String(255), nullable=True
     )  # trial kit/IP reference
     randomized_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+
+
+class AllocationKeyMetadata(AuditedModel):
+    """Acts as a key-metadata store for derived RTSM allocation keys."""
+
+    __tablename__ = "allocation_key_metadata"
+    __table_args__ = (
+        UniqueConstraint("key_version", name="uq_allocation_key_metadata_version"),
+    )
+
+    key_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    salt: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), nullable=False
     )
 
