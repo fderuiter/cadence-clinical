@@ -180,6 +180,7 @@ class ClinicalSubject(AuditedModel):
     withdrawal_reason: Mapped[str] = mapped_column(String(1000), nullable=True)
     randomization_id: Mapped[str] = mapped_column(String(36), nullable=True)
     kit_reference: Mapped[str] = mapped_column(String(255), nullable=True)
+    enrollment_index: Mapped[int] = mapped_column(Integer, nullable=True)
 
     @validates("status")
     def validate_status(self, key, value):

@@ -420,6 +420,86 @@ async def upgrade_existing_tables(conn) -> None:
                 text(f"ALTER TABLE {table_name} ADD COLUMN site_id VARCHAR(255);")
             )
 
+    # 4. Update clinical_subjects with enrollment_index and backfill existing entries
+    subj_cols = await conn.run_sync(
+        lambda sc: get_table_columns(sc, "clinical_subjects")
+    )
+    if subj_cols and "enrollment_index" not in subj_cols:
+        print("Adding missing column enrollment_index to clinical_subjects table...")
+        await conn.execute(
+            text("ALTER TABLE clinical_subjects ADD COLUMN enrollment_index INTEGER;")
+        )
+
+    # Deterministic legacy-subject backfill
+    try:
+        subj_res = await conn.execute(
+            text(
+                "SELECT id, subject_id, study_id, enrollment_index FROM clinical_subjects;"
+            )
+        )
+        subjects = subj_res.fetchall()
+
+        # Group subjects by study_id
+        study_subjects = {}
+        for s in subjects:
+            study_id = s[2]
+            if study_id not in study_subjects:
+                study_subjects[study_id] = []
+            study_subjects[study_id].append(s)
+
+        for study_id, subjs in study_subjects.items():
+            # Check if any subject in this study has a NULL enrollment_index
+            if any(s[3] is None for s in subjs):
+                print(f"Backfilling enrollment_index for study {study_id}...")
+                subj_timestamps = {}
+                for s in subjs:
+                    sid = s[0]
+                    ts = None
+                    try:
+                        # Try PostgreSQL audit schema first
+                        ts_res = await conn.execute(
+                            text(
+                                "SELECT MIN(timestamp) FROM audit_schema.audit_logs WHERE table_name = 'clinical_subjects' AND record_id = :sid;"
+                            ),
+                            {"sid": sid},
+                        )
+                        ts = ts_res.scalar()
+                    except Exception:
+                        try:
+                            # Fallback to default schema (SQLite)
+                            ts_res = await conn.execute(
+                                text(
+                                    "SELECT MIN(timestamp) FROM audit_logs WHERE table_name = 'clinical_subjects' AND record_id = :sid;"
+                                ),
+                                {"sid": sid},
+                            )
+                            ts = ts_res.scalar()
+                        except Exception:
+                            ts = None
+                    subj_timestamps[sid] = ts
+
+                # Deterministically sort:
+                # 1. Earliest audit log timestamp (if exists)
+                # 2. Lexical subject_id
+                def sort_key(s):
+                    sid = s[0]
+                    subject_id = s[1]
+                    ts = subj_timestamps.get(sid)
+                    ts_str = str(ts) if ts is not None else ""
+                    return (ts_str == "", ts_str, subject_id)
+
+                sorted_subjs = sorted(subjs, key=sort_key)
+                for idx, s in enumerate(sorted_subjs):
+                    sid = s[0]
+                    await conn.execute(
+                        text(
+                            "UPDATE clinical_subjects SET enrollment_index = :idx WHERE id = :sid;"
+                        ),
+                        {"idx": idx, "sid": sid},
+                    )
+    except Exception as e:
+        print(f"Warning: Legacy backfill of enrollment_index failed: {e}")
+
 
 async def run_migrations(database_url: str) -> None:
     """
