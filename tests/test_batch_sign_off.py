@@ -94,7 +94,11 @@ async def setup_test_db():
 
 @pytest.mark.asyncio
 async def test_batch_sign_off_happy_path_form() -> None:
-    """Test successful batch sign-off using FORM target resolution."""
+    """
+    # @req:Trace-14
+    # @req:Trace-15
+    Test successful batch sign-off using FORM target resolution.
+    """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
@@ -188,7 +192,10 @@ async def test_batch_sign_off_happy_path_form() -> None:
 
 @pytest.mark.asyncio
 async def test_batch_sign_off_visit_resolution() -> None:
-    """Test successful batch sign-off using VISIT target resolution."""
+    """
+    # @req:Trace-14
+    Test successful batch sign-off using VISIT target resolution.
+    """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
@@ -257,7 +264,10 @@ async def test_batch_sign_off_visit_resolution() -> None:
 
 @pytest.mark.asyncio
 async def test_batch_sign_off_subject_resolution() -> None:
-    """Test successful batch sign-off using SUBJECT target resolution."""
+    """
+    # @req:Trace-14
+    Test successful batch sign-off using SUBJECT target resolution.
+    """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
@@ -305,7 +315,10 @@ async def test_batch_sign_off_subject_resolution() -> None:
 
 @pytest.mark.asyncio
 async def test_batch_sign_off_pi_only() -> None:
-    """Test that unauthorized non-PI roles are rejected with HTTP 403."""
+    """
+    # @req:Trace-14
+    Test that unauthorized non-PI roles are rejected with HTTP 403.
+    """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
@@ -332,7 +345,10 @@ async def test_batch_sign_off_pi_only() -> None:
 
 @pytest.mark.asyncio
 async def test_batch_sign_off_token_replay() -> None:
-    """Test that signature token can be used exactly once and replay returns HTTP 401."""
+    """
+    # @req:Trace-15
+    Test that signature token can be used exactly once and replay returns HTTP 401.
+    """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
@@ -383,7 +399,10 @@ async def test_batch_sign_off_token_replay() -> None:
 
 @pytest.mark.asyncio
 async def test_batch_sign_off_locks_and_atomic_rollback() -> None:
-    """Test that site/visit locks reject sign-off write and roll back everything atomically (no partial approvals)."""
+    """
+    # @req:Trace-14
+    Test that site/visit locks reject sign-off write and roll back everything atomically (no partial approvals).
+    """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
@@ -442,7 +461,11 @@ async def test_batch_sign_off_locks_and_atomic_rollback() -> None:
 
 @pytest.mark.asyncio
 async def test_batch_sign_off_mismatched_bindings_and_no_write() -> None:
-    """Test that a batch sign-off with mismatched binding (study, type, targets, reason) is rejected and does not write/modify any data."""
+    """
+    # @req:Trace-14
+    # @req:Trace-15
+    Test that a batch sign-off with mismatched binding (study, type, targets, reason) is rejected and does not write/modify any data.
+    """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
@@ -533,7 +556,10 @@ async def test_batch_sign_off_mismatched_bindings_and_no_write() -> None:
 
 @pytest.mark.asyncio
 async def test_batch_sign_off_all_locks() -> None:
-    """Test that different lock levels (trial, visit, subject, form) reject sign-off write and roll back atomically."""
+    """
+    # @req:Trace-14
+    Test that different lock levels (trial, visit, subject, form) reject sign-off write and roll back atomically.
+    """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
@@ -630,7 +656,10 @@ async def test_batch_sign_off_all_locks() -> None:
 
 @pytest.mark.asyncio
 async def test_batch_sign_off_non_lock_rollback(monkeypatch) -> None:
-    """Test that a non-lock exception raised during processing rolls back changes to all processed submissions."""
+    """
+    # @req:Trace-14
+    Test that a non-lock exception raised during processing rolls back changes to all processed submissions.
+    """
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
@@ -698,7 +727,10 @@ async def test_batch_sign_off_non_lock_rollback(monkeypatch) -> None:
 
 @pytest.mark.asyncio
 async def test_batch_sign_off_audit_manifestation_capture() -> None:
-    """Test that batch sign-off captures signature manifestation and version details in database AuditLog records."""
+    """
+    # @req:Trace-14
+    Test that batch sign-off captures signature manifestation and version details in database AuditLog records.
+    """
     from apps.execution.database.models import AuditLog
 
     async with httpx.AsyncClient(

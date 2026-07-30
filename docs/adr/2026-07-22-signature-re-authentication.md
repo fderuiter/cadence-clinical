@@ -20,4 +20,4 @@ We enforce a secure, double-keying re-authentication flow upon performing any e-
 - **Positive**: Complete 21 CFR Part 11 and GxP compliance. Absolute non-repudiation via certificate-bound signing. Minimal attack surface with 60-second token limits.
 - **Negative**: Minor prompt interaction required for users immediately before performing signature actions.
 
-This decision implements requirements under Trace-8, Trace-13, and PRD-SYS-001.
+This decision implements requirements under Trace-15, Trace-13, and PRD-SYS-001.
