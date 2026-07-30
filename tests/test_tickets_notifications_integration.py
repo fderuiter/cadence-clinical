@@ -31,7 +31,9 @@ async def setup_tickets_db():
         await db_manager.close()
 
 
-def get_auth_headers(user_id: str = "tickets_test_user", roles: str = "admin", change_reason: str = "") -> dict:
+def get_auth_headers(
+    user_id: str = "tickets_test_user", roles: str = "admin", change_reason: str = ""
+) -> dict:
     """
     Helper to generate valid gateway V2 signed headers for testing.
     """
@@ -62,7 +64,9 @@ async def test_ticket_assignment_notification(mock_publish):
     client = TestClient(app)
 
     # Setup - Create a ticket
-    create_headers = get_auth_headers(user_id="reporter_user", change_reason="Initial issue")
+    create_headers = get_auth_headers(
+        user_id="reporter_user", change_reason="Initial issue"
+    )
     payload = {
         "title": "Assignment test ticket",
         "description": "Test description",
@@ -73,12 +77,18 @@ async def test_ticket_assignment_notification(mock_publish):
     ticket_id = res_create.json()["id"]
 
     # Assign ticket (acting as "reporter_user")
-    assign_headers = get_auth_headers(user_id="reporter_user", change_reason="Assigning developer")
+    assign_headers = get_auth_headers(
+        user_id="reporter_user", change_reason="Assigning developer"
+    )
     assign_payload = {
         "assignee_user": "developer_bob",
         "version_index": 1,
     }
-    res_assign = client.post(f"/api/v1/tickets/{ticket_id}/assign", json=assign_payload, headers=assign_headers)
+    res_assign = client.post(
+        f"/api/v1/tickets/{ticket_id}/assign",
+        json=assign_payload,
+        headers=assign_headers,
+    )
     assert res_assign.status_code == 200
 
     # Wait for background tasks to execute
@@ -126,9 +136,15 @@ async def test_ticket_comment_notification(mock_publish):
     mock_publish.reset_mock()
 
     # Add comment as reporter_user -> should notify developer_bob (assignee), but exclude reporter_user (actor)
-    comment_headers = get_auth_headers(user_id="reporter_user", change_reason="Add query")
+    comment_headers = get_auth_headers(
+        user_id="reporter_user", change_reason="Add query"
+    )
     comment_payload = {"body": "Could you check this please?"}
-    res_comment = client.post(f"/api/v1/tickets/{ticket_id}/comments", json=comment_payload, headers=comment_headers)
+    res_comment = client.post(
+        f"/api/v1/tickets/{ticket_id}/comments",
+        json=comment_payload,
+        headers=comment_headers,
+    )
     assert res_comment.status_code == 201
 
     assert mock_publish.call_count == 1
@@ -168,7 +184,11 @@ async def test_ticket_transition_notification(mock_publish):
         "status": "IN_PROGRESS",
         "version_index": 1,
     }
-    res_trans = client.post(f"/api/v1/tickets/{ticket_id}/transition", json=trans_payload, headers=trans_headers)
+    res_trans = client.post(
+        f"/api/v1/tickets/{ticket_id}/transition",
+        json=trans_payload,
+        headers=trans_headers,
+    )
     assert res_trans.status_code == 200
 
     assert mock_publish.call_count == 1
@@ -204,13 +224,17 @@ async def test_update_ticket_notifications(mock_publish):
     mock_publish.reset_mock()
 
     # Update ticket both assignee and status (acting as a third user "manager_alice")
-    update_headers = get_auth_headers(user_id="manager_alice", change_reason="Update manager and solve")
+    update_headers = get_auth_headers(
+        user_id="manager_alice", change_reason="Update manager and solve"
+    )
     update_payload = {
         "assignee_user": "developer_charlie",
         "status": "RESOLVED",
         "version_index": 1,
     }
-    res_update = client.put(f"/api/v1/tickets/{ticket_id}", json=update_payload, headers=update_headers)
+    res_update = client.put(
+        f"/api/v1/tickets/{ticket_id}", json=update_payload, headers=update_headers
+    )
     assert res_update.status_code == 200
 
     # Since manager_alice is the actor, recipients for assignment are developer_charlie and reporter_user.
@@ -248,12 +272,18 @@ async def test_notification_failure_isolation(mock_publish):
     ticket_id = res_create.json()["id"]
 
     # Assign ticket (this triggers assignment notification, which will fail/raise)
-    assign_headers = get_auth_headers(user_id="reporter_user", change_reason="Assigning developer")
+    assign_headers = get_auth_headers(
+        user_id="reporter_user", change_reason="Assigning developer"
+    )
     assign_payload = {
         "assignee_user": "developer_bob",
         "version_index": 1,
     }
-    res_assign = client.post(f"/api/v1/tickets/{ticket_id}/assign", json=assign_payload, headers=assign_headers)
+    res_assign = client.post(
+        f"/api/v1/tickets/{ticket_id}/assign",
+        json=assign_payload,
+        headers=assign_headers,
+    )
 
     # Assert mutation is still completely successful
     assert res_assign.status_code == 200
@@ -293,12 +323,18 @@ async def test_notification_idempotency(mock_publish):
     ticket_id = res_create.json()["id"]
 
     # First assignment
-    assign_headers = get_auth_headers(user_id="reporter_user", change_reason="Assign first")
+    assign_headers = get_auth_headers(
+        user_id="reporter_user", change_reason="Assign first"
+    )
     assign_payload = {
         "assignee_user": "developer_bob",
         "version_index": 1,
     }
-    client.post(f"/api/v1/tickets/{ticket_id}/assign", json=assign_payload, headers=assign_headers)
+    client.post(
+        f"/api/v1/tickets/{ticket_id}/assign",
+        json=assign_payload,
+        headers=assign_headers,
+    )
 
     # Capture first related_entity_id
     first_call_payload = mock_publish.call_args_list[-1][0][0]
@@ -310,7 +346,11 @@ async def test_notification_idempotency(mock_publish):
         "assignee_user": "developer_charlie",
         "version_index": 2,
     }
-    client.post(f"/api/v1/tickets/{ticket_id}/assign", json=assign_payload2, headers=assign_headers)
+    client.post(
+        f"/api/v1/tickets/{ticket_id}/assign",
+        json=assign_payload2,
+        headers=assign_headers,
+    )
 
     # Capture second related_entity_id
     second_call_payload = mock_publish.call_args_list[-1][0][0]

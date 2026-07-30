@@ -20,7 +20,9 @@ async def test_publish_notification_success():
         mock_response.status_code = 201
         mock_post.return_value = mock_response
 
-        with audit_context(user_id="test_actor", change_reason="Test notification reason"):
+        with audit_context(
+            user_id="test_actor", change_reason="Test notification reason"
+        ):
             result = await publish_notification(payload)
 
         assert result is True
@@ -64,6 +66,9 @@ async def test_publish_notification_transport_exception():
     """
     payload = {"message_content": "Test timeout message"}
 
-    with patch("httpx.AsyncClient.post", side_effect=httpx.ConnectTimeout("Connection timed out")):
+    with patch(
+        "httpx.AsyncClient.post",
+        side_effect=httpx.ConnectTimeout("Connection timed out"),
+    ):
         result = await publish_notification(payload)
         assert result is False

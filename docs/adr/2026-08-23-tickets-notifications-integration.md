@@ -13,7 +13,7 @@ The Cadence Clinical platform supports support ticket management in the `tickets
 To satisfy clinical auditability and platform usability requirements, the platform must notify appropriate users of these ticketing lifecycle events.
 
 ## 2. Decision Drivers & Constraints
-* **GxP 21 CFR Part 11 Compliance:** The notification engine must be fully auditable, and dispatch failures must be separated from core database state mutations.
+* **GxP 21 CFR Part 11 Compliance:** The notification engine must be fully auditable, and dispatch failures must be separated from core database state mutations, as mapped under PRD-SYS-001.
 * **Failure Isolation:** A network or notification service failure must never cause a support ticket transaction to fail or roll back after it has been successfully committed.
 * **Authentication Contract:** Internal service-to-service communication must satisfy the Gateway HMAC-SHA256 V2 authentication requirements.
 * **Deduplication:** Repeated event notifications must be protected against duplicates at the recipient side.

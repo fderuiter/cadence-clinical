@@ -30,24 +30,21 @@ def generate_ticket_notification_payloads(
     # 1. Target assignee_user when set, else assignee_role
     if ticket.assignee_user:
         if ticket.assignee_user != actor:
-            recipients.append({
-                "recipient_user_id": ticket.assignee_user,
-                "recipient_role": None
-            })
+            recipients.append(
+                {"recipient_user_id": ticket.assignee_user, "recipient_role": None}
+            )
     elif ticket.assignee_role:
-        recipients.append({
-            "recipient_user_id": None,
-            "recipient_role": ticket.assignee_role
-        })
+        recipients.append(
+            {"recipient_user_id": None, "recipient_role": ticket.assignee_role}
+        )
 
     # 2. Also notify reporter
     if ticket.reporter and ticket.reporter != actor:
         # Avoid duplicating reporter if reporter is already the assignee_user
         if not any(r["recipient_user_id"] == ticket.reporter for r in recipients):
-            recipients.append({
-                "recipient_user_id": ticket.reporter,
-                "recipient_role": None
-            })
+            recipients.append(
+                {"recipient_user_id": ticket.reporter, "recipient_role": None}
+            )
 
     if not recipients:
         logger.info(
@@ -72,8 +69,12 @@ def generate_ticket_notification_payloads(
         category = "ACTION_ITEMS"
         priority = "MEDIUM"
         if comment_body:
-            snippet = comment_body[:60] + "..." if len(comment_body) > 60 else comment_body
-            message_content = f"New comment added to ticket {ticket.reference}: '{snippet}'."
+            snippet = (
+                comment_body[:60] + "..." if len(comment_body) > 60 else comment_body
+            )
+            message_content = (
+                f"New comment added to ticket {ticket.reference}: '{snippet}'."
+            )
         else:
             message_content = f"New comment added to ticket {ticket.reference}."
     elif event_type == "transition":
@@ -82,7 +83,9 @@ def generate_ticket_notification_payloads(
         if old_status and new_status:
             message_content = f"Ticket {ticket.reference} status transitioned from {old_status} to {new_status}."
         elif new_status:
-            message_content = f"Ticket {ticket.reference} status transitioned to {new_status}."
+            message_content = (
+                f"Ticket {ticket.reference} status transitioned to {new_status}."
+            )
         else:
             message_content = f"Ticket {ticket.reference} status transitioned."
     else:

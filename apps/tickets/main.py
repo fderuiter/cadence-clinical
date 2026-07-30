@@ -214,8 +214,17 @@ async def dispatch_ticket_notifications(
     Swallows and logs any exception.
     """
     try:
+
         class CommittedTicket:
-            def __init__(self, id, reference, assignee_user, assignee_role, reporter, version_index):
+            def __init__(
+                self,
+                id,
+                reference,
+                assignee_user,
+                assignee_role,
+                reporter,
+                version_index,
+            ):
                 self.id = id
                 self.reference = reference
                 self.assignee_user = assignee_user
@@ -736,16 +745,30 @@ async def update_ticket(
 
     # Detect assignment diff and status change
     has_assignment_diff = False
-    if payload.assignee_user is not None and payload.assignee_user != ticket.assignee_user:
+    if (
+        payload.assignee_user is not None
+        and payload.assignee_user != ticket.assignee_user
+    ):
         has_assignment_diff = True
-    if payload.assignee_role is not None and payload.assignee_role != ticket.assignee_role:
+    if (
+        payload.assignee_role is not None
+        and payload.assignee_role != ticket.assignee_role
+    ):
         has_assignment_diff = True
 
     has_status_change = False
-    old_status_str = current_status.value if hasattr(current_status, "value") else str(current_status)
+    old_status_str = (
+        current_status.value
+        if hasattr(current_status, "value")
+        else str(current_status)
+    )
     if payload.status is not None and payload.status != ticket.status:
         has_status_change = True
-        new_status_str = payload.status.value if hasattr(payload.status, "value") else str(payload.status)
+        new_status_str = (
+            payload.status.value
+            if hasattr(payload.status, "value")
+            else str(payload.status)
+        )
 
     # Track audit details
     assignment_changes = []
@@ -896,8 +919,14 @@ async def transition_ticket(
                 detail=f"Invalid transition from {current_status} to {target_status}.",
             )
 
-    old_status_str = current_status.value if hasattr(current_status, "value") else str(current_status)
-    new_status_str = target_status.value if hasattr(target_status, "value") else str(target_status)
+    old_status_str = (
+        current_status.value
+        if hasattr(current_status, "value")
+        else str(current_status)
+    )
+    new_status_str = (
+        target_status.value if hasattr(target_status, "value") else str(target_status)
+    )
 
     # Record details for auditing before we modify the model
     actor_roles = ", ".join(principal.roles)
