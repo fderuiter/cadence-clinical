@@ -1,11 +1,12 @@
 import time
+import uuid
 
 import httpx
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 from sae_icsr import MedDRACoding, SeriousAdverseEvent
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from apps.gateway.main import generate_signature
 from apps.safety.adapter import SafetyDatabaseAdapter
@@ -26,8 +27,24 @@ async def setup_reconciliation_db():
     """
     Setup in-memory Safety database for reconciliation tests.
     """
-    db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)
+    db_uri = f"sqlite+aiosqlite:///file:memdb_sae_{uuid.uuid4().hex}?mode=memory&cache=shared&uri=true"
+    db_manager.init_db(db_uri, echo=False)
+
+    from sqlalchemy import event as sa_event
+
+    @sa_event.listens_for(db_manager.engine.sync_engine, "connect")
+    def attach_audit_schema(dbapi_conn, record):
+        cursor = dbapi_conn.cursor()
+        try:
+            cursor.execute("ATTACH DATABASE ':memory:' AS audit_schema;")
+        except Exception:
+            pass
+        finally:
+            cursor.close()
+
     async with db_manager.engine.begin() as conn:
+        if db_manager.engine.dialect.name == "postgresql":
+            await conn.execute(text("CREATE SCHEMA IF NOT EXISTS audit_schema;"))
         await conn.run_sync(Base.metadata.create_all)
     yield
     if db_manager.engine is not None:
@@ -58,6 +75,7 @@ def get_signed_headers(roles: str = "admin", change_reason: str = "") -> dict:
 # ==========================================
 # 1. Pure Comparison Tests
 # ==========================================
+
 
 def test_pure_comparison_missing_on_either_side():
     # EDC has 1 event, Safety has 0
@@ -170,12 +188,12 @@ def test_pure_comparison_differing_fields():
     sae_safety = SeriousAdverseEvent(
         subject_key="SUBJ-001",
         AETERM="HEADACHE",
-        AESTDTC="2026-07-26", # Mismatch stdtc
-        AEENDTC="2026-07-27", # Mismatch enddtc
-        AESEV="SEVERE", # Mismatch severity
-        AESER="N", # Mismatch seriousness
-        AEREL="NOT RELATED", # Mismatch relatedness
-        AEOUT="NOT RECOVERED", # Mismatch outcome
+        AESTDTC="2026-07-26",  # Mismatch stdtc
+        AEENDTC="2026-07-27",  # Mismatch enddtc
+        AESEV="SEVERE",  # Mismatch severity
+        AESER="N",  # Mismatch seriousness
+        AEREL="NOT RELATED",  # Mismatch relatedness
+        AEOUT="NOT RECOVERED",  # Mismatch outcome
         AESEQ=1,
     )
 
@@ -220,6 +238,7 @@ def test_deterministic_output_sorting():
 # 2. Client & Adapter Integration Tests
 # ==========================================
 
+
 @pytest.mark.asyncio
 async def test_execution_client_and_adapter_methods():
     class MockAsyncClient:
@@ -236,19 +255,55 @@ async def test_execution_client_and_adapter_methods():
                                 "name": "AE",
                                 "label": "Adverse Events",
                                 "items": [
-                                    {"name": "STUDYID", "label": "Study ID", "type": "string"},
-                                    {"name": "USUBJID", "label": "Subject ID", "type": "string"},
-                                    {"name": "AETERM", "label": "AE Term", "type": "string"},
-                                    {"name": "AESTDTC", "label": "Start Date", "type": "string"},
-                                    {"name": "AESEV", "label": "Severity", "type": "string"},
-                                    {"name": "AESER", "label": "Serious", "type": "string"},
-                                    {"name": "AESEQ", "label": "Sequence", "type": "integer"},
+                                    {
+                                        "name": "STUDYID",
+                                        "label": "Study ID",
+                                        "type": "string",
+                                    },
+                                    {
+                                        "name": "USUBJID",
+                                        "label": "Subject ID",
+                                        "type": "string",
+                                    },
+                                    {
+                                        "name": "AETERM",
+                                        "label": "AE Term",
+                                        "type": "string",
+                                    },
+                                    {
+                                        "name": "AESTDTC",
+                                        "label": "Start Date",
+                                        "type": "string",
+                                    },
+                                    {
+                                        "name": "AESEV",
+                                        "label": "Severity",
+                                        "type": "string",
+                                    },
+                                    {
+                                        "name": "AESER",
+                                        "label": "Serious",
+                                        "type": "string",
+                                    },
+                                    {
+                                        "name": "AESEQ",
+                                        "label": "Sequence",
+                                        "type": "integer",
+                                    },
                                 ],
                                 "itemData": [
-                                    ["STUDY-001", "SUBJ-001", "SEVERE HEADACHE", "2026-07-25", "SEVERE", "Y", 1]
-                                ]
+                                    [
+                                        "STUDY-001",
+                                        "SUBJ-001",
+                                        "SEVERE HEADACHE",
+                                        "2026-07-25",
+                                        "SEVERE",
+                                        "Y",
+                                        1,
+                                    ]
+                                ],
                             }
-                        }
+                        },
                     }
                 }
                 return httpx.Response(status_code=200, json=mock_json)
@@ -272,7 +327,7 @@ async def test_execution_client_and_adapter_methods():
                             "primary_soc_flag": "Y",
                             "score": 1.0,
                         }
-                    ]
+                    ],
                 }
                 return httpx.Response(status_code=200, json=mock_res)
 
@@ -284,20 +339,17 @@ async def test_execution_client_and_adapter_methods():
                             "sender_organization": "SPONSOR_A",
                             "receiver_organization": "FDA",
                             "transmission_date": "2026-07-25T15:00:00Z",
-                            "message_id": "MSG-001"
+                            "message_id": "MSG-001",
                         },
                         "report_identifiers": {
                             "worldwide_unique_case_id": "WW-CASE-001"
                         },
-                        "patient": {
-                            "patient_id": "SUBJ-001",
-                            "sex": "F"
-                        },
+                        "patient": {"patient_id": "SUBJ-001", "sex": "F"},
                         "reactions": [
                             {
                                 "reaction_term": "SEVERE HEADACHE",
                                 "start_date": "2026-07-25",
-                                "seriousness_hospitalization": "Y", # Serious
+                                "seriousness_hospitalization": "Y",  # Serious
                                 "meddra_coding": {
                                     "llt_code": "10019211",
                                     "llt_name": "Severe Headache",
@@ -311,9 +363,9 @@ async def test_execution_client_and_adapter_methods():
                                     "soc_name": "Nervous system disorders",
                                     "primary_soc_flag": "Y",
                                     "score": 1.0,
-                                }
+                                },
                             }
-                        ]
+                        ],
                     }
                 ]
                 return httpx.Response(status_code=200, json=mock_cases)
@@ -328,7 +380,9 @@ async def test_execution_client_and_adapter_methods():
     assert len(res_ae["AE"]) == 1
     assert res_ae["AE"][0]["AETERM"] == "SEVERE HEADACHE"
 
-    res_meddra = await exec_cli.resolve_meddra_code("SEVERE HEADACHE", client=mock_client)
+    res_meddra = await exec_cli.resolve_meddra_code(
+        "SEVERE HEADACHE", client=mock_client
+    )
     assert res_meddra["status"] == "AUTO-CODED"
     assert res_meddra["matches"][0]["llt_code"] == "10019211"
 
@@ -342,6 +396,7 @@ async def test_execution_client_and_adapter_methods():
 # ==========================================
 # 3. Persistence + Audit E2E Integration
 # ==========================================
+
 
 @pytest.mark.asyncio
 async def test_reconciliation_persistence_and_audit():
@@ -358,18 +413,49 @@ async def test_reconciliation_persistence_and_audit():
                                 "name": "AE",
                                 "label": "Adverse Events",
                                 "items": [
-                                    {"name": "STUDYID", "label": "Study ID", "type": "string"},
-                                    {"name": "USUBJID", "label": "Subject ID", "type": "string"},
-                                    {"name": "AETERM", "label": "AE Term", "type": "string"},
-                                    {"name": "AESTDTC", "label": "Start Date", "type": "string"},
-                                    {"name": "AESEV", "label": "Severity", "type": "string"},
-                                    {"name": "AESER", "label": "Serious", "type": "string"},
+                                    {
+                                        "name": "STUDYID",
+                                        "label": "Study ID",
+                                        "type": "string",
+                                    },
+                                    {
+                                        "name": "USUBJID",
+                                        "label": "Subject ID",
+                                        "type": "string",
+                                    },
+                                    {
+                                        "name": "AETERM",
+                                        "label": "AE Term",
+                                        "type": "string",
+                                    },
+                                    {
+                                        "name": "AESTDTC",
+                                        "label": "Start Date",
+                                        "type": "string",
+                                    },
+                                    {
+                                        "name": "AESEV",
+                                        "label": "Severity",
+                                        "type": "string",
+                                    },
+                                    {
+                                        "name": "AESER",
+                                        "label": "Serious",
+                                        "type": "string",
+                                    },
                                 ],
                                 "itemData": [
-                                    ["STUDY-001", "SUBJ-001", "SEVERE HEADACHE", "2026-07-25", "SEVERE", "Y"]
-                                ]
+                                    [
+                                        "STUDY-001",
+                                        "SUBJ-001",
+                                        "SEVERE HEADACHE",
+                                        "2026-07-25",
+                                        "SEVERE",
+                                        "Y",
+                                    ]
+                                ],
                             }
-                        }
+                        },
                     }
                 }
                 return httpx.Response(status_code=200, json=mock_json)
@@ -392,7 +478,7 @@ async def test_reconciliation_persistence_and_audit():
                             "primary_soc_flag": "Y",
                             "score": 1.0,
                         }
-                    ]
+                    ],
                 }
                 return httpx.Response(status_code=200, json=mock_res)
 
@@ -403,15 +489,12 @@ async def test_reconciliation_persistence_and_audit():
                             "sender_organization": "SPONSOR_A",
                             "receiver_organization": "FDA",
                             "transmission_date": "2026-07-25T15:00:00Z",
-                            "message_id": "MSG-001"
+                            "message_id": "MSG-001",
                         },
                         "report_identifiers": {
                             "worldwide_unique_case_id": "WW-CASE-001"
                         },
-                        "patient": {
-                            "patient_id": "SUBJ-001",
-                            "sex": "F"
-                        },
+                        "patient": {"patient_id": "SUBJ-001", "sex": "F"},
                         "reactions": [
                             {
                                 "reaction_term": "SEVERE HEADACHE",
@@ -431,9 +514,9 @@ async def test_reconciliation_persistence_and_audit():
                                     "soc_name": "Nervous system disorders",
                                     "primary_soc_flag": "Y",
                                     "score": 1.0,
-                                }
+                                },
                             }
-                        ]
+                        ],
                     }
                 ]
                 return httpx.Response(status_code=200, json=mock_cases)
@@ -451,7 +534,9 @@ async def test_reconciliation_persistence_and_audit():
 
     payload = {"study_id": "STUDY-001"}
 
-    res = client.post("/api/v1/safety/reconciliation/runs", json=payload, headers=headers)
+    res = client.post(
+        "/api/v1/safety/reconciliation/runs", json=payload, headers=headers
+    )
     assert res.status_code == 201
 
     data = res.json()
@@ -466,13 +551,17 @@ async def test_reconciliation_persistence_and_audit():
 
     # Verify database persistence
     async with db_manager.get_session_maker()() as session:
-        stmt_run = select(SAEReconciliationRun).where(SAEReconciliationRun.study_id == "STUDY-001")
+        stmt_run = select(SAEReconciliationRun).where(
+            SAEReconciliationRun.study_id == "STUDY-001"
+        )
         res_run = await session.execute(stmt_run)
         runs_db = res_run.scalars().all()
         assert len(runs_db) == 1
 
         assert runs_db[0].created_by == "safety_recon_user"
-        assert runs_db[0].reason_for_change == "Perform SAE Reconciliation audit trial run"
+        assert (
+            runs_db[0].reason_for_change == "Perform SAE Reconciliation audit trial run"
+        )
         assert runs_db[0].version_index == 1
 
         stmt_disc = select(SAEDiscrepancy).where(SAEDiscrepancy.run_id == runs_db[0].id)
@@ -483,7 +572,9 @@ async def test_reconciliation_persistence_and_audit():
         assert discs_db[0].version_index == 1
 
         # Check safety audit log
-        stmt_audit = select(SafetyAuditLog).where(SafetyAuditLog.action == "SAE_RECONCILIATION_RUN")
+        stmt_audit = select(SafetyAuditLog).where(
+            SafetyAuditLog.action == "SAE_RECONCILIATION_RUN"
+        )
         res_audit = await session.execute(stmt_audit)
         audits_db = res_audit.scalars().all()
         assert len(audits_db) == 1

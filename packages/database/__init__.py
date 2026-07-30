@@ -22,7 +22,6 @@ class RelationalDatabaseManager:
         @event.listens_for(self.engine.sync_engine, "connect")
         def set_sqlite_pragma(dbapi_connection, connection_record):
             """Enable SQLite foreign key support on connect event."""
-            # If using sqlite, ensure foreign keys are enabled (if dialect is sqlite)
             cursor = dbapi_connection.cursor()
             try:
                 cursor.execute("PRAGMA foreign_keys=ON")

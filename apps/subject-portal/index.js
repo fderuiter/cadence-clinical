@@ -313,7 +313,8 @@ function renderTasks() {
     if (failureEl) {
       failureEl.style.display = "block";
       if (errorMsgEl) errorMsgEl.textContent = state.tasksError || "We are unable to connect to the study servers right now.";
-    } else if (container) {
+    }
+    if (container) {
       container.style.display = "block";
       container.innerHTML = `
         <div class="card" style="text-align: center; padding: 32px; color: var(--danger);">
@@ -1236,9 +1237,11 @@ async function initializeApp() {
   async function retryTasks() {
     state.tasksLoading = true;
     state.tasksError = null;
+    state.assignmentsError = false;
     renderTasks();
     try {
       state.assignments = await fetchAssignments(state.session.userId);
+      state.assignmentsError = false;
       if (isAuthenticatedSession()) {
         try {
           const insts = await fetchAssignedInstruments(state.session.userId);
@@ -1252,6 +1255,7 @@ async function initializeApp() {
       }
     } catch (err) {
       state.tasksError = err.message || err;
+      state.assignmentsError = true;
       state.assignments = [];
     } finally {
       state.tasksLoading = false;
