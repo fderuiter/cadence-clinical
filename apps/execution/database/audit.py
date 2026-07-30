@@ -110,6 +110,43 @@ def receive_before_flush(session: Session, flush_context, instances):
             "Trial is currently locked in a read-only state due to a security violation."
         )
 
+    # Propagate site_id for subject-derived records if not specified
+    for obj in list(session.new) + list(session.dirty):
+        if not hasattr(obj, "__tablename__") or obj.__tablename__ == "audit_logs":
+            continue
+        tablename = obj.__tablename__
+        if tablename in (
+            "clinical_visits",
+            "clinical_observations",
+            "clinical_queries",
+            "form_submissions",
+            "sdv_sign_offs",
+        ):
+            current_site = getattr(obj, "site_id", None)
+            if not current_site:
+                subject_id = getattr(obj, "subject_id", None)
+                if subject_id:
+                    subj_obj = None
+                    for new_obj in list(session.new) + list(session.identity_map.values()):
+                        if (
+                            hasattr(new_obj, "__tablename__")
+                            and new_obj.__tablename__ == "clinical_subjects"
+                            and (getattr(new_obj, "subject_id", None) == subject_id or getattr(new_obj, "id", None) == subject_id)
+                        ):
+                            subj_obj = new_obj
+                            break
+                    if not subj_obj:
+                        with session.no_autoflush:
+                            from sqlalchemy import select
+                            from .models import ClinicalSubject
+                            stmt_subj = select(ClinicalSubject).where(
+                                (ClinicalSubject.subject_id == subject_id)
+                                | (ClinicalSubject.id == subject_id)
+                            )
+                            subj_obj = session.execute(stmt_subj).scalars().first()
+                    if subj_obj and subj_obj.site_id:
+                        obj.site_id = subj_obj.site_id
+
     # Check for site-level and visit-level locks
     for obj in list(session.new) + list(session.dirty) + list(session.deleted):
         if not hasattr(obj, "__tablename__") or obj.__tablename__ == "audit_logs":
