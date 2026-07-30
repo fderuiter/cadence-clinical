@@ -20,7 +20,12 @@ def is_path_signature_gated(path_lower: str) -> bool:
     Preserves existing substring-match semantics for historical patterns like 'approve' or 'sign-off'.
     For the newly introduced 'sign' pattern, we use exact path segment matching or exact ending checks
     to prevent false positives such as 'design', 'assignments', 'designers', or 'signature-verification'.
+    We also exclude 'econsent' paths from gateway-level step-up gating as eConsent handles its own subject-level
+    consent checks.
     """
+    if "econsent" in path_lower:
+        return False
+
     for pattern in SIGNATURE_GATED_PATTERNS:
         if pattern == "sign":
             # Match exactly segment "sign" or if path ends with "/sign"

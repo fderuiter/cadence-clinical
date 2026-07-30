@@ -2406,7 +2406,9 @@ async def approve_study_version_delta(
         ver_record["status"] = "APPROVED"
         ver_record["signature_manifestation"] = signature_manifestation_payload
         ver_record["signer"] = user_id
-        ver_record["signing_timestamp"] = signature_manifestation_payload.get("timestamp")
+        ver_record["signing_timestamp"] = signature_manifestation_payload.get(
+            "timestamp"
+        )
 
         # Regenerate StudyVersion signature
         payload_to_sign = {

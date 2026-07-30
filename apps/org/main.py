@@ -25,7 +25,6 @@ from apps.org.models import (
     Personnel,
     PersonnelAssignment,
     Site,
-    TrainingLog,
 )
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.delegation import verify_delegation_scope

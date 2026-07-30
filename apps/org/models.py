@@ -8,7 +8,7 @@ Part 11 and GxP standards.
 
 import uuid
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy import JSON, Boolean, DateTime, Integer, String, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship

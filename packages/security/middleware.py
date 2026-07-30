@@ -176,6 +176,7 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
 
         # Check if request is signature-gated
         from packages.security.gating import is_path_signature_gated
+
         path_lower = request.url.path.lower()
         is_signature_gated = is_path_signature_gated(path_lower)
 

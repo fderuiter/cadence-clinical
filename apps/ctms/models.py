@@ -1,9 +1,8 @@
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import Any, Dict, Optional
 
-from typing import Dict, Any
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, func, JSON
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -362,10 +361,14 @@ class RegulatoryForm(Base):
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
     study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    site_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
+    site_id: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True, index=True
+    )
     form_type: Mapped[str] = mapped_column(String(50), nullable=False)
     rendered_content: Mapped[str] = mapped_column(String(100000), nullable=False)
-    approval_status: Mapped[str] = mapped_column(String(50), default="PENDING", nullable=False)
+    approval_status: Mapped[str] = mapped_column(
+        String(50), default="PENDING", nullable=False
+    )
 
     # Standard Part 11 Audit Fields
     created_at: Mapped[datetime] = mapped_column(
