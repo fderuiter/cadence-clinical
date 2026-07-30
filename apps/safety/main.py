@@ -635,10 +635,13 @@ async def trigger_sae_reconciliation(
             client=test_client,
         )
     except Exception as e:
+        import traceback
+
+        tb = traceback.format_exc()
         logger.exception("SAE Reconciliation orchestrator failed: %s", e)
         raise HTTPException(
             status_code=502,
-            detail=f"SAE Reconciliation execution failure: {str(e)}",
+            detail=f"SAE Reconciliation execution failure: {str(e)}\nTraceback:\n{tb}",
         )
 
     run = results["run"]
