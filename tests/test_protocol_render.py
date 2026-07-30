@@ -286,12 +286,23 @@ def get_sample_rendered_document():
 
     # SoA
     epoch = SoAHeaderEpoch(epoch_id="ep1", epoch_name="Screening", sequence=1)
-    encounter = SoAHeaderEncounter(encounter_id="enc1", encounter_name="Visit 1", epoch_id="ep1", sequence=1)
-    cell = SoACellView(activity_id="act1", encounter_id="enc1", epoch_id="ep1", is_applicable=True, details="Vitals detail")
-    row = SoARowView(activity_id="act1", activity_name="Vitals Collection", cells=[cell])
+    encounter = SoAHeaderEncounter(
+        encounter_id="enc1", encounter_name="Visit 1", epoch_id="ep1", sequence=1
+    )
+    cell = SoACellView(
+        activity_id="act1",
+        encounter_id="enc1",
+        epoch_id="ep1",
+        is_applicable=True,
+        details="Vitals detail",
+    )
+    row = SoARowView(
+        activity_id="act1", activity_name="Vitals Collection", cells=[cell]
+    )
     soa = SoAMatrixView(epochs=[epoch], encounters=[encounter], rows=[row])
 
     from usdm_model import Study
+
     usdm_study = Study(id=str(uuid.uuid4()), name="Test Study", instanceType="Study")
 
     return RenderedProtocolDocument(
@@ -328,7 +339,11 @@ def test_render_protocol_to_html_combined():
     assert intro_idx < bg_idx
 
     # Content assertions
-    items = [div.text.strip() for d in soup.find_all("div", class_="narrative-item") for div in [d]]
+    items = [
+        div.text.strip()
+        for d in soup.find_all("div", class_="narrative-item")
+        for div in [d]
+    ]
     assert "Intro para text" in items
 
     # SoA Table and structures assertions
@@ -345,7 +360,9 @@ def test_render_protocol_to_html_combined():
     applicable_cells = table.find_all("td", class_="applicable")
     assert len(applicable_cells) == 1
     assert "X" in applicable_cells[0].text
-    assert "Vitals detail" in applicable_cells[0].find("span", class_="cell-details").text
+    assert (
+        "Vitals detail" in applicable_cells[0].find("span", class_="cell-details").text
+    )
 
 
 def test_render_protocol_to_html_synopsis_only():

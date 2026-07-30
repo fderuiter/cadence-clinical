@@ -399,12 +399,16 @@ def test_export_protocol_unauthorized_empty_roles(client):
     )
     assert response.status_code == 403
     # Check detail covers role missing or permission forbidden
-    assert "Missing role credentials" in response.json()["detail"] or "Forbidden" in response.json()["detail"]
+    assert (
+        "Missing role credentials" in response.json()["detail"]
+        or "Forbidden" in response.json()["detail"]
+    )
 
 
 def _find_all_tables_in_docx(doc):
     from docx.oxml.table import CT_Tbl
     from docx.table import Table
+
     tables = []
     for child in doc.element.body.iter():
         if isinstance(child, CT_Tbl):
@@ -429,7 +433,10 @@ def test_render_protocol_to_docx_combined_structure():
 
     assert result.content is not None
     assert result.filename == "protocol_study_test_v2.docx"
-    assert result.media_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    assert (
+        result.media_type
+        == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
 
     # Parse with python-docx
     doc = Document(io.BytesIO(result.content))
