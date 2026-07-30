@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+from eligibility import evaluate_eligibility
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select
@@ -15,6 +16,7 @@ from apps.interop.auth import (
     verify_subject_identity,
 )
 from apps.interop.database import db_manager
+from apps.interop.designer_client import fetch_eligibility_criteria
 from apps.interop.fhir_adapter import FHIRAdapter
 from apps.interop.models import (
     Base,
@@ -89,6 +91,32 @@ class FHIRPrefillRequest(BaseModel):
     bundle: Dict[str, Any] = Field(
         ..., description="The standard FHIR Bundle JSON payload"
     )
+
+
+class FHIRPreScreenRequest(BaseModel):
+    """
+    Payload for advisory FHIR eligibility pre-screening.
+    """
+
+    study_id: str = Field(..., description="Unique identifier of the clinical study")
+    bundle: Dict[str, Any] = Field(
+        ..., description="The standard FHIR Bundle JSON payload"
+    )
+
+
+class CriterionExplanation(BaseModel):
+    criterion_id: str = Field(..., description="The ID of the criterion evaluated.")
+    criterion_type: str = Field(..., description="inclusion or exclusion.")
+    description: str = Field(..., description="Human-readable text of the criterion.")
+    is_met: bool = Field(..., description="Indicates if the subject satisfies this criterion.")
+    is_indeterminate: bool = Field(..., description="Indicates if evaluation was indeterminate.")
+
+
+class FHIRPreScreenResponse(BaseModel):
+    eligible: Optional[bool] = Field(None, description="Aggregated eligibility. True if all criteria met, False if any failed, None if indeterminate.")
+    failed_criteria: List[str] = Field(default_factory=list, description="List of criterion IDs that failed.")
+    indeterminate_criteria: List[str] = Field(default_factory=list, description="List of criterion IDs that were indeterminate.")
+    criteria_explanations: List[CriterionExplanation] = Field(default_factory=list, description="Detailed list of criterion-level explanations.")
 
 
 class ConflictStrategy(str, Enum):
@@ -591,6 +619,75 @@ async def fhir_prefill(
     )
 
     return result
+
+
+@app.post("/api/v1/interop/fhir/pre-screen", response_model=FHIRPreScreenResponse)
+async def fhir_pre_screen(
+    request: Request,
+    payload: FHIRPreScreenRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> FHIRPreScreenResponse:
+    """
+    Advisory FHIR eligibility pre-screening endpoint. Orchestrates projection,
+    MDR criteria retrieval, kleene AST evaluation, and non-PHI audit logging.
+    Strictly isolated from clinical subject execution data mutations.
+    """
+    require_staff_role(request)
+    user_id = getattr(request.state, "user_id", "system")
+    user_roles = getattr(request.state, "roles", "system")
+    change_reason = getattr(request.state, "change_reason", "system_operation")
+
+    # 1. Parse bundle and build de-identified eCRF flat context
+    adapter = FHIRAdapter(payload.study_id)
+    parsed_result = adapter.parse_bundle(payload.bundle)
+    ecrf_context = adapter.build_ecrf_context(parsed_result)
+
+    # 2. Fetch criteria from Designer service
+    criteria = await fetch_eligibility_criteria(payload.study_id)
+
+    # 3. Evaluate criteria using shared evaluator
+    eval_res = evaluate_eligibility(criteria, ecrf_context)
+
+    # 4. Write non-PHI audit log
+    met_count = sum(1 for c in eval_res.criteria_evaluations.values() if c.is_met and not c.is_indeterminate)
+    failed_count = len(eval_res.failed_criteria)
+    indeterminate_count = len(eval_res.indeterminate_criteria)
+    total_count = len(criteria)
+
+    audit_details = (
+        f"Advisory FHIR Pre-screen executed for study '{payload.study_id}'. "
+        f"Pseudonymized Subject: '{parsed_result['subject_pseudonym']}'. "
+        f"Criteria evaluated: {total_count} total (Met: {met_count}, Failed: {failed_count}, Indeterminate: {indeterminate_count}). "
+        f"Aggregate Outcome: {eval_res.eligible}."
+    )
+
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
+        user_role=user_roles,
+        action="FHIR_PRESCREEN",
+        details=audit_details,
+        change_reason=change_reason,
+    )
+
+    # 5. Map to response structure
+    explanations = [
+        CriterionExplanation(
+            criterion_id=crit_id,
+            criterion_type=crit_eval.criterion_type,
+            description=crit_eval.description,
+            is_met=crit_eval.is_met,
+            is_indeterminate=crit_eval.is_indeterminate,
+        )
+        for crit_id, crit_eval in eval_res.criteria_evaluations.items()
+    ]
+
+    return FHIRPreScreenResponse(
+        eligible=eval_res.eligible,
+        failed_criteria=eval_res.failed_criteria,
+        indeterminate_criteria=eval_res.indeterminate_criteria,
+        criteria_explanations=explanations,
+    )
 
 
 @app.post("/api/v1/interop/epro/submit", status_code=201)
