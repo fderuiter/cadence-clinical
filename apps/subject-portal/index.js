@@ -1,4 +1,4 @@
-import { generateGatewaySignature, buildLedgerBlock, validateField } from "ui";
+import { buildLedgerBlock, validateField } from "ui";
 import {
   queueSubmission,
   getQueuedSubmissions,
@@ -128,11 +128,14 @@ const state = {
     roles: "Subject",
     token: null,
     isOfflineMode: true,
+    isDemoMode: true, // explicit flag, defaulting consistent with demo-first behavior
   },
   assignments: [],
   notifications: [],
   ledgerBlocks: [],
   activeQuestionnaire: null,
+  assignmentsError: false,
+  notificationsError: false,
 };
 
 // Simple Router
@@ -222,31 +225,9 @@ function renderLedger() {
 // API Call helper
 async function dispatchApi(endpoint, options = {}) {
   const url = `http://localhost:8000/api/v1/interop/${endpoint}`; // Assume API Gateway defaults
-  const timestamp = new Date().toISOString();
-
-  // Signing headers
-  const secret = "internal-gateway-secret-12345"; // pragma: allowlist secret
-  let signature = "";
-  try {
-    signature = await generateGatewaySignature(
-      state.session.userId,
-      state.session.roles,
-      timestamp,
-      "2",
-      options.change_reason || "API Operation",
-      secret
-    );
-  } catch (err) {
-    console.error("Signature stamping failed:", err);
-  }
 
   const defaultHeaders = {
     "Content-Type": "application/json",
-    "X-User-Id": state.session.userId,
-    "X-User-Roles": state.session.roles,
-    "X-Gateway-Timestamp": timestamp,
-    "X-Gateway-Signature": signature,
-    "X-Signature-Version": "2",
   };
 
   if (options.change_reason) {
@@ -282,6 +263,16 @@ async function dispatchApi(endpoint, options = {}) {
 function renderTasks() {
   const container = document.getElementById("tasks-list-container");
   if (!container) return;
+
+  if (state.assignmentsError) {
+    container.innerHTML = `
+      <div class="card" style="text-align: center; padding: 32px; color: var(--danger);">
+        <p style="font-size: 18px; font-weight: 700; margin-bottom: 6px;">⚠️ Error loading tasks</p>
+        <p style="font-size: 14px;">We are unable to connect to the study servers right now. Please check your connection and try again.</p>
+      </div>
+    `;
+    return;
+  }
 
   const activeTasks = state.assignments.filter((a) => a.status !== "COMPLETED");
 
@@ -603,6 +594,15 @@ function renderInbox() {
   const container = document.getElementById("inbox-container");
   if (!container) return;
 
+  if (state.notificationsError) {
+    container.innerHTML = `
+      <div class="card" style="text-align: center; padding: 32px; color: var(--danger);">
+        <p style="font-size: 16px; font-weight: 700;">⚠️ Error loading notifications</p>
+      </div>
+    `;
+    return;
+  }
+
   const unread = state.notifications.filter((n) => !n.is_read);
   const badge = document.getElementById("unread-count");
   if (badge) {
@@ -831,6 +831,8 @@ async function syncOfflineQueue() {
 
 // Bootstrap Initialization
 async function initializeApp() {
+  let authenticatedSuccessfully = false;
+
   // Graceful OIDC Keycloak setup
   if (typeof window !== "undefined" && !window.__MOCK_TEST_ENV__) {
     try {
@@ -852,27 +854,45 @@ async function initializeApp() {
           state.session.userId = keycloak.subject || "subject_001";
           state.session.token = keycloak.token;
           state.session.isOfflineMode = false;
+          state.session.isDemoMode = false;
+          authenticatedSuccessfully = true;
           console.log(
             "OIDC Session Verified for subject:",
             state.session.userId
           );
+        } else {
+          state.session.isDemoMode = true;
         }
+      } else {
+        state.session.isDemoMode = true;
       }
     } catch (err) {
+      state.session.isDemoMode = true;
       console.warn(
         "Keycloak login failed or offline. Continuing in sandbox demo mode:",
         err.message
       );
     }
+  } else {
+    // If window.__MOCK_TEST_ENV__ is true, we keep state.session.isDemoMode as-is (e.g. tests can override or drive it)
   }
 
   // Set participant visual name
   const nameEl = document.getElementById("session-subject-id");
   if (nameEl) nameEl.textContent = state.session.userId;
 
-  // Bootstrap initial items
-  state.assignments = JSON.parse(JSON.stringify(MOCK_ASSIGNMENTS));
-  state.notifications = JSON.parse(JSON.stringify(MOCK_NOTIFICATIONS));
+  // Bootstrap initial items only if in demo mode
+  if (state.session.isDemoMode) {
+    state.assignments = JSON.parse(JSON.stringify(MOCK_ASSIGNMENTS));
+    state.notifications = JSON.parse(JSON.stringify(MOCK_NOTIFICATIONS));
+    state.assignmentsError = false;
+    state.notificationsError = false;
+  } else {
+    state.assignments = [];
+    state.notifications = [];
+    state.assignmentsError = false;
+    state.notificationsError = false;
+  }
 
   // Initialize genesis compliance ledger
   await logAuditRecord(
@@ -881,8 +901,8 @@ async function initializeApp() {
     "Patient companion portal session securely booted."
   );
 
-  // Query real endpoints to synchronize initially if online
-  if (!state.session.isOfflineMode) {
+  // Query real endpoints to synchronize initially if online and not in demo mode
+  if (!state.session.isOfflineMode && !state.session.isDemoMode) {
     try {
       const assignments = await dispatchApi(
         `assignments/subject/${state.session.userId}`
@@ -898,9 +918,24 @@ async function initializeApp() {
           end_date: a.end_date,
           status: a.version_index > 1 ? "COMPLETED" : "PENDING",
         }));
+        state.assignmentsError = false;
+      } else {
+        throw new Error("Invalid assignments payload returned");
       }
-    } catch {
-      // Keep mock structures
+    } catch (err) {
+      console.error("Failed to fetch assignments:", err);
+      state.assignments = []; // Ensure empty or error state on failure, do not fall back to MOCK_*
+      state.assignmentsError = true;
+      // Render a visual indication of failure
+      const container = document.getElementById("tasks-list-container");
+      if (container) {
+        container.innerHTML = `
+          <div class="card" style="text-align: center; padding: 32px; color: var(--danger);">
+            <p style="font-size: 18px; font-weight: 700; margin-bottom: 6px;">⚠️ Error loading tasks</p>
+            <p style="font-size: 14px;">We are unable to connect to the study servers right now. Please check your connection and try again.</p>
+          </div>
+        `;
+      }
     }
 
     try {
@@ -917,9 +952,22 @@ async function initializeApp() {
           channel: n.channel,
           is_read: n.is_read,
         }));
+        state.notificationsError = false;
+      } else {
+        throw new Error("Invalid notifications payload returned");
       }
-    } catch {
-      // Keep mock structures
+    } catch (err) {
+      console.error("Failed to fetch notifications:", err);
+      state.notifications = []; // Ensure empty or error state on failure, do not fall back to MOCK_*
+      state.notificationsError = true;
+      const container = document.getElementById("inbox-container");
+      if (container) {
+        container.innerHTML = `
+          <div class="card" style="text-align: center; padding: 32px; color: var(--danger);">
+            <p style="font-size: 16px; font-weight: 700;">⚠️ Error loading notifications</p>
+          </div>
+        `;
+      }
     }
   }
 
@@ -1028,6 +1076,7 @@ export {
   renderSyncQueueList,
   syncOfflineQueue,
   clearAllSubmissions,
+  dispatchApi,
 };
 
 function createClinicalInput(
