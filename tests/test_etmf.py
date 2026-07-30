@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from apps.etmf.database import db_manager
+from apps.etmf.ingestion import ingest_document_service
 from apps.etmf.main import app, map_artifact_to_tmf
 from apps.etmf.models import Base, DocumentQCTransition, TMFAuditLog, TMFDocument
 from apps.gateway.main import generate_signature
@@ -1939,3 +1940,140 @@ async def test_completeness_from_catalog_across_versions():
         headers=inspector_headers,
     )
     assert res_unknown.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_service_caller_ingestion_success():
+    """
+    Verify that a non-HTTP direct service caller can ingest content using the
+    exact same workflow, and can customize the audit-action.
+    """
+    session_maker = db_manager.get_session_maker()
+    async with session_maker() as session:
+        # Ingest a document directly using the service
+        doc = await ingest_document_service(
+            session=session,
+            study_id="study_service_001",
+            artifact_type="Clinical Trial Protocol",
+            filename="protocol_from_email.txt",
+            content="Protocol text received via inbound email parsing.",
+            mime_type="text/plain",
+            user_id="email_parser_job",
+            user_roles="system_daemon",
+            audit_action="EMAIL_INGEST",
+        )
+        await session.commit()
+
+        assert doc.id is not None
+        assert doc.study_id == "study_service_001"
+        assert doc.filename == "protocol_from_email.txt"
+        assert doc.version_index == 1
+        assert doc.zone == 1
+        assert doc.section == "01.01"
+
+    # Query the database to verify persistence and audit trails
+    async with session_maker() as session:
+        # Verify TMFDocument persistence
+        stmt_doc = select(TMFDocument).where(TMFDocument.id == doc.id)
+        res_doc = await session.execute(stmt_doc)
+        db_doc = res_doc.scalars().first()
+        assert db_doc is not None
+        assert db_doc.created_by == "email_parser_job"
+
+        # Verify TMFAuditLog with the custom EMAIL_INGEST action is written
+        stmt_audit = select(TMFAuditLog).where(TMFAuditLog.document_id == doc.id)
+        res_audit = await session.execute(stmt_audit)
+        audit_logs = res_audit.scalars().all()
+        assert len(audit_logs) == 1
+        assert audit_logs[0].action == "EMAIL_INGEST"
+        assert audit_logs[0].user_id == "email_parser_job"
+        assert "Ingested artifact type" in audit_logs[0].details
+
+
+@pytest.mark.asyncio
+async def test_service_caller_ingestion_rollback_on_failure():
+    """
+    Verify that transactional boundaries are defined so a failed ingest does
+    not leave partial document or audit state in the session/database.
+    """
+    session_maker = db_manager.get_session_maker()
+    async with session_maker() as session:
+        # Start a transaction block or let nested handle it.
+        # Try to ingest an unknown artifact, which will raise ValueError
+        with pytest.raises(ValueError, match="Validation Error"):
+            await ingest_document_service(
+                session=session,
+                study_id="study_service_002",
+                artifact_type="Fake Out Artifact",
+                filename="fake.txt",
+                content="Some content",
+                mime_type="text/plain",
+                user_id="job_runner",
+                user_roles="system_daemon",
+            )
+
+        # Ensure that no document was inserted or flushed to the database
+        stmt_doc = select(TMFDocument).where(
+            TMFDocument.study_id == "study_service_002"
+        )
+        res_doc = await session.execute(stmt_doc)
+        assert len(res_doc.scalars().all()) == 0
+
+        # Ensure no audit logs were written
+        stmt_audit = select(TMFAuditLog).where(TMFAuditLog.user_id == "job_runner")
+        res_audit = await session.execute(stmt_audit)
+        assert len(res_audit.scalars().all()) == 0
+
+
+@pytest.mark.asyncio
+async def test_service_caller_ingestion_immutability_violation():
+    """
+    Verify that the document immutability protection remains intact at the service level,
+    rejecting attempts to ingest new versions of signed/approved documents and writing a
+    MUTATION_REJECTED audit log record.
+    """
+    session_maker = db_manager.get_session_maker()
+
+    # 1. Ingest initial document version
+    async with session_maker() as session:
+        doc = await ingest_document_service(
+            session=session,
+            study_id="study_imm_test",
+            artifact_type="Clinical Trial Protocol",
+            filename="protocol_v1.txt",
+            content="Original content.",
+            mime_type="text/plain",
+            user_id="user_admin",
+            user_roles="admin",
+        )
+        # Transition to SIGNED
+        doc.status = "SIGNED"
+        doc.approval_status = "APPROVED"
+        doc.signature_manifestation = {"mock": "manifestation"}
+        await session.commit()
+        doc_id = doc.id
+
+    # 2. Attempt to ingest a new version over the signed/approved document -> must raise PermissionError
+    async with session_maker() as session:
+        with pytest.raises(PermissionError, match="IMMUTABILITY_VIOLATION"):
+            await ingest_document_service(
+                session=session,
+                study_id="study_imm_test",
+                artifact_type="Clinical Trial Protocol",
+                filename="protocol_v2.txt",
+                content="Attempting modification.",
+                mime_type="text/plain",
+                user_id="user_unauthorized",
+                user_roles="sponsor_dm",
+            )
+
+    # 3. Verify that the MUTATION_REJECTED audit log record was successfully persisted
+    async with session_maker() as session:
+        stmt_audit = select(TMFAuditLog).where(
+            TMFAuditLog.document_id == doc_id, TMFAuditLog.action == "MUTATION_REJECTED"
+        )
+        res_audit = await session.execute(stmt_audit)
+        reject_logs = res_audit.scalars().all()
+        assert len(reject_logs) == 1
+        assert "Rejected attempt to ingest new version" in reject_logs[0].details
+        assert reject_logs[0].user_id == "user_unauthorized"

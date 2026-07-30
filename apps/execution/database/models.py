@@ -1008,7 +1008,9 @@ class StudyAuthoredRule(AuditedModel):
 
     study_id: Mapped[str] = mapped_column(String(255), nullable=False)
     rule_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    rule_type: Mapped[str] = mapped_column(String(50), default="cross_form_check", nullable=False)
+    rule_type: Mapped[str] = mapped_column(
+        String(50), default="cross_form_check", nullable=False
+    )
     condition: Mapped[dict] = mapped_column(JSON, nullable=False)
     query_message: Mapped[str] = mapped_column(String(1000), nullable=False)
     message: Mapped[str] = mapped_column(String(1000), nullable=False)
