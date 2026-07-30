@@ -796,7 +796,12 @@ async def unblind_subject(
         if not subject:
             raise HTTPException(status_code=404, detail="Subject not found")
 
-        verify_site_access(principal, subject.site_id, study_id=subject.study_id, subject_id=subject.subject_id)
+        verify_site_access(
+            principal,
+            subject.site_id,
+            study_id=subject.study_id,
+            subject_id=subject.subject_id,
+        )
 
         # Perform the transition inside a try-except to catch transition errors
         try:
@@ -2869,7 +2874,7 @@ async def list_queries(
                         query_type=q.query_type,
                         action_required=q.action_required,
                     ),
-                    principal
+                    principal,
                 )
             )
         return responses
@@ -2897,7 +2902,9 @@ async def get_query(
         if not q:
             raise HTTPException(status_code=404, detail="Clinical query not found")
 
-        verify_site_access(principal, q.site_id, study_id=q.study_id, subject_id=q.subject_id)
+        verify_site_access(
+            principal, q.site_id, study_id=q.study_id, subject_id=q.subject_id
+        )
 
         history = await fetch_history(session, q.id)
         return redact_response(
@@ -2931,7 +2938,7 @@ async def get_query(
                 query_type=q.query_type,
                 action_required=q.action_required,
             ),
-            principal
+            principal,
         )
 
 
@@ -3978,7 +3985,7 @@ async def list_form_submissions(
                     is_deleted=sub.is_deleted,
                     signature_manifest=sub.signature_manifest,
                 ),
-                principal
+                principal,
             )
             for sub in subs
         ]
@@ -4002,7 +4009,9 @@ async def get_form_submission(
         if not sub:
             raise HTTPException(status_code=404, detail="Form submission not found")
 
-        verify_site_access(principal, sub.site_id, study_id=sub.study_id, subject_id=sub.subject_id)
+        verify_site_access(
+            principal, sub.site_id, study_id=sub.study_id, subject_id=sub.subject_id
+        )
 
         return redact_response(
             FormSubmissionResponse(
@@ -4017,7 +4026,7 @@ async def get_form_submission(
                 is_deleted=sub.is_deleted,
                 signature_manifest=sub.signature_manifest,
             ),
-            principal
+            principal,
         )
 
 

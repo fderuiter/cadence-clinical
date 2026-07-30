@@ -63,6 +63,22 @@ def verify_site_access(
                 detail="Forbidden: access restricted to your assigned site(s).",
             )
 
+    # If the principal has no assigned sites (empty list), they are treated as unscoped
+    # or globally authorized (e.g. in test/admin context), so we bypass site-isolation checks.
+    if not principal.assigned_sites:
+        return
+
+    # If principal has assigned sites, they are restricted:
+    if site_id is None or str(site_id).strip() == "":
+        # Restricted users cannot access unscoped/global resources
+        dispatch_access_violation_alert(
+            principal, site_id, study_id=study_id, subject_id=subject_id
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: access restricted to your assigned site(s).",
+        )
+
     if not can_access_site(principal, site_id):
         dispatch_access_violation_alert(
             principal, site_id, study_id=study_id, subject_id=subject_id

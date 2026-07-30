@@ -856,7 +856,9 @@ def test_rtsm_role_aware_masking() -> None:
     assert masked_cra["drug_code"] == "Obfuscated Kit"
 
     # Statistician -> sees allocation fields but NOT drug code / kit reference
-    stat_p = Principal(user_id="s1", roles=[ROLE_UNBLINDED_STATISTICIAN], unblinded_access=False)
+    stat_p = Principal(
+        user_id="s1", roles=[ROLE_UNBLINDED_STATISTICIAN], unblinded_access=False
+    )
     masked_stat = mask_payload(payload, stat_p)
     assert masked_stat["treatment_arm"] == "Active Arm"
     assert masked_stat["randomization_seed"] == 12345
@@ -875,6 +877,7 @@ def test_rtsm_role_aware_masking() -> None:
 # ==========================================
 # Integration Tests for RTSM Authorization
 # ==========================================
+
 
 @pytest.mark.asyncio
 async def test_cross_site_unblind_denied_with_alert(monkeypatch) -> None:
@@ -924,13 +927,17 @@ async def test_cross_site_unblind_denied_with_alert(monkeypatch) -> None:
 
     # Monkeypatch publish_notification to capture the dispatched security alert
     captured_payloads = []
+
     async def mock_publish(payload):
         captured_payloads.append(payload)
         return True
 
     import apps.execution.notifications_client
     import apps.execution.rtsm_authz
-    monkeypatch.setattr(apps.execution.notifications_client, "publish_notification", mock_publish)
+
+    monkeypatch.setattr(
+        apps.execution.notifications_client, "publish_notification", mock_publish
+    )
     monkeypatch.setattr(apps.execution.rtsm_authz, "publish_notification", mock_publish)
 
     async with httpx.AsyncClient(
@@ -944,7 +951,11 @@ async def test_cross_site_unblind_denied_with_alert(monkeypatch) -> None:
 
     # Verify that a security alert was dispatched to appropriate roles
     assert len(captured_payloads) > 0
-    assert any(p["category"] == "ALERTS" and p["related_entity_type"] == "rtsm-access-violation" for p in captured_payloads)
+    assert any(
+        p["category"] == "ALERTS"
+        and p["related_entity_type"] == "rtsm-access-violation"
+        for p in captured_payloads
+    )
 
 
 @pytest.mark.asyncio
@@ -1011,9 +1022,7 @@ async def test_cross_site_query_read_isolation() -> None:
         assert res_single.status_code == 403
 
         # List read -> filters and returns ONLY site_chicago queries
-        res_list = await client.get(
-            "/api/v1/execution/queries", headers=headers
-        )
+        res_list = await client.get("/api/v1/execution/queries", headers=headers)
         assert res_list.status_code == 200
         queries = res_list.json()
         assert len(queries) == 1

@@ -1054,7 +1054,9 @@ def _recursive_mask(data: Any, unmasked_fields: Optional[Set[str]] = None) -> An
         new_dict = {}
         for k, v in data.items():
             k_lower = k.lower()
-            if k_lower in MASKING_RULES and (unmasked_fields is None or k_lower not in unmasked_fields):
+            if k_lower in MASKING_RULES and (
+                unmasked_fields is None or k_lower not in unmasked_fields
+            ):
                 new_dict[k] = MASKING_RULES[k_lower](v)
             else:
                 new_dict[k] = _recursive_mask(v, unmasked_fields)

@@ -265,7 +265,9 @@ default parameter values so existing test suites (`tests/test_pr_comment.py`)
 do not break:
 
 ```python
-def get_pr_metadata(repo: str = "owner/repo", pr_number: str = "123") -> tuple[str, list[str]]:
+def get_pr_metadata(
+    repo: str = "owner/repo", pr_number: str = "123"
+) -> tuple[str, list[str]]:
     pass
 ```
 
