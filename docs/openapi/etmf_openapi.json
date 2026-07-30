@@ -1130,6 +1130,56 @@
         }
       }
     },
+    "/api/v1/etmf/studies/{study_id}/archive": {
+      "post": {
+        "summary": "Bulk Archive Study Documents",
+        "description": "Perform authorized bulk study-level document archival transitioning eligible eTMF documents to\nthe terminal ARCHIVED status under 21 CFR Part 11 requirements.",
+        "operationId": "bulk_archive_study_documents_api_v1_etmf_studies__study_id__archive_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StudyArchiveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudyArchiveResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/etmf/documents/{document_id}/qc-history": {
       "get": {
         "summary": "Get Document Qc History",
@@ -1460,6 +1510,17 @@
           "study_id": {
             "type": "string",
             "title": "Study Id"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
           },
           "zone": {
             "type": "integer",
@@ -1813,6 +1874,18 @@
             "title": "Study Id",
             "description": "Unique identifier of the clinical study"
           },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Optional site identifier"
+          },
           "artifact_type": {
             "type": "string",
             "title": "Artifact Type",
@@ -2160,6 +2233,121 @@
         ],
         "title": "SpanItem",
         "description": "Explicit character span to redact in manual redaction."
+      },
+      "StudyArchiveItemResult": {
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "title": "Document Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "from_status": {
+            "type": "string",
+            "title": "From Status"
+          },
+          "to_status": {
+            "type": "string",
+            "title": "To Status"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id",
+          "filename",
+          "from_status",
+          "to_status",
+          "status"
+        ],
+        "title": "StudyArchiveItemResult",
+        "description": "Detailed result for an individual document's archival attempt."
+      },
+      "StudyArchiveRequest": {
+        "properties": {
+          "reason_for_change": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 10,
+            "title": "Reason For Change",
+            "description": "Part 11 change justification reason for bulk study archive"
+          },
+          "all_or_nothing": {
+            "type": "boolean",
+            "title": "All Or Nothing",
+            "description": "If True, rolling back the entire operation if any eligible document fails to transition.",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason_for_change"
+        ],
+        "title": "StudyArchiveRequest",
+        "description": "Payload to request bulk study-level document archival."
+      },
+      "StudyArchiveResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "total_processed": {
+            "type": "integer",
+            "title": "Total Processed"
+          },
+          "successful_count": {
+            "type": "integer",
+            "title": "Successful Count"
+          },
+          "failed_count": {
+            "type": "integer",
+            "title": "Failed Count"
+          },
+          "skipped_count": {
+            "type": "integer",
+            "title": "Skipped Count"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/StudyArchiveItemResult"
+            },
+            "type": "array",
+            "title": "Results"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "study_id",
+          "total_processed",
+          "successful_count",
+          "failed_count",
+          "skipped_count",
+          "results"
+        ],
+        "title": "StudyArchiveResponse",
+        "description": "Response model for bulk study archive operation."
       },
       "TransitionRequest": {
         "properties": {

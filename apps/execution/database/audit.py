@@ -130,18 +130,25 @@ def receive_before_flush(session: Session, flush_context, instances):
                 subject_id = getattr(obj, "subject_id", None)
                 if subject_id:
                     subj_obj = None
-                    for new_obj in list(session.new) + list(session.identity_map.values()):
+                    for new_obj in list(session.new) + list(
+                        session.identity_map.values()
+                    ):
                         if (
                             hasattr(new_obj, "__tablename__")
                             and new_obj.__tablename__ == "clinical_subjects"
-                            and (getattr(new_obj, "subject_id", None) == subject_id or getattr(new_obj, "id", None) == subject_id)
+                            and (
+                                getattr(new_obj, "subject_id", None) == subject_id
+                                or getattr(new_obj, "id", None) == subject_id
+                            )
                         ):
                             subj_obj = new_obj
                             break
                     if not subj_obj:
                         with session.no_autoflush:
                             from sqlalchemy import select
+
                             from .models import ClinicalSubject
+
                             stmt_subj = select(ClinicalSubject).where(
                                 (ClinicalSubject.subject_id == subject_id)
                                 | (ClinicalSubject.id == subject_id)

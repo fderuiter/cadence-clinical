@@ -109,7 +109,13 @@ export const soaClient = {
   /**
    * Verifies re-supplied credentials to obtain a short-lived signature token (sig_token).
    */
-  async verifySignature({ username, password, totp = null, action, batchId = null }) {
+  async verifySignature({
+    username,
+    password,
+    totp = null,
+    action,
+    batchId = null,
+  }) {
     return apiClient.post("/api/v1/auth/signature-verification", {
       username,
       password,

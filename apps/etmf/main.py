@@ -25,7 +25,6 @@ from apps.etmf.models import (
     ExpectedDocument,
     TMFAuditLog,
     TMFDocument,
-    is_site_level_artifact,
 )
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.deid.detector import DeidDetector

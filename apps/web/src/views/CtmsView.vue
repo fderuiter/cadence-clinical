@@ -127,7 +127,10 @@
 <script setup>
 import { computed } from "vue";
 import { useClinicalStore } from "../stores/clinical";
-import { createCtmsMilestoneTable, createCtmsVisitTable } from "../lib/legacy_helpers.js";
+import {
+  createCtmsMilestoneTable,
+  createCtmsVisitTable,
+} from "../lib/legacy_helpers.js";
 
 const store = useClinicalStore();
 

@@ -71,11 +71,7 @@ const routes = [
     component: () => import("./views/MdrView.vue"),
     meta: {
       requiresAuth: true,
-      requiresRole: [
-        "sponsor_designer",
-        "data_manager",
-        "sponsor_admin",
-      ],
+      requiresRole: ["sponsor_designer", "data_manager", "sponsor_admin"],
     },
   },
   {

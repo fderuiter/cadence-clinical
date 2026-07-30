@@ -102,7 +102,12 @@ def verify_gateway_signature(
 
     # 2. Compatibility check: Fallbacks are ONLY permitted if no scope fields are present/active.
     # If any scope values are present, they are scope-bearing requests and must verify using the payload.
-    has_scopes = bool(site_id or sponsor_id or unblinded_access or tenant_id)
+    has_scopes = bool(
+        site_id
+        or sponsor_id
+        or unblinded_access
+        or (tenant_id and tenant_id != "tenant_default")
+    )
     if not has_scopes:
         # Fallback 1: Verify as if scope fields were omitted from the signature generation
         no_scope_expected = generate_gateway_signature(

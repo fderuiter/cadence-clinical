@@ -146,7 +146,9 @@ describe("SoA Request Construction & Serialization Unit Tests (Mocking apiClient
     expect(apiClient.put).toHaveBeenCalledTimes(1);
     const [path, body, opts] = apiClient.put.mock.calls[0];
 
-    expect(path).toBe("/api/v1/studies/STUDY-01/versions/v_draft_01/arms/ARM-Z");
+    expect(path).toBe(
+      "/api/v1/studies/STUDY-01/versions/v_draft_01/arms/ARM-Z"
+    );
     expect(body).toEqual({
       properties: { name: "Arm Z Modified" },
     });
@@ -161,7 +163,9 @@ describe("SoA Builder Store Integration", () => {
     // mock projection fetch
     apiClient.get.mockResolvedValueOnce({
       epochs: [{ epoch_id: "EP-1", epoch_name: "Epoch 1" }],
-      encounters: [{ encounter_id: "E1", encounter_name: "Visit 1", epoch_id: "EP-1" }],
+      encounters: [
+        { encounter_id: "E1", encounter_name: "Visit 1", epoch_id: "EP-1" },
+      ],
       rows: [{ activity_id: "ACT1", activity_name: "Vitals", cells: [] }],
     });
 
@@ -175,9 +179,11 @@ describe("SoA Builder Store Integration", () => {
     );
 
     expect(apiClient.post).toHaveBeenCalledTimes(1);
-    const [path, body, opts] = apiClient.post.mock.calls[0];
+    const [path, , opts] = apiClient.post.mock.calls[0];
 
-    expect(path).toBe("/api/v1/studies/STUDY-USDM-001/versions/v_draft_01/arms");
+    expect(path).toBe(
+      "/api/v1/studies/STUDY-USDM-001/versions/v_draft_01/arms"
+    );
     expect(opts.changeReason).toBe("Configure arm");
 
     // Regression: make sure no other client side trusted headers are present in opts
@@ -191,8 +197,15 @@ describe("SoA Builder Store Integration", () => {
   });
 
   it("handles link creation API calls correctly with changeReason", async () => {
-    apiClient.post.mockResolvedValueOnce({ status: "success", message: "Link established" });
-    apiClient.get.mockResolvedValueOnce({ epochs: [], encounters: [], rows: [] });
+    apiClient.post.mockResolvedValueOnce({
+      status: "success",
+      message: "Link established",
+    });
+    apiClient.get.mockResolvedValueOnce({
+      epochs: [],
+      encounters: [],
+      rows: [],
+    });
 
     const store = useClinicalStore();
 
@@ -206,13 +219,17 @@ describe("SoA Builder Store Integration", () => {
     expect(apiClient.post).toHaveBeenCalledTimes(1);
     const [path, body, opts] = apiClient.post.mock.calls[0];
 
-    expect(path).toBe("/api/v1/studies/STUDY-USDM-001/versions/v_draft_01/links/visit-procedure");
+    expect(path).toBe(
+      "/api/v1/studies/STUDY-USDM-001/versions/v_draft_01/links/visit-procedure"
+    );
     expect(body).toEqual(payload);
     expect(opts.changeReason).toBe("Link VS to Screening");
   });
 
   it("handles locked version immutability failures gracefully", async () => {
-    apiClient.post.mockRejectedValueOnce(new Error("IMMUTABILITY_VIOLATION: Locked Version cannot be modified"));
+    apiClient.post.mockRejectedValueOnce(
+      new Error("IMMUTABILITY_VIOLATION: Locked Version cannot be modified")
+    );
 
     const store = useClinicalStore();
 
@@ -225,6 +242,8 @@ describe("SoA Builder Store Integration", () => {
       );
 
     await expect(triggerMutation()).rejects.toThrow("IMMUTABILITY_VIOLATION");
-    expect(store.soaError).toBe("IMMUTABILITY_VIOLATION: Locked Version cannot be modified");
+    expect(store.soaError).toBe(
+      "IMMUTABILITY_VIOLATION: Locked Version cannot be modified"
+    );
   });
 });

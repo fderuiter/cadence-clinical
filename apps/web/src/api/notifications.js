@@ -16,7 +16,9 @@ export const notificationsService = {
     if (status) params.append("status", status);
 
     const queryString = params.toString();
-    const path = queryString ? `/api/v1/notifications?${queryString}` : "/api/v1/notifications";
+    const path = queryString
+      ? `/api/v1/notifications?${queryString}`
+      : "/api/v1/notifications";
     return apiClient.get(path, rest);
   },
 
@@ -31,7 +33,11 @@ export const notificationsService = {
    * Acknowledges a notification (transition from OPEN to ACKNOWLEDGED).
    */
   acknowledgeNotification(id, options = {}) {
-    return apiClient.post(`/api/v1/notifications/${id}/acknowledge`, {}, options);
+    return apiClient.post(
+      `/api/v1/notifications/${id}/acknowledge`,
+      {},
+      options
+    );
   },
 
   /**

@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { validateField, sha256, renderFormFromJSON } from "../src/lib/legacy_helpers.js";
+import {
+  validateField,
+  sha256,
+  renderFormFromJSON,
+} from "../src/lib/legacy_helpers.js";
 
 describe("validateField", () => {
   it("returns valid: true if field has no validation rules", () => {

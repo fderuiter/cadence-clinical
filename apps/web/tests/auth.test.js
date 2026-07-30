@@ -137,11 +137,7 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
         authenticated: true,
         tokenParsed: {
           realm_access: {
-            roles: [
-              "Sponsor Designer",
-              "study_designer",
-              "designer",
-            ],
+            roles: ["Sponsor Designer", "study_designer", "designer"],
           },
         },
       };

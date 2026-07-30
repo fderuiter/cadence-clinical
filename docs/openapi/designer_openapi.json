@@ -452,6 +452,1347 @@
         }
       }
     },
+    "/api/v1/studies/{study_id}/versions/{version_id}/arms/{arm_id}": {
+      "delete": {
+        "summary": "Retire Arm Endpoint",
+        "operationId": "retire_arm_endpoint_api_v1_studies__study_id__versions__version_id__arms__arm_id__delete",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          },
+          {
+            "name": "arm_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Arm Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoAEntityCreatedResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Get Arm Endpoint",
+        "operationId": "get_arm_endpoint_api_v1_studies__study_id__versions__version_id__arms__arm_id__get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          },
+          {
+            "name": "arm_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Arm Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoAEntityDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update Arm Endpoint",
+        "operationId": "update_arm_endpoint_api_v1_studies__study_id__versions__version_id__arms__arm_id__put",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          },
+          {
+            "name": "arm_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Arm Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStudyArmRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoAEntityCreatedResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/studies/{study_id}/versions/{version_id}/epochs/{epoch_id}": {
+      "delete": {
+        "summary": "Retire Epoch Endpoint",
+        "operationId": "retire_epoch_endpoint_api_v1_studies__study_id__versions__version_id__epochs__epoch_id__delete",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          },
+          {
+            "name": "epoch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Epoch Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoAEntityCreatedResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Get Epoch Endpoint",
+        "operationId": "get_epoch_endpoint_api_v1_studies__study_id__versions__version_id__epochs__epoch_id__get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          },
+          {
+            "name": "epoch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Epoch Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoAEntityDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update Epoch Endpoint",
+        "operationId": "update_epoch_endpoint_api_v1_studies__study_id__versions__version_id__epochs__epoch_id__put",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          },
+          {
+            "name": "epoch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Epoch Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateEpochRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoAEntityCreatedResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/studies/{study_id}/versions/{version_id}/visits/{visit_id}": {
+      "delete": {
+        "summary": "Retire Visit Endpoint",
+        "operationId": "retire_visit_endpoint_api_v1_studies__study_id__versions__version_id__visits__visit_id__delete",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          },
+          {
+            "name": "visit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Visit Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoAEntityCreatedResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Get Visit Endpoint",
+        "operationId": "get_visit_endpoint_api_v1_studies__study_id__versions__version_id__visits__visit_id__get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          },
+          {
+            "name": "visit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Visit Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoAEntityDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update Visit Endpoint",
+        "operationId": "update_visit_endpoint_api_v1_studies__study_id__versions__version_id__visits__visit_id__put",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          },
+          {
+            "name": "visit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Visit Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/apps__designer__soa_models__UpdateVisitRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoAEntityCreatedResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/studies/{study_id}/versions/{version_id}/procedures/{procedure_id}": {
+      "delete": {
+        "summary": "Retire Procedure Endpoint",
+        "operationId": "retire_procedure_endpoint_api_v1_studies__study_id__versions__version_id__procedures__procedure_id__delete",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          },
+          {
+            "name": "procedure_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Procedure Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoAEntityCreatedResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Get Procedure Endpoint",
+        "operationId": "get_procedure_endpoint_api_v1_studies__study_id__versions__version_id__procedures__procedure_id__get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          },
+          {
+            "name": "procedure_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Procedure Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoAEntityDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update Procedure Endpoint",
+        "operationId": "update_procedure_endpoint_api_v1_studies__study_id__versions__version_id__procedures__procedure_id__put",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          },
+          {
+            "name": "procedure_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Procedure Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProcedureRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoAEntityCreatedResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/studies/{study_id}/versions/{version_id}/timing-windows/{timing_id}": {
+      "delete": {
+        "summary": "Retire Timing Window Endpoint",
+        "operationId": "retire_timing_window_endpoint_api_v1_studies__study_id__versions__version_id__timing_windows__timing_id__delete",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          },
+          {
+            "name": "timing_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Timing Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoAEntityCreatedResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Get Timing Window Endpoint",
+        "operationId": "get_timing_window_endpoint_api_v1_studies__study_id__versions__version_id__timing_windows__timing_id__get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          },
+          {
+            "name": "timing_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Timing Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoAEntityDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update Timing Window Endpoint",
+        "operationId": "update_timing_window_endpoint_api_v1_studies__study_id__versions__version_id__timing_windows__timing_id__put",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          },
+          {
+            "name": "timing_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Timing Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTimingWindowRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoAEntityCreatedResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/studies/{study_id}/versions/{version_id}/links/epoch-visit": {
+      "delete": {
+        "summary": "Retire Epoch Visit Endpoint",
+        "operationId": "retire_epoch_visit_endpoint_api_v1_studies__study_id__versions__version_id__links_epoch_visit_delete",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinkEpochVisitRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoALinkResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Link Epoch Visit Endpoint",
+        "operationId": "link_epoch_visit_endpoint_api_v1_studies__study_id__versions__version_id__links_epoch_visit_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinkEpochVisitRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoALinkResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/studies/{study_id}/versions/{version_id}/links/visit-procedure": {
+      "delete": {
+        "summary": "Retire Visit Procedure Endpoint",
+        "operationId": "retire_visit_procedure_endpoint_api_v1_studies__study_id__versions__version_id__links_visit_procedure_delete",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinkVisitProcedureRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoALinkResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Link Visit Procedure Endpoint",
+        "operationId": "link_visit_procedure_endpoint_api_v1_studies__study_id__versions__version_id__links_visit_procedure_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinkVisitProcedureRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoALinkResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/studies/{study_id}/versions/{version_id}/links/timing": {
+      "delete": {
+        "summary": "Retire Timing Endpoint",
+        "operationId": "retire_timing_endpoint_api_v1_studies__study_id__versions__version_id__links_timing_delete",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinkTimingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoALinkResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Link Timing Endpoint",
+        "operationId": "link_timing_endpoint_api_v1_studies__study_id__versions__version_id__links_timing_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinkTimingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoALinkResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/studies/{study_id}/versions/{version_id}/links/arm-applicability": {
+      "delete": {
+        "summary": "Retire Arm Applicability Endpoint",
+        "operationId": "retire_arm_applicability_endpoint_api_v1_studies__study_id__versions__version_id__links_arm_applicability_delete",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinkArmApplicabilityRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoALinkResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Link Arm Applicability Endpoint",
+        "operationId": "link_arm_applicability_endpoint_api_v1_studies__study_id__versions__version_id__links_arm_applicability_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinkArmApplicabilityRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoALinkResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/studies/{study_id}/export": {
       "get": {
         "summary": "Export Protocol",
@@ -1141,7 +2482,7 @@
                     "$ref": "#/components/schemas/CreateArmRequest"
                   },
                   {
-                    "$ref": "#/components/schemas/CreateVisitRequest"
+                    "$ref": "#/components/schemas/apps__designer__library__CreateVisitRequest"
                   }
                 ],
                 "discriminator": {
@@ -1150,7 +2491,7 @@
                     "FORM": "#/components/schemas/CreateFormRequest",
                     "DATA_ELEMENT": "#/components/schemas/CreateDataElementRequest",
                     "ARM": "#/components/schemas/CreateArmRequest",
-                    "VISIT": "#/components/schemas/CreateVisitRequest"
+                    "VISIT": "#/components/schemas/apps__designer__library__CreateVisitRequest"
                   }
                 },
                 "title": "Payload"
@@ -1386,7 +2727,7 @@
                     "$ref": "#/components/schemas/UpdateArmRequest"
                   },
                   {
-                    "$ref": "#/components/schemas/UpdateVisitRequest"
+                    "$ref": "#/components/schemas/apps__designer__library__UpdateVisitRequest"
                   }
                 ],
                 "discriminator": {
@@ -1395,7 +2736,7 @@
                     "FORM": "#/components/schemas/UpdateFormRequest",
                     "DATA_ELEMENT": "#/components/schemas/UpdateDataElementRequest",
                     "ARM": "#/components/schemas/UpdateArmRequest",
-                    "VISIT": "#/components/schemas/UpdateVisitRequest"
+                    "VISIT": "#/components/schemas/apps__designer__library__UpdateVisitRequest"
                   }
                 },
                 "title": "Payload"
@@ -2444,7 +3785,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateSoAEntityRequest"
+                "$ref": "#/components/schemas/CreateStudyArmRequest"
               }
             }
           }
@@ -2523,128 +3864,6 @@
         }
       }
     },
-    "/api/v1/studies/{study_id}/versions/{version_id}/arms/{arm_id}": {
-      "get": {
-        "summary": "Get Arm Endpoint",
-        "operationId": "get_arm_endpoint_api_v1_studies__study_id__versions__version_id__arms__arm_id__get",
-        "parameters": [
-          {
-            "name": "study_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Study Id"
-            }
-          },
-          {
-            "name": "version_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Version Id"
-            }
-          },
-          {
-            "name": "arm_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Arm Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SoAEntityDetail"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "summary": "Update Arm Endpoint",
-        "operationId": "update_arm_endpoint_api_v1_studies__study_id__versions__version_id__arms__arm_id__put",
-        "parameters": [
-          {
-            "name": "study_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Study Id"
-            }
-          },
-          {
-            "name": "version_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Version Id"
-            }
-          },
-          {
-            "name": "arm_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Arm Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateSoAEntityRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SoAEntityCreatedResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/studies/{study_id}/versions/{version_id}/epochs": {
       "post": {
         "summary": "Create Epoch Endpoint",
@@ -2674,7 +3893,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateSoAEntityRequest"
+                "$ref": "#/components/schemas/CreateEpochRequest"
               }
             }
           }
@@ -2753,128 +3972,6 @@
         }
       }
     },
-    "/api/v1/studies/{study_id}/versions/{version_id}/epochs/{epoch_id}": {
-      "get": {
-        "summary": "Get Epoch Endpoint",
-        "operationId": "get_epoch_endpoint_api_v1_studies__study_id__versions__version_id__epochs__epoch_id__get",
-        "parameters": [
-          {
-            "name": "study_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Study Id"
-            }
-          },
-          {
-            "name": "version_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Version Id"
-            }
-          },
-          {
-            "name": "epoch_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Epoch Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SoAEntityDetail"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "summary": "Update Epoch Endpoint",
-        "operationId": "update_epoch_endpoint_api_v1_studies__study_id__versions__version_id__epochs__epoch_id__put",
-        "parameters": [
-          {
-            "name": "study_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Study Id"
-            }
-          },
-          {
-            "name": "version_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Version Id"
-            }
-          },
-          {
-            "name": "epoch_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Epoch Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateSoAEntityRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SoAEntityCreatedResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/studies/{study_id}/versions/{version_id}/visits": {
       "post": {
         "summary": "Create Visit Endpoint",
@@ -2904,7 +4001,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateSoAEntityRequest"
+                "$ref": "#/components/schemas/apps__designer__soa_models__CreateVisitRequest"
               }
             }
           }
@@ -2983,128 +4080,6 @@
         }
       }
     },
-    "/api/v1/studies/{study_id}/versions/{version_id}/visits/{visit_id}": {
-      "get": {
-        "summary": "Get Visit Endpoint",
-        "operationId": "get_visit_endpoint_api_v1_studies__study_id__versions__version_id__visits__visit_id__get",
-        "parameters": [
-          {
-            "name": "study_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Study Id"
-            }
-          },
-          {
-            "name": "version_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Version Id"
-            }
-          },
-          {
-            "name": "visit_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Visit Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SoAEntityDetail"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "summary": "Update Visit Endpoint",
-        "operationId": "update_visit_endpoint_api_v1_studies__study_id__versions__version_id__visits__visit_id__put",
-        "parameters": [
-          {
-            "name": "study_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Study Id"
-            }
-          },
-          {
-            "name": "version_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Version Id"
-            }
-          },
-          {
-            "name": "visit_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Visit Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateSoAEntityRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SoAEntityCreatedResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/studies/{study_id}/versions/{version_id}/procedures": {
       "post": {
         "summary": "Create Procedure Endpoint",
@@ -3134,7 +4109,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateSoAEntityRequest"
+                "$ref": "#/components/schemas/CreateProcedureRequest"
               }
             }
           }
@@ -3213,128 +4188,6 @@
         }
       }
     },
-    "/api/v1/studies/{study_id}/versions/{version_id}/procedures/{procedure_id}": {
-      "get": {
-        "summary": "Get Procedure Endpoint",
-        "operationId": "get_procedure_endpoint_api_v1_studies__study_id__versions__version_id__procedures__procedure_id__get",
-        "parameters": [
-          {
-            "name": "study_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Study Id"
-            }
-          },
-          {
-            "name": "version_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Version Id"
-            }
-          },
-          {
-            "name": "procedure_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Procedure Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SoAEntityDetail"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "summary": "Update Procedure Endpoint",
-        "operationId": "update_procedure_endpoint_api_v1_studies__study_id__versions__version_id__procedures__procedure_id__put",
-        "parameters": [
-          {
-            "name": "study_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Study Id"
-            }
-          },
-          {
-            "name": "version_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Version Id"
-            }
-          },
-          {
-            "name": "procedure_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Procedure Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateSoAEntityRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SoAEntityCreatedResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/studies/{study_id}/versions/{version_id}/timing-windows": {
       "post": {
         "summary": "Create Timing Window Endpoint",
@@ -3364,7 +4217,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateSoAEntityRequest"
+                "$ref": "#/components/schemas/CreateTimingWindowRequest"
               }
             }
           }
@@ -3426,360 +4279,6 @@
                     "$ref": "#/components/schemas/SoAEntityDetail"
                   },
                   "title": "Response List Timing Windows Endpoint Api V1 Studies  Study Id  Versions  Version Id  Timing Windows Get"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/studies/{study_id}/versions/{version_id}/timing-windows/{timing_id}": {
-      "get": {
-        "summary": "Get Timing Window Endpoint",
-        "operationId": "get_timing_window_endpoint_api_v1_studies__study_id__versions__version_id__timing_windows__timing_id__get",
-        "parameters": [
-          {
-            "name": "study_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Study Id"
-            }
-          },
-          {
-            "name": "version_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Version Id"
-            }
-          },
-          {
-            "name": "timing_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Timing Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SoAEntityDetail"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "summary": "Update Timing Window Endpoint",
-        "operationId": "update_timing_window_endpoint_api_v1_studies__study_id__versions__version_id__timing_windows__timing_id__put",
-        "parameters": [
-          {
-            "name": "study_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Study Id"
-            }
-          },
-          {
-            "name": "version_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Version Id"
-            }
-          },
-          {
-            "name": "timing_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Timing Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateSoAEntityRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SoAEntityCreatedResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/studies/{study_id}/versions/{version_id}/links/epoch-visit": {
-      "post": {
-        "summary": "Link Epoch Visit Endpoint",
-        "operationId": "link_epoch_visit_endpoint_api_v1_studies__study_id__versions__version_id__links_epoch_visit_post",
-        "parameters": [
-          {
-            "name": "study_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Study Id"
-            }
-          },
-          {
-            "name": "version_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Version Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LinkEpochVisitRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SoALinkResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/studies/{study_id}/versions/{version_id}/links/visit-procedure": {
-      "post": {
-        "summary": "Link Visit Procedure Endpoint",
-        "operationId": "link_visit_procedure_endpoint_api_v1_studies__study_id__versions__version_id__links_visit_procedure_post",
-        "parameters": [
-          {
-            "name": "study_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Study Id"
-            }
-          },
-          {
-            "name": "version_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Version Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LinkVisitProcedureRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SoALinkResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/studies/{study_id}/versions/{version_id}/links/timing": {
-      "post": {
-        "summary": "Link Timing Endpoint",
-        "operationId": "link_timing_endpoint_api_v1_studies__study_id__versions__version_id__links_timing_post",
-        "parameters": [
-          {
-            "name": "study_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Study Id"
-            }
-          },
-          {
-            "name": "version_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Version Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LinkTimingRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SoALinkResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/studies/{study_id}/versions/{version_id}/links/arm-applicability": {
-      "post": {
-        "summary": "Link Arm Applicability Endpoint",
-        "operationId": "link_arm_applicability_endpoint_api_v1_studies__study_id__versions__version_id__links_arm_applicability_post",
-        "parameters": [
-          {
-            "name": "study_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Study Id"
-            }
-          },
-          {
-            "name": "version_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Version Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LinkArmApplicabilityRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SoALinkResponse"
                 }
               }
             }
@@ -4909,6 +5408,25 @@
         ],
         "title": "CreateEligibilityCriterionRequest"
       },
+      "CreateEpochRequest": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Id",
+            "description": "Unique identifier for the epoch."
+          },
+          "properties": {
+            "$ref": "#/components/schemas/EpochProperties"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "properties"
+        ],
+        "title": "CreateEpochRequest"
+      },
       "CreateFormRequest": {
         "properties": {
           "id": {
@@ -4956,6 +5474,25 @@
         ],
         "title": "CreateFormRequest",
         "description": "Request model for creating a Form library object."
+      },
+      "CreateProcedureRequest": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Id",
+            "description": "Unique identifier for the procedure."
+          },
+          "properties": {
+            "$ref": "#/components/schemas/ProcedureProperties"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "properties"
+        ],
+        "title": "CreateProcedureRequest"
       },
       "CreateRuleRequest": {
         "properties": {
@@ -5039,16 +5576,16 @@
         "title": "CreateRuleRequest",
         "description": "Request schema to create a rule."
       },
-      "CreateSoAEntityRequest": {
+      "CreateStudyArmRequest": {
         "properties": {
           "id": {
             "type": "string",
-            "title": "Id"
+            "minLength": 1,
+            "title": "Id",
+            "description": "Unique identifier for the study arm."
           },
           "properties": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Properties"
+            "$ref": "#/components/schemas/StudyArmProperties"
           }
         },
         "type": "object",
@@ -5056,7 +5593,7 @@
           "id",
           "properties"
         ],
-        "title": "CreateSoAEntityRequest"
+        "title": "CreateStudyArmRequest"
       },
       "CreateStudyVersionRequest": {
         "properties": {
@@ -5087,53 +5624,24 @@
         "title": "CreateStudyVersionRequest",
         "description": "Request payload to establish a StudyVersion node."
       },
-      "CreateVisitRequest": {
+      "CreateTimingWindowRequest": {
         "properties": {
           "id": {
             "type": "string",
+            "minLength": 1,
             "title": "Id",
-            "description": "Stable, unique global library ID."
+            "description": "Unique identifier for the timing window."
           },
-          "version": {
-            "type": "string",
-            "title": "Version",
-            "description": "Initial version code.",
-            "default": "1.0.0"
-          },
-          "status": {
-            "$ref": "#/components/schemas/LibraryStatus",
-            "description": "Initial library state.",
-            "default": "DRAFT"
-          },
-          "sponsor_id": {
-            "type": "string",
-            "title": "Sponsor Id",
-            "description": "Sponsor / Tenant identifier."
-          },
-          "change_reason": {
-            "type": "string",
-            "title": "Change Reason",
-            "description": "Mandatory reason for change / audit trail justification."
-          },
-          "object_type": {
-            "type": "string",
-            "const": "VISIT",
-            "title": "Object Type",
-            "default": "VISIT"
-          },
-          "payload": {
-            "$ref": "#/components/schemas/VisitPayload"
+          "properties": {
+            "$ref": "#/components/schemas/TimingWindowProperties"
           }
         },
         "type": "object",
         "required": [
           "id",
-          "sponsor_id",
-          "change_reason",
-          "payload"
+          "properties"
         ],
-        "title": "CreateVisitRequest",
-        "description": "Request model for creating a Visit library object."
+        "title": "CreateTimingWindowRequest"
       },
       "DataElementLibraryObjectDetail": {
         "properties": {
@@ -5374,6 +5882,48 @@
         ],
         "title": "EligibilityCriterion",
         "description": "Represents a single inclusion or exclusion criterion with full GxP audit metadata."
+      },
+      "EpochProperties": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "The name of the study epoch, e.g., 'Screening'."
+          },
+          "epoch_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Epoch Name",
+            "description": "Alternate/legacy field name for epoch name."
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Sequence",
+            "description": "Sequential ordering rank of the epoch."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sequence"
+        ],
+        "title": "EpochProperties",
+        "description": "Properties specific to a Study Epoch."
       },
       "ExpressionNode-Input": {
         "properties": {
@@ -6057,14 +6607,21 @@
         "properties": {
           "arm_id": {
             "type": "string",
+            "minLength": 1,
             "title": "Arm Id"
           },
           "target_id": {
             "type": "string",
+            "minLength": 1,
             "title": "Target Id"
           },
           "target_type": {
             "type": "string",
+            "enum": [
+              "visit",
+              "procedure",
+              "epoch"
+            ],
             "title": "Target Type",
             "default": "visit"
           }
@@ -6080,10 +6637,12 @@
         "properties": {
           "epoch_id": {
             "type": "string",
+            "minLength": 1,
             "title": "Epoch Id"
           },
           "visit_id": {
             "type": "string",
+            "minLength": 1,
             "title": "Visit Id"
           }
         },
@@ -6098,14 +6657,20 @@
         "properties": {
           "source_id": {
             "type": "string",
+            "minLength": 1,
             "title": "Source Id"
           },
           "timing_id": {
             "type": "string",
+            "minLength": 1,
             "title": "Timing Id"
           },
           "source_type": {
             "type": "string",
+            "enum": [
+              "visit",
+              "procedure"
+            ],
             "title": "Source Type",
             "default": "visit"
           }
@@ -6121,10 +6686,12 @@
         "properties": {
           "visit_id": {
             "type": "string",
+            "minLength": 1,
             "title": "Visit Id"
           },
           "procedure_id": {
             "type": "string",
+            "minLength": 1,
             "title": "Procedure Id"
           }
         },
@@ -6197,6 +6764,39 @@
           "code"
         ],
         "title": "ProblemDetails"
+      },
+      "ProcedureProperties": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "The display name of the procedure."
+          },
+          "activity_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activity Name",
+            "description": "Alternate/legacy field name for the procedure."
+          }
+        },
+        "type": "object",
+        "title": "ProcedureProperties",
+        "description": "Properties specific to a clinical Procedure / Activity."
       },
       "ProtocolAmendRequest": {
         "properties": {
@@ -6382,7 +6982,8 @@
         "required": [
           "id"
         ],
-        "title": "SoAEntityCreatedResponse"
+        "title": "SoAEntityCreatedResponse",
+        "description": "Standard successful creation response."
       },
       "SoAEntityDetail": {
         "properties": {
@@ -6401,6 +7002,16 @@
           "created_at": {
             "type": "string",
             "title": "Created At"
+          },
+          "is_retired": {
+            "type": "boolean",
+            "title": "Is Retired",
+            "default": false
+          },
+          "is_deleted": {
+            "type": "boolean",
+            "title": "Is Deleted",
+            "default": false
           }
         },
         "additionalProperties": true,
@@ -6411,7 +7022,8 @@
           "created_by",
           "created_at"
         ],
-        "title": "SoAEntityDetail"
+        "title": "SoAEntityDetail",
+        "description": "Standard details of a versioned SoA entity."
       },
       "SoAHeaderArm": {
         "properties": {
@@ -6670,6 +7282,42 @@
         "title": "StudyAlignmentReport",
         "description": "Comprehensive alignment report analyzing the mapping between study epochs and CRFs.\n\nAttributes:\n    study_id: The unique identifier of the study being evaluated.\n    complete_activities: Activities where all required items are mapped successfully.\n    incomplete_activities: Activities with partially mapped items.\n    unmapped_activities: Activities completely lacking any mapped items.\n    unmapped_odm_items: ODM nodes present but not associated with any active activity item.\n    unmapped_crf_item_values: CRF items/values present but not associated with any activity definition."
       },
+      "StudyArmProperties": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Name",
+            "description": "The name of the study arm, e.g., 'Active' or 'Placebo'."
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Type",
+            "description": "The classification type of the arm."
+          },
+          "sequence": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sequence",
+            "description": "Sequential ordering rank."
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "type"
+        ],
+        "title": "StudyArmProperties",
+        "description": "Properties specific to a clinical trial Study Arm."
+      },
       "StudyTerminologyValidationReport": {
         "properties": {
           "study_id": {
@@ -6799,6 +7447,47 @@
         ],
         "title": "TerminologySearchResponse",
         "description": "Response model for search and autocomplete queries."
+      },
+      "TimingWindowProperties": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Name",
+            "description": "Label or duration specification of the timing window."
+          },
+          "conditional": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conditional",
+            "description": "Flag indicating if the timing or applicability is conditional."
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason",
+            "description": "Mandatory justification reason required if conditional is True."
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "TimingWindowProperties",
+        "description": "Properties specific to a Timing Window. Enforces cross-field conditional justification."
       },
       "UpdateArmRequest": {
         "properties": {
@@ -6964,6 +7653,18 @@
         ],
         "title": "UpdateEligibilityCriterionRequest"
       },
+      "UpdateEpochRequest": {
+        "properties": {
+          "properties": {
+            "$ref": "#/components/schemas/EpochProperties"
+          }
+        },
+        "type": "object",
+        "required": [
+          "properties"
+        ],
+        "title": "UpdateEpochRequest"
+      },
       "UpdateFormRequest": {
         "properties": {
           "reason_for_change": {
@@ -7004,44 +7705,41 @@
         ],
         "title": "UpdateLibraryInstanceRequest"
       },
-      "UpdateSoAEntityRequest": {
+      "UpdateProcedureRequest": {
         "properties": {
           "properties": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Properties"
+            "$ref": "#/components/schemas/ProcedureProperties"
           }
         },
         "type": "object",
         "required": [
           "properties"
         ],
-        "title": "UpdateSoAEntityRequest"
+        "title": "UpdateProcedureRequest"
       },
-      "UpdateVisitRequest": {
+      "UpdateStudyArmRequest": {
         "properties": {
-          "reason_for_change": {
-            "type": "string",
-            "title": "Reason For Change",
-            "description": "Mandatory reason for change / audit trail justification."
-          },
-          "object_type": {
-            "type": "string",
-            "const": "VISIT",
-            "title": "Object Type",
-            "default": "VISIT"
-          },
-          "payload": {
-            "$ref": "#/components/schemas/VisitPayload"
+          "properties": {
+            "$ref": "#/components/schemas/StudyArmProperties"
           }
         },
         "type": "object",
         "required": [
-          "reason_for_change",
-          "payload"
+          "properties"
         ],
-        "title": "UpdateVisitRequest",
-        "description": "Request model for updating a Visit library object."
+        "title": "UpdateStudyArmRequest"
+      },
+      "UpdateTimingWindowRequest": {
+        "properties": {
+          "properties": {
+            "$ref": "#/components/schemas/TimingWindowProperties"
+          }
+        },
+        "type": "object",
+        "required": [
+          "properties"
+        ],
+        "title": "UpdateTimingWindowRequest"
       },
       "ValidationError": {
         "properties": {
@@ -7265,6 +7963,152 @@
         ],
         "title": "VisitPayload",
         "description": "Visit-specific payload validation containing visit attributes."
+      },
+      "VisitProperties": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "The display name of the visit."
+          },
+          "encounter_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Encounter Name",
+            "description": "Alternate/legacy field name for encounter/visit."
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Sequence",
+            "description": "Sequential ordering rank of the visit."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sequence"
+        ],
+        "title": "VisitProperties",
+        "description": "Properties specific to a Visit / Encounter."
+      },
+      "apps__designer__library__CreateVisitRequest": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Stable, unique global library ID."
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "description": "Initial version code.",
+            "default": "1.0.0"
+          },
+          "status": {
+            "$ref": "#/components/schemas/LibraryStatus",
+            "description": "Initial library state.",
+            "default": "DRAFT"
+          },
+          "sponsor_id": {
+            "type": "string",
+            "title": "Sponsor Id",
+            "description": "Sponsor / Tenant identifier."
+          },
+          "change_reason": {
+            "type": "string",
+            "title": "Change Reason",
+            "description": "Mandatory reason for change / audit trail justification."
+          },
+          "object_type": {
+            "type": "string",
+            "const": "VISIT",
+            "title": "Object Type",
+            "default": "VISIT"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/VisitPayload"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "sponsor_id",
+          "change_reason",
+          "payload"
+        ],
+        "title": "CreateVisitRequest",
+        "description": "Request model for creating a Visit library object."
+      },
+      "apps__designer__library__UpdateVisitRequest": {
+        "properties": {
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Mandatory reason for change / audit trail justification."
+          },
+          "object_type": {
+            "type": "string",
+            "const": "VISIT",
+            "title": "Object Type",
+            "default": "VISIT"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/VisitPayload"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason_for_change",
+          "payload"
+        ],
+        "title": "UpdateVisitRequest",
+        "description": "Request model for updating a Visit library object."
+      },
+      "apps__designer__soa_models__CreateVisitRequest": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Id",
+            "description": "Unique identifier for the visit."
+          },
+          "properties": {
+            "$ref": "#/components/schemas/VisitProperties"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "properties"
+        ],
+        "title": "CreateVisitRequest"
+      },
+      "apps__designer__soa_models__UpdateVisitRequest": {
+        "properties": {
+          "properties": {
+            "$ref": "#/components/schemas/VisitProperties"
+          }
+        },
+        "type": "object",
+        "required": [
+          "properties"
+        ],
+        "title": "UpdateVisitRequest"
       }
     }
   }

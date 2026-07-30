@@ -457,7 +457,10 @@ async def test_api_with_mocked_neo4j_driver():
             headers = get_auth_headers()
             res = await client.post(
                 "/api/v1/studies/study_1/versions/v_draft/arms",
-                json={"id": "arm_mocked", "properties": {"name": "Arm Mocked", "type": "Active"}},
+                json={
+                    "id": "arm_mocked",
+                    "properties": {"name": "Arm Mocked", "type": "Active"},
+                },
                 headers=headers,
             )
             assert res.status_code == 201
@@ -547,7 +550,10 @@ async def test_api_audit_reason_enforcement():
 
         res = await client.post(
             f"/api/v1/studies/{study_id}/versions/{version_id}/arms",
-            json={"id": "arm_no_reason", "properties": {"name": "Arm A", "type": "Active"}},
+            json={
+                "id": "arm_no_reason",
+                "properties": {"name": "Arm A", "type": "Active"},
+            },
             headers=headers,
         )
         assert res.status_code == 403
@@ -558,7 +564,10 @@ async def test_api_audit_reason_enforcement():
         headers_long = get_auth_headers(change_reason=long_reason)
         res_long = await client.post(
             f"/api/v1/studies/{study_id}/versions/{version_id}/arms",
-            json={"id": "arm_long_reason", "properties": {"name": "Arm A", "type": "Active"}},
+            json={
+                "id": "arm_long_reason",
+                "properties": {"name": "Arm A", "type": "Active"},
+            },
             headers=headers_long,
         )
         assert res_long.status_code == 400
@@ -728,23 +737,23 @@ async def test_api_soa_typed_validation_and_timing_rejection():
                 "properties": {
                     "name": "Fasting Timing",
                     "conditional": True,
-                    "reason": "" # empty reason is invalid
-                }
+                    "reason": "",  # empty reason is invalid
+                },
             },
             headers=headers,
         )
         assert res_invalid_timing.status_code == 400
-        assert "String should have at least 1 character" in res_invalid_timing.text or "A non-empty 'reason' must be provided" in res_invalid_timing.text
+        assert (
+            "String should have at least 1 character" in res_invalid_timing.text
+            or "A non-empty 'reason' must be provided" in res_invalid_timing.text
+        )
 
         # 1b. Invalid Timing Window: conditional is True, reason is omitted entirely
         res_missing_reason = await client.post(
             f"/api/v1/studies/{study_id}/versions/{version_id}/timing-windows",
             json={
                 "id": "tw_cond_missing",
-                "properties": {
-                    "name": "Fasting Timing",
-                    "conditional": True
-                }
+                "properties": {"name": "Fasting Timing", "conditional": True},
             },
             headers=headers,
         )
@@ -759,8 +768,8 @@ async def test_api_soa_typed_validation_and_timing_rejection():
                 "properties": {
                     "name": "Fasting Timing",
                     "conditional": True,
-                    "reason": "Only required for diabetic cohort"
-                }
+                    "reason": "Only required for diabetic cohort",
+                },
             },
             headers=headers,
         )
@@ -795,7 +804,10 @@ async def test_api_soa_retirement_and_projection_exclusion():
         # 1. Create a Visit and Procedure, and a Timing Window
         await client.post(
             f"/api/v1/studies/{study_id}/versions/{version_id}/visits",
-            json={"id": "visit_ret", "properties": {"encounter_name": "Week 1", "sequence": 1}},
+            json={
+                "id": "visit_ret",
+                "properties": {"encounter_name": "Week 1", "sequence": 1},
+            },
             headers=headers,
         )
         await client.post(
@@ -817,7 +829,11 @@ async def test_api_soa_retirement_and_projection_exclusion():
         )
         await client.post(
             f"/api/v1/studies/{study_id}/versions/{version_id}/links/timing",
-            json={"source_id": "proc_ret", "timing_id": "timing_ret", "source_type": "procedure"},
+            json={
+                "source_id": "proc_ret",
+                "timing_id": "timing_ret",
+                "source_type": "procedure",
+            },
             headers=headers,
         )
 

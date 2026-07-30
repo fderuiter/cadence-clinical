@@ -40,7 +40,9 @@ export const useNotificationsStore = defineStore("notifications", {
       this.error = null;
       this.errorStatus = null;
       try {
-        const updated = await notificationsService.acknowledgeNotification(id, { changeReason });
+        const updated = await notificationsService.acknowledgeNotification(id, {
+          changeReason,
+        });
         const index = this.notifications.findIndex((n) => n.id === id);
         if (index !== -1) {
           this.notifications[index] = updated;
@@ -59,7 +61,9 @@ export const useNotificationsStore = defineStore("notifications", {
       this.error = null;
       this.errorStatus = null;
       try {
-        const updated = await notificationsService.resolveNotification(id, { changeReason });
+        const updated = await notificationsService.resolveNotification(id, {
+          changeReason,
+        });
         const index = this.notifications.findIndex((n) => n.id === id);
         if (index !== -1) {
           this.notifications[index] = updated;

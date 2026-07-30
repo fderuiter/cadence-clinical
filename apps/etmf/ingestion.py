@@ -105,7 +105,9 @@ async def ingest_document_service(
     if resolved_site_id is not None:
         stripped = resolved_site_id.strip()
         if not stripped:
-            raise ValueError("Validation Error: site_id cannot be empty or whitespace-only")
+            raise ValueError(
+                "Validation Error: site_id cannot be empty or whitespace-only"
+            )
         resolved_site_id = stripped
     else:
         if is_site_level_artifact(canonical_artifact_type, resolved_artifact_code):
@@ -114,7 +116,9 @@ async def ingest_document_service(
     # Enforce site scope if the caller is site-scoped
     if assigned_sites and len(assigned_sites) > 0:
         if not resolved_site_id or resolved_site_id not in assigned_sites:
-            raise PermissionError("Forbidden: You can only ingest documents for your assigned site(s).")
+            raise PermissionError(
+                "Forbidden: You can only ingest documents for your assigned site(s)."
+            )
 
     # 4. Validate hierarchy if user supplied specific zone/section hierarchy
     supplied_zone = zone

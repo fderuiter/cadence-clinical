@@ -89,7 +89,9 @@ describe("Vue SPA Smoke Tests", () => {
       },
     });
 
-    expect(wrapper.html()).toContain("Regulatory Auditor &amp; Inspection Portal");
+    expect(wrapper.html()).toContain(
+      "Regulatory Auditor &amp; Inspection Portal"
+    );
     expect(wrapper.html()).toContain("GxP Execution Ledger Chain Verification");
   });
 

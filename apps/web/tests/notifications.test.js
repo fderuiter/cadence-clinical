@@ -122,7 +122,9 @@ describe("Notifications System End-to-End Visual Integration", () => {
       expect(wrapper.text()).toContain("ACTION_ITEMS");
       expect(wrapper.text()).toContain("HIGH");
       expect(wrapper.text()).toContain("ACKNOWLEDGED");
-      expect(wrapper.text()).toContain("Review form submission for Subject 001.");
+      expect(wrapper.text()).toContain(
+        "Review form submission for Subject 001."
+      );
       expect(wrapper.text()).toContain("Role: monitor");
     });
 
@@ -181,7 +183,9 @@ describe("Notifications System End-to-End Visual Integration", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find("#notifications-empty").exists()).toBe(true);
-      expect(wrapper.text()).toContain("No notifications found matching the active filters.");
+      expect(wrapper.text()).toContain(
+        "No notifications found matching the active filters."
+      );
     });
   });
 
@@ -243,7 +247,9 @@ describe("Notifications System End-to-End Visual Integration", () => {
         version_index: 2,
         reason_for_change: "Acknowledged via test",
       };
-      notificationsService.acknowledgeNotification.mockResolvedValue(updatedNotif);
+      notificationsService.acknowledgeNotification.mockResolvedValue(
+        updatedNotif
+      );
 
       const wrapper = mount(NotificationsView, {
         global: {
@@ -256,7 +262,9 @@ describe("Notifications System End-to-End Visual Integration", () => {
 
       // Click acknowledge
       await wrapper.find(".btn-acknowledge").trigger("click");
-      await wrapper.find("#modal-reason-select").setValue("Clinical event acknowledged");
+      await wrapper
+        .find("#modal-reason-select")
+        .setValue("Clinical event acknowledged");
 
       // Confirm trigger
       await wrapper.find("#btn-submit-modal").trigger("click");
@@ -279,7 +287,9 @@ describe("Notifications System End-to-End Visual Integration", () => {
 
     it("displays transition validation or server errors inline when actions fail, keeping modal open", async () => {
       notificationsService.acknowledgeNotification.mockRejectedValue(
-        new Error("Validation Failure: Transition not permitted under CFR guidelines")
+        new Error(
+          "Validation Failure: Transition not permitted under CFR guidelines"
+        )
       );
 
       const wrapper = mount(NotificationsView, {
@@ -301,7 +311,9 @@ describe("Notifications System End-to-End Visual Integration", () => {
       // Assert modal stays open and error is shown
       expect(wrapper.find("#justification-modal").exists()).toBe(true);
       expect(wrapper.find("#modal-error").exists()).toBe(true);
-      expect(wrapper.find("#modal-error").text()).toContain("Transition not permitted");
+      expect(wrapper.find("#modal-error").text()).toContain(
+        "Transition not permitted"
+      );
     });
   });
 
@@ -326,7 +338,9 @@ describe("Notifications System End-to-End Visual Integration", () => {
     });
 
     it("renders a generic error banner when response fails with other error codes", async () => {
-      const error500 = new Error("Severe internal database connection failure.");
+      const error500 = new Error(
+        "Severe internal database connection failure."
+      );
       error500.status = 500;
       notificationsService.getNotifications.mockRejectedValue(error500);
 
@@ -341,7 +355,9 @@ describe("Notifications System End-to-End Visual Integration", () => {
 
       expect(wrapper.find("#notifications-error-generic").exists()).toBe(true);
       expect(wrapper.find("#notifications-error-403").exists()).toBe(false);
-      expect(wrapper.text()).toContain("Severe internal database connection failure.");
+      expect(wrapper.text()).toContain(
+        "Severe internal database connection failure."
+      );
     });
   });
 });

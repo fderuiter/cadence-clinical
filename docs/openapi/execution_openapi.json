@@ -3261,7 +3261,7 @@
     "/api/v1/execution/biostat/sdtm/{domain}": {
       "get": {
         "summary": "Export Sdtm Domain",
-        "description": "Exports SDTM domain data (DM, AE, VS, LB, MH, CM) in CDISC Dataset-JSON format.\n\n- **Protected Endpoint**: Requires authenticated session under GatewayAuthMiddleware.\n- **Authorized Roles**: CRA, Data Manager, Sponsor Statistician.\n- **Validations**: Automatically validates schema, keys, and values before returning payload.\n- **Media Type Contract**: `application/json` conforming to CDISC Dataset-JSON 1.0.0.",
+        "description": "Exports SDTM domain data (DM, AE, VS, LB, MH, CM) in CDISC Dataset-JSON format.\n\n- **Protected Endpoint**: Requires authenticated session under GatewayAuthMiddleware.\n- **Authorized Roles**: CRA, Data Manager, Sponsor Statistician.\n- **Validations**: Automatically validates schema, keys, and values before returning payload.\n- **Media Type Contract**: `application/json` conforming to CDISC Dataset-JSON 1.0.0.\n- **Supplemental Contract**: Includes matching SUPP<domain> dataset alongside the parent dataset when supplemental records exist.",
         "operationId": "export_sdtm_domain_api_v1_execution_biostat_sdtm__domain__get",
         "parameters": [
           {
@@ -3304,6 +3304,27 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/audit/integrity": {
+      "get": {
+        "summary": "Get Execution Audit Integrity",
+        "description": "Verify the GxP clinical execution ledger integrity via block-sealing validation.\n\nEnsures that chronological audit logs, block-level seals, and sequential chaining\nremain structurally unbroken.",
+        "operationId": "get_execution_audit_integrity_api_v1_execution_audit_integrity_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Execution Audit Integrity Api V1 Execution Audit Integrity Get"
                 }
               }
             }
@@ -3367,7 +3388,7 @@
     "/api/v1/execution/biostat/bundle": {
       "get": {
         "summary": "Export Biostat Bundle",
-        "description": "Exports all SDTM domains and ADaM datasets bundled in a single CDISC Dataset-JSON document.\n\n- **Protected Endpoint**: Requires authenticated session under GatewayAuthMiddleware.\n- **Authorized Roles**: CRA, Data Manager, Sponsor Statistician.\n- **Validations**: Validates complete structural, domain-level, and cross-dataset referential consistency.\n- **Media Type Contract**: `application/json` conforming to CDISC Dataset-JSON 1.0.0.",
+        "description": "Exports all SDTM domains and ADaM datasets bundled in a single CDISC Dataset-JSON document.\n\n- **Protected Endpoint**: Requires authenticated session under GatewayAuthMiddleware.\n- **Authorized Roles**: CRA, Data Manager, Sponsor Statistician.\n- **Validations**: Validates complete structural, domain-level, and cross-dataset referential consistency.\n- **Media Type Contract**: `application/json` conforming to CDISC Dataset-JSON 1.0.0.\n- **Supplemental Contract**: Includes all generated SUPP-- datasets alongside their parent datasets in the bundle.",
         "operationId": "export_biostat_bundle_api_v1_execution_biostat_bundle_get",
         "parameters": [
           {

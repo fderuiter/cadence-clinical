@@ -167,7 +167,9 @@ class ClinicalSubject(AuditedModel):
 
     subject_id: Mapped[str] = mapped_column(String(255), nullable=False)
     study_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    site_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
+    site_id: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True, index=True
+    )
     encrypted_demographics: Mapped[str] = mapped_column(String, nullable=True)
 
     status: Mapped[str] = mapped_column(String(50), default="SCREENING", nullable=False)
@@ -279,7 +281,9 @@ class ClinicalVisit(AuditedModel):
     visit_name: Mapped[str] = mapped_column(String(255), nullable=False)
     visit_date: Mapped[datetime] = mapped_column(DateTime, default=func.now())
     study_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    site_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
+    site_id: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True, index=True
+    )
 
 
 class ClinicalObservation(AuditedModel):
@@ -311,7 +315,9 @@ class ClinicalObservation(AuditedModel):
 
     subject_id: Mapped[str] = mapped_column(String(255), nullable=False)
     study_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    site_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
+    site_id: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True, index=True
+    )
     visit_id: Mapped[str] = mapped_column(String(255), nullable=True)
     domain: Mapped[str] = mapped_column(String(50), nullable=False)
     observation_date: Mapped[datetime] = mapped_column(DateTime, default=func.now())
@@ -370,7 +376,9 @@ class ClinicalQuery(AuditedModel):
     )
 
     study_id: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
-    site_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
+    site_id: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True, index=True
+    )
     subject_id: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
     visit_id: Mapped[str] = mapped_column(String(255), index=True, nullable=True)
     domain: Mapped[str] = mapped_column(String(50), index=True, nullable=True)
@@ -429,7 +437,9 @@ class SDVSignOff(AuditedModel):
     target_id: Mapped[str] = mapped_column(String(255), nullable=False)
     subject_id: Mapped[str] = mapped_column(String(255), nullable=False)
     study_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    site_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
+    site_id: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True, index=True
+    )
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     verified_by: Mapped[str] = mapped_column(String(255), nullable=True)
     verified_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
@@ -790,7 +800,9 @@ class FormSubmission(AuditedModel):
     )
 
     study_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    site_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
+    site_id: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True, index=True
+    )
     subject_id: Mapped[str] = mapped_column(String(255), nullable=False)
     visit_id: Mapped[str] = mapped_column(String(255), nullable=True)
     form_id: Mapped[str] = mapped_column(String(255), nullable=False)

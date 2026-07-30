@@ -11,8 +11,16 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: "/audit", name: "audit", component: AuditView },
-    { path: "/login", name: "login", component: { template: "<div>Login</div>" } },
-    { path: "/forbidden", name: "forbidden", component: { template: "<div>Forbidden</div>" } },
+    {
+      path: "/login",
+      name: "login",
+      component: { template: "<div>Login</div>" },
+    },
+    {
+      path: "/forbidden",
+      name: "forbidden",
+      component: { template: "<div>Forbidden</div>" },
+    },
   ],
 });
 
@@ -60,7 +68,8 @@ describe("Auditor Portal - eTMF Inspection & Execution Sealing Integration", () 
           user_role: "site_investigator",
           action: "INGEST",
           document_id: "doc-123",
-          details: "Ingested artifact type 'FDA Form 1572' for study 'study_001'.",
+          details:
+            "Ingested artifact type 'FDA Form 1572' for study 'study_001'.",
         },
       ],
       total_count: 2,
@@ -68,7 +77,8 @@ describe("Auditor Portal - eTMF Inspection & Execution Sealing Integration", () 
 
     auditorService.getExecutionIntegrity.mockResolvedValue({
       verified: true,
-      message: "GxP clinical execution ledger chain fully verified and structurally intact.",
+      message:
+        "GxP clinical execution ledger chain fully verified and structurally intact.",
     });
 
     auditorService.getWatermarkedDownloadUrl.mockReturnValue(
@@ -99,7 +109,9 @@ describe("Auditor Portal - eTMF Inspection & Execution Sealing Integration", () 
     });
 
     // Mock URL helper
-    global.window.URL.createObjectURL = vi.fn().mockReturnValue("blob:mock-url");
+    global.window.URL.createObjectURL = vi
+      .fn()
+      .mockReturnValue("blob:mock-url");
     global.window.URL.revokeObjectURL = vi.fn();
   });
 
@@ -191,7 +203,9 @@ describe("Auditor Portal - eTMF Inspection & Execution Sealing Integration", () 
     const previewPanel = wrapper.find(".secure-preview-panel");
     expect(previewPanel.exists()).toBe(true);
     expect(previewPanel.text()).toContain("Secure Preview: form_1572_v1.txt");
-    expect(previewPanel.text()).toContain("MOCK DOCUMENT WATERMARKED CONTENT PREVIEW");
+    expect(previewPanel.text()).toContain(
+      "MOCK DOCUMENT WATERMARKED CONTENT PREVIEW"
+    );
 
     // Verify presence of client-side visual watermark overlay
     const overlay = wrapper.find(".watermark-overlay");
@@ -222,11 +236,16 @@ describe("Auditor Portal - eTMF Inspection & Execution Sealing Integration", () 
     vi.spyOn(document.body, "removeChild").mockImplementation(() => {});
 
     // Trigger Binder ZIP export
-    const btnExport = wrapper.findAll("button").find(b => b.text().includes("Export Regulatory Binder"));
+    const btnExport = wrapper
+      .findAll("button")
+      .find((b) => b.text().includes("Export Regulatory Binder"));
     expect(btnExport.exists()).toBe(true);
     await btnExport.trigger("click");
 
-    expect(auditorService.getBinderExportUrl).toHaveBeenCalledWith("study_001", false);
+    expect(auditorService.getBinderExportUrl).toHaveBeenCalledWith(
+      "study_001",
+      false
+    );
     expect(global.fetch).toHaveBeenCalled();
   });
 
@@ -235,7 +254,9 @@ describe("Auditor Portal - eTMF Inspection & Execution Sealing Integration", () 
       global: { plugins: [pinia, router] },
     });
 
-    expect(wrapper.text()).toContain("🧪 Sandbox / Non-Production Demo Status Controls");
+    expect(wrapper.text()).toContain(
+      "🧪 Sandbox / Non-Production Demo Status Controls"
+    );
     expect(wrapper.find("#btn-clear-ledger").exists()).toBe(true);
   });
 });

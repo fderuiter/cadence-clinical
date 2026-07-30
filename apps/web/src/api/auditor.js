@@ -21,7 +21,9 @@ export const auditorService = {
     if (params.offset !== undefined) query.append("offset", params.offset);
 
     const queryString = query.toString();
-    const path = queryString ? `/api/v1/etmf/audit-logs?${queryString}` : "/api/v1/etmf/audit-logs";
+    const path = queryString
+      ? `/api/v1/etmf/audit-logs?${queryString}`
+      : "/api/v1/etmf/audit-logs";
     return apiClient.get(path);
   },
 
@@ -48,5 +50,5 @@ export const auditorService = {
   getBinderExportUrl(studyId, includeHistory = false) {
     const baseUrl = getBaseUrl();
     return `${baseUrl}/api/v1/etmf/studies/${studyId}/binder?include_history=${includeHistory}`;
-  }
+  },
 };

@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { renderFormFromXML, renderFormFromJSON } from "../src/lib/legacy_helpers.js";
+import {
+  renderFormFromXML,
+  renderFormFromJSON,
+} from "../src/lib/legacy_helpers.js";
 
 describe("renderFormFromXML", () => {
   it("renders a form with inputs from XML payload", () => {

@@ -918,7 +918,10 @@ async function confirmReauth() {
       // Compute canonical batch binding
       const normStudy = studyId.trim();
       const normType = targetType.trim().toUpperCase();
-      const normIds = [...targetIds].map(id => String(id).trim()).sort().join(",");
+      const normIds = [...targetIds]
+        .map((id) => String(id).trim())
+        .sort()
+        .join(",");
       const normReason = signingReason.trim();
       const bindingStr = `${normStudy}:${normType}:${normIds}:${normReason}`;
 
@@ -926,7 +929,9 @@ async function confirmReauth() {
       const msgBuffer = new TextEncoder().encode(bindingStr);
       const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
       const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const batchId = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+      const batchId = hashArray
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
 
       // 1. Obtain signature token
       const reauthRes = await soaClient.verifySignature(
