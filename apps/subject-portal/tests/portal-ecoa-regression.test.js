@@ -107,6 +107,13 @@ beforeEach(async () => {
 });
 
 describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
+  beforeEach(async () => {
+    const portal = await import("../index.js");
+    portal.state.session.isDemoMode = true; // Default tests to demo-mode to preserve mock data reliance
+    portal.state.session.isOfflineMode = true;
+    portal.state.session.token = null;
+  });
+
   it("verifies dynamic rendering and form field generation from instrument schemas", async () => {
     const portal = await import("../index.js");
     await portal.initializeApp();

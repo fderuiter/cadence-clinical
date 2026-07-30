@@ -107,6 +107,13 @@ beforeEach(async () => {
 });
 
 describe("eCOA Companion Patient Portal - Workflow Tests", () => {
+  beforeEach(async () => {
+    const portal = await import("../index.js");
+    portal.state.session.isDemoMode = true; // Default tests to demo-mode to preserve mock data reliance
+    portal.state.session.isOfflineMode = true;
+    portal.state.session.token = null;
+  });
+
   it("initializes app state with default tasks and mock data on load", async () => {
     // Import dynamically to trigger DOM listeners and state bootstrap
     const portal = await import("../index.js");
@@ -456,6 +463,92 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       const syncList = document.getElementById("sync-queue-list");
       expect(syncList.innerHTML).toContain("QUEUED");
     });
+
+  it("asserts Bearer token is attached and gateway headers are absent when authenticated", async () => {
+    const portal = await import("../index.js");
+    portal.state.session.isDemoMode = false;
+    portal.state.session.isOfflineMode = false;
+    portal.state.session.token = "valid_test_token_abc123";
+
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ status: "success" }),
+      })
+    );
+
+    await portal.dispatchApi("epro/sync", {
+      method: "POST",
+      body: JSON.stringify({ test: "data" }),
+    });
+
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    const lastCall = globalThis.fetch.mock.calls[0];
+    const headers = lastCall[1].headers;
+
+    // Bearer token present and well-formed
+    expect(headers["Authorization"]).toBe("Bearer valid_test_token_abc123");
+
+    // Gateway client-side signing headers strictly absent
+    expect(headers["X-Gateway-Signature"]).toBeUndefined();
+    expect(headers["X-User-Id"]).toBeUndefined();
+    expect(headers["X-User-Roles"]).toBeUndefined();
+    expect(headers["X-Gateway-Timestamp"]).toBeUndefined();
+    expect(headers["X-Signature-Version"]).toBeUndefined();
+  });
+
+  it("asserts no Authorization header is emitted when no token is present", async () => {
+    const portal = await import("../index.js");
+    portal.state.session.isDemoMode = false;
+    portal.state.session.isOfflineMode = false;
+    portal.state.session.token = null;
+
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ status: "success" }),
+      })
+    );
+
+    await portal.dispatchApi("epro/sync", {
+      method: "POST",
+      body: JSON.stringify({ test: "data" }),
+    });
+
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    const lastCall = globalThis.fetch.mock.calls[0];
+    const headers = lastCall[1].headers;
+
+    expect(headers["Authorization"]).toBeUndefined();
+  });
+
+  it("surfaces an error state on authenticated (non-demo) dispatch failures instead of falling back silently to mocks", async () => {
+    const portal = await import("../index.js");
+    portal.state.session.isDemoMode = false;
+    portal.state.session.isOfflineMode = false;
+    portal.state.session.token = "some_token";
+
+    // Mock fetch rejection
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.reject(new Error("Unreachable network"))
+    );
+
+    // Initialize application under non-demo, online authenticated context
+    await portal.initializeApp();
+
+    // Verify mocks were NOT loaded
+    expect(portal.state.assignments).toEqual([]);
+    expect(portal.state.notifications).toEqual([]);
+
+    // Tasks list and inbox list contain error/failure UI state instead of mocks
+    const tasksList = document.getElementById("tasks-list-container");
+    expect(tasksList.innerHTML).toContain("Error loading tasks");
+    expect(tasksList.innerHTML).not.toContain("Daily Health &amp; Vital Diary");
+
+    const inboxList = document.getElementById("inbox-container");
+    expect(inboxList.innerHTML).toContain("Error loading notifications");
+    expect(inboxList.innerHTML).not.toContain("Reminder: Daily Health &amp; Vital Diary");
+  });
 
     it("displays conflict resolution outcomes (MERGED, IGNORED_SERVER_WINS) cleanly without discarding", async () => {
       const portal = await import("../index.js");

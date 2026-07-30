@@ -1342,6 +1342,79 @@ def test_gateway_tenant_spoofing_prevention(monkeypatch: pytest.MonkeyPatch) -> 
         assert sent_request.headers.get("X-Tenant-Id") == "tenant_pfizer_123"
 
 
+def test_gateway_bearer_only_subject_routing_and_header_enforcement(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    Test that sending a Subject-role JWT with only Authorization: Bearer <token>
+    to the portal's actually-consumed routes successfully proxies (returns 200),
+    that the gateway correctly injects downstream headers, and that any client-supplied
+    identity/signature headers are stripped and overwritten.
+    """
+    monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
+
+    # 1. Subject role token
+    token = jwt.encode(
+        {"sub": "patient_123", "realm_access": {"roles": ["Subject"]}},
+        "test_secret",
+        algorithm="HS256",
+    )
+
+    mock_send = AsyncMock()
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.content = b'{"status": "ok"}'
+    mock_resp.headers = {"content-type": "application/json"}
+    mock_send.return_value = mock_resp
+    monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
+
+    # Portal's actually-consumed routes
+    routes_to_test = [
+        ("/api/v1/interop/assignments/subject/patient_123", "GET", None),
+        ("/api/v1/interop/subjects/patient_123/notifications", "GET", None),
+        (
+            "/api/v1/interop/notifications/notif_123/acknowledge",
+            "POST",
+            {"reason_for_change": "some reason"},
+        ),
+        ("/api/v1/interop/epro/sync", "POST", {"submissions": []}),
+    ]
+
+    with TestClient(app) as client:
+        for route, method, payload in routes_to_test:
+            mock_send.reset_mock()
+
+            # Attempt to send client-supplied spoofed identity/signature headers
+            headers = {
+                "Authorization": f"Bearer {token}",
+                "X-User-Id": "malicious_user",
+                "X-User-Roles": "malicious_role",
+                "X-Gateway-Signature": "fake_signature",
+                "X-Signature-Version": "fake_version",
+                "X-Gateway-Timestamp": "fake_timestamp",
+            }
+
+            if method == "GET":
+                res = client.get(route, headers=headers)
+            else:
+                res = client.post(route, headers=headers, json=payload)
+
+            assert res.status_code == 200
+
+            # Verify downstream send was called
+            assert mock_send.call_args is not None
+            sent_request = mock_send.call_args.args[0]
+            sent_headers = sent_request.headers
+
+            # Verify that client-supplied identity/signature headers were stripped and overwritten by the gateway
+            assert sent_headers.get("X-User-Id") == "patient_123"
+            assert sent_headers.get("X-User-Roles") == "Subject"
+            assert sent_headers.get("X-Signature-Version") == "2"
+            assert sent_headers.get("X-Gateway-Timestamp") != "fake_timestamp"
+            assert sent_headers.get("X-Gateway-Signature") != "fake_signature"
+            assert sent_headers.get("X-Gateway-Signature") is not None
+
+
 def test_gateway_startup_production_no_bypass_configs() -> None:
     """
     Test that the gateway successfully completes initialization in production when no test bypass
