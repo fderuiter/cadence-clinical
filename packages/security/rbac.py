@@ -104,9 +104,13 @@ ROLE_ALIASES = {
     "authorized er physician": ROLE_AUTHORIZED_ER_PHYSICIAN,
     "authorized_er_physician": ROLE_AUTHORIZED_ER_PHYSICIAN,
     "authorized-er-physician": ROLE_AUTHORIZED_ER_PHYSICIAN,
+    "authorederphysician": ROLE_AUTHORIZED_ER_PHYSICIAN,
+    "er physician": ROLE_AUTHORIZED_ER_PHYSICIAN,
+    "er_physician": ROLE_AUTHORIZED_ER_PHYSICIAN,
     "lead investigator": ROLE_LEAD_INVESTIGATOR,
     "lead_investigator": ROLE_LEAD_INVESTIGATOR,
     "lead-investigator": ROLE_LEAD_INVESTIGATOR,
+    "leadinvestigator": ROLE_LEAD_INVESTIGATOR,
     "investigator_user": ROLE_INVESTIGATOR,
     "crc": ROLE_CRC,
     "clinical research coordinator": ROLE_CRC,
@@ -546,67 +550,20 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
     ROLE_EMERGENCY_UNBLINDER: {
         "rtsm_unblind": {"write"},
     },
-    ROLE_PRINCIPAL_INVESTIGATOR: {
-        "rtsm_unblind": {"write"},
-        "study_design": {"read"},
-        "subject_enrollment": {"create", "read", "update"},
-        "ecrf_data_entry": {"create", "read", "update"},
-        "query_lifecycle": {"read", "update"},
-        "sdv": {"read"},
-        "system_audit_logs": {"read"},
-        "regulatory_form": {"create", "read", "sign"},
-        "training_log": {"create", "read", "sign"},
-        "ctms_study": {"read"},
-        "ctms_recruitment": {"read"},
-        "ctms_site_milestone": {"read"},
-        "ctms_cra_allocation": {"read"},
-        "ctms_cra_workload": {"read"},
-        "etmf_document": {"read"},
-        "etmf_edl": {"read"},
-        "quality_event": {"read"},
-        "eisf_document": {"create", "read", "update", "delete", "sync"},
-    },
-    ROLE_AUTHORIZED_ER_PHYSICIAN: {
-        "rtsm_unblind": {"write"},
-        "study_design": {"read"},
-        "subject_enrollment": {"create", "read", "update"},
-        "ecrf_data_entry": {"create", "read", "update"},
-        "query_lifecycle": {"read", "update"},
-        "sdv": {"read"},
-        "system_audit_logs": {"read"},
-        "regulatory_form": {"create", "read", "sign"},
-        "training_log": {"create", "read", "sign"},
-        "ctms_study": {"read"},
-        "ctms_recruitment": {"read"},
-        "ctms_site_milestone": {"read"},
-        "ctms_cra_allocation": {"read"},
-        "ctms_cra_workload": {"read"},
-        "etmf_document": {"read"},
-        "etmf_edl": {"read"},
-        "quality_event": {"read"},
-        "eisf_document": {"create", "read", "update", "delete", "sync"},
-    },
-    ROLE_LEAD_INVESTIGATOR: {
-        "rtsm_unblind": {"write"},
-        "study_design": {"read"},
-        "subject_enrollment": {"create", "read", "update"},
-        "ecrf_data_entry": {"create", "read", "update"},
-        "query_lifecycle": {"read", "update"},
-        "sdv": {"read"},
-        "system_audit_logs": {"read"},
-        "regulatory_form": {"create", "read", "sign"},
-        "training_log": {"create", "read", "sign"},
-        "ctms_study": {"read"},
-        "ctms_recruitment": {"read"},
-        "ctms_site_milestone": {"read"},
-        "ctms_cra_allocation": {"read"},
-        "ctms_cra_workload": {"read"},
-        "etmf_document": {"read"},
-        "etmf_edl": {"read"},
-        "quality_event": {"read"},
-        "eisf_document": {"create", "read", "update", "delete", "sync"},
-    },
 }
+
+# Derive PI / ER-Physician / Lead-Investigator permissions from the base
+# ROLE_INVESTIGATOR grant set so a single edit propagates to all three personas.
+# Each derivative role adds rtsm_unblind:write (controlled by the emergency-
+# unblinding endpoint) and full eISF document access beyond the base.
+_PI_BASE_PERMISSIONS: dict = {
+    **ROLE_PERMISSIONS[ROLE_INVESTIGATOR],
+    "rtsm_unblind": {"write"},
+    "eisf_document": {"create", "read", "update", "delete", "sync"},
+}
+ROLE_PERMISSIONS[ROLE_PRINCIPAL_INVESTIGATOR] = _PI_BASE_PERMISSIONS.copy()
+ROLE_PERMISSIONS[ROLE_AUTHORIZED_ER_PHYSICIAN] = _PI_BASE_PERMISSIONS.copy()
+ROLE_PERMISSIONS[ROLE_LEAD_INVESTIGATOR] = _PI_BASE_PERMISSIONS.copy()
 
 
 # Field-level blinding/masking rules from §2.3
@@ -659,14 +616,16 @@ UNMASKED_SUPPLY_FIELDS: Set[str] = {
 }
 
 # Role-aware masking policy mapping unblinded RTSM roles to visible fields.
+# NOTE: Routine investigator personas (PI, ER Physician, Lead Investigator) do NOT
+# receive blanket unmasked-allocation or unmasked-supply grants here. Allocation
+# field visibility for those roles is conferred only via the controlled emergency-
+# unblinding endpoint, which returns the decrypted value directly in its response
+# without persisting wide-open field visibility in the session principal.
 ROLE_UNMASKED_FIELDS: Dict[str, Set[str]] = {
     ROLE_UNBLINDED_STATISTICIAN: UNMASKED_ALLOCATION_FIELDS,
     ROLE_IDMC: UNMASKED_ALLOCATION_FIELDS,
     ROLE_PHARMACIST: UNMASKED_SUPPLY_FIELDS,
     ROLE_EMERGENCY_UNBLINDER: UNMASKED_ALLOCATION_FIELDS | UNMASKED_SUPPLY_FIELDS,
-    ROLE_PRINCIPAL_INVESTIGATOR: UNMASKED_ALLOCATION_FIELDS | UNMASKED_SUPPLY_FIELDS,
-    ROLE_AUTHORIZED_ER_PHYSICIAN: UNMASKED_ALLOCATION_FIELDS | UNMASKED_SUPPLY_FIELDS,
-    ROLE_LEAD_INVESTIGATOR: UNMASKED_ALLOCATION_FIELDS | UNMASKED_SUPPLY_FIELDS,
 }
 
 
@@ -716,32 +675,29 @@ def has_permission(principal: Principal, permission: str) -> bool:
 
 def can_access_site(principal: Principal, site_id: str) -> bool:
     """
-    Checks if the principal has access to a specific site.
-    Site-scoped users are restricted to their assigned_sites.
-    Sponsor/SysAdmin users with empty assigned_sites are allowed global access.
+    Determine whether a principal is permitted to access a given site.
+
+    Site-scoped roles (e.g., investigators, CRCs, CRAs, ER physicians, lead
+    investigators) are restricted to the sites listed in *principal.assigned_sites*.
+    Sponsor/SysAdmin principals with an empty *assigned_sites* list are granted
+    global access. The function is fail-closed: a site-scoped user with no
+    assigned sites is denied access everywhere.
+
+    Args:
+        principal: The authenticated principal making the request.
+        site_id: The site identifier to check access for.
+
+    Returns:
+        True if the principal may access the site; False otherwise.
     """
     # Fail-closed handling for missing/empty site_id on legacy/study-level rows
     if site_id is None or str(site_id).strip() == "":
-        site_scoped_roles = {
-            ROLE_INVESTIGATOR,
-            ROLE_CRC,
-            ROLE_CRA_CANONICAL,
-            "monitor",
-            ROLE_EXTERNAL_MONITOR,
-        }
-        user_site_roles = [r for r in principal.roles if r in site_scoped_roles]
+        user_site_roles = [r for r in principal.roles if r in SITE_SCOPED_ROLES]
         if user_site_roles or principal.assigned_sites:
             return False
         return True
 
-    site_scoped_roles = {
-        ROLE_INVESTIGATOR,
-        ROLE_CRC,
-        ROLE_CRA_CANONICAL,
-        "monitor",
-        ROLE_EXTERNAL_MONITOR,
-    }
-    user_site_roles = [r for r in principal.roles if r in site_scoped_roles]
+    user_site_roles = [r for r in principal.roles if r in SITE_SCOPED_ROLES]
 
     if user_site_roles:
         return site_id in principal.assigned_sites

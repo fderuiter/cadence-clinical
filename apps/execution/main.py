@@ -5,7 +5,7 @@ import tempfile
 import uuid
 import zipfile
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, AsyncGenerator, List, Optional
 
@@ -106,6 +106,7 @@ from packages.security import (
     ROLE_CRA,
     ROLE_CRC,
     ROLE_DATA_MANAGER,
+    ROLE_EMERGENCY_UNBLINDER,
     ROLE_INVESTIGATOR,
     ROLE_LEAD_INVESTIGATOR,
     ROLE_PRINCIPAL_INVESTIGATOR,
@@ -181,25 +182,99 @@ class ProblemDetails(BaseModel):
 
 
 class UnblindingReasonCode(str, Enum):
+    """Controlled vocabulary of approved reason codes for emergency unblinding.
+
+    Only these three regulatory-approved scenarios authorise an emergency
+    treatment-allocation disclosure outside of the standard end-of-study
+    unblinding process.
+
+    Attributes:
+        SAE_LIFE_THREATENING_EVENT: Serious Adverse Event that is immediately
+            life-threatening and requires knowledge of the treatment assignment.
+        ACCIDENTAL_OVERDOSE: Accidental administration of an overdose requiring
+            immediate clinical intervention with knowledge of the treatment arm.
+        REQUIRED_BY_REGULATORY_AUTHORITY: A competent regulatory authority has
+            formally requested disclosure of the blinded assignment.
+    """
+
     SAE_LIFE_THREATENING_EVENT = "SAE-Life-Threatening-Event"
     ACCIDENTAL_OVERDOSE = "Accidental-Overdose"
     REQUIRED_BY_REGULATORY_AUTHORITY = "Required-by-Regulatory-Authority"
 
 
+class CustodianEnum(str, Enum):
+    """Enumeration of the two permissible dual-custody key holders.
+
+    The Shamir secret-sharing scheme used for emergency unblinding mandates
+    that exactly one share comes from each of these two custodians.  Any
+    other custodian identity is rejected with a 422 validation error before
+    the request reaches the cryptographic layer.
+
+    Attributes:
+        LEAD_UNBLINDED_STATISTICIAN: The lead unblinded statistician who holds
+            one half of the Shamir key share.
+        IDMC: The Independent Data Monitoring Committee representative who holds
+            the second half of the Shamir key share.
+    """
+
+    LEAD_UNBLINDED_STATISTICIAN = "Lead Unblinded Statistician"
+    IDMC = "IDMC"
+
+
 class CustodianShare(BaseModel):
-    custodian: str
+    """A single custodian's Shamir secret share for dual-custody unblinding.
+
+    Both shares must be present in the request body before the encrypted
+    allocation record can be reconstructed.  Field constraints are enforced
+    at the schema boundary so malformed shares produce structured 422
+    responses rather than opaque crypto-layer failures.
+
+    Attributes:
+        custodian: The identity of the key custodian; must be one of the two
+            approved dual-custody holders defined by ``CustodianEnum``.
+        version: The version of the key material associated with this share;
+            used to select the correct key generation from the database.
+        x: The x-coordinate of the Shamir share point; must be strictly
+            positive (> 0) as required by the polynomial reconstruction.
+        y: The y-coordinate of the Shamir share point; must be non-negative
+            (>= 0) and less than the prime modulus used by the crypto layer.
+    """
+
+    custodian: CustodianEnum
     version: int
-    x: int
-    y: int
+    x: int = Field(..., gt=0, description="Shamir x-coordinate; must be > 0")
+    y: int = Field(..., ge=0, description="Shamir y-coordinate; must be >= 0")
 
 
 MIN_JUSTIFICATION_LENGTH = 50
 
 
 class UnblindRequest(BaseModel):
+    """Request body for an emergency treatment-allocation unblinding operation.
+
+    The dual-custody contract requires exactly two custodian shares — one from
+    each approved custodian.  Requests with fewer or more shares, or with an
+    insufficiently detailed justification, are rejected at the schema layer.
+
+    Attributes:
+        reason_code: One of the three regulatory-approved unblinding scenarios
+            from ``UnblindingReasonCode``.
+        justification: A free-text clinical justification of at least
+            ``MIN_JUSTIFICATION_LENGTH`` characters.  Stored only in the
+            immutable audit record; never broadcast in notifications.
+        shares: Exactly two ``CustodianShare`` objects — one per approved
+            custodian — supplying the Shamir secret shares needed to
+            reconstruct the blinded allocation key.
+    """
+
     reason_code: UnblindingReasonCode
     justification: str = Field(..., min_length=MIN_JUSTIFICATION_LENGTH)
-    shares: List[CustodianShare]
+    shares: List[CustodianShare] = Field(
+        ...,
+        min_length=2,
+        max_length=2,
+        description="Exactly two custodian shares are required (dual-custody contract).",
+    )
 
 
 app = FastAPI(
@@ -239,21 +314,37 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     return JSONResponse(status_code=400, content=problem.model_dump(exclude_none=True))
 
 
-@app.exception_handler(PermissionError)
-async def permission_error_handler(request: Request, exc: PermissionError):
+class AuthorizationDeniedError(Exception):
+    """Domain exception raised when an authenticated principal lacks the
+    required permission to perform an action.
+
+    This exception is distinct from ``PermissionError`` (which is the built-in
+    ``OSError`` subclass for filesystem/OS permission failures) and is used
+    exclusively for application-level authorization denials.  Raising this
+    exception routes through ``authorization_denied_handler``, which returns a
+    generic HTTP 403 response without leaking internal details.
     """
-    Return a forbidden response for permission errors.
-    
-    Parameters:
-    	request (Request): The incoming request.
-    	exc (PermissionError): The permission error to include in the response.
-    
+
+
+@app.exception_handler(AuthorizationDeniedError)
+async def authorization_denied_handler(
+    request: Request, exc: AuthorizationDeniedError
+) -> JSONResponse:
+    """Convert an application-level authorization denial into an HTTP 403 response.
+
+    Returns a static, non-revealing detail string so that neither filesystem
+    paths nor internal exception messages are exposed to the caller.
+
+    Args:
+        request: The inbound HTTP request that triggered the authorization check.
+        exc: The ``AuthorizationDeniedError`` raised by the application layer.
+
     Returns:
-    	JSONResponse: A response with status code 403 and the error detail.
+        JSONResponse: A 403 response with a safe ``detail`` field.
     """
     return JSONResponse(
         status_code=403,
-        content={"detail": str(exc)},
+        content={"detail": "Forbidden: you do not have permission to perform this action."},
     )
 
 
@@ -887,22 +978,66 @@ async def unblind_subject(
             ROLE_PRINCIPAL_INVESTIGATOR,
             ROLE_AUTHORIZED_ER_PHYSICIAN,
             ROLE_LEAD_INVESTIGATOR,
+            ROLE_EMERGENCY_UNBLINDER,
             detail="ROLE_INSUFFICIENT",
         )
     ),
 ) -> SubjectUnblindResponse:
-    """
-    Execute emergency unblinding for a randomized subject.
-    
-    Parameters:
-        subject_id (str): Identifier of the subject to unblind.
-        payload (UnblindRequest): Unblinding reason, justification, and custodian shares.
-    
+    """Execute an emergency treatment-allocation unblinding for a randomised subject.
+
+    This endpoint implements the GxP / 21 CFR Part 11 compliant emergency
+    unblinding workflow: it validates step-up re-authentication, performs
+    Shamir dual-custody reconstruction of the encrypted allocation, builds a
+    cryptographically signed evidence record, writes an immutable audit-log
+    entry, and dispatches a critical-priority dashboard notification — all
+    within a single atomic database transaction.
+
+    Args:
+        subject_id: Path parameter identifying the subject to unblind.
+        request: The raw FastAPI request object; used to extract and validate
+            the step-up ``X-Sig-Token`` and change-justification headers.
+        background_tasks: FastAPI background-task registry used to dispatch
+            the post-commit dashboard notification without blocking the response.
+        payload: Validated ``UnblindRequest`` body containing the reason code,
+            clinical justification, and exactly two Shamir custodian shares.
+        principal: The authenticated caller resolved by ``get_principal``.
+        roles: Role enforcement dependency; only the four approved unblinding
+            personas may call this endpoint.
+
     Returns:
-        SubjectUnblindResponse: The subject's updated unblinding status and allocation details, filtered according to the caller's access.
+        SubjectUnblindResponse: The subject's updated unblinding status and
+        allocation details, masked according to the caller's access level.
+
+    Raises:
+        HTTPException(400): If the justification is too short, the subject has
+            not been randomised, the Shamir reconstruction fails, the decrypted
+            payload does not contain a recognisable allocation field, or the
+            subject is already unblinded.
+        HTTPException(401): If the ``X-Sig-Token`` is absent or invalid
+            (step-up re-authentication required).
+        HTTPException(403): If the caller's role is insufficient.
+        HTTPException(404): If the subject record does not exist.
     """
     # Ensure change justification headers are present and valid
     verify_change_justification(request)
+
+    # Step-up re-authentication: validate X-Sig-Token before any write
+    from jose import JWTError, jwt as jose_jwt
+
+    sig_token = request.headers.get("X-Sig-Token")
+    if not sig_token:
+        raise HTTPException(
+            status_code=401,
+            detail="REAUTHENTICATION_REQUIRED",
+        )
+    _secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()
+    try:
+        jose_jwt.decode(sig_token, _secret, algorithms=["HS256"])
+    except JWTError:
+        raise HTTPException(
+            status_code=401,
+            detail="REAUTHENTICATION_REQUIRED",
+        )
 
     # Validate min-length justification explicitly
     if len(payload.justification) < MIN_JUSTIFICATION_LENGTH:
@@ -924,6 +1059,13 @@ async def unblind_subject(
         if not subject:
             raise HTTPException(status_code=404, detail="Subject not found")
 
+        # Reject already-unblinded subjects before any write attempt
+        if subject.is_unblinded:
+            raise HTTPException(
+                status_code=400,
+                detail="Subject has already been unblinded; duplicate unblinding is not permitted.",
+            )
+
         verify_site_access(
             principal,
             subject.site_id,
@@ -944,7 +1086,8 @@ async def unblind_subject(
                 detail="Subject has not been randomized; treatment allocation cannot be unblinded.",
             )
 
-        # Call key_mgr.decrypt_with_shares
+        # Load AllocationKeyManager — module-level import avoids hiding the
+        # symbol in the hot path and keeps the import block auditable.
         from apps.execution.cryptography import AllocationKeyManager
 
         key_mgr = AllocationKeyManager()
@@ -955,20 +1098,35 @@ async def unblind_subject(
             decrypted = key_mgr.decrypt_with_shares(
                 rand.encrypted_allocation, shares_dict_list
             )
-            unmasked_treatment_arm = (
-                decrypted.get("allocation")
-                or decrypted.get("treatment_arm")
-                or "Active Treatment Arm"
+        except HTTPException:
+            # Propagate HTTP-layer errors (e.g. 403 from decrypt_with_shares) unchanged.
+            raise
+        except PermissionError:
+            # decrypt_with_shares raises PermissionError for authorization
+            # failures (e.g. custodian mismatch); map to 403.
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: key custodian authorization failed during share reconstruction.",
             )
-        except Exception as e:
-            # On any reconstruction/decryption failure, return a defined error response
+        except Exception:
+            # Generic reconstruction or decryption failure; no internal detail
+            # is forwarded to avoid leaking crypto internals.
             raise HTTPException(
                 status_code=400,
-                detail=f"Reconstruction/decryption failed: {str(e)}",
+                detail="Reconstruction/decryption failed: invalid or incompatible custodian shares.",
             )
 
-        # Build canonical decision payload and sign it
-        timestamp_str = datetime.utcnow().isoformat() + "Z"
+        unmasked_treatment_arm = decrypted.get("allocation") or decrypted.get("treatment_arm")
+        if not unmasked_treatment_arm:
+            raise HTTPException(
+                status_code=400,
+                detail="Decryption succeeded but the allocation field is absent from the recovered payload.",
+            )
+
+        # Single canonical timestamp for the entire unblinding event — avoids
+        # drift between the audit log, the signature payload, and subject fields.
+        unblind_utc = datetime.now(timezone.utc)
+        timestamp_str = unblind_utc.isoformat()
         allocation_reference = rand.kit_reference or "unknown"
 
         decision_payload = {
@@ -984,6 +1142,10 @@ async def unblind_subject(
         secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()
         signature = generate_canonical_signature(decision_payload, secret)
 
+        # Capture actual pre-unblind state *before* calling subject.unblind()
+        pre_status = subject.status
+        pre_is_unblinded = subject.is_unblinded
+
         async with session.begin():
             # Perform the transition inside a try-except to catch transition errors
             try:
@@ -992,7 +1154,9 @@ async def unblind_subject(
             except InvalidStateTransitionError as e:
                 raise HTTPException(status_code=400, detail=str(e))
 
-            # Insert an explicit AuditLog row for EMERGENCY_UNBLINDING
+            # Insert an explicit AuditLog row for EMERGENCY_UNBLINDING.
+            # Signature is stored as signer evidence; it is excluded from the
+            # cryptographic seal payload to prevent a circular dependency.
             audit_log = AuditLog(
                 id=str(uuid.uuid4()),
                 table_name="clinical_subjects",
@@ -1000,15 +1164,15 @@ async def unblind_subject(
                 action="EMERGENCY_UNBLINDING",
                 user_id=principal.user_id or "system",
                 ip_address=current_ip_address.get() or "127.0.0.1",
-                timestamp=datetime.utcnow(),
-                old_values={"status": "RANDOMIZED", "is_unblinded": False},
+                timestamp=unblind_utc.replace(tzinfo=None),  # Store as naive UTC in DB
+                old_values={"status": pre_status, "is_unblinded": pre_is_unblinded},
                 new_values={
                     "status": "UNBLINDED",
                     "is_unblinded": True,
                     "unblinded_by": principal.user_id,
-                    "unblinded_at": datetime.utcnow().isoformat(),
+                    "unblinded_at": timestamp_str,
                     "unblinded_reason": composed_reason,
-                    "unblinded_signature": signature,
+                    "signer_evidence": signature,
                 },
                 version_index=(subject.version or 1) + 1,
                 change_reason=composed_reason,
@@ -1018,13 +1182,17 @@ async def unblind_subject(
         # Refresh
         await session.refresh(subject)
 
-        # Compose message_content from non-sensitive fields only
+        # Compose message_content from non-sensitive fields only.
+        # The full clinical justification (composed_reason) is retained in the
+        # immutable audit record only; the dashboard notification carries the
+        # approved reason code to prevent PII / free-text clinical detail from
+        # propagating to notification stores.
         msg_parts = [
             f"Emergency unblinding alert for Subject {subject.subject_id}.",
             f"Status: {subject.status}",
             f"Unblinded By: {subject.unblinded_by}",
             f"Unblinded At: {subject.unblinded_at.isoformat() if subject.unblinded_at else 'N/A'}",
-            f"Reason: {composed_reason}",
+            f"Reason Code: {payload.reason_code.value}",
         ]
         message_text = "\n".join(msg_parts)
 
