@@ -195,8 +195,13 @@ pnpm -r lint
 pnpm -r format
 pnpm -r test
 
-# Unified workspace checking command
-pnpm check
+### Useful Developer Commands
+```bash
+# Export OpenAPI schemas for contract validation
+uv run python scripts/validate_schemas.py --export-dir docs/openapi
+
+# Regenerate and stage GxP RTM compliance docs
+uv run python scripts/sync_gxp.py
 ```
 
 ---
