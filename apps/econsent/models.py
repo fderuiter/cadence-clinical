@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import JSON, Boolean, DateTime, Integer, String, func
+from sqlalchemy import JSON, Boolean, DateTime, Float, Integer, String, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -31,6 +31,93 @@ class ConsentDocument(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), nullable=False
     )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+
+
+class ComprehensionCheck(Base):
+    """
+    Represents a set of comprehension questions, answers, and thresholds bound to a specific template version.
+    Ensures that historical check configurations are preserved.
+    """
+
+    __tablename__ = "comprehension_checks"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    template_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    version_index: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    questions: Mapped[list[dict]] = mapped_column(JSON, default=list, nullable=False)
+    expected_answers: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    threshold_policy: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+
+    # 21 CFR Part 11 Compliance Auditing Metadata
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+
+
+class ComprehensionResult(Base):
+    """
+    Represents an append-only, immutable record of a subject's comprehension evaluation.
+    Complies with FDA 21 CFR Part 11 auditing and tracking constraints.
+    """
+
+    __tablename__ = "comprehension_results"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    template_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    version_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    subject_pseudonym: Mapped[str] = mapped_column(
+        String(255), nullable=False, index=True
+    )
+
+    # Snapshots/Definitions of check used during the check
+    questions: Mapped[list[dict]] = mapped_column(JSON, default=list, nullable=False)
+    expected_answers: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    threshold_policy: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+
+    # Subject submission & evaluation
+    submitted_answers: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    passed: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    score: Mapped[float] = mapped_column(Float, nullable=False)
+
+    # 21 CFR Part 11 Compliance Auditing Metadata
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+
+
+class ConsentSignature(Base):
+    """
+    Represents a subject's electronic signature on a specific version of an eConsent template.
+    Complies with FDA 21 CFR Part 11 auditing and tracking constraints.
+    """
+
+    __tablename__ = "consent_signatures"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    template_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    version_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    subject_pseudonym: Mapped[str] = mapped_column(
+        String(255), nullable=False, index=True
+    )
+    signature_data: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    signed_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+
+    # 21 CFR Part 11 Compliance Auditing Metadata
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
 

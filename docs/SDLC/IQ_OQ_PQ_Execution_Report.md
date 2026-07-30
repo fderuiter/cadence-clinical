@@ -25,6 +25,8 @@ Based on the executed automated verification suite, the platform meets all prede
 - **Passed:** 1237 🟢
 - **Total Automated Test Cases Run:** 1229
 - **Passed:** 1229 🟢
+- **Total Automated Test Cases Run:** 1240
+- **Passed:** 1240 🟢
 - **Failed/Errors:** 0 🔴
 - **Passed:** 1229 🟢
 - **Total Automated Test Cases Run:** 1238
@@ -469,6 +471,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_shared_audit_fields_validation` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_template_lifecycle_and_validation` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_uninitialized_database_manager_econsent` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_auditor_restrictions_on_checks` | `tests.test_econsent_comprehension` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_create_and_retrieve_comprehension_check` | `tests.test_econsent_comprehension` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_signature_blocks_if_comprehension_checks_fail_or_incomplete` | `tests.test_econsent_comprehension` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_submit_answers_and_evaluation_boundaries` | `tests.test_econsent_comprehension` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_template_version_separation` | `tests.test_econsent_comprehension` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_approved_content_retrieval_and_cache` | `tests.test_econsent_translations` | Trace-10 | 🟢 PASSED | < 1s |
 | `test_language_code_validation` | `tests.test_econsent_translations` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_translation_crud_and_validation` | `tests.test_econsent_translations` | *Regression/Helper* | 🟢 PASSED | < 1s |

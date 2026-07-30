@@ -15,11 +15,17 @@ from apps.econsent.cache import (
     get_approved_template_translation,
 )
 from apps.econsent.database import db_manager
+from apps.econsent.evaluator import (
+    submit_comprehension_answers,
+)
 from apps.econsent.models import (
     Base,
+    ComprehensionCheck,
+    ComprehensionResult,
     ConsentAuditLog,
     ConsentClause,
     ConsentDocument,
+    ConsentSignature,
     ConsentTemplate,
     ConsentTranslation,
 )
@@ -324,6 +330,95 @@ class TranslationTransitionRequest(BaseModel):
                 "status must be either 'DRAFT', 'IN_REVIEW', or 'APPROVED'"
             )
         return v_clean
+
+
+# Pydantic Schemas for ComprehensionCheck / Result / Signature
+class ComprehensionCheckCreate(AuditFields):
+    """
+    Schema for creating/configuring a new comprehension check for a template version.
+    """
+
+    questions: list[dict] = Field(..., description="List of question dicts")
+    expected_answers: dict[str, str] = Field(
+        ..., description="Mapping of question_id to expected answer"
+    )
+    threshold_policy: dict = Field(
+        ..., description="Evaluation threshold policy, e.g. {'min_correct': 2}"
+    )
+
+
+class ComprehensionCheckResponse(AuditFields):
+    """
+    Schema for retrieving comprehension check configurations.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    template_id: str
+    version_index: int
+    questions: list[dict]
+    expected_answers: dict[str, str]
+    threshold_policy: dict
+
+
+class ComprehensionSubmissionRequest(BaseModel):
+    """
+    Schema for submitting answers for evaluation.
+    """
+
+    subject_pseudonym: str = Field(
+        ..., description="Pseudonym identifier of the subject"
+    )
+    submitted_answers: dict[str, str] = Field(
+        ..., description="Mapping of question_id to submitted answer"
+    )
+    reason_for_change: str = Field(
+        ..., description="Part 11 signature/evaluation change reason"
+    )
+
+
+class ComprehensionSubmissionResponse(BaseModel):
+    """
+    Schema for the UI-ready progression state after submitting answers.
+    """
+
+    passed: bool
+    score: float
+    total_questions: int
+    correct_count: int
+    min_required: int
+    next_step: str  # "sign_consent" or "review_material" / "retry_checks"
+    message: str
+
+
+class ConsentSignatureRequest(BaseModel):
+    """
+    Schema for submitting an electronic signature on a template version.
+    """
+
+    subject_pseudonym: str = Field(
+        ..., description="Pseudonym identifier of the subject"
+    )
+    signature_data: Optional[str] = Field(
+        None, description="Electronic signature data (drawing or string)"
+    )
+    reason_for_change: str = Field(..., description="Change reason for signing")
+
+
+class ConsentSignatureResponse(AuditFields):
+    """
+    Schema for signature response.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    template_id: str
+    version_index: int
+    subject_pseudonym: str
+    signature_data: Optional[str]
+    signed_at: datetime
 
 
 DATABASE_URL = os.getenv("ECONSENT_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
@@ -737,6 +832,332 @@ async def create_consent_template(
     )
 
     return template
+
+
+@app.post(
+    "/api/v1/econsent/templates/{template_id}/versions/{version_index}/comprehension-checks",
+    response_model=ComprehensionCheckResponse,
+    status_code=201,
+)
+async def create_or_update_comprehension_check(
+    request: Request,
+    template_id: str,
+    version_index: int,
+    payload: ComprehensionCheckCreate,
+    _auth=Depends(verify_not_auditor),
+    session: AsyncSession = Depends(get_db_session),
+) -> ComprehensionCheckResponse:
+    """
+    Create or update the comprehension check definition for a specific template version.
+    Records a Part 11 compliant audit log entry.
+    """
+    user_id = getattr(request.state, "user_id", "system")
+    user_role = getattr(request.state, "roles", "system")
+    change_reason = getattr(request.state, "change_reason", payload.reason_for_change)
+
+    # Validate template version exists
+    stmt_tpl = select(ConsentTemplate).where(
+        ConsentTemplate.template_id == template_id,
+        ConsentTemplate.version_index == version_index,
+    )
+    res_tpl = await session.execute(stmt_tpl)
+    template = res_tpl.scalars().first()
+    if not template:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Consent template '{template_id}' version {version_index} not found.",
+        )
+
+    # Check if a ComprehensionCheck already exists for this version
+    stmt_check = select(ComprehensionCheck).where(
+        ComprehensionCheck.template_id == template_id,
+        ComprehensionCheck.version_index == version_index,
+    )
+    res_check = await session.execute(stmt_check)
+    check = res_check.scalars().first()
+
+    if check:
+        check.questions = payload.questions
+        check.expected_answers = payload.expected_answers
+        check.threshold_policy = payload.threshold_policy
+        check.created_by = user_id
+        check.reason_for_change = change_reason
+    else:
+        check = ComprehensionCheck(
+            template_id=template_id,
+            version_index=version_index,
+            questions=payload.questions,
+            expected_answers=payload.expected_answers,
+            threshold_policy=payload.threshold_policy,
+            created_by=user_id,
+            reason_for_change=change_reason,
+        )
+        session.add(check)
+
+    await session.flush()
+
+    await write_audit_log(
+        session=session,
+        actor_id=user_id,
+        actor_role=str(user_role),
+        action="DEFINE_COMPREHENSION_CHECK",
+        document_id=check.id,
+        details=f"Defined comprehension check for template '{template_id}' version {version_index}.",
+        reason_for_change=change_reason,
+    )
+
+    return ComprehensionCheckResponse(
+        id=check.id,
+        template_id=check.template_id,
+        version_index=check.version_index,
+        questions=check.questions,
+        expected_answers=check.expected_answers,
+        threshold_policy=check.threshold_policy,
+        created_at=check.created_at,
+        created_by=check.created_by,
+        reason_for_change=check.reason_for_change,
+    )
+
+
+@app.post(
+    "/api/v1/econsent/templates/{template_id}/versions/{version_index}/submit-answers",
+    response_model=ComprehensionSubmissionResponse,
+)
+async def submit_comprehension_answers_endpoint(
+    request: Request,
+    template_id: str,
+    version_index: int,
+    payload: ComprehensionSubmissionRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> ComprehensionSubmissionResponse:
+    """
+    Submit subject answers for comprehension checks, evaluate them, persist the append-only results,
+    and return a UI-ready progression state.
+    """
+    user_id = getattr(request.state, "user_id", "patient")
+    user_role = getattr(request.state, "roles", "patient")
+    change_reason = getattr(request.state, "change_reason", payload.reason_for_change)
+
+    # Validate template exists
+    stmt_tpl = select(ConsentTemplate).where(
+        ConsentTemplate.template_id == template_id,
+        ConsentTemplate.version_index == version_index,
+    )
+    res_tpl = await session.execute(stmt_tpl)
+    template = res_tpl.scalars().first()
+    if not template:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Consent template '{template_id}' version {version_index} not found.",
+        )
+
+    try:
+        # Submit and evaluate
+        result = await submit_comprehension_answers(
+            session=session,
+            template_id=template_id,
+            version_index=version_index,
+            subject_pseudonym=payload.subject_pseudonym,
+            submitted_answers=payload.submitted_answers,
+            created_by=user_id,
+            reason_for_change=change_reason,
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=str(e),
+        )
+
+    # Calculate count metadata
+    total_questions = len(result.expected_answers)
+    correct_count = 0
+    for q_id, expected_val in result.expected_answers.items():
+        sub_val = result.submitted_answers.get(q_id)
+        if (
+            sub_val is not None
+            and str(sub_val).strip().lower() == str(expected_val).strip().lower()
+        ):
+            correct_count += 1
+
+    import math
+
+    if "min_correct" in result.threshold_policy:
+        min_required = int(result.threshold_policy["min_correct"])
+    elif "passing_percentage" in result.threshold_policy:
+        min_required = math.ceil(
+            (float(result.threshold_policy["passing_percentage"]) / 100.0)
+            * total_questions
+        )
+    else:
+        min_required = total_questions
+
+    # Set UI progression state
+    if result.passed:
+        next_step = "sign_consent"
+        message = "Congratulations! You have passed the comprehension check and can proceed to sign the consent form."
+    else:
+        next_step = "retry_checks"
+        message = "You did not meet the passing threshold. Please review the material and try again."
+
+    # Write audit log
+    await write_audit_log(
+        session=session,
+        actor_id=user_id,
+        actor_role=str(user_role),
+        action="COMPREHENSION_EVALUATION",
+        document_id=result.id,
+        details=f"Evaluated comprehension answers for template '{template_id}' version {version_index}, subject '{payload.subject_pseudonym}'. Score: {result.score}%. Passed: {result.passed}.",
+        reason_for_change=change_reason,
+    )
+
+    return ComprehensionSubmissionResponse(
+        passed=result.passed,
+        score=result.score,
+        total_questions=total_questions,
+        correct_count=correct_count,
+        min_required=min_required,
+        next_step=next_step,
+        message=message,
+    )
+
+
+@app.post(
+    "/api/v1/econsent/templates/{template_id}/versions/{version_index}/sign",
+    response_model=ConsentSignatureResponse,
+)
+async def sign_consent_template_endpoint(
+    request: Request,
+    template_id: str,
+    version_index: int,
+    payload: ConsentSignatureRequest,
+    session: AsyncSession = Depends(get_db_session),
+) -> ConsentSignatureResponse:
+    """
+    Electronic signature endpoint that requires all defined/required checks to pass for the exact template version.
+    """
+    user_id = getattr(request.state, "user_id", "patient")
+    user_role = getattr(request.state, "roles", "patient")
+    change_reason = getattr(request.state, "change_reason", payload.reason_for_change)
+
+    # Validate template exists
+    stmt_tpl = select(ConsentTemplate).where(
+        ConsentTemplate.template_id == template_id,
+        ConsentTemplate.version_index == version_index,
+    )
+    res_tpl = await session.execute(stmt_tpl)
+    template = res_tpl.scalars().first()
+    if not template:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Consent template '{template_id}' version {version_index} not found.",
+        )
+
+    # Check if a ComprehensionCheck exists in the database
+    stmt_check = select(ComprehensionCheck).where(
+        ComprehensionCheck.template_id == template_id,
+        ComprehensionCheck.version_index == version_index,
+    )
+    res_check = await session.execute(stmt_check)
+    check = res_check.scalars().first()
+
+    # Also check if template specifies a comprehension check in its workflow steps
+    has_comprehension_step = any(
+        step.get("type")
+        in ("comprehension_check", "comprehension-check", "comprehension")
+        or step.get("step_type")
+        in ("comprehension_check", "comprehension-check", "comprehension")
+        for step in template.workflow_steps
+    )
+
+    if check or has_comprehension_step:
+        # Require a successful ComprehensionResult for this exact subject pseudonym and template version
+        stmt_result = select(ComprehensionResult).where(
+            ComprehensionResult.template_id == template_id,
+            ComprehensionResult.version_index == version_index,
+            ComprehensionResult.subject_pseudonym == payload.subject_pseudonym,
+            ComprehensionResult.passed.is_(True),
+        )
+        res_result = await session.execute(stmt_result)
+        passing_result = res_result.scalars().first()
+
+        if not passing_result:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot sign consent. Comprehension checks have not been completed or passed for this template version.",
+            )
+
+    # Proceed to save the electronic signature (append-only)
+    sig = ConsentSignature(
+        template_id=template_id,
+        version_index=version_index,
+        subject_pseudonym=payload.subject_pseudonym,
+        signature_data=payload.signature_data,
+        created_by=user_id,
+        reason_for_change=change_reason,
+    )
+    session.add(sig)
+    await session.flush()
+
+    # Write audit log
+    await write_audit_log(
+        session=session,
+        actor_id=user_id,
+        actor_role=str(user_role),
+        action="SIGN_CONSENT",
+        document_id=sig.id,
+        details=f"Subject '{payload.subject_pseudonym}' signed consent template '{template_id}' version {version_index}.",
+        reason_for_change=change_reason,
+    )
+
+    return ConsentSignatureResponse(
+        id=sig.id,
+        template_id=sig.template_id,
+        version_index=sig.version_index,
+        subject_pseudonym=sig.subject_pseudonym,
+        signature_data=sig.signature_data,
+        signed_at=sig.signed_at,
+        created_by=sig.created_by,
+        reason_for_change=sig.reason_for_change,
+    )
+
+
+@app.get(
+    "/api/v1/econsent/templates/{template_id}/versions/{version_index}/comprehension-checks",
+    response_model=ComprehensionCheckResponse,
+)
+async def get_comprehension_check(
+    request: Request,
+    template_id: str,
+    version_index: int,
+    session: AsyncSession = Depends(get_db_session),
+) -> ComprehensionCheckResponse:
+    """
+    Retrieve the comprehension check definition for a specific template version.
+    """
+    stmt = select(ComprehensionCheck).where(
+        ComprehensionCheck.template_id == template_id,
+        ComprehensionCheck.version_index == version_index,
+    )
+    res = await session.execute(stmt)
+    check = res.scalars().first()
+
+    if not check:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Comprehension check for template '{template_id}' version {version_index} not found.",
+        )
+
+    return ComprehensionCheckResponse(
+        id=check.id,
+        template_id=check.template_id,
+        version_index=check.version_index,
+        questions=check.questions,
+        expected_answers=check.expected_answers,
+        threshold_policy=check.threshold_policy,
+        created_at=check.created_at,
+        created_by=check.created_by,
+        reason_for_change=check.reason_for_change,
+    )
 
 
 # --- Translation Management Endpoints ---
