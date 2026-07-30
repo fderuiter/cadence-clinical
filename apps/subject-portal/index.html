@@ -76,6 +76,18 @@
               </p>
             </div>
 
+            <!-- Tasks Loading Placeholder -->
+            <div id="tasks-loading" class="loading-state" style="display: none;">
+              Loading your assigned tasks...
+            </div>
+
+            <!-- Tasks Failure Container -->
+            <div id="tasks-failure" class="card error-state" style="display: none; text-align: center; padding: 32px; border: 1px solid var(--danger); margin-bottom: 16px;">
+              <p style="color: var(--danger); font-weight: bold; font-size: 16px;">Failed to load assigned tasks.</p>
+              <p style="font-size: 14px; margin-bottom: 12px;" id="tasks-error-msg">Unknown error</p>
+              <button type="button" id="btn-retry-tasks" class="btn btn-primary">Retry</button>
+            </div>
+
             <!-- List of tasks -->
             <div id="tasks-list-container" class="tasks-list">
               <!-- Dynamically rendered tasks go here -->
@@ -179,6 +191,18 @@
               </p>
             </div>
 
+            <!-- Compliance Loading Placeholder -->
+            <div id="compliance-loading" class="loading-state" style="display: none;">
+              Loading compliance data...
+            </div>
+
+            <!-- Compliance Failure Container -->
+            <div id="compliance-failure" class="card error-state" style="display: none; text-align: center; padding: 32px; border: 1px solid var(--danger); margin-bottom: 16px;">
+              <p style="color: var(--danger); font-weight: bold; font-size: 16px;">Failed to load compliance data.</p>
+              <p style="font-size: 14px; margin-bottom: 12px;" id="compliance-error-msg">Unknown error</p>
+              <button type="button" id="btn-retry-compliance" class="btn btn-primary">Retry</button>
+            </div>
+
             <div class="grid-layout">
               <!-- Compliance Score Card -->
               <div class="card compliance-score-card">
@@ -246,6 +270,18 @@
                 Receive reminders, alerts, and system notifications regarding
                 your trial schedule.
               </p>
+            </div>
+
+            <!-- Inbox Loading Placeholder -->
+            <div id="inbox-loading" class="loading-state" style="display: none;">
+              Loading notifications...
+            </div>
+
+            <!-- Inbox Failure Container -->
+            <div id="inbox-failure" class="card error-state" style="display: none; text-align: center; padding: 32px; border: 1px solid var(--danger); margin-bottom: 16px;">
+              <p style="color: var(--danger); font-weight: bold; font-size: 16px;">Failed to load notifications.</p>
+              <p style="font-size: 14px; margin-bottom: 12px;" id="inbox-error-msg">Unknown error</p>
+              <button type="button" id="btn-retry-inbox" class="btn btn-primary">Retry</button>
             </div>
 
             <div id="inbox-container" class="inbox-list">
