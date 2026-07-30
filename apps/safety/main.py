@@ -644,9 +644,6 @@ async def trigger_sae_reconciliation(
     run = results["run"]
     discrepancies = results["discrepancies"]
 
-    # Commit the transaction so runs are permanently stored
-    await session.commit()
-
     # Log action to immutable safety audit ledger (PII-free)
     audit_details = f"Executed SAE reconciliation run ID '{run.id}' for study '{payload.study_id}'. Identified {len(discrepancies)} discrepancies."
     await write_safety_audit_log(
@@ -658,7 +655,6 @@ async def trigger_sae_reconciliation(
         change_reason=change_reason,
         version_index=1,
     )
-    await session.commit()
 
     return map_run_to_response(run, discrepancies)
 
@@ -697,7 +693,6 @@ async def list_reconciliation_runs(
         change_reason=change_reason,
         version_index=1,
     )
-    await session.commit()
 
     return response_runs
 
@@ -739,6 +734,5 @@ async def get_reconciliation_run(
         change_reason=change_reason,
         version_index=run.version_index,
     )
-    await session.commit()
 
     return map_run_to_response(run, discrepancies)
