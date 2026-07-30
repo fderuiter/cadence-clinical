@@ -510,6 +510,20 @@ def can_access_site(principal: Principal, site_id: str) -> bool:
     Site-scoped users are restricted to their assigned_sites.
     Sponsor/SysAdmin users with empty assigned_sites are allowed global access.
     """
+    # Fail-closed handling for missing/empty site_id on legacy/study-level rows
+    if site_id is None or str(site_id).strip() == "":
+        site_scoped_roles = {
+            ROLE_INVESTIGATOR,
+            ROLE_CRC,
+            ROLE_CRA_CANONICAL,
+            "monitor",
+            ROLE_EXTERNAL_MONITOR,
+        }
+        user_site_roles = [r for r in principal.roles if r in site_scoped_roles]
+        if user_site_roles or principal.assigned_sites:
+            return False
+        return True
+
     site_scoped_roles = {
         ROLE_INVESTIGATOR,
         ROLE_CRC,
