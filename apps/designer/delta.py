@@ -141,7 +141,7 @@ def assert_mock_study_version_mutable(study_version_id: str):
         for ver in versions:
             if ver.get("id") == study_version_id:
                 status = ver.get("status")
-                if status in ("LOCKED", "PUBLISHED", "ARCHIVED"):
+                if status in ("APPROVED", "SIGNED", "LOCKED", "PUBLISHED", "ARCHIVED"):
                     raise ImmutabilityViolationError("IMMUTABILITY_VIOLATION")
                 return
 
@@ -180,7 +180,7 @@ async def assert_study_version_mutable(tx, study_version_id: str):
             version_props["status"] = record.get("status")
 
         status = version_props.get("status")
-        if status in ("LOCKED", "PUBLISHED", "ARCHIVED"):
+        if status in ("APPROVED", "SIGNED", "LOCKED", "PUBLISHED", "ARCHIVED"):
             raise ImmutabilityViolationError("IMMUTABILITY_VIOLATION")
 
 
@@ -249,7 +249,7 @@ async def assert_graph_mutable(
                 raise InvalidSignatureError("INVALID_OR_MISSING_SIGNATURE")
 
             status = version_props.get("status")
-            if status in ("LOCKED", "PUBLISHED", "ARCHIVED"):
+            if status in ("APPROVED", "SIGNED", "LOCKED", "PUBLISHED", "ARCHIVED"):
                 raise ImmutabilityViolationError("IMMUTABILITY_VIOLATION")
 
     if object_id:
@@ -262,7 +262,7 @@ async def assert_graph_mutable(
         record = await res.single()
         if record:
             status = record.get("status")
-            if status in ("LOCKED", "PUBLISHED", "ARCHIVED"):
+            if status in ("APPROVED", "SIGNED", "LOCKED", "PUBLISHED", "ARCHIVED"):
                 raise ImmutabilityViolationError("IMMUTABILITY_VIOLATION")
 
 
@@ -2363,6 +2363,195 @@ async def link_epoch_to_visit(
             )
             record = await res.single()
             return record["success"] if record else False
+
+
+@with_transaction_retry()
+async def approve_study_version_delta(
+    driver,
+    study_id: str,
+    version_id: str,
+    user_id: str,
+    change_reason: str,
+    signature_manifestation_payload: Dict[str, Any],
+) -> Dict[str, Any]:
+    """
+    Saves the APPROVED status and the signature manifestation in the study version record
+    and records an Action in the append-only history.
+    """
+    import os
+
+    from packages.security.signing import generate_canonical_signature
+
+    if driver is None:
+        from apps.designer.db import MOCK_STUDIES, MOCK_STUDY_VERSIONS
+
+        # Find version record
+        versions = MOCK_STUDY_VERSIONS.get(study_id, [])
+        ver_record = None
+        for v in versions:
+            if v.get("id") == version_id:
+                ver_record = v
+                break
+        if not ver_record:
+            raise ValueError(
+                f"StudyVersion {version_id} not found under Study {study_id}"
+            )
+
+        # Check immutability
+        status = ver_record.get("status")
+        if status in ("APPROVED", "SIGNED", "LOCKED", "PUBLISHED", "ARCHIVED"):
+            raise ImmutabilityViolationError("IMMUTABILITY_VIOLATION")
+
+        # Update status
+        ver_record["status"] = "APPROVED"
+        ver_record["signature_manifestation"] = signature_manifestation_payload
+
+        # Regenerate StudyVersion signature
+        payload_to_sign = {
+            "id": ver_record.get("id") or "legacy_ver",
+            "version_tag": ver_record.get("version_tag") or "1.0",
+            "status": "APPROVED",
+            "version_index": ver_record.get("version_index") or 1,
+            "created_by": ver_record.get("created_by") or "system",
+        }
+        if "created_at" in ver_record:
+            payload_to_sign["created_at"] = str(ver_record["created_at"])
+        if "parent_version" in ver_record:
+            payload_to_sign["parent_version"] = ver_record["parent_version"]
+
+        secret = os.getenv(
+            "SIGNING_SECRET", "designer-amendment-secure-key-12345"
+        ).encode("utf-8")
+        ver_record["signature"] = generate_canonical_signature(payload_to_sign, secret)
+
+        # Record in action history
+        action_id = str(uuid.uuid4())
+        action_record = {
+            "id": action_id,
+            "user_id": user_id,
+            "change_reason": change_reason,
+            "timestamp": dt.datetime.now().isoformat(),
+            "type": "APPROVAL",
+            "signature_manifestation": signature_manifestation_payload,
+        }
+        if study_id in MOCK_STUDIES:
+            if "actions" not in MOCK_STUDIES[study_id]:
+                MOCK_STUDIES[study_id]["actions"] = []
+            MOCK_STUDIES[study_id]["actions"].append(action_record)
+
+        return {
+            "study_id": study_id,
+            "version_id": version_id,
+            "status": "APPROVED",
+            "signature_manifestation": signature_manifestation_payload,
+        }
+
+    # Neo4j implementation
+    import json
+
+    async with driver.session() as session:
+        tx = await session.begin_transaction()
+        async with tx:
+            # Exclusively lock Study root and StudyVersion
+            lock_query = """
+            MATCH (s:Study {id: $study_id})
+            SET s._lock = true
+            RETURN s.id as id
+            """
+            await tx.run(lock_query, study_id=study_id)
+
+            lock_ver_query = """
+            MATCH (sv:StudyVersion {id: $version_id})
+            SET sv._lock = true
+            RETURN sv.id as id
+            """
+            await tx.run(lock_ver_query, version_id=version_id)
+
+            # Retrieve StudyVersion properties
+            ver_query = """
+            MATCH (sv:StudyVersion {id: $version_id})
+            RETURN sv {.*} as version_props
+            """
+            ver_res = await tx.run(ver_query, version_id=version_id)
+            ver_record = await ver_res.single()
+            if not ver_record:
+                raise ValueError(f"StudyVersion {version_id} not found")
+            version_props = dict(ver_record["version_props"])
+
+            # Check immutability
+            status = version_props.get("status")
+            if status in ("APPROVED", "SIGNED", "LOCKED", "PUBLISHED", "ARCHIVED"):
+                raise ImmutabilityViolationError("IMMUTABILITY_VIOLATION")
+
+            # Regenerate canonical signature for status="APPROVED"
+            payload_to_sign = {
+                "id": version_props.get("id") or "legacy_ver",
+                "version_tag": version_props.get("version_tag") or "1.0",
+                "status": "APPROVED",
+                "version_index": version_props.get("version_index") or 1,
+                "created_by": version_props.get("created_by") or "system",
+            }
+            created_at = version_props.get("created_at")
+            if created_at is not None:
+                if hasattr(created_at, "isoformat"):
+                    created_at_val = created_at.isoformat()
+                else:
+                    created_at_val = str(created_at)
+                payload_to_sign["created_at"] = created_at_val
+            if "parent_version" in version_props:
+                payload_to_sign["parent_version"] = version_props["parent_version"]
+
+            secret = os.getenv(
+                "SIGNING_SECRET", "designer-amendment-secure-key-12345"
+            ).encode("utf-8")
+            new_signature = generate_canonical_signature(payload_to_sign, secret)
+
+            # Update StudyVersion node with approved status and signature manifestation
+            update_ver_query = """
+            MATCH (sv:StudyVersion {id: $version_id})
+            SET sv.status = "APPROVED",
+                sv.signature = $new_signature,
+                sv.signature_manifestation_json = $manifestation_json
+            """
+            await tx.run(
+                update_ver_query,
+                version_id=version_id,
+                new_signature=new_signature,
+                manifestation_json=json.dumps(signature_manifestation_payload),
+            )
+
+            # Create Action node
+            action_id = str(uuid.uuid4())
+            action_query = """
+            MATCH (sv:StudyVersion {id: $version_id})
+            MATCH (s:Study {id: $study_id})
+            CREATE (a:Action {
+                id: $action_id,
+                type: "APPROVAL",
+                user_id: $user_id,
+                change_reason: $change_reason,
+                timestamp: datetime(),
+                signature_manifestation_json: $manifestation_json
+            })
+            CREATE (s)-[:HAS_ACTION]->(a)
+            CREATE (a)-[:AFTER]->(sv)
+            """
+            await tx.run(
+                action_query,
+                study_id=study_id,
+                version_id=version_id,
+                action_id=action_id,
+                user_id=user_id,
+                change_reason=change_reason,
+                manifestation_json=json.dumps(signature_manifestation_payload),
+            )
+
+            return {
+                "study_id": study_id,
+                "version_id": version_id,
+                "status": "APPROVED",
+                "signature_manifestation": signature_manifestation_payload,
+            }
 
 
 @with_transaction_retry()

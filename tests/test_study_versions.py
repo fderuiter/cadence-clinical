@@ -30,6 +30,8 @@ def get_auth_headers(
     user_id="test_designer",
     roles="STUDY_DESIGNER",
     change_reason="Study versioning operations",
+    action_path=None,
+    sig_token_custom=None,
 ):
     timestamp = str(time.time())
     payload = {
@@ -42,7 +44,7 @@ def get_auth_headers(
     signature = hmac.new(
         GATEWAY_SECRET.encode(), serialized.encode(), hashlib.sha256
     ).hexdigest()
-    return {
+    headers = {
         "X-User-Id": user_id,
         "X-User-Roles": roles,
         "X-Gateway-Timestamp": timestamp,
@@ -50,6 +52,23 @@ def get_auth_headers(
         "X-Signature-Version": "2",
         "X-Change-Reason": change_reason,
     }
+    if sig_token_custom:
+        headers["X-Sig-Token"] = sig_token_custom
+    elif action_path:
+        from jose import jwt
+
+        sig_payload = {
+            "sub": user_id,
+            "username": user_id,
+            "action": action_path,
+            "roles": [roles],
+            "iat": time.time(),
+            "exp": time.time() + 300.0,
+            "jti": f"jti-{time.time()}-{hash(action_path)}-{time.process_time()}",
+        }
+        sig_token = jwt.encode(sig_payload, GATEWAY_SECRET, algorithm="HS256")
+        headers["X-Sig-Token"] = sig_token
+    return headers
 
 
 # =====================================================================
@@ -645,3 +664,136 @@ def test_verify_version_signature_edge_cases():
 
     # Dict without signature
     assert not verify_version_signature({"id": "v_123", "status": "DRAFT"})
+
+
+@pytest.mark.asyncio
+async def test_api_protocol_approval_and_immutability():
+    """
+    Comprehensive integration test verifying:
+    - Re-authentication: Approval requires a step-up token (X-Sig-Token).
+    - Status transition: Successful approval changes status to APPROVED and populates SignatureManifestation.
+    - Immutability: Modifications (rules, blocks, or re-approval) on an APPROVED version are strictly blocked (403 IMMUTABILITY_VIOLATION).
+    - Tracer: Manifestation is archived in the append-only Action history.
+    """
+    study_id = "approval_test_study"
+    version_id = "v_approval"
+
+    import copy
+
+    from apps.designer.db import MOCK_RULES, MOCK_STUDIES, MOCK_STUDY_VERSIONS
+
+    MOCK_STUDY_VERSIONS[study_id] = []
+    MOCK_RULES[study_id] = []
+    MOCK_STUDIES[study_id] = copy.deepcopy(MOCK_STUDIES["study_1"])
+    MOCK_STUDIES[study_id]["study_id"] = study_id
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # 1. Establish DRAFT version
+        res_v1 = await client.post(
+            f"/api/v1/studies/{study_id}/versions",
+            json={
+                "id": version_id,
+                "version_tag": "1.0",
+                "status": "DRAFT",
+                "version_index": 1,
+            },
+            headers=get_auth_headers(),
+        )
+        assert res_v1.status_code == 201
+
+        # 2. Try approval without X-Sig-Token -> Should fail with 401
+        res_no_token = await client.post(
+            f"/api/v1/studies/{study_id}/versions/{version_id}/approve",
+            json={"signing_reason": "APPROVAL"},
+            headers=get_auth_headers(
+                roles="STUDY_DESIGNER", change_reason="Try approve"
+            ),
+        )
+        assert res_no_token.status_code == 401
+        assert (
+            "reauthentication" in res_no_token.json()["detail"].lower()
+            or "re-authentication" in res_no_token.json()["message"].lower()
+        )
+
+        # 3. Call with valid X-Sig-Token
+        action_path = f"/api/v1/studies/{study_id}/versions/{version_id}/approve"
+        sig_headers = get_auth_headers(
+            roles="STUDY_DESIGNER",
+            change_reason="Approve oncology protocol",
+            action_path=action_path,
+        )
+
+        res_approve = await client.post(
+            action_path,
+            json={"signing_reason": "APPROVAL"},
+            headers=sig_headers,
+        )
+        assert res_approve.status_code == 200
+        approve_data = res_approve.json()
+        assert approve_data["status"] == "APPROVED"
+        assert approve_data["version_id"] == version_id
+        assert "signature_manifestation" in approve_data
+        assert approve_data["signature_manifestation"]["signer_id"] == "test_designer"
+
+        # 4. Immutability checks - Subsequent modifications must be strictly rejected with 403
+        rule_payload = {
+            "type": "skip_logic",
+            "condition": {
+                "type": "comparison",
+                "operator": "==",
+                "operands": [
+                    {"type": "field_ref", "field_ref": {"field_id": "act_1"}},
+                    {"type": "constant", "value": "N"},
+                ],
+            },
+            "action": "hide",
+            "target_field": "act_2",
+        }
+        res_fail_rule = await client.post(
+            f"/api/v1/studies/{study_id}/rules",
+            json=rule_payload,
+            headers=get_auth_headers(),
+        )
+        assert res_fail_rule.status_code == 403
+        assert "IMMUTABILITY_VIOLATION" in res_fail_rule.json()["detail"]
+
+        # Attempt to add blocks -> 403
+        block_payload = {
+            "id": "blk_1",
+            "block_type": "narrative",
+            "order": 1,
+            "properties": {"content": "Test block"},
+            "change_reason": "Adding block on approved protocol",
+        }
+        res_fail_block = await client.post(
+            f"/api/v1/studies/{study_id}/versions/{version_id}/blocks",
+            json=block_payload,
+            headers=get_auth_headers(roles="STUDY_DESIGNER"),
+        )
+        assert res_fail_block.status_code == 403
+        assert "IMMUTABILITY_VIOLATION" in res_fail_block.json()["detail"]
+
+        # Attempt to re-approve -> 403
+        res_fail_reapprove = await client.post(
+            action_path,
+            json={"signing_reason": "APPROVAL"},
+            headers=get_auth_headers(
+                roles="STUDY_DESIGNER",
+                change_reason="Re-approve",
+                action_path=action_path,
+            ),
+        )
+        assert res_fail_reapprove.status_code == 403
+        assert "IMMUTABILITY_VIOLATION" in res_fail_reapprove.json()["detail"]
+
+        # 5. Tracer Action History Verification
+        actions = MOCK_STUDIES[study_id].get("actions", [])
+        assert len(actions) > 0
+        approval_action = next(a for a in actions if a.get("type") == "APPROVAL")
+        assert approval_action["user_id"] == "test_designer"
+        assert approval_action["change_reason"] == "Approve oncology protocol"
+        assert (
+            approval_action["signature_manifestation"]["signer_id"] == "test_designer"
+        )

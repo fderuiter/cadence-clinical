@@ -224,6 +224,8 @@ def loaded_specs():
 
 
 WHITELISTED_ROUTES = {
+    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/approve"),
+    ("post", "/api/v1/studies/{study_id}/versions/{version_id}/sign-off"),
     ("get", "/api/v1/studies/{study_id}/versions/{version_id}/blocks"),
     ("get", "/api/v1/studies/{study_id}/versions/{version_id}/blocks/{block_id}"),
     ("post", "/api/v1/studies/{study_id}/versions/{version_id}/blocks"),

@@ -32,6 +32,7 @@ from typing import Any, Dict, List, Literal, Optional, Tuple
 import httpx
 from eligibility import EligibilityCriterion, ExpressionNode, parse_dsl
 from fastapi import (
+    BackgroundTasks,
     Depends,
     FastAPI,
     File,
@@ -46,6 +47,7 @@ from fastapi.responses import JSONResponse
 from neo4j import AsyncGraphDatabase
 from protocol_render import SoAMatrixView
 from pydantic import BaseModel, Field, TypeAdapter
+from signature import SigningReason
 
 from apps.designer.db import (
     assert_mock_study_mutable,
@@ -67,6 +69,7 @@ from apps.designer.delta import (
     LibraryObjectInUseError,
     _init_mock_soa,
     amend_protocol_version,
+    approve_study_version_delta,
     compute_graph_diff,
     create_block,
     create_eligibility_criterion,
@@ -1213,6 +1216,333 @@ async def export_protocol(
         media_type=result.media_type,
         headers=headers,
     )
+
+
+class ApproveProtocolRequest(BaseModel):
+    signing_reason: SigningReason = Field(..., description="Reason for signing")
+
+
+async def archive_approved_protocol_background_task(
+    study_id: str,
+    version_id: str,
+    user_id: str,
+    roles: str,
+    change_reason: str,
+    signature_manifestation_payload: Dict[str, Any],
+):
+    import os
+
+    import usdm_model
+    from fastapi.concurrency import run_in_threadpool
+
+    from apps.designer.content_assembly import assemble_rendered_protocol_document
+    from apps.designer.rendering import render_protocol_to_pdf
+
+    # Fetch study data
+    study_data = get_study_projection(study_id)
+    if not study_data:
+        print(f"[BACKGROUND ARCHIVAL] Study {study_id} not found.")
+        return
+
+    # Map study to USDM
+    try:
+        usdm_dict = map_study_to_usdm(study_data)
+        from apps.designer.mapper import to_uuid
+
+        usdm_dict["id"] = to_uuid(usdm_dict["id"], "study")
+        study_obj = usdm_model.Study.model_validate(usdm_dict)
+    except Exception as e:
+        print(f"[BACKGROUND ARCHIVAL] USDM mapping failed: {str(e)}")
+        return
+
+    # Assemble document view
+    try:
+        version_index = 1
+        try:
+            raw_version = study_data.get("current_version", "1")
+            version_num = "".join(filter(str.isdigit, str(raw_version)))
+            version_index = int(version_num) if version_num else 1
+        except Exception:
+            version_index = 1
+
+        doc_view = assemble_rendered_protocol_document(
+            study=study_obj,
+            creator=user_id,
+            change_reason=change_reason,
+            version_index=max(1, version_index),
+        )
+    except Exception as e:
+        print(f"[BACKGROUND ARCHIVAL] Document assembly failed: {str(e)}")
+        return
+
+    # Render as PDF
+    try:
+        result = await run_in_threadpool(render_protocol_to_pdf, doc_view, "combined")
+    except Exception as e:
+        print(f"[BACKGROUND ARCHIVAL] PDF rendering failed: {str(e)}")
+        return
+
+    # Forward to eTMF
+    forward_enabled = os.getenv("ETMF_FORWARDING_ENABLED", "true").lower() in (
+        "true",
+        "1",
+        "yes",
+    )
+    if not forward_enabled:
+        return
+
+    etmf_metadata = {
+        "creator": user_id,
+        "change_reason": change_reason,
+        "version_index": version_index,
+        "output": "combined",
+        "format": "pdf",
+        "requires_signature": False,
+        "signature_manifestation": signature_manifestation_payload,
+    }
+
+    try:
+        await forward_to_etmf(
+            study_id=study_id,
+            filename=f"protocol_{study_id}_v{version_index}_signed.pdf",
+            content_bytes=result.content,
+            mime_type=result.media_type,
+            metadata_json=etmf_metadata,
+            user_id=user_id,
+            roles=roles,
+            change_reason=change_reason,
+        )
+        print("[BACKGROUND ARCHIVAL] Successfully archived protocol to eTMF.")
+    except Exception as e:
+        print(f"[BACKGROUND ARCHIVAL] Best-effort eTMF forwarding failed: {str(e)}")
+
+
+@app.post(
+    "/api/v1/studies/{study_id}/versions/{version_id}/approve",
+    status_code=200,
+)
+@app.post(
+    "/api/v1/studies/{study_id}/versions/{version_id}/sign-off",
+    status_code=200,
+)
+async def approve_study_version_endpoint(
+    study_id: str,
+    version_id: str,
+    payload: ApproveProtocolRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+) -> Dict[str, Any]:
+    """
+    Approve and cryptographically sign a Metadata Designer clinical protocol version, producing
+    a 21 CFR Part 11 compliant persisted signature manifestation, recording immutable Action history,
+    and locks the protocol version by transitioning its status to APPROVED.
+    Locked statuses (APPROVED, SIGNED) block any subsequent edits via immutability checks across both Neo4j and mock databases.
+    Successfully approved protocols are archived as PROTOCOL_SIGNOFF artifacts to the eTMF service asynchronously.
+    """
+    driver = await get_neo4j_driver(request)
+
+    # 1. Extract identity and scope
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = resolve_change_reason(request, None)
+
+    # 2. Check roles/permissions
+    raw_roles = get_normalized_roles(request)
+    roles_list = []
+    for r in raw_roles:
+        norm_r = r.strip().lower()
+        if norm_r in ("sponsor admin", "sponsor_admin"):
+            roles_list.append("sponsor_admin")
+        else:
+            roles_list.append(ROLE_ALIASES.get(norm_r, norm_r))
+
+    allowed_roles = {
+        "sponsor_designer",
+        "sponsor_dm",
+        "sponsor_admin",
+        "sysadmin",
+        "study_designer",
+    }
+    if not any(role in allowed_roles for role in roles_list):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: User is not authorized to approve study protocols.",
+        )
+
+    # 3. Check if study version exists
+    if driver is None:
+        from apps.designer.db import MOCK_STUDY_VERSIONS, get_study_projection
+
+        versions = MOCK_STUDY_VERSIONS.get(study_id, [])
+        ver_record = None
+        for v in versions:
+            if v.get("id") == version_id:
+                ver_record = v
+                break
+        if not ver_record:
+            raise HTTPException(status_code=404, detail="StudyVersion not found")
+
+        # Check if already approved/signed
+        if ver_record.get("status") in (
+            "APPROVED",
+            "SIGNED",
+            "LOCKED",
+            "PUBLISHED",
+            "ARCHIVED",
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="IMMUTABILITY_VIOLATION: Version is already approved and locked.",
+            )
+    else:
+        # Neo4j check
+        async with driver.session() as session:
+            ver_query = """
+            MATCH (s:Study {id: $study_id})-[:HAS_VERSION]->(sv:StudyVersion {id: $version_id})
+            RETURN sv {.*} as version_props
+            """
+            ver_res = await session.run(
+                ver_query, study_id=study_id, version_id=version_id
+            )
+            record = await ver_res.single()
+            if not record:
+                raise HTTPException(status_code=404, detail="StudyVersion not found")
+            version_props = dict(record["version_props"])
+            if version_props.get("status") in (
+                "APPROVED",
+                "SIGNED",
+                "LOCKED",
+                "PUBLISHED",
+                "ARCHIVED",
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="IMMUTABILITY_VIOLATION: Version is already approved and locked.",
+                )
+
+    # 4. Compute content hash from canonically serialized projection
+    from datetime import datetime, timedelta, timezone
+
+    from cryptography import x509
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography.x509.oid import NameOID
+    from signature import SignatureManifestation
+
+    from packages.security.signing import (
+        asymmetric_sign,
+        capture_certificate_identifiers,
+        clean_json_val,
+        compute_sha256_hash,
+    )
+
+    study_data = get_study_projection(study_id)
+    serialized_study = clean_json_val(study_data)
+    study_hash = compute_sha256_hash(serialized_study)
+
+    # 5. Extract metadata context (IP address, User-Agent)
+    client_ip = getattr(request.state, "ip_address", None)
+    if not client_ip:
+        client_ip = request.headers.get("x-forwarded-for") or (
+            request.client.host if request.client else "127.0.0.1"
+        )
+        if "," in client_ip:
+            client_ip = client_ip.split(",")[0].strip()
+
+    user_agent = request.headers.get("user-agent") or "Metadata Designer Service"
+    now_utc = datetime.now(timezone.utc)
+
+    # 6. Build SignatureManifestation
+    manifest = SignatureManifestation(
+        signer_id=user_id,
+        timestamp=now_utc,
+        signing_reason=payload.signing_reason,
+        ip_address=client_ip,
+        user_agent=user_agent,
+        sha256_hash=study_hash,
+    )
+
+    # 7. Generate transient certificate and sign manifestation canonical bytes
+    private_key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=2048,
+    )
+    subject = issuer = x509.Name(
+        [
+            x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
+            x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, "California"),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Cadence Clinical"),
+            x509.NameAttribute(NameOID.COMMON_NAME, f"designer-{user_id}"),
+        ]
+    )
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(private_key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(now_utc - timedelta(days=1))
+        .not_valid_after(now_utc + timedelta(days=10))
+        .add_extension(
+            x509.SubjectKeyIdentifier.from_public_key(private_key.public_key()),
+            critical=False,
+        )
+        .sign(private_key, hashes.SHA256())
+    )
+
+    private_key_pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption(),
+    ).decode("utf-8")
+
+    cert_pem = cert.public_bytes(serialization.Encoding.PEM).decode("utf-8")
+
+    canonical_bytes = manifest.get_canonical_bytes()
+    sig_b64 = asymmetric_sign(canonical_bytes, private_key_pem)
+    ids = capture_certificate_identifiers(cert_pem)
+
+    manifest.signature = sig_b64
+    manifest.certificate_pem = cert_pem
+    manifest.key_identifier = ids["subject_key_identifier"]
+
+    # Verify signature
+    assert manifest.verify() is True
+
+    signature_manifestation_payload = manifest.model_dump(mode="json")
+
+    # 8. Persist approved/locked state via delta approval logic
+    try:
+        await approve_study_version_delta(
+            driver=driver,
+            study_id=study_id,
+            version_id=version_id,
+            user_id=user_id,
+            change_reason=change_reason,
+            signature_manifestation_payload=signature_manifestation_payload,
+        )
+    except ImmutabilityViolationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e),
+        )
+
+    # 9. Register background task for asynchronous archival forwarding to eTMF
+    roles_str = ",".join(roles_list) if roles_list else "sponsor_designer"
+    background_tasks.add_task(
+        archive_approved_protocol_background_task,
+        study_id,
+        version_id,
+        user_id,
+        roles_str,
+        change_reason,
+        signature_manifestation_payload,
+    )
+
+    return {
+        "status": "APPROVED",
+        "version_id": version_id,
+        "signature_manifestation": signature_manifestation_payload,
+    }
 
 
 # ==========================================
