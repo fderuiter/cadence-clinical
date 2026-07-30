@@ -590,8 +590,7 @@ function handleConceptCodeInput(field, newValue) {
   field._debounceTimer = setTimeout(async () => {
     try {
       const response = await terminologyClient.validateSingleCode(newValue, {
-        userId: authStore.identity?.username || "fderuiter",
-        roles: authStore.identity?.roles?.[0] || "Data Manager",
+        changeReason: "Validate code",
       });
 
       if (currentReqId !== conceptRequestIds[field.id]) {
@@ -658,8 +657,6 @@ const debouncedValidate = debounce(async (fieldId, value) => {
 
   try {
     const res = await terminologyClient.validateSingleCode(value, {
-      userId: store.user?.username || "fderuiter",
-      roles: store.user?.roles ? store.user.roles.join(",") : "investigator",
       changeReason: "Validate code",
     });
 
@@ -748,8 +745,6 @@ async function performConceptCodeValidation(fieldId, value) {
 
   try {
     const res = await terminologyClient.validateSingleCode(value, {
-      userId: store.user?.username || "fderuiter",
-      roles: store.user?.roles ? store.user.roles.join(",") : "investigator",
       changeReason: "Validate code",
     });
 

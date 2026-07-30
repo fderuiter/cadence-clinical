@@ -559,8 +559,6 @@ const debouncedSearchArm = debounce(async (term) => {
   }
   try {
     const res = await terminologyClient.searchTerminology(term, {
-      userId: authStore.identity?.username || "fderuiter",
-      roles: authStore.identity?.roles?.[0] || "investigator",
       changeReason: "Arm concept search",
     });
     armSuggestions.value = res.results || [];
@@ -576,8 +574,6 @@ const debouncedSearchEnc = debounce(async (term) => {
   }
   try {
     const res = await terminologyClient.searchTerminology(term, {
-      userId: authStore.identity?.username || "fderuiter",
-      roles: authStore.identity?.roles?.[0] || "investigator",
       changeReason: "Encounter concept search",
     });
     encSuggestions.value = res.results || [];

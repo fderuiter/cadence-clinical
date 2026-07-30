@@ -172,7 +172,7 @@ function scheduleVisit() {
       .slice(0, 10),
     actualDate: "",
     status: "SCHEDULED",
-    cra: "cra_fderuiter",
+    cra: store.user?.username ? `cra_${store.user.username}` : "cra_demo_seed_fderuiter",
   };
   store.currentCtmsData.visits.push(newVisit);
   store.addLedgerBlock(
