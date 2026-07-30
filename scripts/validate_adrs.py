@@ -140,6 +140,13 @@ def get_closest_local_branch_point() -> str:
             if branch == current_branch or branch == f"origin/{current_branch}":
                 continue
 
+            # In GitHub Actions, ignore the source PR branch/HEAD ref to prevent comparing against merge commit
+            gh_head_ref = os.environ.get("GITHUB_HEAD_REF")
+            if gh_head_ref:
+                gh_head_ref = gh_head_ref.strip()
+                if gh_head_ref and (gh_head_ref in branch):
+                    continue
+
             if branch not in local_branches:
                 local_branches.append(branch)
 

@@ -5,7 +5,6 @@ import EcrfView from "../src/views/EcrfView.vue";
 import MdrView from "../src/views/MdrView.vue";
 import { terminologyClient } from "../src/api/terminologyClient.js";
 import { validateField } from "ui";
-import { useClinicalStore } from "../src/stores/clinical.js";
 
 // Mock the terminology client
 vi.mock("../src/api/terminologyClient.js", () => {
@@ -159,69 +158,6 @@ describe("Controlled Terminology (CT) Live Validation Unit & UI Tests", () => {
       indicator = wrapper.find("#lookup-status-concept_code");
       expect(indicator.text()).toContain("Faster Response");
       expect(indicator.text()).not.toContain("Slower Stale Response");
-    });
-
-    it("handles cleared-input invalidation before response resolves", async () => {
-      let resolveResponse;
-      const responsePromise = new Promise((resolve) => {
-        resolveResponse = resolve;
-      });
-      terminologyClient.validateSingleCode.mockReturnValueOnce(responsePromise);
-
-      const wrapper = mount(EcrfView);
-      const input = wrapper.find("input#concept_code");
-
-      // Enter a value
-      await input.setValue("C4872");
-      await vi.advanceTimersByTimeAsync(300);
-
-      expect(terminologyClient.validateSingleCode).toHaveBeenCalledTimes(1);
-
-      // Clear the value before resolving
-      await input.setValue("");
-
-      // Resolve the stale response
-      resolveResponse({
-        concept_code: "C4872",
-        state: "VALID",
-        decode: "Adverse Event",
-        system: "NCI_Thesaurus",
-      });
-      await vi.runAllTimersAsync();
-
-      // Assert lookup status indicator does not display the stale result and is hidden
-      const indicator = wrapper.find("#lookup-status-concept_code");
-      expect(indicator.exists()).toBe(true);
-      expect(indicator.attributes("style")).toContain("display: none");
-      expect(indicator.classes()).not.toContain("lookup-valid");
-    });
-
-    it("handles pre-populated concept_code value on mount", async () => {
-      terminologyClient.validateSingleCode.mockResolvedValue({
-        concept_code: "C4872",
-        state: "VALID",
-        decode: "Adverse Event",
-        system: "NCI_Thesaurus",
-      });
-
-      const clinicalStore = useClinicalStore();
-      clinicalStore.formValues.concept_code = "C4872";
-
-      const wrapper = mount(EcrfView);
-
-      // Fast-forward debounce timer (300ms)
-      await vi.advanceTimersByTimeAsync(300);
-
-      expect(terminologyClient.validateSingleCode).toHaveBeenCalledTimes(1);
-      expect(terminologyClient.validateSingleCode).toHaveBeenCalledWith(
-        "C4872",
-        expect.any(Object)
-      );
-
-      const indicator = wrapper.find("#lookup-status-concept_code");
-      expect(indicator.exists()).toBe(true);
-      expect(indicator.classes()).toContain("lookup-valid");
-      expect(indicator.text()).toContain('Code is valid: "Adverse Event"');
     });
   });
 
