@@ -1319,13 +1319,13 @@ async function submitConsentAnswers() {
       banner.textContent = decision.message;
       banner.style.display = "block";
       if (decision.canSign) {
-        banner.style.backgroundColor = "#ecfdf5";
-        banner.style.color = "#047857";
-        banner.style.border = "1px solid #a7f3d0";
+        banner.style.backgroundColor = "#ecfdf5"; // deid-ignore
+        banner.style.color = "#047857"; // deid-ignore
+        banner.style.border = "1px solid #a7f3d0"; // deid-ignore
       } else {
-        banner.style.backgroundColor = "#fef2f2";
-        banner.style.color = "#b91c1c";
-        banner.style.border = "1px solid #fecaca";
+        banner.style.backgroundColor = "#fef2f2"; // deid-ignore
+        banner.style.color = "#b91c1c"; // deid-ignore
+        banner.style.border = "1px solid #fecaca"; // deid-ignore
       }
     }
 
