@@ -1,12 +1,13 @@
 import enum
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Dict, Optional
 
 from sqlalchemy import (
     DDL,
     JSON,
     CheckConstraint,
+    Date,
     DateTime,
     ForeignKey,
     Index,
@@ -145,6 +146,11 @@ class TMFDocument(Base):
         String(50), default="01.01.01", nullable=False, index=True
     )
     metadata_json: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
+
+    # Expiration metadata fields
+    issue_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True, index=True)
+    expiration_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True, index=True)
+    document_owner_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
 
     # Change justification and shared protocol-version reference fields
     reason_for_change: Mapped[Optional[str]] = mapped_column(

@@ -533,6 +533,11 @@ Alembic-style, migration scripts must employ a **Expand-and-Contract (Two-Phase)
 1. **Expand Phase (Pre-boot):** Add columns, create shadow tables, execute non-blocking writes. Database changes are completely backward compatible with older codebase versions currently running in production.
 2. **Contract Phase (Post-rollout):** Deprecate and drop older attributes only after all microservice instances are updated.
 
+### 3.1.0 eTMF & eISF Pre-boot Migration Runners
+Following the platform-wide zero-downtime execution pattern, both the event-driven eTMF and eISF services manage their database schema migrations through dedicated pre-boot migration runners (`apps.etmf.database.migrate` and `apps.eisf.database.migrate`).
+
+These runners execute base DDL declarations (e.g. adding nullable `issue_date`, `expiration_date`, and `document_owner_id` columns, alongside corresponding indexing structures) idempotently before starting up web servers. This ensures safe backward-compatibility across all active and legacy document management nodes during platform upgrades.
+
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────────────────┐
 │                                   EXPAND PHASE (Backward Compatible)                          │

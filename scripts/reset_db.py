@@ -20,7 +20,9 @@ from sqlalchemy.ext.asyncio import create_async_engine
 # Import SQLite Bases for metadata extraction
 from apps.ctms.models import Base as CTMSBase
 from apps.econsent.models import Base as EConsentBase
+from apps.eisf.database.migrate import run_migrations as run_eisf_migrations
 from apps.eisf.models import Base as EISFBase
+from apps.etmf.database.migrate import run_migrations as run_etmf_migrations
 from apps.etmf.models import Base as ETMFBase
 
 # Import PostgreSQL migrations
@@ -162,6 +164,8 @@ async def reset_postgres(url: str, allow_offline: bool) -> None:
 
         # Re-apply migrations, tables, and triggers
         await run_migrations(url)
+        await run_etmf_migrations(url)
+        await run_eisf_migrations(url)
         print(
             "PostgreSQL database schemas, migrations, and triggers successfully re-applied."
         )
@@ -284,6 +288,12 @@ async def reset_sqlite_db(
             await conn.run_sync(metadata.create_all)
 
         await engine.dispose()
+
+        if name == "eTMF":
+            await run_etmf_migrations(url)
+        elif name == "eISF":
+            await run_eisf_migrations(url)
+
         print(f"SQLite database for {name} purged and migrated successfully.")
     except Exception as e:
         if allow_offline:

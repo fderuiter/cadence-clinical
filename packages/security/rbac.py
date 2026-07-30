@@ -137,6 +137,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
             "transition_rejected",
             "transition_draft",
             "transition_signed",
+            "manage_expiration",
         },
         "etmf_edl": {"read", "create"},
         "etmf_audit_logs": {"read"},
@@ -188,6 +189,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
             "transition_rejected",
             "transition_draft",
             "transition_signed",
+            "manage_expiration",
         },
         "etmf_edl": {"read", "create"},
         # Quality
@@ -403,6 +405,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
             "transition_rejected",
             "transition_draft",
             "transition_signed",
+            "manage_expiration",
         },
         "etmf_edl": {"read", "create"},
         # Quality
@@ -436,7 +439,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "ctms_financial_budget": {"create", "read"},
         "ctms_financial_milestone": {"create", "read", "trigger"},
         "ctms_financial_payable": {"read"},
-        "etmf_document": {"create", "read", "read_raw", "redact", "sign"},
+        "etmf_document": {"create", "read", "read_raw", "redact", "sign", "manage_expiration"},
         "etmf_edl": {"read", "create"},
         "etmf_audit_logs": {"read"},
         "quality_event": {"create", "read", "update", "delete", "investigate"},
