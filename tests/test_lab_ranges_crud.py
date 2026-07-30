@@ -502,3 +502,109 @@ async def test_soft_delete_lab_reference_range() -> None:
         )
         assert len(res_list_all.json()) == 1
         assert res_list_all.json()[0]["id"] == range_id
+
+
+@pytest.mark.asyncio
+async def test_create_central_range_with_site_id_blocked() -> None:
+    """Verify that creating a CENTRAL range with a non-null site_id is blocked with HTTP 400."""
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        payload = {
+            "study_id": "STUDY-001",
+            "test_code": "WBC",
+            "test_name": "White Blood Cell Count",
+            "source": "CENTRAL",
+            "site_id": "SITE-A",  # Violates the invariant!
+            "unit": "10^9/L",
+            "normalized_unit": "10^9/L",
+            "sex_applicability": "ALL",
+        }
+        headers = get_auth_headers(roles="cra")
+        res = await client.post(
+            "/api/v1/execution/lab-ranges",
+            json=payload,
+            headers=headers,
+        )
+        assert res.status_code == 400
+        assert (
+            "CENTRAL reference ranges are global and must have site_id = None"
+            in res.json()["detail"]
+        )
+
+
+@pytest.mark.asyncio
+async def test_create_central_range_with_null_site_id_allowed() -> None:
+    """Verify that creating a CENTRAL range with site_id = None is allowed."""
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        payload = {
+            "study_id": "STUDY-001",
+            "test_code": "WBC",
+            "test_name": "White Blood Cell Count",
+            "source": "CENTRAL",
+            "site_id": None,
+            "unit": "10^9/L",
+            "normalized_unit": "10^9/L",
+            "sex_applicability": "ALL",
+        }
+        headers = get_auth_headers(roles="cra")
+        res = await client.post(
+            "/api/v1/execution/lab-ranges",
+            json=payload,
+            headers=headers,
+        )
+        assert res.status_code == 201
+        assert res.json()["site_id"] is None
+
+
+@pytest.mark.asyncio
+async def test_update_local_to_central_invariant_enforcement() -> None:
+    """Verify that updating a LOCAL range (with site_id) to CENTRAL requires clearing site_id."""
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        headers = get_auth_headers(roles="cra")
+
+        # 1. Create a LOCAL range with a site_id
+        payload = {
+            "study_id": "STUDY-001",
+            "test_code": "WBC",
+            "test_name": "White Blood Cell Count",
+            "source": "LOCAL",
+            "site_id": "SITE-A",
+            "unit": "10^9/L",
+            "normalized_unit": "10^9/L",
+            "sex_applicability": "ALL",
+        }
+        res_create = await client.post(
+            "/api/v1/execution/lab-ranges",
+            json=payload,
+            headers=headers,
+        )
+        assert res_create.status_code == 201
+        range_id = res_create.json()["id"]
+
+        # 2. Try to update source to CENTRAL without setting site_id to None
+        # This merged state will have source=CENTRAL and site_id=SITE-A, which is invalid!
+        res_update_invalid = await client.put(
+            f"/api/v1/execution/lab-ranges/{range_id}",
+            json={"source": "CENTRAL"},
+            headers=headers,
+        )
+        assert res_update_invalid.status_code == 400
+        assert (
+            "CENTRAL reference ranges are global and must have site_id = None"
+            in res_update_invalid.json()["detail"]
+        )
+
+        # 3. Update source to CENTRAL and set site_id to None
+        res_update_valid = await client.put(
+            f"/api/v1/execution/lab-ranges/{range_id}",
+            json={"source": "CENTRAL", "site_id": None},
+            headers=headers,
+        )
+        assert res_update_valid.status_code == 200
+        assert res_update_valid.json()["source"] == "CENTRAL"
+        assert res_update_valid.json()["site_id"] is None
