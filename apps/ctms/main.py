@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
-from typing import List, Optional
+from enum import Enum
+from typing import Any, Dict, List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -13,11 +14,13 @@ from apps.ctms.models import (
     BudgetLineItem,
     CRAAllocation,
     CTMSAuditLog,
+    CTMSClinicalQuery,
     CTMSStudy,
     GeneratedLetter,
     InvestigatorGrant,
     InvestigatorPayable,
     MonitoringVisit,
+    MonitoringVisitDefeated,
     MonitoringVisitFinding,
     PaymentMilestone,
     RecruitmentRecord,
@@ -48,6 +51,67 @@ app.add_middleware(GatewayAuthMiddleware)
 
 # Dependable to obtain database session
 get_db_session = DatabaseSessionDependency(db_manager)
+
+
+class ConflictStrategy(str, Enum):
+    """
+    Explicit validated conflict resolution strategies.
+    """
+
+    CLIENT_WINS = "CLIENT_WINS"
+    SERVER_WINS = "SERVER_WINS"
+    MERGE = "MERGE"
+
+
+class FindingCreate(BaseModel):
+    text: str = Field(..., description="The observation or action item text")
+    severity: str = Field(..., description="Finding severity (MINOR, MAJOR, CRITICAL)")
+    resolution_status: Optional[str] = Field("OPEN", description="Resolution status")
+
+
+class OfflineSyncMarkers(BaseModel):
+    """
+    Offline queue reconciliation and conflict resolution parameters.
+    """
+
+    sequence_number: int = Field(
+        ..., description="The queue order sequence from device"
+    )
+    client_id: str = Field(..., description="Unique identifier for the mobile device")
+    conflict_strategy: ConflictStrategy = Field(
+        ConflictStrategy.CLIENT_WINS,
+        description="Conflict strategy to resolve duplicate submissions. Supported: CLIENT_WINS, SERVER_WINS, MERGE",
+    )
+    signature: Optional[str] = Field(
+        None,
+        description="Optional HMAC-SHA256 signature of the payload for cryptographic integrity",
+    )
+    timestamps: Optional[Dict[str, datetime]] = Field(
+        None,
+        description="Optional per-field UTC timestamps indicating when each field in 'answers' was modified",
+    )
+
+
+class MonitoringVisitOfflineSync(BaseModel):
+    """
+    Offline synchronization payload for a site monitoring visit completion and findings.
+    """
+
+    visit_id: str = Field(..., description="Unique ID of the target MonitoringVisit")
+    study_id: Optional[str] = Field(None, description="Optional study ID")
+    site_id: Optional[str] = Field(None, description="Optional site ID")
+    actual_date: datetime = Field(
+        ..., description="Actual date/time when the visit was conducted"
+    )
+    findings: List[FindingCreate] = Field(
+        default=[], description="List of recorded findings"
+    )
+    device_timestamp: datetime = Field(
+        ..., description="ISO 8601 timestamp when the entry was created on device"
+    )
+    offline_sync_markers: OfflineSyncMarkers = Field(
+        ..., description="The offline sync queue conflict tracking parameters"
+    )
 
 
 # Pydantic models for CTMS Study
@@ -88,12 +152,6 @@ class MonitoringVisitCreate(BaseModel):
     scheduled_date: datetime = Field(
         ..., description="Scheduled date/time of the visit"
     )
-
-
-class FindingCreate(BaseModel):
-    text: str = Field(..., description="The observation or action item text")
-    severity: str = Field(..., description="Finding severity (MINOR, MAJOR, CRITICAL)")
-    resolution_status: Optional[str] = Field("OPEN", description="Resolution status")
 
 
 class MonitoringVisitComplete(BaseModel):
@@ -2337,3 +2395,380 @@ async def list_investigator_payables(
         )
         for p in payables
     ]
+
+
+async def process_visit_sync(
+    session: AsyncSession, payload: MonitoringVisitOfflineSync, principal: Principal
+) -> Dict[str, Any]:
+    # 1. Look up the target MonitoringVisit using payload.visit_id
+    visit_stmt = select(MonitoringVisit).where(MonitoringVisit.id == payload.visit_id)
+    visit_res = await session.execute(visit_stmt)
+    visit = visit_res.scalars().first()
+
+    # 2. Pre-reconciliation checks: structural conflicts
+    if not visit:
+        # Create Clinical Query
+        query = CTMSClinicalQuery(
+            study_id=payload.study_id or "UNKNOWN",
+            site_id=payload.site_id or "UNKNOWN",
+            visit_id=payload.visit_id,
+            status="OPEN",
+            explanation=f"Structural conflict: target record (MonitoringVisit) is missing or deleted for Visit {payload.visit_id}.",
+            created_by=principal.user_id,
+            reason_for_change="SYSTEM SYNC EXCEPTION TRIGGERED",
+            version_index=1,
+        )
+        session.add(query)
+
+        # Archive to Defeated
+        defeated = MonitoringVisitDefeated(
+            visit_id=payload.visit_id,
+            actual_date=payload.actual_date,
+            findings={"findings": [f.model_dump() for f in payload.findings]},
+            device_timestamp=payload.device_timestamp,
+            offline_sync_markers=payload.offline_sync_markers.model_dump(mode="json"),
+            status="Defeated by online-merge conflict resolution",
+        )
+        session.add(defeated)
+        await session.flush()
+
+        # Write structural conflict audit log
+        await write_audit_log(
+            session=session,
+            user_id=principal.user_id,
+            user_role=",".join(principal.raw_roles),
+            action="MONITORING_VISIT_STRUCTURAL_CONFLICT",
+            details=f"Structural conflict on Visit '{payload.visit_id}': Target record missing or deleted. Reason: SYSTEM SYNC EXCEPTION TRIGGERED",
+        )
+
+        return {
+            "status": "STRUCTURAL_CONFLICT",
+            "query": {
+                "id": query.id,
+                "study_id": query.study_id,
+                "site_id": query.site_id,
+                "visit_id": query.visit_id,
+                "status": query.status,
+                "explanation": query.explanation,
+            },
+            "signature_validation": {
+                "status": "SKIPPED",
+                "detail": None,
+            },
+            "reconciliation_result": {
+                "status": "STRUCTURAL_CONFLICT",
+                "metadata": None,
+            },
+            "audit_details": {
+                "action": "MONITORING_VISIT_STRUCTURAL_CONFLICT",
+                "details": f"Structural conflict on Visit '{payload.visit_id}'.",
+            },
+        }
+
+    # 3. Verify the submitting principal's identity/allocation matches the visit's cra_id/site
+    from packages.security.rbac import can_access_site
+
+    if not (
+        principal.user_id == visit.cra_id or can_access_site(principal, visit.site_id)
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Forbidden: Submitting principal '{principal.user_id}' does not match CRA '{visit.cra_id}' or Site '{visit.site_id}' allocation.",
+        )
+
+    # 4. Idempotency Check: exact-duplicate replays
+    if visit.offline_sync_markers:
+        v_markers = visit.offline_sync_markers
+        if (
+            v_markers.get("client_id") == payload.offline_sync_markers.client_id
+            and v_markers.get("sequence_number")
+            == payload.offline_sync_markers.sequence_number
+        ):
+            return {
+                "status": "DUPLICATE_IGNORED",
+                "id": visit.id,
+                "actual_date": visit.actual_date.isoformat()
+                if visit.actual_date
+                else None,
+                "sync_status": visit.sync_status,
+                "version_index": visit.version_index,
+                "signature_validation": {
+                    "status": "SKIPPED",
+                    "detail": None,
+                },
+                "reconciliation_result": {
+                    "status": "DUPLICATE_IGNORED",
+                    "metadata": None,
+                },
+                "audit_details": {
+                    "action": "MONITORING_VISIT_RECONCILE",
+                    "details": "Exact duplicate sync payload ignored",
+                },
+            }
+
+    # 5. Build SyncRecord representation
+    from apps.interop.sync_engine import (
+        SignatureValidationError,
+        SyncMetadata,
+        SyncRecord,
+        reconcile_records,
+        verify_record_signature,
+    )
+
+    incoming_timestamps = payload.offline_sync_markers.timestamps or {}
+    timestamps = {}
+    for k in ["actual_date"]:
+        t_val = incoming_timestamps.get(k)
+        if t_val:
+            if isinstance(t_val, str):
+                timestamps[k] = datetime.fromisoformat(t_val)
+            else:
+                timestamps[k] = t_val
+        else:
+            timestamps[k] = payload.device_timestamp
+
+    metadata = SyncMetadata(
+        timestamps=timestamps,
+        modified_by=payload.offline_sync_markers.client_id,
+        signature=payload.offline_sync_markers.signature,
+    )
+
+    study_id = visit.study_id
+    site_id = visit.site_id
+    dedup_key = f"{study_id}:{site_id}:{payload.visit_id}"
+
+    incoming_record = SyncRecord(
+        deduplication_key=dedup_key,
+        data={
+            "actual_date": payload.actual_date.isoformat()
+            if isinstance(payload.actual_date, datetime)
+            else str(payload.actual_date)
+        },
+        metadata=metadata,
+    )
+
+    gateway_secret_str = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
+    secret_bytes = gateway_secret_str.encode("utf-8")
+
+    signature_status = "SKIPPED"
+    signature_detail = None
+
+    if payload.offline_sync_markers.signature is not None:
+        try:
+            if not verify_record_signature(incoming_record, secret_bytes):
+                raise SignatureValidationError(
+                    "Invalid signature on the incoming record."
+                )
+            signature_status = "VALID"
+        except SignatureValidationError as e:
+            signature_status = "FAILED"
+            signature_detail = str(e)
+            raise HTTPException(status_code=400, detail=str(e))
+
+    # Reconstruct existing data & metadata if existing record exists
+    if visit.actual_date:
+        existing_markers = visit.offline_sync_markers or {}
+        existing_ts_raw = existing_markers.get("timestamps") or {}
+        existing_timestamps = {}
+        for k in ["actual_date"]:
+            t_val = existing_ts_raw.get(k)
+            if t_val:
+                if isinstance(t_val, str):
+                    existing_timestamps[k] = datetime.fromisoformat(t_val)
+                else:
+                    existing_timestamps[k] = t_val
+            else:
+                existing_timestamps[k] = visit.actual_date or visit.created_at
+
+        existing_metadata = SyncMetadata(
+            timestamps=existing_timestamps,
+            modified_by=existing_markers.get("client_id", "server"),
+            signature=existing_markers.get("signature"),
+        )
+        existing_data = {"actual_date": visit.actual_date.isoformat()}
+    else:
+        existing_data = {}
+        existing_metadata = None
+
+    # 6. Reconcile
+    strategy = payload.offline_sync_markers.conflict_strategy
+    if isinstance(strategy, ConflictStrategy):
+        strategy = strategy.value
+    strategy = strategy.upper()
+
+    res = reconcile_records(
+        existing_data=existing_data,
+        existing_metadata=existing_metadata,
+        incoming_record=incoming_record,
+        strategy=strategy,
+        secret=secret_bytes,
+        require_signature=False,
+    )
+
+    status = res["status"]
+    reconciled_metadata: SyncMetadata = res["metadata"]
+
+    markers_dict = payload.offline_sync_markers.model_dump(mode="json")
+    markers_dict["timestamps"] = {
+        k: v.isoformat() if isinstance(v, datetime) else str(v)
+        for k, v in reconciled_metadata.timestamps.items()
+    }
+    if reconciled_metadata.signature:
+        markers_dict["signature"] = reconciled_metadata.signature
+
+    change_reason = principal.change_reason or "SYSTEM OFFLINE SYNC"
+
+    if status in ("UPDATED_CLIENT_WINS", "MERGED", "CREATED"):
+        if status in ("UPDATED_CLIENT_WINS", "MERGED"):
+            # Archive existing to Defeated (before mutating)
+            existing_findings_stmt = select(MonitoringVisitFinding).where(
+                MonitoringVisitFinding.visit_id == visit.id
+            )
+            existing_findings_res = await session.execute(existing_findings_stmt)
+            existing_findings = existing_findings_res.scalars().all()
+            findings_list = [
+                {
+                    "text": f.text,
+                    "severity": f.severity,
+                    "resolution_status": f.resolution_status,
+                    "offline_sync_markers": f.offline_sync_markers,
+                }
+                for f in existing_findings
+            ]
+
+            defeated = MonitoringVisitDefeated(
+                visit_id=visit.id,
+                actual_date=visit.actual_date,
+                findings={"findings": findings_list},
+                device_timestamp=visit.actual_date or visit.created_at,
+                offline_sync_markers=visit.offline_sync_markers or {},
+                status="Defeated by online-merge conflict resolution",
+            )
+            session.add(defeated)
+
+        # Mutate target MonitoringVisit
+        winning_date_str = res["data"]["actual_date"]
+        visit.actual_date = datetime.fromisoformat(winning_date_str)
+        visit.status = "COMPLETED"
+        visit.offline_sync_markers = markers_dict
+        visit.sync_status = "RESOLVED"
+        visit.version_index += 1
+        visit.reason_for_change = change_reason
+        session.add(visit)
+
+        # Reconcile findings
+        for f in payload.findings:
+            f_stmt = select(MonitoringVisitFinding).where(
+                MonitoringVisitFinding.visit_id == visit.id,
+                MonitoringVisitFinding.text == f.text,
+            )
+            f_res = await session.execute(f_stmt)
+            existing_f = f_res.scalars().first()
+
+            if not existing_f:
+                new_finding = MonitoringVisitFinding(
+                    visit_id=visit.id,
+                    text=f.text,
+                    severity=f.severity.upper(),
+                    resolution_status=f.resolution_status or "OPEN",
+                    created_by=principal.user_id,
+                    reason_for_change=change_reason,
+                    version_index=1,
+                    offline_sync_markers=markers_dict,
+                    sync_status="RESOLVED",
+                )
+                session.add(new_finding)
+
+        await session.flush()
+
+        audit_details = f"Decision: {status}. Strategy applied: {strategy}. Version incremented to {visit.version_index}. Reason: {change_reason}"
+        await write_audit_log(
+            session=session,
+            user_id=principal.user_id,
+            user_role=",".join(principal.raw_roles),
+            action="MONITORING_VISIT_RECONCILE",
+            details=audit_details,
+        )
+
+    elif status == "IGNORED_SERVER_WINS":
+        # Archive incoming payload as defeated
+        defeated = MonitoringVisitDefeated(
+            visit_id=payload.visit_id,
+            actual_date=payload.actual_date,
+            findings={"findings": [f.model_dump() for f in payload.findings]},
+            device_timestamp=payload.device_timestamp,
+            offline_sync_markers=payload.offline_sync_markers.model_dump(mode="json"),
+            status="Defeated by online-merge conflict resolution",
+        )
+        session.add(defeated)
+        await session.flush()
+
+        audit_details = f"Decision: SERVER_WINS. Strategy applied: {strategy}. Version index is {visit.version_index}. Reason: {change_reason}"
+        await write_audit_log(
+            session=session,
+            user_id=principal.user_id,
+            user_role=",".join(principal.raw_roles),
+            action="MONITORING_VISIT_RECONCILE",
+            details=audit_details,
+        )
+
+    return {
+        "status": status,
+        "id": visit.id,
+        "actual_date": visit.actual_date.isoformat() if visit.actual_date else None,
+        "sync_status": visit.sync_status,
+        "version_index": visit.version_index,
+        "signature_validation": {
+            "status": signature_status,
+            "detail": signature_detail,
+        },
+        "reconciliation_result": {
+            "status": status,
+            "metadata": reconciled_metadata.model_dump(mode="json"),
+        },
+        "audit_details": {
+            "action": "MONITORING_VISIT_RECONCILE",
+            "details": audit_details,
+        },
+    }
+
+
+@app.post("/api/v1/ctms/monitoring-visits/sync", status_code=200)
+async def sync_monitoring_visit(
+    request: Request,
+    payload: MonitoringVisitOfflineSync,
+    session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
+) -> Dict[str, Any]:
+    """
+    Secure sync endpoint for offline monitoring visits completion and findings.
+    """
+    if not has_permission(principal, "ctms_monitoring_visit:sync"):
+        raise HTTPException(status_code=403, detail="Forbidden: Access denied.")
+
+    return await process_visit_sync(session, payload, principal)
+
+
+@app.post("/api/v1/ctms/monitoring-visits/bulk-sync", status_code=200)
+async def bulk_sync_monitoring_visits(
+    request: Request,
+    payloads: List[MonitoringVisitOfflineSync],
+    session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
+) -> Dict[str, Any]:
+    """
+    Secure bulk sync endpoint for offline monitoring visits completion and findings.
+    """
+    if not has_permission(principal, "ctms_monitoring_visit:sync"):
+        raise HTTPException(status_code=403, detail="Forbidden: Access denied.")
+
+    results = []
+    for payload in payloads:
+        res = await process_visit_sync(session, payload, principal)
+        results.append(res)
+
+    return {
+        "status": "success",
+        "processed_count": len(payloads),
+        "results": results,
+    }
