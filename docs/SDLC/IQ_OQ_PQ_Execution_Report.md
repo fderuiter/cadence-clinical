@@ -19,6 +19,8 @@ Based on the executed automated verification suite, the platform meets all prede
 - **Passed:** 1183 🟢
 - **Total Automated Test Cases Run:** 1188
 - **Passed:** 1188 🟢
+- **Total Automated Test Cases Run:** 1185
+- **Passed:** 1185 🟢
 - **Failed/Errors:** 0 🔴
 - **Passed:** 1229 🟢
 - **Total Automated Test Cases Run:** 1238
@@ -1116,6 +1118,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_api_soa_immutability_guards` | `tests.test_soa_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_soa_immutability_guards_updates` | `tests.test_soa_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_soa_linking_and_matrix_projection` | `tests.test_soa_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_soa_retirement_and_projection_exclusion` | `tests.test_soa_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_soa_typed_validation_and_timing_rejection` | `tests.test_soa_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_unauthorized_requests` | `tests.test_soa_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_validation_failures` | `tests.test_soa_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_with_mocked_neo4j_driver` | `tests.test_soa_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |

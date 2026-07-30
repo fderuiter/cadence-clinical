@@ -2577,36 +2577,45 @@ async def link_arm_applicability(
 async def get_soa_matrix_projection(driver, study_version_id: str) -> Dict[str, Any]:
     """
     Returns a read-only projection representing the complete matrix shape (SoAMatrixView).
-    Consistently handles both real Neo4j driver or the mock/in-memory fallback.
+    Consistently handles both real Neo4j driver or the mock/in-memory fallback, and
+    excludes retired/deleted data from the projection.
     """
     if driver is None:
         _init_mock_soa(study_version_id)
         data = MOCK_SOA_DATA[study_version_id]
 
-        raw_epochs = list(data["epochs"].values())
-        raw_encounters = list(data["visits"].values())
-        raw_procedures = list(data["procedures"].values())
-        _raw_arms = list(data["arms"].values())
+        raw_epochs = [ep for ep in data["epochs"].values() if not ep.get("is_retired") and not ep.get("is_deleted")]
+        raw_encounters = [v for v in data["visits"].values() if not v.get("is_retired") and not v.get("is_deleted")]
+        raw_procedures = [p for p in data["procedures"].values() if not p.get("is_retired") and not p.get("is_deleted")]
+        _raw_arms = [sa for sa in data["arms"].values() if not sa.get("is_retired") and not sa.get("is_deleted")]
 
         epoch_visit_links = [
             {"epoch_id": L["from_id"], "visit_id": L["to_id"]}
             for L in data["links"]
             if L["type"] == "epoch_visit"
+            and L["from_id"] in data["epochs"] and not data["epochs"][L["from_id"]].get("is_retired") and not data["epochs"][L["from_id"]].get("is_deleted")
+            and L["to_id"] in data["visits"] and not data["visits"][L["to_id"]].get("is_retired") and not data["visits"][L["to_id"]].get("is_deleted")
         ]
         visit_proc_links = [
             {"visit_id": L["from_id"], "procedure_id": L["to_id"]}
             for L in data["links"]
             if L["type"] == "visit_procedure"
+            and L["from_id"] in data["visits"] and not data["visits"][L["from_id"]].get("is_retired") and not data["visits"][L["from_id"]].get("is_deleted")
+            and L["to_id"] in data["procedures"] and not data["procedures"][L["to_id"]].get("is_retired") and not data["procedures"][L["to_id"]].get("is_deleted")
         ]
         visit_timing = [
             {"visit_id": L["from_id"], "timing_name": L["to_id"]}
             for L in data["links"]
             if L["type"] == "timing" and L["source_type"] == "visit"
+            and L["from_id"] in data["visits"] and not data["visits"][L["from_id"]].get("is_retired") and not data["visits"][L["from_id"]].get("is_deleted")
+            and L["to_id"] in data["timing_windows"] and not data["timing_windows"][L["to_id"]].get("is_retired") and not data["timing_windows"][L["to_id"]].get("is_deleted")
         ]
         proc_timing = [
             {"procedure_id": L["from_id"], "timing_name": L["to_id"]}
             for L in data["links"]
             if L["type"] == "timing" and L["source_type"] == "procedure"
+            and L["from_id"] in data["procedures"] and not data["procedures"][L["from_id"]].get("is_retired") and not data["procedures"][L["from_id"]].get("is_deleted")
+            and L["to_id"] in data["timing_windows"] and not data["timing_windows"][L["to_id"]].get("is_retired") and not data["timing_windows"][L["to_id"]].get("is_deleted")
         ]
         # Extracted arm applicability links
         arm_applicability_links = [
@@ -2617,6 +2626,7 @@ async def get_soa_matrix_projection(driver, study_version_id: str) -> Dict[str, 
             }
             for L in data["links"]
             if L["type"] == "arm_applicability"
+            and L["from_id"] in data["arms"] and not data["arms"][L["from_id"]].get("is_retired") and not data["arms"][L["from_id"]].get("is_deleted")
         ]
     else:
         async with driver.session() as session:
@@ -2640,8 +2650,8 @@ async def get_soa_matrix_projection(driver, study_version_id: str) -> Dict[str, 
                 collect(distinct sa {.*}) as arms,
                 collect(distinct {epoch_id: ep.id, visit_id: v.id}) as epoch_visit_links,
                 collect(distinct {visit_id: v.id, procedure_id: p.id}) as visit_proc_links,
-                collect(distinct {visit_id: v.id, timing_name: tw_v.name}) as visit_timing,
-                collect(distinct {procedure_id: p.id, timing_name: tw_p.name}) as proc_timing,
+                collect(distinct {visit_id: v.id, timing_name: tw_v.name, is_retired: tw_v.is_retired, is_deleted: tw_v.is_deleted}) as visit_timing,
+                collect(distinct {procedure_id: p.id, timing_name: tw_p.name, is_retired: tw_p.is_retired, is_deleted: tw_p.is_deleted}) as proc_timing,
                 collect(distinct {arm_id: sa.id, target_id: tgt.id, target_type: labels(tgt)[0]}) as applicability_links
             """
             res = await session.run(query, study_version_id=study_version_id)
@@ -2649,14 +2659,17 @@ async def get_soa_matrix_projection(driver, study_version_id: str) -> Dict[str, 
             if not record:
                 return {"epochs": [], "encounters": [], "rows": [], "arms": []}
 
-            raw_epochs = record.get("epochs") or []
-            raw_encounters = record.get("encounters") or []
-            raw_procedures = record.get("procedures") or []
-            _raw_arms = record.get("arms") or []
+            raw_epochs = [e for e in (record.get("epochs") or []) if e and not e.get("is_retired") and not e.get("is_deleted")]
+            raw_encounters = [e for e in (record.get("encounters") or []) if e and not e.get("is_retired") and not e.get("is_deleted")]
+            raw_procedures = [e for e in (record.get("procedures") or []) if e and not e.get("is_retired") and not e.get("is_deleted")]
+            _raw_arms = [e for e in (record.get("arms") or []) if e and not e.get("is_retired") and not e.get("is_deleted")]
+
             epoch_visit_links = record.get("epoch_visit_links") or []
             visit_proc_links = record.get("visit_proc_links") or []
-            visit_timing = record.get("visit_timing") or []
-            proc_timing = record.get("proc_timing") or []
+
+            visit_timing = [vt for vt in (record.get("visit_timing") or []) if vt and not vt.get("is_retired") and not vt.get("is_deleted")]
+            proc_timing = [pt for pt in (record.get("proc_timing") or []) if pt and not pt.get("is_retired") and not pt.get("is_deleted")]
+
             arm_applicability_links = record.get("applicability_links") or []
 
     # Map raw arms to SoAHeaderArm shape
@@ -4277,3 +4290,400 @@ async def propagate_soa_mutation(
                 b["block_id"],
                 properties,
             )
+
+
+@with_transaction_retry()
+async def retire_soa_entity(
+    driver,
+    study_version_id: str,
+    user_id: str,
+    change_reason: str,
+    entity_id: str,
+    entity_type: str,  # "arms", "epochs", "visits", "procedures", "timing_windows"
+) -> str:
+    """
+    Soft-retires/deletes an active SoA entity by creating a new version of the node
+    with version_index bumped and is_retired/is_deleted set to True, and disconnects
+    it from the StudyVersion root non-destructively, preserving the history.
+    """
+    mapping = {
+        "arms": ("HAS_ARM", "StudyArm"),
+        "epochs": ("HAS_EPOCH", "Epoch"),
+        "visits": ("HAS_VISIT", "Visit"),
+        "procedures": ("HAS_PROCEDURE", "Procedure"),
+        "timing_windows": ("HAS_TIMING_WINDOW", "TimingWindow"),
+    }
+    if entity_type not in mapping:
+        raise ValueError(f"Invalid entity type: {entity_type}")
+
+    rel_name, label = mapping[entity_type]
+
+    if driver is None:
+        assert_mock_study_version_mutable(study_version_id)
+        _init_mock_soa(study_version_id)
+        store = MOCK_SOA_DATA[study_version_id][entity_type]
+        if entity_id not in store:
+            raise ValueError(f"Entity {entity_id} of type {entity_type} not found")
+        old_node = store[entity_id]
+        if old_node.get("is_retired") or old_node.get("is_deleted"):
+            return entity_id
+        new_node = {
+            **old_node,
+            "version_index": old_node["version_index"] + 1,
+            "created_by": user_id,
+            "created_at": dt.datetime.now().isoformat(),
+            "is_retired": True,
+            "is_deleted": True,
+        }
+        store[entity_id] = new_node
+        action = {
+            "id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "change_reason": change_reason,
+            "timestamp": dt.datetime.now().isoformat(),
+            "before": old_node,
+            "after": new_node,
+        }
+        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
+        return entity_id
+
+    async with driver.session() as session:
+        tx = await session.begin_transaction()
+        async with tx:
+            await assert_study_version_mutable(tx, study_version_id)
+            await tx.run(
+                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
+                study_version_id=study_version_id,
+            )
+            # Check existence
+            check = await tx.run(
+                f"MATCH (sv:StudyVersion {{id: $study_version_id}})-[r:{rel_name}]->(old_node:{label} {{id: $entity_id}}) RETURN old_node.id",
+                study_version_id=study_version_id,
+                entity_id=entity_id,
+            )
+            if not await check.single():
+                raise ValueError(f"Entity {entity_id} of type {entity_type} not found")
+
+            action_id = str(uuid.uuid4())
+            query = f"""
+            MATCH (sv:StudyVersion {{id: $study_version_id}})-[r:{rel_name}]->(old_node:{label} {{id: $entity_id}})
+            CREATE (new_node:{label} {{
+                id: $entity_id,
+                version_index: old_node.version_index + 1,
+                created_at: datetime(),
+                created_by: $created_by,
+                is_retired: true,
+                is_deleted: true
+            }})
+            SET new_node += properties(old_node)
+            SET new_node.is_retired = true
+            SET new_node.is_deleted = true
+            SET new_node.version_index = old_node.version_index + 1
+            CREATE (sv)-[:{rel_name}]->(new_node)
+            DELETE r
+            CREATE (new_node)-[:PREVIOUS_VERSION]->(old_node)
+            CREATE (a:Action {{
+                id: $action_id,
+                user_id: $created_by,
+                change_reason: $change_reason,
+                timestamp: datetime()
+            }})
+            CREATE (a)-[:AFTER]->(new_node)
+            CREATE (a)-[:BEFORE]->(old_node)
+            RETURN new_node.id as id
+            """
+            res = await tx.run(
+                query,
+                study_version_id=study_version_id,
+                entity_id=entity_id,
+                created_by=user_id,
+                change_reason=change_reason,
+                action_id=action_id,
+            )
+            record = await res.single()
+            return record["id"]
+
+
+@with_transaction_retry()
+async def retire_epoch_visit_link(
+    driver,
+    study_version_id: str,
+    user_id: str,
+    change_reason: str,
+    epoch_id: str,
+    visit_id: str,
+) -> bool:
+    """
+    Retires/deletes an Epoch-to-Visit link non-destructively, logging the deletion action.
+    """
+    if driver is None:
+        assert_mock_study_version_mutable(study_version_id)
+        _init_mock_soa(study_version_id)
+        links = MOCK_SOA_DATA[study_version_id]["links"]
+        link = {"type": "epoch_visit", "from_id": epoch_id, "to_id": visit_id}
+        if link in links:
+            links.remove(link)
+        action = {
+            "id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "change_reason": change_reason,
+            "timestamp": dt.datetime.now().isoformat(),
+            "retired_link": link,
+        }
+        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
+        return True
+
+    async with driver.session() as session:
+        tx = await session.begin_transaction()
+        async with tx:
+            await assert_study_version_mutable(tx, study_version_id)
+            await tx.run(
+                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
+                study_version_id=study_version_id,
+            )
+            query = """
+            MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_EPOCH]->(ep:Epoch {id: $epoch_id})
+            MATCH (sv)-[:HAS_VISIT]->(v:Visit {id: $visit_id})
+            MATCH (ep)-[r:HAS_VISIT]->(v)
+            DELETE r
+            CREATE (a:Action {
+                id: $action_id,
+                user_id: $user_id,
+                change_reason: $change_reason,
+                timestamp: datetime()
+            })
+            CREATE (a)-[:BEFORE]->(ep)
+            RETURN true as success
+            """
+            res = await tx.run(
+                query,
+                study_version_id=study_version_id,
+                epoch_id=epoch_id,
+                visit_id=visit_id,
+                user_id=user_id,
+                change_reason=change_reason,
+                action_id=str(uuid.uuid4()),
+            )
+            record = await res.single()
+            return record["success"] if record else False
+
+
+@with_transaction_retry()
+async def retire_visit_procedure_link(
+    driver,
+    study_version_id: str,
+    user_id: str,
+    change_reason: str,
+    visit_id: str,
+    procedure_id: str,
+) -> bool:
+    """
+    Retires/deletes a Visit-to-Procedure link non-destructively, logging the deletion action.
+    """
+    if driver is None:
+        assert_mock_study_version_mutable(study_version_id)
+        _init_mock_soa(study_version_id)
+        links = MOCK_SOA_DATA[study_version_id]["links"]
+        link = {"type": "visit_procedure", "from_id": visit_id, "to_id": procedure_id}
+        if link in links:
+            links.remove(link)
+        action = {
+            "id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "change_reason": change_reason,
+            "timestamp": dt.datetime.now().isoformat(),
+            "retired_link": link,
+        }
+        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
+        return True
+
+    async with driver.session() as session:
+        tx = await session.begin_transaction()
+        async with tx:
+            await assert_study_version_mutable(tx, study_version_id)
+            await tx.run(
+                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
+                study_version_id=study_version_id,
+            )
+            query = """
+            MATCH (sv:StudyVersion {id: $study_version_id})-[:HAS_VISIT]->(v:Visit {id: $visit_id})
+            MATCH (sv)-[:HAS_PROCEDURE]->(p:Procedure {id: $procedure_id})
+            MATCH (v)-[r:HAS_PROCEDURE]->(p)
+            DELETE r
+            CREATE (a:Action {
+                id: $action_id,
+                user_id: $user_id,
+                change_reason: $change_reason,
+                timestamp: datetime()
+            })
+            CREATE (a)-[:BEFORE]->(v)
+            RETURN true as success
+            """
+            res = await tx.run(
+                query,
+                study_version_id=study_version_id,
+                visit_id=visit_id,
+                procedure_id=procedure_id,
+                user_id=user_id,
+                change_reason=change_reason,
+                action_id=str(uuid.uuid4()),
+            )
+            record = await res.single()
+            return record["success"] if record else False
+
+
+@with_transaction_retry()
+async def retire_timing_link(
+    driver,
+    study_version_id: str,
+    user_id: str,
+    change_reason: str,
+    source_id: str,
+    timing_id: str,
+    source_type: str = "visit",
+) -> bool:
+    """
+    Retires/deletes a Timing Window link non-destructively, logging the deletion action.
+    """
+    if driver is None:
+        assert_mock_study_version_mutable(study_version_id)
+        _init_mock_soa(study_version_id)
+        links = MOCK_SOA_DATA[study_version_id]["links"]
+        link = {
+            "type": "timing",
+            "from_id": source_id,
+            "to_id": timing_id,
+            "source_type": source_type,
+        }
+        if link in links:
+            links.remove(link)
+        action = {
+            "id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "change_reason": change_reason,
+            "timestamp": dt.datetime.now().isoformat(),
+            "retired_link": link,
+        }
+        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
+        return True
+
+    async with driver.session() as session:
+        tx = await session.begin_transaction()
+        async with tx:
+            await assert_study_version_mutable(tx, study_version_id)
+            await tx.run(
+                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
+                study_version_id=study_version_id,
+            )
+            query = """
+            MATCH (sv:StudyVersion {id: $study_version_id})
+            MATCH (t:TimingWindow {id: $timing_id})
+            WHERE (sv)-[:HAS_TIMING_WINDOW]->(t)
+
+            WITH sv, t
+            MATCH (src)
+            WHERE (src:Visit AND $source_type = "visit" AND (sv)-[:HAS_VISIT]->(src) AND src.id = $source_id)
+               OR (src:Procedure AND $source_type = "procedure" AND (sv)-[:HAS_PROCEDURE]->(src) AND src.id = $source_id)
+
+            MATCH (src)-[r:HAS_TIMING]->(t)
+            DELETE r
+            CREATE (a:Action {
+                id: $action_id,
+                user_id: $user_id,
+                change_reason: $change_reason,
+                timestamp: datetime()
+            })
+            CREATE (a)-[:BEFORE]->(src)
+            RETURN true as success
+            """
+            res = await tx.run(
+                query,
+                study_version_id=study_version_id,
+                source_id=source_id,
+                timing_id=timing_id,
+                source_type=source_type,
+                user_id=user_id,
+                change_reason=change_reason,
+                action_id=str(uuid.uuid4()),
+            )
+            record = await res.single()
+            return record["success"] if record else False
+
+
+@with_transaction_retry()
+async def retire_arm_applicability_link(
+    driver,
+    study_version_id: str,
+    user_id: str,
+    change_reason: str,
+    arm_id: str,
+    target_id: str,
+    target_type: str = "visit",
+) -> bool:
+    """
+    Retires/deletes an Arm Applicability link non-destructively, logging the deletion action.
+    """
+    if driver is None:
+        assert_mock_study_version_mutable(study_version_id)
+        _init_mock_soa(study_version_id)
+        links = MOCK_SOA_DATA[study_version_id]["links"]
+        link = {
+            "type": "arm_applicability",
+            "from_id": arm_id,
+            "to_id": target_id,
+            "target_type": target_type,
+        }
+        if link in links:
+            links.remove(link)
+        action = {
+            "id": str(uuid.uuid4()),
+            "user_id": user_id,
+            "change_reason": change_reason,
+            "timestamp": dt.datetime.now().isoformat(),
+            "retired_link": link,
+        }
+        MOCK_SOA_DATA[study_version_id]["actions"].append(action)
+        return True
+
+    async with driver.session() as session:
+        tx = await session.begin_transaction()
+        async with tx:
+            await assert_study_version_mutable(tx, study_version_id)
+            await tx.run(
+                "MATCH (sv:StudyVersion {id: $study_version_id}) SET sv._lock = true RETURN sv.id",
+                study_version_id=study_version_id,
+            )
+            query = """
+            MATCH (sv:StudyVersion {id: $study_version_id})
+            MATCH (arm:StudyArm {id: $arm_id})
+            WHERE (sv)-[:HAS_ARM]->(arm)
+
+            WITH sv, arm
+            MATCH (tgt)
+            WHERE (tgt:Visit AND $target_type = "visit" AND (sv)-[:HAS_VISIT]->(tgt) AND tgt.id = $target_id)
+               OR (tgt:Procedure AND $target_type = "procedure" AND (sv)-[:HAS_PROCEDURE]->(tgt) AND tgt.id = $target_id)
+               OR (tgt:Epoch AND $target_type = "epoch" AND (sv)-[:HAS_EPOCH]->(tgt) AND tgt.id = $target_id)
+
+            MATCH (arm)-[r:APPLICABLE_TO]->(tgt)
+            DELETE r
+            CREATE (a:Action {
+                id: $action_id,
+                user_id: $user_id,
+                change_reason: $change_reason,
+                timestamp: datetime()
+            })
+            CREATE (a)-[:BEFORE]->(arm)
+            RETURN true as success
+            """
+            res = await tx.run(
+                query,
+                study_version_id=study_version_id,
+                arm_id=arm_id,
+                target_id=target_id,
+                target_type=target_type,
+                user_id=user_id,
+                change_reason=change_reason,
+                action_id=str(uuid.uuid4()),
+            )
+            record = await res.single()
+            return record["success"] if record else False

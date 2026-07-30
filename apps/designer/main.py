@@ -105,6 +105,11 @@ from apps.designer.delta import (
     update_study_arm,
     update_timing_window,
     update_visit,
+    retire_soa_entity,
+    retire_epoch_visit_link,
+    retire_visit_procedure_link,
+    retire_timing_link,
+    retire_arm_applicability_link,
 )
 from apps.designer.evs_client import NCIEVSClient
 from apps.designer.library import (
@@ -183,54 +188,25 @@ class VersionDiffResponse(BaseModel):
     deleted_nodes: List[DifferenceResult]
 
 
-class CreateSoAEntityRequest(BaseModel):
-    id: str
-    properties: Dict[str, Any]
-
-
-class UpdateSoAEntityRequest(BaseModel):
-    properties: Dict[str, Any]
-
-
-class SoAEntityCreatedResponse(BaseModel):
-    status: str = "success"
-    id: str
-
-
-class SoAEntityDetail(BaseModel):
-    id: str
-    version_index: int
-    created_by: str
-    created_at: str
-
-    model_config = {"extra": "allow"}
-
-
-class LinkEpochVisitRequest(BaseModel):
-    epoch_id: str
-    visit_id: str
-
-
-class LinkVisitProcedureRequest(BaseModel):
-    visit_id: str
-    procedure_id: str
-
-
-class LinkTimingRequest(BaseModel):
-    source_id: str
-    timing_id: str
-    source_type: str = "visit"  # "visit" or "procedure"
-
-
-class LinkArmApplicabilityRequest(BaseModel):
-    arm_id: str
-    target_id: str
-    target_type: str = "visit"  # "visit", "procedure", or "epoch"
-
-
-class SoALinkResponse(BaseModel):
-    status: str = "success"
-    message: str = "Link established successfully"
+from apps.designer.soa_models import (
+    CreateStudyArmRequest,
+    UpdateStudyArmRequest,
+    CreateEpochRequest,
+    UpdateEpochRequest,
+    CreateVisitRequest,
+    UpdateVisitRequest,
+    CreateProcedureRequest,
+    UpdateProcedureRequest,
+    CreateTimingWindowRequest,
+    UpdateTimingWindowRequest,
+    SoAEntityCreatedResponse,
+    SoAEntityDetail,
+    LinkEpochVisitRequest,
+    LinkVisitProcedureRequest,
+    LinkTimingRequest,
+    LinkArmApplicabilityRequest,
+    SoALinkResponse,
+)
 
 
 class ConceptLockedError(Exception):
@@ -706,6 +682,258 @@ async def study_differences(
             )
 
     return differences
+
+
+# --- Retirement / Deletion Endpoints ---
+
+@app.delete(
+    "/api/v1/studies/{study_id}/versions/{version_id}/arms/{arm_id}",
+    response_model=SoAEntityCreatedResponse,
+)
+async def retire_arm_endpoint(
+    study_id: str,
+    version_id: str,
+    arm_id: str,
+    request: Request,
+) -> SoAEntityCreatedResponse:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = resolve_change_reason(request, None)
+
+    try:
+        await retire_soa_entity(
+            driver=driver,
+            study_version_id=version_id,
+            user_id=user_id,
+            change_reason=change_reason,
+            entity_id=arm_id,
+            entity_type="arms",
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return SoAEntityCreatedResponse(id=arm_id)
+
+
+@app.delete(
+    "/api/v1/studies/{study_id}/versions/{version_id}/epochs/{epoch_id}",
+    response_model=SoAEntityCreatedResponse,
+)
+async def retire_epoch_endpoint(
+    study_id: str,
+    version_id: str,
+    epoch_id: str,
+    request: Request,
+) -> SoAEntityCreatedResponse:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = resolve_change_reason(request, None)
+
+    try:
+        await retire_soa_entity(
+            driver=driver,
+            study_version_id=version_id,
+            user_id=user_id,
+            change_reason=change_reason,
+            entity_id=epoch_id,
+            entity_type="epochs",
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return SoAEntityCreatedResponse(id=epoch_id)
+
+
+@app.delete(
+    "/api/v1/studies/{study_id}/versions/{version_id}/visits/{visit_id}",
+    response_model=SoAEntityCreatedResponse,
+)
+async def retire_visit_endpoint(
+    study_id: str,
+    version_id: str,
+    visit_id: str,
+    request: Request,
+) -> SoAEntityCreatedResponse:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = resolve_change_reason(request, None)
+
+    try:
+        await retire_soa_entity(
+            driver=driver,
+            study_version_id=version_id,
+            user_id=user_id,
+            change_reason=change_reason,
+            entity_id=visit_id,
+            entity_type="visits",
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return SoAEntityCreatedResponse(id=visit_id)
+
+
+@app.delete(
+    "/api/v1/studies/{study_id}/versions/{version_id}/procedures/{procedure_id}",
+    response_model=SoAEntityCreatedResponse,
+)
+async def retire_procedure_endpoint(
+    study_id: str,
+    version_id: str,
+    procedure_id: str,
+    request: Request,
+) -> SoAEntityCreatedResponse:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = resolve_change_reason(request, None)
+
+    try:
+        await retire_soa_entity(
+            driver=driver,
+            study_version_id=version_id,
+            user_id=user_id,
+            change_reason=change_reason,
+            entity_id=procedure_id,
+            entity_type="procedures",
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return SoAEntityCreatedResponse(id=procedure_id)
+
+
+@app.delete(
+    "/api/v1/studies/{study_id}/versions/{version_id}/timing-windows/{timing_id}",
+    response_model=SoAEntityCreatedResponse,
+)
+async def retire_timing_window_endpoint(
+    study_id: str,
+    version_id: str,
+    timing_id: str,
+    request: Request,
+) -> SoAEntityCreatedResponse:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = resolve_change_reason(request, None)
+
+    try:
+        await retire_soa_entity(
+            driver=driver,
+            study_version_id=version_id,
+            user_id=user_id,
+            change_reason=change_reason,
+            entity_id=timing_id,
+            entity_type="timing_windows",
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return SoAEntityCreatedResponse(id=timing_id)
+
+
+@app.delete(
+    "/api/v1/studies/{study_id}/versions/{version_id}/links/epoch-visit",
+    response_model=SoALinkResponse,
+)
+async def retire_epoch_visit_endpoint(
+    study_id: str,
+    version_id: str,
+    payload: LinkEpochVisitRequest,
+    request: Request,
+) -> SoALinkResponse:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = resolve_change_reason(request, None)
+
+    success = await retire_epoch_visit_link(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        epoch_id=payload.epoch_id,
+        visit_id=payload.visit_id,
+    )
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to retire epoch-visit link")
+    return SoALinkResponse()
+
+
+@app.delete(
+    "/api/v1/studies/{study_id}/versions/{version_id}/links/visit-procedure",
+    response_model=SoALinkResponse,
+)
+async def retire_visit_procedure_endpoint(
+    study_id: str,
+    version_id: str,
+    payload: LinkVisitProcedureRequest,
+    request: Request,
+) -> SoALinkResponse:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = resolve_change_reason(request, None)
+
+    success = await retire_visit_procedure_link(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        visit_id=payload.visit_id,
+        procedure_id=payload.procedure_id,
+    )
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to retire visit-procedure link")
+    return SoALinkResponse()
+
+
+@app.delete(
+    "/api/v1/studies/{study_id}/versions/{version_id}/links/timing",
+    response_model=SoALinkResponse,
+)
+async def retire_timing_endpoint(
+    study_id: str,
+    version_id: str,
+    payload: LinkTimingRequest,
+    request: Request,
+) -> SoALinkResponse:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = resolve_change_reason(request, None)
+
+    success = await retire_timing_link(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        source_id=payload.source_id,
+        timing_id=payload.timing_id,
+        source_type=payload.source_type,
+    )
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to retire timing window link")
+    return SoALinkResponse()
+
+
+@app.delete(
+    "/api/v1/studies/{study_id}/versions/{version_id}/links/arm-applicability",
+    response_model=SoALinkResponse,
+)
+async def retire_arm_applicability_endpoint(
+    study_id: str,
+    version_id: str,
+    payload: LinkArmApplicabilityRequest,
+    request: Request,
+) -> SoALinkResponse:
+    driver = await get_neo4j_driver(request)
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = resolve_change_reason(request, None)
+
+    success = await retire_arm_applicability_link(
+        driver=driver,
+        study_version_id=version_id,
+        user_id=user_id,
+        change_reason=change_reason,
+        arm_id=payload.arm_id,
+        target_id=payload.target_id,
+        target_type=payload.target_type,
+    )
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to retire arm applicability link")
+    return SoALinkResponse()
 
 
 # ==========================================
@@ -2721,7 +2949,7 @@ async def reorder_blocks_endpoint(
 async def create_arm_endpoint(
     study_id: str,
     version_id: str,
-    payload: CreateSoAEntityRequest,
+    payload: CreateStudyArmRequest,
     request: Request,
 ) -> SoAEntityCreatedResponse:
     driver = await get_neo4j_driver(request)
@@ -2734,7 +2962,7 @@ async def create_arm_endpoint(
         user_id=user_id,
         change_reason=change_reason,
         arm_id=payload.id,
-        properties=payload.properties,
+        properties=payload.properties.model_dump(),
     )
     return SoAEntityCreatedResponse(id=payload.id)
 
@@ -2778,7 +3006,7 @@ async def update_arm_endpoint(
     study_id: str,
     version_id: str,
     arm_id: str,
-    payload: UpdateSoAEntityRequest,
+    payload: UpdateStudyArmRequest,
     request: Request,
 ) -> SoAEntityCreatedResponse:
     driver = await get_neo4j_driver(request)
@@ -2792,7 +3020,7 @@ async def update_arm_endpoint(
             user_id=user_id,
             change_reason=change_reason,
             arm_id=arm_id,
-            properties=payload.properties,
+            properties=payload.properties.model_dump(),
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -2810,7 +3038,7 @@ async def update_arm_endpoint(
 async def create_epoch_endpoint(
     study_id: str,
     version_id: str,
-    payload: CreateSoAEntityRequest,
+    payload: CreateEpochRequest,
     request: Request,
 ) -> SoAEntityCreatedResponse:
     driver = await get_neo4j_driver(request)
@@ -2823,7 +3051,7 @@ async def create_epoch_endpoint(
         user_id=user_id,
         change_reason=change_reason,
         epoch_id=payload.id,
-        properties=payload.properties,
+        properties=payload.properties.model_dump(),
     )
     return SoAEntityCreatedResponse(id=payload.id)
 
@@ -2867,7 +3095,7 @@ async def update_epoch_endpoint(
     study_id: str,
     version_id: str,
     epoch_id: str,
-    payload: UpdateSoAEntityRequest,
+    payload: UpdateEpochRequest,
     request: Request,
 ) -> SoAEntityCreatedResponse:
     driver = await get_neo4j_driver(request)
@@ -2881,7 +3109,7 @@ async def update_epoch_endpoint(
             user_id=user_id,
             change_reason=change_reason,
             epoch_id=epoch_id,
-            properties=payload.properties,
+            properties=payload.properties.model_dump(),
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -2899,7 +3127,7 @@ async def update_epoch_endpoint(
 async def create_visit_endpoint(
     study_id: str,
     version_id: str,
-    payload: CreateSoAEntityRequest,
+    payload: CreateVisitRequest,
     request: Request,
 ) -> SoAEntityCreatedResponse:
     driver = await get_neo4j_driver(request)
@@ -2912,7 +3140,7 @@ async def create_visit_endpoint(
         user_id=user_id,
         change_reason=change_reason,
         visit_id=payload.id,
-        properties=payload.properties,
+        properties=payload.properties.model_dump(),
     )
     return SoAEntityCreatedResponse(id=payload.id)
 
@@ -2956,7 +3184,7 @@ async def update_visit_endpoint(
     study_id: str,
     version_id: str,
     visit_id: str,
-    payload: UpdateSoAEntityRequest,
+    payload: UpdateVisitRequest,
     request: Request,
 ) -> SoAEntityCreatedResponse:
     driver = await get_neo4j_driver(request)
@@ -2970,7 +3198,7 @@ async def update_visit_endpoint(
             user_id=user_id,
             change_reason=change_reason,
             visit_id=visit_id,
-            properties=payload.properties,
+            properties=payload.properties.model_dump(),
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -2988,7 +3216,7 @@ async def update_visit_endpoint(
 async def create_procedure_endpoint(
     study_id: str,
     version_id: str,
-    payload: CreateSoAEntityRequest,
+    payload: CreateProcedureRequest,
     request: Request,
 ) -> SoAEntityCreatedResponse:
     driver = await get_neo4j_driver(request)
@@ -3001,7 +3229,7 @@ async def create_procedure_endpoint(
         user_id=user_id,
         change_reason=change_reason,
         procedure_id=payload.id,
-        properties=payload.properties,
+        properties=payload.properties.model_dump(),
     )
     return SoAEntityCreatedResponse(id=payload.id)
 
@@ -3045,7 +3273,7 @@ async def update_procedure_endpoint(
     study_id: str,
     version_id: str,
     procedure_id: str,
-    payload: UpdateSoAEntityRequest,
+    payload: UpdateProcedureRequest,
     request: Request,
 ) -> SoAEntityCreatedResponse:
     driver = await get_neo4j_driver(request)
@@ -3059,7 +3287,7 @@ async def update_procedure_endpoint(
             user_id=user_id,
             change_reason=change_reason,
             procedure_id=procedure_id,
-            properties=payload.properties,
+            properties=payload.properties.model_dump(),
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -3077,7 +3305,7 @@ async def update_procedure_endpoint(
 async def create_timing_window_endpoint(
     study_id: str,
     version_id: str,
-    payload: CreateSoAEntityRequest,
+    payload: CreateTimingWindowRequest,
     request: Request,
 ) -> SoAEntityCreatedResponse:
     driver = await get_neo4j_driver(request)
@@ -3090,7 +3318,7 @@ async def create_timing_window_endpoint(
         user_id=user_id,
         change_reason=change_reason,
         timing_id=payload.id,
-        properties=payload.properties,
+        properties=payload.properties.model_dump(),
     )
     return SoAEntityCreatedResponse(id=payload.id)
 
@@ -3134,7 +3362,7 @@ async def update_timing_window_endpoint(
     study_id: str,
     version_id: str,
     timing_id: str,
-    payload: UpdateSoAEntityRequest,
+    payload: UpdateTimingWindowRequest,
     request: Request,
 ) -> SoAEntityCreatedResponse:
     driver = await get_neo4j_driver(request)
@@ -3148,7 +3376,7 @@ async def update_timing_window_endpoint(
             user_id=user_id,
             change_reason=change_reason,
             timing_id=timing_id,
-            properties=payload.properties,
+            properties=payload.properties.model_dump(),
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
