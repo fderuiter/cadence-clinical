@@ -7,10 +7,12 @@ import {
   generateGatewaySignature,
   verifyGatewaySignature,
   sha256,
+} from "../index.js";
+import {
   encryptAESGCM,
   decryptAESGCM,
   deriveSessionKey,
-} from "../index.js";
+} from "../signing.js";
 
 describe("canonicalSerialize", () => {
   it("serializes primitives identically to Python", () => {
@@ -215,10 +217,9 @@ describe("cross-language parity", () => {
     const aad = "my_aad_data";
 
     const pythonCmd = `uv run python -c "
-import json
 from packages.security.encryption import encrypt
 key = bytes.fromhex('${hexKey}')
-payload = json.loads('${JSON.stringify(payload)}')
+payload = {'hello': 'world', 'count': 42}
 aad = '${aad}'.encode('utf-8')
 print(encrypt(payload, key, 1, aad))
 "`;
