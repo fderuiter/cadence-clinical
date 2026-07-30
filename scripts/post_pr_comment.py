@@ -64,6 +64,11 @@ def run_command(args: list[str], check: bool = True) -> tuple[str, str]:
         if check:
             raise e
         return "", e.stderr.strip()
+    except FileNotFoundError as e:
+        print(f"Command executable not found: {args[0]}")
+        if check:
+            raise e
+        return "", "Executable not found"
 
 
 def get_status_emoji(outcome: str | None) -> str:
