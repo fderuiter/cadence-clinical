@@ -194,6 +194,20 @@ def get_changed_files() -> set[str]:
                         changed_files.add(line.strip())
         except Exception:
             pass
+        if changed_files:
+            return changed_files
+
+    # 2. If in GitHub Actions, use origin/main diff as the primary source of truth
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        diff_origin, _ = run_git_command(
+            ["git", "diff", "--name-only", "origin/main...HEAD"]
+        )
+        if diff_origin:
+            for line in diff_origin.splitlines():
+                if line.strip():
+                    changed_files.add(line.strip())
+            if changed_files:
+                return changed_files
 
     # 2. Dynamically calculate the closest local branch point
     branch_point = get_closest_local_branch_point()

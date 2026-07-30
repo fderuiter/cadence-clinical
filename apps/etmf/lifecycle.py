@@ -143,3 +143,120 @@ async def validate_and_transition_document_status(
     )
     session.add(transition_record)
     await session.flush()
+
+
+def is_site_scoped_user(principal: Principal) -> bool:
+    """
+    Determines if the principal is a site-scoped user.
+    """
+    site_scoped_roles = {
+        "investigator",
+        "crc",
+        "monitor",
+        "external_monitor",
+    }
+    has_site_role = any(r in site_scoped_roles for r in principal.roles)
+    if has_site_role:
+        return True
+    if "cra" in principal.roles:
+        return len(principal.assigned_sites) > 0
+    return bool(principal.assigned_sites)
+
+
+def check_lifecycle_visibility(principal: Principal, doc: TMFDocument) -> None:
+    """
+    Lightweight hook for lifecycle/QC status-based disclosure decisions.
+    Currently defaults to existing behavior (no-op), but centralized for future status restrictions.
+    """
+    pass
+
+
+async def authorize_document_read(
+    principal: Principal,
+    doc: TMFDocument,
+    session: AsyncSession,
+) -> None:
+    """
+    Centralized, reusable read-authorization policy for eTMF documents.
+    Raises HTTPException(403) on denial.
+    """
+    from fastapi import HTTPException
+
+    from apps.etmf.models import is_site_level_artifact
+    from packages.security.rbac import can_access_site, can_access_study
+
+    # (1) Enforce positive authorization first by rejecting unless has_permission(principal, "etmf_document:read")
+    if not has_permission(principal, "etmf_document:read"):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Insufficient permissions to read eTMF documents.",
+        )
+
+    # (2) Enforce site scope via can_access_site(principal, doc.site_id) and study scope via can_access_study(principal, doc.study_id)
+    if not can_access_study(principal, doc.study_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Access is restricted to authorized studies.",
+        )
+
+    if is_site_scoped_user(principal):
+        if not can_access_site(principal, doc.site_id):
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: Access is restricted to authorized sites.",
+            )
+
+    # (3) Enforce redaction-representation policy — if the document is an un-redacted original with a redacted successor (via redaction_source_id), require etmf_document:read_raw, otherwise deny raw disclosure
+    if not doc.is_redacted:
+        # Check if a redacted successor exists in the database
+        stmt_redacted = select(TMFDocument.id).where(
+            TMFDocument.redaction_source_id == doc.id
+        )
+        res_redacted = await session.execute(stmt_redacted)
+        if res_redacted.scalars().first() is not None:
+            if not has_permission(principal, "etmf_document:read_raw"):
+                raise HTTPException(
+                    status_code=403,
+                    detail="Forbidden: Raw-original retrieval is restricted to privileged roles.",
+                )
+
+    # (4) Enforce zone/artifact-type attribute policy for site-scoped roles using is_site_level_artifact() from apps/etmf/models.py so study-level/sponsor-only zones/artifact types are not disclosed even when site_id matches, and treat the "QUARANTINED" sentinel as non-disclosable to site-scoped roles
+    if is_site_scoped_user(principal):
+        if doc.site_id == "QUARANTINED":
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: Quarantined documents are not disclosable to site-scoped roles.",
+            )
+        if not is_site_level_artifact(doc.artifact_type, doc.artifact_code):
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: Study-level or sponsor-only artifacts are not disclosable to site-scoped roles.",
+            )
+
+    # (5) Provide a lightweight lifecycle/QC visibility check hook so status-based disclosure decisions happen before serialization, defaulting to existing behavior while centralizing where status restrictions apply.
+    check_lifecycle_visibility(principal, doc)
+
+
+def apply_document_query_filter(stmt, principal: Principal):
+    """
+    Applies site scope, fail-closed and raw-original suppression predicates to a select query on TMFDocument.
+    """
+    from sqlalchemy import exists, literal, not_
+    from sqlalchemy.orm import aliased
+
+    # 1. Site scope and fail-closed
+    if is_site_scoped_user(principal):
+        if principal.assigned_sites:
+            stmt = stmt.where(TMFDocument.site_id.in_(principal.assigned_sites))
+        else:
+            stmt = stmt.where(literal(1) == literal(0))
+
+    # 2. Raw-original suppression for callers lacking read_raw
+    if not has_permission(principal, "etmf_document:read_raw"):
+        doc_alias = aliased(TMFDocument)
+        successor_exists = exists(
+            select(doc_alias.id).where(doc_alias.redaction_source_id == TMFDocument.id)
+        )
+        stmt = stmt.where(not_(successor_exists))
+
+    return stmt

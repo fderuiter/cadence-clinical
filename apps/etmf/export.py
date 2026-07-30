@@ -39,26 +39,29 @@ async def generate_binder_zip(
     It contains watermarked documents organized by DIA TMF zones and sections,
     a manifest.json of exported files, and a masked_audit_summary.json of study events.
     """
+    from apps.etmf.lifecycle import authorize_document_read
+
     # 1. Query all documents for this study
     stmt_docs = select(TMFDocument).where(TMFDocument.study_id == study_id)
-    if principal:
-        # Enforce site visibility and study-level semantics
-        is_site_scoped = len(principal.assigned_sites) > 0
-        if is_site_scoped:
-            if principal.assigned_sites:
-                stmt_docs = stmt_docs.where(
-                    TMFDocument.site_id.in_(principal.assigned_sites)
-                )
-            else:
-                stmt_docs = stmt_docs.where(TMFDocument.site_id == "NONE_ASSIGNED")
-
     res_docs = await session.execute(stmt_docs)
     all_docs = res_docs.scalars().all()
+
+    # Apply shared read-authorization logic (scoping, redaction-representation policy, etc.)
+    authorized_docs = []
+    if principal:
+        for doc in all_docs:
+            try:
+                await authorize_document_read(principal, doc, session)
+                authorized_docs.append(doc)
+            except Exception:
+                continue
+    else:
+        authorized_docs = list(all_docs)
 
     # 2. Filter latest versions or full history
     if not include_history:
         latest_by_code = {}
-        for doc in all_docs:
+        for doc in authorized_docs:
             code = doc.artifact_code
             if (
                 code not in latest_by_code
@@ -67,7 +70,7 @@ async def generate_binder_zip(
                 latest_by_code[code] = doc
         documents_to_export = list(latest_by_code.values())
     else:
-        documents_to_export = all_docs
+        documents_to_export = authorized_docs
 
     # Create in-memory zip file
     zip_buffer = io.BytesIO()
