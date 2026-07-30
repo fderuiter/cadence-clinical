@@ -31,9 +31,12 @@ def map_db_to_criterion(db_crit: Dict[str, Any]) -> EligibilityCriterion:
         cond = ExpressionNode(**cond)
     else:
         # Fallback if both condition and dsl_source are somehow empty (should not happen for valid criteria)
-        raise ValueError("Criterion must provide a structured condition or a valid dsl_source.")
+        raise ValueError(
+            "Criterion must provide a structured condition or a valid dsl_source."
+        )
 
     import datetime
+
     created_at = db_crit.get("created_at")
     if not created_at:
         created_at = datetime.datetime.now(datetime.timezone.utc)

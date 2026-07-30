@@ -1,10 +1,10 @@
-import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 from unittest.mock import AsyncMock, patch
 
 import pytest
 import pytest_asyncio
+from eligibility import EligibilityCriterion, parse_dsl
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
@@ -13,7 +13,6 @@ from apps.interop.database import db_manager
 from apps.interop.fhir_adapter import FHIRAdapter, pseudonymize_identifier
 from apps.interop.main import app
 from apps.interop.models import Base, InteropAuditLog
-from eligibility import EligibilityCriterion, parse_dsl
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -66,23 +65,17 @@ def test_build_ecrf_context_mapping():
             "DM.USUBJID": "study_123-pseudonym_123",
             "DM.SUBJID": "pseudonym_123",
             "DM.BRTHDTC": "1995-10-24",
-            "DM.SEX": "F"
+            "DM.SEX": "F",
         },
         "clinical_records": {
             "vital_signs": [
                 {"cdash_testcd": "SYSBP", "value": 118},
-                {"cdash_testcd": "DIABP", "value": 76}
+                {"cdash_testcd": "DIABP", "value": 76},
             ],
-            "labs": [
-                {"cdash_testcd": "GLUC", "value": 5.4}
-            ],
-            "conditions": [
-                {"display_name": "Asthma"}
-            ],
-            "medications": [
-                {"display_name": "Albuterol"}
-            ]
-        }
+            "labs": [{"cdash_testcd": "GLUC", "value": 5.4}],
+            "conditions": [{"display_name": "Asthma"}],
+            "medications": [{"display_name": "Albuterol"}],
+        },
     }
 
     context = adapter.build_ecrf_context(parsed)
@@ -117,21 +110,19 @@ def test_build_ecrf_context_multiple_and_missing():
     parsed = {
         "study_id": "study_123",
         "subject_pseudonym": "pseudonym_123",
-        "mapped_fields": {
-            "DM.SEX": "M"
-        },
+        "mapped_fields": {"DM.SEX": "M"},
         "clinical_records": {
             "vital_signs": [],
             "labs": [],
             "conditions": [
                 {"display_name": "Hypertension"},
-                {"display_name": "Type 2 Diabetes"}
+                {"display_name": "Type 2 Diabetes"},
             ],
             "medications": [
                 {"display_name": "Metformin"},
-                {"display_name": "Lisinopril"}
-            ]
-        }
+                {"display_name": "Lisinopril"},
+            ],
+        },
     }
 
     context = adapter.build_ecrf_context(parsed)
@@ -178,11 +169,13 @@ async def test_pre_screen_eligible(mock_fetch):
             condition=parse_dsl("eCRF.DM.SEX == 'F'"),
             expected_outcome=True,
             **audit_args,
-        )
+        ),
     ]
 
     client = TestClient(app)
-    headers = get_auth_headers(roles="admin,sponsor_dm", change_reason="Pre-screening test")
+    headers = get_auth_headers(
+        roles="admin,sponsor_dm", change_reason="Pre-screening test"
+    )
 
     # Patient born 2000 (age is >= 24) and Female
     mock_bundle = {
@@ -193,18 +186,17 @@ async def test_pre_screen_eligible(mock_fetch):
                     "resourceType": "Patient",
                     "id": "EHR-PATIENT-1",
                     "gender": "female",
-                    "birthDate": "2000-01-01"
+                    "birthDate": "2000-01-01",
                 }
             }
-        ]
+        ],
     }
 
-    req_payload = {
-        "study_id": "study_abc",
-        "bundle": mock_bundle
-    }
+    req_payload = {"study_id": "study_abc", "bundle": mock_bundle}
 
-    resp = client.post("/api/v1/interop/fhir/pre-screen", json=req_payload, headers=headers)
+    resp = client.post(
+        "/api/v1/interop/fhir/pre-screen", json=req_payload, headers=headers
+    )
     assert resp.status_code == 200
     data = resp.json()
 
@@ -242,7 +234,9 @@ async def test_pre_screen_ineligible(mock_fetch):
     ]
 
     client = TestClient(app)
-    headers = get_auth_headers(roles="admin,sponsor_dm", change_reason="Pre-screening test")
+    headers = get_auth_headers(
+        roles="admin,sponsor_dm", change_reason="Pre-screening test"
+    )
 
     # Patient born 2015 (underage)
     mock_bundle = {
@@ -253,18 +247,17 @@ async def test_pre_screen_ineligible(mock_fetch):
                     "resourceType": "Patient",
                     "id": "EHR-PATIENT-2",
                     "gender": "male",
-                    "birthDate": "2015-01-01"
+                    "birthDate": "2015-01-01",
                 }
             }
-        ]
+        ],
     }
 
-    req_payload = {
-        "study_id": "study_abc",
-        "bundle": mock_bundle
-    }
+    req_payload = {"study_id": "study_abc", "bundle": mock_bundle}
 
-    resp = client.post("/api/v1/interop/fhir/pre-screen", json=req_payload, headers=headers)
+    resp = client.post(
+        "/api/v1/interop/fhir/pre-screen", json=req_payload, headers=headers
+    )
     assert resp.status_code == 200
     data = resp.json()
 
@@ -296,7 +289,9 @@ async def test_pre_screen_indeterminate(mock_fetch):
     ]
 
     client = TestClient(app)
-    headers = get_auth_headers(roles="admin,sponsor_dm", change_reason="Pre-screening test")
+    headers = get_auth_headers(
+        roles="admin,sponsor_dm", change_reason="Pre-screening test"
+    )
 
     # Patient bundle with no birthDate
     mock_bundle = {
@@ -306,18 +301,17 @@ async def test_pre_screen_indeterminate(mock_fetch):
                 "resource": {
                     "resourceType": "Patient",
                     "id": "EHR-PATIENT-3",
-                    "gender": "male"
+                    "gender": "male",
                 }
             }
-        ]
+        ],
     }
 
-    req_payload = {
-        "study_id": "study_abc",
-        "bundle": mock_bundle
-    }
+    req_payload = {"study_id": "study_abc", "bundle": mock_bundle}
 
-    resp = client.post("/api/v1/interop/fhir/pre-screen", json=req_payload, headers=headers)
+    resp = client.post(
+        "/api/v1/interop/fhir/pre-screen", json=req_payload, headers=headers
+    )
     assert resp.status_code == 200
     data = resp.json()
 
@@ -363,18 +357,17 @@ async def test_pre_screen_audit_evidence_non_phi(mock_fetch):
                     "resourceType": "Patient",
                     "id": "EHR-PATIENT-4",
                     "gender": "male",
-                    "birthDate": "2000-01-01"
+                    "birthDate": "2000-01-01",
                 }
             }
-        ]
+        ],
     }
 
-    req_payload = {
-        "study_id": "study_abc",
-        "bundle": mock_bundle
-    }
+    req_payload = {"study_id": "study_abc", "bundle": mock_bundle}
 
-    resp = client.post("/api/v1/interop/fhir/pre-screen", json=req_payload, headers=headers)
+    resp = client.post(
+        "/api/v1/interop/fhir/pre-screen", json=req_payload, headers=headers
+    )
     assert resp.status_code == 200
 
     # Retrieve audit log entry

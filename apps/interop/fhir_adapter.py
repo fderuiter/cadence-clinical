@@ -146,6 +146,7 @@ Condition              | code.text/display       | MH.MHTERM                  | 
 MedicationStatement    | medication.text/display | CM.CMTRT                   | eCRF.CM.CMTRT
 """
 
+
 class FHIRAdapter:
     """
     FHIR to CDASH eCRF data mapping adapter.
@@ -175,6 +176,7 @@ class FHIRAdapter:
             try:
                 birth_year = int(birth_date_str.split("-")[0])
                 from datetime import datetime
+
                 current_year = datetime.now().year
                 ecrf_context["eCRF.DM.AGE"] = current_year - birth_year
             except (ValueError, IndexError):
@@ -202,7 +204,9 @@ class FHIRAdapter:
         ]
         if conditions:
             # If multiple, store list; if single, store string
-            ecrf_context["eCRF.MH.MHTERM"] = conditions[0] if len(conditions) == 1 else conditions
+            ecrf_context["eCRF.MH.MHTERM"] = (
+                conditions[0] if len(conditions) == 1 else conditions
+            )
 
         # 5. Medications
         medications = [
@@ -212,7 +216,9 @@ class FHIRAdapter:
         ]
         if medications:
             # If multiple, store list; if single, store string
-            ecrf_context["eCRF.CM.CMTRT"] = medications[0] if len(medications) == 1 else medications
+            ecrf_context["eCRF.CM.CMTRT"] = (
+                medications[0] if len(medications) == 1 else medications
+            )
 
         return ecrf_context
 

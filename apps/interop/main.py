@@ -108,15 +108,30 @@ class CriterionExplanation(BaseModel):
     criterion_id: str = Field(..., description="The ID of the criterion evaluated.")
     criterion_type: str = Field(..., description="inclusion or exclusion.")
     description: str = Field(..., description="Human-readable text of the criterion.")
-    is_met: bool = Field(..., description="Indicates if the subject satisfies this criterion.")
-    is_indeterminate: bool = Field(..., description="Indicates if evaluation was indeterminate.")
+    is_met: bool = Field(
+        ..., description="Indicates if the subject satisfies this criterion."
+    )
+    is_indeterminate: bool = Field(
+        ..., description="Indicates if evaluation was indeterminate."
+    )
 
 
 class FHIRPreScreenResponse(BaseModel):
-    eligible: Optional[bool] = Field(None, description="Aggregated eligibility. True if all criteria met, False if any failed, None if indeterminate.")
-    failed_criteria: List[str] = Field(default_factory=list, description="List of criterion IDs that failed.")
-    indeterminate_criteria: List[str] = Field(default_factory=list, description="List of criterion IDs that were indeterminate.")
-    criteria_explanations: List[CriterionExplanation] = Field(default_factory=list, description="Detailed list of criterion-level explanations.")
+    eligible: Optional[bool] = Field(
+        None,
+        description="Aggregated eligibility. True if all criteria met, False if any failed, None if indeterminate.",
+    )
+    failed_criteria: List[str] = Field(
+        default_factory=list, description="List of criterion IDs that failed."
+    )
+    indeterminate_criteria: List[str] = Field(
+        default_factory=list,
+        description="List of criterion IDs that were indeterminate.",
+    )
+    criteria_explanations: List[CriterionExplanation] = Field(
+        default_factory=list,
+        description="Detailed list of criterion-level explanations.",
+    )
 
 
 class ConflictStrategy(str, Enum):
@@ -649,7 +664,11 @@ async def fhir_pre_screen(
     eval_res = evaluate_eligibility(criteria, ecrf_context)
 
     # 4. Write non-PHI audit log
-    met_count = sum(1 for c in eval_res.criteria_evaluations.values() if c.is_met and not c.is_indeterminate)
+    met_count = sum(
+        1
+        for c in eval_res.criteria_evaluations.values()
+        if c.is_met and not c.is_indeterminate
+    )
     failed_count = len(eval_res.failed_criteria)
     indeterminate_count = len(eval_res.indeterminate_criteria)
     total_count = len(criteria)
