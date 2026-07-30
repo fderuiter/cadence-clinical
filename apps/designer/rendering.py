@@ -4,6 +4,7 @@ import re
 from typing import Any
 
 from docx import Document
+from docx.opc.exceptions import PackageNotFoundError
 from docxtpl import DocxTemplate
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from protocol_render import RenderedProtocolDocument, SoAMatrixView
@@ -30,6 +31,12 @@ class RendererResult:
         self.media_type = media_type
 
 
+class TemplateRenderingError(Exception):
+    """Raised when there is an issue locating, loading, or rendering a document template."""
+
+    pass
+
+
 def sanitize_filename(name: str) -> str:
     """
     Sanitizes string inputs to create secure, deterministic filenames.
@@ -49,15 +56,13 @@ def get_safe_filename(study_id: str, version_index: int, extension: str) -> str:
     return f"protocol_{safe_study_id}_v{version_index}.{extension.strip('.')}"
 
 
-def ensure_docx_template_exists(force: bool = False) -> str:
+def build_docx_template() -> str:
     """
     Programmatically creates the base .docx template containing
-    docxtpl placeholders if it does not already exist.
+    docxtpl placeholders, always overwriting the target file at
+    TEMPLATES_DIR/protocol_template.docx.
     """
     template_path = os.path.join(TEMPLATES_DIR, "protocol_template.docx")
-    if os.path.exists(template_path) and not force:
-        return template_path
-
     doc = Document()
 
     # Title Page
@@ -140,6 +145,37 @@ def ensure_docx_template_exists(force: bool = False) -> str:
 
     doc.save(template_path)
     return template_path
+
+
+def load_docx_template() -> DocxTemplate:
+    """
+    Resolves the protocol template path, verifies existence, and loads it.
+    Never triggers build_docx_template().
+    """
+    template_path = os.path.join(TEMPLATES_DIR, "protocol_template.docx")
+    if not os.path.exists(template_path):
+        raise TemplateRenderingError(f"Template file is missing: {template_path}")
+    try:
+        tpl = DocxTemplate(template_path)
+        tpl.init_docx()
+        return tpl
+    except PackageNotFoundError as e:
+        raise TemplateRenderingError(
+            f"Template file is invalid or corrupt (PackageNotFoundError): {e}"
+        )
+    except Exception as e:
+        raise TemplateRenderingError(f"Failed to load document template: {e}")
+
+
+def ensure_docx_template_exists(force: bool = False) -> str:
+    """
+    Deprecated alias. Programmatically creates the base .docx template containing
+    docxtpl placeholders by calling build_docx_template().
+    """
+    template_path = os.path.join(TEMPLATES_DIR, "protocol_template.docx")
+    if os.path.exists(template_path) and not force:
+        return template_path
+    return build_docx_template()
 
 
 def build_soa_subdoc(subdoc: Any, soa_matrix: SoAMatrixView) -> None:
@@ -266,8 +302,7 @@ def render_protocol_to_docx(
     """
     Renders the RenderedProtocolDocument to a DOCX byte stream using docxtpl.
     """
-    template_path = ensure_docx_template_exists()
-    tpl = DocxTemplate(template_path)
+    tpl = load_docx_template()
 
     # Build SubDoc for SoA
     subdoc = tpl.new_subdoc()

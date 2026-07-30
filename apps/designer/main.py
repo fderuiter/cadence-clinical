@@ -125,6 +125,7 @@ from apps.designer.library import (
     UpdateLibraryObjectRequest,
 )
 from apps.designer.mapper import map_study_to_usdm
+from apps.designer.rendering import TemplateRenderingError
 from apps.designer.rules import (
     CreateRuleRequest,
     compile_to_xpath,
@@ -337,6 +338,21 @@ async def concept_locked_handler(request: Request, exc: ConceptLockedError):
             "workflow_suggestion": "To modify this concept, please initiate a protocol amendment workflow via POST /api/designer/protocols/{study_id}/amend.",
         },
     )
+
+
+@app.exception_handler(TemplateRenderingError)
+async def template_rendering_error_handler(
+    request: Request, exc: TemplateRenderingError
+):
+    problem = ProblemDetails(
+        type="https://api.cadence-clinical.com/errors/template-unavailable",
+        title="Template Unavailable",
+        status=503,
+        detail=str(exc),
+        instance=request.url.path,
+        code="TEMPLATE_UNAVAILABLE",
+    )
+    return JSONResponse(status_code=503, content=problem.model_dump(exclude_none=True))
 
 
 async def get_neo4j_driver(request: Request):
