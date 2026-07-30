@@ -57,6 +57,11 @@ def run_command(args: list[str], check: bool = True) -> tuple[str, str]:
         if check:
             raise e
         return "", "Timeout expired"
+    except FileNotFoundError as e:
+        print(f"Command executable not found: {args[0]}")
+        if check:
+            raise e
+        return "", "Executable not found"
     except subprocess.CalledProcessError as e:
         print(f"Command failed: {' '.join(args)}")
         print(f"Stdout: {e.stdout}")
