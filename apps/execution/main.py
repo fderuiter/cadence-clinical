@@ -284,11 +284,10 @@ app = FastAPI(
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    """
-    Convert request validation errors into a standardized HTTP 400 problem-details response.
-    
+    """Convert request validation errors into a standardized HTTP 400 problem-details response.
+
     Returns:
-    	JSONResponse: A 400 response containing details for each invalid request parameter.
+        JSONResponse: A 400 response containing details for each invalid request parameter.
     """
     validation_errors_list = []
     for err in exc.errors():
@@ -344,7 +343,9 @@ async def authorization_denied_handler(
     """
     return JSONResponse(
         status_code=403,
-        content={"detail": "Forbidden: you do not have permission to perform this action."},
+        content={
+            "detail": "Forbidden: you do not have permission to perform this action."
+        },
     )
 
 
@@ -1022,7 +1023,8 @@ async def unblind_subject(
     verify_change_justification(request)
 
     # Step-up re-authentication: validate X-Sig-Token before any write
-    from jose import JWTError, jwt as jose_jwt
+    from jose import JWTError
+    from jose import jwt as jose_jwt
 
     sig_token = request.headers.get("X-Sig-Token")
     if not sig_token:
@@ -1116,7 +1118,9 @@ async def unblind_subject(
                 detail="Reconstruction/decryption failed: invalid or incompatible custodian shares.",
             )
 
-        unmasked_treatment_arm = decrypted.get("allocation") or decrypted.get("treatment_arm")
+        unmasked_treatment_arm = decrypted.get("allocation") or decrypted.get(
+            "treatment_arm"
+        )
         if not unmasked_treatment_arm:
             raise HTTPException(
                 status_code=400,
@@ -1198,12 +1202,11 @@ async def unblind_subject(
 
         # Helper/task to be dispatched after commit
         def dispatch_unblind_notification(subj_id: str, msg: str):
-            """
-            Send a critical emergency-unblinding notification for a subject.
-            
-            Parameters:
-            	subj_id (str): Identifier of the subject associated with the unblinding event.
-            	msg (str): Notification message describing the event.
+            """Send a critical emergency-unblinding notification for a subject.
+
+            Args:
+                subj_id: Identifier of the subject associated with the unblinding event.
+                msg: Notification message describing the event.
             """
             from apps.execution.trial_lock import NotificationRouter
 

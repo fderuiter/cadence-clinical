@@ -349,7 +349,7 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
 async def upgrade_existing_tables(conn) -> None:
     """
     Upgrade existing clinical tables by adding missing schema columns and backfilling subject enrollment indexes.
-    
+
     The backfill orders subjects within each study by earliest audit timestamp and then by subject identifier. Failures during the legacy backfill are reported as warnings.
     """
     from sqlalchemy import inspect

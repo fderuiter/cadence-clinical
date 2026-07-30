@@ -131,3 +131,4 @@ tmp_etmf/
 apps/designer/templates/*.docx
 *.docx
 scripts/sync_github_project.py
+scripts/live_hygiene_enforcement.py

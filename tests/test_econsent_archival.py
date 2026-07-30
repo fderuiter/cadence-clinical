@@ -109,14 +109,18 @@ async def test_icf_sign_and_archival_queueing():
     # 2. Assert ConsentSignature and EtmfArchivalDelivery rows are created in DB
     async with db_manager.get_session_maker()() as session:
         # Check Signature
-        sig_stmt = select(ConsentSignature).where(ConsentSignature.template_id == "template-123")
+        sig_stmt = select(ConsentSignature).where(
+            ConsentSignature.template_id == "template-123"
+        )
         sig_res = await session.execute(sig_stmt)
         signature = sig_res.scalars().first()
         assert signature is not None
         assert signature.subject_pseudonym == "subject_pseudonym_999"
 
         # Check Delivery
-        del_stmt = select(EtmfArchivalDelivery).where(EtmfArchivalDelivery.template_id == "template-123")
+        del_stmt = select(EtmfArchivalDelivery).where(
+            EtmfArchivalDelivery.template_id == "template-123"
+        )
         del_res = await session.execute(del_stmt)
         delivery = del_res.scalars().first()
         assert delivery is not None
@@ -127,7 +131,9 @@ async def test_icf_sign_and_archival_queueing():
         assert "manifest" in delivery.artifact_content
 
         # Check ConsentAuditLog for ARCHIVAL_QUEUED
-        audit_stmt = select(ConsentAuditLog).where(ConsentAuditLog.action == "ARCHIVAL_QUEUED")
+        audit_stmt = select(ConsentAuditLog).where(
+            ConsentAuditLog.action == "ARCHIVAL_QUEUED"
+        )
         audit_res = await session.execute(audit_stmt)
         audit = audit_res.scalars().first()
         assert audit is not None
@@ -158,7 +164,9 @@ async def test_poll_and_dispatch_success():
         delivery_id = delivery.id
 
     # Mock forward_icf_to_etmf to return a mocked document_id
-    with patch("apps.econsent.etmf_client.forward_icf_to_etmf", new_callable=AsyncMock) as mock_forward:
+    with patch(
+        "apps.econsent.etmf_client.forward_icf_to_etmf", new_callable=AsyncMock
+    ) as mock_forward:
         mock_forward.return_value = "etmf-doc-uuid-888"
 
         await poll_and_dispatch()
@@ -167,7 +175,9 @@ async def test_poll_and_dispatch_success():
 
     # Re-fetch from DB and assert state
     async with db_manager.get_session_maker()() as session:
-        stmt = select(EtmfArchivalDelivery).where(EtmfArchivalDelivery.id == delivery_id)
+        stmt = select(EtmfArchivalDelivery).where(
+            EtmfArchivalDelivery.id == delivery_id
+        )
         res = await session.execute(stmt)
         updated = res.scalars().first()
         assert updated.status == "SUCCESS"
@@ -175,7 +185,9 @@ async def test_poll_and_dispatch_success():
         assert updated.completed_at is not None
 
         # Verify ConsentAuditLog contains ARCHIVAL_ACCEPTED
-        audit_stmt = select(ConsentAuditLog).where(ConsentAuditLog.action == "ARCHIVAL_ACCEPTED")
+        audit_stmt = select(ConsentAuditLog).where(
+            ConsentAuditLog.action == "ARCHIVAL_ACCEPTED"
+        )
         audit_res = await session.execute(audit_stmt)
         audit = audit_res.scalars().first()
         assert audit is not None
@@ -206,11 +218,16 @@ async def test_poll_and_dispatch_failure_and_retry_backoff():
         delivery_id = delivery.id
 
     # 1st Attempt: forward fails with exception
-    with patch("apps.econsent.etmf_client.forward_icf_to_etmf", side_effect=Exception("eTMF service down")):
+    with patch(
+        "apps.econsent.etmf_client.forward_icf_to_etmf",
+        side_effect=Exception("eTMF service down"),
+    ):
         await poll_and_dispatch()
 
     async with db_manager.get_session_maker()() as session:
-        stmt = select(EtmfArchivalDelivery).where(EtmfArchivalDelivery.id == delivery_id)
+        stmt = select(EtmfArchivalDelivery).where(
+            EtmfArchivalDelivery.id == delivery_id
+        )
         res = await session.execute(stmt)
         delivery_1 = res.scalars().first()
         assert delivery_1.status == "FAILED"
@@ -225,11 +242,16 @@ async def test_poll_and_dispatch_failure_and_retry_backoff():
         await session.commit()
 
     # 5th Attempt: forward fails again, reaches cap of 5
-    with patch("apps.econsent.etmf_client.forward_icf_to_etmf", side_effect=Exception("Terminal down")):
+    with patch(
+        "apps.econsent.etmf_client.forward_icf_to_etmf",
+        side_effect=Exception("Terminal down"),
+    ):
         await poll_and_dispatch()
 
     async with db_manager.get_session_maker()() as session:
-        stmt = select(EtmfArchivalDelivery).where(EtmfArchivalDelivery.id == delivery_id)
+        stmt = select(EtmfArchivalDelivery).where(
+            EtmfArchivalDelivery.id == delivery_id
+        )
         res = await session.execute(stmt)
         delivery_5 = res.scalars().first()
         assert delivery_5.status == "FAILED"
@@ -264,16 +286,23 @@ async def test_archival_status_endpoints():
     headers = get_auth_headers()
 
     # 1. Fetch by path (correlation_id)
-    resp1 = client.get("/api/v1/econsent/archival-status/temp-abc:1:subj-query", headers=headers)
+    resp1 = client.get(
+        "/api/v1/econsent/archival-status/temp-abc:1:subj-query", headers=headers
+    )
     assert resp1.status_code == 200
     assert resp1.json()["status"] == "SUCCESS"
     assert resp1.json()["etmf_document_id"] == "etmf-uuid-111"
 
     # 2. Fetch by query params
-    resp2 = client.get("/api/v1/econsent/archival-status?template_id=temp-abc&version_index=1&subject_pseudonym=subj-query", headers=headers)
+    resp2 = client.get(
+        "/api/v1/econsent/archival-status?template_id=temp-abc&version_index=1&subject_pseudonym=subj-query",
+        headers=headers,
+    )
     assert resp2.status_code == 200
     assert resp2.json()["correlation_id"] == "temp-abc:1:subj-query"
 
     # 3. Bad request with missing parameters
-    resp3 = client.get("/api/v1/econsent/archival-status?template_id=temp-abc", headers=headers)
+    resp3 = client.get(
+        "/api/v1/econsent/archival-status?template_id=temp-abc", headers=headers
+    )
     assert resp3.status_code == 400

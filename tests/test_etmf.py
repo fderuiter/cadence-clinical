@@ -2558,8 +2558,9 @@ def test_informed_consent_form_taxonomy_and_idempotency():
     and verify that re-ingesting a document with the same idempotency_key is a no-op
     returning the existing document.
     """
-    from tmf_reference_model import resolve_artifact, get_active_catalog
     from fastapi.testclient import TestClient
+    from tmf_reference_model import get_active_catalog, resolve_artifact
+
     from apps.etmf.main import app
 
     # 1. Assert taxonomy resolution of "Informed Consent Form"
@@ -2574,7 +2575,9 @@ def test_informed_consent_form_taxonomy_and_idempotency():
 
     # 2. Ingest first time with idempotency_key
     client = TestClient(app)
-    headers = get_auth_headers(roles="admin", change_reason="Testing taxonomy and idempotency")
+    headers = get_auth_headers(
+        roles="admin", change_reason="Testing taxonomy and idempotency"
+    )
 
     payload = {
         "study_id": "study_idem_123",
