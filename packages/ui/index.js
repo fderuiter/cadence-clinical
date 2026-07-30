@@ -30,3 +30,9 @@ export {
   decryptAESGCM,
   deriveSessionKey,
 } from "./signing.js";
+
+export {
+  normalizeApprovedConsent,
+  shapeComprehensionAnswers,
+  interpretComprehensionResult,
+} from "./econsent.js";
