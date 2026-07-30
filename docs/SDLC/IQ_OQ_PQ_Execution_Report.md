@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1427
-- **Passed:** 1427 🟢
+- **Total Automated Test Cases Run:** 1435
+- **Passed:** 1435 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1005,6 +1005,14 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_merge_outcomes` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_parse_existing_outcomes` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_traceability_outcome_handling` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_clinical_capture_provenance_and_version_stamping` | `tests.test_protocol_amendments_validation_suite` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_designer_amendment_immutability_and_race_safety` | `tests.test_protocol_amendments_validation_suite` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_designer_amendment_signature_validation` | `tests.test_protocol_amendments_validation_suite` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_etmf_document_change_rationale_mandatory_rules` | `tests.test_protocol_amendments_validation_suite` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_etmf_linkage_and_version_history_lineage` | `tests.test_protocol_amendments_validation_suite` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_etmf_qc_transitions_immutability` | `tests.test_protocol_amendments_validation_suite` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_exact_version_consent_and_reconsent_gating` | `tests.test_protocol_amendments_validation_suite` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_non_destructive_reconciliation_and_multi_hop` | `tests.test_protocol_amendments_validation_suite` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_block_crud_with_rbac` | `tests.test_protocol_blocks` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_arm_aware_soa_matrix_projection` | `tests.test_protocol_blocks` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_block_persistence_lifecycle` | `tests.test_protocol_blocks` | *Regression/Helper* | 🟢 PASSED | < 1s |
