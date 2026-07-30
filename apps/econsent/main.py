@@ -15,20 +15,19 @@ from apps.econsent.cache import (
     get_approved_template_translation,
 )
 from apps.econsent.database import db_manager
+from apps.econsent.evaluator import (
+    submit_comprehension_answers,
+)
 from apps.econsent.models import (
     Base,
+    ComprehensionCheck,
+    ComprehensionResult,
     ConsentAuditLog,
     ConsentClause,
     ConsentDocument,
+    ConsentSignature,
     ConsentTemplate,
     ConsentTranslation,
-    ComprehensionCheck,
-    ComprehensionResult,
-    ConsentSignature,
-)
-from apps.econsent.evaluator import (
-    evaluate_comprehension,
-    submit_comprehension_answers,
 )
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
@@ -338,15 +337,21 @@ class ComprehensionCheckCreate(AuditFields):
     """
     Schema for creating/configuring a new comprehension check for a template version.
     """
+
     questions: list[dict] = Field(..., description="List of question dicts")
-    expected_answers: dict[str, str] = Field(..., description="Mapping of question_id to expected answer")
-    threshold_policy: dict = Field(..., description="Evaluation threshold policy, e.g. {'min_correct': 2}")
+    expected_answers: dict[str, str] = Field(
+        ..., description="Mapping of question_id to expected answer"
+    )
+    threshold_policy: dict = Field(
+        ..., description="Evaluation threshold policy, e.g. {'min_correct': 2}"
+    )
 
 
 class ComprehensionCheckResponse(AuditFields):
     """
     Schema for retrieving comprehension check configurations.
     """
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -361,15 +366,23 @@ class ComprehensionSubmissionRequest(BaseModel):
     """
     Schema for submitting answers for evaluation.
     """
-    subject_pseudonym: str = Field(..., description="Pseudonym identifier of the subject")
-    submitted_answers: dict[str, str] = Field(..., description="Mapping of question_id to submitted answer")
-    reason_for_change: str = Field(..., description="Part 11 signature/evaluation change reason")
+
+    subject_pseudonym: str = Field(
+        ..., description="Pseudonym identifier of the subject"
+    )
+    submitted_answers: dict[str, str] = Field(
+        ..., description="Mapping of question_id to submitted answer"
+    )
+    reason_for_change: str = Field(
+        ..., description="Part 11 signature/evaluation change reason"
+    )
 
 
 class ComprehensionSubmissionResponse(BaseModel):
     """
     Schema for the UI-ready progression state after submitting answers.
     """
+
     passed: bool
     score: float
     total_questions: int
@@ -383,8 +396,13 @@ class ConsentSignatureRequest(BaseModel):
     """
     Schema for submitting an electronic signature on a template version.
     """
-    subject_pseudonym: str = Field(..., description="Pseudonym identifier of the subject")
-    signature_data: Optional[str] = Field(None, description="Electronic signature data (drawing or string)")
+
+    subject_pseudonym: str = Field(
+        ..., description="Pseudonym identifier of the subject"
+    )
+    signature_data: Optional[str] = Field(
+        None, description="Electronic signature data (drawing or string)"
+    )
     reason_for_change: str = Field(..., description="Change reason for signing")
 
 
@@ -392,6 +410,7 @@ class ConsentSignatureResponse(AuditFields):
     """
     Schema for signature response.
     """
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -954,14 +973,21 @@ async def submit_comprehension_answers_endpoint(
     correct_count = 0
     for q_id, expected_val in result.expected_answers.items():
         sub_val = result.submitted_answers.get(q_id)
-        if sub_val is not None and str(sub_val).strip().lower() == str(expected_val).strip().lower():
+        if (
+            sub_val is not None
+            and str(sub_val).strip().lower() == str(expected_val).strip().lower()
+        ):
             correct_count += 1
 
     import math
+
     if "min_correct" in result.threshold_policy:
         min_required = int(result.threshold_policy["min_correct"])
     elif "passing_percentage" in result.threshold_policy:
-        min_required = math.ceil((float(result.threshold_policy["passing_percentage"]) / 100.0) * total_questions)
+        min_required = math.ceil(
+            (float(result.threshold_policy["passing_percentage"]) / 100.0)
+            * total_questions
+        )
     else:
         min_required = total_questions
 
@@ -1036,8 +1062,10 @@ async def sign_consent_template_endpoint(
 
     # Also check if template specifies a comprehension check in its workflow steps
     has_comprehension_step = any(
-        step.get("type") in ("comprehension_check", "comprehension-check", "comprehension")
-        or step.get("step_type") in ("comprehension_check", "comprehension-check", "comprehension")
+        step.get("type")
+        in ("comprehension_check", "comprehension-check", "comprehension")
+        or step.get("step_type")
+        in ("comprehension_check", "comprehension-check", "comprehension")
         for step in template.workflow_steps
     )
 
@@ -1047,7 +1075,7 @@ async def sign_consent_template_endpoint(
             ComprehensionResult.template_id == template_id,
             ComprehensionResult.version_index == version_index,
             ComprehensionResult.subject_pseudonym == payload.subject_pseudonym,
-            ComprehensionResult.passed == True,
+            ComprehensionResult.passed.is_(True),
         )
         res_result = await session.execute(stmt_result)
         passing_result = res_result.scalars().first()

@@ -1,11 +1,9 @@
-import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
-from sqlalchemy import select
 
 from apps.econsent.database import db_manager
 from apps.econsent.main import app
-from apps.econsent.models import Base, ConsentAuditLog, ComprehensionCheck, ComprehensionResult, ConsentSignature, ConsentTemplate
+from apps.econsent.models import Base
 from tests.test_econsent import get_auth_headers
 
 
@@ -39,36 +37,33 @@ def test_create_and_retrieve_comprehension_check():
         "clauses": [],
         "workflow_steps": [
             {"type": "comprehension_check"},
-            {"type": "signature_placeholder"}
+            {"type": "signature_placeholder"},
         ],
         "reason_for_change": "Initial template creation",
         "created_by": "admin_user",
     }
     headers = get_auth_headers(user_id="designer_user", roles="Grants Manager")
-    res_tpl = client.post("/api/v1/econsent/templates", json=template_payload, headers=headers)
+    res_tpl = client.post(
+        "/api/v1/econsent/templates", json=template_payload, headers=headers
+    )
     assert res_tpl.status_code == 201
 
     # 2. Add a comprehension check definition
     check_payload = {
         "questions": [
             {"id": "q1", "text": "What is the study purpose?", "options": ["A", "B"]},
-            {"id": "q2", "text": "Can you withdraw?", "options": ["Yes", "No"]}
+            {"id": "q2", "text": "Can you withdraw?", "options": ["Yes", "No"]},
         ],
-        "expected_answers": {
-            "q1": "A",
-            "q2": "Yes"
-        },
-        "threshold_policy": {
-            "min_correct": 2
-        },
+        "expected_answers": {"q1": "A", "q2": "Yes"},
+        "threshold_policy": {"min_correct": 2},
         "reason_for_change": "Defining questions for template check",
-        "created_by": "designer_user"
+        "created_by": "designer_user",
     }
 
     res_check = client.post(
         "/api/v1/econsent/templates/tpl-comp-1/versions/1/comprehension-checks",
         json=check_payload,
-        headers=headers
+        headers=headers,
     )
     assert res_check.status_code == 201
     data = res_check.json()
@@ -81,7 +76,7 @@ def test_create_and_retrieve_comprehension_check():
     # 3. Retrieve the check definition
     res_get = client.get(
         "/api/v1/econsent/templates/tpl-comp-1/versions/1/comprehension-checks",
-        headers=headers
+        headers=headers,
     )
     assert res_get.status_code == 200
     data_get = res_get.json()
@@ -103,9 +98,12 @@ def test_submit_answers_and_evaluation_boundaries():
         "template_name": "Informed Consent Form",
         "protocol_version": "v1.0",
         "clauses": [],
-        "workflow_steps": [{"type": "comprehension_check"}, {"type": "signature_placeholder"}],
+        "workflow_steps": [
+            {"type": "comprehension_check"},
+            {"type": "signature_placeholder"},
+        ],
         "reason_for_change": "Initial template",
-        "created_by": "designer"
+        "created_by": "designer",
     }
     client.post("/api/v1/econsent/templates", json=template_payload, headers=headers)
 
@@ -114,29 +112,29 @@ def test_submit_answers_and_evaluation_boundaries():
         "questions": [
             {"id": "q1", "text": "Q1"},
             {"id": "q2", "text": "Q2"},
-            {"id": "q3", "text": "Q3"}
+            {"id": "q3", "text": "Q3"},
         ],
         "expected_answers": {"q1": "A", "q2": "B", "q3": "C"},
         "threshold_policy": {"min_correct": 2},
         "reason_for_change": "Setting up check",
-        "created_by": "designer"
+        "created_by": "designer",
     }
     client.post(
         "/api/v1/econsent/templates/tpl-boundary/versions/1/comprehension-checks",
         json=check_payload,
-        headers=headers
+        headers=headers,
     )
 
     # Submit 1 correct -> should fail
     sub_payload_1 = {
         "subject_pseudonym": "SUB-001",
         "submitted_answers": {"q1": "A", "q2": "Wrong", "q3": "Wrong"},
-        "reason_for_change": "Submission 1"
+        "reason_for_change": "Submission 1",
     }
     res_sub_1 = client.post(
         "/api/v1/econsent/templates/tpl-boundary/versions/1/submit-answers",
         json=sub_payload_1,
-        headers=headers
+        headers=headers,
     )
     assert res_sub_1.status_code == 200
     res_data_1 = res_sub_1.json()
@@ -149,12 +147,12 @@ def test_submit_answers_and_evaluation_boundaries():
     sub_payload_2 = {
         "subject_pseudonym": "SUB-001",
         "submitted_answers": {"q1": "A", "q2": "B", "q3": "Wrong"},
-        "reason_for_change": "Submission 2"
+        "reason_for_change": "Submission 2",
     }
     res_sub_2 = client.post(
         "/api/v1/econsent/templates/tpl-boundary/versions/1/submit-answers",
         json=sub_payload_2,
-        headers=headers
+        headers=headers,
     )
     assert res_sub_2.status_code == 200
     res_data_2 = res_sub_2.json()
@@ -167,24 +165,24 @@ def test_submit_answers_and_evaluation_boundaries():
         "questions": [
             {"id": "q1", "text": "Q1"},
             {"id": "q2", "text": "Q2"},
-            {"id": "q3", "text": "Q3"}
+            {"id": "q3", "text": "Q3"},
         ],
         "expected_answers": {"q1": "A", "q2": "B", "q3": "C"},
         "threshold_policy": {"passing_percentage": 66.0},
         "reason_for_change": "Updating threshold policy to percentage",
-        "created_by": "designer"
+        "created_by": "designer",
     }
     client.post(
         "/api/v1/econsent/templates/tpl-boundary/versions/1/comprehension-checks",
         json=check_payload_percentage,
-        headers=headers
+        headers=headers,
     )
 
     # Submit 2 correct (66.67%) -> should pass
     res_sub_pct = client.post(
         "/api/v1/econsent/templates/tpl-boundary/versions/1/submit-answers",
         json=sub_payload_2,
-        headers=headers
+        headers=headers,
     )
     assert res_sub_pct.status_code == 200
     assert res_sub_pct.json()["passed"] is True
@@ -205,9 +203,12 @@ def test_signature_blocks_if_comprehension_checks_fail_or_incomplete():
         "template_name": "Informed Consent Form",
         "protocol_version": "v1.0",
         "clauses": [],
-        "workflow_steps": [{"type": "comprehension_check"}, {"type": "signature_placeholder"}],
+        "workflow_steps": [
+            {"type": "comprehension_check"},
+            {"type": "signature_placeholder"},
+        ],
         "reason_for_change": "Initial template",
-        "created_by": "designer"
+        "created_by": "designer",
     }
     client.post("/api/v1/econsent/templates", json=template_payload, headers=headers)
 
@@ -217,45 +218,48 @@ def test_signature_blocks_if_comprehension_checks_fail_or_incomplete():
         "expected_answers": {"q1": "A"},
         "threshold_policy": {"min_correct": 1},
         "reason_for_change": "Setting up check",
-        "created_by": "designer"
+        "created_by": "designer",
     }
     client.post(
         "/api/v1/econsent/templates/tpl-sign-test/versions/1/comprehension-checks",
         json=check_payload,
-        headers=headers
+        headers=headers,
     )
 
     # Attempt to sign immediately without answering check -> should fail with 400
     sig_payload = {
         "subject_pseudonym": "SUB-999",
         "signature_data": "My Signed Name",
-        "reason_for_change": "I consent to clinical trial terms"
+        "reason_for_change": "I consent to clinical trial terms",
     }
     res_sign = client.post(
         "/api/v1/econsent/templates/tpl-sign-test/versions/1/sign",
         json=sig_payload,
-        headers=headers
+        headers=headers,
     )
     assert res_sign.status_code == 400
-    assert "Comprehension checks have not been completed or passed" in res_sign.json()["detail"]
+    assert (
+        "Comprehension checks have not been completed or passed"
+        in res_sign.json()["detail"]
+    )
 
     # Submit WRONG answers -> check fails
     sub_wrong = {
         "subject_pseudonym": "SUB-999",
         "submitted_answers": {"q1": "Wrong Answer"},
-        "reason_for_change": "Check submission"
+        "reason_for_change": "Check submission",
     }
     client.post(
         "/api/v1/econsent/templates/tpl-sign-test/versions/1/submit-answers",
         json=sub_wrong,
-        headers=headers
+        headers=headers,
     )
 
     # Attempt to sign after fail -> should still fail
     res_sign_after_fail = client.post(
         "/api/v1/econsent/templates/tpl-sign-test/versions/1/sign",
         json=sig_payload,
-        headers=headers
+        headers=headers,
     )
     assert res_sign_after_fail.status_code == 400
 
@@ -263,12 +267,12 @@ def test_signature_blocks_if_comprehension_checks_fail_or_incomplete():
     sub_correct = {
         "subject_pseudonym": "SUB-999",
         "submitted_answers": {"q1": "A"},
-        "reason_for_change": "Check submission correct"
+        "reason_for_change": "Check submission correct",
     }
     res_sub_correct = client.post(
         "/api/v1/econsent/templates/tpl-sign-test/versions/1/submit-answers",
         json=sub_correct,
-        headers=headers
+        headers=headers,
     )
     assert res_sub_correct.status_code == 200
     assert res_sub_correct.json()["passed"] is True
@@ -277,7 +281,7 @@ def test_signature_blocks_if_comprehension_checks_fail_or_incomplete():
     res_sign_success = client.post(
         "/api/v1/econsent/templates/tpl-sign-test/versions/1/sign",
         json=sig_payload,
-        headers=headers
+        headers=headers,
     )
     assert res_sign_success.status_code == 200
     assert res_sign_success.json()["subject_pseudonym"] == "SUB-999"
@@ -298,9 +302,12 @@ def test_template_version_separation():
         "template_name": "Informed Consent Form",
         "protocol_version": "v1.0",
         "clauses": [],
-        "workflow_steps": [{"type": "comprehension_check"}, {"type": "signature_placeholder"}],
+        "workflow_steps": [
+            {"type": "comprehension_check"},
+            {"type": "signature_placeholder"},
+        ],
         "reason_for_change": "V1",
-        "created_by": "designer"
+        "created_by": "designer",
     }
     client.post("/api/v1/econsent/templates", json=tpl_payload, headers=headers)
 
@@ -310,12 +317,12 @@ def test_template_version_separation():
         "expected_answers": {"q1": "A"},
         "threshold_policy": {"min_correct": 1},
         "reason_for_change": "Check V1",
-        "created_by": "designer"
+        "created_by": "designer",
     }
     client.post(
         "/api/v1/econsent/templates/tpl-versioned/versions/1/comprehension-checks",
         json=check_payload_1,
-        headers=headers
+        headers=headers,
     )
 
     # 2. Create template version 2
@@ -324,36 +331,41 @@ def test_template_version_separation():
         "template_name": "Informed Consent Form New",
         "protocol_version": "v2.0",
         "clauses": [],
-        "workflow_steps": [{"type": "comprehension_check"}, {"type": "signature_placeholder"}],
+        "workflow_steps": [
+            {"type": "comprehension_check"},
+            {"type": "signature_placeholder"},
+        ],
         "reason_for_change": "V2",
-        "created_by": "designer"
+        "created_by": "designer",
     }
-    client.put("/api/v1/econsent/templates/tpl-versioned", json=tpl_payload_2, headers=headers)
+    client.put(
+        "/api/v1/econsent/templates/tpl-versioned", json=tpl_payload_2, headers=headers
+    )
 
     # Configure check for version 2
     check_payload_2 = {
         "questions": [{"id": "q1", "text": "Q1"}],
-        "expected_answers": {"q1": "B"}, # Note correct answer changed to B
+        "expected_answers": {"q1": "B"},  # Note correct answer changed to B
         "threshold_policy": {"min_correct": 1},
         "reason_for_change": "Check V2",
-        "created_by": "designer"
+        "created_by": "designer",
     }
     client.post(
         "/api/v1/econsent/templates/tpl-versioned/versions/2/comprehension-checks",
         json=check_payload_2,
-        headers=headers
+        headers=headers,
     )
 
     # 3. Subject passes check for version 1
     sub_payload_1 = {
         "subject_pseudonym": "SUB-123",
         "submitted_answers": {"q1": "A"},
-        "reason_for_change": "Submit V1 answers"
+        "reason_for_change": "Submit V1 answers",
     }
     res_sub_1 = client.post(
         "/api/v1/econsent/templates/tpl-versioned/versions/1/submit-answers",
         json=sub_payload_1,
-        headers=headers
+        headers=headers,
     )
     assert res_sub_1.json()["passed"] is True
 
@@ -361,15 +373,18 @@ def test_template_version_separation():
     sig_payload = {
         "subject_pseudonym": "SUB-123",
         "signature_data": "My Signed Name",
-        "reason_for_change": "Signing V2"
+        "reason_for_change": "Signing V2",
     }
     res_sign_2 = client.post(
         "/api/v1/econsent/templates/tpl-versioned/versions/2/sign",
         json=sig_payload,
-        headers=headers
+        headers=headers,
     )
     assert res_sign_2.status_code == 400
-    assert "Comprehension checks have not been completed or passed" in res_sign_2.json()["detail"]
+    assert (
+        "Comprehension checks have not been completed or passed"
+        in res_sign_2.json()["detail"]
+    )
 
 
 def test_auditor_restrictions_on_checks():
@@ -384,14 +399,14 @@ def test_auditor_restrictions_on_checks():
         "expected_answers": {"q1": "A"},
         "threshold_policy": {"min_correct": 1},
         "reason_for_change": "Unauthorized define",
-        "created_by": "auditor"
+        "created_by": "auditor",
     }
 
     headers_inspector = get_auth_headers(user_id="inspector_user", roles="inspector")
     res = client.post(
         "/api/v1/econsent/templates/tpl-comp-1/versions/1/comprehension-checks",
         json=check_payload,
-        headers=headers_inspector
+        headers=headers_inspector,
     )
     assert res.status_code == 403
     assert "restricted to read-only access" in res.json()["detail"]

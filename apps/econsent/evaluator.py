@@ -1,14 +1,13 @@
-import math
-from datetime import datetime
-from typing import Optional
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from apps.econsent.models import ComprehensionCheck, ComprehensionResult
+
 
 def evaluate_comprehension(
     submitted_answers: dict[str, str],
     expected_answers: dict[str, str],
-    threshold_policy: dict
+    threshold_policy: dict,
 ) -> tuple[bool, float, int]:
     """
     Stateless, deterministic evaluator for comprehension checks.
@@ -23,10 +22,15 @@ def evaluate_comprehension(
 
     for q_id, expected_val in expected_answers.items():
         sub_val = submitted_answers.get(q_id)
-        if sub_val is not None and str(sub_val).strip().lower() == str(expected_val).strip().lower():
+        if (
+            sub_val is not None
+            and str(sub_val).strip().lower() == str(expected_val).strip().lower()
+        ):
             correct_count += 1
 
-    score_percentage = (correct_count / total_questions) * 100.0 if total_questions > 0 else 100.0
+    score_percentage = (
+        (correct_count / total_questions) * 100.0 if total_questions > 0 else 100.0
+    )
 
     passed = True
     if threshold_policy:
@@ -57,19 +61,21 @@ async def submit_comprehension_answers(
     # 1. Fetch the ComprehensionCheck definition for this template version
     stmt = select(ComprehensionCheck).where(
         ComprehensionCheck.template_id == template_id,
-        ComprehensionCheck.version_index == version_index
+        ComprehensionCheck.version_index == version_index,
     )
     result_check = await session.execute(stmt)
     check = result_check.scalars().first()
 
     if not check:
-        raise ValueError(f"No comprehension check defined for template '{template_id}' version {version_index}.")
+        raise ValueError(
+            f"No comprehension check defined for template '{template_id}' version {version_index}."
+        )
 
     # 2. Evaluate answers deterministically
     passed, score, correct_count = evaluate_comprehension(
         submitted_answers=submitted_answers,
         expected_answers=check.expected_answers,
-        threshold_policy=check.threshold_policy
+        threshold_policy=check.threshold_policy,
     )
 
     # 3. Create and persist ComprehensionResult

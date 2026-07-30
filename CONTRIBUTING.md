@@ -116,14 +116,14 @@ avoid `I001` errors:
 import copy
 import logging
 from datetime import datetime
-from typing import Any, List, Optional   # ← alphabetical within typing
+from typing import Any, List, Optional  # ← alphabetical within typing
 
 from sqlalchemy import select
 
 from apps.execution.database.models import (
-    ClinicalObservation,    # ← alphabetical
+    ClinicalObservation,  # ← alphabetical
     FormSubmission,
-    StudyAuthoredRule,      # ← NOT appended at the end
+    StudyAuthoredRule,  # ← NOT appended at the end
 )
 ```
 
