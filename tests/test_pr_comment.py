@@ -1,5 +1,6 @@
 import os
 import sys
+from unittest.mock import patch
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -88,7 +89,9 @@ def test_combined_audit_logic():
     assert combined_audit == "failure"
 
 
-def test_build_comment_body():
+@patch("scripts.post_pr_comment.get_pr_metadata")
+def test_build_comment_body(mock_metadata):
+    mock_metadata.return_value = ("Mock PR Title", ["apps/etmf/main.py"])
     outcomes = {
         "lint": "success",
         "test": "success",
@@ -106,8 +109,10 @@ def test_build_comment_body():
     assert "### ⚠️ Action Required: Quality Gate Verification Issues" in body_fail
 
 
-def test_traceability_outcome_handling():
+@patch("scripts.post_pr_comment.get_pr_metadata")
+def test_traceability_outcome_handling(mock_metadata):
     """Verify Requirements Traceability is parsed, merged, and rendered."""
+    mock_metadata.return_value = ("Mock PR Title", ["apps/etmf/main.py"])
     sample_comment = """<!-- ID: CADENCE_PR_QUALITY_GATE_CHECKLIST -->
 ### ⚠️ Action Required: Quality Gate Verification Issues
 
