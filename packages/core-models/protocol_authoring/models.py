@@ -6,6 +6,7 @@ hierarchical section skeletons, and GxP compliant optimistic locking, audits, an
 selective lineage metadata tracking.
 """
 
+from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Union
 
@@ -63,6 +64,10 @@ class ProtocolBlock(AuditFields):
     derived_from_soa: bool = Field(
         default=False,
         description="Flag indicating if this block is dynamically derived from Schedule of Activities (SoA) mutations.",
+    )
+    section_id: Optional[str] = Field(
+        None,
+        description="Optional section identifier representing which ICH M11 section this block belongs to.",
     )
 
 
@@ -249,3 +254,142 @@ def build_canonical_ich_skeleton() -> List[ICHSection]:
 
 # Global constant holding the canonical schema sequence tree
 CANONICAL_ICH_SKELETON: List[ICHSection] = build_canonical_ich_skeleton()
+
+
+class SectionReviewStatus(str, Enum):
+    """
+    Standard review statuses representing the lifecycle of an ICH section.
+    """
+
+    DRAFT = "DRAFT"
+    IN_REVIEW = "IN_REVIEW"
+    LOCKED = "LOCKED"
+    APPROVED = "APPROVED"
+
+
+class Comment(BaseModel):
+    """
+    Represent an individual block-anchored user review comment.
+    """
+
+    comment_id: str = Field(..., description="Unique comment identifier.")
+    thread_id: str = Field(..., description="Linked thread identifier.")
+    text: str = Field(..., description="Comment text body.")
+    created_by: str = Field(..., description="Author user ID.")
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        description="Creation timestamp.",
+    )
+    updated_at: Optional[datetime] = Field(
+        None,
+        description="Optional modification timestamp.",
+    )
+    version_index: int = Field(
+        default=1,
+        description="Sequential version index for GxP auditing.",
+    )
+
+
+class CommentThread(BaseModel):
+    """
+    Represents a collection of ordered review comments anchored to a specific block and section.
+    """
+
+    thread_id: str = Field(..., description="Unique thread identifier.")
+    block_id: str = Field(..., description="Anchor block identifier.")
+    section_id: str = Field(..., description="Anchor section identifier.")
+    study_id: str = Field(..., description="Associated study identifier.")
+    status: str = Field(
+        "open",
+        description="Thread resolution status (open, resolved).",
+    )
+    created_by: str = Field(..., description="Thread creator user ID.")
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        description="Creation timestamp.",
+    )
+    block_version_index: int = Field(
+        ...,
+        description="The block's version_index at the time of thread creation.",
+    )
+    comments: List[Comment] = Field(
+        default_factory=list,
+        description="Ordered list of comments.",
+    )
+
+
+class SuggestionStatus(str, Enum):
+    """
+    Statuses for suggestion workflows.
+    """
+
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+
+
+class Suggestion(BaseModel):
+    """
+    Represents a proposed collaborative content replacement suggestion for a block.
+    """
+
+    suggestion_id: str = Field(..., description="Unique suggestion identifier.")
+    block_id: str = Field(..., description="Anchor block identifier.")
+    study_id: str = Field(..., description="Associated study identifier.")
+    suggested_text: str = Field(..., description="Proposed replacement text.")
+    original_text: str = Field(..., description="Original block text at proposed time.")
+    status: SuggestionStatus = Field(
+        SuggestionStatus.PENDING,
+        description="Current suggestion status.",
+    )
+    created_by: str = Field(..., description="Proposer user ID.")
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        description="Creation timestamp.",
+    )
+    reason: str = Field(..., description="Rationale for the suggestion.")
+    decision_reason: Optional[str] = Field(
+        None,
+        description="Rationale for acceptance or rejection.",
+    )
+    decided_by: Optional[str] = Field(None, description="User ID of decider.")
+    decided_at: Optional[datetime] = Field(
+        None,
+        description="Timestamp of decision.",
+    )
+    block_version_index: int = Field(
+        ...,
+        description="The block's version_index at the time of proposing.",
+    )
+    version_index: int = Field(default=1, description="Sequential version index.")
+
+
+class SectionReviewTransition(BaseModel):
+    """
+    Represents an immutable, audited, Part 11 compliant transition of a section review status.
+    """
+
+    transition_id: str = Field(
+        ...,
+        description="Unique transition tracking identifier.",
+    )
+    section_id: str = Field(..., description="Anchor section identifier.")
+    study_id: str = Field(..., description="Associated study identifier.")
+    from_status: SectionReviewStatus = Field(..., description="Source review status.")
+    to_status: SectionReviewStatus = Field(
+        ...,
+        description="Destination review status.",
+    )
+    actor_id: str = Field(..., description="User ID executing status transition.")
+    actor_role: str = Field(
+        ...,
+        description="Role string used to authorize status transition.",
+    )
+    reason_for_change: str = Field(
+        ...,
+        description="Part 11 change reason justification.",
+    )
+    timestamp: datetime = Field(
+        default_factory=datetime.utcnow,
+        description="Transition timestamp.",
+    )

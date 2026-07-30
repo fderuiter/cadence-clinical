@@ -126,6 +126,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "system_audit_logs": {"read"},
         "export_masked": {"read"},
         "protocol_ingestion": {"upload", "read", "review", "promote"},
+        "protocol_section": {"lock", "unlock", "approve", "review", "read"},
         # New permissions
         "protocol_version": {"sign", "transition_approved"},
         "regulatory_form": {"create", "read", "sign"},
@@ -172,12 +173,14 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "system_audit_logs": {"read"},
         "protocol_ingestion": {"upload", "read", "review", "promote"},
         "protocol_version": {"sign", "transition_approved"},
+        "protocol_section": {"lock", "unlock", "approve", "review", "read"},
         "regulatory_form": {"read"},
         "training_log": {"read"},
     },
     ROLE_REVIEWER: {
         "study_design": {"read"},
         "protocol_ingestion": {"upload", "read", "review", "promote"},
+        "protocol_section": {"review", "read"},
     },
     ROLE_SPONSOR_DM: {
         "study_design": {"read"},
@@ -187,6 +190,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "system_audit_logs": {"read"},
         "export_masked": {"create", "read", "update"},
         "protocol_version": {"transition_approved"},
+        "protocol_section": {"read"},
         "regulatory_form": {"create", "read", "sign"},
         "training_log": {"create", "read", "sign"},
         # CTMS
@@ -422,6 +426,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "system_audit_logs": {"read"},
         "export_masked": {"create", "read", "update"},
         "protocol_version": {"sign", "transition_approved"},
+        "protocol_section": {"lock", "unlock", "approve", "review", "read"},
         "regulatory_form": {"create", "read", "sign"},
         "training_log": {"create", "read", "sign"},
         # CTMS
@@ -498,6 +503,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "quality_event": {"create", "read", "update", "delete", "investigate"},
         "quality_audit_logs": {"read"},
         "protocol_version": {"sign", "transition_approved"},
+        "protocol_section": {"lock", "unlock", "approve", "review", "read"},
         "regulatory_form": {"create", "read", "sign"},
         "training_log": {"create", "read", "sign"},
         # eISF
