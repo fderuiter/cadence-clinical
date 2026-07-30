@@ -303,15 +303,21 @@ END;
 $$ LANGUAGE plpgsql;
 """)
 
-trigger_update_pg = DDL("""
+trigger_update_pg_drop = DDL("""
 DROP TRIGGER IF EXISTS tmf_document_qc_transitions_no_update ON tmf_document_qc_transitions;
+""")
+
+trigger_update_pg_create = DDL("""
 CREATE TRIGGER tmf_document_qc_transitions_no_update
 BEFORE UPDATE ON tmf_document_qc_transitions
 FOR EACH ROW EXECUTE FUNCTION block_qc_transition_mutation();
 """)
 
-trigger_delete_pg = DDL("""
+trigger_delete_pg_drop = DDL("""
 DROP TRIGGER IF EXISTS tmf_document_qc_transitions_no_delete ON tmf_document_qc_transitions;
+""")
+
+trigger_delete_pg_create = DDL("""
 CREATE TRIGGER tmf_document_qc_transitions_no_delete
 BEFORE DELETE ON tmf_document_qc_transitions
 FOR EACH ROW EXECUTE FUNCTION block_qc_transition_mutation();
@@ -335,12 +341,22 @@ event.listen(
 event.listen(
     DocumentQCTransition.__table__,
     "after_create",
-    trigger_update_pg.execute_if(dialect="postgresql"),
+    trigger_update_pg_drop.execute_if(dialect="postgresql"),
 )
 event.listen(
     DocumentQCTransition.__table__,
     "after_create",
-    trigger_delete_pg.execute_if(dialect="postgresql"),
+    trigger_update_pg_create.execute_if(dialect="postgresql"),
+)
+event.listen(
+    DocumentQCTransition.__table__,
+    "after_create",
+    trigger_delete_pg_drop.execute_if(dialect="postgresql"),
+)
+event.listen(
+    DocumentQCTransition.__table__,
+    "after_create",
+    trigger_delete_pg_create.execute_if(dialect="postgresql"),
 )
 
 
