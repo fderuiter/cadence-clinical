@@ -771,7 +771,9 @@ async def archive_signed_doa_to_eisf(
 
     # Retrieve eISF Service Ingest Endpoint
     # Prioritize EISF_URL environment variable, fallback to default interop port/endpoint
-    eisf_url = os.getenv("EISF_URL") or os.getenv("INTEROP_URL") or "http://localhost:8004"
+    eisf_url = (
+        os.getenv("EISF_URL") or os.getenv("INTEROP_URL") or "http://localhost:8004"
+    )
     ingest_endpoint = f"{eisf_url}/api/v1/eisf/ingest"
 
     # Assemble preserved signed DOA payload contents
@@ -780,18 +782,26 @@ async def archive_signed_doa_to_eisf(
         "delegator_id": doa.delegator_id,
         "delegatee_id": doa.delegatee_id,
         "delegated_duties": doa.duties,
-        "start_date": doa.start_date.isoformat() if isinstance(doa.start_date, datetime) else str(doa.start_date),
-        "end_date": doa.end_date.isoformat() if (doa.end_date and isinstance(doa.end_date, datetime)) else (str(doa.end_date) if doa.end_date else None),
+        "start_date": doa.start_date.isoformat()
+        if isinstance(doa.start_date, datetime)
+        else str(doa.start_date),
+        "end_date": doa.end_date.isoformat()
+        if (doa.end_date and isinstance(doa.end_date, datetime))
+        else (str(doa.end_date) if doa.end_date else None),
         "signed_payload": doa.signed_payload,
         "signature": doa.signature,
         "signed_by": doa.signed_by,
-        "signed_at": doa.signed_at.isoformat() if isinstance(doa.signed_at, datetime) else (str(doa.signed_at) if doa.signed_at else None),
+        "signed_at": doa.signed_at.isoformat()
+        if isinstance(doa.signed_at, datetime)
+        else (str(doa.signed_at) if doa.signed_at else None),
         "audit_provenance": {
             "created_by": doa.created_by,
-            "created_at": doa.created_at.isoformat() if isinstance(doa.created_at, datetime) else str(doa.created_at),
+            "created_at": doa.created_at.isoformat()
+            if isinstance(doa.created_at, datetime)
+            else str(doa.created_at),
             "reason_for_change": doa.reason_for_change,
             "version_index": doa.version_index,
-        }
+        },
     }
 
     # Build compliant EISFIngestionRequest payload
@@ -809,7 +819,7 @@ async def archive_signed_doa_to_eisf(
             "doa_id": doa.id,
         },
         "source_system": "Organization Directory",
-        "reason_for_change": f"Finalized and signed Delegation of Authority Log archival for DOA {doa.id}"
+        "reason_for_change": f"Finalized and signed Delegation of Authority Log archival for DOA {doa.id}",
     }
 
     # Generate Gateway V2 signature using service token
@@ -853,7 +863,9 @@ async def archive_signed_doa_to_eisf(
                 logger.info(f"Successfully archived signed DOA {doa.id} to eISF.")
     except Exception as e:
         # GxP compliance guidelines specify to log failures without crashing/blocking parent transactions
-        logger.error(f"Transport failure while archiving signed DOA {doa.id} to eISF: {str(e)}")
+        logger.error(
+            f"Transport failure while archiving signed DOA {doa.id} to eISF: {str(e)}"
+        )
 
 
 @app.post("/api/v1/org/delegations/{id}/sign-off", response_model=DelegationResponse)

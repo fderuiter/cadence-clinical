@@ -155,7 +155,9 @@ def test_gateway_org_proxy_routing(monkeypatch: pytest.MonkeyPatch) -> None:
         assert str(sent_req1.url) == "http://localhost:8010/health"
 
         # Test routing for '/api/v1/org/organizations'
-        res2 = client.get("/api/v1/org/organizations", headers={"Authorization": f"Bearer {token}"})
+        res2 = client.get(
+            "/api/v1/org/organizations", headers={"Authorization": f"Bearer {token}"}
+        )
         assert res2.status_code == 200
         sent_req2 = mock_send.call_args.args[0]
         # Should keep path and point to localhost:8010/api/v1/org/organizations
@@ -168,7 +170,9 @@ def test_gateway_org_proxy_routing(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.mark.asyncio
-async def test_gateway_openapi_aggregation_with_org(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_gateway_openapi_aggregation_with_org(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """
     Verify that gateway aggregates OpenAPI from org service and prefixes component namespace.
     """
@@ -183,10 +187,17 @@ async def test_gateway_openapi_aggregation_with_org(monkeypatch: pytest.MonkeyPa
         def json(self):
             return {
                 "openapi": "3.1.0",
-                "paths": {"/test-endpoint": {"get": {"responses": {"200": {"description": "Success"}}}}},
+                "paths": {
+                    "/test-endpoint": {
+                        "get": {"responses": {"200": {"description": "Success"}}}
+                    }
+                },
                 "components": {
                     "schemas": {
-                        "TestModel": {"type": "object", "properties": {"id": {"type": "string"}}}
+                        "TestModel": {
+                            "type": "object",
+                            "properties": {"id": {"type": "string"}},
+                        }
                     }
                 },
             }
@@ -219,7 +230,9 @@ async def test_gateway_openapi_aggregation_with_org(monkeypatch: pytest.MonkeyPa
 
 
 @pytest.mark.asyncio
-async def test_doa_signoff_automatic_archival_handoff(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_doa_signoff_automatic_archival_handoff(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """
     E2E integration: Verify that successfully signing off a Delegation of Authority
     triggers an automatic, authenticated, durable handoff call to eISF ingestion.
@@ -255,7 +268,9 @@ async def test_doa_signoff_automatic_archival_handoff(monkeypatch: pytest.Monkey
         "study_id": "study_alpha",
         "reason_for_change": "Initial site setup",
     }
-    site_resp = org_client.post("/api/v1/org/sites", json=site_payload, headers=admin_headers)
+    site_resp = org_client.post(
+        "/api/v1/org/sites", json=site_payload, headers=admin_headers
+    )
     assert site_resp.status_code == 201
 
     # Create PI Personnel
@@ -269,7 +284,9 @@ async def test_doa_signoff_automatic_archival_handoff(monkeypatch: pytest.Monkey
         "study_id": "study_alpha",
         "reason_for_change": "Initial PI setup",
     }
-    pi_resp = org_client.post("/api/v1/org/personnel", json=pi_payload, headers=admin_headers)
+    pi_resp = org_client.post(
+        "/api/v1/org/personnel", json=pi_payload, headers=admin_headers
+    )
     assert pi_resp.status_code == 201
     pi_id = pi_resp.json()["id"]
 
@@ -284,7 +301,9 @@ async def test_doa_signoff_automatic_archival_handoff(monkeypatch: pytest.Monkey
         "study_id": "study_alpha",
         "reason_for_change": "Initial CRC setup",
     }
-    crc_resp = org_client.post("/api/v1/org/personnel", json=crc_payload, headers=admin_headers)
+    crc_resp = org_client.post(
+        "/api/v1/org/personnel", json=crc_payload, headers=admin_headers
+    )
     assert crc_resp.status_code == 201
     crc_id = crc_resp.json()["id"]
 
@@ -305,7 +324,9 @@ async def test_doa_signoff_automatic_archival_handoff(monkeypatch: pytest.Monkey
         "reason_for_change": "Onboarding coordinator",
     }
 
-    grant_resp = org_client.post("/api/v1/org/delegations", json=grant_payload, headers=grant_headers)
+    grant_resp = org_client.post(
+        "/api/v1/org/delegations", json=grant_payload, headers=grant_headers
+    )
     assert grant_resp.status_code == 201
     doa_data = grant_resp.json()
     doa_id = doa_data["id"]
@@ -468,7 +489,9 @@ def test_doa_signoff_tampered_payload_rejected() -> None:
         "study_id": "study_alpha",
         "reason_for_change": "Initial PI setup",
     }
-    pi_resp = org_client.post("/api/v1/org/personnel", json=pi_payload, headers=admin_headers)
+    pi_resp = org_client.post(
+        "/api/v1/org/personnel", json=pi_payload, headers=admin_headers
+    )
     pi_id = pi_resp.json()["id"]
 
     # Create CRC Personnel
@@ -482,7 +505,9 @@ def test_doa_signoff_tampered_payload_rejected() -> None:
         "study_id": "study_alpha",
         "reason_for_change": "Initial CRC setup",
     }
-    crc_resp = org_client.post("/api/v1/org/personnel", json=crc_payload, headers=admin_headers)
+    crc_resp = org_client.post(
+        "/api/v1/org/personnel", json=crc_payload, headers=admin_headers
+    )
     crc_id = crc_resp.json()["id"]
 
     # Grant Delegation
@@ -501,7 +526,9 @@ def test_doa_signoff_tampered_payload_rejected() -> None:
         "start_date": datetime.now(timezone.utc).isoformat(),
         "reason_for_change": "Onboarding coordinator",
     }
-    grant_resp = org_client.post("/api/v1/org/delegations", json=grant_payload, headers=grant_headers)
+    grant_resp = org_client.post(
+        "/api/v1/org/delegations", json=grant_payload, headers=grant_headers
+    )
     doa_data = grant_resp.json()
     doa_id = doa_data["id"]
 
@@ -512,7 +539,11 @@ def test_doa_signoff_tampered_payload_rejected() -> None:
         "delegatee_id": crc_id,
         "site_id": "site_boston_01",
         "study_id": "study_alpha",
-        "duties": ["Informed Consent", "CRF Data Entry", "Unauthorized Drug Dispensation"],
+        "duties": [
+            "Informed Consent",
+            "CRF Data Entry",
+            "Unauthorized Drug Dispensation",
+        ],
         "start_date": doa_data["start_date"],
     }
     # Compute signature over correct/original payload

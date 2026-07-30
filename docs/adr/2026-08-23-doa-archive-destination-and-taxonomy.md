@@ -50,7 +50,7 @@ This decision satisfies GxP and 21 CFR Part 11 requirements under Trace-7 and PR
 * **Completeness Workflow:** Finalized records participate immediately in eISF completeness checks out-of-the-box.
 * **Transport Resilience:** Downstream transport errors are captured and logged to ensure that a transient network glitch in eISF does not block PI operations.
 
-## 6. Verification Plan
+## 6. Implementation & Verification
 * New integration tests in `tests/test_org_integration_e2e.py` will verify:
   - Successful sign-off and subsequent handoff trigger to eISF.
   - Correct taxomomy mapping.
