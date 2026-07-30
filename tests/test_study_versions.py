@@ -678,7 +678,8 @@ async def test_api_protocol_approval_and_immutability():
     version_id = "v_approval"
 
     import copy
-    from apps.designer.db import MOCK_STUDIES, MOCK_STUDY_VERSIONS, MOCK_RULES
+
+    from apps.designer.db import MOCK_RULES, MOCK_STUDIES, MOCK_STUDY_VERSIONS
 
     MOCK_STUDY_VERSIONS[study_id] = []
     MOCK_RULES[study_id] = []
