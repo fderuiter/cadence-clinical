@@ -28,8 +28,24 @@ ROLE_AUDITOR_CANONICAL = "auditor"
 ROLE_EXTERNAL_MONITOR = "external_monitor"
 ROLE_REVIEWER = "protocol_reviewer"
 
+# RTSM roles
+ROLE_PHARMACIST = "pharmacist"
+ROLE_UNBLINDED_STATISTICIAN = "unblinded_statistician"
+ROLE_IDMC = "idmc"
+ROLE_EMERGENCY_UNBLINDER = "emergency_unblinder"
+
 
 ROLE_ALIASES = {
+    "unblinded statistician": ROLE_UNBLINDED_STATISTICIAN,
+    "lead unblinded statistician": ROLE_UNBLINDED_STATISTICIAN,
+    "unblinded_statistician": ROLE_UNBLINDED_STATISTICIAN,
+    "idmc": ROLE_IDMC,
+    "dsmb": ROLE_IDMC,
+    "pharmacist": ROLE_PHARMACIST,
+    "unblinded pharmacist": ROLE_PHARMACIST,
+    "unblinded_pharmacist": ROLE_PHARMACIST,
+    "emergency unblinder": ROLE_EMERGENCY_UNBLINDER,
+    "emergency_unblinder": ROLE_EMERGENCY_UNBLINDER,
     "protocol_reviewer": ROLE_REVIEWER,
     "protocol reviewer": ROLE_REVIEWER,
     "protocol-reviewer": ROLE_REVIEWER,
@@ -230,6 +246,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
     ROLE_INVESTIGATOR: {
         "study_design": {"read"},
         "subject_enrollment": {"create", "read", "update"},
+        "rtsm_unblind": {"write"},
         "ecrf_data_entry": {"create", "read", "update"},
         "query_lifecycle": {
             "read",
@@ -500,6 +517,20 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         # eISF
         "eisf_document": {"read"},
     },
+    ROLE_UNBLINDED_STATISTICIAN: {
+        "rtsm_randomization": {"read"},
+        "rtsm_allocation": {"read"},
+    },
+    ROLE_IDMC: {
+        "rtsm_randomization": {"read"},
+        "rtsm_allocation": {"read"},
+    },
+    ROLE_PHARMACIST: {
+        "rtsm_supply": {"read", "write"},
+    },
+    ROLE_EMERGENCY_UNBLINDER: {
+        "rtsm_unblind": {"write"},
+    },
 }
 
 
@@ -514,6 +545,55 @@ MASKING_RULES: Dict[str, Callable[[Any], Any]] = {
     "administered_drug_code": lambda val: "Obfuscated Kit" if val else val,
     "drug_code": lambda val: "Obfuscated Kit" if val else val,
     "changed_reason_for_blinded_field": lambda val: "Obfuscated" if val else val,
+    "randomization_seed": lambda val: "MASKED" if val is not None else val,
+    "seed": lambda val: "MASKED" if val is not None else val,
+    "encrypted_allocation": lambda val: "MASKED" if val is not None else val,
+    "kit_reference": lambda val: "Obfuscated Kit" if val else val,
+    "stratum_key": lambda val: "MASKED" if val else val,
+    "randomization_id": lambda val: "MASKED" if val else val,
+    "encrypted_sequence": lambda val: "MASKED" if val else val,
+}
+
+# Role-aware masking policy mapping unblinded RTSM roles to visible fields.
+ROLE_UNMASKED_FIELDS: Dict[str, Set[str]] = {
+    ROLE_UNBLINDED_STATISTICIAN: {
+        "treatment_arm",
+        "treatment_arm_id",
+        "randomization_seed",
+        "seed",
+        "encrypted_allocation",
+        "stratum_key",
+        "randomization_id",
+        "encrypted_sequence",
+    },
+    ROLE_IDMC: {
+        "treatment_arm",
+        "treatment_arm_id",
+        "randomization_seed",
+        "seed",
+        "encrypted_allocation",
+        "stratum_key",
+        "randomization_id",
+        "encrypted_sequence",
+    },
+    ROLE_PHARMACIST: {
+        "drug_code",
+        "administered_drug_code",
+        "kit_reference",
+    },
+    ROLE_EMERGENCY_UNBLINDER: {
+        "treatment_arm",
+        "treatment_arm_id",
+        "drug_code",
+        "administered_drug_code",
+        "kit_reference",
+        "randomization_seed",
+        "seed",
+        "encrypted_allocation",
+        "stratum_key",
+        "randomization_id",
+        "encrypted_sequence",
+    },
 }
 
 
@@ -948,16 +1028,25 @@ def mask_payload(payload: Any, principal: Principal) -> Any:
     if principal.unblinded_access:
         return payload
 
+    # Find if any RTSM role-specific policies apply
+    rtsm_roles = [r for r in principal.roles if r in ROLE_UNMASKED_FIELDS]
+    if rtsm_roles:
+        # Union of all unmasked fields for their active RTSM roles
+        unmasked_fields = set()
+        for r in rtsm_roles:
+            unmasked_fields.update(ROLE_UNMASKED_FIELDS[r])
+        return _recursive_mask(payload, unmasked_fields=unmasked_fields)
+
     return _recursive_mask(payload)
 
 
-def _recursive_mask(data: Any) -> Any:
+def _recursive_mask(data: Any, unmasked_fields: Optional[Set[str]] = None) -> Any:
     if data is None:
         return None
 
     if isinstance(data, pydantic.BaseModel):
         dumped = data.model_dump()
-        masked = _recursive_mask(dumped)
+        masked = _recursive_mask(dumped, unmasked_fields)
         # Reconstruct the model safely
         return data.__class__.model_validate(masked)
 
@@ -965,20 +1054,20 @@ def _recursive_mask(data: Any) -> Any:
         new_dict = {}
         for k, v in data.items():
             k_lower = k.lower()
-            if k_lower in MASKING_RULES:
+            if k_lower in MASKING_RULES and (unmasked_fields is None or k_lower not in unmasked_fields):
                 new_dict[k] = MASKING_RULES[k_lower](v)
             else:
-                new_dict[k] = _recursive_mask(v)
+                new_dict[k] = _recursive_mask(v, unmasked_fields)
         return new_dict
 
     if isinstance(data, list):
-        return [_recursive_mask(item) for item in data]
+        return [_recursive_mask(item, unmasked_fields) for item in data]
 
     if isinstance(data, tuple):
-        return tuple(_recursive_mask(item) for item in data)
+        return tuple(_recursive_mask(item, unmasked_fields) for item in data)
 
     if isinstance(data, set):
-        return {_recursive_mask(item) for item in data}
+        return {_recursive_mask(item, unmasked_fields) for item in data}
 
     return data
 
@@ -1063,6 +1152,23 @@ ROLE_EXPANSIONS = {
         "protocol reviewer",
         "protocol-reviewer",
         "reviewer",
+    },
+    "unblinded_statistician": {
+        "unblinded_statistician",
+        "unblinded statistician",
+        "lead unblinded statistician",
+    },
+    "idmc": {
+        "idmc",
+        "dsmb",
+    },
+    "pharmacist": {
+        "pharmacist",
+        "unblinded pharmacist",
+    },
+    "emergency_unblinder": {
+        "emergency_unblinder",
+        "emergency unblinder",
     },
 }
 
