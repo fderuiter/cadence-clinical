@@ -204,6 +204,17 @@ describe("sha256", () => {
 });
 
 describe("cross-language parity", () => {
+  const getPythonOutput = (script) => {
+    const cwd = process.cwd();
+    const env = { ...process.env, PYTHONPATH: cwd };
+    const pyScript = script.trim().split("\n").map(line => line.trim()).filter(Boolean).join("; ");
+    try {
+      return execSync(`uv run python -c "${pyScript}"`, { env, cwd }).toString().trim();
+    } catch {
+      return execSync(`python3 -c "${pyScript}"`, { env, cwd }).toString().trim();
+    }
+  };
+
   it("JS can decrypt a Python-produced AES-GCM envelope", async () => {
     const rawKey = new Uint8Array(32);
     for (let i = 0; i < 32; i++) rawKey[i] = i;
@@ -214,18 +225,13 @@ describe("cross-language parity", () => {
     const payload = { hello: "world", count: 42 };
     const aad = "my_aad_data";
 
-    const pythonCmd = `uv run python -c "
+    const pythonEnvelope = getPythonOutput(`
 from packages.security.encryption import encrypt
 key = bytes.fromhex('${hexKey}')
 payload = {'hello': 'world', 'count': 42}
 aad = '${aad}'.encode('utf-8')
 print(encrypt(payload, key, 1, aad))
-"`;
-    const pythonEnvelope = execSync(pythonCmd, {
-      env: { ...process.env, PYTHONPATH: "/app" },
-    })
-      .toString()
-      .trim();
+`);
 
     const decrypted = await decryptAESGCM(
       pythonEnvelope,
@@ -256,19 +262,14 @@ print(encrypt(payload, key, 1, aad))
       new TextEncoder().encode(aad)
     );
 
-    const pythonCmd = `uv run python -c "
+    const pythonOutput = getPythonOutput(`
 import json
 from packages.security.encryption import decrypt
 key = bytes.fromhex('${hexKey}')
 aad = '${aad}'.encode('utf-8')
 decrypted = decrypt('${jsEnvelope}', key, 1, aad)
 print(json.dumps(decrypted))
-"`;
-    const pythonOutput = execSync(pythonCmd, {
-      env: { ...process.env, PYTHONPATH: "/app" },
-    })
-      .toString()
-      .trim();
+`);
     const parsedOutput = JSON.parse(pythonOutput);
     expect(parsedOutput).toEqual(payload);
   });
@@ -283,16 +284,11 @@ print(json.dumps(decrypted))
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
 
-    const pythonCmd = `uv run python -c "
+    const pythonHex = getPythonOutput(`
 from packages.security.encryption import derive_session_key
 derived = derive_session_key(b'${material}', b'${salt}', b'${info}')
 print(derived.hex())
-"`;
-    const pythonHex = execSync(pythonCmd, {
-      env: { ...process.env, PYTHONPATH: "/app" },
-    })
-      .toString()
-      .trim();
+`);
     expect(jsHex).toBe(pythonHex);
   });
 });
