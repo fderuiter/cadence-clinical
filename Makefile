@@ -7,7 +7,7 @@
 # ==============================================================================
 
 .DEFAULT_GOAL := help
-.PHONY: help setup fix lint format check verify test sync-gxp rtm adr docs ports
+.PHONY: help setup fix lint format check verify test sync-gxp rtm adr docs ports regenerate-templates
 
 # Colour codes
 CYAN  := \033[0;36m
@@ -67,6 +67,9 @@ docs: ## Serve the VitePress documentation portal locally
 
 db-reset: ## Drop and re-create the local development database schema
 	uv run python scripts/reset_db.py
+
+regenerate-templates: ## Regenerate DOCX protocol templates programmatically
+	uv run python scripts/regenerate_templates.py
 
 ports: ## Check that all required service ports are free
 	python3 scripts/check_ports.py

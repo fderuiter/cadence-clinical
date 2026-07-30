@@ -11,7 +11,8 @@ from fastapi.testclient import TestClient
 from apps.designer.db import MOCK_DESIGNER_AUDIT_LOGS
 from apps.designer.main import app as designer_app
 from apps.designer.rendering import (
-    ensure_docx_template_exists,
+    TemplateRenderingError,
+    build_docx_template,
     get_safe_filename,
     sanitize_filename,
 )
@@ -44,7 +45,7 @@ def get_custom_auth_headers(change_reason="system_operation"):
 
 @pytest.fixture
 def client():
-    return TestClient(designer_app)
+    return TestClient(designer_app, raise_server_exceptions=False)
 
 
 @pytest.fixture(autouse=True)
@@ -52,6 +53,14 @@ def clear_audit_logs():
     MOCK_DESIGNER_AUDIT_LOGS.clear()
     yield
     MOCK_DESIGNER_AUDIT_LOGS.clear()
+
+
+@pytest.fixture(scope="module", autouse=True)
+def setup_default_template():
+    """
+    Ensure a baseline protocol template exists for standard tests.
+    """
+    build_docx_template()
 
 
 def test_sanitize_filename():
@@ -75,13 +84,126 @@ def test_get_safe_filename():
     assert filename_docx == "protocol_oncology-trial_v1.docx"
 
 
-def test_ensure_docx_template_exists():
+def test_build_docx_template():
     """
-    Ensure the version-controlled docxtpl base template exists or is generated correctly.
+    Verify that build_docx_template successfully generates a file on disk.
+
+    Requirements: PRD-SYS-001
     """
-    path = ensure_docx_template_exists()
+    path = build_docx_template()
     assert os.path.exists(path)
     assert path.endswith(".docx")
+
+
+def test_template_immutability(tmp_path, monkeypatch):
+    """
+    Assert that the template on disk remains byte-for-byte unchanged after render_protocol_to_docx().
+
+    Requirements: PRD-SYS-001
+    """
+    import usdm_model
+
+    from apps.designer import rendering
+    from apps.designer.content_assembly import assemble_rendered_protocol_document
+    from apps.designer.db import get_study_projection
+    from apps.designer.mapper import map_study_to_usdm, to_uuid
+
+    # Isolate TEMPLATES_DIR to a temporary path
+    temp_dir = str(tmp_path)
+    monkeypatch.setattr(rendering, "TEMPLATES_DIR", temp_dir)
+
+    # Build template in isolated TEMPLATES_DIR
+    template_path = rendering.build_docx_template()
+    assert os.path.exists(template_path)
+
+    # Capture initial bytes
+    with open(template_path, "rb") as f:
+        initial_bytes = f.read()
+
+    # Prepare document data for rendering
+    study_data = get_study_projection("study_1")
+    usdm_dict = map_study_to_usdm(study_data)
+    usdm_dict["id"] = to_uuid(usdm_dict["id"], "study")
+    study_obj = usdm_model.Study.model_validate(usdm_dict)
+    doc_view = assemble_rendered_protocol_document(
+        study=study_obj,
+        creator="test_user",
+        change_reason="Test template rendering",
+        version_index=1,
+    )
+
+    # Run render
+    result = rendering.render_protocol_to_docx(doc_view, "combined")
+    assert result.content is not None
+
+    # Assert template file is byte-for-byte unchanged
+    with open(template_path, "rb") as f:
+        after_bytes = f.read()
+    assert after_bytes == initial_bytes
+
+
+def test_load_template_missing(tmp_path, monkeypatch):
+    """
+    Assert that trying to load with no template present raises TemplateRenderingError.
+
+    Requirements: PRD-SYS-001
+    """
+    from apps.designer import rendering
+
+    # Isolate TEMPLATES_DIR to an empty directory
+    temp_dir = str(tmp_path)
+    monkeypatch.setattr(rendering, "TEMPLATES_DIR", temp_dir)
+
+    with pytest.raises(TemplateRenderingError) as exc_info:
+        rendering.load_docx_template()
+    assert "Template file is missing" in str(exc_info.value)
+
+
+def test_load_template_invalid(tmp_path, monkeypatch):
+    """
+    Assert that an invalid or corrupt template file (e.g. non-zip) raises TemplateRenderingError.
+
+    Requirements: PRD-SYS-001
+    """
+    from apps.designer import rendering
+
+    # Isolate TEMPLATES_DIR to a temporary path
+    temp_dir = str(tmp_path)
+    monkeypatch.setattr(rendering, "TEMPLATES_DIR", temp_dir)
+
+    template_path = os.path.join(temp_dir, "protocol_template.docx")
+    with open(template_path, "w") as f:
+        f.write("Not a zip file. Invalid document structure.")
+
+    with pytest.raises(TemplateRenderingError) as exc_info:
+        rendering.load_docx_template()
+    assert "Template file is invalid or corrupt" in str(exc_info.value)
+
+
+def test_export_protocol_template_unavailable_integration(
+    client, tmp_path, monkeypatch
+):
+    """
+    Assert that when the controlled template is absent, a format=docx export request
+    returns a structured ProblemDetails response instead of a raw 500 error.
+
+    Requirements: PRD-SYS-001
+    """
+    from apps.designer import rendering
+
+    # Isolate TEMPLATES_DIR to an empty directory
+    temp_dir = str(tmp_path)
+    monkeypatch.setattr(rendering, "TEMPLATES_DIR", temp_dir)
+
+    response = client.get(
+        "/api/v1/studies/study_1/export?format=docx",
+        headers=get_custom_auth_headers(),
+    )
+    assert response.status_code == 503
+    data = response.json()
+    assert data["code"] == "TEMPLATE_UNAVAILABLE"
+    assert "Template file is missing" in data["detail"]
+    assert data["title"] == "Template Unavailable"
 
 
 def test_export_protocol_as_pdf_success(client):
