@@ -3,19 +3,16 @@ import hmac
 import json
 import os
 import time
+
+import httpx
 import pytest
 import pytest_asyncio
-import httpx
 from sqlalchemy import select
 
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import (
     Base,
     ClinicalObservation,
-    ClinicalSubject,
-    ClinicalVisit,
-    MigrationRule,
-    SubjectConsent,
 )
 from apps.execution.main import app
 from apps.execution.migration_rules import reconcile_observations
@@ -227,9 +224,7 @@ async def test_protocol_capture_and_reconciliation_lifecycle() -> None:
             assert db_observations[0].protocol_version_tag == "1.0"
 
             # Execute the reconcile_observations function for target version "3.0"
-            reconciled = await reconcile_observations(
-                session, db_observations, "3.0"
-            )
+            reconciled = await reconcile_observations(session, db_observations, "3.0")
 
             # We expect 2 reconciled observations:
             # 1. The renamed "SYSBP" (from "VSSBP")
@@ -245,7 +240,9 @@ async def test_protocol_capture_and_reconciliation_lifecycle() -> None:
             # Provenance steps should show the rename and carry-overs
             prov_sysbp = sysbp_obs.provenance
             assert len(prov_sysbp) >= 2
-            rename_step = next(step for step in prov_sysbp if step["action"] == "rename")
+            rename_step = next(
+                step for step in prov_sysbp if step["action"] == "rename"
+            )
             assert rename_step["source_field"] == "VSSBP"
             assert rename_step["target_field"] == "SYSBP"
             assert rename_step["source_version"] == "1.0"
@@ -293,7 +290,9 @@ async def test_protocol_capture_and_reconciliation_lifecycle() -> None:
         # Let's extract test codes from the rows
         # The fields/variables are mapped in standard sequence
         variables = item_group.get("items", [])
-        vstestcd_idx = next(i for i, v in enumerate(variables) if v["name"] == "VSTESTCD")
+        vstestcd_idx = next(
+            i for i, v in enumerate(variables) if v["name"] == "VSTESTCD"
+        )
 
         test_codes_exported = [r[vstestcd_idx] for r in rows]
         assert "SYSBP" in test_codes_exported

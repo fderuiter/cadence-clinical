@@ -284,8 +284,12 @@ class ClinicalVisit(AuditedModel):
     site_id: Mapped[Optional[str]] = mapped_column(
         String(255), nullable=True, index=True
     )
-    protocol_version_tag: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
-    protocol_version_index: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    protocol_version_tag: Mapped[Optional[str]] = mapped_column(
+        String(50), nullable=True
+    )
+    protocol_version_index: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True
+    )
 
 
 class ClinicalObservation(AuditedModel):
@@ -344,8 +348,12 @@ class ClinicalObservation(AuditedModel):
     lab_indicator: Mapped[str] = mapped_column(String(50), nullable=True)
     lab_out_of_range: Mapped[bool] = mapped_column(Boolean, nullable=True)
     matched_normal_bounds: Mapped[str] = mapped_column(String(255), nullable=True)
-    protocol_version_tag: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
-    protocol_version_index: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    protocol_version_tag: Mapped[Optional[str]] = mapped_column(
+        String(50), nullable=True
+    )
+    protocol_version_index: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True
+    )
 
 
 class ClinicalQuery(AuditedModel):
@@ -1047,7 +1055,9 @@ class MigrationRule(AuditedModel):
     study_id: Mapped[str] = mapped_column(String(255), nullable=False)
     source_version: Mapped[str] = mapped_column(String(50), nullable=False)
     target_version: Mapped[str] = mapped_column(String(50), nullable=False)
-    rule_type: Mapped[str] = mapped_column(String(50), nullable=False)  # "rename", "add", "remove"
+    rule_type: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # "rename", "add", "remove"
     source_field: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     target_field: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     default_value_string: Mapped[Optional[str]] = mapped_column(String, nullable=True)

@@ -885,11 +885,15 @@ async def create_visit(
             study_id=payload.study_id,
         )
         # Stamping capture-time protocol-version identity
-        stmt_consent = select(SubjectConsent).where(
-            SubjectConsent.subject_id == payload.subject_id,
-            SubjectConsent.study_id == payload.study_id,
-            SubjectConsent.icf_signed.is_(True),
-        ).order_by(SubjectConsent.version_index.desc())
+        stmt_consent = (
+            select(SubjectConsent)
+            .where(
+                SubjectConsent.subject_id == payload.subject_id,
+                SubjectConsent.study_id == payload.study_id,
+                SubjectConsent.icf_signed.is_(True),
+            )
+            .order_by(SubjectConsent.version_index.desc())
+        )
         res_consent = await session.execute(stmt_consent)
         active_consent = res_consent.scalars().first()
         if active_consent:
@@ -979,11 +983,15 @@ async def create_observation(
         # Stamping capture-time protocol-version identity
         protocol_version_tag = None
         protocol_version_index = None
-        stmt_consent = select(SubjectConsent).where(
-            SubjectConsent.subject_id == payload.subject_id,
-            SubjectConsent.study_id == study_id,
-            SubjectConsent.icf_signed.is_(True),
-        ).order_by(SubjectConsent.version_index.desc())
+        stmt_consent = (
+            select(SubjectConsent)
+            .where(
+                SubjectConsent.subject_id == payload.subject_id,
+                SubjectConsent.study_id == study_id,
+                SubjectConsent.icf_signed.is_(True),
+            )
+            .order_by(SubjectConsent.version_index.desc())
+        )
         res_consent = await session.execute(stmt_consent)
         active_consent = res_consent.scalars().first()
         if active_consent:
@@ -1915,10 +1923,13 @@ async def generate_cdisc_export_xml(study_id: str) -> str:
 
         # Unpack observations and visit names
         raw_obs = [row[0] for row in rows]
-        visit_names_by_obs_id = {row[0].id: row[1] for row in rows if row[0].id is not None}
+        visit_names_by_obs_id = {
+            row[0].id: row[1] for row in rows if row[0].id is not None
+        }
 
         # Dynamic non-destructive protocol reconciliation
         from apps.execution.migration_rules import reconcile_observations
+
         stmt_target_version = (
             select(SubjectConsent.version_tag)
             .where(SubjectConsent.study_id == study_id)
@@ -5269,6 +5280,7 @@ async def run_sdtm_extraction(
 
     # Dynamic non-destructive protocol reconciliation
     from apps.execution.migration_rules import reconcile_observations
+
     stmt_target_version = (
         select(SubjectConsent.version_tag)
         .where(SubjectConsent.study_id == study_id)
@@ -5334,6 +5346,7 @@ async def run_adam_derivation(session, study_id: str, dataset: str) -> List[dict
 
     # Dynamic non-destructive protocol reconciliation
     from apps.execution.migration_rules import reconcile_observations
+
     stmt_target_version = (
         select(SubjectConsent.version_tag)
         .where(SubjectConsent.study_id == study_id)

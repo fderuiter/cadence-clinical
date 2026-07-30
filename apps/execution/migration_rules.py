@@ -1,7 +1,10 @@
 import uuid
 from typing import Any, Dict, List, Optional
+
 from sqlalchemy import select
+
 from apps.execution.database.models import ClinicalObservation, MigrationRule
+
 
 class ReconciledObservation(ClinicalObservation):
     """Subclass of ClinicalObservation supporting dict-like key-value access and provenance tracking."""
@@ -41,13 +44,33 @@ class ReconciledObservation(ClinicalObservation):
 
     def keys(self):
         return [
-            "id", "subject_id", "study_id", "site_id", "visit_id", "domain",
-            "observation_date", "test_code", "test_name", "value", "value_string",
-            "unit", "normalized_value", "normalized_unit", "is_outlier",
-            "is_sdv_verified", "sdv_verified_by", "sdv_verified_at", "page_id",
-            "lab_source", "lab_site_id", "lab_indicator", "lab_out_of_range",
-            "matched_normal_bounds", "protocol_version_tag", "protocol_version_index",
-            "provenance"
+            "id",
+            "subject_id",
+            "study_id",
+            "site_id",
+            "visit_id",
+            "domain",
+            "observation_date",
+            "test_code",
+            "test_name",
+            "value",
+            "value_string",
+            "unit",
+            "normalized_value",
+            "normalized_unit",
+            "is_outlier",
+            "is_sdv_verified",
+            "sdv_verified_by",
+            "sdv_verified_at",
+            "page_id",
+            "lab_source",
+            "lab_site_id",
+            "lab_indicator",
+            "lab_out_of_range",
+            "matched_normal_bounds",
+            "protocol_version_tag",
+            "protocol_version_index",
+            "provenance",
         ]
 
     def values(self):
@@ -57,7 +80,9 @@ class ReconciledObservation(ClinicalObservation):
         return [(k, self.get(k)) for k in self.keys()]
 
 
-def find_migration_path(rules_by_src: Dict[str, List[str]], current: str, target: str, visited: set) -> Optional[List[str]]:
+def find_migration_path(
+    rules_by_src: Dict[str, List[str]], current: str, target: str, visited: set
+) -> Optional[List[str]]:
     if current == target:
         return [current]
     if current in visited:
@@ -73,7 +98,9 @@ def find_migration_path(rules_by_src: Dict[str, List[str]], current: str, target
     return None
 
 
-async def reconcile_observations(session, observations: List[ClinicalObservation], target_version: str) -> List[ReconciledObservation]:
+async def reconcile_observations(
+    session, observations: List[ClinicalObservation], target_version: str
+) -> List[ReconciledObservation]:
     """Reconciles observations dynamically and non-destructively to a target protocol version."""
     if not observations:
         return []
@@ -83,8 +110,7 @@ async def reconcile_observations(session, observations: List[ClinicalObservation
 
     # Fetch all migration rules for this study
     stmt = select(MigrationRule).where(
-        MigrationRule.study_id == study_id,
-        MigrationRule.is_deleted.is_(False)
+        MigrationRule.study_id == study_id, MigrationRule.is_deleted.is_(False)
     )
     res = await session.execute(stmt)
     rules = list(res.scalars().all())
@@ -162,8 +188,16 @@ async def reconcile_observations(session, observations: List[ClinicalObservation
                 # Partition reconciled into:
                 # 1. Those undergoing this hop
                 # 2. Others (passed through)
-                to_migrate = [o for o in reconciled if (o.protocol_version_tag or "1.0") == src_ver]
-                others = [o for o in reconciled if (o.protocol_version_tag or "1.0") != src_ver]
+                to_migrate = [
+                    o
+                    for o in reconciled
+                    if (o.protocol_version_tag or "1.0") == src_ver
+                ]
+                others = [
+                    o
+                    for o in reconciled
+                    if (o.protocol_version_tag or "1.0") != src_ver
+                ]
 
                 migrated_step: List[ReconciledObservation] = []
 
@@ -181,7 +215,10 @@ async def reconcile_observations(session, observations: List[ClinicalObservation
                         # Find any matching rename or remove rule
                         matched_rule = None
                         for r in step_rules:
-                            if r.rule_type in ("rename", "remove") and r.source_field == o.test_code:
+                            if (
+                                r.rule_type in ("rename", "remove")
+                                and r.source_field == o.test_code
+                            ):
                                 matched_rule = r
                                 break
 
@@ -189,13 +226,15 @@ async def reconcile_observations(session, observations: List[ClinicalObservation
                             if matched_rule.rule_type == "rename":
                                 o.test_code = matched_rule.target_field
                                 o.protocol_version_tag = tgt_ver
-                                o.provenance.append({
-                                    "action": "rename",
-                                    "source_version": src_ver,
-                                    "target_version": tgt_ver,
-                                    "source_field": matched_rule.source_field,
-                                    "target_field": matched_rule.target_field
-                                })
+                                o.provenance.append(
+                                    {
+                                        "action": "rename",
+                                        "source_version": src_ver,
+                                        "target_version": tgt_ver,
+                                        "source_field": matched_rule.source_field,
+                                        "target_field": matched_rule.target_field,
+                                    }
+                                )
                                 migrated_step.append(o)
                             elif matched_rule.rule_type == "remove":
                                 # Omit/filter out from migrated list
@@ -203,19 +242,27 @@ async def reconcile_observations(session, observations: List[ClinicalObservation
                         else:
                             # Carry over
                             o.protocol_version_tag = tgt_ver
-                            o.provenance.append({
-                                "action": "carry_over",
-                                "source_version": src_ver,
-                                "target_version": tgt_ver,
-                                "field": o.test_code
-                            })
+                            o.provenance.append(
+                                {
+                                    "action": "carry_over",
+                                    "source_version": src_ver,
+                                    "target_version": tgt_ver,
+                                    "field": o.test_code,
+                                }
+                            )
                             migrated_step.append(o)
 
                     # Now process "add" rules for this group
                     for r in step_rules:
                         if r.rule_type == "add":
                             # Check if target_field already exists in the migrated group or original group
-                            exists = any(o.test_code == r.target_field for o in migrated_step if o.subject_id == sub_id and o.visit_id == vis_id and o.domain == dom)
+                            exists = any(
+                                o.test_code == r.target_field
+                                for o in migrated_step
+                                if o.subject_id == sub_id
+                                and o.visit_id == vis_id
+                                and o.domain == dom
+                            )
                             if not exists:
                                 # Create synthetic observation
                                 new_obs = ReconciledObservation(
@@ -230,14 +277,16 @@ async def reconcile_observations(session, observations: List[ClinicalObservation
                                     value=r.default_value_float,
                                     value_string=r.default_value_string,
                                     protocol_version_tag=tgt_ver,
-                                    provenance=[{
-                                        "action": "add",
-                                        "source_version": src_ver,
-                                        "target_version": tgt_ver,
-                                        "target_field": r.target_field,
-                                        "default_value_string": r.default_value_string,
-                                        "default_value_float": r.default_value_float
-                                    }]
+                                    provenance=[
+                                        {
+                                            "action": "add",
+                                            "source_version": src_ver,
+                                            "target_version": tgt_ver,
+                                            "target_field": r.target_field,
+                                            "default_value_string": r.default_value_string,
+                                            "default_value_float": r.default_value_float,
+                                        }
+                                    ],
                                 )
                                 migrated_step.append(new_obs)
 
