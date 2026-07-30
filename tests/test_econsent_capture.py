@@ -21,7 +21,9 @@ from apps.econsent.models import (
 )
 from packages.security.signing import verify_canonical_signature
 
-TEST_GATEWAY_SECRET = "test-econsent-gateway-secret-key-12345"
+TEST_GATEWAY_SECRET = (
+    "test-econsent-gateway-secret-key-12345"  # pragma: allowlist secret
+)
 
 
 def get_sig_token(

@@ -350,7 +350,14 @@ class FHIRAdapter:
                     break
 
         # Also fallback detection via loinc codes
-        vital_loincs = ["8480-6", "8462-4", "8867-4", "8310-5", "29463-7", "8302-2"]
+        vital_loincs = [
+            "8480-6",
+            "8462-4",
+            "8867-4",
+            "8310-5",
+            "29463-7",  # deid: ignore
+            "8302-2",
+        ]
         if loinc_code in vital_loincs or "vital" in display_name.lower():
             is_vital = True
 
@@ -380,7 +387,9 @@ class FHIRAdapter:
             elif "8310-5" in loinc_code or "temp" in display_name.lower():
                 record["cdash_testcd"] = "TEMP"
                 record["cdash_test"] = "Temperature"
-            elif "29463-7" in loinc_code or "weight" in display_name.lower():
+            elif (
+                "29463-7" in loinc_code or "weight" in display_name.lower()
+            ):  # deid: ignore
                 record["cdash_testcd"] = "WEIGHT"
                 record["cdash_test"] = "Weight"
             elif "8302-2" in loinc_code or "height" in display_name.lower():

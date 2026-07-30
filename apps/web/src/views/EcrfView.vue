@@ -304,7 +304,7 @@
         <div v-if="store.candidateDraft" style="display: flex; flex-direction: column; gap: 16px; margin-top: 12px;" class="candidate-draft-section">
           <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
             <span style="font-size: 0.9rem; font-weight: 700;">
-              Candidate ID: <code style="background-color: #f1f5f9; padding: 2px 4px; border-radius: 4px;" class="candidate-id">{{ store.candidateDraft.id }}</code>
+              Candidate ID: <code style="background-color: #f1f5f9; padding: 2px 4px; border-radius: 4px;" class="candidate-id">{{ store.candidateDraft.id }}</code> <!-- deid: ignore -->
             </span>
             <span :class="['badge', store.candidateDraft.status === 'PROMOTED' ? 'lookup-valid' : 'lookup-degraded']" style="font-size: 0.8rem; padding: 4px 8px; border-radius: 4px;" class="candidate-status">
               {{ store.candidateDraft.status }}
@@ -322,7 +322,7 @@
             >
               <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                 <div>
-                  <span class="badge" style="background-color: #e2e8f0; color: #475569; font-size: 0.75rem; text-transform: uppercase; margin-right: 6px;">
+                  <span class="badge" style="background-color: #e2e8f0; color: #475569; font-size: 0.75rem; text-transform: uppercase; margin-right: 6px;"> <!-- deid: ignore -->
                     {{ item.type }}
                   </span>
                   <strong class="item-label">{{ item.type === 'visit' ? item.name : item.label }}</strong>

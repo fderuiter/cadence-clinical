@@ -134,7 +134,7 @@
                   style="
                     padding: 6px;
                     cursor: pointer;
-                    border-bottom: 1px solid #f1f5f9;
+                    border-bottom: 1px solid #f1f5f9; /* deid: ignore */
                   "
                   @click="selectArmConcept(sug)"
                 >
@@ -292,7 +292,7 @@
                   style="
                     padding: 6px;
                     cursor: pointer;
-                    border-bottom: 1px solid #f1f5f9;
+                    border-bottom: 1px solid #f1f5f9; /* deid: ignore */
                   "
                   @click="selectEncConcept(sug)"
                 >

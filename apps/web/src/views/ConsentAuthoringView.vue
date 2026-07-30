@@ -300,7 +300,7 @@
           <!-- Composed Live Preview -->
           <fieldset style="border: 1px solid var(--border); border-radius: 8px; padding: 16px;">
             <legend style="padding: 0 8px; font-weight: bold; color: var(--accent);">Live Preview (Compose Dry-run)</legend>
-            <div style="background-color: #f1f5f9; padding: 12px; border-radius: 8px; border: 1px solid var(--border); min-height: 100px;">
+            <div style="background-color: #f1f5f9; padding: 12px; border-radius: 8px; border: 1px solid var(--border); min-height: 100px;"> <!-- deid: ignore -->
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                 <strong style="color: var(--primary); font-size: 0.85rem;">Hydrated Clauses Preview:</strong>
                 <button

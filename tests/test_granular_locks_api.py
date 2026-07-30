@@ -438,7 +438,9 @@ async def test_forbidden_roles_matrix() -> None:
 
         for role in unauthorized_roles:
             # We must verify at least one endpoint per granularity plus freeze/unfreeze alias
-            headers = get_auth_headers(roles=role, change_reason="Illegal lock attempt")
+            headers = get_auth_headers(
+                roles=role, change_reason="Illegal lock attempt"
+            )  # pragma: allowlist secret
 
             # Site level
             res = await client.post(
@@ -498,7 +500,7 @@ async def test_absent_and_malformed_roles() -> None:
         # Case A: Absent X-User-Roles
         headers_absent = get_auth_headers(
             roles="", omit_roles=True, change_reason="Absent roles"
-        )
+        )  # pragma: allowlist secret
         res = await client.post(
             "/api/v1/execution/locks/site/SITE-MALFORMED/lock", headers=headers_absent
         )
@@ -506,7 +508,9 @@ async def test_absent_and_malformed_roles() -> None:
         assert "SITE-MALFORMED" not in TrialLockManager._locked_sites
 
         # Case B: Empty role values
-        headers_empty = get_auth_headers(roles="", change_reason="Empty roles")
+        headers_empty = get_auth_headers(
+            roles="", change_reason="Empty roles"
+        )  # pragma: allowlist secret
         res = await client.post(
             "/api/v1/execution/locks/site/SITE-MALFORMED/lock", headers=headers_empty
         )
@@ -514,7 +518,9 @@ async def test_absent_and_malformed_roles() -> None:
         assert "SITE-MALFORMED" not in TrialLockManager._locked_sites
 
         # Case C: Whitespace-only role values
-        headers_ws = get_auth_headers(roles="   ", change_reason="WS roles")
+        headers_ws = get_auth_headers(
+            roles="   ", change_reason="WS roles"
+        )  # pragma: allowlist secret
         res = await client.post(
             "/api/v1/execution/locks/site/SITE-MALFORMED/lock", headers=headers_ws
         )
