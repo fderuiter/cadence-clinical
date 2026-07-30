@@ -346,7 +346,9 @@ async def test_schema_evolution_migration_upgrade():
 
         # Assert backfilled default values on the seeded row
         res = await conn.execute(
-            text("SELECT is_sdv_verified, sdv_verified_by, sdv_verified_at, page_id FROM clinical_observations WHERE id = 'legacy-obs-id-1';")
+            text(
+                "SELECT is_sdv_verified, sdv_verified_by, sdv_verified_at, page_id FROM clinical_observations WHERE id = 'legacy-obs-id-1';"
+            )
         )
         row = res.fetchone()
         assert row is not None
@@ -375,11 +377,13 @@ async def test_schema_evolution_migration_upgrade():
             {
                 "is_verified": True,
                 "verified_by": "CRA-001",
-                "verified_at": "2026-08-14 13:00:00"
-            }
+                "verified_at": "2026-08-14 13:00:00",
+            },
         )
         res = await conn.execute(
-            text("SELECT is_sdv_verified, sdv_verified_by, sdv_verified_at FROM clinical_observations WHERE id = 'legacy-obs-id-1';")
+            text(
+                "SELECT is_sdv_verified, sdv_verified_by, sdv_verified_at FROM clinical_observations WHERE id = 'legacy-obs-id-1';"
+            )
         )
         row = res.fetchone()
         assert row is not None
