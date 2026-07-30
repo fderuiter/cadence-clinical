@@ -837,131 +837,15 @@
     </div>
 
     <!-- Reason for Change Modal Dialog -->
-    <div
-      v-if="showReasonModal"
-      class="modal-overlay"
-      style="
-        display: flex;
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.5);
-        justify-content: center;
-        align-items: center;
-        z-index: 1000;
-      "
-    >
-      <div
-        class="modal"
-        style="
-          background: white;
-          border-radius: 12px;
-          max-width: 500px;
-          width: 100%;
-          padding: 24px;
-          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
-        "
-      >
-        <div
-          class="modal-header"
-          style="
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: var(--primary);
-            margin-bottom: 12px;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 8px;
-          "
-        >
-          Reason for Change Required
-        </div>
-        <div
-          class="modal-body"
-          style="
-            font-size: 0.9rem;
-            color: var(--neutral-dark);
-            line-height: 1.5;
-            margin-bottom: 16px;
-          "
-        >
-          <p style="margin-bottom: 12px">
-            To comply with <strong>21 CFR Part 11 / EU Annex 11</strong>, you
-            must document a reason for changing this clinical data check rule.
-          </p>
-          <div class="form-group" style="margin-bottom: 12px">
-            <label style="display: block; margin-bottom: 4px; font-weight: 600"
-              >Select Standard Reason</label
-            >
-            <select
-              v-model="changeReason"
-              style="
-                width: 100%;
-                padding: 8px;
-                border: 1px solid var(--border);
-                border-radius: 6px;
-              "
-            >
-              <option value="Initial Entry">Initial Data Entry</option>
-              <option value="Typographical Error">
-                Correction of typographical error
-              </option>
-              <option value="Re-measurement">Re-measurement of vitals</option>
-              <option value="Transcription Error">
-                Correction of transcription error
-              </option>
-              <option value="Protocol Amendment">
-                Protocol Amendment / Update
-              </option>
-              <option value="Other">Other (specify below)</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label style="display: block; margin-bottom: 4px; font-weight: 600"
-              >Custom Explanation (Optional)</label
-            >
-            <textarea
-              v-model="customChangeReason"
-              placeholder="Explain the clinical reason for this modification..."
-              style="
-                width: 100%;
-                height: 80px;
-                padding: 8px;
-                border: 1px solid var(--border);
-                border-radius: 6px;
-                resize: none;
-              "
-            />
-          </div>
-        </div>
-        <div
-          class="modal-footer"
-          style="
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-            border-top: 1px solid var(--border);
-            padding-top: 12px;
-          "
-        >
-          <button
-            class="btn"
-            style="padding: 6px 16px; cursor: pointer"
-            @click="closeReasonModal"
-          >
-            Cancel Change
-          </button>
-          <button
-            class="btn btn-primary"
-            style="padding: 6px 16px; cursor: pointer"
-            @click="confirmChangeReason"
-          >
-            Sign & Save
-          </button>
-        </div>
-      </div>
-    </div>
+    <ReasonModal
+      :show="showReasonModal"
+      title="Reason for Change Required"
+      description="To comply with 21 CFR Part 11 / EU Annex 11, you must document a reason for changing this clinical data check rule."
+      :options="rulesReasonOptions"
+      default-option="Initial Entry"
+      @confirm="confirmChangeReason"
+      @cancel="closeReasonModal"
+    />
   </div>
 </template>
 
@@ -970,6 +854,16 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { apiClient } from "../api/apiClient";
+import ReasonModal from "../components/ReasonModal.vue";
+
+const rulesReasonOptions = [
+  { value: "Initial Entry", text: "Initial Data Entry" },
+  { value: "Typographical Error", text: "Correction of typographical error" },
+  { value: "Re-measurement", text: "Re-measurement of vitals" },
+  { value: "Transcription Error", text: "Correction of transcription error" },
+  { value: "Protocol Amendment", text: "Protocol Amendment / Update" },
+  { value: "Other", text: "Other (specify below)" },
+];
 
 const store = useClinicalStore();
 const authStore = useAuthStore();
@@ -1027,8 +921,6 @@ const previewCircularCycles = ref([]);
 
 // Reason Modal state
 const showReasonModal = ref(false);
-const changeReason = ref("Initial Entry");
-const customChangeReason = ref("");
 const pendingAction = ref(null); // { type: 'save' | 'delete', ruleId?: string, payload?: any }
 
 // Helper to construct signed headers
@@ -1339,8 +1231,6 @@ function promptSaveRule() {
     type: "save",
     payload,
   };
-  changeReason.value = "Initial Entry";
-  customChangeReason.value = "";
   showReasonModal.value = true;
 }
 
@@ -1349,8 +1239,6 @@ function promptDeleteRule(ruleId) {
     type: "delete",
     ruleId,
   };
-  changeReason.value = "Protocol Amendment";
-  customChangeReason.value = "";
   showReasonModal.value = true;
 }
 
@@ -1359,19 +1247,7 @@ function closeReasonModal() {
   pendingAction.value = null;
 }
 
-async function confirmChangeReason() {
-  const reasonText =
-    changeReason.value === "Other" && customChangeReason.value
-      ? customChangeReason.value
-      : changeReason.value;
-
-  if (!reasonText || !reasonText.trim()) {
-    alert(
-      "Compliance modification justification reason text is strictly required!"
-    );
-    return;
-  }
-
+async function confirmChangeReason(reasonText) {
   const action = pendingAction.value;
   if (!action) return;
 

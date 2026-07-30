@@ -268,58 +268,15 @@
     </div>
 
     <!-- Reason for Change Modal Dialog -->
-    <div
-      v-if="showReasonModal"
-      id="reason-modal"
-      class="modal-overlay"
-      style="display: flex"
-    >
-      <div class="modal">
-        <div class="modal-header">Reason for Change Required</div>
-        <div class="modal-body">
-          <p>
-            To comply with <strong>21 CFR Part 11 / EU Annex 11</strong>, you
-            must document a reason for changing this clinical data field.
-          </p>
-          <div class="form-group" style="margin-bottom: 12px">
-            <label for="change-reason-select">Select Standard Reason</label>
-            <select id="change-reason-select" v-model="selectedReason">
-              <option value="Initial Entry">Initial Data Entry</option>
-              <option value="Typographical Error">
-                Correction of typographical error
-              </option>
-              <option value="Re-measurement">Re-measurement of vitals</option>
-              <option value="Transcription Error">
-                Correction of transcription error
-              </option>
-              <option value="Other">Other (specify below)</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="change-reason-text"
-              >Custom Explanation (Optional)</label
-            >
-            <textarea
-              id="change-reason-text"
-              v-model="customReasonExplanation"
-              placeholder="Explain the clinical reason for this modification..."
-            />
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button id="btn-cancel-change" class="btn" @click="cancelChange">
-            Cancel Change
-          </button>
-          <button
-            id="btn-save-change"
-            class="btn btn-primary"
-            @click="saveChange"
-          >
-            Sign & Save
-          </button>
-        </div>
-      </div>
-    </div>
+    <ReasonModal
+      :show="showReasonModal"
+      title="Reason for Change Required"
+      description="To comply with 21 CFR Part 11 / EU Annex 11, you must document a reason for changing this clinical data field."
+      :options="ecrfReasonOptions"
+      default-option="Initial Entry"
+      @confirm="saveChange"
+      @cancel="cancelChange"
+    />
 
     <!-- Re-authentication Modal Dialog -->
     <div
@@ -416,6 +373,15 @@ import { validateField } from "../lib/legacy_helpers.js";
 import { debounce } from "ui";
 import { terminologyClient } from "../api/terminologyClient";
 import ClinicalFormField from "../components/clinical/ClinicalFormField.vue";
+import ReasonModal from "../components/ReasonModal.vue";
+
+const ecrfReasonOptions = [
+  { value: "Initial Entry", text: "Initial Data Entry" },
+  { value: "Typographical Error", text: "Correction of typographical error" },
+  { value: "Re-measurement", text: "Re-measurement of vitals" },
+  { value: "Transcription Error", text: "Correction of transcription error" },
+  { value: "Other", text: "Other (specify below)" },
+];
 
 const store = useClinicalStore();
 const authStore = useAuthStore();
@@ -659,8 +625,6 @@ function handleLookupInput(field, value) {
 
 // Reason Modal States
 const showReasonModal = ref(false);
-const selectedReason = ref("Initial Entry");
-const customReasonExplanation = ref("");
 const pendingValueChange = ref(null);
 
 // Re-authentication Modal States
@@ -711,8 +675,6 @@ function handleFieldChange(field, newValue, targetEl) {
       newValue,
       targetEl,
     };
-    selectedReason.value = "Initial Entry";
-    customReasonExplanation.value = "";
     showReasonModal.value = true;
   } else {
     commitChange(field, oldValue, newValue, "Initial Entry");
@@ -732,13 +694,8 @@ function cancelChange() {
   pendingValueChange.value = null;
 }
 
-function saveChange() {
+function saveChange(finalReason) {
   if (!pendingValueChange.value) return;
-
-  const sel = selectedReason.value;
-  const cust = customReasonExplanation.value.trim();
-  const finalReason =
-    sel === "Other" && cust ? cust : `${sel}${cust ? ": " + cust : ""}`;
 
   commitChange(
     pendingValueChange.value.field,

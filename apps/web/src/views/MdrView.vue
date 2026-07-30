@@ -518,46 +518,15 @@
     </div>
 
     <!-- Part 11 Change Reason Modal -->
-    <div v-if="showReasonModal" class="modal-overlay" style="display: flex">
-      <div class="modal">
-        <div class="modal-header">Reason for Change Required</div>
-        <div class="modal-body">
-          <p>
-            To comply with <strong>21 CFR Part 11 / EU Annex 11</strong>, you
-            must document a reason for changing this clinical study design.
-          </p>
-          <div class="form-group" style="margin-bottom: 12px">
-            <label for="change-reason-select">Select Standard Reason</label>
-            <select id="change-reason-select" v-model="changeReason">
-              <option value="Initial Entry">Initial Study Configuration</option>
-              <option value="Protocol Amendment">
-                Protocol Amendment / Fork
-              </option>
-              <option value="Correction of Error">
-                Correction of study layout error
-              </option>
-              <option value="Other">Other (specify below)</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="change-reason-text"
-              >Custom Explanation (Optional)</label
-            >
-            <textarea
-              id="change-reason-text"
-              v-model="customChangeReason"
-              placeholder="Explain the clinical reason for this modification..."
-            />
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn" @click="cancelMutation">Cancel Change</button>
-          <button class="btn btn-primary" @click="confirmMutation">
-            Sign & Save
-          </button>
-        </div>
-      </div>
-    </div>
+    <ReasonModal
+      :show="showReasonModal"
+      title="Reason for Change Required"
+      description="To comply with 21 CFR Part 11 / EU Annex 11, you must document a reason for changing this clinical study design."
+      :options="mdrReasonOptions"
+      default-option="Initial Entry"
+      @confirm="confirmMutation"
+      @cancel="cancelMutation"
+    />
   </div>
 </template>
 
@@ -568,6 +537,14 @@ import { createClinicalVisitMatrix } from "../lib/legacy_helpers.js";
 import { terminologyClient } from "../api/terminologyClient.js";
 import { useAuthStore } from "../stores/auth.js";
 import { debounce } from "ui";
+import ReasonModal from "../components/ReasonModal.vue";
+
+const mdrReasonOptions = [
+  { value: "Initial Entry", text: "Initial Study Configuration" },
+  { value: "Protocol Amendment", text: "Protocol Amendment / Fork" },
+  { value: "Correction of Error", text: "Correction of study layout error" },
+  { value: "Other", text: "Other (specify below)" },
+];
 
 const store = useClinicalStore();
 const authStore = useAuthStore();
@@ -647,8 +624,6 @@ const linkPayload = reactive({ procedure_id: "", visit_id: "", timing: "" });
 
 // Part 11 Reason Modal States
 const showReasonModal = ref(false);
-const changeReason = ref("Initial Entry");
-const customChangeReason = ref("");
 const pendingMutation = ref(null);
 
 watch(
@@ -847,8 +822,6 @@ function updateSoa() {
 // Interactive Creator Handlers
 function queueMutation(mutation) {
   pendingMutation.value = mutation;
-  changeReason.value = "Initial Entry";
-  customChangeReason.value = "";
   showReasonModal.value = true;
 }
 
@@ -857,13 +830,8 @@ function cancelMutation() {
   pendingMutation.value = null;
 }
 
-async function confirmMutation() {
+async function confirmMutation(finalReason) {
   if (!pendingMutation.value) return;
-
-  const sel = changeReason.value;
-  const cust = customChangeReason.value.trim();
-  const finalReason =
-    sel === "Other" && cust ? cust : `${sel}${cust ? ": " + cust : ""}`;
 
   showReasonModal.value = false;
   const mutation = pendingMutation.value;
