@@ -348,8 +348,9 @@ async def deploy_database_triggers(conn, dialect_name: str) -> None:
 
 async def upgrade_existing_tables(conn) -> None:
     """
-    Upgrades pre-existing tables with new columns if they do not exist.
-    This ensures schema evolution is deployable without relying on create_all to alter tables.
+    Upgrade existing clinical tables by adding missing schema columns and backfilling subject enrollment indexes.
+    
+    The backfill orders subjects within each study by earliest audit timestamp and then by subject identifier. Failures during the legacy backfill are reported as warnings.
     """
     from sqlalchemy import inspect
 
@@ -432,6 +433,12 @@ async def upgrade_existing_tables(conn) -> None:
         print("Adding missing column enrollment_index to clinical_subjects table...")
         await conn.execute(
             text("ALTER TABLE clinical_subjects ADD COLUMN enrollment_index INTEGER;")
+        )
+
+    if subj_cols and "unblinded_signature" not in subj_cols:
+        print("Adding missing column unblinded_signature to clinical_subjects table...")
+        await conn.execute(
+            text("ALTER TABLE clinical_subjects ADD COLUMN unblinded_signature TEXT;")
         )
 
     # Deterministic legacy-subject backfill

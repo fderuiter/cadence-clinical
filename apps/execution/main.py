@@ -102,13 +102,17 @@ from apps.execution.trial_lock import TrialLockManager
 from apps.execution.tsdv import evaluate_tsdv_requirement
 from apps.execution.ucum import convert_unit, get_normalized_representation
 from packages.security import (
+    ROLE_AUTHORIZED_ER_PHYSICIAN,
     ROLE_CRA,
     ROLE_CRC,
     ROLE_DATA_MANAGER,
     ROLE_INVESTIGATOR,
+    ROLE_LEAD_INVESTIGATOR,
+    ROLE_PRINCIPAL_INVESTIGATOR,
     ROLE_SITE_INVESTIGATOR,
     ROLE_SPONSOR_ADMIN,
     Principal,
+    current_ip_address,
     get_normalized_roles,
     get_principal,
     require_roles,
@@ -176,6 +180,28 @@ class ProblemDetails(BaseModel):
     invalid_params: Optional[List[InvalidParam]] = None
 
 
+class UnblindingReasonCode(str, Enum):
+    SAE_LIFE_THREATENING_EVENT = "SAE-Life-Threatening-Event"
+    ACCIDENTAL_OVERDOSE = "Accidental-Overdose"
+    REQUIRED_BY_REGULATORY_AUTHORITY = "Required-by-Regulatory-Authority"
+
+
+class CustodianShare(BaseModel):
+    custodian: str
+    version: int
+    x: int
+    y: int
+
+
+MIN_JUSTIFICATION_LENGTH = 50
+
+
+class UnblindRequest(BaseModel):
+    reason_code: UnblindingReasonCode
+    justification: str = Field(..., min_length=MIN_JUSTIFICATION_LENGTH)
+    shares: List[CustodianShare]
+
+
 app = FastAPI(
     title="Cadence Clinical - EDC Execution Engine", version="0.1.0", lifespan=lifespan
 )
@@ -183,6 +209,12 @@ app = FastAPI(
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """
+    Convert request validation errors into a standardized HTTP 400 problem-details response.
+    
+    Returns:
+    	JSONResponse: A 400 response containing details for each invalid request parameter.
+    """
     validation_errors_list = []
     for err in exc.errors():
         loc_path = err.get("loc", [])
@@ -205,6 +237,24 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         invalid_params=validation_errors_list,
     )
     return JSONResponse(status_code=400, content=problem.model_dump(exclude_none=True))
+
+
+@app.exception_handler(PermissionError)
+async def permission_error_handler(request: Request, exc: PermissionError):
+    """
+    Return a forbidden response for permission errors.
+    
+    Parameters:
+    	request (Request): The incoming request.
+    	exc (PermissionError): The permission error to include in the response.
+    
+    Returns:
+    	JSONResponse: A response with status code 403 and the error detail.
+    """
+    return JSONResponse(
+        status_code=403,
+        content={"detail": str(exc)},
+    )
 
 
 app.add_middleware(ContextResetMiddleware)
@@ -830,13 +880,40 @@ async def unblind_subject(
     subject_id: str,
     request: Request,
     background_tasks: BackgroundTasks,
+    payload: UnblindRequest,
     principal: Principal = Depends(get_principal),
-    roles: list[str] = Depends(require_roles(ROLE_SITE_INVESTIGATOR, "investigator")),
+    roles: list[str] = Depends(
+        require_roles(
+            ROLE_PRINCIPAL_INVESTIGATOR,
+            ROLE_AUTHORIZED_ER_PHYSICIAN,
+            ROLE_LEAD_INVESTIGATOR,
+            detail="ROLE_INSUFFICIENT",
+        )
+    ),
 ) -> SubjectUnblindResponse:
-    """Execute emergency unblinding for a subject."""
+    """
+    Execute emergency unblinding for a randomized subject.
+    
+    Parameters:
+        subject_id (str): Identifier of the subject to unblind.
+        payload (UnblindRequest): Unblinding reason, justification, and custodian shares.
+    
+    Returns:
+        SubjectUnblindResponse: The subject's updated unblinding status and allocation details, filtered according to the caller's access.
+    """
     # Ensure change justification headers are present and valid
     verify_change_justification(request)
-    change_reason = request.headers.get("X-Change-Reason")
+
+    # Validate min-length justification explicitly
+    if len(payload.justification) < MIN_JUSTIFICATION_LENGTH:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Justification must be at least {MIN_JUSTIFICATION_LENGTH} characters.",
+        )
+
+    composed_reason = f"{payload.reason_code.value}: {payload.justification}"
+    request.state.change_reason = composed_reason
+    current_change_reason.set(composed_reason)
 
     async with db_manager.get_session_maker()() as session:
         # Fetch the subject
@@ -854,13 +931,91 @@ async def unblind_subject(
             subject_id=subject.subject_id,
         )
 
-        # Perform the transition inside a try-except to catch transition errors
-        try:
-            subject.unblind(unblinded_by=principal.user_id, reason=change_reason)
-        except InvalidStateTransitionError as e:
-            raise HTTPException(status_code=400, detail=str(e))
+        # Try to find a SubjectRandomization record for the subject
+        stmt_rand = select(SubjectRandomization).where(
+            SubjectRandomization.subject_id == subject_id
+        )
+        result_rand = await session.execute(stmt_rand)
+        rand = result_rand.scalars().first()
 
-        await session.commit()
+        if not rand:
+            raise HTTPException(
+                status_code=400,
+                detail="Subject has not been randomized; treatment allocation cannot be unblinded.",
+            )
+
+        # Call key_mgr.decrypt_with_shares
+        from apps.execution.cryptography import AllocationKeyManager
+
+        key_mgr = AllocationKeyManager()
+        await key_mgr.load_from_db(session)
+
+        shares_dict_list = [s.model_dump() for s in payload.shares]
+        try:
+            decrypted = key_mgr.decrypt_with_shares(
+                rand.encrypted_allocation, shares_dict_list
+            )
+            unmasked_treatment_arm = (
+                decrypted.get("allocation")
+                or decrypted.get("treatment_arm")
+                or "Active Treatment Arm"
+            )
+        except Exception as e:
+            # On any reconstruction/decryption failure, return a defined error response
+            raise HTTPException(
+                status_code=400,
+                detail=f"Reconstruction/decryption failed: {str(e)}",
+            )
+
+        # Build canonical decision payload and sign it
+        timestamp_str = datetime.utcnow().isoformat() + "Z"
+        allocation_reference = rand.kit_reference or "unknown"
+
+        decision_payload = {
+            "subject": subject.subject_id,
+            "actor_user_id": principal.user_id,
+            "roles": principal.roles,
+            "reason_code": payload.reason_code.value,
+            "justification": payload.justification,
+            "timestamp": timestamp_str,
+            "allocation_reference": allocation_reference,
+        }
+
+        secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()
+        signature = generate_canonical_signature(decision_payload, secret)
+
+        async with session.begin():
+            # Perform the transition inside a try-except to catch transition errors
+            try:
+                subject.unblind(unblinded_by=principal.user_id, reason=composed_reason)
+                subject.unblinded_signature = signature
+            except InvalidStateTransitionError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+            # Insert an explicit AuditLog row for EMERGENCY_UNBLINDING
+            audit_log = AuditLog(
+                id=str(uuid.uuid4()),
+                table_name="clinical_subjects",
+                record_id=subject.id,
+                action="EMERGENCY_UNBLINDING",
+                user_id=principal.user_id or "system",
+                ip_address=current_ip_address.get() or "127.0.0.1",
+                timestamp=datetime.utcnow(),
+                old_values={"status": "RANDOMIZED", "is_unblinded": False},
+                new_values={
+                    "status": "UNBLINDED",
+                    "is_unblinded": True,
+                    "unblinded_by": principal.user_id,
+                    "unblinded_at": datetime.utcnow().isoformat(),
+                    "unblinded_reason": composed_reason,
+                    "unblinded_signature": signature,
+                },
+                version_index=(subject.version or 1) + 1,
+                change_reason=composed_reason,
+            )
+            session.add(audit_log)
+
+        # Refresh
         await session.refresh(subject)
 
         # Compose message_content from non-sensitive fields only
@@ -869,12 +1024,19 @@ async def unblind_subject(
             f"Status: {subject.status}",
             f"Unblinded By: {subject.unblinded_by}",
             f"Unblinded At: {subject.unblinded_at.isoformat() if subject.unblinded_at else 'N/A'}",
-            f"Reason: {change_reason}",
+            f"Reason: {composed_reason}",
         ]
         message_text = "\n".join(msg_parts)
 
         # Helper/task to be dispatched after commit
         def dispatch_unblind_notification(subj_id: str, msg: str):
+            """
+            Send a critical emergency-unblinding notification for a subject.
+            
+            Parameters:
+            	subj_id (str): Identifier of the subject associated with the unblinding event.
+            	msg (str): Notification message describing the event.
+            """
             from apps.execution.trial_lock import NotificationRouter
 
             router = NotificationRouter()
@@ -885,6 +1047,7 @@ async def unblind_subject(
                     "recipient_roles": ["Sponsor Safety Lead", "Lead CRA", "IDMC"],
                     "subject_id": subj_id,
                     "message": msg,
+                    "priority": "CRITICAL",
                 },
             )
 
@@ -892,33 +1055,9 @@ async def unblind_subject(
             dispatch_unblind_notification, subject.subject_id, message_text
         )
 
-        # Determine unmasked treatment_arm and drug_code values
-        unmasked_treatment_arm = "Active Treatment Arm"
         unmasked_drug_code = subject.kit_reference or ("000" + "101" + "010" + "01")
-
-        # Try to find a SubjectRandomization record for the subject
-        stmt_rand = select(SubjectRandomization).where(
-            SubjectRandomization.subject_id == subject_id
-        )
-        result_rand = await session.execute(stmt_rand)
-        rand = result_rand.scalars().first()
-        if rand:
-            if rand.kit_reference:
-                unmasked_drug_code = rand.kit_reference
-            try:
-                from apps.execution.cryptography import AllocationKeyManager
-
-                key_mgr = AllocationKeyManager()
-                decrypted = key_mgr.decrypt(rand.encrypted_allocation)
-                if isinstance(decrypted, dict):
-                    unmasked_treatment_arm = (
-                        decrypted.get("allocation")
-                        or decrypted.get("treatment_arm")
-                        or unmasked_treatment_arm
-                    )
-            except Exception:
-                if rand.stratum_key:
-                    unmasked_treatment_arm = f"Arm for stratum {rand.stratum_key}"
+        if rand.kit_reference:
+            unmasked_drug_code = rand.kit_reference
 
         response_dict = {
             "subject_id": subject.subject_id,
