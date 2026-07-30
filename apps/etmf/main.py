@@ -226,6 +226,14 @@ class IngestionRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_dates(self) -> "IngestionRequest":
+        """Validate that issue_date does not exceed expiration_date.
+
+        Returns:
+            IngestionRequest: The validated model instance.
+
+        Raises:
+            ValueError: If ``issue_date`` is later than ``expiration_date``.
+        """
         if self.issue_date and self.expiration_date:
             if self.issue_date > self.expiration_date:
                 raise ValueError("issue_date cannot be later than expiration_date")
@@ -274,6 +282,20 @@ class DocumentResponse(BaseModel):
 
 
 def to_document_response(doc: TMFDocument) -> DocumentResponse:
+    """Construct a ``DocumentResponse`` schema object from a ``TMFDocument`` ORM row.
+
+    This mapper is the single authoritative point for converting the internal
+    database representation into the public API response shape, ensuring that
+    optional nested structures (e.g. ``ProtocolVersionRef``) are only populated
+    when all required sub-fields are present.
+
+    Args:
+        doc: The ``TMFDocument`` SQLAlchemy ORM instance to convert.
+
+    Returns:
+        DocumentResponse: A fully populated Pydantic response model ready for
+        serialisation by FastAPI.
+    """
     return DocumentResponse(
         id=doc.id,
         study_id=doc.study_id,
@@ -320,6 +342,13 @@ def to_document_response(doc: TMFDocument) -> DocumentResponse:
 
 
 class DocumentExpirationUpdate(BaseModel):
+    """Payload for patching the date-range and ownership metadata of an eTMF document.
+
+    All fields are optional; only the supplied fields are applied.  The
+    ``validate_dates`` validator enforces chronological ordering when both
+    ``issue_date`` and ``expiration_date`` are provided together.
+    """
+
     issue_date: Optional[date] = Field(None, description="Optional document issue date")
     expiration_date: Optional[date] = Field(
         None, description="Optional document expiration date"
@@ -330,6 +359,14 @@ class DocumentExpirationUpdate(BaseModel):
 
     @model_validator(mode="after")
     def validate_dates(self) -> "DocumentExpirationUpdate":
+        """Validate that issue_date does not exceed expiration_date.
+
+        Returns:
+            DocumentExpirationUpdate: The validated model instance.
+
+        Raises:
+            ValueError: If ``issue_date`` is later than ``expiration_date``.
+        """
         if self.issue_date and self.expiration_date:
             if self.issue_date > self.expiration_date:
                 raise ValueError("issue_date cannot be later than expiration_date")

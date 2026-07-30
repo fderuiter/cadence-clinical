@@ -2,8 +2,9 @@
 """
 Cadence Clinical — Automated GitHub Project & Issue Sync Tool
 
-Automates GitHub Project 17 ('Cadence-Clinical') synchronization, body formatting with native GitHub tasklists,
-dynamic issue unblocking, label synchronization, priority classification, and developer readiness mapping.
+Automates GitHub Project 17 ('Cadence-Clinical') synchronization using native GitHub
+GraphQL relationships (blockedBy, blocking, parent, subIssues), body formatting with native
+tasklists, dynamic label synchronization, priority classification, and developer readiness mapping.
 
 Usage:
     python3 scripts/sync_github_project.py
@@ -56,10 +57,103 @@ def run_cmd(args):
     return res.stdout
 
 
+def run_gql(query, variables=None):
+    cmd = ["gh", "api", "graphql", "-f", f"query={query}"]
+    if variables:
+        for k, v in variables.items():
+            cmd.extend(["-F", f"{k}={v}"])
+    res = subprocess.run(cmd, capture_output=True, text=True)
+    if res.returncode != 0:
+        print(f"GraphQL Query failed: {res.stderr.strip()}", file=sys.stderr)
+        return None
+    try:
+        return json.loads(res.stdout)
+    except Exception as e:
+        print(f"Failed to parse GraphQL output: {e}", file=sys.stderr)
+        return None
+
+
+def fetch_all_issues_gql():
+    cursor = None
+    all_nodes = []
+    while True:
+        c_str = f', after: "{cursor}"' if cursor else ""
+        query = f"""
+query {{
+  repository(owner: "{OWNER}", name: "cadence-clinical") {{
+    issues(first: 100{c_str}) {{
+      nodes {{
+        id
+        databaseId
+        number
+        title
+        state
+        url
+        body
+        labels(first: 50) {{ nodes {{ name }} }}
+        milestone {{ number title description }}
+        parent {{ id number title state }}
+        subIssues(first: 100) {{ nodes {{ id number title state }} }}
+        blockedBy(first: 100) {{ nodes {{ id number title state }} }}
+        blocking(first: 100) {{ nodes {{ id number title state }} }}
+      }}
+      pageInfo {{ hasNextPage endCursor }}
+    }}
+  }}
+}}
+"""
+        data = run_gql(query)
+        if not data or "data" not in data:
+            break
+        res = data["data"]["repository"]["issues"]
+        all_nodes.extend(res["nodes"])
+        if not res["pageInfo"]["hasNextPage"]:
+            break
+        cursor = res["pageInfo"]["endCursor"]
+    return {n["number"]: n for n in all_nodes}
+
+
+def add_blocked_by(issue_id, blocking_issue_id):
+    mutation = """
+mutation($issueId: ID!, $blockingIssueId: ID!) {
+  addBlockedBy(input: {issueId: $issueId, blockingIssueId: $blockingIssueId}) {
+    issue { id }
+  }
+}
+"""
+    return run_gql(
+        mutation, {"issueId": issue_id, "blockingIssueId": blocking_issue_id}
+    )
+
+
+def remove_blocked_by(issue_id, blocking_issue_id):
+    mutation = """
+mutation($issueId: ID!, $blockingIssueId: ID!) {
+  removeBlockedBy(input: {issueId: $issueId, blockingIssueId: $blockingIssueId}) {
+    issue { id }
+  }
+}
+"""
+    return run_gql(
+        mutation, {"issueId": issue_id, "blockingIssueId": blocking_issue_id}
+    )
+
+
+def add_sub_issue(parent_issue_id, sub_issue_id):
+    mutation = """
+mutation($issueId: ID!, $subIssueId: ID!) {
+  addSubIssue(input: {issueId: $issueId, subIssueId: $subIssueId}) {
+    issue { id }
+  }
+}
+"""
+    return run_gql(mutation, {"issueId": parent_issue_id, "subIssueId": sub_issue_id})
+
+
 def assign_work_stream(i):
     title = i["title"].lower()
     body = (i.get("body") or "").lower()
-    labels = [lbl["name"].lower() for lbl in i.get("labels", [])]
+    labels = [lbl["name"].lower() for lbl in i.get("labels", {}).get("nodes", [])]
 
     if any(
         k in title or k in body for k in ["etmf", "isf", "document", "archiving", "tmf"]
@@ -130,7 +224,7 @@ def assign_work_stream(i):
 def clean_and_format_body(i, epics, issue_by_num):
     num = i["number"]
     body = (i.get("body") or "").strip()
-    is_epic = num in epics
+    is_epic = num in epics or i["title"].startswith("EPIC:")
 
     lines = body.split("\n")
     cleaned_lines = []
@@ -158,7 +252,6 @@ def clean_and_format_body(i, epics, issue_by_num):
     body_core = "\n".join(cleaned_lines).strip()
     body_core = re.sub(r"^(---|\s+|\n)+", "", body_core).strip()
 
-    # Strip any trailing DoD or tasklist headers that were previously appended
     body_core = re.sub(
         r"## 📋 Definition of Done \(DoD\) Checklist.*",
         "",
@@ -178,18 +271,6 @@ def clean_and_format_body(i, epics, issue_by_num):
         flags=re.DOTALL,
     ).strip()
     body_core = re.sub(r"\n---\n*$", "", body_core).strip()
-
-    # Extract references
-    all_refs = [
-        int(r)
-        for r in re.findall(r"#(\d+)", body)
-        if int(r) in issue_by_num and int(r) != num
-    ]
-
-    # Leaf prerequisites are non-epic references
-    prereqs = sorted(list(set([r for r in all_refs if r not in epics])))
-    # Parent child tasks are all references
-    children = sorted(list(set(all_refs)))
 
     stream_name, default_ms = assign_work_stream(i)
     current_ms = i["milestone"]["title"] if i.get("milestone") else default_ms
@@ -219,23 +300,31 @@ def clean_and_format_body(i, epics, issue_by_num):
 > 📁 **Target Modules / Files**: `{files_str}`"""
 
     tasklist_section = ""
-    if is_epic and children:
+
+    # Native subIssues for epics
+    native_sub_issues = i.get("subIssues", {}).get("nodes", [])
+    if is_epic and native_sub_issues:
         items = []
-        for c in children:
-            c_issue = issue_by_num.get(c, {})
-            title = c_issue.get("title", "")
-            state = c_issue.get("state", "OPEN")
-            box = "[x]" if state == "CLOSED" else "[ ]"
-            items.append(f"- {box} #{c} — {title}")
+        sorted_subs = sorted(native_sub_issues, key=lambda x: x["number"])
+        for c in sorted_subs:
+            c_num = c["number"]
+            c_title = c["title"]
+            c_state = c["state"]
+            box = "[x]" if c_state == "CLOSED" else "[ ]"
+            items.append(f"- {box} #{c_num} — {c_title}")
         tasklist_section = "\n\n### 📋 Child Issues / Sub-Tasks\n" + "\n".join(items)
-    elif not is_epic and prereqs:
+
+    # Native blockedBy for non-epics
+    native_blocked_by = i.get("blockedBy", {}).get("nodes", [])
+    if not is_epic and native_blocked_by:
         items = []
-        for p in prereqs:
-            p_issue = issue_by_num.get(p, {})
-            title = p_issue.get("title", "")
-            state = p_issue.get("state", "OPEN")
-            box = "[x]" if state == "CLOSED" else "[ ]"
-            items.append(f"- {box} #{p} — {title}")
+        sorted_prereqs = sorted(native_blocked_by, key=lambda x: x["number"])
+        for p in sorted_prereqs:
+            p_num = p["number"]
+            p_title = p["title"]
+            p_state = p["state"]
+            box = "[x]" if p_state == "CLOSED" else "[ ]"
+            items.append(f"- {box} #{p_num} — {p_title}")
         tasklist_section = "\n\n### 🔗 Prerequisites / Dependencies\n" + "\n".join(
             items
         )
@@ -258,73 +347,136 @@ def clean_and_format_body(i, epics, issue_by_num):
 {dod_block}"""
 
     was_changed = body.strip() != formatted_body.strip()
-    return formatted_body, was_changed, prereqs
+    return formatted_body, was_changed
 
 
 def main():
     print(
-        "=== Cadence Clinical — Standardized Project & Dynamic Issue Sync ===",
+        "=== Cadence Clinical — Native GitHub Relationship & Project Sync ===",
         flush=True,
     )
 
-    # 1. Fetch all repo issues
-    print("1. Fetching all repository issues...", flush=True)
-    raw_issues = run_cmd(
-        [
-            "gh",
-            "issue",
-            "list",
-            "--limit",
-            "1000",
-            "--state",
-            "all",
-            "--json",
-            "number,title,state,labels,milestone,body,url",
-        ]
+    # 1. Fetch all repo issues via GraphQL
+    print(
+        "1. Fetching all repository issues and native relationships via GraphQL...",
+        flush=True,
     )
-    if not raw_issues:
+    issue_by_num = fetch_all_issues_gql()
+    if not issue_by_num:
         print("Failed to fetch repository issues.", file=sys.stderr)
         sys.exit(1)
 
-    issues = json.loads(raw_issues)
-    issue_by_num = {i["number"]: i for i in issues}
+    print(f"Fetched {len(issue_by_num)} total issues.", flush=True)
 
     epics = set()
-    for i in issues:
-        labels = [lbl["name"] for lbl in i.get("labels", [])]
+    for num, i in issue_by_num.items():
+        labels = [lbl["name"] for lbl in i.get("labels", {}).get("nodes", [])]
         if "Parent" in labels or i["title"].startswith("EPIC:"):
-            epics.add(i["number"])
+            epics.add(num)
 
-    # 2. Standardize issue bodies and update dynamic blocked status
+    # 2. Smart Migration: Parse explicit body declarations and ensure native GraphQL relations exist
     print(
-        "2. Standardizing issue descriptions & updating dynamic blocked states...",
+        "2. Auditing explicit body text declarations and migrating to native GraphQL relationships...",
         flush=True,
     )
-    open_issues = [i for i in issues if i["state"] == "OPEN"]
+    relations_added = 0
+
+    for num, i in issue_by_num.items():
+        if i["state"] != "OPEN":
+            continue
+
+        body = i.get("body") or ""
+        i_id = i["id"]
+
+        # Parse explicit "Blocked by:", "Depends on:", "Native blockers:"
+        explicit_prereqs = set()
+        for line in body.splitlines():
+            l_str = line.strip()
+            for pattern in [
+                r"Blocked by:\s*([^\.\n]+)",
+                r"Depends on:\s*([^\.\n]+)",
+                r"Native blockers:\s*([^\.\n]+)",
+            ]:
+                m = re.search(pattern, l_str, re.IGNORECASE)
+                if m:
+                    for ref in re.findall(r"#(\d+)", m.group(1)):
+                        ref_num = int(ref)
+                        if ref_num in issue_by_num and ref_num != num:
+                            explicit_prereqs.add(ref_num)
+
+        # Sync native blockedBy
+        existing_blocked_by = {
+            b["number"] for b in i.get("blockedBy", {}).get("nodes", [])
+        }
+        for p_num in explicit_prereqs:
+            if p_num not in existing_blocked_by:
+                p_issue = issue_by_num[p_num]
+                print(
+                    f"Adding native relationship: #{num} blockedBy #{p_num}",
+                    flush=True,
+                )
+                add_blocked_by(i_id, p_issue["id"])
+                relations_added += 1
+
+        # Parse explicit "Parent: #X" or "Epic: #X"
+        parent_match = re.search(
+            r"(?:Parent(?: coordination issue)?|Epic):\s*#(\d+)", body, re.IGNORECASE
+        )
+        if parent_match:
+            parent_num = int(parent_match.group(1))
+            current_parent = i.get("parent")
+            if parent_num in issue_by_num and (
+                not current_parent or current_parent["number"] != parent_num
+            ):
+                parent_issue = issue_by_num[parent_num]
+                print(
+                    f"Adding native parent relationship: #{parent_num} subIssue #{num}",
+                    flush=True,
+                )
+                add_sub_issue(parent_issue["id"], i_id)
+                relations_added += 1
+
+    if relations_added > 0:
+        print(
+            f"Added {relations_added} native relationships. Re-fetching issues...",
+            flush=True,
+        )
+        issue_by_num = fetch_all_issues_gql()
+
+    # 3. Synchronize Issue Labels and Descriptions using Native Relationships
+    print(
+        "3. Synchronizing issue labels & descriptions using native relationship states...",
+        flush=True,
+    )
+    open_issues = [i for i in issue_by_num.values() if i["state"] == "OPEN"]
     formatted_count = 0
     unblocked_count = 0
     blocked_count = 0
     tmp_file = "/tmp/cadence_issue_body.md"
 
-    open_prereqs_by_num = {}
-
     for i in open_issues:
         num = i["number"]
-        new_body, was_changed, prereqs = clean_and_format_body(i, epics, issue_by_num)
+        new_body, was_changed = clean_and_format_body(i, epics, issue_by_num)
 
-        open_prereqs = [
-            p for p in prereqs if issue_by_num.get(p, {}).get("state") == "OPEN"
+        native_blocked_by = i.get("blockedBy", {}).get("nodes", [])
+        open_native_blockers = [b for b in native_blocked_by if b["state"] == "OPEN"]
+
+        current_labels = [lbl["name"] for lbl in i.get("labels", {}).get("nodes", [])]
+
+        labels_to_remove = [
+            lbl for lbl in ["blocked", "status: blocked"] if lbl in current_labels
         ]
-        open_prereqs_by_num[num] = open_prereqs
+        labels_to_add = [
+            lbl for lbl in ["blocked", "status: blocked"] if lbl not in current_labels
+        ]
 
-        current_labels = [lbl["name"] for lbl in i.get("labels", [])]
-        has_blocked_label = "blocked" in current_labels
-
-        if open_prereqs and not has_blocked_label:
-            run_cmd(["gh", "issue", "edit", str(num), "--add-label", "blocked"])
+        if open_native_blockers and labels_to_add:
+            for lbl in labels_to_add:
+                run_cmd(["gh", "issue", "edit", str(num), "--add-label", lbl])
             blocked_count += 1
-        elif not open_prereqs and has_blocked_label:
-            run_cmd(["gh", "issue", "edit", str(num), "--remove-label", "blocked"])
+        elif not open_native_blockers and labels_to_remove:
+            for lbl in labels_to_remove:
+                run_cmd(["gh", "issue", "edit", str(num), "--remove-label", lbl])
             unblocked_count += 1
 
         if was_changed:
@@ -335,12 +487,12 @@ def main():
             time.sleep(0.05)
 
     print(
-        f"Reformatted {formatted_count} issues. Dynamically unblocked {unblocked_count} issues. Added blocked label to {blocked_count} issues.",
+        f"Reformatted {formatted_count} issues. Dynamically unblocked {unblocked_count} issues. Added blocked labels to {blocked_count} issues.",
         flush=True,
     )
 
-    # 3. Fetch project items
-    print("3. Fetching items from GitHub Project 17...", flush=True)
+    # 4. Fetch Project 17 Items
+    print("4. Fetching items from GitHub Project 17...", flush=True)
     raw_project = run_cmd(
         [
             "gh",
@@ -356,10 +508,7 @@ def main():
         ]
     )
     if not raw_project:
-        print(
-            "Warning: Could not fetch GitHub Project items.",
-            file=sys.stderr,
-        )
+        print("Warning: Could not fetch GitHub Project items.", file=sys.stderr)
         return
 
     project_data = json.loads(raw_project)
@@ -372,7 +521,7 @@ def main():
             if num:
                 item_by_issue_num[num] = item
 
-    # 4. Add missing issues to Project
+    # 5. Add missing issues to Project Board
     missing_issues = [i for i in open_issues if i["number"] not in item_by_issue_num]
     if missing_issues:
         print(
@@ -416,9 +565,9 @@ def main():
                 if num:
                     item_by_issue_num[num] = item
 
-    # 5. Sync Project Board fields
+    # 6. Sync Project Board fields
     print(
-        f"4. Synchronizing fields for {len(item_by_issue_num)} project items...",
+        f"5. Synchronizing fields for {len(item_by_issue_num)} project items...",
         flush=True,
     )
     for idx, (num, item) in enumerate(item_by_issue_num.items(), 1):
@@ -427,23 +576,26 @@ def main():
         if not issue:
             continue
 
-        labels = [lbl["name"].lower() for lbl in issue.get("labels", [])]
+        labels = [
+            lbl["name"].lower() for lbl in issue.get("labels", {}).get("nodes", [])
+        ]
         body = issue.get("body") or ""
         state = issue["state"]
 
-        open_prereqs = open_prereqs_by_num.get(num, [])
+        native_blocked_by = issue.get("blockedBy", {}).get("nodes", [])
+        open_native_blockers = [b for b in native_blocked_by if b["state"] == "OPEN"]
 
-        # Status
+        # Status logic
         if state == "CLOSED":
             target_status = "Done"
         elif "jules" in labels:
             target_status = "In progress"
-        elif open_prereqs or num in epics:
+        elif open_native_blockers or num in epics:
             target_status = "Backlog"
         else:
             target_status = "Ready"
 
-        # Priority
+        # Priority logic
         if "priority: high" in labels or "p0" in labels or "critical" in labels:
             target_priority = "P0"
         elif "priority: medium" in labels or "p1" in labels:
@@ -451,7 +603,7 @@ def main():
         else:
             target_priority = "P2"
 
-        # Size
+        # Size logic
         if num in epics:
             target_size = "XL"
         elif (
@@ -518,7 +670,7 @@ def main():
         time.sleep(0.02)
 
     print(
-        "✅ Standardized Project Board & Dynamic Issue Automation Sync Complete!",
+        "✅ Standardized Project Board & Native GitHub Relationship Sync Complete!",
         flush=True,
     )
 

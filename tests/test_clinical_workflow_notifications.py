@@ -20,11 +20,24 @@ GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
 
 def get_auth_headers(
     user_id="test_inv",
-    roles="site investigator",
+    roles="principal_investigator",
     change_reason="Emergency unblinding requested",
     unblinded_access=True,
 ) -> dict:
-    """Generate Gateway signature-compliant authentication headers."""
+    """Generate Gateway signature-compliant authentication headers.
+
+    Args:
+        user_id: Identifies the requesting user; embedded in the gateway signature.
+        roles: The canonical role string for the simulated user; defaults to
+            ``principal_investigator`` which is the minimum role authorized to
+            call the emergency-unblinding endpoint.
+        change_reason: Justification text placed in ``X-Change-Reason`` header.
+        unblinded_access: When ``True`` adds the ``X-Unblinded-Access: true``
+            header so the principal can see unmasked allocation fields.
+
+    Returns:
+        dict: Header dictionary suitable for passing to an httpx test client.
+    """
     timestamp = str(time.time())
     sig = generate_gateway_signature(
         user_id=user_id,
@@ -48,9 +61,18 @@ def get_auth_headers(
 
 
 def get_sig_token(
-    user_id="test_inv", roles="site investigator", action="unblind"
+    user_id="test_inv", roles="principal_investigator", action="unblind"
 ) -> str:
-    """Generate a 21 CFR Part 11 compliant re-authentication token."""
+    """Generate a 21 CFR Part 11 compliant step-up re-authentication token.
+
+    Args:
+        user_id: Subject identifier embedded as ``sub`` and ``username`` claims.
+        roles: Role string embedded in the ``roles`` claim of the JWT payload.
+        action: The specific action this token grants re-authentication for.
+
+    Returns:
+        str: HS256-signed JWT string.
+    """
     payload = {
         "sub": user_id,
         "username": user_id,
@@ -246,7 +268,7 @@ async def test_unblind_emergency_unblinding_alert_integration() -> None:
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
-        # Create a randomized subject
+        # Create a randomized subject with randomization record
         async with db_manager.get_session_maker()() as session:
             subj = ClinicalSubject(
                 subject_id="SUBJ-005",
@@ -258,19 +280,59 @@ async def test_unblind_emergency_unblinding_alert_integration() -> None:
             subj.status = "ENROLLED"
             await session.flush()
             subj.status = "RANDOMIZED"
+
+            from apps.execution.cryptography import AllocationKeyManager
+            from apps.execution.database.models import SubjectRandomization
+
+            key_mgr = AllocationKeyManager()
+            encrypted_alloc = key_mgr.encrypt({"allocation": "Arm A Active"})
+
+            rand = SubjectRandomization(
+                study_id="STUDY-1",
+                subject_id="SUBJ-005",
+                encrypted_allocation=encrypted_alloc,
+                kit_reference="KIT-555",
+            )
+            session.add(rand)
             await session.commit()
 
-        headers = get_auth_headers(roles="site investigator", unblinded_access=True)
-        headers["X-Sig-Token"] = get_sig_token()
+        headers = get_auth_headers(
+            roles="principal_investigator", unblinded_access=True
+        )
+        headers["X-Sig-Token"] = get_sig_token(roles="principal_investigator")
 
-        with patch(
-            "apps.execution.trial_lock.publish_notification",
-            new_callable=AsyncMock,
-        ) as mock_pub:
+        with (
+            patch(
+                "apps.execution.trial_lock.publish_notification",
+                new_callable=AsyncMock,
+            ) as mock_pub,
+            patch(
+                "apps.execution.cryptography.AllocationKeyManager.load_from_db",
+                new_callable=AsyncMock,
+            ),
+            patch(
+                "apps.execution.cryptography.AllocationKeyManager.decrypt_with_shares",
+                return_value={"allocation": "Arm A Active"},
+            ),
+        ):
             mock_pub.return_value = True
 
             res = await client.post(
-                "/api/v1/execution/subjects/SUBJ-005/unblind", headers=headers
+                "/api/v1/execution/subjects/SUBJ-005/unblind",
+                headers=headers,
+                json={
+                    "reason_code": "SAE-Life-Threatening-Event",
+                    "justification": "Critical adverse event: patient non-responsive, immediate intervention required per protocol.",
+                    "shares": [
+                        {
+                            "custodian": "Lead Unblinded Statistician",
+                            "version": 1,
+                            "x": 1,
+                            "y": 42,
+                        },
+                        {"custodian": "IDMC", "version": 1, "x": 2, "y": 87},
+                    ],
+                },
             )
             assert res.status_code == 200
 

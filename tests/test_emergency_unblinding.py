@@ -17,11 +17,23 @@ GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
 
 def get_auth_headers(
     user_id="test_inv",
-    roles="site investigator",
+    roles="principal_investigator",
     change_reason="Emergency unblinding requested",
     unblinded_access=False,
 ) -> dict:
-    """Generate Gateway signature-compliant authentication headers."""
+    """Generate Gateway signature-compliant authentication headers.
+
+    Args:
+        user_id: The user identifier to embed in the gateway signature.
+        roles: The role string to embed; defaults to ``principal_investigator``
+            which is the minimum required role for the unblinding endpoint.
+        change_reason: Audit-trail justification text.
+        unblinded_access: If ``True``, the ``X-Unblinded-Access`` header is
+            added so the principal can see unmasked allocation fields.
+
+    Returns:
+        dict: HTTP headers dict ready to be passed to an httpx/TestClient request.
+    """
     timestamp = str(time.time())
     sig = generate_gateway_signature(
         user_id=user_id,
@@ -45,9 +57,18 @@ def get_auth_headers(
 
 
 def get_sig_token(
-    user_id="test_inv", roles="site investigator", action="unblind"
+    user_id="test_inv", roles="principal_investigator", action="unblind"
 ) -> str:
-    """Generate a 21 CFR Part 11 compliant re-authentication token."""
+    """Generate a 21 CFR Part 11 compliant step-up re-authentication token.
+
+    Args:
+        user_id: The subject's user identifier to embed as ``sub`` and ``username``.
+        roles: The role to embed in the token ``roles`` claim.
+        action: The specific action this token grants permission for.
+
+    Returns:
+        str: A HS256-signed JWT string.
+    """
     payload = {
         "sub": user_id,
         "username": user_id,
@@ -57,6 +78,33 @@ def get_sig_token(
         "exp": time.time() + 60.0,
     }
     return jwt.encode(payload, "internal-gateway-secret-12345", algorithm="HS256")
+
+
+def get_unblind_payload(
+    reason_code: str = "SAE-Life-Threatening-Event",
+    justification: str = "Critical adverse event: patient non-responsive, immediate intervention required per protocol.",
+) -> dict:
+    """Return a valid UnblindRequest JSON payload with compliant dual-custody shares.
+
+    The shares use the two approved CustodianEnum values and numerically valid
+    Shamir-share coordinates (x > 0, y >= 0) so the payload passes Pydantic
+    schema validation without reaching the cryptographic layer.
+
+    Args:
+        reason_code: One of the three approved ``UnblindingReasonCode`` values.
+        justification: Clinical justification text; must be >= 50 characters.
+
+    Returns:
+        dict: A JSON-serialisable dict matching the ``UnblindRequest`` schema.
+    """
+    return {
+        "reason_code": reason_code,
+        "justification": justification,
+        "shares": [
+            {"custodian": "Lead Unblinded Statistician", "version": 1, "x": 1, "y": 42},
+            {"custodian": "IDMC", "version": 1, "x": 2, "y": 87},
+        ],
+    }
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -92,9 +140,13 @@ async def test_unblind_missing_sig_token() -> None:
             await session.commit()
 
         # Send request without X-Sig-Token header
-        headers = get_auth_headers(roles="site investigator", unblinded_access=True)
+        headers = get_auth_headers(
+            roles="principal_investigator", unblinded_access=True
+        )
         res = await client.post(
-            "/api/v1/execution/subjects/SUBJ-001/unblind", headers=headers
+            "/api/v1/execution/subjects/SUBJ-001/unblind",
+            headers=headers,
+            json=get_unblind_payload(),
         )
         assert res.status_code == 401
         assert res.json()["detail"] == "REAUTHENTICATION_REQUIRED"
@@ -115,14 +167,18 @@ async def test_unblind_screening_status_error() -> None:
             session.add(subj)
             await session.commit()
 
-        headers = get_auth_headers(roles="site investigator", unblinded_access=True)
-        headers["X-Sig-Token"] = get_sig_token()
+        headers = get_auth_headers(
+            roles="principal_investigator", unblinded_access=True
+        )
+        headers["X-Sig-Token"] = get_sig_token(roles="principal_investigator")
         res = await client.post(
-            "/api/v1/execution/subjects/SUBJ-002/unblind", headers=headers
+            "/api/v1/execution/subjects/SUBJ-002/unblind",
+            headers=headers,
+            json=get_unblind_payload(),
         )
         assert res.status_code == 400
         assert (
-            "Transition from SCREENING to UNBLINDED is forbidden"
+            "Subject has not been randomized; treatment allocation cannot be unblinded."
             in res.json()["detail"]
         )
 
@@ -144,14 +200,18 @@ async def test_unblind_withdrawn_status_error() -> None:
             subj.status = "WITHDRAWN"
             await session.commit()
 
-        headers = get_auth_headers(roles="site investigator", unblinded_access=True)
-        headers["X-Sig-Token"] = get_sig_token()
+        headers = get_auth_headers(
+            roles="principal_investigator", unblinded_access=True
+        )
+        headers["X-Sig-Token"] = get_sig_token(roles="principal_investigator")
         res = await client.post(
-            "/api/v1/execution/subjects/SUBJ-002-W/unblind", headers=headers
+            "/api/v1/execution/subjects/SUBJ-002-W/unblind",
+            headers=headers,
+            json=get_unblind_payload(),
         )
         assert res.status_code == 400
         assert (
-            "Transition from WITHDRAWN to UNBLINDED is forbidden"
+            "Subject has not been randomized; treatment allocation cannot be unblinded."
             in res.json()["detail"]
         )
 
@@ -162,10 +222,14 @@ async def test_unblind_subject_not_found() -> None:
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
-        headers = get_auth_headers(roles="site investigator", unblinded_access=True)
-        headers["X-Sig-Token"] = get_sig_token()
+        headers = get_auth_headers(
+            roles="principal_investigator", unblinded_access=True
+        )
+        headers["X-Sig-Token"] = get_sig_token(roles="principal_investigator")
         res = await client.post(
-            "/api/v1/execution/subjects/SUBJ-999/unblind", headers=headers
+            "/api/v1/execution/subjects/SUBJ-999/unblind",
+            headers=headers,
+            json=get_unblind_payload(),
         )
         assert res.status_code == 404
         assert "Subject not found" in res.json()["detail"]
@@ -206,17 +270,27 @@ async def test_unblind_success_authorized_access() -> None:
             await session.commit()
 
         # Investigator with unblinded access = True
-        headers = get_auth_headers(roles="site investigator", unblinded_access=True)
-        headers["X-Sig-Token"] = get_sig_token()
+        headers = get_auth_headers(
+            roles="principal_investigator", unblinded_access=True
+        )
+        headers["X-Sig-Token"] = get_sig_token(roles="principal_investigator")
 
-        from unittest.mock import patch
+        from unittest.mock import AsyncMock, patch
 
-        with patch(
-            "apps.execution.cryptography.AllocationKeyManager.decrypt"
-        ) as mock_decrypt:
-            mock_decrypt.return_value = {"allocation": "Arm A Active"}
+        with (
+            patch(
+                "apps.execution.cryptography.AllocationKeyManager.load_from_db",
+                new_callable=AsyncMock,
+            ),
+            patch(
+                "apps.execution.cryptography.AllocationKeyManager.decrypt_with_shares",
+                return_value={"allocation": "Arm A Active"},
+            ),
+        ):
             res = await client.post(
-                "/api/v1/execution/subjects/SUBJ-003/unblind", headers=headers
+                "/api/v1/execution/subjects/SUBJ-003/unblind",
+                headers=headers,
+                json=get_unblind_payload(),
             )
         assert res.status_code == 200
         data = res.json()
@@ -227,7 +301,8 @@ async def test_unblind_success_authorized_access() -> None:
         assert data["treatment_arm"] == "Arm A Active"
         assert data["drug_code"] == "KIT-777"
         assert data["unblinded_by"] == "test_inv"
-        assert data["unblinded_reason"] == "Emergency unblinding requested"
+        expected_reason = "SAE-Life-Threatening-Event: Critical adverse event: patient non-responsive, immediate intervention required per protocol."
+        assert data["unblinded_reason"] == expected_reason
         assert data["unblinded_at"] is not None
 
         # Verify subject is updated in DB
@@ -240,7 +315,7 @@ async def test_unblind_success_authorized_access() -> None:
             assert subj_db.status == "UNBLINDED"
             assert subj_db.is_unblinded is True
             assert subj_db.unblinded_by == "test_inv"
-            assert subj_db.unblinded_reason == "Emergency unblinding requested"
+            assert subj_db.unblinded_reason == expected_reason
 
 
 @pytest.mark.asyncio
@@ -249,7 +324,7 @@ async def test_unblind_success_masked_access() -> None:
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
-        # Create an active subject
+        # Create an active subject with randomization record
         async with db_manager.get_session_maker()() as session:
             subj = ClinicalSubject(
                 subject_id="SUBJ-004",
@@ -263,15 +338,45 @@ async def test_unblind_success_masked_access() -> None:
             subj.status = "RANDOMIZED"
             await session.flush()
             subj.status = "ACTIVE"
+
+            from apps.execution.cryptography import AllocationKeyManager
+
+            key_mgr = AllocationKeyManager()
+            encrypted_alloc = key_mgr.encrypt({"allocation": "Arm A Active"})
+
+            rand = SubjectRandomization(
+                study_id="STUDY-1",
+                subject_id="SUBJ-004",
+                encrypted_allocation=encrypted_alloc,
+                kit_reference="KIT-999",
+            )
+            session.add(rand)
             await session.commit()
 
         # Investigator without unblinded access (unblinded_access = False)
-        headers = get_auth_headers(roles="site investigator", unblinded_access=False)
-        headers["X-Sig-Token"] = get_sig_token()
-
-        res = await client.post(
-            "/api/v1/execution/subjects/SUBJ-004/unblind", headers=headers
+        # Even without unblinded_access, a PI can call the endpoint but sees masked allocation fields.
+        headers = get_auth_headers(
+            roles="principal_investigator", unblinded_access=False
         )
+        headers["X-Sig-Token"] = get_sig_token(roles="principal_investigator")
+
+        from unittest.mock import AsyncMock, patch
+
+        with (
+            patch(
+                "apps.execution.cryptography.AllocationKeyManager.load_from_db",
+                new_callable=AsyncMock,
+            ),
+            patch(
+                "apps.execution.cryptography.AllocationKeyManager.decrypt_with_shares",
+                return_value={"allocation": "Arm A Active"},
+            ),
+        ):
+            res = await client.post(
+                "/api/v1/execution/subjects/SUBJ-004/unblind",
+                headers=headers,
+                json=get_unblind_payload(),
+            )
         assert res.status_code == 200
         data = res.json()
 
@@ -281,4 +386,6 @@ async def test_unblind_success_masked_access() -> None:
         assert data["treatment_arm"] == "BLINDED"
         assert data["drug_code"] == "Obfuscated Kit"
         assert data["unblinded_by"] == "test_inv"
-        assert data["unblinded_reason"] == "Emergency unblinding requested"
+        assert data["unblinded_reason"] == (
+            "SAE-Life-Threatening-Event: Critical adverse event: patient non-responsive, immediate intervention required per protocol."
+        )

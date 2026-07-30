@@ -1150,38 +1150,38 @@ async def unblind_subject(
         pre_status = subject.status
         pre_is_unblinded = subject.is_unblinded
 
-        async with session.begin():
-            # Perform the transition inside a try-except to catch transition errors
-            try:
-                subject.unblind(unblinded_by=principal.user_id, reason=composed_reason)
-                subject.unblinded_signature = signature
-            except InvalidStateTransitionError as e:
-                raise HTTPException(status_code=400, detail=str(e))
+        # Perform the transition inside a try-except to catch transition errors
+        try:
+            subject.unblind(unblinded_by=principal.user_id, reason=composed_reason)
+            subject.unblinded_signature = signature
+        except InvalidStateTransitionError as e:
+            raise HTTPException(status_code=400, detail=str(e))
 
-            # Insert an explicit AuditLog row for EMERGENCY_UNBLINDING.
-            # Signature is stored as signer evidence; it is excluded from the
-            # cryptographic seal payload to prevent a circular dependency.
-            audit_log = AuditLog(
-                id=str(uuid.uuid4()),
-                table_name="clinical_subjects",
-                record_id=subject.id,
-                action="EMERGENCY_UNBLINDING",
-                user_id=principal.user_id or "system",
-                ip_address=current_ip_address.get() or "127.0.0.1",
-                timestamp=unblind_utc.replace(tzinfo=None),  # Store as naive UTC in DB
-                old_values={"status": pre_status, "is_unblinded": pre_is_unblinded},
-                new_values={
-                    "status": "UNBLINDED",
-                    "is_unblinded": True,
-                    "unblinded_by": principal.user_id,
-                    "unblinded_at": timestamp_str,
-                    "unblinded_reason": composed_reason,
-                    "signer_evidence": signature,
-                },
-                version_index=(subject.version or 1) + 1,
-                change_reason=composed_reason,
-            )
-            session.add(audit_log)
+        # Insert an explicit AuditLog row for EMERGENCY_UNBLINDING.
+        # Signature is stored as signer evidence; it is excluded from the
+        # cryptographic seal payload to prevent a circular dependency.
+        audit_log = AuditLog(
+            id=str(uuid.uuid4()),
+            table_name="clinical_subjects",
+            record_id=subject.id,
+            action="EMERGENCY_UNBLINDING",
+            user_id=principal.user_id or "system",
+            ip_address=current_ip_address.get() or "127.0.0.1",
+            timestamp=unblind_utc.replace(tzinfo=None),  # Store as naive UTC in DB
+            old_values={"status": pre_status, "is_unblinded": pre_is_unblinded},
+            new_values={
+                "status": "UNBLINDED",
+                "is_unblinded": True,
+                "unblinded_by": principal.user_id,
+                "unblinded_at": timestamp_str,
+                "unblinded_reason": composed_reason,
+                "signer_evidence": signature,
+            },
+            version_index=(subject.version or 1) + 1,
+            change_reason=composed_reason,
+        )
+        session.add(audit_log)
+        await session.commit()
 
         # Refresh
         await session.refresh(subject)

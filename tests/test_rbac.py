@@ -422,10 +422,18 @@ async def test_execution_observation_creation_auditor_forbidden() -> None:
 
 
 def test_role_aliases_normalization() -> None:
-    """Verify that role aliases map to canonical forms correctly."""
+    """Verify that role aliases map to canonical forms correctly.
+
+    'pi' and 'principal investigator' must map to ROLE_PRINCIPAL_INVESTIGATOR
+    (not ROLE_INVESTIGATOR) so that role-based access control for the
+    emergency-unblinding endpoint works correctly.
+
+    Requirements: PRD-SYS-RBAC-001
+    """
     from packages.security.rbac import (
         ROLE_CRA_CANONICAL,
         ROLE_INVESTIGATOR,
+        ROLE_PRINCIPAL_INVESTIGATOR,
         ROLE_SPONSOR_DESIGNER,
         ROLE_SPONSOR_DM,
         ROLE_SYSADMIN,
@@ -436,8 +444,12 @@ def test_role_aliases_normalization() -> None:
     assert normalize_role("system_admin") == ROLE_SYSADMIN
     assert normalize_role("Admin") == ROLE_SPONSOR_DM
     assert normalize_role("Sponsor DM") == ROLE_SPONSOR_DM
-    assert normalize_role("pi") == ROLE_INVESTIGATOR
-    assert normalize_role("principal investigator") == ROLE_INVESTIGATOR
+    # "pi" aliases ROLE_PRINCIPAL_INVESTIGATOR, which is a distinct, more-privileged
+    # role than ROLE_INVESTIGATOR (the basic site investigator).
+    assert normalize_role("pi") == ROLE_PRINCIPAL_INVESTIGATOR
+    assert normalize_role("principal investigator") == ROLE_PRINCIPAL_INVESTIGATOR
+    # "investigator" / "site investigator" still maps to the base ROLE_INVESTIGATOR.
+    assert normalize_role("investigator") == ROLE_INVESTIGATOR
     assert normalize_role("cra_monitor") == ROLE_CRA_CANONICAL
     assert normalize_role("unknown_role") == "unknown_role"
     assert normalize_role("study_designer") == ROLE_SPONSOR_DESIGNER
@@ -916,11 +928,12 @@ async def test_cross_site_unblind_denied_with_alert(monkeypatch) -> None:
         subj.status = "RANDOMIZED"
         await session.commit()
 
-    # Access using investigator scoped to site_chicago (cross-site)
+    # Access using principal_investigator scoped to site_chicago (cross-site)
+    # The PI role clears the require_roles gate; the site check then denies access.
     timestamp = str(time.time())
     sig = generate_signature(
         user_id="test_inv",
-        roles="site investigator",
+        roles="principal_investigator",
         timestamp=timestamp,
         version="2",
         change_reason="Emergency unblinding requested",
@@ -929,14 +942,15 @@ async def test_cross_site_unblind_denied_with_alert(monkeypatch) -> None:
     )
     headers = {
         "X-User-Id": "test_inv",
-        "X-User-Roles": "site investigator",
+        "X-User-Roles": "principal_investigator",
+        "X-Assigned-Sites": "site_chicago",
         "X-Site-Id": "site_chicago",
         "X-Tenant-Id": "tenant_default",
         "X-Gateway-Timestamp": timestamp,
         "X-Gateway-Signature": sig,
         "X-Signature-Version": "2",
         "X-Change-Reason": "Emergency unblinding requested",
-        "X-Sig-Token": get_sig_token(),
+        "X-Sig-Token": get_sig_token(roles="principal_investigator"),
     }
 
     # Monkeypatch publish_notification to capture the dispatched security alert
@@ -962,7 +976,21 @@ async def test_cross_site_unblind_denied_with_alert(monkeypatch) -> None:
         transport=httpx.ASGITransport(app=exec_app), base_url="http://test"
     ) as client:
         res = await client.post(
-            "/api/v1/execution/subjects/SUBJ-BOSTON/unblind", headers=headers
+            "/api/v1/execution/subjects/SUBJ-BOSTON/unblind",
+            headers=headers,
+            json={
+                "reason_code": "SAE-Life-Threatening-Event",
+                "justification": "Critical adverse event: patient non-responsive, immediate intervention required per protocol.",
+                "shares": [
+                    {
+                        "custodian": "Lead Unblinded Statistician",
+                        "version": 1,
+                        "x": 1,
+                        "y": 42,
+                    },
+                    {"custodian": "IDMC", "version": 1, "x": 2, "y": 87},
+                ],
+            },
         )
         assert res.status_code == 403
         assert "access restricted to your assigned site(s)" in res.json()["detail"]
