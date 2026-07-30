@@ -554,46 +554,38 @@ MASKING_RULES: Dict[str, Callable[[Any], Any]] = {
     "encrypted_sequence": lambda val: "MASKED" if val else val,
 }
 
+# Canonical set of site-scoped trial personas
+SITE_SCOPED_ROLES: Set[str] = {
+    ROLE_INVESTIGATOR,
+    ROLE_CRC,
+    ROLE_CRA_CANONICAL,
+    "monitor",
+    ROLE_EXTERNAL_MONITOR,
+}
+
+UNMASKED_ALLOCATION_FIELDS: Set[str] = {
+    "treatment_arm",
+    "treatment_arm_id",
+    "randomization_seed",
+    "seed",
+    "encrypted_allocation",
+    "stratum_key",
+    "randomization_id",
+    "encrypted_sequence",
+}
+
+UNMASKED_SUPPLY_FIELDS: Set[str] = {
+    "drug_code",
+    "administered_drug_code",
+    "kit_reference",
+}
+
 # Role-aware masking policy mapping unblinded RTSM roles to visible fields.
 ROLE_UNMASKED_FIELDS: Dict[str, Set[str]] = {
-    ROLE_UNBLINDED_STATISTICIAN: {
-        "treatment_arm",
-        "treatment_arm_id",
-        "randomization_seed",
-        "seed",
-        "encrypted_allocation",
-        "stratum_key",
-        "randomization_id",
-        "encrypted_sequence",
-    },
-    ROLE_IDMC: {
-        "treatment_arm",
-        "treatment_arm_id",
-        "randomization_seed",
-        "seed",
-        "encrypted_allocation",
-        "stratum_key",
-        "randomization_id",
-        "encrypted_sequence",
-    },
-    ROLE_PHARMACIST: {
-        "drug_code",
-        "administered_drug_code",
-        "kit_reference",
-    },
-    ROLE_EMERGENCY_UNBLINDER: {
-        "treatment_arm",
-        "treatment_arm_id",
-        "drug_code",
-        "administered_drug_code",
-        "kit_reference",
-        "randomization_seed",
-        "seed",
-        "encrypted_allocation",
-        "stratum_key",
-        "randomization_id",
-        "encrypted_sequence",
-    },
+    ROLE_UNBLINDED_STATISTICIAN: UNMASKED_ALLOCATION_FIELDS,
+    ROLE_IDMC: UNMASKED_ALLOCATION_FIELDS,
+    ROLE_PHARMACIST: UNMASKED_SUPPLY_FIELDS,
+    ROLE_EMERGENCY_UNBLINDER: UNMASKED_ALLOCATION_FIELDS | UNMASKED_SUPPLY_FIELDS,
 }
 
 
@@ -1020,10 +1012,21 @@ def require_permission(permission: str) -> Callable[[Principal], Principal]:
 
 
 def mask_payload(payload: Any, principal: Principal) -> Any:
-    """
-    Recursively masks sensitive fields in dictionaries, lists, or Pydantic models
-    based on the principal's unblinded status.
-    If principal.unblinded_access is True, no masking is performed.
+    """Recursively mask sensitive fields in dictionaries, lists, or Pydantic models based on principal authorization.
+
+    If principal.unblinded_access is True, no masking is performed and the original payload is returned unchanged.
+    Otherwise, if the principal possesses unblinded RTSM roles configured in ROLE_UNMASKED_FIELDS, field-level
+    masking rules are bypassed for fields included in the principal's unmasked set.
+
+    Args:
+        payload: The target data structure (dict, list, or Pydantic BaseModel instance) to mask.
+        principal: The authenticated Principal whose roles and unblinded_access status govern field masking.
+
+    Returns:
+        The recursively masked data structure or dictionary.
+
+    Raises:
+        ValueError: If payload structure cannot be processed.
     """
     if principal.unblinded_access:
         return payload
@@ -1032,7 +1035,7 @@ def mask_payload(payload: Any, principal: Principal) -> Any:
     rtsm_roles = [r for r in principal.roles if r in ROLE_UNMASKED_FIELDS]
     if rtsm_roles:
         # Union of all unmasked fields for their active RTSM roles
-        unmasked_fields = set()
+        unmasked_fields: Set[str] = set()
         for r in rtsm_roles:
             unmasked_fields.update(ROLE_UNMASKED_FIELDS[r])
         return _recursive_mask(payload, unmasked_fields=unmasked_fields)
@@ -1047,8 +1050,10 @@ def _recursive_mask(data: Any, unmasked_fields: Optional[Set[str]] = None) -> An
     if isinstance(data, pydantic.BaseModel):
         dumped = data.model_dump()
         masked = _recursive_mask(dumped, unmasked_fields)
-        # Reconstruct the model safely
-        return data.__class__.model_validate(masked)
+        try:
+            return data.__class__.model_validate(masked)
+        except Exception:
+            return masked
 
     if isinstance(data, dict):
         new_dict = {}
@@ -1167,6 +1172,7 @@ ROLE_EXPANSIONS = {
     "pharmacist": {
         "pharmacist",
         "unblinded pharmacist",
+        "unblinded_pharmacist",
     },
     "emergency_unblinder": {
         "emergency_unblinder",

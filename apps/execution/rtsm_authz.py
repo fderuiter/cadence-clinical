@@ -4,6 +4,7 @@ from fastapi import HTTPException, status
 
 from apps.execution.notifications_client import publish_notification, run_async
 from packages.security.rbac import (
+    SITE_SCOPED_ROLES,
     Principal,
     can_access_site,
     can_access_study,
@@ -17,7 +18,17 @@ def dispatch_access_violation_alert(
     study_id: Optional[str] = None,
     subject_id: Optional[str] = None,
 ) -> None:
-    """Construct and dispatch access violation alerts to critical roles."""
+    """Construct and non-blockingly dispatch security access violation alerts to critical roles.
+
+    Args:
+        principal: The authenticated Principal who triggered the security violation.
+        site_id: Optional site scope identifier associated with the request context.
+        study_id: Optional study scope identifier associated with the request context.
+        subject_id: Optional subject identifier associated with the request context.
+
+    Returns:
+        None.
+    """
     site_str = site_id or "None"
     study_str = study_id or "None"
     subject_str = subject_id or "None"
@@ -39,7 +50,7 @@ def dispatch_access_violation_alert(
             "related_entity_type": "rtsm-access-violation",
             "related_entity_id": f"{site_str}:{principal.user_id}",
         }
-        # Safely run asynchronously
+        # Non-blocking async submission
         run_async(publish_notification(payload))
 
 
@@ -51,7 +62,21 @@ def verify_site_access(
 ) -> None:
     """Enforce site and study isolation for site-scoped or restricted resources.
 
-    Raises HTTP 403 and triggers an audit alert on unauthorized mismatch/cross-site access.
+    Validates that the requesting principal possesses authorized access to the requested
+    study and site boundaries. If access is unauthorized, dispatches a security alert and
+    raises an HTTP 403 Forbidden exception.
+
+    Args:
+        principal: The authenticated Principal making the request.
+        site_id: Target site identifier for the requested resource.
+        study_id: Target study identifier for the requested resource.
+        subject_id: Optional subject identifier for context tracking.
+
+    Returns:
+        None.
+
+    Raises:
+        HTTPException: HTTP 403 Forbidden if site or study access isolation checks fail.
     """
     if study_id is not None:
         if not can_access_study(principal, study_id):
@@ -60,17 +85,17 @@ def verify_site_access(
             )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Forbidden: access restricted to your assigned site(s).",
+                detail="Forbidden: access restricted to your assigned study.",
             )
 
-    # If the principal has no assigned sites (empty list), they are treated as unscoped
-    # or globally authorized (e.g. in test/admin context), so we bypass site-isolation checks.
-    if not principal.assigned_sites:
+    # If the resource has no site restriction (site_id is None), site isolation does not apply
+    if site_id is None or str(site_id).strip() == "":
         return
 
-    # If principal has assigned sites, they are restricted:
-    if site_id is None or str(site_id).strip() == "":
-        # Restricted users cannot access unscoped/global resources
+    is_site_scoped_user = any(role in SITE_SCOPED_ROLES for role in principal.roles)
+
+    # Deny site-scoped users who lack site assignments when requesting a site-restricted resource
+    if is_site_scoped_user and not principal.assigned_sites:
         dispatch_access_violation_alert(
             principal, site_id, study_id=study_id, subject_id=subject_id
         )
@@ -78,6 +103,10 @@ def verify_site_access(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Forbidden: access restricted to your assigned site(s).",
         )
+
+    # Globally authorized non-site-scoped users (e.g. sysadmin, sponsor_dm, auditor) bypass site checks
+    if not principal.assigned_sites and not is_site_scoped_user:
+        return
 
     if not can_access_site(principal, site_id):
         dispatch_access_violation_alert(
@@ -90,5 +119,13 @@ def verify_site_access(
 
 
 def redact_response(payload: Any, principal: Principal) -> Any:
-    """Apply role-aware masking/redaction to outgoing payloads based on principal roles and access."""
+    """Apply role-aware masking/redaction to outgoing payloads based on principal roles and access.
+
+    Args:
+        payload: The outgoing data structure or model to redact.
+        principal: The requesting Principal whose roles determine unmasking policies.
+
+    Returns:
+        The redacted data structure.
+    """
     return mask_payload(payload, principal)

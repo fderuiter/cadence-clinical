@@ -106,7 +106,9 @@ async def test_partial_binder_structure():
     Ingest a document, check that it is PRESENT, expected ones are MISSING, and other ones EXPECTED.
     """
     client = TestClient(app)
-    headers = get_auth_headers(roles="admin,sponsor_dm", change_reason="Ingest protocol document")
+    headers = get_auth_headers(
+        roles="admin,sponsor_dm", change_reason="Ingest protocol document"
+    )
 
     # 1. Ingest Clinical Trial Protocol (01.01.01) for study_partial
     payload = {

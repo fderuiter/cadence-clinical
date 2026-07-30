@@ -114,7 +114,7 @@ from packages.security import (
     verify_not_auditor,
 )
 from packages.security.middleware import GatewayAuthMiddleware
-from packages.security.rbac import can_access_study, mask_payload
+from packages.security.rbac import SITE_SCOPED_ROLES, can_access_study, mask_payload
 from packages.security.signing import generate_canonical_signature
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
@@ -2904,14 +2904,7 @@ async def list_queries(
         if status:
             stmt = stmt.where(ClinicalQuery.status == status)
 
-        site_scoped_roles = {
-            "investigator",
-            "crc",
-            "cra",
-            "monitor",
-            "external_monitor",
-        }
-        user_site_roles = [r for r in principal.roles if r in site_scoped_roles]
+        user_site_roles = [r for r in principal.roles if r in SITE_SCOPED_ROLES]
         if user_site_roles or principal.assigned_sites:
             stmt = stmt.where(ClinicalQuery.site_id.in_(principal.assigned_sites))
 
@@ -4036,14 +4029,7 @@ async def list_form_submissions(
         if form_id:
             stmt = stmt.where(FormSubmission.form_id == form_id)
 
-        site_scoped_roles = {
-            "investigator",
-            "crc",
-            "cra",
-            "monitor",
-            "external_monitor",
-        }
-        user_site_roles = [r for r in principal.roles if r in site_scoped_roles]
+        user_site_roles = [r for r in principal.roles if r in SITE_SCOPED_ROLES]
         if user_site_roles or principal.assigned_sites:
             stmt = stmt.where(FormSubmission.site_id.in_(principal.assigned_sites))
 
