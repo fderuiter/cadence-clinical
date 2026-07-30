@@ -104,7 +104,7 @@ def assert_mock_study_mutable(study_id: str):
             raise InvalidSignatureError("INVALID_OR_MISSING_SIGNATURE")
 
         status = latest.get("status")
-        if status in ("LOCKED", "PUBLISHED", "ARCHIVED"):
+        if status in ("APPROVED", "SIGNED", "LOCKED", "PUBLISHED", "ARCHIVED"):
             from apps.designer.delta import ImmutabilityViolationError
 
             raise ImmutabilityViolationError("IMMUTABILITY_VIOLATION")
