@@ -3,11 +3,12 @@ FastAPI application for the Tickets microservice.
 """
 
 import asyncio
+import logging
 import os
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,7 +25,10 @@ from apps.tickets.models import (
     TicketPriority,
     TicketStatus,
 )
+from apps.tickets.notification_events import generate_ticket_notification_payloads
+from apps.tickets.notifications_client import publish_notification
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
+from packages.security.context import audit_context
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.rbac import (
     Principal,
@@ -185,6 +189,74 @@ class TicketAuditLogResponse(BaseModel):
 
 
 DATABASE_URL = os.getenv("TICKETS_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+
+
+logger = logging.getLogger("tickets-notifications-client")
+
+
+async def dispatch_ticket_notifications(
+    ticket_id: str,
+    reference: str,
+    assignee_user: Optional[str],
+    assignee_role: Optional[str],
+    reporter: str,
+    version_index: int,
+    event_type: str,
+    actor_id: str,
+    change_reason: Optional[str],
+    old_status: Optional[str] = None,
+    new_status: Optional[str] = None,
+    comment_body: Optional[str] = None,
+) -> None:
+    """
+    Background task to generate and publish notifications for ticket events.
+    Does not touch the active SQLAlchemy session, operating on captured committed values.
+    Swallows and logs any exception.
+    """
+    try:
+        class CommittedTicket:
+            def __init__(self, id, reference, assignee_user, assignee_role, reporter, version_index):
+                self.id = id
+                self.reference = reference
+                self.assignee_user = assignee_user
+                self.assignee_role = assignee_role
+                self.reporter = reporter
+                self.version_index = version_index
+
+        ticket = CommittedTicket(
+            id=ticket_id,
+            reference=reference,
+            assignee_user=assignee_user,
+            assignee_role=assignee_role,
+            reporter=reporter,
+            version_index=version_index,
+        )
+
+        with audit_context(user_id=actor_id, change_reason=change_reason):
+            payloads = generate_ticket_notification_payloads(
+                ticket,
+                event_type,
+                old_status=old_status,
+                new_status=new_status,
+                comment_body=comment_body,
+            )
+            for payload in payloads:
+                try:
+                    await publish_notification(payload)
+                except Exception as e:
+                    logger.error(
+                        "Error publishing ticket notification payload for ticket %s: %s",
+                        ticket_id,
+                        e,
+                        exc_info=True,
+                    )
+    except Exception as e:
+        logger.error(
+            "Error building/dispatching ticket notifications for ticket %s: %s",
+            ticket_id,
+            e,
+            exc_info=True,
+        )
 
 
 app = FastAPI(
@@ -600,6 +672,7 @@ async def update_ticket(
     request: Request,
     id: str,
     payload: TicketUpdate,
+    background_tasks: BackgroundTasks,
     principal: Principal = Depends(get_principal),
     _not_auditor=Depends(verify_not_auditor),
     session: AsyncSession = Depends(get_db_session),
@@ -661,6 +734,19 @@ async def update_ticket(
                 detail=f"Invalid transition from {current_status} to {target_status}.",
             )
 
+    # Detect assignment diff and status change
+    has_assignment_diff = False
+    if payload.assignee_user is not None and payload.assignee_user != ticket.assignee_user:
+        has_assignment_diff = True
+    if payload.assignee_role is not None and payload.assignee_role != ticket.assignee_role:
+        has_assignment_diff = True
+
+    has_status_change = False
+    old_status_str = current_status.value if hasattr(current_status, "value") else str(current_status)
+    if payload.status is not None and payload.status != ticket.status:
+        has_status_change = True
+        new_status_str = payload.status.value if hasattr(payload.status, "value") else str(payload.status)
+
     # Track audit details
     assignment_changes = []
     if (
@@ -716,6 +802,37 @@ async def update_ticket(
         version_index=ticket.version_index,
     )
 
+    # Enqueue notification dispatches
+    if has_assignment_diff:
+        background_tasks.add_task(
+            dispatch_ticket_notifications,
+            ticket_id=ticket.id,
+            reference=ticket.reference,
+            assignee_user=ticket.assignee_user,
+            assignee_role=ticket.assignee_role,
+            reporter=ticket.reporter,
+            version_index=ticket.version_index,
+            event_type="assignment",
+            actor_id=user_id,
+            change_reason=change_reason,
+        )
+
+    if has_status_change:
+        background_tasks.add_task(
+            dispatch_ticket_notifications,
+            ticket_id=ticket.id,
+            reference=ticket.reference,
+            assignee_user=ticket.assignee_user,
+            assignee_role=ticket.assignee_role,
+            reporter=ticket.reporter,
+            version_index=ticket.version_index,
+            event_type="transition",
+            actor_id=user_id,
+            change_reason=change_reason,
+            old_status=old_status_str,
+            new_status=new_status_str,
+        )
+
     return map_ticket_to_response(ticket)
 
 
@@ -724,6 +841,7 @@ async def transition_ticket(
     request: Request,
     id: str,
     payload: TicketTransitionPayload,
+    background_tasks: BackgroundTasks,
     principal: Principal = Depends(get_principal),
     _not_auditor=Depends(verify_not_auditor),
     session: AsyncSession = Depends(get_db_session),
@@ -778,6 +896,9 @@ async def transition_ticket(
                 detail=f"Invalid transition from {current_status} to {target_status}.",
             )
 
+    old_status_str = current_status.value if hasattr(current_status, "value") else str(current_status)
+    new_status_str = target_status.value if hasattr(target_status, "value") else str(target_status)
+
     # Record details for auditing before we modify the model
     actor_roles = ", ".join(principal.roles)
     audit_details = (
@@ -808,6 +929,21 @@ async def transition_ticket(
         version_index=ticket.version_index,
     )
 
+    background_tasks.add_task(
+        dispatch_ticket_notifications,
+        ticket_id=ticket.id,
+        reference=ticket.reference,
+        assignee_user=ticket.assignee_user,
+        assignee_role=ticket.assignee_role,
+        reporter=ticket.reporter,
+        version_index=ticket.version_index,
+        event_type="transition",
+        actor_id=user_id,
+        change_reason=change_reason,
+        old_status=old_status_str,
+        new_status=new_status_str,
+    )
+
     return map_ticket_to_response(ticket)
 
 
@@ -816,6 +952,7 @@ async def assign_ticket(
     request: Request,
     id: str,
     payload: TicketAssignPayload,
+    background_tasks: BackgroundTasks,
     principal: Principal = Depends(get_principal),
     _not_auditor=Depends(verify_not_auditor),
     session: AsyncSession = Depends(get_db_session),
@@ -921,6 +1058,19 @@ async def assign_ticket(
         version_index=ticket.version_index,
     )
 
+    background_tasks.add_task(
+        dispatch_ticket_notifications,
+        ticket_id=ticket.id,
+        reference=ticket.reference,
+        assignee_user=ticket.assignee_user,
+        assignee_role=ticket.assignee_role,
+        reporter=ticket.reporter,
+        version_index=ticket.version_index,
+        event_type="assignment",
+        actor_id=user_id,
+        change_reason=change_reason,
+    )
+
     return map_ticket_to_response(ticket)
 
 
@@ -932,6 +1082,7 @@ async def create_ticket_comment(
     request: Request,
     id: str,
     payload: CommentCreate,
+    background_tasks: BackgroundTasks,
     session: AsyncSession = Depends(get_db_session),
 ) -> CommentResponse:
     """
@@ -970,6 +1121,20 @@ async def create_ticket_comment(
         ticket_id=id,
         change_reason=change_reason,
         version_index=1,
+    )
+
+    background_tasks.add_task(
+        dispatch_ticket_notifications,
+        ticket_id=ticket.id,
+        reference=ticket.reference,
+        assignee_user=ticket.assignee_user,
+        assignee_role=ticket.assignee_role,
+        reporter=ticket.reporter,
+        version_index=ticket.version_index,
+        event_type="comment",
+        actor_id=user_id,
+        change_reason=change_reason,
+        comment_body=comment.body,
     )
 
     return CommentResponse(
