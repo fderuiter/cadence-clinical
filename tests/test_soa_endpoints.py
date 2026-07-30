@@ -388,7 +388,7 @@ async def test_api_soa_immutability_guards():
         # Attempt to create arm under LOCKED version -> should fail with 403
         res_create_arm = await client.post(
             f"/api/v1/studies/{study_id}/versions/{version_id}/arms",
-            json={"id": "arm_1", "properties": {"name": "Arm A"}},
+            json={"id": "arm_1", "properties": {"name": "Arm A", "type": "Active"}},
             headers=headers,
         )
         assert res_create_arm.status_code == 403
@@ -409,7 +409,7 @@ async def test_api_unauthorized_requests():
         # Request with missing headers -> should return 403 (for POST/PUT)
         res = await client.post(
             f"/api/v1/studies/{study_id}/versions/{version_id}/arms",
-            json={"id": "arm_1", "properties": {"name": "Arm A"}},
+            json={"id": "arm_1", "properties": {"name": "Arm A", "type": "Active"}},
         )
         assert res.status_code == 403
 
@@ -457,7 +457,7 @@ async def test_api_with_mocked_neo4j_driver():
             headers = get_auth_headers()
             res = await client.post(
                 "/api/v1/studies/study_1/versions/v_draft/arms",
-                json={"id": "arm_mocked", "properties": {"name": "Arm Mocked"}},
+                json={"id": "arm_mocked", "properties": {"name": "Arm Mocked", "type": "Active"}},
                 headers=headers,
             )
             assert res.status_code == 201
@@ -497,7 +497,7 @@ async def test_api_concurrent_locking_conflict_exception_translation():
             headers = get_auth_headers()
             res = await client.post(
                 f"/api/v1/studies/{study_id}/versions/{version_id}/arms",
-                json={"id": "arm_1", "properties": {"name": "Arm A"}},
+                json={"id": "arm_1", "properties": {"name": "Arm A", "type": "Active"}},
                 headers=headers,
             )
             assert res.status_code == 409
@@ -522,7 +522,7 @@ async def test_api_invalid_signature_exception_translation():
             headers = get_auth_headers()
             res = await client.post(
                 f"/api/v1/studies/{study_id}/versions/{version_id}/arms",
-                json={"id": "arm_1", "properties": {"name": "Arm A"}},
+                json={"id": "arm_1", "properties": {"name": "Arm A", "type": "Active"}},
                 headers=headers,
             )
             assert res.status_code == 400
@@ -547,7 +547,7 @@ async def test_api_audit_reason_enforcement():
 
         res = await client.post(
             f"/api/v1/studies/{study_id}/versions/{version_id}/arms",
-            json={"id": "arm_no_reason", "properties": {"name": "Arm A"}},
+            json={"id": "arm_no_reason", "properties": {"name": "Arm A", "type": "Active"}},
             headers=headers,
         )
         assert res.status_code == 403
@@ -558,7 +558,7 @@ async def test_api_audit_reason_enforcement():
         headers_long = get_auth_headers(change_reason=long_reason)
         res_long = await client.post(
             f"/api/v1/studies/{study_id}/versions/{version_id}/arms",
-            json={"id": "arm_long_reason", "properties": {"name": "Arm A"}},
+            json={"id": "arm_long_reason", "properties": {"name": "Arm A", "type": "Active"}},
             headers=headers_long,
         )
         assert res_long.status_code == 400
@@ -689,8 +689,183 @@ async def test_api_soa_immutability_guards_updates():
         # Attempt to update arm under LOCKED version -> should fail with 403
         res_update_arm = await client.put(
             f"/api/v1/studies/{study_id}/versions/{version_id}/arms/arm_1",
-            json={"properties": {"name": "Arm A (Modified)"}},
+            json={"properties": {"name": "Arm A (Modified)", "type": "Active"}},
             headers=headers,
         )
         assert res_update_arm.status_code == 403
         assert "IMMUTABILITY_VIOLATION" in res_update_arm.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_api_soa_typed_validation_and_timing_rejection():
+    """
+    Verifies that invalid input data types and cross-field conditional timing constraints
+    are deterministically rejected with HTTP 400 Bad Request.
+    """
+    study_id = "study_1"
+    version_id = "v_draft"
+
+    MOCK_STUDY_VERSIONS[study_id] = [
+        {
+            "id": version_id,
+            "version_tag": "1.0",
+            "status": "DRAFT",
+            "version_index": 1,
+            "created_by": "designer",
+        }
+    ]
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        headers = get_auth_headers()
+
+        # 1. Invalid Timing Window: conditional is True, but reason is missing or empty
+        res_invalid_timing = await client.post(
+            f"/api/v1/studies/{study_id}/versions/{version_id}/timing-windows",
+            json={
+                "id": "tw_cond_invalid",
+                "properties": {
+                    "name": "Fasting Timing",
+                    "conditional": True,
+                    "reason": "" # empty reason is invalid
+                }
+            },
+            headers=headers,
+        )
+        assert res_invalid_timing.status_code == 400
+        assert "String should have at least 1 character" in res_invalid_timing.text or "A non-empty 'reason' must be provided" in res_invalid_timing.text
+
+        # 1b. Invalid Timing Window: conditional is True, reason is omitted entirely
+        res_missing_reason = await client.post(
+            f"/api/v1/studies/{study_id}/versions/{version_id}/timing-windows",
+            json={
+                "id": "tw_cond_missing",
+                "properties": {
+                    "name": "Fasting Timing",
+                    "conditional": True
+                }
+            },
+            headers=headers,
+        )
+        assert res_missing_reason.status_code == 400
+        assert "A non-empty 'reason' must be provided" in res_missing_reason.text
+
+        # 2. Valid Timing Window: conditional is True, reason is provided
+        res_valid_timing = await client.post(
+            f"/api/v1/studies/{study_id}/versions/{version_id}/timing-windows",
+            json={
+                "id": "tw_cond_valid",
+                "properties": {
+                    "name": "Fasting Timing",
+                    "conditional": True,
+                    "reason": "Only required for diabetic cohort"
+                }
+            },
+            headers=headers,
+        )
+        assert res_valid_timing.status_code == 201
+
+
+@pytest.mark.asyncio
+async def test_api_soa_retirement_and_projection_exclusion():
+    """
+    Verifies that soft-retiring of entities (arms, epochs, visits, procedures, timing windows)
+    and links is non-destructive, increments the version_index, and excludes them
+    from future normal matrix projections.
+    """
+    study_id = "study_1"
+    version_id = "v_draft"
+
+    MOCK_STUDY_VERSIONS[study_id] = [
+        {
+            "id": version_id,
+            "version_tag": "1.0",
+            "status": "DRAFT",
+            "version_index": 1,
+            "created_by": "designer",
+        }
+    ]
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        headers = get_auth_headers()
+
+        # 1. Create a Visit and Procedure, and a Timing Window
+        await client.post(
+            f"/api/v1/studies/{study_id}/versions/{version_id}/visits",
+            json={"id": "visit_ret", "properties": {"encounter_name": "Week 1", "sequence": 1}},
+            headers=headers,
+        )
+        await client.post(
+            f"/api/v1/studies/{study_id}/versions/{version_id}/procedures",
+            json={"id": "proc_ret", "properties": {"activity_name": "Vitals"}},
+            headers=headers,
+        )
+        await client.post(
+            f"/api/v1/studies/{study_id}/versions/{version_id}/timing-windows",
+            json={"id": "timing_ret", "properties": {"name": "timing_ret"}},
+            headers=headers,
+        )
+
+        # Link them
+        await client.post(
+            f"/api/v1/studies/{study_id}/versions/{version_id}/links/visit-procedure",
+            json={"visit_id": "visit_ret", "procedure_id": "proc_ret"},
+            headers=headers,
+        )
+        await client.post(
+            f"/api/v1/studies/{study_id}/versions/{version_id}/links/timing",
+            json={"source_id": "proc_ret", "timing_id": "timing_ret", "source_type": "procedure"},
+            headers=headers,
+        )
+
+        # Check projection before retirement
+        res_proj_1 = await client.get(
+            f"/api/v1/studies/{study_id}/versions/{version_id}/soa-projection",
+            headers=headers,
+        )
+        assert res_proj_1.status_code == 200
+        proj_1 = res_proj_1.json()
+        assert len(proj_1["encounters"]) == 1
+        assert len(proj_1["rows"]) == 1
+        assert proj_1["rows"][0]["cells"][0]["details"] == "timing_ret"
+
+        # 2. Retire the Timing Window
+        res_retire_timing = await client.delete(
+            f"/api/v1/studies/{study_id}/versions/{version_id}/timing-windows/timing_ret",
+            headers=headers,
+        )
+        assert res_retire_timing.status_code == 200
+
+        # Check projection: timing window is excluded/details is None (as link target is retired)
+        res_proj_2 = await client.get(
+            f"/api/v1/studies/{study_id}/versions/{version_id}/soa-projection",
+            headers=headers,
+        )
+        assert res_proj_2.json()["rows"][0]["cells"][0]["details"] is None
+
+        # Verify Timing Window node still exists, but version_index is incremented and is_retired is True
+        res_get_tw = await client.get(
+            f"/api/v1/studies/{study_id}/versions/{version_id}/timing-windows/timing_ret",
+            headers=headers,
+        )
+        assert res_get_tw.status_code == 200
+        tw_detail = res_get_tw.json()
+        assert tw_detail["version_index"] == 2
+        assert tw_detail["is_retired"] is True
+
+        # 3. Retire the Visit
+        res_retire_visit = await client.delete(
+            f"/api/v1/studies/{study_id}/versions/{version_id}/visits/visit_ret",
+            headers=headers,
+        )
+        assert res_retire_visit.status_code == 200
+
+        # Check projection: encounters list is now empty as the visit is retired
+        res_proj_3 = await client.get(
+            f"/api/v1/studies/{study_id}/versions/{version_id}/soa-projection",
+            headers=headers,
+        )
+        assert len(res_proj_3.json()["encounters"]) == 0
