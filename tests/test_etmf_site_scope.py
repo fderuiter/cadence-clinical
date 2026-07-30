@@ -624,25 +624,57 @@ async def test_unauthorized_role_denied_on_all_paths():
     assert client.get("/api/v1/etmf/documents", headers=headers).status_code == 403
 
     # 2. view_document
-    assert client.get(f"/api/v1/etmf/documents/{doc_id}", headers=headers).status_code == 403
+    assert (
+        client.get(f"/api/v1/etmf/documents/{doc_id}", headers=headers).status_code
+        == 403
+    )
 
     # 3. download_document
-    assert client.get(f"/api/v1/etmf/documents/{doc_id}/download", headers=headers).status_code == 403
+    assert (
+        client.get(
+            f"/api/v1/etmf/documents/{doc_id}/download", headers=headers
+        ).status_code
+        == 403
+    )
 
     # 4. history (transitions)
-    assert client.get(f"/api/v1/etmf/documents/{doc_id}/transitions", headers=headers).status_code == 403
+    assert (
+        client.get(
+            f"/api/v1/etmf/documents/{doc_id}/transitions", headers=headers
+        ).status_code
+        == 403
+    )
 
     # 5. qc-history
-    assert client.get(f"/api/v1/etmf/documents/{doc_id}/qc-history", headers=headers).status_code == 403
+    assert (
+        client.get(
+            f"/api/v1/etmf/documents/{doc_id}/qc-history", headers=headers
+        ).status_code
+        == 403
+    )
 
     # 6. completeness
-    assert client.get("/api/v1/etmf/completeness?study_id=study_001&milestone=INITIATION", headers=headers).status_code == 403
+    assert (
+        client.get(
+            "/api/v1/etmf/completeness?study_id=study_001&milestone=INITIATION",
+            headers=headers,
+        ).status_code
+        == 403
+    )
 
     # 7. binder structure
-    assert client.get("/api/v1/etmf/studies/study_001/binder/structure", headers=headers).status_code == 403
+    assert (
+        client.get(
+            "/api/v1/etmf/studies/study_001/binder/structure", headers=headers
+        ).status_code
+        == 403
+    )
 
     # 8. export regulatory binder
-    assert client.get("/api/v1/etmf/studies/study_001/binder", headers=headers).status_code == 403
+    assert (
+        client.get("/api/v1/etmf/studies/study_001/binder", headers=headers).status_code
+        == 403
+    )
 
 
 @pytest.mark.asyncio
@@ -708,7 +740,9 @@ async def test_raw_original_suppression_without_read_raw():
     # 3. Request lists/view as user lacking read_raw (e.g. investigator)
     inv_headers = get_site_auth_headers(roles="investigator", site_id="site_alpha")
 
-    list_resp = client.get("/api/v1/etmf/documents?study_id=study_redact_test", headers=inv_headers)
+    list_resp = client.get(
+        "/api/v1/etmf/documents?study_id=study_redact_test", headers=inv_headers
+    )
     assert list_resp.status_code == 200
     listed_ids = [d["id"] for d in list_resp.json()]
 
@@ -717,15 +751,33 @@ async def test_raw_original_suppression_without_read_raw():
     assert red_id in listed_ids
 
     # Viewing/downloading the raw original must be blocked (403)
-    assert client.get(f"/api/v1/etmf/documents/{orig_id}", headers=inv_headers).status_code == 403
-    assert client.get(f"/api/v1/etmf/documents/{orig_id}/download", headers=inv_headers).status_code == 403
+    assert (
+        client.get(f"/api/v1/etmf/documents/{orig_id}", headers=inv_headers).status_code
+        == 403
+    )
+    assert (
+        client.get(
+            f"/api/v1/etmf/documents/{orig_id}/download", headers=inv_headers
+        ).status_code
+        == 403
+    )
 
     # Viewing/downloading the redacted successor must be allowed (200)
-    assert client.get(f"/api/v1/etmf/documents/{red_id}", headers=inv_headers).status_code == 200
-    assert client.get(f"/api/v1/etmf/documents/{red_id}/download", headers=inv_headers).status_code == 200
+    assert (
+        client.get(f"/api/v1/etmf/documents/{red_id}", headers=inv_headers).status_code
+        == 200
+    )
+    assert (
+        client.get(
+            f"/api/v1/etmf/documents/{red_id}/download", headers=inv_headers
+        ).status_code
+        == 200
+    )
 
     # 4. Request as user with read_raw (e.g. admin)
-    list_admin = client.get("/api/v1/etmf/documents?study_id=study_redact_test", headers=admin_headers)
+    list_admin = client.get(
+        "/api/v1/etmf/documents?study_id=study_redact_test", headers=admin_headers
+    )
     assert list_admin.status_code == 200
     admin_listed_ids = [d["id"] for d in list_admin.json()]
 
@@ -734,8 +786,18 @@ async def test_raw_original_suppression_without_read_raw():
     assert red_id in admin_listed_ids
 
     # View/download orig must be allowed
-    assert client.get(f"/api/v1/etmf/documents/{orig_id}", headers=admin_headers).status_code == 200
-    assert client.get(f"/api/v1/etmf/documents/{orig_id}/download", headers=admin_headers).status_code == 200
+    assert (
+        client.get(
+            f"/api/v1/etmf/documents/{orig_id}", headers=admin_headers
+        ).status_code
+        == 200
+    )
+    assert (
+        client.get(
+            f"/api/v1/etmf/documents/{orig_id}/download", headers=admin_headers
+        ).status_code
+        == 200
+    )
 
 
 @pytest.mark.asyncio
@@ -782,12 +844,14 @@ async def test_binder_export_redaction_representation_policy():
         await session.commit()
 
     # Auditor scoped to site_alpha only, who has etmf_document:read but NOT read_raw
-    auditor_headers = get_site_auth_headers(roles="regulatory_inspector", site_id="site_alpha")
+    auditor_headers = get_site_auth_headers(
+        roles="regulatory_inspector", site_id="site_alpha"
+    )
 
     # Export binder with include_history=True
     resp = client.get(
         "/api/v1/etmf/studies/study_binder_redact_test/binder?include_history=True",
-        headers=auditor_headers
+        headers=auditor_headers,
     )
     assert resp.status_code == 200
 
@@ -805,7 +869,9 @@ async def test_binder_export_redaction_representation_policy():
 @pytest.mark.asyncio
 async def test_site_scoped_cannot_read_study_level_or_quarantined_documents():
     client = TestClient(app)
-    admin_headers = get_global_auth_headers(roles="admin", change_reason="Setup study docs")
+    admin_headers = get_global_auth_headers(
+        roles="admin", change_reason="Setup study docs"
+    )
 
     # 1. Ingest a study-level document (site_id=None) but set its site_id to "site_alpha" in DB to check zone/artifact-type check
     res_study = client.post(
@@ -842,12 +908,24 @@ async def test_site_scoped_cannot_read_study_level_or_quarantined_documents():
     inv_headers = get_site_auth_headers(roles="investigator", site_id="site_alpha")
 
     # Listing documents for study_attr_test should exclude both the study-level protocol and the quarantined document!
-    list_resp = client.get("/api/v1/etmf/documents?study_id=study_attr_test", headers=inv_headers)
+    list_resp = client.get(
+        "/api/v1/etmf/documents?study_id=study_attr_test", headers=inv_headers
+    )
     assert list_resp.status_code == 200
     listed_ids = [d["id"] for d in list_resp.json()]
     assert study_doc_id not in listed_ids
     assert quar_doc_id not in listed_ids
 
     # Viewing/downloading them directly must return 403 Forbidden
-    assert client.get(f"/api/v1/etmf/documents/{study_doc_id}", headers=inv_headers).status_code == 403
-    assert client.get(f"/api/v1/etmf/documents/{quar_doc_id}", headers=inv_headers).status_code == 403
+    assert (
+        client.get(
+            f"/api/v1/etmf/documents/{study_doc_id}", headers=inv_headers
+        ).status_code
+        == 403
+    )
+    assert (
+        client.get(
+            f"/api/v1/etmf/documents/{quar_doc_id}", headers=inv_headers
+        ).status_code
+        == 403
+    )

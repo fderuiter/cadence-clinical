@@ -732,6 +732,7 @@ def enforce_document_site_visibility(doc: TMFDocument, principal: Principal) -> 
     Enforces document-level site-scope visibility rules.
     """
     from packages.security.rbac import can_access_site, can_access_study
+
     if not can_access_study(principal, doc.study_id):
         raise HTTPException(
             status_code=403,
@@ -1525,6 +1526,7 @@ async def check_completeness(
 
     # Use can_access_site/can_access_study for site-scoped EDL/completeness filtering
     from packages.security.rbac import can_access_site, can_access_study
+
     if not can_access_study(principal, study_id):
         raise HTTPException(
             status_code=403,
@@ -3115,6 +3117,7 @@ async def get_binder_structure(
 
     # Use can_access_site/can_access_study for site-scoped EDL/completeness filtering
     from packages.security.rbac import can_access_site, can_access_study
+
     if not can_access_study(principal, study_id):
         raise HTTPException(
             status_code=403,

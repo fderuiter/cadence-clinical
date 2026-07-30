@@ -255,9 +255,7 @@ def apply_document_query_filter(stmt, principal: Principal):
     if not has_permission(principal, "etmf_document:read_raw"):
         doc_alias = aliased(TMFDocument)
         successor_exists = exists(
-            select(doc_alias.id).where(
-                doc_alias.redaction_source_id == TMFDocument.id
-            )
+            select(doc_alias.id).where(doc_alias.redaction_source_id == TMFDocument.id)
         )
         stmt = stmt.where(not_(successor_exists))
 
