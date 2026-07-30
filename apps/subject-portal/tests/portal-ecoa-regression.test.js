@@ -32,6 +32,11 @@ beforeEach(async () => {
         <main class="portal-main">
           <!-- Tasks View -->
           <section id="view-tasks" class="portal-view">
+            <div id="tasks-loading" style="display: none;"></div>
+            <div id="tasks-failure" style="display: none;">
+              <span id="tasks-error-msg"></span>
+              <button type="button" id="btn-retry-tasks">Retry</button>
+            </div>
             <div id="tasks-list-container"></div>
 
             <!-- Offline Sync Status Panel -->
@@ -63,17 +68,29 @@ beforeEach(async () => {
 
           <!-- Compliance View -->
           <section id="view-compliance" class="portal-view">
-            <div id="compliance-rate-pct">0%</div>
-            <div id="compliance-completed-count">0</div>
-            <div id="compliance-pending-count">0</div>
-            <div id="compliance-overdue-count">0</div>
-            <table>
-              <tbody id="compliance-history-tbody"></tbody>
-            </table>
+            <div id="compliance-loading" style="display: none;"></div>
+            <div id="compliance-failure" style="display: none;">
+              <span id="compliance-error-msg"></span>
+              <button type="button" id="btn-retry-compliance">Retry</button>
+            </div>
+            <div class="grid-layout">
+              <div id="compliance-rate-pct">0%</div>
+              <div id="compliance-completed-count">0</div>
+              <div id="compliance-pending-count">0</div>
+              <div id="compliance-overdue-count">0</div>
+              <table>
+                <tbody id="compliance-history-tbody"></tbody>
+              </table>
+            </div>
           </section>
 
           <!-- Inbox View -->
           <section id="view-inbox" class="portal-view">
+            <div id="inbox-loading" style="display: none;"></div>
+            <div id="inbox-failure" style="display: none;">
+              <span id="inbox-error-msg"></span>
+              <button type="button" id="btn-retry-inbox">Retry</button>
+            </div>
             <div id="inbox-container"></div>
           </section>
         </main>
@@ -104,6 +121,31 @@ beforeEach(async () => {
       json: () => Promise.resolve({ status: "success" }),
     })
   );
+
+  // Reset state
+  try {
+    const portal = await import("../index.js");
+    portal.state.session.userId = "subject_001";
+    portal.state.session.roles = "Subject";
+    portal.state.session.token = null;
+    portal.state.session.isOfflineMode = true;
+    portal.state.assignments = [];
+    portal.state.notifications = [];
+    portal.state.ledgerBlocks = [];
+    portal.state.activeQuestionnaire = null;
+    portal.state.instruments = {};
+    portal.state.compliance = null;
+    portal.state.tasksLoading = false;
+    portal.state.tasksError = null;
+    portal.state.instrumentsLoading = false;
+    portal.state.instrumentsError = null;
+    portal.state.complianceLoading = false;
+    portal.state.complianceError = null;
+    portal.state.notificationsLoading = false;
+    portal.state.notificationsError = null;
+  } catch (err) {
+    console.error("State reset failed in beforeEach:", err);
+  }
 });
 
 describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
@@ -368,5 +410,267 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
     expect(syncList.innerHTML).toContain(
       "Conflict resolved: Local and server entries were combined."
     );
+  });
+
+  describe("Authenticated live data loading and failure states", () => {
+    const serverAssignments = [
+      {
+        id: "serv_assign_01",
+        subject_id: "subject_authenticated",
+        instrument_id: "serv_inst_01",
+        start_date: "2026-01-01T00:00:00Z",
+        end_date: "2026-01-02T00:00:00Z",
+        due_at: new Date(Date.now() + 4 * 3600 * 1000).toISOString(),
+        created_at: "2026-01-01T00:00:00Z",
+        created_by: "system",
+        reason_for_change: "Initial",
+        version_index: 1
+      }
+    ];
+
+    const serverInstruments = [
+      {
+        id: "serv_inst_01",
+        name: "Server Instrument Name",
+        description: "Server Instrument Description",
+        items: {
+          server_field: {
+            label: "Server Field Label",
+            type: "numeric",
+            required: true,
+            min: 1,
+            max: 10
+          }
+        },
+        response_types: {},
+        scoring_metadata: {},
+        created_at: "2026-01-01T00:00:00Z",
+        created_by: "system",
+        reason_for_change: "Initial",
+        version_index: 1
+      }
+    ];
+
+    const serverCompliance = {
+      subject_id: "subject_authenticated",
+      compliance_rate: 85.5,
+      completed_count: 5,
+      pending_count: 1,
+      overdue_count: 0,
+      assignments: [
+        {
+          assignment_id: "serv_assign_01",
+          instrument_id: "serv_inst_01",
+          instrument_name: "Server Instrument Name",
+          status: "PENDING",
+          due_at: new Date(Date.now() + 4 * 3600 * 1000).toISOString(),
+          end_date: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+          submitted_at: null
+        }
+      ]
+    };
+
+    const serverNotifications = [
+      {
+        id: "serv_notif_01",
+        subject_id: "subject_authenticated",
+        assignment_id: "serv_assign_01",
+        message: "Server Reminder Message",
+        due_at: "2026-01-01T12:00:00Z",
+        channel: "IN_APP",
+        delivery_status: "DELIVERED",
+        is_read: false,
+        read_at: null,
+        created_at: "2026-01-01T00:00:00Z",
+        created_by: "system",
+        reason_for_change: "Initial"
+      }
+    ];
+
+    it("authenticates and loads data from server-shaped payloads correctly", async () => {
+      const portal = await import("../index.js");
+
+      // Enable authenticated session
+      portal.state.session.userId = "subject_authenticated";
+      portal.state.session.token = "valid-token";
+      portal.state.session.isOfflineMode = false;
+
+      // Mock fetch for the specific endpoints
+      globalThis.fetch = vi.fn().mockImplementation((url) => {
+        if (url.includes("assignments/subject/")) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve(serverAssignments) });
+        }
+        if (url.includes("/instruments")) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve(serverInstruments) });
+        }
+        if (url.includes("/compliance")) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve(serverCompliance) });
+        }
+        if (url.includes("/notifications")) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve(serverNotifications) });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      });
+
+      await portal.initializeApp();
+
+      // Assert tasks render from server data
+      portal.renderTasks();
+      const tasksHtml = document.getElementById("tasks-list-container").innerHTML;
+      expect(tasksHtml).toContain("Server Instrument Name");
+
+      // Assert compliance render from server compliance data
+      portal.renderCompliance();
+      expect(document.getElementById("compliance-rate-pct").textContent).toBe("86%"); // 85.5 rounded to 86
+      expect(document.getElementById("compliance-completed-count").textContent).toBe("5");
+
+      // Assert questionnaire displays server instrument definitions
+      await portal.startQuestionnaire("serv_assign_01");
+      expect(document.getElementById("questionnaire-title").textContent).toBe("Server Instrument Name");
+      expect(document.getElementById("questionnaire-form-container").innerHTML).toContain("Server Field Label");
+    });
+
+    it("shows loading, empty, and failure states on tasks, inbox, and compliance with retry actions", async () => {
+      const portal = await import("../index.js");
+
+      portal.state.session.userId = "subject_authenticated";
+      portal.state.session.token = "valid-token";
+      portal.state.session.isOfflineMode = false;
+
+      // Simulate failures for all
+      globalThis.fetch = vi.fn().mockImplementation(() =>
+        Promise.resolve({ ok: false, status: 500 })
+      );
+
+      await portal.initializeApp();
+
+      // Verify tasks failure state
+      portal.renderTasks();
+      expect(document.getElementById("tasks-failure").style.display).toBe("block");
+      expect(document.getElementById("tasks-list-container").style.display).toBe("none");
+
+      // Verify compliance failure state
+      portal.renderCompliance();
+      expect(document.getElementById("compliance-failure").style.display).toBe("block");
+      expect(document.querySelector("#view-compliance .grid-layout").style.display).toBe("none");
+
+      // Verify inbox failure state
+      portal.renderInbox();
+      expect(document.getElementById("inbox-failure").style.display).toBe("block");
+      expect(document.getElementById("inbox-container").style.display).toBe("none");
+
+      // Test retry triggers refetching and rendering
+      globalThis.fetch = vi.fn().mockImplementation((url) => {
+        if (url.includes("assignments/subject/")) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve(serverAssignments) });
+        }
+        if (url.includes("/instruments")) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve(serverInstruments) });
+        }
+        if (url.includes("/compliance")) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve(serverCompliance) });
+        }
+        if (url.includes("/notifications")) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve(serverNotifications) });
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      });
+
+      // Simulate clicking retry on tasks
+      document.getElementById("btn-retry-tasks").click();
+      // Wait for the async click handler to complete
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(document.getElementById("tasks-failure").style.display).toBe("none");
+      expect(document.getElementById("tasks-list-container").innerHTML).toContain("Server Instrument Name");
+
+      // Simulate clicking retry on compliance
+      document.getElementById("btn-retry-compliance").click();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(document.getElementById("compliance-failure").style.display).toBe("none");
+      expect(document.getElementById("compliance-rate-pct").textContent).toBe("86%");
+    });
+
+    it("prevents changing notification state on failed server acknowledgement, but updates on success", async () => {
+      const portal = await import("../index.js");
+
+      portal.state.session.userId = "subject_authenticated";
+      portal.state.session.token = "valid-token";
+      portal.state.session.isOfflineMode = false;
+      portal.state.notifications = [
+        {
+          id: "serv_notif_01",
+          subject_id: "subject_authenticated",
+          assignment_id: "serv_assign_01",
+          message: "Server Reminder",
+          due_at: "2026-01-01T12:00:00Z",
+          channel: "IN_APP",
+          is_read: false
+        }
+      ];
+
+      portal.renderInbox();
+      expect(String(document.getElementById("unread-count").textContent)).toBe("1");
+
+      // Mock failure response for acknowledgement
+      globalThis.fetch = vi.fn().mockImplementation(() =>
+        Promise.resolve({ ok: false, status: 500 })
+      );
+
+      await portal.acknowledgeNotification("serv_notif_01");
+
+      // Since it failed, the notification is still unread (1 unread)
+      expect(String(document.getElementById("unread-count").textContent)).toBe("1");
+      expect(portal.state.notifications[0].is_read).toBe(false);
+      expect(document.getElementById("inbox-failure").style.display).toBe("block");
+
+      // Mock successful acknowledgement response
+      const ackResponse = {
+        id: "serv_notif_01",
+        subject_id: "subject_authenticated",
+        assignment_id: "serv_assign_01",
+        due_at: "2026-01-01T12:00:00Z",
+        channel: "IN_APP",
+        is_read: true,
+        read_at: new Date().toISOString(),
+        created_at: "2026-01-01T00:00:00Z",
+        created_by: "system",
+        reason_for_change: "Initial"
+      };
+      globalThis.fetch = vi.fn().mockImplementation(() =>
+        Promise.resolve({ ok: true, json: () => Promise.resolve(ackResponse) })
+      );
+
+      await portal.acknowledgeNotification("serv_notif_01");
+
+      // Successful ack updates state to read
+      expect(String(document.getElementById("unread-count").textContent)).toBe("0");
+      expect(portal.state.notifications[0].is_read).toBe(true);
+    });
+
+    it("guarantees an authenticated read failure never substitutes mock content or locally derived compliance", async () => {
+      const portal = await import("../index.js");
+
+      portal.state.session.userId = "subject_authenticated";
+      portal.state.session.token = "valid-token";
+      portal.state.session.isOfflineMode = false;
+
+      // Fail all fetches
+      globalThis.fetch = vi.fn().mockImplementation(() =>
+        Promise.resolve({ ok: false, status: 500 })
+      );
+
+      await portal.initializeApp();
+
+      // Check assignments are empty list, not loaded with MOCK_ASSIGNMENTS
+      expect(portal.state.assignments).toHaveLength(0);
+
+      // Check notifications are empty list, not loaded with MOCK_NOTIFICATIONS
+      expect(portal.state.notifications).toHaveLength(0);
+
+      // Check compliance is null, and renderCompliance handles error
+      expect(portal.state.compliance).toBeNull();
+      portal.renderCompliance();
+      expect(document.getElementById("compliance-failure").style.display).toBe("block");
+    });
   });
 });

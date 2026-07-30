@@ -133,10 +133,44 @@ const state = {
   assignments: [],
   notifications: [],
   ledgerBlocks: [],
-  activeQuestionnaire: null,
   assignmentsError: false,
   notificationsError: false,
+  instruments: {}, // Map keyed by instrument id
+  compliance: null, // Holds SubjectComplianceResponse
+  tasksLoading: false,
+  tasksError: null,
+  instrumentsLoading: false,
+  instrumentsError: null,
+  complianceLoading: false,
+  complianceError: null,
+  notificationsLoading: false,
+  notificationsError: null,
 };
+
+// Auth Fetch Helpers
+async function fetchAssignments(subjectId) {
+  return await dispatchApi(`assignments/subject/${subjectId}`);
+}
+
+async function fetchAssignedInstruments(subjectId) {
+  return await dispatchApi(`subjects/${subjectId}/instruments`);
+}
+
+async function fetchInstrument(id) {
+  return await dispatchApi(`instruments/${id}`);
+}
+
+async function fetchCompliance(subjectId) {
+  return await dispatchApi(`subjects/${subjectId}/compliance`);
+}
+
+async function fetchNotifications(subjectId) {
+  return await dispatchApi(`subjects/${subjectId}/notifications`);
+}
+
+function isAuthenticatedSession() {
+  return !!(state.session.token && !state.session.isOfflineMode);
+}
 
 // Simple Router
 function showView(viewId) {
@@ -261,20 +295,45 @@ async function dispatchApi(endpoint, options = {}) {
 
 // 1. My Tasks (Assigned Surveys)
 function renderTasks() {
+  const loadingEl = document.getElementById("tasks-loading");
+  const failureEl = document.getElementById("tasks-failure");
   const container = document.getElementById("tasks-list-container");
-  if (!container) return;
+  const errorMsgEl = document.getElementById("tasks-error-msg");
 
-  if (state.assignmentsError) {
-    container.innerHTML = `
-      <div class="card" style="text-align: center; padding: 32px; color: var(--danger);">
-        <p style="font-size: 18px; font-weight: 700; margin-bottom: 6px;">⚠️ Error loading tasks</p>
-        <p style="font-size: 14px;">We are unable to connect to the study servers right now. Please check your connection and try again.</p>
-      </div>
-    `;
+  if (loadingEl) loadingEl.style.display = "none";
+  if (failureEl) failureEl.style.display = "none";
+  if (container) container.style.display = "none";
+
+  if (state.tasksLoading) {
+    if (loadingEl) loadingEl.style.display = "block";
     return;
   }
 
-  const activeTasks = state.assignments.filter((a) => a.status !== "COMPLETED");
+  if (state.tasksError || state.assignmentsError) {
+    if (failureEl) {
+      failureEl.style.display = "block";
+      if (errorMsgEl) errorMsgEl.textContent = state.tasksError || "We are unable to connect to the study servers right now.";
+    } else if (container) {
+      container.style.display = "block";
+      container.innerHTML = `
+        <div class="card" style="text-align: center; padding: 32px; color: var(--danger);">
+          <p style="font-size: 18px; font-weight: 700; margin-bottom: 6px;">⚠️ Error loading tasks</p>
+          <p style="font-size: 14px;">We are unable to connect to the study servers right now. Please check your connection and try again.</p>
+        </div>
+      `;
+    }
+    return;
+  }
+
+  if (container) {
+    container.style.display = "block";
+  }
+
+  // To support both authenticated and unauthenticated mappings cleanly:
+  const activeTasks = state.assignments.filter((task) => {
+    const isCompleted = task.status === "COMPLETED" || task.version_index > 1;
+    return !isCompleted;
+  });
 
   if (activeTasks.length === 0) {
     container.innerHTML = `
@@ -288,16 +347,17 @@ function renderTasks() {
 
   container.innerHTML = activeTasks
     .map((task) => {
-      const isOverdue =
-        task.status === "OVERDUE" || new Date(task.due_at) < new Date();
+      const instName = (state.instruments && state.instruments[task.instrument_id]?.name) || task.instrument_name || "Assigned Instrument";
+      const isCompleted = task.status === "COMPLETED" || task.version_index > 1;
+      const isOverdue = !isCompleted && (task.status === "OVERDUE" || (task.due_at && new Date(task.due_at) < new Date()));
       const statusClass = isOverdue ? "overdue" : "pending";
       const statusLabel = isOverdue ? "Overdue" : "Pending";
-      const dueText = new Date(task.due_at).toLocaleString();
+      const dueText = task.due_at ? new Date(task.due_at).toLocaleString() : "—";
 
       return `
         <div class="task-item" id="task-card-${task.id}">
           <div class="task-meta">
-            <span class="task-name">${task.instrument_name}</span>
+            <span class="task-name">${instName}</span>
             <span class="task-due">Scheduled Due: <strong>${dueText}</strong></span>
           </div>
           <div style="display: flex; align-items: center; gap: 16px;">
@@ -319,11 +379,25 @@ function renderTasks() {
 }
 
 // 2. Questionnaire Completion
-function startQuestionnaire(assignmentId) {
+async function startQuestionnaire(assignmentId) {
   const assignment = state.assignments.find((a) => a.id === assignmentId);
   if (!assignment) return;
 
-  const instrument = MOCK_INSTRUMENTS[assignment.instrument_id];
+  let instrument = state.instruments[assignment.instrument_id];
+  if (!instrument && isAuthenticatedSession()) {
+    try {
+      instrument = await fetchInstrument(assignment.instrument_id);
+      state.instruments[assignment.instrument_id] = instrument;
+    } catch (err) {
+      alert("Failed to retrieve questionnaire definition: " + (err.message || err));
+      return;
+    }
+  }
+
+  if (!instrument && !isAuthenticatedSession()) {
+    instrument = MOCK_INSTRUMENTS[assignment.instrument_id];
+  }
+
   if (!instrument) {
     alert("Questionnaire specification not found.");
     return;
@@ -519,18 +593,79 @@ async function verifyAndSubmitSignature() {
 
 // 3. My Compliance
 function renderCompliance() {
-  const total = state.assignments.length;
-  const completed = state.assignments.filter(
-    (a) => a.status === "COMPLETED"
-  ).length;
-  const overdue = state.assignments.filter(
-    (a) => a.status === "OVERDUE"
-  ).length;
-  const pending = state.assignments.filter(
-    (a) => a.status === "PENDING"
-  ).length;
+  const loadingEl = document.getElementById("compliance-loading");
+  const failureEl = document.getElementById("compliance-failure");
+  const errorMsgEl = document.getElementById("compliance-error-msg");
+  const gridLayoutEl = document.querySelector("#view-compliance .grid-layout");
 
-  const rate = total > 0 ? Math.round((completed / total) * 100) : 100;
+  if (loadingEl) loadingEl.style.display = "none";
+  if (failureEl) failureEl.style.display = "none";
+  if (gridLayoutEl) gridLayoutEl.style.display = "none";
+
+  if (state.complianceLoading) {
+    if (loadingEl) loadingEl.style.display = "block";
+    return;
+  }
+
+  if (state.complianceError) {
+    if (failureEl) {
+      failureEl.style.display = "block";
+      if (errorMsgEl) errorMsgEl.textContent = state.complianceError;
+    }
+    return;
+  }
+
+  if (gridLayoutEl) {
+    gridLayoutEl.style.display = "grid";
+  }
+
+  let rate;
+  let completed;
+  let pending;
+  let overdue;
+  let historyList;
+
+  if (isAuthenticatedSession()) {
+    if (!state.compliance) {
+      if (failureEl) {
+        failureEl.style.display = "block";
+        if (gridLayoutEl) gridLayoutEl.style.display = "none";
+        if (errorMsgEl) errorMsgEl.textContent = "No compliance data loaded.";
+      }
+      return;
+    }
+    rate = Math.round(state.compliance.compliance_rate);
+    completed = state.compliance.completed_count;
+    pending = state.compliance.pending_count;
+    overdue = state.compliance.overdue_count;
+    historyList = state.compliance.assignments || [];
+  } else {
+    // Sandbox mode: compute from state.assignments
+    const total = state.assignments.length;
+    completed = state.assignments.filter((a) => {
+      return a.status === "COMPLETED" || a.version_index > 1;
+    }).length;
+    overdue = state.assignments.filter((a) => {
+      const isCompleted = a.status === "COMPLETED" || a.version_index > 1;
+      return !isCompleted && (a.status === "OVERDUE" || (a.due_at && new Date(a.due_at) < new Date()));
+    }).length;
+    pending = total - completed - overdue;
+    rate = total > 0 ? Math.round((completed / total) * 100) : 100;
+
+    historyList = state.assignments.map((item) => {
+      const isCompleted = item.status === "COMPLETED" || item.version_index > 1;
+      const isOverdue = !isCompleted && (item.status === "OVERDUE" || (item.due_at && new Date(item.due_at) < new Date()));
+      const status = isCompleted ? "COMPLETED" : (isOverdue ? "OVERDUE" : "PENDING");
+      return {
+        instrument_id: item.instrument_id,
+        instrument_name: item.instrument_name,
+        due_at: item.due_at,
+        end_date: item.end_date,
+        submitted_at: item.submitted_at,
+        status: status
+      };
+    });
+  }
 
   // Update DOM metrics
   const pctEl = document.getElementById("compliance-rate-pct");
@@ -547,19 +682,19 @@ function renderCompliance() {
   const tbody = document.getElementById("compliance-history-tbody");
   if (!tbody) return;
 
-  if (state.assignments.length === 0) {
+  if (historyList.length === 0) {
     tbody.innerHTML = `<tr><td colspan="4" class="no-data">No history found.</td></tr>`;
     return;
   }
 
   // Sort assignments chronologically by due_at or end_date
-  const sorted = state.assignments
+  const sorted = historyList
     .slice()
     .sort((a, b) => new Date(b.due_at) - new Date(a.due_at));
 
   tbody.innerHTML = sorted
     .map((item) => {
-      const scheduledText = new Date(item.due_at).toLocaleDateString();
+      const scheduledText = item.due_at ? new Date(item.due_at).toLocaleDateString() : "—";
       const submittedText = item.submitted_at
         ? new Date(item.submitted_at).toLocaleString()
         : "—";
@@ -571,15 +706,17 @@ function renderCompliance() {
         statusLabel = "Completed";
       } else if (
         item.status === "OVERDUE" ||
-        new Date(item.due_at) < new Date()
+        (item.due_at && new Date(item.due_at) < new Date())
       ) {
         pillClass = "overdue";
         statusLabel = "Overdue";
       }
 
+      const instName = item.instrument_name || (state.instruments && state.instruments[item.instrument_id]?.name) || "Assigned Instrument";
+
       return `
         <tr>
-          <td><strong>${item.instrument_name}</strong></td>
+          <td><strong>${instName}</strong></td>
           <td>${scheduledText}</td>
           <td>${submittedText}</td>
           <td><span class="status-pill ${pillClass}">${statusLabel}</span></td>
@@ -591,8 +728,31 @@ function renderCompliance() {
 
 // 4. My Inbox (Notifications & Reminders)
 function renderInbox() {
+  const loadingEl = document.getElementById("inbox-loading");
+  const failureEl = document.getElementById("inbox-failure");
   const container = document.getElementById("inbox-container");
-  if (!container) return;
+  const errorMsgEl = document.getElementById("inbox-error-msg");
+
+  if (loadingEl) loadingEl.style.display = "none";
+  if (failureEl) failureEl.style.display = "none";
+  if (container) container.style.display = "none";
+
+  if (state.notificationsLoading) {
+    if (loadingEl) loadingEl.style.display = "block";
+    return;
+  }
+
+  if (state.notificationsError) {
+    if (failureEl) {
+      failureEl.style.display = "block";
+      if (errorMsgEl) errorMsgEl.textContent = state.notificationsError;
+    }
+    return;
+  }
+
+  if (container) {
+    container.style.display = "block";
+  }
 
   if (state.notificationsError) {
     container.innerHTML = `
@@ -628,7 +788,7 @@ function renderInbox() {
       return `
         <div class="inbox-item ${unreadClass}" id="notif-card-${notif.id}">
           <div class="inbox-meta">
-            <span class="inbox-name">${notif.message}</span>
+            <span class="inbox-name">${notif.message || `Scheduled trial survey reminder (channel: ${notif.channel})`}</span>
             <span class="inbox-due">Due reminder timestamp: ${dueText} (Channel: ${notif.channel})</span>
           </div>
           <div class="inbox-actions">
@@ -657,31 +817,66 @@ async function acknowledgeNotification(notificationId) {
   if (!notif) return;
 
   // Acknowledgment requires a simple audit reason
-  const actionReason = `Acknowledge study reminder: "${notif.message}"`;
+  const actionReason = `Acknowledge study reminder: "${notif.message || `Scheduled trial survey reminder (channel: ${notif.channel})`}"`;
 
-  notif.is_read = true;
-  notif.read_at = new Date().toISOString();
+  if (isAuthenticatedSession()) {
+    try {
+      const updatedNotif = await dispatchApi(`notifications/${notificationId}/acknowledge`, {
+        method: "POST",
+        body: JSON.stringify({ reason_for_change: actionReason }),
+        change_reason: actionReason,
+      });
 
-  // Audit Stamp locally
-  await logAuditRecord(
-    "ACKNOWLEDGE_NOTIFICATION",
-    { notification_id: notificationId, channel: notif.channel },
-    actionReason
-  );
+      // Update state notification on success
+      const idx = state.notifications.findIndex((n) => n.id === notificationId);
+      if (idx !== -1) {
+        state.notifications[idx] = updatedNotif;
+      } else {
+        notif.is_read = true;
+        notif.read_at = new Date().toISOString();
+      }
 
-  // Attempt API delivery
-  try {
-    await dispatchApi(`notifications/${notificationId}/acknowledge`, {
-      method: "POST",
-      body: JSON.stringify({ reason_for_change: actionReason }),
-      change_reason: actionReason,
-    });
-  } catch {
-    console.info("Acknowledged notification offline.");
+      // Audit Stamp locally
+      await logAuditRecord(
+        "ACKNOWLEDGE_NOTIFICATION",
+        { notification_id: notificationId, channel: notif.channel },
+        actionReason
+      );
+
+      // Reset any notification error if successful
+      state.notificationsError = null;
+      renderInbox();
+    } catch (err) {
+      // Keep the notification unread and render the visible actionable failure state with retry
+      state.notificationsError = err.message || err;
+      renderInbox();
+    }
+  } else {
+    // Sandbox mode: original optimistic flow
+    notif.is_read = true;
+    notif.read_at = new Date().toISOString();
+
+    // Audit Stamp locally
+    await logAuditRecord(
+      "ACKNOWLEDGE_NOTIFICATION",
+      { notification_id: notificationId, channel: notif.channel },
+      actionReason
+    );
+
+    // Attempt API delivery
+    try {
+      await dispatchApi(`notifications/${notificationId}/acknowledge`, {
+        method: "POST",
+        body: JSON.stringify({ reason_for_change: actionReason }),
+        change_reason: actionReason,
+      });
+    } catch {
+      console.info("Acknowledged notification offline.");
+    }
+
+    // Refresh inbox & count badges
+    renderInbox();
   }
-
-  // Refresh inbox & count badges
-  renderInbox();
 }
 
 function checkOnline() {
@@ -703,7 +898,9 @@ async function renderSyncQueueList() {
 
   listEl.innerHTML = all
     .map((item) => {
-      const instName = MOCK_INSTRUMENTS[item.diary_id]?.name || item.diary_id;
+      const instName = (state.instruments && state.instruments[item.diary_id]?.name) ||
+                       (!isAuthenticatedSession() && MOCK_INSTRUMENTS[item.diary_id]?.name) ||
+                       item.diary_id;
       const submittedTime = new Date(item.device_timestamp).toLocaleString();
 
       let badgeClass = "pending";
@@ -878,19 +1075,6 @@ async function initializeApp() {
   const nameEl = document.getElementById("session-subject-id");
   if (nameEl) nameEl.textContent = state.session.userId;
 
-  // Bootstrap initial items only if in demo mode
-  if (state.session.isDemoMode) {
-    state.assignments = JSON.parse(JSON.stringify(MOCK_ASSIGNMENTS));
-    state.notifications = JSON.parse(JSON.stringify(MOCK_NOTIFICATIONS));
-    state.assignmentsError = false;
-    state.notificationsError = false;
-  } else {
-    state.assignments = [];
-    state.notifications = [];
-    state.assignmentsError = false;
-    state.notificationsError = false;
-  }
-
   // Initialize genesis compliance ledger
   await logAuditRecord(
     "GENESIS",
@@ -898,74 +1082,67 @@ async function initializeApp() {
     "Patient companion portal session securely booted."
   );
 
-  // Query real endpoints to synchronize initially if online and not in demo mode
-  if (!state.session.isOfflineMode && !state.session.isDemoMode) {
+  if (isAuthenticatedSession()) {
+    const userId = state.session.userId;
+
+    // Fetch Assignments/Tasks
+    state.tasksLoading = true;
+    state.tasksError = null;
     try {
-      const assignments = await dispatchApi(
-        `assignments/subject/${state.session.userId}`
-      );
-      if (Array.isArray(assignments)) {
-        state.assignments = assignments.map((a) => ({
-          id: a.id,
-          subject_id: a.subject_id,
-          instrument_id: a.instrument_id,
-          instrument_name:
-            MOCK_INSTRUMENTS[a.instrument_id]?.name || "Assigned Instrument",
-          due_at: a.due_at || a.end_date,
-          end_date: a.end_date,
-          status: a.version_index > 1 ? "COMPLETED" : "PENDING",
-        }));
-        state.assignmentsError = false;
-      } else {
-        throw new Error("Invalid assignments payload returned");
-      }
+      state.assignments = await fetchAssignments(userId);
+      state.assignmentsError = false;
     } catch (err) {
-      console.error("Failed to fetch assignments:", err);
-      state.assignments = []; // Ensure empty or error state on failure, do not fall back to MOCK_*
+      state.tasksError = err.message || err;
+      state.assignments = [];
       state.assignmentsError = true;
-      // Render a visual indication of failure
-      const container = document.getElementById("tasks-list-container");
-      if (container) {
-        container.innerHTML = `
-          <div class="card" style="text-align: center; padding: 32px; color: var(--danger);">
-            <p style="font-size: 18px; font-weight: 700; margin-bottom: 6px;">⚠️ Error loading tasks</p>
-            <p style="font-size: 14px;">We are unable to connect to the study servers right now. Please check your connection and try again.</p>
-          </div>
-        `;
-      }
+    } finally {
+      state.tasksLoading = false;
     }
 
+    // Fetch Assigned Instruments
+    state.instrumentsLoading = true;
+    state.instrumentsError = null;
     try {
-      const notifs = await dispatchApi(
-        `subjects/${state.session.userId}/notifications`
-      );
-      if (Array.isArray(notifs)) {
-        state.notifications = notifs.map((n) => ({
-          id: n.id,
-          subject_id: n.subject_id,
-          assignment_id: n.assignment_id,
-          message: `Scheduled trial survey reminder (channel: ${n.channel})`,
-          due_at: n.due_at,
-          channel: n.channel,
-          is_read: n.is_read,
-        }));
-        state.notificationsError = false;
-      } else {
-        throw new Error("Invalid notifications payload returned");
-      }
+      const insts = await fetchAssignedInstruments(userId);
+      state.instruments = {};
+      insts.forEach((inst) => {
+        state.instruments[inst.id] = inst;
+      });
     } catch (err) {
-      console.error("Failed to fetch notifications:", err);
-      state.notifications = []; // Ensure empty or error state on failure, do not fall back to MOCK_*
-      state.notificationsError = true;
-      const container = document.getElementById("inbox-container");
-      if (container) {
-        container.innerHTML = `
-          <div class="card" style="text-align: center; padding: 32px; color: var(--danger);">
-            <p style="font-size: 16px; font-weight: 700;">⚠️ Error loading notifications</p>
-          </div>
-        `;
-      }
+      state.instrumentsError = err.message || err;
+      state.instruments = {};
+    } finally {
+      state.instrumentsLoading = false;
     }
+
+    // Fetch Compliance
+    state.complianceLoading = true;
+    state.complianceError = null;
+    try {
+      state.compliance = await fetchCompliance(userId);
+    } catch (err) {
+      state.complianceError = err.message || err;
+      state.compliance = null;
+    } finally {
+      state.complianceLoading = false;
+    }
+
+    // Fetch Notifications
+    state.notificationsLoading = true;
+    state.notificationsError = null;
+    try {
+      state.notifications = await fetchNotifications(userId);
+    } catch (err) {
+      state.notificationsError = err.message || err;
+      state.notifications = [];
+    } finally {
+      state.notificationsLoading = false;
+    }
+  } else {
+    // Sandbox branch (non-authenticated path)
+    state.assignments = JSON.parse(JSON.stringify(MOCK_ASSIGNMENTS));
+    state.notifications = JSON.parse(JSON.stringify(MOCK_NOTIFICATIONS));
+    state.instruments = JSON.parse(JSON.stringify(MOCK_INSTRUMENTS));
   }
 
   // Draw Initial Views
@@ -1054,6 +1231,78 @@ async function initializeApp() {
   const btnModalSign = document.getElementById("btn-modal-sign");
   if (btnModalSign)
     btnModalSign.addEventListener("click", verifyAndSubmitSignature);
+
+  // Retry Handlers
+  async function retryTasks() {
+    state.tasksLoading = true;
+    state.tasksError = null;
+    renderTasks();
+    try {
+      state.assignments = await fetchAssignments(state.session.userId);
+      if (isAuthenticatedSession()) {
+        try {
+          const insts = await fetchAssignedInstruments(state.session.userId);
+          state.instruments = {};
+          insts.forEach((inst) => {
+            state.instruments[inst.id] = inst;
+          });
+        } catch (e) {
+          console.warn("Could not refetch instruments during retry:", e);
+        }
+      }
+    } catch (err) {
+      state.tasksError = err.message || err;
+      state.assignments = [];
+    } finally {
+      state.tasksLoading = false;
+      renderTasks();
+    }
+  }
+
+  async function retryInbox() {
+    state.notificationsLoading = true;
+    state.notificationsError = null;
+    renderInbox();
+    try {
+      state.notifications = await fetchNotifications(state.session.userId);
+    } catch (err) {
+      state.notificationsError = err.message || err;
+      state.notifications = [];
+    } finally {
+      state.notificationsLoading = false;
+      renderInbox();
+    }
+  }
+
+  async function retryCompliance() {
+    state.complianceLoading = true;
+    state.complianceError = null;
+    renderCompliance();
+    try {
+      state.compliance = await fetchCompliance(state.session.userId);
+    } catch (err) {
+      state.complianceError = err.message || err;
+      state.compliance = null;
+    } finally {
+      state.complianceLoading = false;
+      renderCompliance();
+    }
+  }
+
+  const btnRetryTasks = document.getElementById("btn-retry-tasks");
+  if (btnRetryTasks) {
+    btnRetryTasks.addEventListener("click", retryTasks);
+  }
+
+  const btnRetryInbox = document.getElementById("btn-retry-inbox");
+  if (btnRetryInbox) {
+    btnRetryInbox.addEventListener("click", retryInbox);
+  }
+
+  const btnRetryCompliance = document.getElementById("btn-retry-compliance");
+  if (btnRetryCompliance) {
+    btnRetryCompliance.addEventListener("click", retryCompliance);
+  }
 }
 
 // Auto-run on load in DOM environments
@@ -1074,6 +1323,15 @@ export {
   syncOfflineQueue,
   clearAllSubmissions,
   dispatchApi,
+  fetchAssignments,
+  fetchAssignedInstruments,
+  fetchInstrument,
+  fetchCompliance,
+  fetchNotifications,
+  isAuthenticatedSession,
+  renderTasks,
+  renderCompliance,
+  renderInbox,
 };
 
 function createClinicalInput(
