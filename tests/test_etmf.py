@@ -2077,3 +2077,114 @@ async def test_service_caller_ingestion_immutability_violation():
         assert len(reject_logs) == 1
         assert "Rejected attempt to ingest new version" in reject_logs[0].details
         assert reject_logs[0].user_id == "user_unauthorized"
+
+
+@pytest.mark.asyncio
+async def test_protocol_versioning_and_change_justification_ingestion():
+    """
+    Verify that ingestion properly persists the shared ProtocolVersionRef context
+    and records the custom reason_for_change rationale on the TMFDocument version.
+    """
+    client = TestClient(app)
+    headers = get_auth_headers(
+        roles="admin", change_reason="Initial Protocol Amendment"
+    )
+
+    payload = {
+        "study_id": "STUDY-AMEND-101",
+        "artifact_type": "Clinical Trial Protocol",
+        "filename": "protocol_v1.pdf",
+        "content": "Protocol text with versioning data.",
+        "mime_type": "application/pdf",
+        "protocol_version": {
+            "study_id": "STUDY-AMEND-101",
+            "version_tag": "1.0",
+            "version_index": 1,
+            "status": "ACTIVE",
+        },
+    }
+
+    # Ingest document
+    response = client.post("/api/v1/etmf/ingest", json=payload, headers=headers)
+    assert response.status_code == 201
+    doc_id = response.json()["document_id"]
+
+    # Verify via retrieve endpoint
+    response_get = client.get(f"/api/v1/etmf/documents/{doc_id}", headers=headers)
+    assert response_get.status_code == 200
+    doc_data = response_get.json()
+    assert doc_data["reason_for_change"] == "Initial Protocol Amendment"
+    assert doc_data["protocol_version"]["study_id"] == "STUDY-AMEND-101"
+    assert doc_data["protocol_version"]["version_tag"] == "1.0"
+    assert doc_data["protocol_version"]["version_index"] == 1
+    assert doc_data["protocol_version"]["status"] == "ACTIVE"
+
+
+@pytest.mark.asyncio
+async def test_ordered_artifact_history_endpoint():
+    """
+    Verify that the GET study artifact history endpoint returns historical versions of
+    a given artifact type, correctly ordered by version_index in ascending sequence.
+    """
+    client = TestClient(app)
+    headers = get_auth_headers(
+        roles="admin", change_reason="Upload sequential protocol edits"
+    )
+
+    study_id = "STUDY-HIST-99"
+
+    # Ingest Version 1
+    p1 = {
+        "study_id": study_id,
+        "artifact_type": "Clinical Trial Protocol",
+        "filename": "prot_v1.pdf",
+        "content": "Version 1 protocol.",
+        "mime_type": "application/pdf",
+        "protocol_version": {
+            "study_id": study_id,
+            "version_tag": "1.0",
+            "version_index": 1,
+            "status": "DRAFT",
+        },
+    }
+    resp1 = client.post("/api/v1/etmf/ingest", json=p1, headers=headers)
+    assert resp1.status_code == 201
+
+    # Ingest Version 2
+    p2 = {
+        "study_id": study_id,
+        "artifact_type": "Clinical Trial Protocol",
+        "filename": "prot_v2.pdf",
+        "content": "Version 2 protocol.",
+        "mime_type": "application/pdf",
+        "protocol_version": {
+            "study_id": study_id,
+            "version_tag": "2.0",
+            "version_index": 2,
+            "status": "ACTIVE",
+        },
+    }
+    # Change change_reason to verify updated rationale
+    headers_v2 = get_auth_headers(
+        roles="admin", change_reason="Submitting Major protocol amendment"
+    )
+    resp2 = client.post("/api/v1/etmf/ingest", json=p2, headers=headers_v2)
+    assert resp2.status_code == 201
+
+    # Call history retrieval endpoint
+    history_resp = client.get(
+        f"/api/v1/etmf/studies/{study_id}/artifacts/Clinical Trial Protocol/history",
+        headers=get_auth_headers(roles="regulatory_inspector"),
+    )
+    assert history_resp.status_code == 200
+    history = history_resp.json()
+    assert len(history) == 2
+
+    # Verify chronological ascending sequence
+    assert history[0]["version_index"] == 1
+    assert history[0]["reason_for_change"] == "Upload sequential protocol edits"
+    assert history[0]["protocol_version"]["version_tag"] == "1.0"
+
+    assert history[1]["version_index"] == 2
+    assert history[1]["reason_for_change"] == "Submitting Major protocol amendment"
+    assert history[1]["protocol_version"]["version_tag"] == "2.0"

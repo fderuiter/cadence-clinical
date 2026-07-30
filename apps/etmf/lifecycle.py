@@ -115,6 +115,7 @@ async def validate_and_transition_document_status(
     # Execute transition
     from_status = current
     document.status = to_status
+    document.reason_for_change = reason_for_change.strip()
 
     # Record append-only history log
     role_str = (
