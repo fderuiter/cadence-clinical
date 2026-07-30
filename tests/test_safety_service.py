@@ -12,6 +12,18 @@ from apps.safety.main import app
 from apps.safety.models import Base, SafetyAuditLog, SafetyCaseICSR, SafetyExportJob
 
 
+@pytest.fixture(autouse=True)
+def clean_test_httpx_client():
+    """
+    Ensures that app.state.test_httpx_client is cleaned up to prevent test isolation leaks.
+    """
+    if hasattr(app, "state") and hasattr(app.state, "test_httpx_client"):
+        app.state.test_httpx_client = None
+    yield
+    if hasattr(app, "state") and hasattr(app.state, "test_httpx_client"):
+        app.state.test_httpx_client = None
+
+
 @pytest_asyncio.fixture(autouse=True)
 async def setup_safety_db():
     """

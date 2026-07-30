@@ -81,7 +81,9 @@ class ExecutionClient:
 
         try:
             if client is not None:
-                response = await client.get(url, headers=headers, params=params, timeout=self.timeout)
+                response = await client.get(
+                    url, headers=headers, params=params, timeout=self.timeout
+                )
             else:
                 async with httpx.AsyncClient(timeout=self.timeout) as cli:
                     response = await cli.get(url, headers=headers, params=params)
@@ -120,7 +122,9 @@ class ExecutionClient:
             return result
 
         except httpx.RequestError as e:
-            logger.error("Failed to connect to clinical execution service for AE data: %s", e)
+            logger.error(
+                "Failed to connect to clinical execution service for AE data: %s", e
+            )
             raise HTTPException(
                 status_code=502,
                 detail=f"Failed to connect to execution service: {str(e)}",
@@ -128,7 +132,9 @@ class ExecutionClient:
         except Exception as e:
             if isinstance(e, HTTPException):
                 raise e
-            logger.error("Unexpected error fetching AE data from execution service: %s", e)
+            logger.error(
+                "Unexpected error fetching AE data from execution service: %s", e
+            )
             raise HTTPException(
                 status_code=502,
                 detail=f"Unexpected error fetching AE data: {str(e)}",
@@ -155,7 +161,9 @@ class ExecutionClient:
 
         try:
             if client is not None:
-                response = await client.get(url, headers=headers, params=params, timeout=self.timeout)
+                response = await client.get(
+                    url, headers=headers, params=params, timeout=self.timeout
+                )
             else:
                 async with httpx.AsyncClient(timeout=self.timeout) as cli:
                     response = await cli.get(url, headers=headers, params=params)
@@ -174,7 +182,10 @@ class ExecutionClient:
             return response.json()
 
         except httpx.RequestError as e:
-            logger.error("Failed to connect to clinical execution service for MedDRA resolution: %s", e)
+            logger.error(
+                "Failed to connect to clinical execution service for MedDRA resolution: %s",
+                e,
+            )
             raise HTTPException(
                 status_code=502,
                 detail=f"Failed to connect to execution service dictionaries: {str(e)}",
@@ -182,7 +193,9 @@ class ExecutionClient:
         except Exception as e:
             if isinstance(e, HTTPException):
                 raise e
-            logger.error("Unexpected error resolving MedDRA term in execution service: %s", e)
+            logger.error(
+                "Unexpected error resolving MedDRA term in execution service: %s", e
+            )
             raise HTTPException(
                 status_code=502,
                 detail=f"Unexpected error resolving MedDRA term: {str(e)}",

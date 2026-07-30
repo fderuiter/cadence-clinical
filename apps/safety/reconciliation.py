@@ -29,18 +29,23 @@ def generate_stable_event_key(subject_key: str, sae: SeriousAdverseEvent) -> str
         return f"{subj}:TERM-{normalized_term}:{start_date}"
 
 
-def normalize_edc_ae_to_sae(ae_dict: Dict[str, Any], meddra_coding: Optional[MedDRACoding] = None) -> SeriousAdverseEvent:
+def normalize_edc_ae_to_sae(
+    ae_dict: Dict[str, Any], meddra_coding: Optional[MedDRACoding] = None
+) -> SeriousAdverseEvent:
     """
     Normalizes an EDC Adverse Event dict into a SeriousAdverseEvent model.
     """
     # Aligns keys
     subject_key = ae_dict.get("USUBJID") or ae_dict.get("subject_key") or "UNKNOWN"
     aeterm = ae_dict.get("AETERM") or ae_dict.get("reaction_term") or "UNKNOWN"
-    aestdtc = ae_dict.get("AESTDTC") or ae_dict.get("start_date") or "2026-07-28" # safe fallback
+    default_dt = "2026-07-28"  # deid-ignore pragma: allowlist
+    aestdtc = ae_dict.get("AESTDTC") or ae_dict.get("start_date") or default_dt
     aeendtc = ae_dict.get("AEENDTC") or ae_dict.get("end_date") or None
 
     aesev = ae_dict.get("AESEV") or "MILD"
-    aeser = ae_dict.get("AESER") or "Y"  # If reconciling, expect serious or default serious
+    aeser = (
+        ae_dict.get("AESER") or "Y"
+    )  # If reconciling, expect serious or default serious
     aerel = ae_dict.get("AEREL") or None
     aeout = ae_dict.get("AEOUT") or None
     aeseq = ae_dict.get("AESEQ") or None
@@ -59,33 +64,49 @@ def normalize_edc_ae_to_sae(ae_dict: Dict[str, Any], meddra_coding: Optional[Med
     )
 
 
-def normalize_external_icsr_to_saes(icsr_dict: Dict[str, Any]) -> List[SeriousAdverseEvent]:
+def normalize_external_icsr_to_saes(
+    icsr_dict: Dict[str, Any],
+) -> List[SeriousAdverseEvent]:
     """
     Normalizes reaction events inside an external safety case / ICSR payload dict into SeriousAdverseEvent models.
     """
     try:
         icsr = IndividualCaseSafetyReport(**icsr_dict)
     except Exception as e:
-        logger.error("Failed to parse safety case dict into IndividualCaseSafetyReport: %s", e)
+        logger.error(
+            "Failed to parse safety case dict into IndividualCaseSafetyReport: %s", e
+        )
         # Attempt loose key extraction if pydantic validation fails due to minor E2B mismatch
         patient_id = icsr_dict.get("patient", {}).get("patient_id") or "UNKNOWN"
         reactions = icsr_dict.get("reactions") or []
         saes = []
+        fallback_dt = "2026-07-28"  # deid-ignore pragma: allowlist
         for r in reactions:
             term = r.get("reaction_term") or "UNKNOWN"
-            is_serious = "Y" if any(r.get(f) == "Y" for f in (
-                "seriousness_death", "seriousness_life_threatening", "seriousness_hospitalization"
-            )) else "N"
-            saes.append(SeriousAdverseEvent(
-                subject_key=patient_id,
-                AETERM=term,
-                AESTDTC=r.get("start_date") or "2026-07-28",
-                AEENDTC=r.get("end_date"),
-                AESEV="SEVERE" if is_serious == "Y" else "MILD",
-                AESER=is_serious,
-                AEOUT=r.get("outcome"),
-                meddra_coding=r.get("meddra_coding"),
-            ))
+            is_serious = (
+                "Y"
+                if any(
+                    r.get(f) == "Y"
+                    for f in (
+                        "seriousness_death",
+                        "seriousness_life_threatening",
+                        "seriousness_hospitalization",
+                    )
+                )
+                else "N"
+            )
+            saes.append(
+                SeriousAdverseEvent(
+                    subject_key=patient_id,
+                    AETERM=term,
+                    AESTDTC=r.get("start_date") or fallback_dt,
+                    AEENDTC=r.get("end_date"),
+                    AESEV="SEVERE" if is_serious == "Y" else "MILD",
+                    AESER=is_serious,
+                    AEOUT=r.get("outcome"),
+                    meddra_coding=r.get("meddra_coding"),
+                )
+            )
         return saes
 
     patient_id = icsr.patient.patient_id
@@ -103,16 +124,18 @@ def normalize_external_icsr_to_saes(icsr_dict: Dict[str, Any]) -> List[SeriousAd
         is_serious = "Y" if any(flag == "Y" for flag in seriousness_flags) else "N"
         aesev = "SEVERE" if is_serious == "Y" else "MILD"
 
-        saes.append(SeriousAdverseEvent(
-            subject_key=patient_id,
-            AETERM=reaction.reaction_term,
-            AESTDTC=reaction.start_date,
-            AEENDTC=reaction.end_date,
-            AESEV=aesev,
-            AESER=is_serious,
-            AEOUT=reaction.outcome,
-            meddra_coding=reaction.meddra_coding,
-        ))
+        saes.append(
+            SeriousAdverseEvent(
+                subject_key=patient_id,
+                AETERM=reaction.reaction_term,
+                AESTDTC=reaction.start_date,
+                AEENDTC=reaction.end_date,
+                AESEV=aesev,
+                AESER=is_serious,
+                AEOUT=reaction.outcome,
+                meddra_coding=reaction.meddra_coding,
+            )
+        )
     return saes
 
 
@@ -138,25 +161,29 @@ def compare_sae_records(
 
         # 1. Handle missing on either side
         if edc_sae is None:
-            discrepancies.append({
-                "source": "EDC",
-                "case_event_key": key,
-                "field_name": "event_presence",
-                "expected_value": "MISSING",
-                "actual_value": "PRESENT",
-                "meddra_version": meddra_version,
-            })
+            discrepancies.append(
+                {
+                    "source": "EDC",
+                    "case_event_key": key,
+                    "field_name": "event_presence",
+                    "expected_value": "MISSING",
+                    "actual_value": "PRESENT",
+                    "meddra_version": meddra_version,
+                }
+            )
             continue
 
         if safety_sae is None:
-            discrepancies.append({
-                "source": "SAFETY",
-                "case_event_key": key,
-                "field_name": "event_presence",
-                "expected_value": "PRESENT",
-                "actual_value": "MISSING",
-                "meddra_version": meddra_version,
-            })
+            discrepancies.append(
+                {
+                    "source": "SAFETY",
+                    "case_event_key": key,
+                    "field_name": "event_presence",
+                    "expected_value": "PRESENT",
+                    "actual_value": "MISSING",
+                    "meddra_version": meddra_version,
+                }
+            )
             continue
 
         # 2. Field-level comparisons
@@ -171,28 +198,36 @@ def compare_sae_records(
             s_safety = str(v_safety).strip() if v_safety is not None else None
 
             if s_edc != s_safety:
-                discrepancies.append({
-                    "source": "RECONCILIATION",
-                    "case_event_key": key,
-                    "field_name": f,
-                    "expected_value": s_edc,
-                    "actual_value": s_safety,
-                    "meddra_version": meddra_version,
-                })
+                discrepancies.append(
+                    {
+                        "source": "RECONCILIATION",
+                        "case_event_key": key,
+                        "field_name": f,
+                        "expected_value": s_edc,
+                        "actual_value": s_safety,
+                        "meddra_version": meddra_version,
+                    }
+                )
 
         # MedDRA coding comparison
         edc_coding = edc_sae.meddra_coding
         safety_coding = safety_sae.meddra_coding
 
         if (edc_coding is None) != (safety_coding is None):
-            discrepancies.append({
-                "source": "RECONCILIATION",
-                "case_event_key": key,
-                "field_name": "meddra_coding",
-                "expected_value": f"LLT_CODE:{edc_coding.llt_code}" if edc_coding else "None",
-                "actual_value": f"LLT_CODE:{safety_coding.llt_code}" if safety_coding else "None",
-                "meddra_version": meddra_version,
-            })
+            discrepancies.append(
+                {
+                    "source": "RECONCILIATION",
+                    "case_event_key": key,
+                    "field_name": "meddra_coding",
+                    "expected_value": f"LLT_CODE:{edc_coding.llt_code}"
+                    if edc_coding
+                    else "None",
+                    "actual_value": f"LLT_CODE:{safety_coding.llt_code}"
+                    if safety_coding
+                    else "None",
+                    "meddra_version": meddra_version,
+                }
+            )
         elif edc_coding is not None and safety_coding is not None:
             # Compare resolved codes and hierarchies
             meddra_mismatch = False
@@ -206,14 +241,16 @@ def compare_sae_records(
                 meddra_mismatch = True
 
             if meddra_mismatch:
-                discrepancies.append({
-                    "source": "RECONCILIATION",
-                    "case_event_key": key,
-                    "field_name": "meddra_coding",
-                    "expected_value": f"LLT:{edc_coding.llt_code}, PT:{edc_coding.pt_code}, SOC:{edc_coding.soc_code}, primary_soc_flag:{edc_coding.primary_soc_flag}",
-                    "actual_value": f"LLT:{safety_coding.llt_code}, PT:{safety_coding.pt_code}, SOC:{safety_coding.soc_code}, primary_soc_flag:{safety_coding.primary_soc_flag}",
-                    "meddra_version": meddra_version,
-                })
+                discrepancies.append(
+                    {
+                        "source": "RECONCILIATION",
+                        "case_event_key": key,
+                        "field_name": "meddra_coding",
+                        "expected_value": f"LLT:{edc_coding.llt_code}, PT:{edc_coding.pt_code}, SOC:{edc_coding.soc_code}, primary_soc_flag:{edc_coding.primary_soc_flag}",
+                        "actual_value": f"LLT:{safety_coding.llt_code}, PT:{safety_coding.pt_code}, SOC:{safety_coding.soc_code}, primary_soc_flag:{safety_coding.primary_soc_flag}",
+                        "meddra_version": meddra_version,
+                    }
+                )
 
     # Sort deterministically by case_event_key then field_name
     discrepancies.sort(key=lambda x: (x["case_event_key"], x["field_name"]))
@@ -273,7 +310,9 @@ async def run_reconciliation(
                         score=top_match.get("score", 1.0),
                     )
             except Exception as e:
-                logger.warning("Failed to resolve MedDRA code for term '%s': %s", aeterm, e)
+                logger.warning(
+                    "Failed to resolve MedDRA code for term '%s': %s", aeterm, e
+                )
 
         normalized_edc_saes.append(normalize_edc_ae_to_sae(ae_rec, meddra_coding))
 

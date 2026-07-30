@@ -209,7 +209,9 @@ def map_job_to_response(job: SafetyExportJob) -> SafetyExportJobResponse:
     )
 
 
-def map_run_to_response(run: SAEReconciliationRun, discrepancies: List[SAEDiscrepancy]) -> SAEReconciliationRunResponse:
+def map_run_to_response(
+    run: SAEReconciliationRun, discrepancies: List[SAEDiscrepancy]
+) -> SAEReconciliationRunResponse:
     return SAEReconciliationRunResponse(
         id=run.id,
         study_id=run.study_id,

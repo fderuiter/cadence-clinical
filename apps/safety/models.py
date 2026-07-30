@@ -103,7 +103,9 @@ class SAEDiscrepancy(Base):
     run_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("sae_reconciliation_runs.id"), nullable=False, index=True
     )
-    source: Mapped[str] = mapped_column(String(100), nullable=False)  # EDC, SAFETY, or RECONCILIATION
+    source: Mapped[str] = mapped_column(
+        String(100), nullable=False
+    )  # EDC, SAFETY, or RECONCILIATION
     case_event_key: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     field_name: Mapped[str] = mapped_column(String(100), nullable=False)
     expected_value: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
