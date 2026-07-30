@@ -88,7 +88,12 @@ def test_combined_audit_logic():
     assert combined_audit == "failure"
 
 
-def test_build_comment_body():
+from unittest.mock import patch
+
+
+@patch("scripts.post_pr_comment.get_pr_metadata")
+def test_build_comment_body(mock_get_pr):
+    mock_get_pr.return_value = ("PR #123", ["apps/designer/main.py"])
     outcomes = {
         "lint": "success",
         "test": "success",
@@ -106,8 +111,10 @@ def test_build_comment_body():
     assert "### ⚠️ Action Required: Quality Gate Verification Issues" in body_fail
 
 
-def test_traceability_outcome_handling():
+@patch("scripts.post_pr_comment.get_pr_metadata")
+def test_traceability_outcome_handling(mock_get_pr):
     """Verify Requirements Traceability is parsed, merged, and rendered."""
+    mock_get_pr.return_value = ("PR #123", ["apps/designer/main.py"])
     sample_comment = """<!-- ID: CADENCE_PR_QUALITY_GATE_CHECKLIST -->
 ### ⚠️ Action Required: Quality Gate Verification Issues
 
