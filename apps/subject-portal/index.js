@@ -831,8 +831,6 @@ async function syncOfflineQueue() {
 
 // Bootstrap Initialization
 async function initializeApp() {
-  let authenticatedSuccessfully = false;
-
   // Graceful OIDC Keycloak setup
   if (typeof window !== "undefined" && !window.__MOCK_TEST_ENV__) {
     try {
@@ -855,7 +853,6 @@ async function initializeApp() {
           state.session.token = keycloak.token;
           state.session.isOfflineMode = false;
           state.session.isDemoMode = false;
-          authenticatedSuccessfully = true;
           console.log(
             "OIDC Session Verified for subject:",
             state.session.userId
