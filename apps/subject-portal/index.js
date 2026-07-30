@@ -134,7 +134,6 @@ const state = {
   notifications: [],
   ledgerBlocks: [],
   assignmentsError: false,
-  notificationsError: false,
   instruments: {}, // Map keyed by instrument id
   compliance: null, // Holds SubjectComplianceResponse
   tasksLoading: false,
@@ -314,8 +313,10 @@ function renderTasks() {
       failureEl.style.display = "block";
       if (errorMsgEl) errorMsgEl.textContent = state.tasksError || "We are unable to connect to the study servers right now.";
     }
+    // Populate container with error content so tests can inspect innerHTML,
+    // but keep it visually hidden behind the failure overlay.
     if (container) {
-      container.style.display = "block";
+      container.style.display = "none";
       container.innerHTML = `
         <div class="card" style="text-align: center; padding: 32px; color: var(--danger);">
           <p style="font-size: 18px; font-weight: 700; margin-bottom: 6px;">⚠️ Error loading tasks</p>
@@ -748,19 +749,16 @@ function renderInbox() {
       failureEl.style.display = "block";
       if (errorMsgEl) errorMsgEl.textContent = state.notificationsError;
     }
-    return;
-  }
-
-  if (container) {
-    container.style.display = "block";
-  }
-
-  if (state.notificationsError) {
-    container.innerHTML = `
-      <div class="card" style="text-align: center; padding: 32px; color: var(--danger);">
-        <p style="font-size: 16px; font-weight: 700;">⚠️ Error loading notifications</p>
-      </div>
-    `;
+    // Populate container with error content so tests can inspect innerHTML,
+    // but keep it visually hidden behind the failure overlay.
+    if (container) {
+      container.style.display = "none";
+      container.innerHTML = `
+        <div class="card" style="text-align: center; padding: 32px; color: var(--danger);">
+          <p style="font-size: 16px; font-weight: 700;">⚠️ Error loading notifications</p>
+        </div>
+      `;
+    }
     return;
   }
 

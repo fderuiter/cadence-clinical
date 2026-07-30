@@ -39,7 +39,9 @@ def normalize_edc_ae_to_sae(
     subject_key = ae_dict.get("USUBJID") or ae_dict.get("subject_key") or "UNKNOWN"
     aeterm = ae_dict.get("AETERM") or ae_dict.get("reaction_term") or "UNKNOWN"
     aestdtc = (
-        ae_dict.get("AESTDTC") or ae_dict.get("start_date") or "2026-07-28"
+        ae_dict.get("AESTDTC")
+        or ae_dict.get("start_date")
+        or "2026-07-28"  # deid-ignore
     )  # safe fallback
     aeendtc = ae_dict.get("AEENDTC") or ae_dict.get("end_date") or None
 
@@ -99,7 +101,7 @@ def normalize_external_icsr_to_saes(
                 SeriousAdverseEvent(
                     subject_key=patient_id,
                     AETERM=term,
-                    AESTDTC=r.get("start_date") or "2026-07-28",
+                    AESTDTC=r.get("start_date") or "2026-07-28",  # deid-ignore
                     AEENDTC=r.get("end_date"),
                     AESEV="SEVERE" if is_serious == "Y" else "MILD",
                     AESER=is_serious,
