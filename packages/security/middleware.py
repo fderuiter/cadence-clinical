@@ -175,19 +175,9 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
             )
 
         # Check if request is signature-gated
-        is_signature_gated = False
+        from packages.security.gating import is_path_signature_gated
         path_lower = request.url.path.lower()
-        for pattern in [
-            "approve",
-            "sign-off",
-            "unblind",
-            "randomize",
-            "queries/sync",
-            "close",
-        ]:
-            if pattern in path_lower:
-                is_signature_gated = True
-                break
+        is_signature_gated = is_path_signature_gated(path_lower)
 
         if is_signature_gated and is_mutation:
             sig_token = request.headers.get("X-Sig-Token")
