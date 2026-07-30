@@ -1,5 +1,4 @@
 import {
-  generateGatewaySignature,
   sha256 as sharedSha256,
   validateField as sharedValidateField,
   debounce as sharedDebounce,
@@ -1667,114 +1666,6 @@ if (typeof document !== "undefined") {
       openReasonModal();
     }
 
-    async function executeRuleSave(ruleData, changeReason) {
-      // 21 CFR Part 11 signed API header authorization
-      const userId = "usr_9921a88b2c410";
-      const roles = "STUDY_DESIGNER";
-      const timestamp = new Date().toISOString();
-      const secret = "internal-gateway-secret-12345"; // pragma: allowlist secret
-
-      const signature = await generateGatewaySignature(
-        userId,
-        roles,
-        timestamp,
-        "2",
-        changeReason,
-        secret
-      );
-
-      const headers = {
-        "X-User-Id": userId,
-        "X-User-Roles": roles,
-        "X-Gateway-Timestamp": timestamp,
-        "X-Gateway-Signature": signature,
-        "X-Signature-Version": "2",
-        "X-Change-Reason": changeReason,
-      };
-
-      // Store in activeRules
-      const existingIdx = activeRules.findIndex((r) => r.id === ruleData.id);
-      if (existingIdx > -1) {
-        activeRules[existingIdx] = ruleData;
-      } else {
-        activeRules.push(ruleData);
-      }
-
-      renderRulesList();
-      if (rulesEditorWorkspace) rulesEditorWorkspace.style.display = "none";
-      editingRuleId = null;
-
-      await addLedgerBlock(
-        "RULE_SAVE",
-        {
-          ruleId: ruleData.id,
-          type: ruleData.type,
-          xpath: ruleData.compiled_xpath,
-          headers,
-        },
-        changeReason
-      );
-
-      alert(`Rule successfully compiled and signed save verified!`);
-    }
-
-    async function executeRuleDelete(ruleId, changeReason) {
-      const userId = "usr_9921a88b2c410";
-      const roles = "STUDY_DESIGNER";
-      const timestamp = new Date().toISOString();
-      const secret = "internal-gateway-secret-12345"; // pragma: allowlist secret
-
-      const signature = await generateGatewaySignature(
-        userId,
-        roles,
-        timestamp,
-        "2",
-        changeReason,
-        secret
-      );
-
-      const headers = {
-        "X-User-Id": userId,
-        "X-User-Roles": roles,
-        "X-Gateway-Timestamp": timestamp,
-        "X-Gateway-Signature": signature,
-        "X-Signature-Version": "2",
-        "X-Change-Reason": changeReason,
-      };
-
-      activeRules = activeRules.filter((r) => r.id !== ruleId);
-      renderRulesList();
-      if (rulesEditorWorkspace) rulesEditorWorkspace.style.display = "none";
-
-      await addLedgerBlock("RULE_DELETE", { ruleId, headers }, changeReason);
-
-      alert("Rule successfully soft-deleted!");
-    }
-
-    // Connect Reason for Change save button with Rules logic
-    btnSaveChange.addEventListener("click", () => {
-      if (pendingValueChange && pendingValueChange.isRuleSave) {
-        const selReason = reasonSelect.value;
-        const custText = reasonText.value.trim();
-        const finalReason =
-          selReason === "Other" && custText
-            ? custText
-            : `${selReason}${custText ? ": " + custText : ""}`;
-
-        executeRuleSave(pendingValueChange.ruleData, finalReason);
-        closeReasonModal();
-      } else if (pendingValueChange && pendingValueChange.isRuleDelete) {
-        const selReason = reasonSelect.value;
-        const custText = reasonText.value.trim();
-        const finalReason =
-          selReason === "Other" && custText
-            ? custText
-            : `${selReason}${custText ? ": " + custText : ""}`;
-
-        executeRuleDelete(pendingValueChange.ruleId, finalReason);
-        closeReasonModal();
-      }
-    });
 
     if (btnNewRule) {
       btnNewRule.addEventListener("click", () => {
@@ -1957,105 +1848,6 @@ if (typeof document !== "undefined") {
     let selectedLibraryObjectId = null;
     let pendingLibraryAction = null; // { type: 'transition'/'instantiate', id, targetStatus, targetStudyId }
 
-    // API triggers
-    async function apiTransitionLibraryObject(
-      id,
-      targetStatus,
-      changeReason,
-      role
-    ) {
-      const userId = "usr_9921a88b2c410";
-      const timestamp = new Date().toISOString();
-      const secret = "internal-gateway-secret-12345"; // pragma: allowlist secret
-
-      const signature = await generateGatewaySignature(
-        userId,
-        role,
-        timestamp,
-        "2",
-        changeReason,
-        secret
-      );
-      const headers = {
-        "X-User-Id": userId,
-        "X-User-Roles": role,
-        "X-Gateway-Timestamp": timestamp,
-        "X-Gateway-Signature": signature,
-        "X-Signature-Version": "2",
-        "X-Change-Reason": changeReason,
-        "X-Sponsor-Id": "SPONSOR-A",
-      };
-
-      const response = await fetch(
-        `http://localhost:8000/api/v1/mdr/library/${id}/transition`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...headers },
-          body: JSON.stringify({
-            status: targetStatus,
-            change_reason: changeReason,
-          }),
-        }
-      );
-      if (!response.ok) {
-        let errData = null;
-        try {
-          errData = await response.json();
-        } catch {
-          /* ignore */
-        }
-        throw new Error(errData?.detail || `API error ${response.status}`);
-      }
-      return await response.json();
-    }
-
-    async function apiInstantiateLibraryObject(
-      studyId,
-      libraryObjectId,
-      changeReason,
-      role
-    ) {
-      const userId = "usr_9921a88b2c410";
-      const timestamp = new Date().toISOString();
-      const secret = "internal-gateway-secret-12345"; // pragma: allowlist secret
-
-      const signature = await generateGatewaySignature(
-        userId,
-        role,
-        timestamp,
-        "2",
-        changeReason,
-        secret
-      );
-      const headers = {
-        "X-User-Id": userId,
-        "X-User-Roles": role,
-        "X-Gateway-Timestamp": timestamp,
-        "X-Gateway-Signature": signature,
-        "X-Signature-Version": "2",
-        "X-Change-Reason": changeReason,
-        "X-Sponsor-Id": "SPONSOR-A",
-      };
-
-      const response = await fetch(
-        `http://localhost:8000/api/v1/studies/${studyId}/library-instances`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...headers },
-          body: JSON.stringify({ library_object_id: libraryObjectId }),
-        }
-      );
-      if (!response.ok) {
-        let errData = null;
-        try {
-          errData = await response.json();
-        } catch {
-          /* ignore */
-        }
-        throw new Error(errData?.detail || `API error ${response.status}`);
-      }
-      return await response.json();
-    }
 
     // UI render helpers
     function displayLibraryError(msg) {
@@ -2348,14 +2140,9 @@ if (typeof document !== "undefined") {
         return;
       }
 
-      try {
-        await apiTransitionLibraryObject(id, targetStatus, reason, role);
-      } catch (err) {
-        console.warn(
-          "API transition failed, continuing with sandbox-offline mock fallback:",
-          err.message
-        );
-      }
+      console.warn(
+        "Continuing with sandbox-offline mock transition fallback"
+      );
 
       const obj = mockLibraryObjects.find((o) => o.id === id);
       if (obj) {
@@ -2410,14 +2197,9 @@ if (typeof document !== "undefined") {
       reason,
       role
     ) {
-      try {
-        await apiInstantiateLibraryObject(targetStudyId, id, reason, role);
-      } catch (err) {
-        console.warn(
-          "API instantiation failed, continuing with sandbox-offline mock fallback:",
-          err.message
-        );
-      }
+      console.warn(
+        "Continuing with sandbox-offline mock instantiation fallback"
+      );
 
       const obj = mockLibraryObjects.find((o) => o.id === id);
       if (!obj) {

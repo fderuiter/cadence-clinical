@@ -535,7 +535,6 @@ import { ref, computed, watch, reactive } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import { createClinicalVisitMatrix } from "../lib/legacy_helpers.js";
 import { terminologyClient } from "../api/terminologyClient.js";
-import { useAuthStore } from "../stores/auth.js";
 import { debounce } from "ui";
 import ReasonModal from "../components/ReasonModal.vue";
 
@@ -547,7 +546,6 @@ const mdrReasonOptions = [
 ];
 
 const store = useClinicalStore();
-const authStore = useAuthStore();
 
 const armSuggestions = ref([]);
 const encSuggestions = ref([]);
@@ -559,8 +557,6 @@ const debouncedSearchArm = debounce(async (term) => {
   }
   try {
     const res = await terminologyClient.searchTerminology(term, {
-      userId: authStore.identity?.username || "fderuiter",
-      roles: authStore.identity?.roles?.[0] || "investigator",
       changeReason: "Arm concept search",
     });
     armSuggestions.value = res.results || [];
@@ -576,8 +572,6 @@ const debouncedSearchEnc = debounce(async (term) => {
   }
   try {
     const res = await terminologyClient.searchTerminology(term, {
-      userId: authStore.identity?.username || "fderuiter",
-      roles: authStore.identity?.roles?.[0] || "investigator",
       changeReason: "Encounter concept search",
     });
     encSuggestions.value = res.results || [];

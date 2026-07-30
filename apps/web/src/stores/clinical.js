@@ -431,16 +431,16 @@ export const useClinicalStore = defineStore("clinical", {
   getters: {
     user: () => {
       const authStore = useAuthStore();
-      if (authStore.isAuthenticated && !authStore.isDemoMode) {
+      if (authStore.isDemoMode && !authStore.isAuthenticated) {
         return {
-          username: authStore.identity?.username || "unknown",
-          roles: authStore.normalizedRoles,
+          username: "fderuiter",
+          roles: ["Monitor", "Sponsor Admin"],
           authenticated: true,
         };
       }
       return {
-        username: "fderuiter",
-        roles: ["Monitor", "Sponsor Admin"],
+        username: authStore.identity?.username || "unknown",
+        roles: authStore.normalizedRoles,
         authenticated: true,
       };
     },
