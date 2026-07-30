@@ -61,9 +61,7 @@ def verify_sig_token(
         return False, "21 CFR Part 11 mandate: Re-authentication is required."
 
     try:
-        sig_payload = jwt.decode(
-            sig_token, secret, algorithms=["HS256"]
-        )
+        sig_payload = jwt.decode(sig_token, secret, algorithms=["HS256"])
     except JWTError as e:
         print(f"VERIFY_SIG_TOKEN: Failed to decode: {e}")
         return False, "Invalid signature token."
