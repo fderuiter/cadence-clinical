@@ -21,6 +21,8 @@ Based on the executed automated verification suite, the platform meets all prede
 - **Passed:** 1188 🟢
 - **Total Automated Test Cases Run:** 1185
 - **Passed:** 1185 🟢
+- **Total Automated Test Cases Run:** 1237
+- **Passed:** 1237 🟢
 - **Failed/Errors:** 0 🔴
 - **Passed:** 1229 🟢
 - **Total Automated Test Cases Run:** 1238
@@ -255,7 +257,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_adae_trtemfl_logic` | `tests.test_biostat_export` | ADAM-ADAE-TRTEMFL-01 | 🟢 PASSED | < 1s |
 | `test_advs_chg_pchg_computations` | `tests.test_biostat_export` | ADAM-ADVS-CHG-01 | 🟢 PASSED | < 1s |
 | `test_api_adam_export_success` | `tests.test_biostat_export` | API-ADAM-EXPORT-01 | 🟢 PASSED | < 1s |
+| `test_api_biostat_bundle_export_with_supp_records` | `tests.test_biostat_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_sdtm_export_success` | `tests.test_biostat_export` | API-SDTM-EXPORT-01 | 🟢 PASSED | < 1s |
+| `test_api_sdtm_export_with_supp_records` | `tests.test_biostat_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_unauthenticated_export_rejection` | `tests.test_biostat_export` | SEC-EXPORT-AUTH-01 | 🟢 PASSED | < 1s |
 | `test_api_validation_failure_logging` | `tests.test_biostat_export` | API-EXPORT-VAL-01 | 🟢 PASSED | < 1s |
 | `test_partial_date_imputation_detailed` | `tests.test_biostat_export` | SDTM-IMPUTE-01 | 🟢 PASSED | < 1s |

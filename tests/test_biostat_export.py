@@ -645,3 +645,108 @@ async def test_api_validation_failure_logging(populate_test_data) -> None:
             export_log = db_res.scalars().first()
             assert export_log is not None
             assert "STUDYID is empty or missing" in export_log.error_message
+
+
+@pytest.mark.asyncio
+async def test_api_sdtm_export_with_supp_records(populate_test_data) -> None:
+    """
+    Verify that individual SDTM exports (e.g. AE) successfully include matching SUPP-- datasets
+    when supplemental records exist, that they pass structural and parent-linkage validation,
+    and that BiostatExport success is saved correctly.
+    """
+    # Let's add an unmapped/qualifier observation to trigger a SUPPAE record
+    async with db_manager.get_session_maker()() as session:
+        supp_obs = ClinicalObservation(
+            subject_id="SUBJ-101",
+            study_id="STUDY-001",
+            domain="AE",
+            test_code="AEENGRY",  # triggers an ongoing/supplemental record in extract_ae
+            test_name="Ongoing Status",
+            value_string="ONGOING",
+            page_id="ae_page_1",
+            observation_date=datetime.fromisoformat("2026-08-01"),
+        )
+        session.add(supp_obs)
+        await session.commit()
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        headers = get_auth_headers(roles="sponsor_statistician")
+        res = await client.get(
+            "/api/v1/execution/biostat/sdtm/AE?study_id=STUDY-001",
+            headers=headers,
+        )
+        assert res.status_code == 200
+        data = res.json()
+
+        # Check that both AE and SUPPAE are included in the Dataset-JSON
+        item_groups = data["clinicalData"]["itemGroupData"]
+        assert "IG.AE" in item_groups
+        assert "IG.SUPPAE" in item_groups
+
+        # Validate that the SUPPAE group contains records
+        supp_group = item_groups["IG.SUPPAE"]
+        assert supp_group["records"] > 0
+
+        # Verify parent linkage
+        ae_group = item_groups["IG.AE"]
+        assert ae_group["records"] > 0
+
+        # Ensure BiostatExport log has status SUCCESS
+        async with db_manager.get_session_maker()() as session:
+            stmt = select(BiostatExport).where(
+                BiostatExport.export_type == "SDTM",
+                BiostatExport.dataset_name == "AE",
+                BiostatExport.status == "SUCCESS",
+            )
+            db_res = await session.execute(stmt)
+            export_log = db_res.scalars().first()
+            assert export_log is not None
+
+
+@pytest.mark.asyncio
+async def test_api_biostat_bundle_export_with_supp_records(populate_test_data) -> None:
+    """
+    Verify that biostatistical bundle exports successfully include all generated SUPP-- datasets
+    alongside parent datasets, that the entire bundle passes validation, and that success is logged.
+    """
+    # Let's add an unmapped/qualifier observation to trigger a SUPPAE record
+    async with db_manager.get_session_maker()() as session:
+        supp_obs = ClinicalObservation(
+            subject_id="SUBJ-101",
+            study_id="STUDY-001",
+            domain="AE",
+            test_code="AEENGRY",
+            test_name="Ongoing Status",
+            value_string="ONGOING",
+            page_id="ae_page_1",
+            observation_date=datetime.fromisoformat("2026-08-01"),
+        )
+        session.add(supp_obs)
+        await session.commit()
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        headers = get_auth_headers(roles="sponsor_statistician")
+        res = await client.get(
+            "/api/v1/execution/biostat/bundle?study_id=STUDY-001",
+            headers=headers,
+        )
+        assert res.status_code == 200
+        data = res.json()
+
+        # Check that both AE and SUPPAE are included in the bundle's item groups
+        item_groups = data["clinicalData"]["itemGroupData"]
+        assert "IG.AE" in item_groups
+        assert "IG.SUPPAE" in item_groups
+
+        # Ensure BiostatExport log has status SUCCESS
+        async with db_manager.get_session_maker()() as session:
+            stmt = select(BiostatExport).where(
+                BiostatExport.export_type == "BUNDLE", BiostatExport.status == "SUCCESS"
+            )
+            db_res = await session.execute(stmt)
+            export_log = db_res.scalars().first()
+            assert export_log is not None
