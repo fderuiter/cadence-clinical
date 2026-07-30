@@ -201,7 +201,9 @@ async def test_lab_range_evaluation_and_recalculation_gxp() -> None:
         res_recalc_2 = await client.post(
             "/api/v1/execution/lab-ranges/recalculate",
             json=recalc_payload,
-            headers=get_auth_headers(roles="cra", change_reason="Recalculating limits again"),
+            headers=get_auth_headers(
+                roles="cra", change_reason="Recalculating limits again"
+            ),
         )
         assert res_recalc_2.status_code == 200
         assert res_recalc_2.json()["updated_count"] == 0
@@ -442,7 +444,9 @@ async def test_lab_range_recalculation_authorized_data_manager() -> None:
         res_recalc_1 = await client.post(
             "/api/v1/execution/lab-ranges/recalculate",
             json=recalc_payload,
-            headers=get_auth_headers(roles="data_manager", change_reason="DM recalibration"),
+            headers=get_auth_headers(
+                roles="data_manager", change_reason="DM recalibration"
+            ),
         )
         assert res_recalc_1.status_code == 200
         assert res_recalc_1.json()["status"] == "success"
@@ -451,7 +455,9 @@ async def test_lab_range_recalculation_authorized_data_manager() -> None:
         res_recalc_2 = await client.post(
             "/api/v1/execution/lab-ranges/recalculate",
             json=recalc_payload,
-            headers=get_auth_headers(roles="Data Manager", change_reason="DM second recalculation"),
+            headers=get_auth_headers(
+                roles="Data Manager", change_reason="DM second recalculation"
+            ),
         )
         assert res_recalc_2.status_code == 200
         assert res_recalc_2.json()["status"] == "success"
