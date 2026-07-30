@@ -87,6 +87,7 @@
           <div class="nav-title">Showcase Modules</div>
           <ul class="nav-menu">
             <li
+              v-if="canViewMdr"
               id="tab-btn-mdr"
               class="nav-item"
               :class="{ active: $route.name === 'mdr' }"
@@ -98,6 +99,7 @@
               </router-link>
             </li>
             <li
+              v-if="canViewEcrf"
               id="tab-btn-ecrf"
               class="nav-item"
               :class="{ active: $route.name === 'ecrf' }"
@@ -109,6 +111,7 @@
               </router-link>
             </li>
             <li
+              v-if="canViewCtms"
               id="tab-btn-ctms"
               class="nav-item"
               :class="{ active: $route.name === 'ctms' }"
@@ -120,6 +123,7 @@
               </router-link>
             </li>
             <li
+              v-if="canViewRules"
               id="tab-btn-rules"
               class="nav-item"
               :class="{ active: $route.name === 'rules' }"
@@ -131,6 +135,7 @@
               </router-link>
             </li>
             <li
+              v-if="canViewAudit"
               id="tab-btn-audit"
               class="nav-item"
               :class="{ active: $route.name === 'audit' }"
@@ -179,13 +184,34 @@
 </template>
 
 <script setup>
-import { onMounted } from "vue";
+import { onMounted, computed } from "vue";
 import { useClinicalStore } from "./stores/clinical";
 import { useAuthStore } from "./stores/auth";
+import { hasRequiredRole } from "./router";
 import "./style.css";
 
 const store = useClinicalStore();
 const authStore = useAuthStore();
+
+const canViewMdr = computed(() => {
+  return hasRequiredRole(authStore.normalizedRoles, ["sponsor_designer", "data_manager", "sponsor_admin"]);
+});
+
+const canViewEcrf = computed(() => {
+  return hasRequiredRole(authStore.normalizedRoles, ["site_investigator", "crc", "data_manager", "sponsor_admin"]);
+});
+
+const canViewCtms = computed(() => {
+  return hasRequiredRole(authStore.normalizedRoles, ["cra", "monitor", "sponsor_admin"]);
+});
+
+const canViewRules = computed(() => {
+  return hasRequiredRole(authStore.normalizedRoles, ["data_manager", "sponsor_admin"]);
+});
+
+const canViewAudit = computed(() => {
+  return hasRequiredRole(authStore.normalizedRoles, ["auditor", "tmf_auditor", "sponsor_admin"]);
+});
 
 onMounted(async () => {
   if (store.ledgerBlocks.length === 0) {
