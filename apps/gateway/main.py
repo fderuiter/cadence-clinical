@@ -164,6 +164,7 @@ SERVICES = {
     "safety": os.getenv("SAFETY_URL", "http://localhost:8008"),
     "tickets": os.getenv("TICKETS_URL", "http://localhost:8009"),
     "org": os.getenv("ORG_URL", "http://localhost:8010"),
+    "econsent": os.getenv("ECONSENT_URL", "http://localhost:8011"),
 }
 
 jwks_cache: Optional[Dict[str, Any]] = None
@@ -1048,6 +1049,10 @@ async def proxy_requests(request: Request, path: str) -> Response:
         target_url = f"{SERVICES['execution']}/{path}"
     elif path.startswith("dictionary/"):
         target_url = f"{SERVICES['execution']}/{path}"
+    elif path.startswith("econsent/"):
+        target_url = f"{SERVICES['econsent']}/{path[len('econsent/') :]}"
+    elif path.startswith("api/v1/econsent"):
+        target_url = f"{SERVICES['econsent']}/{path}"
     elif path.startswith("api/v1/etmf"):
         target_url = f"{SERVICES['etmf']}/{path}"
     elif path.startswith("api/v1/interop"):

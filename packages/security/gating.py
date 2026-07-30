@@ -10,6 +10,7 @@ SIGNATURE_GATED_PATTERNS = [
     "queries/sync",
     "close",
     "sign",
+    "capture-consent",
 ]
 
 
@@ -23,6 +24,8 @@ def is_path_signature_gated(path_lower: str) -> bool:
     We also exclude 'econsent' paths from gateway-level step-up gating as eConsent handles its own subject-level
     consent checks.
     """
+    if "capture-consent" in path_lower:
+        return True
     if "econsent" in path_lower:
         return False
 

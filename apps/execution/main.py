@@ -691,13 +691,18 @@ async def evaluate_and_transition_screening(
 @app.post(
     "/api/v1/execution/subjects/{subject_id}/consent",
     response_model=SubjectConsentResponse,
+    deprecated=True,
 )
 async def record_subject_consent(
     subject_id: str,
     payload: SubjectConsentRequest,
     roles: list[str] = Depends(verify_not_auditor),
 ) -> SubjectConsentResponse:
-    """Record or update subject consent for a specific protocol version."""
+    """Record or update subject consent for a specific protocol version.
+
+    [Deprecated] This is the legacy execution-side local recording endpoint.
+    New integrations should capture consent canonically via the eConsent service.
+    """
     async with db_manager.get_session_maker()() as session:
         # 1. Verify subject exists
         stmt_subj = select(ClinicalSubject).where(
@@ -714,6 +719,27 @@ async def record_subject_consent(
                 status_code=400,
                 detail=f"Consent study_id '{payload.protocol_version.study_id}' does not match subject's study_id '{subj_db.study_id}'.",
             )
+
+        # 2.5 Refresh/validate exact-version consent status from eConsent service if signing ICF
+        if payload.icf_signed:
+            from apps.execution.econsent_client import fetch_subject_consent_status
+            try:
+                status = await fetch_subject_consent_status(
+                    subject_pseudonym=subject_id,
+                    study_id=payload.protocol_version.study_id,
+                )
+                if not status.get("signed") or status.get("version_index") != payload.protocol_version.version_index:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"eConsent service does not have a signed record for subject {subject_id} with version {payload.protocol_version.version_index}.",
+                    )
+            except HTTPException as he:
+                raise he
+            except Exception as e:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Failed to fetch consent status from eConsent: {str(e)}",
+                )
 
         # 3. Check if standard subject_consents record exists for this version_index
         stmt_consent = select(SubjectConsent).where(
