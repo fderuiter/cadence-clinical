@@ -33,6 +33,9 @@ ROLE_PHARMACIST = "pharmacist"
 ROLE_UNBLINDED_STATISTICIAN = "unblinded_statistician"
 ROLE_IDMC = "idmc"
 ROLE_EMERGENCY_UNBLINDER = "emergency_unblinder"
+ROLE_PRINCIPAL_INVESTIGATOR = "principal_investigator"
+ROLE_AUTHORIZED_ER_PHYSICIAN = "authorized_er_physician"
+ROLE_LEAD_INVESTIGATOR = "lead_investigator"
 
 
 ROLE_ALIASES = {
@@ -94,10 +97,16 @@ ROLE_ALIASES = {
     "site investigator": ROLE_INVESTIGATOR,
     "site_investigator": ROLE_INVESTIGATOR,
     "site-investigator": ROLE_INVESTIGATOR,
-    "principal investigator": ROLE_INVESTIGATOR,
-    "pi": ROLE_INVESTIGATOR,
-    "principal_investigator": ROLE_INVESTIGATOR,
-    "principalinvestigator": ROLE_INVESTIGATOR,
+    "principal investigator": ROLE_PRINCIPAL_INVESTIGATOR,
+    "pi": ROLE_PRINCIPAL_INVESTIGATOR,
+    "principal_investigator": ROLE_PRINCIPAL_INVESTIGATOR,
+    "principalinvestigator": ROLE_PRINCIPAL_INVESTIGATOR,
+    "authorized er physician": ROLE_AUTHORIZED_ER_PHYSICIAN,
+    "authorized_er_physician": ROLE_AUTHORIZED_ER_PHYSICIAN,
+    "authorized-er-physician": ROLE_AUTHORIZED_ER_PHYSICIAN,
+    "lead investigator": ROLE_LEAD_INVESTIGATOR,
+    "lead_investigator": ROLE_LEAD_INVESTIGATOR,
+    "lead-investigator": ROLE_LEAD_INVESTIGATOR,
     "investigator_user": ROLE_INVESTIGATOR,
     "crc": ROLE_CRC,
     "clinical research coordinator": ROLE_CRC,
@@ -537,6 +546,66 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
     ROLE_EMERGENCY_UNBLINDER: {
         "rtsm_unblind": {"write"},
     },
+    ROLE_PRINCIPAL_INVESTIGATOR: {
+        "rtsm_unblind": {"write"},
+        "study_design": {"read"},
+        "subject_enrollment": {"create", "read", "update"},
+        "ecrf_data_entry": {"create", "read", "update"},
+        "query_lifecycle": {"read", "update"},
+        "sdv": {"read"},
+        "system_audit_logs": {"read"},
+        "regulatory_form": {"create", "read", "sign"},
+        "training_log": {"create", "read", "sign"},
+        "ctms_study": {"read"},
+        "ctms_recruitment": {"read"},
+        "ctms_site_milestone": {"read"},
+        "ctms_cra_allocation": {"read"},
+        "ctms_cra_workload": {"read"},
+        "etmf_document": {"read"},
+        "etmf_edl": {"read"},
+        "quality_event": {"read"},
+        "eisf_document": {"create", "read", "update", "delete", "sync"},
+    },
+    ROLE_AUTHORIZED_ER_PHYSICIAN: {
+        "rtsm_unblind": {"write"},
+        "study_design": {"read"},
+        "subject_enrollment": {"create", "read", "update"},
+        "ecrf_data_entry": {"create", "read", "update"},
+        "query_lifecycle": {"read", "update"},
+        "sdv": {"read"},
+        "system_audit_logs": {"read"},
+        "regulatory_form": {"create", "read", "sign"},
+        "training_log": {"create", "read", "sign"},
+        "ctms_study": {"read"},
+        "ctms_recruitment": {"read"},
+        "ctms_site_milestone": {"read"},
+        "ctms_cra_allocation": {"read"},
+        "ctms_cra_workload": {"read"},
+        "etmf_document": {"read"},
+        "etmf_edl": {"read"},
+        "quality_event": {"read"},
+        "eisf_document": {"create", "read", "update", "delete", "sync"},
+    },
+    ROLE_LEAD_INVESTIGATOR: {
+        "rtsm_unblind": {"write"},
+        "study_design": {"read"},
+        "subject_enrollment": {"create", "read", "update"},
+        "ecrf_data_entry": {"create", "read", "update"},
+        "query_lifecycle": {"read", "update"},
+        "sdv": {"read"},
+        "system_audit_logs": {"read"},
+        "regulatory_form": {"create", "read", "sign"},
+        "training_log": {"create", "read", "sign"},
+        "ctms_study": {"read"},
+        "ctms_recruitment": {"read"},
+        "ctms_site_milestone": {"read"},
+        "ctms_cra_allocation": {"read"},
+        "ctms_cra_workload": {"read"},
+        "etmf_document": {"read"},
+        "etmf_edl": {"read"},
+        "quality_event": {"read"},
+        "eisf_document": {"create", "read", "update", "delete", "sync"},
+    },
 }
 
 
@@ -567,6 +636,9 @@ SITE_SCOPED_ROLES: Set[str] = {
     ROLE_CRA_CANONICAL,
     "monitor",
     ROLE_EXTERNAL_MONITOR,
+    ROLE_PRINCIPAL_INVESTIGATOR,
+    ROLE_AUTHORIZED_ER_PHYSICIAN,
+    ROLE_LEAD_INVESTIGATOR,
 }
 
 UNMASKED_ALLOCATION_FIELDS: Set[str] = {
@@ -592,6 +664,9 @@ ROLE_UNMASKED_FIELDS: Dict[str, Set[str]] = {
     ROLE_IDMC: UNMASKED_ALLOCATION_FIELDS,
     ROLE_PHARMACIST: UNMASKED_SUPPLY_FIELDS,
     ROLE_EMERGENCY_UNBLINDER: UNMASKED_ALLOCATION_FIELDS | UNMASKED_SUPPLY_FIELDS,
+    ROLE_PRINCIPAL_INVESTIGATOR: UNMASKED_ALLOCATION_FIELDS | UNMASKED_SUPPLY_FIELDS,
+    ROLE_AUTHORIZED_ER_PHYSICIAN: UNMASKED_ALLOCATION_FIELDS | UNMASKED_SUPPLY_FIELDS,
+    ROLE_LEAD_INVESTIGATOR: UNMASKED_ALLOCATION_FIELDS | UNMASKED_SUPPLY_FIELDS,
 }
 
 
@@ -1140,6 +1215,29 @@ ROLE_EXPANSIONS = {
         "site-investigator",
         "site_investigator",
         "investigator_user",
+        "principal_investigator",
+        "principal investigator",
+        "pi",
+        "authorized_er_physician",
+        "authorized er physician",
+        "lead_investigator",
+        "lead investigator",
+    },
+    "principal_investigator": {
+        "principal_investigator",
+        "principal investigator",
+        "pi",
+        "principalinvestigator",
+    },
+    "authorized_er_physician": {
+        "authorized_er_physician",
+        "authorized er physician",
+        "authorized-er-physician",
+    },
+    "lead_investigator": {
+        "lead_investigator",
+        "lead investigator",
+        "lead-investigator",
     },
     "data manager": {
         "data manager",

@@ -178,6 +178,7 @@ class ClinicalSubject(AuditedModel):
     unblinded_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     unblinded_by: Mapped[str] = mapped_column(String(255), nullable=True)
     unblinded_reason: Mapped[str] = mapped_column(String(1000), nullable=True)
+    unblinded_signature: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     withdrawn_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     withdrawal_reason: Mapped[str] = mapped_column(String(1000), nullable=True)
     randomization_id: Mapped[str] = mapped_column(String(36), nullable=True)

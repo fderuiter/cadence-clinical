@@ -280,6 +280,43 @@ def receive_before_flush(session: Session, flush_context, instances):
                 f"Form {form_id} is currently locked in a read-only state."
             )
 
+        # Check if subject is unblinded and restrict subsequent non-safety writes
+        if tablename in (
+            "clinical_observations",
+            "form_submissions",
+        ):
+            sub_id = getattr(obj, "subject_id", None)
+            if sub_id:
+                subj_obj = None
+                with session.no_autoflush:
+                    from sqlalchemy import select
+
+                    from .models import ClinicalSubject
+
+                    stmt_subj = select(ClinicalSubject).where(
+                        (ClinicalSubject.subject_id == sub_id)
+                        | (ClinicalSubject.id == sub_id)
+                    )
+                    subj_obj = session.execute(stmt_subj).scalars().first()
+
+                if subj_obj and subj_obj.is_unblinded:
+                    # Check safety-data exception path
+                    is_safety_data = False
+                    if tablename == "clinical_observations":
+                        # If domain is AE or SAE, allow it as a safety exception
+                        domain = getattr(obj, "domain", "").upper()
+                        if domain in ("AE", "SAE"):
+                            is_safety_data = True
+                    elif tablename == "form_submissions":
+                        form_id = getattr(obj, "form_id", "").upper()
+                        if "AE" in form_id or "SAFETY" in form_id:
+                            is_safety_data = True
+
+                    if not is_safety_data:
+                        raise PermissionError(
+                            f"Subject {sub_id} is unblinded. Subsequent non-safety clinical write operations are blocked."
+                        )
+
     # GxP compliance: Centralized automatic verification drop
     user_id = current_user_id.get()
     reason = current_change_reason.get()
