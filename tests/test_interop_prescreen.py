@@ -1,10 +1,10 @@
-import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 from unittest.mock import AsyncMock, patch
 
 import pytest
 import pytest_asyncio
+from eligibility import EligibilityCriterion, parse_dsl
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
@@ -13,7 +13,6 @@ from apps.interop.database import db_manager
 from apps.interop.fhir_adapter import FHIRAdapter, pseudonymize_identifier
 from apps.interop.main import app
 from apps.interop.models import Base, InteropAuditLog
-from eligibility import EligibilityCriterion, parse_dsl
 
 
 @pytest_asyncio.fixture(autouse=True)
