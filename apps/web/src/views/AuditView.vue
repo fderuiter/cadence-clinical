@@ -728,54 +728,187 @@
       </div>
     </div>
 
-    <!-- Isolated Non-Production Sandbox Accordion -->
-    <div
-      class="card"
-      style="
-        margin-top: 30px;
-        border-top: 4px solid var(--border);
-        border-style: solid none none none;
-        background: rgba(0, 0, 0, 0.01);
-      "
-    >
-      <div class="card-title" style="margin-bottom: 8px">
-        <span
-          style="font-size: 13px; font-weight: 600; color: var(--text-muted)"
-          >🧪 Sandbox / Non-Production Demo Status Controls</span
+    <!-- Card 5: eTMF Completeness Tracking Dashboard -->
+    <div class="card" style="margin-top: 20px">
+      <div class="card-title">
+        <span>eTMF Completeness Tracking &amp; Verification</span>
+        <button
+          class="btn btn-secondary badge btn-check-completeness"
+          style="padding: 4px 8px; font-size: 11px; cursor: pointer"
+          @click="checkCompleteness"
+          :disabled="completenessLoading"
         >
+          {{ completenessLoading ? "Checking..." : "Re-Verify" }}
+        </button>
       </div>
-      <p
+
+      <p style="font-size: 13px; color: var(--text-muted); margin: 8px 0 16px 0">
+        Perform live gap-analysis against the Expected Document List (EDL) to verify regulatory compliance of mandatory TMF artifacts for trial milestones.
+      </p>
+
+      <!-- Completeness Controls -->
+      <div
         style="
-          font-size: 12px;
-          color: var(--text-muted);
-          margin-bottom: 12px;
-          max-width: 750px;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px;
+          background: var(--bg);
+          padding: 12px;
+          border-radius: 6px;
+          border: 1px solid var(--border);
+          margin-bottom: 16px;
         "
       >
-        ⚠️ SANDBOX DISCLOSURE: The controls below clear client-side query ledger
-        sync queues in local storage to facilitate demo testing and rapid
-        simulation iterations. They are physically isolated and have no GxP
-        operational effect on immutable, relational server-side database records
-        or Part 11 regulatory logs.
-      </p>
-      <div>
-        <button
-          id="btn-clear-ledger"
-          class="badge"
-          style="
-            cursor: pointer;
-            background-color: var(--error);
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            font-size: 12px;
-            border-radius: 4px;
-            font-weight: 600;
-          "
-          @click="purgeLedger"
+        <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 140px">
+          <label style="font-size: 11px; font-weight: 600; margin-bottom: 2px; display: block">Study ID</label>
+          <input
+            v-model="completenessParams.study_id"
+            type="text"
+            placeholder="e.g. study_001"
+            class="completeness-study-id"
+            style="
+              width: 100%;
+              padding: 6px 8px;
+              font-size: 12px;
+              border-radius: 4px;
+              border: 1px solid var(--border);
+              background: var(--card-bg);
+              color: var(--text);
+            "
+          />
+        </div>
+        <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 140px">
+          <label style="font-size: 11px; font-weight: 600; margin-bottom: 2px; display: block">Milestone</label>
+          <select
+            v-model="completenessParams.milestone"
+            class="completeness-milestone"
+            style="
+              width: 100%;
+              padding: 6px 8px;
+              font-size: 12px;
+              border-radius: 4px;
+              border: 1px solid var(--border);
+              background: var(--card-bg);
+              color: var(--text);
+            "
+          >
+            <option value="INITIATION">INITIATION (Study Start)</option>
+            <option value="CONDUCT">CONDUCT (Data Collection)</option>
+            <option value="CLOSEOUT">CLOSEOUT (Study Closed/Lock)</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 140px">
+          <label style="font-size: 11px; font-weight: 600; margin-bottom: 2px; display: block">Site ID (Optional)</label>
+          <input
+            v-model="completenessParams.site_id"
+            type="text"
+            placeholder="e.g. site_001"
+            class="completeness-site-id"
+            style="
+              width: 100%;
+              padding: 6px 8px;
+              font-size: 12px;
+              border-radius: 4px;
+              border: 1px solid var(--border);
+              background: var(--card-bg);
+              color: var(--text);
+            "
+          />
+        </div>
+        <div style="display: flex; gap: 8px; width: 100%; margin-top: 4px; justify-content: flex-end">
+          <button
+            class="btn btn-primary btn-run-completeness"
+            style="padding: 6px 12px; font-size: 12px; cursor: pointer"
+            @click="checkCompleteness"
+            :disabled="completenessLoading || !completenessParams.study_id.trim()"
+          >
+            Run Completeness Analysis
+          </button>
+        </div>
+      </div>
+
+      <!-- Completeness Results View -->
+      <div v-if="completenessLoading" style="padding: 24px; text-align: center">
+        <div class="spinner" style="display: inline-block; margin-right: 8px"></div>
+        <span>Calculating live completeness metrics and scanning EDL expectations...</span>
+      </div>
+
+      <div v-else-if="completenessError" style="padding: 16px; background: rgba(220, 53, 69, 0.05); border: 1px solid rgba(220, 53, 69, 0.2); border-radius: 6px">
+        <span style="color: var(--error); font-weight: 600">⚠️ Error:</span> {{ completenessError }}
+      </div>
+
+      <div v-else-if="completenessResult" style="display: flex; flex-direction: column; gap: 16px">
+        <!-- Status Banner -->
+        <div
+          :style="{
+            padding: '16px',
+            background: completenessResult.is_complete ? 'rgba(40, 167, 69, 0.1)' : 'rgba(255, 193, 7, 0.1)',
+            border: completenessResult.is_complete ? '1px solid rgba(40, 167, 69, 0.3)' : '1px solid rgba(255, 193, 7, 0.4)',
+            borderRadius: '6px'
+          }"
         >
-          Purge Client-Side Sync Ledger Queue
-        </button>
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px">
+            <div style="display: flex; align-items: center; gap: 8px">
+              <span style="font-size: 20px">{{ completenessResult.is_complete ? "🟢" : "🟡" }}</span>
+              <div>
+                <strong :style="{ color: completenessResult.is_complete ? '#28a745' : '#b28000', fontSize: '15px' }">
+                  {{ completenessResult.is_complete ? "MILESTONE COMPLIANT" : "PENDING EXPECTED DOCUMENTS" }}
+                </strong>
+                <p style="font-size: 12px; margin: 4px 0 0 0; color: var(--text)">
+                  Study: <strong>{{ completenessResult.study_id }}</strong> | Milestone: <strong>{{ completenessResult.milestone }}</strong>
+                  <span v-if="completenessResult.site_id"> | Site: <strong>{{ completenessResult.site_id }}</strong></span>
+                </p>
+              </div>
+            </div>
+            <div style="font-size: 13px; font-weight: 600">
+              Score: {{ completenessResult.present_artifacts.length }} / {{ completenessResult.per_artifact_detail.length }} Artifacts Present
+            </div>
+          </div>
+        </div>
+
+        <!-- Artifacts Table -->
+        <div style="overflow-x: auto">
+          <table class="clinical-table" style="width: 100%; border-collapse: collapse; font-size: 13px">
+            <thead>
+              <tr style="background: var(--bg); border-bottom: 1px solid var(--border); text-align: left">
+                <th style="padding: 10px">Expected Artifact Type</th>
+                <th style="padding: 10px">Scope</th>
+                <th style="padding: 10px">Compliance Status</th>
+                <th style="padding: 10px">Document ID</th>
+                <th style="padding: 10px">Ver.</th>
+                <th style="padding: 10px; text-align: right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="art in completenessResult.per_artifact_detail" :key="art.artifact_type" style="border-bottom: 1px solid var(--border)">
+                <td style="padding: 10px; font-weight: 500">{{ art.artifact_type }}</td>
+                <td style="padding: 10px; text-transform: capitalize">{{ art.scope }}</td>
+                <td style="padding: 10px">
+                  <span :class="getCompletenessBadgeClass(art.status)" style="font-size: 10px">
+                    {{ art.status }}
+                  </span>
+                </td>
+                <td style="padding: 10px; font-family: monospace; font-size: 11px">
+                  {{ art.document_id || "-" }}
+                </td>
+                <td style="padding: 10px">
+                  {{ art.version_index !== null && art.version_index !== undefined ? "v" + art.version_index : "-" }}
+                </td>
+                <td style="padding: 10px; text-align: right">
+                  <button
+                    v-if="art.document_id"
+                    class="btn btn-secondary btn-preview-completeness-doc"
+                    style="padding: 3px 6px; font-size: 11px; cursor: pointer"
+                    @click="previewDocument({ id: art.document_id, filename: art.artifact_type })"
+                  >
+                    Preview Evidence
+                  </button>
+                  <span v-else style="color: var(--text-muted); font-size: 12px; font-style: italic">Missing Document</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -783,12 +916,10 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from "vue";
-import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { auditorService } from "../api/auditor";
 import { etmfService } from "../api/etmf";
 
-const clinicalStore = useClinicalStore();
 const authStore = useAuthStore();
 
 // Global error alert state
@@ -986,6 +1117,53 @@ function nextPage() {
   }
 }
 
+// --- 5. eTMF Completeness Tracking State ---
+const completenessParams = reactive({
+  study_id: "study_001",
+  milestone: "INITIATION",
+  site_id: "",
+});
+const completenessLoading = ref(false);
+const completenessResult = ref(null);
+const completenessError = ref("");
+
+async function checkCompleteness() {
+  if (!completenessParams.study_id.trim()) return;
+  completenessLoading.value = true;
+  completenessError.value = "";
+  completenessResult.value = null;
+
+  try {
+    const params = {
+      study_id: completenessParams.study_id.trim(),
+      milestone: completenessParams.milestone,
+    };
+    if (completenessParams.site_id.trim()) {
+      params.site_id = completenessParams.site_id.trim();
+    }
+    const res = await etmfService.getCompleteness(params);
+    completenessResult.value = res;
+    // Refresh audit logs since the completeness check creates an audit trail entry
+    await fetchAuditLogs();
+  } catch (err) {
+    console.error("Completeness checking failure:", err);
+    completenessError.value = err.message || "Failed to execute completeness analysis.";
+  } finally {
+    completenessLoading.value = false;
+  }
+}
+
+function getCompletenessBadgeClass(status) {
+  const map = {
+    SIGNED: "badge status-approved",
+    PRESENT: "badge status-approved",
+    UNSIGNED: "badge status-review",
+    PENDING: "badge status-review",
+    ABSENT: "badge status-draft",
+  };
+  return map[status] || "badge";
+}
+
 // --- Helper Functions ---
 
 // Formatted UTC Timestamps
@@ -1038,20 +1216,9 @@ function getActionBadgeClass(action) {
     BINDER_EXPORT: "badge status-approved",
     QC_TRANSITION: "badge status-draft",
     AUDIT_VIEW: "badge status-review",
+    COMPLETENESS: "badge status-approved",
   };
   return map[action] || "badge";
-}
-
-// --- 5. Sandbox Client-Side Purge control ---
-function purgeLedger() {
-  if (
-    confirm(
-      "Are you sure you want to clear your local client-side query ledger sync queue? This is purely a browser-local demo operation."
-    )
-  ) {
-    clinicalStore.clearLedger();
-    alert("Local client-side sync queue cleared successfully!");
-  }
 }
 
 // Initial Loading
@@ -1060,6 +1227,8 @@ onMounted(() => {
   fetchDocuments();
   // Auto-verify ledger integrity on-load if possible
   verifyExecutionIntegrity();
+  // Auto-check default completeness
+  checkCompleteness();
 });
 </script>
 

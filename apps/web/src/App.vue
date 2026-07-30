@@ -87,6 +87,7 @@
           <div class="nav-title">Showcase Modules</div>
           <ul class="nav-menu">
             <li
+              v-if="canAccess(['sponsor_designer', 'data_manager', 'sponsor_admin'])"
               id="tab-btn-mdr"
               class="nav-item"
               :class="{ active: $route.name === 'mdr' }"
@@ -98,6 +99,7 @@
               </router-link>
             </li>
             <li
+              v-if="canAccess(['site_investigator', 'crc', 'data_manager', 'sponsor_admin'])"
               id="tab-btn-ecrf"
               class="nav-item"
               :class="{ active: $route.name === 'ecrf' }"
@@ -109,6 +111,7 @@
               </router-link>
             </li>
             <li
+              v-if="canAccess(['cra', 'monitor', 'sponsor_admin'])"
               id="tab-btn-ctms"
               class="nav-item"
               :class="{ active: $route.name === 'ctms' }"
@@ -120,6 +123,7 @@
               </router-link>
             </li>
             <li
+              v-if="canAccess(['data_manager', 'sponsor_admin'])"
               id="tab-btn-rules"
               class="nav-item"
               :class="{ active: $route.name === 'rules' }"
@@ -131,6 +135,7 @@
               </router-link>
             </li>
             <li
+              v-if="canAccess(['auditor', 'tmf_auditor', 'sponsor_admin'])"
               id="tab-btn-audit"
               class="nav-item"
               :class="{ active: $route.name === 'audit' }"
@@ -182,10 +187,15 @@
 import { onMounted } from "vue";
 import { useClinicalStore } from "./stores/clinical";
 import { useAuthStore } from "./stores/auth";
+import { hasRequiredRole } from "./router";
 import "./style.css";
 
 const store = useClinicalStore();
 const authStore = useAuthStore();
+
+const canAccess = (requiredRoles) => {
+  return hasRequiredRole(authStore.normalizedRoles, requiredRoles);
+};
 
 onMounted(async () => {
   if (store.ledgerBlocks.length === 0) {
