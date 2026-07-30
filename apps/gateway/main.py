@@ -836,12 +836,10 @@ async def proxy_requests(request: Request, path: str) -> Response:
 
     # Enforce sig_token validation for signature-gated mutations
     is_mutation = request.method in ("POST", "PUT", "DELETE", "PATCH")
-    is_signature_gated = False
+    from packages.security.gating import is_path_signature_gated
+
     path_lower = path.lower()
-    for pattern in ["approve", "sign-off", "unblind", "randomize"]:
-        if pattern in path_lower:
-            is_signature_gated = True
-            break
+    is_signature_gated = is_path_signature_gated(path_lower)
 
     if is_signature_gated and is_mutation:
         sig_token = request.headers.get("x-sig-token")

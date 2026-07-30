@@ -141,6 +141,10 @@ class Ticket(Base):
     # Optional due date
     due_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
+    workflow_type: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    action_type: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    signature_action: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+
     # Soft delete
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 

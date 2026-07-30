@@ -8,7 +8,7 @@ Part 11 and GxP standards.
 
 import uuid
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy import JSON, Boolean, DateTime, Integer, String, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -261,6 +261,42 @@ class DelegationOfAuthority(Base):
         primaryjoin="foreign(DelegationOfAuthority.site_id) == Site.site_id",
         back_populates="delegations",
         uselist=False,
+    )
+
+
+class TrainingLog(Base):
+    """
+    Represents a training log record for GxP training validation and compliance under Part 11.
+    """
+
+    __tablename__ = "org_training_logs"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    personnel_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    training_topic: Mapped[str] = mapped_column(String(255), nullable=False)
+    completion_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+
+    # Standard Part 11 Audit Fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(
+        Integer, primary_key=True, default=1, nullable=False
+    )
+
+    # Embedded signatures
+    signature_manifestation: Mapped[Optional[Dict[str, Any]]] = mapped_column(
+        JSON, nullable=True
+    )
+    signer: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    signing_timestamp: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, nullable=True
     )
 
 

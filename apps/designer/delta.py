@@ -2405,6 +2405,10 @@ async def approve_study_version_delta(
         # Update status
         ver_record["status"] = "APPROVED"
         ver_record["signature_manifestation"] = signature_manifestation_payload
+        ver_record["signer"] = user_id
+        ver_record["signing_timestamp"] = signature_manifestation_payload.get(
+            "timestamp"
+        )
 
         # Regenerate StudyVersion signature
         payload_to_sign = {
@@ -2511,13 +2515,18 @@ async def approve_study_version_delta(
             MATCH (sv:StudyVersion {id: $version_id})
             SET sv.status = "APPROVED",
                 sv.signature = $new_signature,
-                sv.signature_manifestation_json = $manifestation_json
+                sv.signature_manifestation_json = $manifestation_json,
+                sv.signature_manifestation = $manifestation_json,
+                sv.signer = $signer,
+                sv.signing_timestamp = $signing_timestamp
             """
             await tx.run(
                 update_ver_query,
                 version_id=version_id,
                 new_signature=new_signature,
                 manifestation_json=json.dumps(signature_manifestation_payload),
+                signer=user_id,
+                signing_timestamp=signature_manifestation_payload.get("timestamp"),
             )
 
             # Create Action node
