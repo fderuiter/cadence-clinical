@@ -549,8 +549,8 @@ import { ref, reactive, watch, onMounted, computed } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { soaClient } from "../api/soaClient";
-import { validateField } from "../lib/legacy_helpers.js";
-import { debounce } from "ui";
+import { validateField, debounce } from "ui";
+import { evaluateAST } from "../evaluator.js";
 import { terminologyClient } from "../api/terminologyClient";
 import ClinicalFormField from "../components/clinical/ClinicalFormField.vue";
 import ReasonModal from "../components/ReasonModal.vue";
@@ -834,7 +834,7 @@ const validSigningReasons = [
 
 function getValidationError(field) {
   const value = store.formValues[field.id];
-  const res = validateField(field, value, store.formValues);
+  const res = validateField(field, value, store.formValues, evaluateAST);
   return res.valid ? null : res.message;
 }
 
@@ -1160,7 +1160,7 @@ function submitEcrf() {
   let errMsgs = [];
 
   store.ecrfFields.forEach((f) => {
-    const res = validateField(f, store.formValues[f.id]);
+    const res = validateField(f, store.formValues[f.id], store.formValues, evaluateAST);
     if (!res.valid) {
       allValid = false;
       errMsgs.push(`${f.label}: ${res.message}`);

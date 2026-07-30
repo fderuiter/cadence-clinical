@@ -513,7 +513,9 @@
             >(Syncing...)</span
           >
         </div>
-        <div id="soa-matrix-container" v-html="matrixHtml" />
+        <div id="soa-matrix-container">
+          <ClinicalSoAMatrix :soa-data="soaData" />
+        </div>
       </div>
     </div>
 
@@ -533,7 +535,7 @@
 <script setup>
 import { ref, computed, watch, reactive } from "vue";
 import { useClinicalStore } from "../stores/clinical";
-import { createClinicalVisitMatrix } from "../lib/legacy_helpers.js";
+import ClinicalSoAMatrix from "../components/clinical/ClinicalSoAMatrix.vue";
 import { terminologyClient } from "../api/terminologyClient.js";
 import { debounce } from "ui";
 import ReasonModal from "../components/ReasonModal.vue";
@@ -628,18 +630,40 @@ watch(
   { deep: true }
 );
 
-const matrixHtml = computed(() => {
+const soaData = computed(() => {
   try {
     const parsed = JSON.parse(usdmText.value);
+    if (!parsed) return null;
     if (parsed.rows || parsed.encounters || parsed.epochs) {
-      return createClinicalVisitMatrix(parsed);
+      return parsed;
     }
-    return createClinicalVisitMatrix({
-      visits: parsed.visits || [],
-      forms: parsed.forms || [],
-    });
+    // Adapt flat/old shape (visits, forms) to the rich shape
+    const visits = parsed.visits || [];
+    const forms = parsed.forms || [];
+    const encounters = visits.map((v, idx) => ({
+      encounter_id: v,
+      encounter_name: v,
+      epoch_id: "EP-DEFAULT",
+      sequence: idx + 1,
+    }));
+    const epochs = [{ epoch_id: "EP-DEFAULT", epoch_name: "Default Epoch", sequence: 1 }];
+    const rows = forms.map((form) => ({
+      activity_id: form.name,
+      activity_name: form.name,
+      cells: form.statuses.map((status, idx) => ({
+        encounter_id: visits[idx],
+        is_applicable: status === "Complete" || status === "Pending",
+        details: status,
+      })),
+    }));
+    return {
+      epochs,
+      encounters,
+      rows,
+      arms: [],
+    };
   } catch {
-    return `<div class="clinical-visit-matrix-error">Invalid JSON format</div>`;
+    return null;
   }
 });
 

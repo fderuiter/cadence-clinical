@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { setActivePinia, createPinia } from "pinia";
+import { validateField } from "ui";
 import {
   evaluateAST,
   compilerCache,
   getCompiledExpression,
-  validateField,
-} from "../src/lib/legacy_helpers.js";
+} from "../src/evaluator.js";
 import { useClinicalStore } from "../src/stores/clinical.js";
 
 describe("Client-side AST Evaluator & Cascading Nullification", () => {
@@ -259,11 +259,11 @@ describe("Client-side AST Evaluator & Cascading Nullification", () => {
       };
 
       // Valid value
-      let res = validateField(heightFieldMeta, "1.75", { height: 1.75 });
+      let res = validateField(heightFieldMeta, "1.75", { height: 1.75 }, evaluateAST);
       expect(res.valid).toBe(true);
 
       // Invalid value violating constraint (value <= 0)
-      res = validateField(heightFieldMeta, "0", { height: 0 });
+      res = validateField(heightFieldMeta, "0", { height: 0 }, evaluateAST);
       expect(res.valid).toBe(false);
       expect(res.message).toBe("Height must be strictly greater than zero.");
     });
