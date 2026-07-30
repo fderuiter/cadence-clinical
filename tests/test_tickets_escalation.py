@@ -10,7 +10,6 @@ from sqlalchemy import select
 from apps.tickets.database import db_manager
 from apps.tickets.escalation import (
     execute_ticket_escalation_cycle,
-    is_notification_owed,
     start_background_ticket_escalation,
     stop_background_ticket_escalation,
 )
@@ -18,7 +17,6 @@ from apps.tickets.models import (
     Base,
     Ticket,
     TicketAuditLog,
-    TicketCategory,
     TicketPriority,
     TicketStatus,
 )
@@ -370,7 +368,9 @@ async def test_notification_deduplication_and_partial_failures(mock_publish):
         t_db = r.scalar_one()
         assert t_db.priority == TicketPriority.MEDIUM
         assert t_db.last_escalated_at is not None
-        assert t_db.last_escalation_notified_at is None  # remains None because notify failed
+        assert (
+            t_db.last_escalation_notified_at is None
+        )  # remains None because notify failed
 
     # 2. Second run, notify succeeds.
     # Cooldown is 86400s, so the ticket won't escalate again. But the notification is still owed!
@@ -386,7 +386,9 @@ async def test_notification_deduplication_and_partial_failures(mock_publish):
     async with session_maker() as db:
         r = await db.execute(select(Ticket).where(Ticket.reference == "TKT-GAP"))
         t_db2 = r.scalar_one()
-        assert t_db2.priority == TicketPriority.MEDIUM  # unchanged (did not re-escalate)
+        assert (
+            t_db2.priority == TicketPriority.MEDIUM
+        )  # unchanged (did not re-escalate)
         assert t_db2.last_escalated_at is not None
         assert t_db2.last_escalation_notified_at is not None  # updated successfully
 

@@ -14,6 +14,10 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.tickets.database import db_manager
+from apps.tickets.escalation import (
+    start_background_ticket_escalation,
+    stop_background_ticket_escalation,
+)
 from apps.tickets.models import (
     TERMINAL_STATES,
     TICKET_TRANSITIONS,
@@ -25,8 +29,6 @@ from apps.tickets.models import (
     TicketPriority,
     TicketStatus,
 )
-
-TICKET_ESCALATE = "TICKET_ESCALATE"
 from apps.tickets.notification_events import generate_ticket_notification_payloads
 from apps.tickets.notifications_client import publish_notification
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
@@ -39,6 +41,8 @@ from packages.security.rbac import (
     get_principal,
     verify_not_auditor,
 )
+
+TICKET_ESCALATE = "TICKET_ESCALATE"
 
 
 class TicketCreate(BaseModel):
@@ -283,11 +287,6 @@ async def dispatch_ticket_notifications(
             exc_info=True,
         )
 
-
-from apps.tickets.escalation import (
-    start_background_ticket_escalation,
-    stop_background_ticket_escalation,
-)
 
 app = FastAPI(
     title="Cadence Clinical - Tickets Service",

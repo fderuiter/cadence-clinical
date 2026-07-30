@@ -1,57 +1,63 @@
-# Tickets: Overdue/SLA Escalation Worker and Notification De-Duplication
+# ADR-101: Support Tickets SLA/Overdue Escalation and Notification De-Duplication
 
-## Status
+* **Status:** Accepted
+* **Date:** 2026-08-24
+* **Authors:** Jules
+* **Deciders:** @fderuiter
 
-Accepted
+---
 
-## Context
+## 1. Context & Problem Statement
+The Cadence Clinical platform supports support ticket management in the `tickets` service. Support tickets that remain unresolved past their designated due date need to be prioritized and escalated automatically over time. In a clinical trial context (regulated under GxP and 21 CFR Part 11 guidelines, as mapped under PRD-SYS-001), overdue actions must be handled with extreme reliability.
 
-We need an automated SLA escalation system for support tickets within the Tickets microservice (`apps/tickets`). Tickets past their `due_date` must have their priority advanced programmatically over time up to `CRITICAL` in a step-wise manner.
+We must implement a programmatic background escalation worker that:
+1. Automatically advances a ticket's priority step-wise towards `CRITICAL` when overdue.
+2. Integrates with the platform notifications service to alert the appropriate assigned roles and users.
+3. Guarantees that notifications are de-duplicated and never lost across system restarts or network partitions.
+4. Prevents duplicate concurrent escalations across multi-instance deployments.
 
-To ensure safe, duplicate-proof, and audit-compliant SLA escalations across multiple background worker instances, we need:
-1. Safe database locks to prevent concurrent worker instances from escalating the same ticket.
-2. Persisted state to support idempotent escalation and notification tracking.
-3. Post-commit notification ordering to guarantee notifications are never lost, even if a crash occurs between the escalation and notification dispatch.
-4. Compliance with GxP 21 CFR Part 11 requirements (creating immutable `TICKET_ESCALATE` audit logs and preserving optimistic versioning).
+## 2. Decision Drivers & Constraints
+* **Step-wise Bounded Priority Policy:** Support ticket priorities must be advanced sequentially (`LOW` -> `MEDIUM` -> `HIGH` -> `CRITICAL`) and bounded strictly at `CRITICAL`.
+* **Idempotency & Notification De-duplication:** Dispatches must not be duplicated, and must be safely persisted across service restarts.
+* **Concurrency Safety:** Multiple concurrent instances of the background worker must not race to escalate or notify the same ticket.
+* **GxP 21 CFR Part 11 Auditing:** All priority changes must write immutable audit entries.
 
-## Decision
+## 3. Options Considered
+### Option 1: Inline Synchronous Request inside DB Transactions
+* **Pros:** Simple, immediate notification.
+* **Cons:** High latency on requests, lacks retry resilience, and risks rolling back core database state due to transient network failures.
 
-We have implemented an asynchronous, decoupled background worker loop for support ticket SLA escalation and notification de-duplication with the following key design decisions:
+### Option 2: Post-Commit Background Poller with Two-Step Transactions (Chosen)
+* **Pros:**
+  * Background worker is decoupled from the user request threads.
+  * Multi-instance safe through the use of database-level pessimistic locking (`.with_for_update()`).
+  * Persists state for tracking and deduplication (`last_escalated_at`, `last_escalation_notified_at`, and `escalation_count`).
+  * Employs a strict two-commit design: the priority escalation and its immutable `TICKET_ESCALATE` audit log are committed first, followed by the notification dispatch, followed by committing the notification timestamp.
 
-### 1. Persisted Escalation and Notification De-duplication State
-We added three nullable/defaulted columns to the `Ticket` model class in `apps/tickets/models.py`:
-- `last_escalated_at` (DateTime): Stores the exact timestamp of the most recent successful priority escalation.
-- `last_escalation_notified_at` (DateTime): Stores the timestamp of when a notification was successfully dispatched for the most recent escalation.
-- `escalation_count` (Integer, default `0`): Tracks the cumulative number of escalations, allowing auditable log-based metrics without requiring a metrics library.
+## 4. Decision Outcome
+We adopted **Option 2**. We implemented the overdue escalation system as follows:
 
-**Notification Owed Invariant:** A notification is owed if and only if `last_escalated_at` is set, and is newer than `last_escalation_notified_at` (`last_escalation_notified_at IS NULL OR last_escalated_at > last_escalation_notified_at`).
+1. **State Persistence:** Added `last_escalated_at`, `last_escalation_notified_at`, and `escalation_count` to the `Ticket` model in `apps/tickets/models.py`.
+2. **Pessimistic Concurrency Locking:** The background poller locks each ticket under `.with_for_update()` before re-verifying constraints, mirroring the pattern in `apps/notifications/main.py`.
+3. **Post-Commit Delivery Order:**
+   * **Commit 1:** Priority advanced, `last_escalated_at` set to `now`, version index incremented, and `TICKET_ESCALATE` audit log written.
+   * **Dispatch:** Notification dispatched via the tickets notifications client (`apps/tickets/notifications_client.py`).
+   * **Commit 2:** Upon success, `last_escalation_notified_at` is set to `now` and committed separately.
+4. **Notification Owed Invariant:** A notification is owed only when `last_escalated_at` is set and is newer than `last_escalation_notified_at`.
 
-### 2. Multi-Instance Concurrency and Pessimistic Locking
-To prevent duplicate escalations from running across multiple worker replicas, we query candidates first, then acquire a database write-lock on each candidate individually using SQLAlchemy `.with_for_update()` (matching our pattern in `apps/notifications/main.py::deliver_channel`). All eligibility checks (active, overdue, not fully escalated, and cooldown-elapsed) are re-evaluated immediately after the lock is acquired before any mutation occurs.
+## 5. Consequences & Trade-offs
+### Alternatives Considered
+We evaluated event-driven brokers but preferred a lightweight direct poller to keep the stack simple and maintain immediate consistency.
 
-### 3. Bounded Step-wise Priority Policy
-When a ticket is escalated, its priority is advanced exactly one level toward `CRITICAL` along the chain `LOW` -> `MEDIUM` -> `HIGH` -> `CRITICAL`. Once a ticket reaches `CRITICAL` priority, it is bounded and can never be escalated further. Priority escalation does not affect ticket lifecycle status.
+### Trade-offs
+* **Pros:**
+  * Bulletproof delivery guarantee: any crash between Commit 1 and Commit 2 simply results in a safe notification retry in the next cycle, with no double-escalations.
+  * Zero external metrics library overhead; structured logging provides complete telemetry.
+* **Cons:**
+  * Short polling cycles consume database connections, which is mitigated by tunable environmental interval options.
 
-### 4. Post-Commit Notification Ordering
-To prevent missing or duplicated notifications in the event of a system crash, we decouple the database updates into two distinct transaction commits:
-1. **Commit 1 (Escalation):** The ticket's priority is increased, `last_escalated_at` is set to `now`, versioning fields (`version_index`, `reason_for_change`, `created_by`) are updated, and a `TICKET_ESCALATE` audit log is appended to the immutable audit trail. This transaction is committed first.
-2. **Notification Dispatch:** Only after Commit 1 succeeds, we attempt to dispatch the notification using our gateway-signed `#577 Tickets notification client` (`apps/tickets/notifications_client.py`).
-3. **Commit 2 (Timestamp persistence):** If notification dispatch succeeds, we record `last_escalation_notified_at` to the database and commit that as a separate step. If a crash or network partition occurs between Commit 1 and Commit 2, the next background worker cycle will detect that a notification is still owed (via the Notification Owed Invariant) and retry dispatch without re-escalating the ticket.
-
-### 5. Env-Var Tunables
-The worker respects two environment variable configurations:
-- `TICKETS_ESCALATION_POLL_INTERVAL_SECONDS` (default: `60.0`): The polling cadence of the background loop.
-- `TICKETS_ESCALATION_INTERVAL_SECONDS` (default: `86400.0`): The cooldown window required between consecutive escalations of the same ticket.
-
-### 6. Log-Based Observability
-To avoid introducing external metrics libraries, we utilize a dedicated module logger `tickets_escalation`. We record cycle starts, per-ticket escalation events (including reference, IDs, and priority levels), and errors with full stack trace (`exc_info=True`). This structured log output acts as the primary telemetry source for SLA metric extraction.
-
-### 7. App Lifespan Integration
-The worker loop is registered as startup and shutdown hooks inside the FastAPI `get_relational_db_lifespan` lifespan wrapper in `apps/tickets/main.py`. It is equipped with a `pytest` environment check to prevent auto-spawning during automated testing.
-
-## Consequences
-
-- **Safety & Resiliency:** Complete prevention of race conditions and safe recovery from network or notification transport failures.
-- **Part 11 & GxP Compliance:** Every priority escalation produces an immutable append-only record in `TicketAuditLog` under the `TICKET_ESCALATE` action.
-- **Backward Compatibility:** All new fields on `Ticket` are nullable/defaulted, leaving existing records and test schemas completely unaffected.
-- **Separation of Concerns:** No due-date ageing or transition logic was added to the main requests thread; SLA management is fully isolated in the background worker.
+## 6. Implementation & Verification
+* **Affected Files:** `apps/tickets/models.py`, `apps/tickets/escalation.py`, `apps/tickets/main.py`
+* **Verification Plan:**
+  * Automated unit and integration tests written in `tests/test_tickets_escalation.py`.
+  * Verified eligibility, stepwise priority cap, cooldown gating, idempotency, and gap-retry resilience.

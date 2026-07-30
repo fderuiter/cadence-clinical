@@ -7,7 +7,7 @@ from typing import Any, Optional
 
 from sqlalchemy import and_, or_, select
 
-from apps.tickets.models import TERMINAL_STATES, Ticket, TicketPriority
+from apps.tickets.models import TERMINAL_STATES, Ticket
 
 logger = logging.getLogger("tickets_escalation")
 
@@ -87,7 +87,7 @@ async def execute_ticket_escalation_cycle(session_maker: Any) -> None:
     logger.info("SLA Escalation worker cycle started.")
     now = datetime.now()
     cooldown_seconds = float(
-        os.getenv("TICKETS_ESCALATION_INTERVAL_SECONDS", "86400.0")
+        os.getenv("TICKETS_ESCALATION_INTERVAL_SECONDS", "86400.0")  # deid-ignore
     )
     cooldown_cutoff = now - timedelta(seconds=cooldown_seconds)
 
@@ -167,8 +167,6 @@ async def execute_ticket_escalation_cycle(session_maker: Any) -> None:
                     # Capture necessary details before commit
                     ticket_id = ticket.id
                     reference = ticket.reference
-                    assignee_user = ticket.assignee_user
-                    assignee_role = ticket.assignee_role
                     old_priority = ticket.priority
                     new_priority = NEXT_PRIORITY[old_priority]
 
@@ -260,9 +258,7 @@ async def start_background_ticket_escalation() -> None:
 
     session_maker = db_manager.get_session_maker()
 
-    poll_interval = float(
-        os.getenv("TICKETS_ESCALATION_POLL_INTERVAL_SECONDS", "60.0")
-    )
+    poll_interval = float(os.getenv("TICKETS_ESCALATION_POLL_INTERVAL_SECONDS", "60.0"))
     _should_run = True
 
     async def escalation_loop():

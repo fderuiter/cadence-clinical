@@ -142,8 +142,12 @@ class Ticket(Base):
     due_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     # Escalation/SLA Tracking
-    last_escalated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    last_escalation_notified_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    last_escalated_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, nullable=True
+    )
+    last_escalation_notified_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, nullable=True
+    )
     escalation_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     workflow_type: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)

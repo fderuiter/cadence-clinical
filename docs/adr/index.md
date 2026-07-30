@@ -145,3 +145,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-19: Structured Expiration Metadata and Migration Runners for eTMF/eISF](2026-08-19-etmf-eisf-structured-expiration-metadata-and-migrations.md)
 - [2026-08-23: Ticket Read Audit Policy and Paginated Audit Log Retrieval](2026-08-23-ticket-read-audit-policy-and-pagination.md)
 - [2026-08-23: Delegation of Authority Log Archive Destination and Taxonomy Mapping Decisions](2026-08-23-doa-archive-destination-and-taxonomy.md)
+- [2026-08-24: Support Tickets SLA/Overdue Escalation and Notification De-Duplication](2026-08-24-tickets-escalation-and-deduplication.md)
