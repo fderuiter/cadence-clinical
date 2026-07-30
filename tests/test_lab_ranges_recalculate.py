@@ -21,7 +21,7 @@ GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
 
 
 def get_auth_headers(
-    user_id="test_user", roles="admin", change_reason="system_operation"
+    user_id="test_user", roles="cra", change_reason="system_operation"
 ):
     """Generate Gateway signature-compliant authentication headers."""
     import json
@@ -81,7 +81,7 @@ async def test_lab_range_evaluation_and_recalculation_gxp() -> None:
         res_subj = await client.post(
             "/api/v1/execution/subjects",
             json=subject_payload,
-            headers=get_auth_headers(),
+            headers=get_auth_headers(roles="cra"),
         )
         assert res_subj.status_code == 200
 
@@ -120,7 +120,7 @@ async def test_lab_range_evaluation_and_recalculation_gxp() -> None:
         res_obs_1 = await client.post(
             "/api/v1/execution/observations",
             json=obs_1_payload,
-            headers=get_auth_headers(),
+            headers=get_auth_headers(roles="cra"),
         )
         assert res_obs_1.status_code == 200
         obs_1_data = res_obs_1.json()
@@ -140,7 +140,7 @@ async def test_lab_range_evaluation_and_recalculation_gxp() -> None:
         res_obs_2 = await client.post(
             "/api/v1/execution/observations",
             json=obs_2_payload,
-            headers=get_auth_headers(),
+            headers=get_auth_headers(roles="cra"),
         )
         assert res_obs_2.status_code == 200
         obs_2_data = res_obs_2.json()
@@ -160,7 +160,7 @@ async def test_lab_range_evaluation_and_recalculation_gxp() -> None:
         res_obs_3 = await client.post(
             "/api/v1/execution/observations",
             json=obs_3_payload,
-            headers=get_auth_headers(),
+            headers=get_auth_headers(roles="cra"),
         )
         assert res_obs_3.status_code == 200
         obs_3_data = res_obs_3.json()
@@ -180,7 +180,7 @@ async def test_lab_range_evaluation_and_recalculation_gxp() -> None:
                 )
                 await session.execute(stmt)
 
-        # 5. Invoke batch recalculation on the lab range endpoint
+        # 5. Invoke batch recalculation on the lab range endpoint using CRA role
         recalc_payload = {
             "study_id": "STUDY-LAB",
             "test_code": "WBC",
@@ -188,7 +188,7 @@ async def test_lab_range_evaluation_and_recalculation_gxp() -> None:
         res_recalc = await client.post(
             "/api/v1/execution/lab-ranges/recalculate",
             json=recalc_payload,
-            headers=get_auth_headers(),
+            headers=get_auth_headers(roles="cra", change_reason="Recalculating limits"),
         )
         assert res_recalc.status_code == 200
         recalc_data = res_recalc.json()
@@ -201,7 +201,9 @@ async def test_lab_range_evaluation_and_recalculation_gxp() -> None:
         res_recalc_2 = await client.post(
             "/api/v1/execution/lab-ranges/recalculate",
             json=recalc_payload,
-            headers=get_auth_headers(),
+            headers=get_auth_headers(
+                roles="cra", change_reason="Recalculating limits again"
+            ),
         )
         assert res_recalc_2.status_code == 200
         assert res_recalc_2.json()["updated_count"] == 0
@@ -228,7 +230,7 @@ async def test_lab_range_evaluation_and_recalculation_gxp() -> None:
             assert obs_1_db.lab_out_of_range is False
             assert obs_1_db.version == 2  # Because bounds changed from 4.0 to 2.5
 
-            # Verify audit trail contains update for clinical_observations
+            # Verify audit trail contains update for clinical_observations and correct details
             stmt_audit = select(AuditLog).where(
                 AuditLog.table_name == "clinical_observations",
                 AuditLog.action == "UPDATE",
@@ -236,6 +238,9 @@ async def test_lab_range_evaluation_and_recalculation_gxp() -> None:
             res_audit = await session.execute(stmt_audit)
             audit_logs = res_audit.scalars().all()
             assert len(audit_logs) == 3
+            for log in audit_logs:
+                assert log.user_id == "test_user"
+                assert log.change_reason == "Recalculating limits"
 
 
 @pytest.mark.asyncio
@@ -254,7 +259,7 @@ async def test_lab_range_recalculation_no_match() -> None:
                 "study_id": "STUDY-NOMATCH",
                 "demographics": {"gender": "M", "birthdate": "1980-01-01"},
             },
-            headers=get_auth_headers(),
+            headers=get_auth_headers(roles="cra"),
         )
 
         # Create active observation for a test with no reference ranges configured
@@ -270,7 +275,7 @@ async def test_lab_range_recalculation_no_match() -> None:
         res_obs = await client.post(
             "/api/v1/execution/observations",
             json=obs_payload,
-            headers=get_auth_headers(),
+            headers=get_auth_headers(roles="cra"),
         )
         assert res_obs.status_code == 200
         data = res_obs.json()
@@ -286,10 +291,173 @@ async def test_lab_range_recalculation_no_match() -> None:
         res_recalc = await client.post(
             "/api/v1/execution/lab-ranges/recalculate",
             json=recalc_payload,
-            headers=get_auth_headers(),
+            headers=get_auth_headers(roles="cra"),
         )
         assert res_recalc.status_code == 200
         recalc_data = res_recalc.json()
         assert recalc_data["status"] == "success"
         # Since it was None and remains None, updated_count should be 0
         assert recalc_data["updated_count"] == 0
+
+
+@pytest.mark.asyncio
+async def test_lab_range_recalculation_unauthorized_role() -> None:
+    """Verify that unauthorized / read-only role calls (e.g., roles="subject")
+    are blocked with a 403 response, and no observations/versions are mutated.
+    """
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # Create subject and observation as CRA first
+        await client.post(
+            "/api/v1/execution/subjects",
+            json={
+                "subject_id": "SUBJ-003",
+                "study_id": "STUDY-UNAUTH",
+                "demographics": {"gender": "F", "birthdate": "1990-01-01"},
+            },
+            headers=get_auth_headers(roles="cra"),
+        )
+
+        obs_payload = {
+            "subject_id": "SUBJ-003",
+            "study_id": "STUDY-UNAUTH",
+            "domain": "LB",
+            "test_code": "WBC",
+            "test_name": "White Blood Cell Count",
+            "value": 3.0,
+            "unit": "10^9/L",
+        }
+        res_obs = await client.post(
+            "/api/v1/execution/observations",
+            json=obs_payload,
+            headers=get_auth_headers(roles="cra"),
+        )
+        assert res_obs.status_code == 200
+        obs_id = res_obs.json()["id"]
+
+        # Attempt to recalculate with roles="subject" (unauthorized)
+        recalc_payload = {
+            "study_id": "STUDY-UNAUTH",
+            "test_code": "WBC",
+        }
+        res_recalc = await client.post(
+            "/api/v1/execution/lab-ranges/recalculate",
+            json=recalc_payload,
+            headers=get_auth_headers(roles="subject"),
+        )
+        assert res_recalc.status_code == 403
+
+        # Confirm the observation remains unchanged (version = 1, same attributes)
+        async with db_manager.get_session_maker()() as session:
+            stmt = select(ClinicalObservation).where(ClinicalObservation.id == obs_id)
+            res_db = await session.execute(stmt)
+            obs_db = res_db.scalar_one()
+            assert obs_db.version == 1
+
+
+@pytest.mark.asyncio
+async def test_lab_range_recalculation_missing_reason() -> None:
+    """Verify that omitting X-Change-Reason header entirely is rejected with HTTP 403."""
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        recalc_payload = {
+            "study_id": "STUDY-TEST",
+            "test_code": "WBC",
+        }
+        # Build valid headers and remove X-Change-Reason
+        headers = get_auth_headers(roles="cra")
+        del headers["X-Change-Reason"]
+
+        res = await client.post(
+            "/api/v1/execution/lab-ranges/recalculate",
+            json=recalc_payload,
+            headers=headers,
+        )
+        assert res.status_code == 403
+        assert "Missing change justification reason" in res.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_lab_range_recalculation_blank_reason() -> None:
+    """Verify that blank/empty X-Change-Reason header is rejected with HTTP 403."""
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        recalc_payload = {
+            "study_id": "STUDY-TEST",
+            "test_code": "WBC",
+        }
+        # Build headers with a blank reason
+        headers = get_auth_headers(roles="cra", change_reason="")
+        headers["X-Change-Reason"] = ""
+
+        res = await client.post(
+            "/api/v1/execution/lab-ranges/recalculate",
+            json=recalc_payload,
+            headers=headers,
+        )
+        assert res.status_code == 403
+        assert "Missing change justification reason" in res.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_lab_range_recalculation_authorized_data_manager() -> None:
+    """Verify that roles="data_manager" or roles="Data Manager" with a valid change reason succeeds."""
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # Create clinical subject
+        await client.post(
+            "/api/v1/execution/subjects",
+            json={
+                "subject_id": "SUBJ-004",
+                "study_id": "STUDY-DM",
+                "demographics": {"gender": "F", "birthdate": "1990-01-01"},
+            },
+            headers=get_auth_headers(roles="cra"),
+        )
+
+        # Create active observation
+        obs_payload = {
+            "subject_id": "SUBJ-004",
+            "study_id": "STUDY-DM",
+            "domain": "LB",
+            "test_code": "WBC",
+            "test_name": "White Blood Cell Count",
+            "value": 5.0,
+            "unit": "10^9/L",
+        }
+        res_obs = await client.post(
+            "/api/v1/execution/observations",
+            json=obs_payload,
+            headers=get_auth_headers(roles="cra"),
+        )
+        assert res_obs.status_code == 200
+
+        # Recalculate using roles="data_manager"
+        recalc_payload = {
+            "study_id": "STUDY-DM",
+            "test_code": "WBC",
+        }
+        res_recalc_1 = await client.post(
+            "/api/v1/execution/lab-ranges/recalculate",
+            json=recalc_payload,
+            headers=get_auth_headers(
+                roles="data_manager", change_reason="DM recalibration"
+            ),
+        )
+        assert res_recalc_1.status_code == 200
+        assert res_recalc_1.json()["status"] == "success"
+
+        # Recalculate using normalized roles="Data Manager"
+        res_recalc_2 = await client.post(
+            "/api/v1/execution/lab-ranges/recalculate",
+            json=recalc_payload,
+            headers=get_auth_headers(
+                roles="Data Manager", change_reason="DM second recalculation"
+            ),
+        )
+        assert res_recalc_2.status_code == 200
+        assert res_recalc_2.json()["status"] == "success"
