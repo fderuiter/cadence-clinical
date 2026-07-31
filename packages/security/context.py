@@ -26,6 +26,10 @@ current_signature_context = contextvars.ContextVar(
     "current_signature_context", default=None
 )
 
+current_signature_manifestation = contextvars.ContextVar(
+    "current_signature_manifestation", default=None
+)
+
 
 @contextmanager
 def audit_context(
@@ -34,6 +38,7 @@ def audit_context(
     ip_address: str | None = None,
     timestamp: datetime | None = None,
     signature_context: Any | None = None,
+    signature_manifestation: Any | None = None,
     site_id: str | None = None,
     sponsor_id: str | None = None,
     unblinded_access: bool = False,
@@ -51,6 +56,7 @@ def audit_context(
         ip_address (str | None): The network IP address of the client.
         timestamp (datetime | None): The timestamp of the operation.
         signature_context (Any | None): Optional electronic signature manifestation context.
+        signature_manifestation (Any | None): Part 11 compliant signature manifestation model instance.
 
     Yields:
         None
@@ -69,6 +75,7 @@ def audit_context(
     ip_token = current_ip_address.set(ip)
     ts_token = current_timestamp.set(ts)
     sig_token = current_signature_context.set(signature_context)
+    sig_manifest_token = current_signature_manifestation.set(signature_manifestation)
     site_token = current_site_id.set(site_id)
     sponsor_token = current_sponsor_id.set(sponsor_id)
     unblinded_token = current_unblinded_access.set(unblinded_access)
@@ -81,6 +88,7 @@ def audit_context(
         current_ip_address.reset(ip_token)
         current_timestamp.reset(ts_token)
         current_signature_context.reset(sig_token)
+        current_signature_manifestation.reset(sig_manifest_token)
         current_site_id.reset(site_token)
         current_sponsor_id.reset(sponsor_token)
         current_unblinded_access.reset(unblinded_token)
@@ -92,6 +100,7 @@ def audit_context_decorator(
     change_reason_getter: Callable[..., str | None] | None = None,
     ip_address_getter: Callable[..., str | None] | None = None,
     signature_context_getter: Callable[..., Any | None] | None = None,
+    signature_manifestation_getter: Callable[..., Any | None] | None = None,
     tenant_id_getter: Callable[..., str | None] | None = None,
 ):
     """Decorator to automatically apply audit context to a function execution.
@@ -101,6 +110,7 @@ def audit_context_decorator(
         change_reason_getter (Callable): A function that extracts the change reason from the decorated function's arguments.
         ip_address_getter (Callable): A function that extracts the IP address from the decorated function's arguments.
         signature_context_getter (Callable): A function that extracts the signature context from the decorated function's arguments.
+        signature_manifestation_getter (Callable): A function that extracts the signature manifestation from the decorated function's arguments.
         tenant_id_getter (Callable): A function that extracts the tenant ID from the decorated function's arguments.
     """
 
@@ -119,12 +129,18 @@ def audit_context_decorator(
                 if signature_context_getter
                 else None
             )
+            signature_manifestation = (
+                signature_manifestation_getter(*args, **kwargs)
+                if signature_manifestation_getter
+                else None
+            )
             tenant_id = tenant_id_getter(*args, **kwargs) if tenant_id_getter else None
             with audit_context(
                 user_id=user_id,
                 change_reason=change_reason,
                 ip_address=ip_address,
                 signature_context=signature_context,
+                signature_manifestation=signature_manifestation,
                 tenant_id=tenant_id,
             ):
                 return await func(*args, **kwargs)  # type: ignore
@@ -143,12 +159,18 @@ def audit_context_decorator(
                 if signature_context_getter
                 else None
             )
+            signature_manifestation = (
+                signature_manifestation_getter(*args, **kwargs)
+                if signature_manifestation_getter
+                else None
+            )
             tenant_id = tenant_id_getter(*args, **kwargs) if tenant_id_getter else None
             with audit_context(
                 user_id=user_id,
                 change_reason=change_reason,
                 ip_address=ip_address,
                 signature_context=signature_context,
+                signature_manifestation=signature_manifestation,
                 tenant_id=tenant_id,
             ):
                 return func(*args, **kwargs)
