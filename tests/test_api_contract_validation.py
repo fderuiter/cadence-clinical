@@ -474,6 +474,7 @@ WHITELISTED_ROUTES = {
     ("post", "/api/v1/execution/safety/dispatch"),
     ("post", "/api/v1/execution/safety/reconcile"),
     ("post", "/api/v1/execution/sdv/signoff"),
+    ("post", "/api/v1/execution/sdv/bulk-sign-off"),
     ("post", "/api/v1/execution/subjects"),
     ("post", "/api/v1/execution/subjects/{subject_id}/consent"),
     ("post", "/api/v1/execution/subjects/{subject_id}/randomize"),
