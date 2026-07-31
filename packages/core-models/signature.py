@@ -1,7 +1,8 @@
-from datetime import datetime, timezone
+from datetime import timezone
 from enum import Enum
 from typing import Optional
 
+from datetime_helpers import AwareDatetime
 from pydantic import BaseModel, Field
 
 
@@ -41,7 +42,7 @@ class SignatureManifestation(BaseModel):
     signer_id: str = Field(
         ..., description="Unique identifier of the user or system signing the record."
     )
-    timestamp: datetime = Field(
+    timestamp: AwareDatetime = Field(
         ..., description="UTC timestamp indicating when the signature was applied."
     )
     signing_reason: SigningReason = Field(

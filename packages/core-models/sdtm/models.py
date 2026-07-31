@@ -11,6 +11,7 @@ import re
 from datetime import datetime, timezone
 from typing import Optional, Union
 
+from datetime_helpers import AwareDatetime
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from sdtm.enums import (
@@ -54,7 +55,7 @@ class AuditableModel(BaseModel):
     and GxP compliant audit and metadata fields.
     """
 
-    created_at: datetime = Field(
+    created_at: AwareDatetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         description="Chronological UTC timestamp when the record was created.",
     )

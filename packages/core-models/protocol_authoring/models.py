@@ -6,12 +6,13 @@ hierarchical section skeletons, and GxP compliant optimistic locking, audits, an
 selective lineage metadata tracking.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Union
 
 # Import shared Part 11 audit fields from sibling module
 from audit import AuditFields
+from datetime_helpers import AwareDatetime
 from pydantic import BaseModel, Field
 from typing_extensions import Annotated
 
@@ -276,11 +277,11 @@ class Comment(BaseModel):
     thread_id: str = Field(..., description="Linked thread identifier.")
     text: str = Field(..., description="Comment text body.")
     created_by: str = Field(..., description="Author user ID.")
-    created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+    created_at: AwareDatetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
         description="Creation timestamp.",
     )
-    updated_at: Optional[datetime] = Field(
+    updated_at: Optional[AwareDatetime] = Field(
         None,
         description="Optional modification timestamp.",
     )
@@ -304,8 +305,8 @@ class CommentThread(BaseModel):
         description="Thread resolution status (open, resolved).",
     )
     created_by: str = Field(..., description="Thread creator user ID.")
-    created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+    created_at: AwareDatetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
         description="Creation timestamp.",
     )
     block_version_index: int = Field(
@@ -343,8 +344,8 @@ class Suggestion(BaseModel):
         description="Current suggestion status.",
     )
     created_by: str = Field(..., description="Proposer user ID.")
-    created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+    created_at: AwareDatetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
         description="Creation timestamp.",
     )
     reason: str = Field(..., description="Rationale for the suggestion.")
@@ -353,7 +354,7 @@ class Suggestion(BaseModel):
         description="Rationale for acceptance or rejection.",
     )
     decided_by: Optional[str] = Field(None, description="User ID of decider.")
-    decided_at: Optional[datetime] = Field(
+    decided_at: Optional[AwareDatetime] = Field(
         None,
         description="Timestamp of decision.",
     )
@@ -389,7 +390,7 @@ class SectionReviewTransition(BaseModel):
         ...,
         description="Part 11 change reason justification.",
     )
-    timestamp: datetime = Field(
-        default_factory=datetime.utcnow,
+    timestamp: AwareDatetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
         description="Transition timestamp.",
     )

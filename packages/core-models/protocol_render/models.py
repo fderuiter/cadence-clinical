@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from typing import List, Optional
 
 import usdm_model
+from datetime_helpers import AwareDatetime
 from pydantic import BaseModel, Field, model_validator
 
 
@@ -23,7 +24,7 @@ class ExportMetadata(BaseModel):
         ...,
         description="The unique identifier (e.g. username/OIDC user_id) of the user who generated/exported the document.",
     )
-    timestamp: datetime = Field(
+    timestamp: AwareDatetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         description="Chronological UTC timestamp when the document export was requested.",
     )
