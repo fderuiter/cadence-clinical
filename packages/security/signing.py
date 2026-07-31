@@ -383,16 +383,18 @@ def verify_inbound_email_signature(
 
 _transient_key_pair = None
 
+
 def _get_or_generate_transient_keys():
     global _transient_key_pair
     if _transient_key_pair is not None:
         return _transient_key_pair
 
     # Generate a transient RSA 2048 key pair & self-signed certificate
-    from datetime import datetime, timezone, timedelta
+    from datetime import datetime, timedelta, timezone
+
     from cryptography import x509
-    from cryptography.hazmat.primitives.asymmetric import rsa
     from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
     from cryptography.x509.oid import NameOID
 
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
@@ -402,9 +404,11 @@ def _get_or_generate_transient_keys():
         encryption_algorithm=serialization.NoEncryption(),
     ).decode("utf-8")
 
-    name = x509.Name([
-        x509.NameAttribute(NameOID.COMMON_NAME, "Cadence Server Node"),
-    ])
+    name = x509.Name(
+        [
+            x509.NameAttribute(NameOID.COMMON_NAME, "Cadence Server Node"),
+        ]
+    )
     now = datetime.now(timezone.utc)
     cert = (
         x509.CertificateBuilder()
@@ -424,6 +428,7 @@ def _get_or_generate_transient_keys():
 def get_server_private_key_pem() -> str:
     """Returns the server's PEM-encoded private key from environment or falls back to transient key."""
     import os
+
     val = os.getenv("SERVER_PRIVATE_KEY") or os.getenv("SERVER_PRIVATE_KEY_PEM")
     if val:
         # Check if it starts with "-----BEGIN" or if it's a file path
@@ -438,6 +443,7 @@ def get_server_private_key_pem() -> str:
 def get_server_certificate_pem() -> str:
     """Returns the server's PEM-encoded certificate from environment or falls back to transient certificate."""
     import os
+
     val = os.getenv("SERVER_CERTIFICATE") or os.getenv("SERVER_CERTIFICATE_PEM")
     if val:
         # Check if it starts with "-----BEGIN" or if it's a file path
@@ -458,7 +464,9 @@ def serialize_manifestation_canonically(manifestation: Any) -> bytes:
         signer_username = signer_id
 
     signer_full_name = getattr(manifestation, "signer_full_name", None)
-    if signer_full_name is None or signer_full_name == getattr(manifestation, "signer_username", None):
+    if signer_full_name is None or signer_full_name == getattr(
+        manifestation, "signer_username", None
+    ):
         signer_full_name = signer_username
 
     ts = getattr(manifestation, "signing_timestamp_utc", None)
@@ -486,7 +494,11 @@ def serialize_manifestation_canonically(manifestation: Any) -> bytes:
 
     reason_text = getattr(manifestation, "signing_reason_text", None)
     if reason_legacy is not None and reason_text is None:
-        reason_text = reason_legacy.value if hasattr(reason_legacy, "value") else str(reason_legacy)
+        reason_text = (
+            reason_legacy.value
+            if hasattr(reason_legacy, "value")
+            else str(reason_legacy)
+        )
 
     network_ip_address = getattr(manifestation, "network_ip_address", None)
     ip_address = getattr(manifestation, "ip_address", None)
@@ -506,9 +518,11 @@ def serialize_manifestation_canonically(manifestation: Any) -> bytes:
     # Ensure standard datetime to string representation
     if ts.tzinfo is None:
         from datetime import timezone
+
         ts_str = ts.replace(tzinfo=timezone.utc).isoformat()
     else:
         from datetime import timezone
+
         ts_str = ts.astimezone(timezone.utc).isoformat()
 
     # Create payload of core fields
@@ -516,7 +530,9 @@ def serialize_manifestation_canonically(manifestation: Any) -> bytes:
         "signer_username": signer_username,
         "signer_full_name": signer_full_name or signer_username,
         "signing_timestamp_utc": ts_str,
-        "signing_reason_code": str(reason_code.value if hasattr(reason_code, "value") else reason_code),
+        "signing_reason_code": str(
+            reason_code.value if hasattr(reason_code, "value") else reason_code
+        ),
         "signing_reason_text": reason_text or str(reason_legacy or reason_code),
         "network_ip_address": network_ip_address,
         "device_user_agent": device_user_agent,
@@ -546,7 +562,9 @@ def sign_manifestation(manifestation: Any) -> Any:
 
     manifestation.signature = signature_b64
     manifestation.certificate_pem = cert_pem
-    manifestation.key_identifier = ids.get("subject_key_identifier") or ids.get("sha256_fingerprint")
+    manifestation.key_identifier = ids.get("subject_key_identifier") or ids.get(
+        "sha256_fingerprint"
+    )
 
     return manifestation
 

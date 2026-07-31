@@ -306,7 +306,9 @@ class NarrativeContentItem(BaseModel):
     id: str = Field(..., description="Unique identifier for the item.")
     name: Optional[str] = Field(None, description="The name/tag of the item.")
     text: str = Field(..., description="The textual content.")
-    instanceType: str = Field("NarrativeContentItem", description="USDM type identifier.")
+    instanceType: str = Field(
+        "NarrativeContentItem", description="USDM type identifier."
+    )
 
 
 class NarrativeContent(BaseModel):
@@ -318,10 +320,23 @@ class NarrativeContent(BaseModel):
     name: Optional[str] = Field(None, description="The name/tag of the section.")
     sectionNumber: Optional[str] = Field(None, description="E.g., '1.1', '2.3.1'.")
     sectionTitle: str = Field(..., description="The heading or title of the section.")
-    displaySectionNumber: Optional[bool] = Field(None, description="Flag to display section number.")
-    displaySectionTitle: Optional[bool] = Field(None, description="Flag to display section title.")
-    childIds: List[str] = Field(default_factory=list, description="Ordered references to child sections or items.")
-    previousId: Optional[str] = Field(None, description="Reference to previous sibling section.")
-    nextId: Optional[str] = Field(None, description="Reference to next sibling section.")
-    contentItemId: Optional[str] = Field(None, description="Reference to content item if directly holding text.")
+    displaySectionNumber: Optional[bool] = Field(
+        None, description="Flag to display section number."
+    )
+    displaySectionTitle: Optional[bool] = Field(
+        None, description="Flag to display section title."
+    )
+    childIds: List[str] = Field(
+        default_factory=list,
+        description="Ordered references to child sections or items.",
+    )
+    previousId: Optional[str] = Field(
+        None, description="Reference to previous sibling section."
+    )
+    nextId: Optional[str] = Field(
+        None, description="Reference to next sibling section."
+    )
+    contentItemId: Optional[str] = Field(
+        None, description="Reference to content item if directly holding text."
+    )
     instanceType: str = Field("NarrativeContent", description="USDM type identifier.")

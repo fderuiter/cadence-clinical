@@ -1,5 +1,3 @@
-import datetime
-from datetime import timezone
 from enum import Enum
 from typing import Any, Optional
 
@@ -69,20 +67,45 @@ class SignatureManifestation(BaseModel):
     # §11.50 requirements
     signer_username: str = Field(..., description="The username of the signer.")
     signer_full_name: str = Field(..., description="The full name of the signer.")
-    signing_timestamp_utc: AwareDatetime = Field(..., description="UTC timestamp of the signature.")
-    signing_reason_code: SigningReasonCode = Field(..., description="System-declared, role-restricted reason code.")
-    signing_reason_text: str = Field(..., description="Human-readable text or meaning associated with the signature reason.")
-    network_ip_address: str = Field(..., description="Network IP address of the client.")
-    device_user_agent: Optional[str] = Field(None, description="User agent of the client device.")
-    signature_hash_sha256: str = Field(..., description="SHA-256 hash of the content being signed.")
+    signing_timestamp_utc: AwareDatetime = Field(
+        ..., description="UTC timestamp of the signature."
+    )
+    signing_reason_code: SigningReasonCode = Field(
+        ..., description="System-declared, role-restricted reason code."
+    )
+    signing_reason_text: str = Field(
+        ...,
+        description="Human-readable text or meaning associated with the signature reason.",
+    )
+    network_ip_address: str = Field(
+        ..., description="Network IP address of the client."
+    )
+    device_user_agent: Optional[str] = Field(
+        None, description="User agent of the client device."
+    )
+    signature_hash_sha256: str = Field(
+        ..., description="SHA-256 hash of the content being signed."
+    )
 
     # Legacy fields (with defaults for backward compatibility, populated/synced via model_validator)
-    signer_id: Optional[str] = Field(None, description="Unique identifier of the user or system signing.")
-    timestamp: Optional[AwareDatetime] = Field(None, description="UTC timestamp indicating when applied.")
-    signing_reason: Optional[SigningReason] = Field(None, description="Controlled reason for creating signature.")
-    ip_address: Optional[str] = Field(None, description="The network IP address of the client application.")
-    user_agent: Optional[str] = Field(None, description="The user agent or device context of the client.")
-    sha256_hash: Optional[str] = Field(None, description="SHA-256 hash of the target record or content.")
+    signer_id: Optional[str] = Field(
+        None, description="Unique identifier of the user or system signing."
+    )
+    timestamp: Optional[AwareDatetime] = Field(
+        None, description="UTC timestamp indicating when applied."
+    )
+    signing_reason: Optional[SigningReason] = Field(
+        None, description="Controlled reason for creating signature."
+    )
+    ip_address: Optional[str] = Field(
+        None, description="The network IP address of the client application."
+    )
+    user_agent: Optional[str] = Field(
+        None, description="The user agent or device context of the client."
+    )
+    sha256_hash: Optional[str] = Field(
+        None, description="SHA-256 hash of the target record or content."
+    )
 
     # Cryptographic fields
     signature: Optional[str] = Field(
@@ -119,7 +142,11 @@ class SignatureManifestation(BaseModel):
                 reason_str = str(reason)
             if reason_str == "AUTHOR":
                 data["signing_reason_code"] = "author"
-            elif reason_str in ("APPROVAL", "SPONSOR_APPROVAL", "INVESTIGATOR_SIGNATURE"):
+            elif reason_str in (
+                "APPROVAL",
+                "SPONSOR_APPROVAL",
+                "INVESTIGATOR_SIGNATURE",
+            ):
                 data["signing_reason_code"] = "approve"
             elif reason_str == "REVIEW":
                 data["signing_reason_code"] = "review"
@@ -129,7 +156,9 @@ class SignatureManifestation(BaseModel):
                 data["signing_reason_code"] = "verify"
         if "signing_reason" in data and "signing_reason_text" not in data:
             val = data["signing_reason"]
-            data["signing_reason_text"] = val.value if hasattr(val, "value") else str(val)
+            data["signing_reason_text"] = (
+                val.value if hasattr(val, "value") else str(val)
+            )
         if "ip_address" in data and "network_ip_address" not in data:
             data["network_ip_address"] = data["ip_address"]
         if "user_agent" in data and "device_user_agent" not in data:
@@ -173,6 +202,7 @@ class SignatureManifestation(BaseModel):
         manifestation data fields, excluding cryptographic outputs (signature, certificate, key identifier).
         """
         from packages.security.signing import serialize_manifestation_canonically
+
         return serialize_manifestation_canonically(self)
 
     def verify(self) -> bool:

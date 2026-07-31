@@ -6,7 +6,12 @@ from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
-from signature import ApprovalStatus, SignatureManifestation, SigningReason, SigningReasonCode
+from signature import (
+    ApprovalStatus,
+    SignatureManifestation,
+    SigningReason,
+    SigningReasonCode,
+)
 
 from packages.security.context import (
     audit_context,
@@ -18,13 +23,13 @@ from packages.security.signing import (
     asymmetric_sign,
     asymmetric_verify,
     capture_certificate_identifiers,
-    compute_sha256_hash,
-    serialize_manifestation_canonically,
     compute_manifestation_hash,
+    compute_sha256_hash,
+    get_server_certificate_pem,
+    get_server_private_key_pem,
+    serialize_manifestation_canonically,
     sign_manifestation,
     verify_manifestation,
-    get_server_private_key_pem,
-    get_server_certificate_pem,
 )
 
 
@@ -236,7 +241,10 @@ def test_part11_signing_reason_code_meanings():
     assert "Principal Investigator approval" in SigningReasonCode.PI_APPROVAL.meaning
     assert "Verification of source data" in SigningReasonCode.VERIFY.meaning
     assert "Reviewer acknowledgement" in SigningReasonCode.REVIEW.meaning
-    assert "Authorization of emergency treatment" in SigningReasonCode.AUTHORIZE_UNBLINDING.meaning
+    assert (
+        "Authorization of emergency treatment"
+        in SigningReasonCode.AUTHORIZE_UNBLINDING.meaning
+    )
 
 
 def test_part11_approval_status_new_members():
@@ -266,10 +274,15 @@ def test_part11_manifestation_mapping_and_validation(crypto_material):
     assert manifest.signer_full_name == "Dr. Indiana Jones"
     assert manifest.signing_timestamp_utc == now_utc
     assert manifest.signing_reason_code == SigningReasonCode.PI_APPROVAL
-    assert manifest.signing_reason_text == "Indiana Jones" in manifest.signing_reason_text or "PI approval" in manifest.signing_reason_text
+    assert (
+        manifest.signing_reason_text == "Indiana Jones" in manifest.signing_reason_text
+        or "PI approval" in manifest.signing_reason_text
+    )
     assert manifest.network_ip_address == "192.168.10.12"
     assert manifest.device_user_agent == "Safari 15.0"
-    assert manifest.signature_hash_sha256 == "abcde1234567890f" * 4  # pragma: allowlist secret
+    assert (
+        manifest.signature_hash_sha256 == "abcde1234567890f" * 4
+    )  # pragma: allowlist secret
 
     # Check legacy fields have been mapped/populated properly via validator
     assert manifest.signer_id == "dr_jones"
@@ -295,7 +308,9 @@ def test_part11_manifestation_mapping_and_validation(crypto_material):
     assert legacy_manifest.signing_reason == SigningReason.REVIEW
     assert legacy_manifest.ip_address == "10.0.0.5"
     assert legacy_manifest.user_agent == "Firefox 90.0"
-    assert legacy_manifest.sha256_hash == "12345abcde" * 6 + "1234"  # pragma: allowlist secret
+    assert (
+        legacy_manifest.sha256_hash == "12345abcde" * 6 + "1234"
+    )  # pragma: allowlist secret
 
     # Check mapped Part 11 fields
     assert legacy_manifest.signer_username == "nurse_smith"
@@ -305,7 +320,9 @@ def test_part11_manifestation_mapping_and_validation(crypto_material):
     assert legacy_manifest.signing_reason_text == "REVIEW"
     assert legacy_manifest.network_ip_address == "10.0.0.5"
     assert legacy_manifest.device_user_agent == "Firefox 90.0"
-    assert legacy_manifest.signature_hash_sha256 == "12345abcde" * 6 + "1234"  # pragma: allowlist secret
+    assert (
+        legacy_manifest.signature_hash_sha256 == "12345abcde" * 6 + "1234"
+    )  # pragma: allowlist secret
 
 
 def test_part11_signing_verification_primitives(crypto_material, monkeypatch):
