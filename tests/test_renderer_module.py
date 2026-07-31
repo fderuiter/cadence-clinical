@@ -5,19 +5,19 @@ and DOCX rendering via docxtpl, including async rendering and error handling.
 """
 
 import pytest
-import os
-import asyncio
 from jinja2 import Environment
-from protocol_render import RenderedProtocolDocument
-from apps.designer.rendering import TemplateRenderingError
+
 from apps.designer.renderer import (
     env as renderer_env,
+)
+from apps.designer.renderer import (
+    render_protocol_to_docx,
+    render_protocol_to_docx_async,
     render_protocol_to_html,
     render_protocol_to_pdf,
-    render_protocol_to_docx,
     render_protocol_to_pdf_async,
-    render_protocol_to_docx_async,
 )
+from apps.designer.rendering import TemplateRenderingError
 from tests.test_protocol_render import get_sample_rendered_document
 
 
@@ -55,7 +55,10 @@ def test_renderer_module_docx_rendering():
     assert isinstance(res.content, bytes)
     assert len(res.content) > 0
     assert res.filename.startswith("protocol_study_test_v2")
-    assert res.media_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    assert (
+        res.media_type
+        == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
 
 
 def test_renderer_module_html_rendering():
@@ -94,18 +97,24 @@ async def test_renderer_module_async_docx_rendering():
     assert isinstance(res.content, bytes)
     assert len(res.content) > 0
     assert res.filename.startswith("protocol_study_test_v2")
-    assert res.media_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    assert (
+        res.media_type
+        == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
 
 
 def test_renderer_module_error_handling(monkeypatch):
     """
     Asserts that actual rendering failures are raised as TemplateRenderingError.
     """
+
     # Force load_docx_template to raise an exception
     def mock_load_docx_template():
         raise ValueError("Simulated template load error")
 
-    monkeypatch.setattr("apps.designer.renderer.load_docx_template", mock_load_docx_template)
+    monkeypatch.setattr(
+        "apps.designer.renderer.load_docx_template", mock_load_docx_template
+    )
 
     doc = get_sample_rendered_document()
     with pytest.raises(TemplateRenderingError) as exc_info:
