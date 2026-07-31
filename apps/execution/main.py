@@ -7,7 +7,7 @@ import zipfile
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, AsyncGenerator, List, Optional, Union
+from typing import Any, AsyncGenerator, List, Optional
 
 from fastapi import (
     BackgroundTasks,
@@ -1472,9 +1472,6 @@ async def create_observation(
             norm_val, matched_range
         )
 
-        ref_low = matched_range.range_low if matched_range else None
-        ref_high = matched_range.range_high if matched_range else None
-
         # Stamping capture-time protocol-version identity
         protocol_version_tag = None
         protocol_version_index = None
@@ -2493,22 +2490,21 @@ async def get_cdisc_export_dictionary(study_id: str) -> Response:
 # Medical Dictionary & UCUM Standardization API Contracts
 # ==========================================
 
-from apps.execution.routers.coding_schemas import (
+from apps.execution.routers.coding_schemas import (  # noqa: E402
+    CoderActionRequest,
+    CodingAssignmentResponse,
     DictTypeEnum,
-    JobStatusEnum,
-    JobStatusResponse,
-    PrimarySocFlagEnum,
-    MedDRACodeMatch,
-    MedDRACodingResult,
-    WHODrugATCContext,
-    WHODrugIngredientItem,
-    WHODrugCodeMatch,
-    WHODrugCodingResult,
     ImpactAnalysisRequest,
     ImpactAnalysisResponse,
     ImpactMetrics,
-    CodingAssignmentResponse,
-    CoderActionRequest,
+    JobStatusEnum,
+    JobStatusResponse,
+    MedDRACodeMatch,
+    MedDRACodingResult,
+    WHODrugATCContext,
+    WHODrugCodeMatch,
+    WHODrugCodingResult,
+    WHODrugIngredientItem,
 )
 
 
@@ -5274,7 +5270,9 @@ async def list_coding_assignments(
     roles: list[str] = Depends(get_normalized_roles),
 ) -> List[CodingAssignmentResponse]:
     """Lists and filters medical coding assignments."""
-    from apps.execution.coding import list_coding_assignments as list_assignments_service
+    from apps.execution.coding import (
+        list_coding_assignments as list_assignments_service,
+    )
 
     async with db_manager.get_session_maker()() as session:
         assignments = await list_assignments_service(
