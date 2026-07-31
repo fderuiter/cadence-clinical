@@ -54,6 +54,7 @@
     "prettier": "^3.9.6",
     "vitepress": "^1.6.4",
     "vitepress-plugin-mermaid": "^2.0.17",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "vite": "^8.1.5"
   }
 }

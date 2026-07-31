@@ -1507,7 +1507,9 @@ async function syncOfflineQueue() {
       offline_sync_markers: {
         sequence_number: item.sequence_number,
         client_id: item.client_id,
-        conflict_strategy: "CLIENT_WINS",
+        conflict_strategy: item.conflict_strategy || "CLIENT_WINS",
+        signature: item.signature || null,
+        timestamps: item.timestamps || null,
       },
     })),
   };
