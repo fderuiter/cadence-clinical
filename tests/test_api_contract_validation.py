@@ -46,7 +46,10 @@ def resolve_schema(schema: Any, spec: Dict[str, Any], seen: Any = None) -> Any:
         if "$ref" in schema:
             ref = schema["$ref"]
             if ref in seen:
-                return {"type": "object", "description": f"Recursive reference to {ref}"}
+                return {
+                    "type": "object",
+                    "description": f"Recursive reference to {ref}",
+                }
             new_seen = set(seen)
             new_seen.add(ref)
             ref_path = ref.split("/")
@@ -56,9 +59,8 @@ def resolve_schema(schema: Any, spec: Dict[str, Any], seen: Any = None) -> Any:
                 resolved = resolved.get(part, {})
             # Resolve recursively in case the referenced schema contains other references
             return resolve_schema(resolved, spec, new_seen)
-        else:
-            return {k: resolve_schema(v, spec, seen) for k, v in schema.items()}
-    elif isinstance(schema, list):
+        return {k: resolve_schema(v, spec, seen) for k, v in schema.items()}
+    if isinstance(schema, list):
         return [resolve_schema(item, spec, seen) for item in schema]
     return schema
 
@@ -228,7 +230,7 @@ def loaded_specs():
     return {"spec_dict": spec_dict, "code_routes": code_routes, "code_full": code_full}
 
 
-WHITELISTED_ROUTES = {
+_RAW_WHITELISTED_ROUTES = {
     ("patch", "/subjects/{id}/state"),
     ("patch", "/api/v1/execution/subjects/{id}/state"),
     ("put", "/subjects/{id}/demographics"),
@@ -237,7 +239,6 @@ WHITELISTED_ROUTES = {
     ("delete", "/api/v1/execution/subjects/{id}/demographics"),
     ("get", "/api/v1/execution/subjects/{subject_id}"),
     ("get", "/api/v1/execution/visits/{visit_id}"),
-_RAW_WHITELISTED_ROUTES = {
     ("post", "/api/v1/documents/upload"),
     ("get", "/api/v1/documents/{doc_id}"),
     ("get", "/api/v1/documents/{doc_id}/versions"),
@@ -595,7 +596,8 @@ _RAW_WHITELISTED_ROUTES = {
 }
 
 WHITELISTED_ROUTES = {
-    (method, path) for (method, path) in _RAW_WHITELISTED_ROUTES
+    (method, path)
+    for (method, path) in _RAW_WHITELISTED_ROUTES
     if "/execution" not in path
 }
 

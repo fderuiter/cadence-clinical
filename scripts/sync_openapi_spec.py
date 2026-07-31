@@ -51,20 +51,20 @@ def main():
         "info": {
             "title": "Cadence Clinical Unified Gateway API",
             "description": "Unified microservices API contract for Cadence Clinical Platform.\nEnforces OIDC/Keycloak authentication, RFC 7807 problem details, and ISO 14155:2020 regulatory compliance.",
-            "version": "1.0.0-PROD"
+            "version": "1.0.0-PROD",
         },
         "servers": [
             {
                 "url": "https://api.cadence-clinical.com/api/v1",
-                "description": "Production API Gateway"
+                "description": "Production API Gateway",
             },
             {
                 "url": "http://localhost:8000/api/v1",
-                "description": "Local Dev Gateway Proxy"
-            }
+                "description": "Local Dev Gateway Proxy",
+            },
         ],
         "paths": {},
-        "components": {}
+        "components": {},
     }
 
     # Deep merge paths
@@ -80,7 +80,9 @@ def main():
     yaml_content = yaml.dump(merged_spec, sort_keys=False, width=1000)
 
     # Find and update Section 7 in docs/SDLC/03_API_Integration_Specification.md
-    markdown_path = os.path.join(app_root, "docs", "SDLC", "03_API_Integration_Specification.md")
+    markdown_path = os.path.join(
+        app_root, "docs", "SDLC", "03_API_Integration_Specification.md"
+    )
     print(f"Updating specification file at: {markdown_path}")
 
     if not os.path.exists(markdown_path):
@@ -102,16 +104,20 @@ def main():
     start_fence = "```yaml"
     start_idx = sec_content_and_after.find(start_fence)
     if start_idx == -1:
-        print("Error: Could not find start of ```yaml block in Section 7", file=sys.stderr)
+        print(
+            "Error: Could not find start of ```yaml block in Section 7", file=sys.stderr
+        )
         sys.exit(1)
 
     end_idx = sec_content_and_after.find("```", start_idx + len(start_fence))
     if end_idx == -1:
-        print("Error: Could not find end of ```yaml block in Section 7", file=sys.stderr)
+        print(
+            "Error: Could not find end of ```yaml block in Section 7", file=sys.stderr
+        )
         sys.exit(1)
 
     new_sec_content_and_after = (
-        sec_content_and_after[:start_idx + len(start_fence)]
+        sec_content_and_after[: start_idx + len(start_fence)]
         + "\n"
         + yaml_content.strip()
         + "\n"
@@ -123,7 +129,9 @@ def main():
     with open(markdown_path, "w", encoding="utf-8") as f:
         f.write(final_content)
 
-    print("Successfully updated OpenAPI Specification in docs/SDLC/03_API_Integration_Specification.md!")
+    print(
+        "Successfully updated OpenAPI Specification in docs/SDLC/03_API_Integration_Specification.md!"
+    )
 
 
 if __name__ == "__main__":

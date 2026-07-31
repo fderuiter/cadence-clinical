@@ -188,13 +188,14 @@ def test_soa_domain_models_schema_alignment():
     and express arm-applicability and entity relationships.
     """
     from datetime import datetime, timezone
+
     from apps.designer.soa_models import (
-        StudyArm,
         Epoch,
-        Visit,
         Procedure,
-        TimingWindow,
         SoAMatrixProjectionResponse,
+        StudyArm,
+        TimingWindow,
+        Visit,
     )
 
     now = datetime.now(timezone.utc)
@@ -292,6 +293,7 @@ def test_soa_domain_models_schema_alignment():
 
     # Test failure when conditional is True but reason is empty/missing
     import pytest
+
     with pytest.raises(ValueError, match="A non-empty 'reason' must be provided"):
         TimingWindow(
             id="tw_invalid",
@@ -304,19 +306,30 @@ def test_soa_domain_models_schema_alignment():
     # 6. Test Matrix Projection Response Response Envelope
     projection = SoAMatrixProjectionResponse(
         epochs=[{"epoch_id": "epoch_1", "epoch_name": "Screening", "sequence": 1}],
-        encounters=[{"encounter_id": "visit_1", "encounter_name": "Week 1 Visit", "epoch_id": "epoch_1", "sequence": 1}],
-        rows=[{
-            "activity_id": "proc_1",
-            "activity_name": "Lab Blood Draw",
-            "cells": [{
-                "activity_id": "proc_1",
+        encounters=[
+            {
                 "encounter_id": "visit_1",
+                "encounter_name": "Week 1 Visit",
                 "epoch_id": "epoch_1",
-                "is_applicable": True,
-                "details": "tw_1"
-            }]
-        }],
-        arms=[{"arm_id": "arm_1", "arm_name": "Experimental Arm", "sequence": 1}]
+                "sequence": 1,
+            }
+        ],
+        rows=[
+            {
+                "activity_id": "proc_1",
+                "activity_name": "Lab Blood Draw",
+                "cells": [
+                    {
+                        "activity_id": "proc_1",
+                        "encounter_id": "visit_1",
+                        "epoch_id": "epoch_1",
+                        "is_applicable": True,
+                        "details": "tw_1",
+                    }
+                ],
+            }
+        ],
+        arms=[{"arm_id": "arm_1", "arm_name": "Experimental Arm", "sequence": 1}],
     )
     assert len(projection.epochs) == 1
     assert len(projection.encounters) == 1

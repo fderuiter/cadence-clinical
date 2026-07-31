@@ -3,6 +3,8 @@
 ## Status
 Accepted
 
+**Requirement:** PRD-SYS-001
+
 ## Context
 The Cadence Clinical platform's metadata designer supports authoring complex, multi-arm clinical trials in compliance with GxP and the CDISC Unified Study Design Model (USDM) standards.
 

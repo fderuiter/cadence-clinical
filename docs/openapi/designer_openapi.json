@@ -7196,6 +7196,12 @@
           },
           "properties": {
             "$ref": "#/components/schemas/EpochProperties"
+          },
+          "change_reason": {
+            "type": "string",
+            "title": "Change Reason",
+            "description": "Change reason for audit trail",
+            "default": "Created epoch"
           }
         },
         "type": "object",
@@ -7263,6 +7269,12 @@
           },
           "properties": {
             "$ref": "#/components/schemas/ProcedureProperties"
+          },
+          "change_reason": {
+            "type": "string",
+            "title": "Change Reason",
+            "description": "Change reason for audit trail",
+            "default": "Created procedure"
           }
         },
         "type": "object",
@@ -7364,6 +7376,12 @@
           },
           "properties": {
             "$ref": "#/components/schemas/StudyArmProperties"
+          },
+          "change_reason": {
+            "type": "string",
+            "title": "Change Reason",
+            "description": "Change reason for audit trail",
+            "default": "Created study arm"
           }
         },
         "type": "object",
@@ -7412,6 +7430,12 @@
           },
           "properties": {
             "$ref": "#/components/schemas/TimingWindowProperties"
+          },
+          "change_reason": {
+            "type": "string",
+            "title": "Change Reason",
+            "description": "Change reason for audit trail",
+            "default": "Created timing window"
           }
         },
         "type": "object",
@@ -10193,6 +10217,12 @@
         "properties": {
           "properties": {
             "$ref": "#/components/schemas/EpochProperties"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Reason for change for audit trail",
+            "default": "Updated epoch"
           }
         },
         "type": "object",
@@ -10245,6 +10275,12 @@
         "properties": {
           "properties": {
             "$ref": "#/components/schemas/ProcedureProperties"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Reason for change for audit trail",
+            "default": "Updated procedure"
           }
         },
         "type": "object",
@@ -10257,6 +10293,12 @@
         "properties": {
           "properties": {
             "$ref": "#/components/schemas/StudyArmProperties"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Reason for change for audit trail",
+            "default": "Updated study arm"
           }
         },
         "type": "object",
@@ -10269,6 +10311,12 @@
         "properties": {
           "properties": {
             "$ref": "#/components/schemas/TimingWindowProperties"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Reason for change for audit trail",
+            "default": "Updated timing window"
           }
         },
         "type": "object",
@@ -10625,6 +10673,12 @@
           },
           "properties": {
             "$ref": "#/components/schemas/VisitProperties"
+          },
+          "change_reason": {
+            "type": "string",
+            "title": "Change Reason",
+            "description": "Change reason for audit trail",
+            "default": "Created visit"
           }
         },
         "type": "object",
@@ -10638,6 +10692,12 @@
         "properties": {
           "properties": {
             "$ref": "#/components/schemas/VisitProperties"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Reason for change for audit trail",
+            "default": "Updated visit"
           }
         },
         "type": "object",

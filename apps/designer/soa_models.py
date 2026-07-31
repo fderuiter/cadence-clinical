@@ -12,7 +12,12 @@ from pydantic import BaseModel, Field, model_validator
 
 # Try to import from protocol_render if available, otherwise define placeholders to ensure robust parsing
 try:
-    from protocol_render import SoAHeaderEpoch, SoAHeaderEncounter, SoARowView, SoAHeaderArm
+    from protocol_render import (
+        SoAHeaderArm,
+        SoAHeaderEncounter,
+        SoAHeaderEpoch,
+        SoARowView,
+    )
 except ImportError:
     # Minimal fallback Pydantic definitions if not in PYTHONPATH during static analysis
     class SoAHeaderEpoch(BaseModel):
@@ -203,9 +208,7 @@ class Visit(SoAAuditMixin):
         ..., description="Study version identifier scoping this visit."
     )
     name: str = Field(..., min_length=1, description="The display name of the visit.")
-    epoch_id: str = Field(
-        ..., min_length=1, description="Epoch identifier reference."
-    )
+    epoch_id: str = Field(..., min_length=1, description="Epoch identifier reference.")
     sequence: int = Field(
         ..., ge=1, description="Sequential ordering rank of the visit."
     )
