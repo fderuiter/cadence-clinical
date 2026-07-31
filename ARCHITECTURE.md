@@ -27,6 +27,7 @@ Traditional clinical trial builds require manual, error-prone translation of pro
   * Subject enrollment, matrix tracking, and event scheduling.
   * Real-time edit-check evaluation during site data entry.
   * Discrepancy (query) workflow management.
+  * Authenticated SDTM/ADaM Dataset-JSON export, structural/referential export validation, and BiostatExport audit logging.
 
 ### C. Web Client (`apps/web`)
 * **Role:** Primary User Interface.

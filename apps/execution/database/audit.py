@@ -332,7 +332,7 @@ def receive_before_flush(session: Session, flush_context, instances):
                             f"Subject {sub_id} is unblinded. Subsequent non-safety clinical write operations are blocked."
                         )
 
-    # GxP compliance: Centralized automatic verification drop
+    # GxP compliance: Centralized automatic verification drop (PRD-QRY-006)
     user_id = current_user_id.get()
     reason = current_change_reason.get()
     timestamp = current_timestamp.get()

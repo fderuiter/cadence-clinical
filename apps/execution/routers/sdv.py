@@ -3,7 +3,7 @@
 Requirements: PRD-QRY-005, PRD-QRY-006, PRD-QRY-007
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import List, Optional
 
@@ -413,7 +413,7 @@ async def sdv_signoff(
 
         # 3. Apply sign-off behavior
         verifier_id = current_user_id.get() or "system"
-        verified_at = datetime.utcnow()
+        verified_at = datetime.now(timezone.utc)
 
         # Update or create the matching SDVSignOff record
         stmt_signoff = select(SDVSignOff).where(
