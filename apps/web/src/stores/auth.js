@@ -18,15 +18,28 @@ export const ROLE_ALIASES = {
 };
 
 export const useAuthStore = defineStore("auth", {
-  state: () => ({
-    isAuthenticated: false,
-    accessToken: null,
-    idToken: null,
-    refreshToken: null,
-    user: null, // includes identity details like username, email, firstName, lastName, and id
-    rawRoles: [],
-    isDemoMode: true, // defaults to true, set to false if Keycloak initializes successfully
-  }),
+  state: () => {
+    let saved = {};
+    if (typeof window !== "undefined" && window.localStorage) {
+      try {
+        const stored = window.localStorage.getItem("cadence_auth");
+        if (stored) {
+          saved = JSON.parse(stored);
+        }
+      } catch (e) {
+        console.error("Failed to parse auth from localStorage", e);
+      }
+    }
+    return {
+      isAuthenticated: saved.isAuthenticated || false,
+      accessToken: saved.accessToken || null,
+      idToken: saved.idToken || null,
+      refreshToken: saved.refreshToken || null,
+      user: saved.user || null, // includes identity details like username, email, firstName, lastName, and id
+      rawRoles: saved.rawRoles || [],
+      isDemoMode: saved.isDemoMode !== undefined ? saved.isDemoMode : true, // defaults to true, set to false if Keycloak initializes successfully
+    };
+  },
   getters: {
     identity: (state) => {
       if (state.isDemoMode && !state.isAuthenticated) {
@@ -67,6 +80,22 @@ export const useAuthStore = defineStore("auth", {
     },
   },
   actions: {
+    persist() {
+      if (typeof window !== "undefined" && window.localStorage) {
+        window.localStorage.setItem(
+          "cadence_auth",
+          JSON.stringify({
+            isAuthenticated: this.isAuthenticated,
+            accessToken: this.accessToken,
+            idToken: this.idToken,
+            refreshToken: this.refreshToken,
+            user: this.user,
+            rawRoles: this.rawRoles,
+            isDemoMode: this.isDemoMode,
+          })
+        );
+      }
+    },
     setAuth(keycloak) {
       if (keycloak && keycloak.authenticated) {
         this.isAuthenticated = true;
@@ -93,6 +122,7 @@ export const useAuthStore = defineStore("auth", {
         this.user = null;
         this.rawRoles = [];
       }
+      this.persist();
     },
     async login(options = {}) {
       if (window.keycloakInstance && !this.isDemoMode) {
@@ -113,6 +143,7 @@ export const useAuthStore = defineStore("auth", {
           "Auditor",
         ];
       }
+      this.persist();
     },
     async logout(options = {}) {
       if (window.keycloakInstance && !this.isDemoMode) {
@@ -125,6 +156,7 @@ export const useAuthStore = defineStore("auth", {
         this.isDemoMode = true;
         this.rawRoles = [];
       }
+      this.persist();
     },
     async refresh(minValidity = 30) {
       if (window.keycloakInstance && !this.isDemoMode) {

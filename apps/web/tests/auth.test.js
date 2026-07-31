@@ -8,6 +8,7 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
     setActivePinia(pinia);
     if (typeof window !== "undefined") {
       delete window.keycloakInstance;
+      window.localStorage.clear();
     }
   });
 

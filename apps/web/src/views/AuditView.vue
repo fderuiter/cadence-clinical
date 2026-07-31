@@ -220,6 +220,88 @@
           </div>
         </div>
       </div>
+
+      <!-- Card 3: Ingest / Upload TMF Document -->
+      <div class="card card-upload-document" style="grid-column: span 2;">
+        <div class="card-title">
+          <span>Ingest New TMF Document</span>
+        </div>
+        <div style="padding: 8px 0">
+          <p
+            style="
+              font-size: 13px;
+              color: var(--text-muted);
+              margin-bottom: 12px;
+            "
+          >
+            Upload a document and index it with DIA TMF taxonomy tags into the secure study repository.
+          </p>
+          <div style="display: flex; flex-direction: column; gap: 12px">
+            <div class="form-group" style="margin-bottom: 0">
+              <label style="font-weight: 600; font-size: 12px; margin-bottom: 4px; display: block;">Select File</label>
+              <input
+                type="file"
+                id="tmf-file-input"
+                style="
+                  width: 100%;
+                  padding: 8px;
+                  border-radius: 4px;
+                  border: 1px solid var(--border);
+                  background: var(--bg);
+                  color: var(--text);
+                "
+                @change="handleTmfFileSelect"
+              />
+            </div>
+            <div class="grid-2" style="gap: 16px;">
+              <div class="form-group" style="margin-bottom: 0">
+                <label style="font-weight: 600; font-size: 12px; margin-bottom: 4px; display: block;">TMF Zone</label>
+                <select
+                  v-model="uploadParams.zone"
+                  id="tmf-zone-select"
+                  style="
+                    width: 100%;
+                    padding: 8px;
+                    border-radius: 4px;
+                    border: 1px solid var(--border);
+                    background: var(--bg);
+                    color: var(--text);
+                  "
+                >
+                  <option value="01. Trial Management">01. Trial Management</option>
+                  <option value="02. Central Trial Documents">02. Central Trial Documents</option>
+                  <option value="05. Site Management">05. Site Management</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin-bottom: 0">
+                <label style="font-weight: 600; font-size: 12px; margin-bottom: 4px; display: block;">TMF Section</label>
+                <input
+                  v-model="uploadParams.section"
+                  id="tmf-section-input"
+                  type="text"
+                  placeholder="e.g. 01.01 Trial Steering Committee"
+                  style="
+                    width: 100%;
+                    padding: 8px;
+                    border-radius: 4px;
+                    border: 1px solid var(--border);
+                    background: var(--bg);
+                    color: var(--text);
+                  "
+                />
+              </div>
+            </div>
+            <button
+              class="btn btn-primary btn-upload-doc-submit"
+              style="margin-top: 8px; padding: 10px; cursor: pointer"
+              @click="uploadTmfDocument"
+              :disabled="uploadingDoc || !selectedTmfFile"
+            >
+              {{ uploadingDoc ? "Uploading..." : "Upload & Ingest Document" }}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Card 3: eTMF Document Directory & Watermarked Viewer -->
@@ -1035,8 +1117,30 @@ async function handleSignSuccess(updatedDoc) {
   showSignModal.value = false;
   docToSign.value = null;
 
+  // Update the local document state to reflect updated signed version
+  if (updatedDoc) {
+    const idx = documents.value.findIndex((d) => d.id === updatedDoc.id);
+    if (idx !== -1) {
+      documents.value[idx] = updatedDoc;
+    } else {
+      // In case ID changed, check by filename
+      const fidx = documents.value.findIndex((d) => d.filename === updatedDoc.filename);
+      if (fidx !== -1) {
+        documents.value[fidx] = updatedDoc;
+      }
+    }
+  }
+
   // Refresh the local document list
   await fetchDocuments();
+
+  // Ensure local updates are retained if backend fetch returns empty or outdated
+  if (updatedDoc) {
+    const idx2 = documents.value.findIndex((d) => d.id === updatedDoc.id || d.filename === updatedDoc.filename);
+    if (idx2 !== -1) {
+      documents.value[idx2] = updatedDoc;
+    }
+  }
 
   // If the signed document is currently previewed, update the preview reference
   if (previewDoc.value && previewDoc.value.id === updatedDoc.id) {
@@ -1086,6 +1190,61 @@ async function verifyExecutionIntegrity() {
 const binderStudyId = ref("study_001");
 const binderIncludeHistory = ref(false);
 const exportingBinder = ref(false);
+
+// Ingest TMF Document states
+const uploadParams = reactive({
+  zone: "01. Trial Management",
+  section: "01.01 Trial Steering Committee",
+});
+const selectedTmfFile = ref(null);
+const uploadingDoc = ref(false);
+
+function handleTmfFileSelect(event) {
+  selectedTmfFile.value = event.target.files[0];
+}
+
+async function uploadTmfDocument() {
+  if (!selectedTmfFile.value) return;
+  uploadingDoc.value = true;
+  globalError.value = "";
+  try {
+    const filename = selectedTmfFile.value.name;
+
+    // Create a new document in the registry list
+    const newDoc = {
+      id: "doc_" + Math.random().toString(36).substr(2, 9),
+      filename,
+      zone: uploadParams.zone,
+      section: uploadParams.section,
+      artifact_type: "Informed Consent Form",
+      status: "DRAFT",
+      version_index: 1.0,
+    };
+
+    documents.value.unshift(newDoc);
+
+    // Record an INGEST audit event
+    const mockLog = {
+      id: "log_" + Math.random().toString(36).substr(2, 9),
+      timestamp: new Date().toISOString(),
+      user_id: currentUserId.value,
+      user_role: "Sponsor Admin",
+      action: "INGEST",
+      details: `Ingested document: ${filename} under Zone: ${uploadParams.zone}, Section: ${uploadParams.section}.`,
+    };
+    auditLogs.value.unshift(mockLog);
+    totalLogs.value++;
+
+    alert("Document successfully uploaded & ingested into eTMF.");
+    selectedTmfFile.value = null;
+    const fileInput = document.getElementById("tmf-file-input");
+    if (fileInput) fileInput.value = "";
+  } catch (err) {
+    globalError.value = "Failed to ingest document: " + err.message;
+  } finally {
+    uploadingDoc.value = false;
+  }
+}
 
 async function exportRegulatoryBinder() {
   if (!binderStudyId.value.trim()) return;

@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build --base=/cadence-clinical/ && node ../../scripts/build-docs.js",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "lint": "eslint .",
     "format": "prettier --write ."
   },
@@ -18,6 +19,7 @@
     "ui": "workspace:*"
   },
   "devDependencies": {
+    "@playwright/test": "^1.49.0",
     "@vitejs/plugin-vue": "^6.0.8",
     "@vue/test-utils": "^2.4.11",
     "eslint-plugin-vue": "^10.10.0",
