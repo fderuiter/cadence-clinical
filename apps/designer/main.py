@@ -154,6 +154,7 @@ from apps.designer.xml_mapping import validate_mapping_csv
 from packages.security import ROLE_ALIASES, get_normalized_roles
 from packages.security.context import audit_context
 from packages.security.middleware import GatewayAuthMiddleware
+from packages.security.org_client import is_sponsor_known_to_org_directory
 from packages.security.rbac import (
     Principal,
     can_access_study,
@@ -3202,12 +3203,22 @@ async def create_library_object_endpoint(
         )
     sponsor_id = sponsor_id.strip()
 
-    tenant_id = getattr(request.state, "tenant_id", None) or request.headers.get(
-        "X-Tenant-Id", "tenant_default"
-    )
+    if not await is_sponsor_known_to_org_directory(sponsor_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Forbidden: Sponsor scope '{sponsor_id}' is unknown to the Organization Directory.",
+        )
+
+    tenant_id = (
+        getattr(request.state, "tenant_id", None)
+        or request.headers.get("X-Tenant-Id", "tenant_default")
+        or "tenant_default"
+    ).strip()
 
     # 2. Prevent duplicate ID within same sponsor scope
-    latest = await get_latest_library_object(driver, payload.id, sponsor_id)
+    latest = await get_latest_library_object(
+        driver, payload.id, sponsor_id, tenant_id=tenant_id
+    )
     if latest:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -3271,6 +3282,18 @@ async def list_library_objects_endpoint(
         )
     sponsor_id = sponsor_id.strip()
 
+    if not await is_sponsor_known_to_org_directory(sponsor_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Forbidden: Sponsor scope '{sponsor_id}' is unknown to the Organization Directory.",
+        )
+
+    tenant_id = (
+        getattr(request.state, "tenant_id", None)
+        or request.headers.get("X-Tenant-Id", "tenant_default")
+        or "tenant_default"
+    ).strip()
+
     # Fetch limit + 1 to detect has_more
     records = await list_library_objects(
         driver,
@@ -3278,6 +3301,7 @@ async def list_library_objects_endpoint(
         object_type=object_type.value if object_type else None,
         limit=limit + 1,
         starting_after=starting_after,
+        tenant_id=tenant_id,
     )
 
     has_more = len(records) > limit
@@ -3320,10 +3344,26 @@ async def get_library_object_endpoint(
         )
     sponsor_id = sponsor_id.strip()
 
+    if not await is_sponsor_known_to_org_directory(sponsor_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Forbidden: Sponsor scope '{sponsor_id}' is unknown to the Organization Directory.",
+        )
+
+    tenant_id = (
+        getattr(request.state, "tenant_id", None)
+        or request.headers.get("X-Tenant-Id", "tenant_default")
+        or "tenant_default"
+    ).strip()
+
     if version is not None:
-        record = await get_library_object_by_version(driver, id, sponsor_id, version)
+        record = await get_library_object_by_version(
+            driver, id, sponsor_id, version, tenant_id=tenant_id
+        )
     else:
-        record = await get_latest_library_object(driver, id, sponsor_id)
+        record = await get_latest_library_object(
+            driver, id, sponsor_id, tenant_id=tenant_id
+        )
 
     if not record:
         raise HTTPException(
@@ -3372,8 +3412,22 @@ async def update_library_object_endpoint(
         )
     sponsor_id = sponsor_id.strip()
 
-    # 1. Verify object exists and is owned by the sponsor
-    latest = await get_latest_library_object(driver, id, sponsor_id)
+    if not await is_sponsor_known_to_org_directory(sponsor_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Forbidden: Sponsor scope '{sponsor_id}' is unknown to the Organization Directory.",
+        )
+
+    tenant_id = (
+        getattr(request.state, "tenant_id", None)
+        or request.headers.get("X-Tenant-Id", "tenant_default")
+        or "tenant_default"
+    ).strip()
+
+    # 1. Verify object exists and is owned by the sponsor and tenant
+    latest = await get_latest_library_object(
+        driver, id, sponsor_id, tenant_id=tenant_id
+    )
     if not latest:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -3470,8 +3524,22 @@ async def amend_library_object_endpoint(
         )
     sponsor_id = sponsor_id.strip()
 
-    # 1. Verify object exists and is owned by the sponsor
-    latest = await get_latest_library_object(driver, id, sponsor_id)
+    if not await is_sponsor_known_to_org_directory(sponsor_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Forbidden: Sponsor scope '{sponsor_id}' is unknown to the Organization Directory.",
+        )
+
+    tenant_id = (
+        getattr(request.state, "tenant_id", None)
+        or request.headers.get("X-Tenant-Id", "tenant_default")
+        or "tenant_default"
+    ).strip()
+
+    # 1. Verify object exists and is owned by the sponsor and tenant
+    latest = await get_latest_library_object(
+        driver, id, sponsor_id, tenant_id=tenant_id
+    )
     if not latest:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -3537,7 +3605,21 @@ async def get_library_object_history_endpoint(
         )
     sponsor_id = sponsor_id.strip()
 
-    records = await get_library_object_history(driver, id, sponsor_id)
+    if not await is_sponsor_known_to_org_directory(sponsor_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Forbidden: Sponsor scope '{sponsor_id}' is unknown to the Organization Directory.",
+        )
+
+    tenant_id = (
+        getattr(request.state, "tenant_id", None)
+        or request.headers.get("X-Tenant-Id", "tenant_default")
+        or "tenant_default"
+    ).strip()
+
+    records = await get_library_object_history(
+        driver, id, sponsor_id, tenant_id=tenant_id
+    )
     if not records:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -3586,8 +3668,22 @@ async def transition_library_object_endpoint(
         )
     sponsor_id = sponsor_id.strip()
 
-    # 2. Verify object exists and is owned by the sponsor
-    latest = await get_latest_library_object(driver, id, sponsor_id)
+    if not await is_sponsor_known_to_org_directory(sponsor_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Forbidden: Sponsor scope '{sponsor_id}' is unknown to the Organization Directory.",
+        )
+
+    tenant_id = (
+        getattr(request.state, "tenant_id", None)
+        or request.headers.get("X-Tenant-Id", "tenant_default")
+        or "tenant_default"
+    ).strip()
+
+    # 2. Verify object exists and is owned by the sponsor and tenant
+    latest = await get_latest_library_object(
+        driver, id, sponsor_id, tenant_id=tenant_id
+    )
     if not latest:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -5059,6 +5155,17 @@ async def instantiate_library_object_endpoint(
         )
     sponsor_id = sponsor_id.strip()
 
+    if not await is_sponsor_known_to_org_directory(sponsor_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Forbidden: Sponsor scope '{sponsor_id}' is unknown to the Organization Directory.",
+        )
+
+    tenant_id = (
+        getattr(request.state, "tenant_id", None)
+        or request.headers.get("X-Tenant-Id", "tenant_default")
+        or "tenant_default"
+    ).strip()
     user_id = getattr(request.state, "user_id", "system")
 
     # 2. Call the delta manager to run checks and instantiation
@@ -5070,6 +5177,7 @@ async def instantiate_library_object_endpoint(
             version=payload.version,
             sponsor_id=sponsor_id,
             user_id=user_id,
+            tenant_id=tenant_id,
         )
         return LibraryInstanceResponse(**instance)
     except PermissionError as e:
@@ -5178,7 +5286,11 @@ async def get_library_instance_diff_endpoint(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Forbidden: Missing authenticated sponsor scope",
         )
-    sponsor_id = sponsor_id.strip()
+    tenant_id = (
+        getattr(request.state, "tenant_id", None)
+        or request.headers.get("X-Tenant-Id", "tenant_default")
+        or "tenant_default"
+    ).strip()
 
     try:
         instance = await get_library_instance_in_study(
@@ -5186,6 +5298,7 @@ async def get_library_instance_diff_endpoint(
             study_id=study_id,
             instance_id=instance_id,
             sponsor_id=sponsor_id,
+            tenant_id=tenant_id,
         )
     except PermissionError as e:
         raise HTTPException(
@@ -5214,6 +5327,7 @@ async def get_library_instance_diff_endpoint(
         object_id=source_obj_id,
         sponsor_id=source_sponsor_id,
         version=source_version,
+        tenant_id=tenant_id,
     )
     if not source_obj:
         raise HTTPException(

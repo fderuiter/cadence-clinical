@@ -1,0 +1,253 @@
+import pytest
+from sqlalchemy import select, text
+
+from apps.execution.database.core import db_manager
+from apps.execution.database.migrate import (
+    deploy_database_triggers,
+)
+from apps.execution.database.models import (
+    AuditLog,
+    Base,
+    LabTestMaster,
+    LabUnitConversion,
+)
+from apps.execution.trial_lock import TrialLockManager
+
+
+@pytest.fixture(autouse=True)
+async def setup_test_db():
+    """Initializes and tears down the test database for lab reference range verification."""
+    TrialLockManager.reset()
+    db_manager.init_db(
+        "sqlite+aiosqlite:///:memory:",
+        echo=False,
+    )
+    async with db_manager.engine.begin() as conn:
+        if db_manager.engine.dialect.name == "postgresql":
+            await conn.execute(text("CREATE SCHEMA IF NOT EXISTS audit_schema;"))
+        await conn.run_sync(Base.metadata.create_all)
+        await deploy_database_triggers(conn, db_manager.engine.dialect.name)
+    yield
+    async with db_manager.engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+    await db_manager.close()
+    TrialLockManager.reset()
+
+
+@pytest.mark.asyncio
+async def test_lab_test_master_crud_and_audit():
+    # @req:PRD-LAB-001
+    # @Req:PRD-LAB-001
+    """
+    Verify CRUD operations, metadata storage, and GxP audit trigger integration
+    for the LabTestMaster model.
+    """
+    master_id = None
+    async with db_manager.get_session_maker()() as session, session.begin():
+        # Let SQLAlchemy listener record audit logs
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', 1);")
+        )
+        test_master = LabTestMaster(
+            study_id="STUDY-XYZ",
+            test_code="HEMOGLOBIN",
+            test_name="Hemoglobin Concentration",
+            default_unit="g/dL",
+            normalized_unit="g/L",
+            loinc_code="718-7",
+            created_by="user_abc",
+            reason_for_change="Initial ingestion",
+            version_index=1,
+        )
+        session.add(test_master)
+        await session.flush()
+        master_id = test_master.id
+
+    # Verify attributes are stored correctly
+    async with db_manager.get_session_maker()() as session:
+        result = await session.execute(
+            select(LabTestMaster).where(LabTestMaster.id == master_id)
+        )
+        saved = result.scalar_one()
+        assert saved.study_id == "STUDY-XYZ"
+        assert saved.test_code == "HEMOGLOBIN"
+        assert saved.test_name == "Hemoglobin Concentration"
+        assert saved.default_unit == "g/dL"
+        assert saved.normalized_unit == "g/L"
+        assert saved.loinc_code == "718-7"
+        assert saved.created_by == "user_abc"
+        assert saved.reason_for_change == "Initial ingestion"
+        assert saved.version_index == 1
+        assert saved.version == 1
+        assert saved.is_deleted is False
+
+    # Verify audit trail logs created by database triggers for INSERT
+    async with db_manager.get_session_maker()() as session:
+        result = await session.execute(
+            select(AuditLog).where(AuditLog.table_name == "lab_test_masters")
+        )
+        logs = result.scalars().all()
+        assert len(logs) == 1
+        assert logs[0].action == "INSERT"
+        assert logs[0].new_values["test_code"] == "HEMOGLOBIN"
+        assert logs[0].new_values["study_id"] == "STUDY-XYZ"
+
+    # Verify UPDATE audit and trigger version tracking
+    async with db_manager.get_session_maker()() as session, session.begin():
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', 1);")
+        )
+        result = await session.execute(
+            select(LabTestMaster).where(LabTestMaster.id == master_id)
+        )
+        saved = result.scalar_one()
+        saved.test_name = "Hemoglobin Level"
+        saved.reason_for_change = "Updated name for clarity"
+        saved.version_index = 2
+
+    async with db_manager.get_session_maker()() as session:
+        result = await session.execute(
+            select(LabTestMaster).where(LabTestMaster.id == master_id)
+        )
+        updated = result.scalar_one()
+        assert updated.test_name == "Hemoglobin Level"
+        assert updated.version == 2
+        assert updated.version_index == 2
+
+        result_logs = await session.execute(
+            select(AuditLog)
+            .where(AuditLog.table_name == "lab_test_masters")
+            .order_by(AuditLog.timestamp)
+        )
+        logs = result_logs.scalars().all()
+        assert len(logs) == 2
+        update_log = logs[1]
+        assert update_log.action == "UPDATE"
+        assert update_log.old_values["test_name"] == "Hemoglobin Concentration"
+        assert update_log.new_values["test_name"] == "Hemoglobin Level"
+
+    # Soft delete and check
+    async with db_manager.get_session_maker()() as session, session.begin():
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', 1);")
+        )
+        result = await session.execute(
+            select(LabTestMaster).where(LabTestMaster.id == master_id)
+        )
+        saved = result.scalar_one()
+        saved.is_deleted = True
+
+    async with db_manager.get_session_maker()() as session:
+        result = await session.execute(
+            select(LabTestMaster).where(LabTestMaster.id == master_id)
+        )
+        deleted = result.scalar_one()
+        assert deleted.is_deleted is True
+        assert deleted.version == 3
+
+    # Attempt hard delete and ensure trigger prevents it
+    async with db_manager.get_session_maker()() as session, session.begin():
+        with pytest.raises(Exception, match="Hard deletions are strictly forbidden"):
+            await session.execute(
+                text("DELETE FROM lab_test_masters WHERE id = :id;").bindparams(
+                    id=master_id
+                )
+            )
+
+
+@pytest.mark.asyncio
+async def test_lab_unit_conversion_crud_and_audit():
+    # @req:PRD-LAB-001
+    # @Req:PRD-LAB-001
+    """
+    Verify CRUD operations, metadata storage, and GxP audit trigger integration
+    for the LabUnitConversion model.
+    """
+    conversion_id = None
+    async with db_manager.get_session_maker()() as session, session.begin():
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', 1);")
+        )
+        unit_conv = LabUnitConversion(
+            study_id="STUDY-XYZ",
+            test_code="CREATININE",
+            from_unit="mg/dL",
+            to_unit="umol/L",
+            factor=88.4,
+            offset=None,
+            created_by="user_xyz",
+            reason_for_change="Standard creatinine conversion factor",
+            version_index=1,
+        )
+        session.add(unit_conv)
+        await session.flush()
+        conversion_id = unit_conv.id
+
+    # Verify attributes are stored correctly
+    async with db_manager.get_session_maker()() as session:
+        result = await session.execute(
+            select(LabUnitConversion).where(LabUnitConversion.id == conversion_id)
+        )
+        saved = result.scalar_one()
+        assert saved.study_id == "STUDY-XYZ"
+        assert saved.test_code == "CREATININE"
+        assert saved.from_unit == "mg/dL"
+        assert saved.to_unit == "umol/L"
+        assert saved.factor == 88.4
+        assert saved.offset is None
+        assert saved.created_by == "user_xyz"
+        assert saved.reason_for_change == "Standard creatinine conversion factor"
+        assert saved.version_index == 1
+        assert saved.version == 1
+        assert saved.is_deleted is False
+
+    # Verify audit logs for INSERT
+    async with db_manager.get_session_maker()() as session:
+        result = await session.execute(
+            select(AuditLog).where(AuditLog.table_name == "lab_unit_conversions")
+        )
+        logs = result.scalars().all()
+        assert len(logs) == 1
+        assert logs[0].action == "INSERT"
+        assert logs[0].new_values["test_code"] == "CREATININE"
+
+    # Verify UPDATE audit
+    async with db_manager.get_session_maker()() as session, session.begin():
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', 1);")
+        )
+        result = await session.execute(
+            select(LabUnitConversion).where(LabUnitConversion.id == conversion_id)
+        )
+        saved = result.scalar_one()
+        saved.offset = 0.01
+        saved.reason_for_change = "Added small offset correction"
+        saved.version_index = 2
+
+    async with db_manager.get_session_maker()() as session:
+        result = await session.execute(
+            select(LabUnitConversion).where(LabUnitConversion.id == conversion_id)
+        )
+        updated = result.scalar_one()
+        assert updated.offset == 0.01
+        assert updated.version == 2
+        assert updated.version_index == 2
+
+        result_logs = await session.execute(
+            select(AuditLog)
+            .where(AuditLog.table_name == "lab_unit_conversions")
+            .order_by(AuditLog.timestamp)
+        )
+        logs = result_logs.scalars().all()
+        assert len(logs) == 2
+        assert logs[1].action == "UPDATE"
+        assert logs[1].new_values["offset"] == 0.01
+
+    # Attempt hard delete and ensure trigger prevents it
+    async with db_manager.get_session_maker()() as session, session.begin():
+        with pytest.raises(Exception, match="Hard deletions are strictly forbidden"):
+            await session.execute(
+                text("DELETE FROM lab_unit_conversions WHERE id = :id;").bindparams(
+                    id=conversion_id
+                )
+            )
