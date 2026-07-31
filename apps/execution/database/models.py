@@ -1272,3 +1272,57 @@ class SDTMDomainRecord(AuditedModel):
     domain: Mapped[str] = mapped_column(String(50), nullable=False)
     usubjid: Mapped[str] = mapped_column(String(255), nullable=False)
     record_data: Mapped[dict] = mapped_column(JSON, nullable=False)
+
+
+class SiteStaffMember(AuditedModel):
+    """Represents a clinical trial site staff member for delegation tracking.
+
+    Requirements: PRD-SYS-001
+    """
+
+    __tablename__ = "site_staff_members"
+
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    staff_user_id: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    email: Mapped[str] = mapped_column(String(255), nullable=False)
+    has_gcp_training: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+
+class DOADelegationRecord(AuditedModel):
+    """Represents a Delegation of Authority (DOA) task delegation record.
+
+    Requirements: PRD-SYS-001
+    """
+
+    __tablename__ = "doa_delegation_records"
+
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    staff_user_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    task_code: Mapped[str] = mapped_column(String(50), nullable=False)
+    status: Mapped[str] = mapped_column(String(50), default="PENDING_PI_APPROVAL", nullable=False)
+    pi_user_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    pi_approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    pi_signature_hash: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    end_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+
+class DOAAuditLog(Base):
+    """Represents an append-only audit trail for DOA delegation operations.
+
+    Requirements: PRD-SYS-001
+    """
+
+    __tablename__ = "doa_audit_logs"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    user_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    action: Mapped[str] = mapped_column(String(255), nullable=False)
+    details: Mapped[str] = mapped_column(String(1000), nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
