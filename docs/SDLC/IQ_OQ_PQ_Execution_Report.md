@@ -11,6 +11,8 @@ Based on the executed automated verification suite, the platform meets all prede
 ### Validation Result Summary
 - **Total Automated Test Cases Run:** 1680
 - **Passed:** 1680 🟢
+- **Total Automated Test Cases Run:** 1746
+- **Passed:** 1746 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -535,6 +537,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_study_differences_registry_offline` | `tests.test_designer_differences` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_study_differences_registry_timeout` | `tests.test_designer_differences` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_study_differences_success` | `tests.test_designer_differences` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_restricted_roles_denied_designer_mutations` | `tests.test_designer_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_sponsor_designer_permissions` | `tests.test_designer_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_sponsor_dm_and_admin_permissions` | `tests.test_designer_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_sysadmin_permissions` | `tests.test_designer_rbac` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_round_trip_endpoint_internal_success` | `tests.test_designer_roundtrip` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_compare_payloads_lossless_equivalence` | `tests.test_designer_roundtrip` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_compare_payloads_lossy_mismatch` | `tests.test_designer_roundtrip` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1018,6 +1024,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_create_lab_reference_range_validation_errors` | `tests.test_lab_ranges_crud` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_and_update_lab_reference_range` | `tests.test_lab_ranges_crud` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_list_and_filter_lab_reference_ranges` | `tests.test_lab_ranges_crud` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_list_lab_reference_ranges_filtering_by_lab_source` | `tests.test_lab_ranges_crud` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_soft_delete_lab_reference_range` | `tests.test_lab_ranges_crud` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_update_local_to_central_invariant_enforcement` | `tests.test_lab_ranges_crud` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_ranges_comprehensive_e2e_workflow` | `tests.test_lab_ranges_e2e_verification` | PRD-LAB-001 | 🟢 PASSED | < 1s |
