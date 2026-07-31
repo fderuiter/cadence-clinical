@@ -586,3 +586,92 @@ async def test_bulk_sync_with_valid_signatures_and_tallies():
 
     assert results[2]["status"] == "UPDATED_CLIENT_WINS"
     assert results[2]["signature_validation"]["status"] == "VALID"
+
+
+@pytest.mark.asyncio
+async def test_bulk_sync_with_session_derived_signatures():
+    """
+    Verify that bulk sync can verify signatures derived from the active session token
+    passed in the request Authorization Bearer header.
+    """
+    async_session = db_manager.get_session_maker()
+    async with async_session() as session:
+        inst = Instrument(
+            id="session_diary",
+            name="Session Signed Diary",
+            items={},
+            response_types={},
+            scoring_metadata={},
+            created_by="admin",
+            reason_for_change="Setup session tracker",
+            version_index=1,
+        )
+        session.add(inst)
+
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        assign = SubjectAssignment(
+            subject_id="subject_session_1",
+            instrument_id="session_diary",
+            start_date=now - timedelta(days=2),
+            end_date=now + timedelta(days=2),
+            created_by="admin",
+            reason_for_change="Setup assignment",
+            version_index=1,
+        )
+        session.add(assign)
+        await session.commit()
+
+    # Derived key from session token using HKDF
+    session_token = "some-long-keycloak-token-abc-12345"
+    from packages.security.encryption import derive_session_key
+    derived_secret = derive_session_key(session_token, b"offline-capture-salt", b"offline-capture-info")
+
+    device_timestamp = datetime.now(timezone.utc)
+    incoming = SyncRecord(
+        deduplication_key="subject_session_1:session_diary",
+        data={"pain": 4},
+        metadata=SyncMetadata(
+            timestamps={"pain": device_timestamp},
+            modified_by="device_mobile",
+        ),
+    )
+    sig = generate_canonical_signature(
+        get_signature_payload(incoming), derived_secret
+    )
+
+    bulk_payload = {
+        "submissions": [
+            {
+                "subject_id": "subject_session_1",
+                "diary_id": "session_diary",
+                "device_timestamp": device_timestamp.isoformat(),
+                "answers": {"pain": 4},
+                "offline_sync_markers": {
+                    "sequence_number": 1,
+                    "client_id": "device_mobile",
+                    "conflict_strategy": "CLIENT_WINS",
+                    "signature": sig,
+                    "timestamps": {
+                        "pain": device_timestamp.isoformat()
+                    },
+                },
+            }
+        ]
+    }
+
+    client = TestClient(app)
+    headers = get_auth_headers(
+        roles="admin,sponsor_dm", change_reason="Session derived sync test"
+    )
+    # Inject Bearer Authorization header into headers
+    headers["Authorization"] = f"Bearer {session_token}"
+
+    resp = client.post("/api/v1/interop/epro/sync", json=bulk_payload, headers=headers)
+    assert resp.status_code == 200
+    data = resp.json()
+
+    assert data["processed_count"] == 1
+    assert data["created_count"] == 1
+    results = data["results"]
+    assert results[0]["status"] == "CREATED"
+    assert results[0]["signature_validation"]["status"] == "VALID"

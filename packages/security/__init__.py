@@ -76,6 +76,11 @@ from packages.security.rbac import (
     verify_is_auditor,
     verify_not_auditor,
 )
+from packages.security.encryption import (
+    decrypt,
+    derive_session_key,
+    encrypt,
+)
 from packages.security.signing import (
     asymmetric_sign,
     asymmetric_verify,
@@ -100,6 +105,9 @@ __all__ = [
     "canonical_serialize",
     "generate_canonical_signature",
     "verify_canonical_signature",
+    "derive_session_key",
+    "encrypt",
+    "decrypt",
     "get_normalized_roles",
     "verify_not_auditor",
     "verify_is_auditor",

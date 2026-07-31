@@ -202,6 +202,7 @@ async def resolve_and_save_submission(
     user_id: str = "system",
     user_role: str = "system",
     change_reason: Optional[str] = None,
+    request: Optional[Request] = None,
 ) -> Dict[str, Any]:
     """
     Save a new ePRO submission or reconcile existing ones based on conflict strategy.
@@ -235,6 +236,14 @@ async def resolve_and_save_submission(
     # Decode GATEWAY_SECRET for signature verification
     gateway_secret_str = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
     secret_bytes = gateway_secret_str.encode("utf-8")
+
+    # If active session token is present in request Authorization header, derive key from it
+    if request:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            session_token = auth_header[len("Bearer "):]
+            from packages.security.encryption import derive_session_key
+            secret_bytes = derive_session_key(session_token, b"offline-capture-salt", b"offline-capture-info")
 
     signature_status = "SKIPPED"
     signature_detail = None
@@ -731,6 +740,7 @@ async def epro_submit(
         user_id=user_id,
         user_role=user_roles,
         change_reason=change_reason,
+        request=request,
     )
 
     # Log action to immutable audit trail
@@ -776,6 +786,7 @@ async def epro_sync(
             user_id=user_id,
             user_role=user_roles,
             change_reason=change_reason,
+            request=request,
         )
         results.append(resolved)
         status = resolved["status"]

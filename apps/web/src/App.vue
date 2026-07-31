@@ -1,5 +1,22 @@
 <template>
   <div id="vue-app-root">
+    <!-- Offline Banner -->
+    <div
+      v-if="isOffline"
+      id="offline-status-banner"
+      class="offline-banner"
+      style="
+        background-color: #fef08a;
+        color: #854d0e;
+        padding: 10px 16px;
+        text-align: center;
+        font-weight: 700;
+        border-bottom: 2px solid #eab308;
+        font-size: 0.95rem;
+      "
+    >
+      Working Offline - Local Storage Enabled
+    </div>
     <!-- Header -->
     <header>
       <div class="header-title-area">
@@ -196,7 +213,7 @@
 </template>
 
 <script setup>
-import { onMounted, computed } from "vue";
+import { ref, onMounted, onUnmounted, computed } from "vue";
 import { useClinicalStore } from "./stores/clinical";
 import { useAuthStore } from "./stores/auth";
 import { hasRequiredRole } from "./router";
@@ -204,6 +221,12 @@ import "./style.css";
 
 const store = useClinicalStore();
 const authStore = useAuthStore();
+
+const isOffline = ref(false);
+
+const updateOnlineStatus = () => {
+  isOffline.value = !navigator.onLine;
+};
 
 const canViewMdr = computed(() => {
   return hasRequiredRole(authStore.normalizedRoles, [
@@ -248,9 +271,12 @@ const canViewAudit = computed(() => {
 const canViewEtmf = computed(() => {
   return hasRequiredRole(authStore.normalizedRoles, ["cra", "monitor", "auditor", "tmf_auditor", "sponsor_admin"]);
 });
-});
 
 onMounted(async () => {
+  updateOnlineStatus();
+  window.addEventListener("online", updateOnlineStatus);
+  window.addEventListener("offline", updateOnlineStatus);
+
   if (store.ledgerBlocks.length === 0) {
     await store.addLedgerBlock(
       "GENESIS",
@@ -268,6 +294,11 @@ onMounted(async () => {
     );
   }
   await store.startSyncTimer();
+});
+
+onUnmounted(() => {
+  window.removeEventListener("online", updateOnlineStatus);
+  window.removeEventListener("offline", updateOnlineStatus);
 });
 </script>
 
