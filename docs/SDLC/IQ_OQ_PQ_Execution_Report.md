@@ -137,6 +137,7 @@ pydantic-core            2.46.4
 pydyf                    0.12.1
 pyee                     13.0.1
 pygments                 2.20.0
+pymupdf                  1.28.0
 pyparsing                3.3.2
 pyphen                   0.17.2
 pytest                   9.1.1
