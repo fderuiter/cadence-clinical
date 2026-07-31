@@ -1,9 +1,11 @@
 import os
 import threading
 import time
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
+
 from fastapi import HTTPException
-from jose import jwt, JWTError
+from jose import JWTError, jwt
+
 
 class TokenConsumptionCache:
     """Thread-safe cache to prevent 21 CFR Part 11 signature token replay attacks.
@@ -78,7 +80,9 @@ def verify_and_consume_sig_token(
         )
 
     if secret is None:
-        secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode("utf-8")
+        secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode(
+            "utf-8"
+        )
 
     try:
         payload = jwt.decode(sig_token, secret, algorithms=["HS256"])

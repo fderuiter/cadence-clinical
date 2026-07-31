@@ -84,7 +84,7 @@ async def test_lab_test_master_crud_and_audit():
     # Verify audit trail logs created by database triggers for INSERT
     async with db_manager.get_session_maker()() as session:
         result = await session.execute(
-            select(AuditLog).where(AuditLog.table_name == "lab_test_master")
+            select(AuditLog).where(AuditLog.table_name == "lab_test_masters")
         )
         logs = result.scalars().all()
         assert len(logs) == 1
@@ -116,7 +116,7 @@ async def test_lab_test_master_crud_and_audit():
 
         result_logs = await session.execute(
             select(AuditLog)
-            .where(AuditLog.table_name == "lab_test_master")
+            .where(AuditLog.table_name == "lab_test_masters")
             .order_by(AuditLog.timestamp)
         )
         logs = result_logs.scalars().all()
@@ -149,7 +149,7 @@ async def test_lab_test_master_crud_and_audit():
     async with db_manager.get_session_maker()() as session, session.begin():
         with pytest.raises(Exception, match="Hard deletions are strictly forbidden"):
             await session.execute(
-                text("DELETE FROM lab_test_master WHERE id = :id;").bindparams(
+                text("DELETE FROM lab_test_masters WHERE id = :id;").bindparams(
                     id=master_id
                 )
             )

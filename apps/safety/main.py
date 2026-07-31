@@ -13,13 +13,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from apps.safety.database import db_manager
 from apps.safety.models import (
     Base,
+    ExportJob,
     SAEDiscrepancy,
     SAEReconciliationJob,
     SAEReconciliationRun,
     SafetyAuditLog,
     SafetyCaseICSR,
-    SafetyExportJob,
-    ExportJob,
     write_audit_log,
 )
 from apps.safety.processor import process_sae_reconciliation
@@ -589,7 +588,7 @@ async def export_safety_case(
     from apps.safety.renderer import generate_e2b_xml
 
     try:
-        raw_xml = generate_e2b_xml(payload.icsr)
+        _ = generate_e2b_xml(payload.icsr)
     except ValueError as e:
         raise HTTPException(
             status_code=422,

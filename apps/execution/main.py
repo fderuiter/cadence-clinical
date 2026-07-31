@@ -1039,6 +1039,7 @@ async def unblind_subject(
     # Step-up re-authentication: validate X-Sig-Token before any write
     sig_token = request.headers.get("X-Sig-Token")
     from packages.security.sig_token_verifier import verify_and_consume_sig_token
+
     verify_and_consume_sig_token(sig_token, principal.user_id)
 
     # Validate min-length justification explicitly
@@ -4404,6 +4405,7 @@ async def post_batch_sign_off(
     user_id = getattr(request.state, "user_id", "")
 
     from packages.security.sig_token_verifier import verify_and_consume_sig_token
+
     sig_payload = verify_and_consume_sig_token(sig_token, user_id)
 
     token_batch_id = sig_payload.get("batch_id")
