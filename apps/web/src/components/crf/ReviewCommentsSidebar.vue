@@ -2,7 +2,10 @@
   <div class="review-comments-sidebar">
     <header class="sidebar-header">
       <h3>Review Comments ({{ filteredComments.length }})</h3>
-      <div v-if="fieldId" class="field-indicator">
+      <div
+        v-if="fieldId"
+        class="field-indicator"
+      >
         Selected Field: <strong>{{ fieldId }}</strong>
       </div>
     </header>
@@ -15,7 +18,10 @@
         :class="{ resolved: c.isResolved }"
         style="border: 1px solid #e2e8f0; padding: 12px; margin-bottom: 8px; border-radius: 6px; background-color: #f8fafc;"
       >
-        <div class="comment-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+        <div
+          class="comment-header"
+          style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;"
+        >
           <div style="display: flex; align-items: center; gap: 8px;">
             <div
               class="author-avatar"
@@ -23,7 +29,10 @@
             >
               {{ (c.authorName || 'U').substring(0, 2).toUpperCase() }}
             </div>
-            <span class="comment-author" style="font-weight: 600; font-size: 13px; color: #1e293b;">
+            <span
+              class="comment-author"
+              style="font-weight: 600; font-size: 13px; color: #1e293b;"
+            >
               {{ c.authorName }}
             </span>
           </div>
@@ -37,12 +46,18 @@
           </span>
         </div>
 
-        <p class="comment-text" style="font-size: 13px; color: #334155; margin: 4px 0 8px 0; word-break: break-all;">
+        <p
+          class="comment-text"
+          style="font-size: 13px; color: #334155; margin: 4px 0 8px 0; word-break: break-all;"
+        >
           {{ c.text }}
         </p>
 
         <div style="display: flex; align-items: center; justify-content: space-between;">
-          <span class="comment-timestamp" style="font-size: 11px; color: #64748b;">
+          <span
+            class="comment-timestamp"
+            style="font-size: 11px; color: #64748b;"
+          >
             {{ formatTimestamp(c.createdAt) }}
           </span>
           <button
@@ -56,17 +71,24 @@
         </div>
       </div>
 
-      <div v-if="filteredComments.length === 0" class="empty-state" style="padding: 16px; text-align: center; color: #64748b; font-size: 13px;">
+      <div
+        v-if="filteredComments.length === 0"
+        class="empty-state"
+        style="padding: 16px; text-align: center; color: #64748b; font-size: 13px;"
+      >
         No comments yet for this field. Use the box below to start a thread.
       </div>
     </div>
 
-    <div class="add-comment-box" style="margin-top: 16px; border-top: 1px solid #e2e8f0; padding-top: 12px;">
+    <div
+      class="add-comment-box"
+      style="margin-top: 16px; border-top: 1px solid #e2e8f0; padding-top: 12px;"
+    >
       <textarea
         v-model="newComment"
         placeholder="Add review comment... Use @user to mention reviewers."
         style="width: 100%; min-height: 80px; padding: 8px; border-radius: 4px; border: 1px solid #cbd5e1; font-size: 13px; margin-bottom: 8px; resize: vertical;"
-      ></textarea>
+      />
       <button
         class="btn-primary"
         style="padding: 6px 12px; font-size: 13px; border-radius: 4px; background-color: #2563eb; color: white; border: none; cursor: pointer; font-weight: 500;"

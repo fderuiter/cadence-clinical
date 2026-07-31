@@ -45,7 +45,7 @@ def render_email_template(template_name: str, context: Dict[str, Any]) -> str:
         try:
             env = Environment(
                 loader=FileSystemLoader(TEMPLATE_DIR),
-                autoescape=select_autoescape(default_for_string=True, default=True),
+                autoescape=select_autoescape(["html", "xml", "j2"]),
             )
             template = env.get_template(template_name)
             return template.render(**context)

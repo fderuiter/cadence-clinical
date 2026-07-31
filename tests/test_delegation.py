@@ -8,8 +8,11 @@ from fastapi.testclient import TestClient
 from organization_domain import ClinicalStaffRole
 
 from packages.security.delegation import (
+    StaffRole,
+    check_delegation_authority,
     normalize_and_validate_staff_role,
     require_delegation,
+    require_staff_role,
     validate_request_staff_roles,
 )
 
@@ -17,6 +20,14 @@ from packages.security.delegation import (
 # Dummy FastAPI Application for Integration Tests
 # ==========================================
 app = FastAPI()
+
+
+@app.post("/test-staff-role")
+async def staff_role_endpoint(
+    roles: list = Depends(require_staff_role(StaffRole.PI, StaffRole.CRC)),
+):
+    """Endpoint requiring specific StaffRoles (PI or CRC)."""
+    return {"status": "success", "roles": [r.value for r in roles]}
 
 
 @app.post("/test-delegation")
@@ -250,3 +261,49 @@ def test_external_monitor_delegation_exclusion() -> None:
             normalize_and_validate_staff_role(role_name)
         assert exc_info.value.status_code == 400
         assert "Invalid clinical staff role" in exc_info.value.detail
+
+
+def test_require_staff_role_success() -> None:
+    """Verify that require_staff_role dependency passes with valid roles."""
+    headers = {
+        "X-User-Roles": "Principal Investigator",
+    }
+    response = client.post("/test-staff-role", headers=headers)
+    assert response.status_code == 200
+    assert response.json()["status"] == "success"
+    assert "Principal Investigator" in response.json()["roles"]
+
+
+def test_require_staff_role_forbidden() -> None:
+    """Verify that require_staff_role dependency rejects unauthorized roles."""
+    headers = {
+        "X-User-Roles": "CRA/Monitor",
+    }
+    response = client.post("/test-staff-role", headers=headers)
+    assert response.status_code == 403
+    assert (
+        "Forbidden: Missing required clinical staff role" in response.json()["detail"]
+    )
+
+
+def test_check_delegation_authority_success() -> None:
+    """Verify that check_delegation_authority executes successfully when valid."""
+
+    class MockRequest:
+        def __init__(self):
+            class State:
+                roles = ["Principal Investigator"]
+                site_id = "site_123"
+                sponsor_id = "sponsor_456"
+
+            self.state = State()
+            self.headers = {}
+
+    request = MockRequest()
+    roles = check_delegation_authority(
+        request=request,
+        target_site_id="site_123",
+        target_sponsor_id="sponsor_456",
+        enforce_pi=True,
+    )
+    assert StaffRole.PRINCIPAL_INVESTIGATOR in roles
