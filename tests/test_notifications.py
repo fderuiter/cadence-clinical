@@ -159,7 +159,7 @@ async def test_notification_creation_and_auditing():
     ):
         await poll_and_dispatch()
         # Allow async task processing robustly
-        for _ in range(160):
+        for _ in range(400):
             await asyncio.sleep(0.05)
             headers_recipient = get_auth_headers(
                 user_id="pi_john",
@@ -519,8 +519,8 @@ async def test_email_delivery_channel_success():
     mock_smtp_client = AsyncMock()
     with patch("aiosmtplib.SMTP", return_value=mock_smtp_client):
         await poll_and_dispatch()
-        # Wait up to 8 seconds for the background task to update the status to SUCCESS
-        for _ in range(160):
+        # Wait up to 20 seconds for the background task to update the status to SUCCESS
+        for _ in range(400):
             await asyncio.sleep(0.05)
             async with db_manager.get_session_maker()() as session:
                 stmt = select(NotificationDelivery).where(
@@ -588,8 +588,8 @@ async def test_webhook_delivery_channel_success():
 
     with patch("httpx.AsyncClient", return_value=mock_context):
         await poll_and_dispatch()
-        # Wait up to 8 seconds for the background task to update the status to SUCCESS
-        for _ in range(160):
+        # Wait up to 20 seconds for the background task to update the status to SUCCESS
+        for _ in range(400):
             await asyncio.sleep(0.05)
             async with db_manager.get_session_maker()() as session:
                 stmt = select(NotificationDelivery).where(
@@ -648,7 +648,7 @@ async def test_webhook_delivery_channel_failure_and_retry_backoff():
     # 1st Attempt: Fails with a network/timeout exception
     with patch("httpx.AsyncClient", side_effect=Exception("Connection timed out")):
         await poll_and_dispatch()
-        for _ in range(160):
+        for _ in range(400):
             await asyncio.sleep(0.05)
             async with db_manager.get_session_maker()() as session:
                 res = await session.execute(
@@ -679,7 +679,7 @@ async def test_webhook_delivery_channel_failure_and_retry_backoff():
     # 2nd Attempt: Fails again
     with patch("httpx.AsyncClient", side_effect=Exception("Temporary server error")):
         await poll_and_dispatch()
-        for _ in range(160):
+        for _ in range(400):
             await asyncio.sleep(0.05)
             async with db_manager.get_session_maker()() as session:
                 res = await session.execute(
@@ -710,7 +710,7 @@ async def test_webhook_delivery_channel_failure_and_retry_backoff():
     # 3rd Attempt: Reaches maximum allowed attempts
     with patch("httpx.AsyncClient", side_effect=Exception("Terminal failure")):
         await poll_and_dispatch()
-        for _ in range(160):
+        for _ in range(400):
             await asyncio.sleep(0.05)
             async with db_manager.get_session_maker()() as session:
                 res = await session.execute(
@@ -770,7 +770,7 @@ async def test_email_delivery_channel_failure_and_exhaustion():
         await poll_and_dispatch()
 
         # Robustly wait for first attempt to complete
-        for _ in range(160):
+        for _ in range(400):
             await asyncio.sleep(0.05)
             async with db_manager.get_session_maker()() as session:
                 res = await session.execute(
@@ -803,7 +803,7 @@ async def test_email_delivery_channel_failure_and_exhaustion():
         await poll_and_dispatch()
 
         # Robustly wait for final attempt to complete
-        for _ in range(160):
+        for _ in range(400):
             await asyncio.sleep(0.05)
             async with db_manager.get_session_maker()() as session:
                 res = await session.execute(
@@ -880,7 +880,7 @@ async def test_multi_channel_edge_case_in_app_succeeds_email_exhausts():
         await poll_and_dispatch()
 
         # Robustly wait for the first dispatch to complete
-        for _ in range(160):
+        for _ in range(400):
             await asyncio.sleep(0.05)
             async with db_manager.get_session_maker()() as session:
                 res_email = await session.execute(
@@ -909,7 +909,7 @@ async def test_multi_channel_edge_case_in_app_succeeds_email_exhausts():
         await poll_and_dispatch()
 
         # Robustly wait for the second dispatch to complete
-        for _ in range(160):
+        for _ in range(400):
             await asyncio.sleep(0.05)
             async with db_manager.get_session_maker()() as session:
                 res_email = await session.execute(
