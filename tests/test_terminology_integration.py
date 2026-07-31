@@ -27,7 +27,7 @@ def test_cache_hit_performs_no_external_lookup():
     with patch.dict(os.environ, {"TERMINOLOGY_OFFLINE": "false"}):
         # Mock the EVS client get_concept method
         with patch(
-            "apps.designer.evs_client.NCIEVSClient.get_concept", new_callable=AsyncMock
+            "apps.designer.services.evs_client.NCIEVSClient.get_concept", new_callable=AsyncMock
         ) as mock_get:
             mock_get.return_value = mock_concept
 
@@ -61,7 +61,7 @@ def test_expired_entry_fallback_on_unreachable_evs():
     with patch.dict(os.environ, {"TERMINOLOGY_OFFLINE": "false"}):
         # 1. Populate the cache first
         with patch(
-            "apps.designer.evs_client.NCIEVSClient.get_concept", new_callable=AsyncMock
+            "apps.designer.services.evs_client.NCIEVSClient.get_concept", new_callable=AsyncMock
         ) as mock_get:
             mock_get.return_value = mock_concept
             val1 = cache.get(concept_id)
@@ -72,7 +72,7 @@ def test_expired_entry_fallback_on_unreachable_evs():
 
         # 3. DB/EVS is now unreachable (throws EVSTransportError)
         with patch(
-            "apps.designer.evs_client.NCIEVSClient.get_concept", new_callable=AsyncMock
+            "apps.designer.services.evs_client.NCIEVSClient.get_concept", new_callable=AsyncMock
         ) as mock_get:
             mock_get.side_effect = EVSTransportError(
                 "Connection timeout contacting EVS API"
@@ -90,7 +90,7 @@ def test_offline_fallback_resolves_supported_seed_concepts():
     # Enable offline mode via environment variable
     with patch.dict(os.environ, {"TERMINOLOGY_OFFLINE": "true"}):
         with patch(
-            "apps.designer.evs_client.NCIEVSClient.get_concept", new_callable=AsyncMock
+            "apps.designer.services.evs_client.NCIEVSClient.get_concept", new_callable=AsyncMock
         ) as mock_get:
             for concept_id, mock_val in MOCK_TERMINOLOGY.items():
                 val = cache.get(concept_id)
@@ -109,7 +109,7 @@ def test_existing_cache_consumers_receive_expected_shape():
 
     with patch.dict(os.environ, {"TERMINOLOGY_OFFLINE": "false"}):
         with patch(
-            "apps.designer.evs_client.NCIEVSClient.get_concept", new_callable=AsyncMock
+            "apps.designer.services.evs_client.NCIEVSClient.get_concept", new_callable=AsyncMock
         ) as mock_get:
             mock_get.return_value = {
                 "code": "C123",
@@ -142,7 +142,7 @@ def test_get_terminology_from_db_delegation():
         os.environ, {"TERMINOLOGY_OFFLINE": "false", "NCI_EVS_OFFLINE": "false"}
     ):
         with patch(
-            "apps.designer.evs_client.NCIEVSClient.get_concept", new_callable=AsyncMock
+            "apps.designer.services.evs_client.NCIEVSClient.get_concept", new_callable=AsyncMock
         ) as mock_get:
             mock_get.return_value = mock_concept
 
@@ -159,7 +159,7 @@ def test_get_terminology_from_db_nci_evs_offline_fallback():
         os.environ, {"TERMINOLOGY_OFFLINE": "false", "NCI_EVS_OFFLINE": "1"}
     ):
         with patch(
-            "apps.designer.evs_client.NCIEVSClient.get_concept", new_callable=AsyncMock
+            "apps.designer.services.evs_client.NCIEVSClient.get_concept", new_callable=AsyncMock
         ) as mock_get:
             res = get_terminology_from_db(concept_id)
             # Should resolve from mock terminology and NOT call EVS client
@@ -176,7 +176,7 @@ def test_get_terminology_from_db_not_found_in_evs_but_in_mock():
         os.environ, {"TERMINOLOGY_OFFLINE": "false", "NCI_EVS_OFFLINE": "false"}
     ):
         with patch(
-            "apps.designer.evs_client.NCIEVSClient.get_concept", new_callable=AsyncMock
+            "apps.designer.services.evs_client.NCIEVSClient.get_concept", new_callable=AsyncMock
         ) as mock_get:
             mock_get.side_effect = EVSNotFoundError("Not found in EVS")
 
@@ -195,7 +195,7 @@ def test_get_terminology_from_db_not_found_anywhere():
         os.environ, {"TERMINOLOGY_OFFLINE": "false", "NCI_EVS_OFFLINE": "false"}
     ):
         with patch(
-            "apps.designer.evs_client.NCIEVSClient.get_concept", new_callable=AsyncMock
+            "apps.designer.services.evs_client.NCIEVSClient.get_concept", new_callable=AsyncMock
         ) as mock_get:
             mock_get.side_effect = EVSNotFoundError("Not found in EVS")
 
@@ -212,7 +212,7 @@ def test_get_terminology_from_db_transport_error_but_in_mock():
         os.environ, {"TERMINOLOGY_OFFLINE": "false", "NCI_EVS_OFFLINE": "false"}
     ):
         with patch(
-            "apps.designer.evs_client.NCIEVSClient.get_concept", new_callable=AsyncMock
+            "apps.designer.services.evs_client.NCIEVSClient.get_concept", new_callable=AsyncMock
         ) as mock_get:
             mock_get.side_effect = EVSTransportError("EVS service is down")
 
@@ -231,7 +231,7 @@ def test_get_terminology_from_db_transport_error_and_not_in_mock():
         os.environ, {"TERMINOLOGY_OFFLINE": "false", "NCI_EVS_OFFLINE": "false"}
     ):
         with patch(
-            "apps.designer.evs_client.NCIEVSClient.get_concept", new_callable=AsyncMock
+            "apps.designer.services.evs_client.NCIEVSClient.get_concept", new_callable=AsyncMock
         ) as mock_get:
             mock_get.side_effect = EVSTransportError("EVS service is down")
 

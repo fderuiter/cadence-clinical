@@ -10,7 +10,7 @@ from apps.designer import (
     EVSTransportError,
     NCIEVSClient,
 )
-from apps.designer.evs_client import normalize_concept
+from apps.designer.services.evs_client import normalize_concept
 
 
 @pytest.mark.asyncio
@@ -18,7 +18,7 @@ async def test_import_does_not_make_network_calls():
     """Ensure that importing modules does not make any live network calls or client requests."""
     # We can verify by patching the httpx.AsyncClient methods and then performing a reload or importing
     with patch("httpx.AsyncClient.get") as mock_get:
-        import apps.designer.evs_client  # noqa: F401
+        import apps.designer.services.evs_client  # noqa: F401
 
         assert not mock_get.called
 

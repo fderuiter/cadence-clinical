@@ -114,7 +114,7 @@ from apps.designer.delta import (
     update_timing_window,
     update_visit,
 )
-from apps.designer.evs_client import NCIEVSClient
+from apps.designer.services.evs_client import NCIEVSClient
 from apps.designer.library import (
     ALLOWED_LIBRARY_TRANSITIONS,
     CreateLibraryObjectRequest,

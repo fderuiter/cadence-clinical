@@ -1,4 +1,4 @@
-from apps.designer.evs_client import (
+from apps.designer.services.evs_client import (
     EVSClientError,
     EVSNotFoundError,
     EVSTimeoutError,

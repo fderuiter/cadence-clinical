@@ -259,7 +259,7 @@ def get_terminology_from_db(concept_id: str) -> Optional[Dict[str, Any]]:
     if is_offline:
         return MOCK_TERMINOLOGY.get(concept_id)
 
-    from apps.designer.evs_client import EVSNotFoundError, NCIEVSClient
+    from apps.designer.services.evs_client import EVSNotFoundError, NCIEVSClient
 
     client = NCIEVSClient()
     try:

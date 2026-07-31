@@ -456,7 +456,7 @@ async def test_search_terminology_endpoint_success():
     ]
 
     with patch(
-        "apps.designer.evs_client.NCIEVSClient.search_concepts",
+        "apps.designer.services.evs_client.NCIEVSClient.search_concepts",
         new_callable=AsyncMock,
     ) as mock_search:
         mock_search.return_value = mock_concepts
@@ -510,7 +510,7 @@ async def test_search_terminology_endpoint_degraded():
     from tests.test_soa_endpoints import get_auth_headers
 
     with patch(
-        "apps.designer.evs_client.NCIEVSClient.search_concepts",
+        "apps.designer.services.evs_client.NCIEVSClient.search_concepts",
         side_effect=Exception("EVS service is unavailable"),
     ):
         async with httpx.AsyncClient(
