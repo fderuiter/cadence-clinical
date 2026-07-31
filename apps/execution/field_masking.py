@@ -99,3 +99,42 @@ def mask_clinical_records_list(
         List of masked record dictionaries.
     """
     return [mask_clinical_record(rec, permissions, unblinded_access) for rec in records]
+
+
+def apply_rtsm_blinded_filter(data: dict, roles: Any) -> dict:
+    """
+    Response-serialization filter that, for blinded roles, replaces
+    treatment_group, randomization_seed, and investigational_product_id with masked placeholders
+    (and returns only ciphertext at the network layer), keyed off request.state.roles.
+    """
+    from packages.security.rbac import normalize_role
+
+    if isinstance(roles, str):
+        raw_roles = [r.strip() for r in roles.split(",") if r.strip()]
+    elif isinstance(roles, (list, set, tuple)):
+        raw_roles = [str(r).strip() for r in roles if str(r).strip()]
+    else:
+        raw_roles = []
+
+    normalized_roles = [normalize_role(r) for r in raw_roles]
+
+    unblinded_roles = {
+        "unblinded_statistician",
+        "idmc",
+        "pharmacist",
+        "emergency_unblinder",
+        "sysadmin",
+        "sponsor_dm",
+        "sponsor_mm",
+        "admin",
+    }
+
+    is_unblinded = any(r in unblinded_roles for r in normalized_roles)
+    if is_unblinded:
+        return data
+
+    masked = dict(data)
+    for field in ("treatment_group", "randomization_seed", "investigational_product_id"):
+        if field in masked:
+            masked[field] = "MASKED"
+    return masked

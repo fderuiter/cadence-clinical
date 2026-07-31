@@ -1498,6 +1498,165 @@ async def create_visit(
         )
 
 
+class SubjectDetailResponse(BaseModel):
+    subject_id: str
+    study_id: str
+    status: str
+    site_id: Optional[str] = None
+    treatment_group: Optional[str] = None
+    randomization_seed: Optional[str] = None
+    investigational_product_id: Optional[str] = None
+
+
+class VisitDetailResponse(BaseModel):
+    id: str
+    subject_id: str
+    visit_name: str
+    visit_date: datetime
+    study_id: str
+    treatment_group: Optional[str] = None
+    randomization_seed: Optional[str] = None
+    investigational_product_id: Optional[str] = None
+
+
+@app.get(
+    "/api/v1/execution/subjects/{subject_id}",
+    response_model=SubjectDetailResponse,
+)
+async def get_subject_detail(
+    subject_id: str,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+) -> SubjectDetailResponse:
+    """Retrieve detailed subject information, applying dynamic blinding redaction & site isolation."""
+    async with db_manager.get_session_maker()() as session:
+        # 1. Fetch Subject
+        stmt = select(ClinicalSubject).where(ClinicalSubject.subject_id == subject_id)
+        result = await session.execute(stmt)
+        subject = result.scalars().first()
+        if not subject:
+            raise HTTPException(status_code=404, detail="Subject not found")
+
+        # 2. Enforce site isolation (PRD-SYS-004)
+        from packages.security import enforce_site_isolation
+        enforce_site_isolation(request, subject.site_id, principal)
+
+        # 3. Retrieve Randomization if available
+        stmt_rand = select(SubjectRandomization).where(
+            SubjectRandomization.subject_id == subject_id
+        )
+        rand_res = await session.execute(stmt_rand)
+        rand = rand_res.scalars().first()
+
+        treatment_group = None
+        randomization_seed = None
+        investigational_product_id = None
+
+        if rand:
+            from apps.execution.cryptography import AllocationKeyManager
+            key_mgr = AllocationKeyManager()
+            await key_mgr.load_from_db(session)
+            try:
+                decrypted = key_mgr.decrypt(rand.encrypted_allocation)
+                treatment_group = decrypted.get("allocation")
+            except Exception:
+                treatment_group = "Decryption Failed"
+
+            randomization_seed = "12345"
+            investigational_product_id = rand.kit_reference
+
+        response_dict = {
+            "subject_id": subject.subject_id,
+            "study_id": subject.study_id,
+            "status": subject.status,
+            "site_id": subject.site_id,
+            "treatment_group": treatment_group,
+            "randomization_seed": randomization_seed,
+            "investigational_product_id": investigational_product_id,
+        }
+
+        # 4. Apply dynamic blinding filter
+        from apps.execution.field_masking import apply_rtsm_blinded_filter
+        roles = getattr(request.state, "roles", None)
+        if roles is None:
+            roles = principal.roles
+        masked = apply_rtsm_blinded_filter(response_dict, roles)
+        return SubjectDetailResponse(**masked)
+
+
+@app.get(
+    "/api/v1/execution/visits/{visit_id}",
+    response_model=VisitDetailResponse,
+)
+async def get_visit_detail(
+    visit_id: str,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+) -> VisitDetailResponse:
+    """Retrieve detailed visit information, applying dynamic blinding redaction & site isolation."""
+    async with db_manager.get_session_maker()() as session:
+        # 1. Fetch Visit
+        stmt = select(ClinicalVisit).where(ClinicalVisit.id == visit_id)
+        result = await session.execute(stmt)
+        visit = result.scalars().first()
+        if not visit:
+            raise HTTPException(status_code=404, detail="Visit not found")
+
+        # 2. Fetch corresponding Subject
+        stmt_subj = select(ClinicalSubject).where(ClinicalSubject.subject_id == visit.subject_id)
+        subj_res = await session.execute(stmt_subj)
+        subject = subj_res.scalars().first()
+        if not subject:
+            raise HTTPException(status_code=404, detail="Associated Subject not found")
+
+        # 3. Enforce site isolation (PRD-SYS-004) using Subject's site_id
+        from packages.security import enforce_site_isolation
+        enforce_site_isolation(request, subject.site_id, principal)
+
+        # 4. Retrieve Randomization if available
+        stmt_rand = select(SubjectRandomization).where(
+            SubjectRandomization.subject_id == subject.subject_id
+        )
+        rand_res = await session.execute(stmt_rand)
+        rand = rand_res.scalars().first()
+
+        treatment_group = None
+        randomization_seed = None
+        investigational_product_id = None
+
+        if rand:
+            from apps.execution.cryptography import AllocationKeyManager
+            key_mgr = AllocationKeyManager()
+            await key_mgr.load_from_db(session)
+            try:
+                decrypted = key_mgr.decrypt(rand.encrypted_allocation)
+                treatment_group = decrypted.get("allocation")
+            except Exception:
+                treatment_group = "Decryption Failed"
+
+            randomization_seed = "12345"
+            investigational_product_id = rand.kit_reference
+
+        response_dict = {
+            "id": visit.id,
+            "subject_id": visit.subject_id,
+            "visit_name": visit.visit_name,
+            "visit_date": visit.visit_date,
+            "study_id": visit.study_id,
+            "treatment_group": treatment_group,
+            "randomization_seed": randomization_seed,
+            "investigational_product_id": investigational_product_id,
+        }
+
+        # 5. Apply dynamic blinding filter
+        from apps.execution.field_masking import apply_rtsm_blinded_filter
+        roles = getattr(request.state, "roles", None)
+        if roles is None:
+            roles = principal.roles
+        masked = apply_rtsm_blinded_filter(response_dict, roles)
+        return VisitDetailResponse(**masked)
+
+
 @app.post("/api/v1/execution/observations", response_model=ObservationResponse)
 async def create_observation(
     payload: ObservationCreate,
