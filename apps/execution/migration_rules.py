@@ -1,5 +1,5 @@
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from sqlalchemy import select
 
@@ -11,15 +11,15 @@ class ReconciledObservation(ClinicalObservation):
 
     def __init__(self, **kwargs):
         # We can extract provenance if passed in kwargs
-        self._provenance: List[Dict[str, Any]] = kwargs.pop("provenance", [])
+        self._provenance: list[dict[str, Any]] = kwargs.pop("provenance", [])
         super().__init__(**kwargs)
 
     @property
-    def provenance(self) -> List[Dict[str, Any]]:
+    def provenance(self) -> list[dict[str, Any]]:
         return self._provenance
 
     @provenance.setter
-    def provenance(self, value: List[Dict[str, Any]]) -> None:
+    def provenance(self, value: list[dict[str, Any]]) -> None:
         self._provenance = value
 
     def __getitem__(self, key: str) -> Any:
@@ -81,8 +81,8 @@ class ReconciledObservation(ClinicalObservation):
 
 
 def find_migration_path(
-    rules_by_src: Dict[str, List[str]], current: str, target: str, visited: set
-) -> Optional[List[str]]:
+    rules_by_src: dict[str, list[str]], current: str, target: str, visited: set
+) -> list[str] | None:
     if current == target:
         return [current]
     if current in visited:
@@ -99,8 +99,8 @@ def find_migration_path(
 
 
 async def reconcile_observations(
-    session, observations: List[ClinicalObservation], target_version: str
-) -> List[ReconciledObservation]:
+    session, observations: list[ClinicalObservation], target_version: str
+) -> list[ReconciledObservation]:
     """Reconciles observations dynamically and non-destructively to a target protocol version."""
     if not observations:
         return []
@@ -116,8 +116,8 @@ async def reconcile_observations(
     rules = list(res.scalars().all())
 
     # Build the adjacency list of version transitions
-    rules_by_src: Dict[str, List[str]] = {}
-    transitions: Dict[str, Dict[str, List[MigrationRule]]] = {}
+    rules_by_src: dict[str, list[str]] = {}
+    transitions: dict[str, dict[str, list[MigrationRule]]] = {}
     for r in rules:
         rules_by_src.setdefault(r.source_version, [])
         if r.target_version not in rules_by_src[r.source_version]:
@@ -127,7 +127,7 @@ async def reconcile_observations(
         transitions[r.source_version][r.target_version].append(r)
 
     # Convert all input observations to ReconciledObservation instances first (non-destructive copy)
-    reconciled: List[ReconciledObservation] = []
+    reconciled: list[ReconciledObservation] = []
     for obs in observations:
         # Copy attributes
         attrs = {
@@ -168,7 +168,7 @@ async def reconcile_observations(
     while changed:
         changed = False
         # Group observations by their current protocol_version_tag
-        by_ver: Dict[str, List[ReconciledObservation]] = {}
+        by_ver: dict[str, list[ReconciledObservation]] = {}
         for obs in reconciled:
             ver = obs.protocol_version_tag or "1.0"  # default fallback if unstamped
             by_ver.setdefault(ver, [])
@@ -199,10 +199,10 @@ async def reconcile_observations(
                     if (o.protocol_version_tag or "1.0") != src_ver
                 ]
 
-                migrated_step: List[ReconciledObservation] = []
+                migrated_step: list[ReconciledObservation] = []
 
                 # Group to_migrate by (subject_id, visit_id, domain) to support 'add' rules per group
-                groups: Dict[tuple, List[ReconciledObservation]] = {}
+                groups: dict[tuple, list[ReconciledObservation]] = {}
                 for o in to_migrate:
                     key = (o.subject_id, o.visit_id, o.domain, o.site_id)
                     groups.setdefault(key, [])

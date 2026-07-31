@@ -1,6 +1,6 @@
 import asyncio
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 
 import pytest
@@ -34,7 +34,7 @@ async def setup_test_db():
 @pytest.mark.asyncio
 async def test_determine_warning_window():
     """Test the threshold helper determine_warning_window on standard thresholds."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # 1. Past expiration
     assert determine_warning_window(now - timedelta(days=1), now) == "EXPIRED"
@@ -64,7 +64,7 @@ async def test_determine_warning_window():
 async def test_execute_expiration_scan_cycle_thresholds():
     """Test that execute_expiration_scan_cycle queries correctly, identifies states, and records alerts."""
     session_maker = db_manager.get_session_maker()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     async with session_maker() as session:
         # Create documents with various expiration dates
@@ -201,7 +201,7 @@ async def test_execute_expiration_scan_cycle_thresholds():
 async def test_scanner_idempotency_restart_and_rearming():
     """Test scanner idempotency across runs, restart behavior, and explicit re-arming."""
     session_maker = db_manager.get_session_maker()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     async with session_maker() as session:
         doc = TMFDocument(
@@ -326,7 +326,7 @@ async def test_scanner_shutdown_cancellation():
 async def test_audit_attribution():
     """Verify that alert-state rows created carry the explicit scanner service identity in created_by."""
     session_maker = db_manager.get_session_maker()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     async with session_maker() as session:
         doc = TMFDocument(
@@ -364,7 +364,7 @@ async def test_dispatch_successful_owner_routing():
     from unittest.mock import AsyncMock, MagicMock, patch
 
     session_maker = db_manager.get_session_maker()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # 1. Create a document with document_owner_id
     async with session_maker() as session:
@@ -463,7 +463,7 @@ async def test_dispatch_fallback_cra_routing():
     from unittest.mock import AsyncMock, MagicMock, patch
 
     session_maker = db_manager.get_session_maker()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # Create document without owner
     async with session_maker() as session:
@@ -503,7 +503,7 @@ async def test_dispatch_failure_and_retryability():
     from unittest.mock import AsyncMock, MagicMock, patch
 
     session_maker = db_manager.get_session_maker()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     async with session_maker() as session:
         doc = TMFDocument(
@@ -598,7 +598,7 @@ async def test_dispatch_idempotency_limit():
     from unittest.mock import AsyncMock, MagicMock, patch
 
     session_maker = db_manager.get_session_maker()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     async with session_maker() as session:
         doc = TMFDocument(

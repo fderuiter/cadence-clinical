@@ -65,9 +65,7 @@ async def test_eisf_to_etmf_e2e_boundaries() -> None:
         "content": "Dr. Smith CV content",
         "mime_type": "application/pdf",
         "correlation_key": "corr:study-100:site-boston-01:investigator-cv:smith",
-        "content_checksum": hashlib.sha256(
-            "Dr. Smith CV content".encode("utf-8")
-        ).hexdigest(),
+        "content_checksum": hashlib.sha256(b"Dr. Smith CV content").hexdigest(),
         "source_system": "eISF",
     }
 

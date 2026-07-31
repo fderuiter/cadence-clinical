@@ -6,12 +6,17 @@ Requirements: PRD-SYS-001
 import asyncio
 import os
 import time
-from datetime import datetime, timezone
-from typing import Any, Dict, List
+from datetime import UTC, datetime
+from typing import Any
 
 import httpx
 import pytest
 import pytest_asyncio
+from execution.safety_models import (
+    CausalityEnum,
+    SAECaseRecord,
+    SeriousnessCriteriaEnum,
+)
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
@@ -21,7 +26,6 @@ from apps.gateway.main import generate_signature
 from apps.safety.database import db_manager
 from apps.safety.main import app
 from apps.safety.models import Base, SafetyAuditLog
-from execution.safety_models import CausalityEnum, SAECaseRecord, SeriousnessCriteriaEnum
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -31,7 +35,9 @@ async def setup_db():
     Also configures GATEWAY_SECRET to prevent signature failures during tests.
     """
     original_secret = os.environ.get("GATEWAY_SECRET")
-    os.environ["GATEWAY_SECRET"] = "internal-gateway-secret-12345"
+    os.environ["GATEWAY_SECRET"] = (
+        "internal-gateway-secret-12345"  # pragma: allowlist secret
+    )
 
     db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)
     async with db_manager.engine.begin() as conn:
@@ -74,7 +80,7 @@ class MockAsyncClientForJobs:
     """Mock client simulating EDC dataset souting, MedDRA code resolution, and safety case persistence."""
 
     def __init__(self):
-        self.notification_calls: List[Dict[str, Any]] = []
+        self.notification_calls: list[dict[str, Any]] = []
 
     async def get(self, url: str, headers=None, params=None, timeout=10.0):
         # 1. Dataset-JSON AE Contract mock
@@ -322,7 +328,7 @@ def test_e2b_xml_generation_and_parser_roundtrip() -> None:
 
     Requirements: PRD-SYS-001
     """
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now_iso = datetime.now(UTC).isoformat()
     original_case = SAECaseRecord(
         case_id="sae_rt_01",
         study_id="study_rt_01",

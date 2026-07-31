@@ -5,8 +5,7 @@ Requirements: PRD-SYS-001
 
 import hashlib
 import uuid
-from datetime import datetime, timezone
-from typing import Dict
+from datetime import UTC, datetime
 
 from execution.eisf_models import (
     EISFDocumentRecord,
@@ -24,7 +23,7 @@ class EISFService:
 
     def __init__(self) -> None:
         """Initialize in-memory document metadata store."""
-        self._document_store: Dict[str, EISFDocumentRecord] = {}
+        self._document_store: dict[str, EISFDocumentRecord] = {}
 
     def upload_document(
         self,
@@ -54,7 +53,7 @@ class EISFService:
         """
         doc_id = f"doc_{uuid.uuid4().hex[:8]}"
         sha256_hash = hashlib.sha256(content_bytes).hexdigest()
-        now_iso = datetime.now(timezone.utc).isoformat()
+        now_iso = datetime.now(UTC).isoformat()
 
         record = EISFDocumentRecord(
             document_id=doc_id,
@@ -84,5 +83,5 @@ class EISFService:
         Returns:
             Watermarked document content bytes.
         """
-        header = f"% WATERMARK: {watermark_text} %\n".encode("utf-8")
+        header = f"% WATERMARK: {watermark_text} %\n".encode()
         return header + content_bytes

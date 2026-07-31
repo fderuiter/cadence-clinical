@@ -3,13 +3,12 @@
 Requirements: PRD-SYS-001
 """
 
-from enum import Enum
-from typing import Optional
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class LockScopeEnum(str, Enum):
+class LockScopeEnum(StrEnum):
     """Granular lock scope boundaries.
 
     Requirements: PRD-SYS-001
@@ -20,7 +19,7 @@ class LockScopeEnum(str, Enum):
     FIELD = "FIELD"
 
 
-class LockStatusEnum(str, Enum):
+class LockStatusEnum(StrEnum):
     """Data lock lifecycle status.
 
     Requirements: PRD-SYS-001
@@ -41,10 +40,10 @@ class DataLockRecord(BaseModel):
     study_id: str = Field(..., description="Target protocol study ID")
     subject_id: str = Field(..., description="Target clinical trial subject ID")
     form_id: str = Field(..., description="Target eCRF form submission ID")
-    item_group_id: Optional[str] = Field(
+    item_group_id: str | None = Field(
         None, description="Optional target item group code"
     )
-    field_name: Optional[str] = Field(
+    field_name: str | None = Field(
         None, description="Optional target field variable name"
     )
     scope: LockScopeEnum = Field(..., description="Lock scope: FORM, ITEM_GROUP, FIELD")

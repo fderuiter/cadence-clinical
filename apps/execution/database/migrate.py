@@ -452,7 +452,7 @@ async def upgrade_existing_tables(conn) -> None:
             ("created_at", "TIMESTAMP"),
             ("created_by", "VARCHAR(255)"),
             ("reason_for_change", "VARCHAR(1000)"),
-            ("version_index", "INTEGER NOT NULL DEFAULT 1"),
+            ("version_index", "INTEGER DEFAULT 1"),
         ]
         for col_name, col_type in new_ref_cols:
             if col_name not in ref_cols:

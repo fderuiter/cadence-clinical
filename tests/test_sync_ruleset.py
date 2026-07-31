@@ -287,9 +287,9 @@ def test_gxp_ruleset_file_structures():
     assert release_path.exists(), "release_branches.json does not exist"
     assert tags_path.exists(), "version_tags.json does not exist"
 
-    with open(release_path, "r") as f:
+    with open(release_path) as f:
         release_data = json.load(f)
-    with open(tags_path, "r") as f:
+    with open(tags_path) as f:
         tags_data = json.load(f)
 
     # 1. Assert correct target and enforcement

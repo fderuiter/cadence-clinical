@@ -706,8 +706,9 @@ def test_python_evaluator_indexed_repeat_and_arity_mismatch():
 # 8. RULE MODEL SERIALIZATION & DESERIALIZATION TESTS
 # =====================================================================
 
+
 def test_rule_models_serialization_deserialization():
-    from apps.designer.rules import SkipLogicRule, ConstraintRule, CrossFormCheckRule
+    from apps.designer.rules import ConstraintRule, CrossFormCheckRule, SkipLogicRule
 
     condition_node = {
         "type": "comparison",
@@ -762,8 +763,9 @@ def test_rule_models_serialization_deserialization():
 
 
 def test_malformed_rule_rejection():
-    from apps.designer.rules import ConstraintRule, CrossFormCheckRule
     from pydantic import ValidationError
+
+    from apps.designer.rules import ConstraintRule, CrossFormCheckRule
 
     # Missing query_message for ConstraintRule
     with pytest.raises(ValidationError):
@@ -790,6 +792,7 @@ def test_malformed_rule_rejection():
 # =====================================================================
 # 9. VALIDATE API ENDPOINT & MISSING HEADER REJECTION TESTS
 # =====================================================================
+
 
 @pytest.mark.asyncio
 async def test_validate_endpoint():

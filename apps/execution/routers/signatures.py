@@ -4,7 +4,7 @@ Requirements: PRD-SYS-001
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from execution.signature_transport_models import (
     BatchSignatureRequest,
@@ -54,7 +54,7 @@ async def batch_signature_sign_off_endpoint(
 
     sig_id = f"sig_{uuid.uuid4().hex[:8]}"
     audit_tx = f"tx_{uuid.uuid4().hex[:12]}"
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now_iso = datetime.now(UTC).isoformat()
 
     return BatchSignatureResponse(
         signature_id=sig_id,

@@ -14,7 +14,7 @@ Compliance:
 
 import os
 import sys
-from typing import Any, Dict, List
+from typing import Any
 
 # Set up python path for local imports and package paths to ensure absolute isolation
 app_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -68,7 +68,7 @@ def validate_schemas() -> bool:
               safe from collisions; False otherwise.
     """
     print("--- Starting Static Schema Compilation & Namespacing Checks ---")
-    raw_schemas: Dict[str, Any] = {}
+    raw_schemas: dict[str, Any] = {}
 
     # 1. Statically generate the OpenAPI schema from each application instance
     for service_name, config in SERVICES_CONFIG.items():
@@ -80,7 +80,7 @@ def validate_schemas() -> bool:
             return False
 
     # 2. Track schema definition occurrences across services to find shared models
-    schema_sources: Dict[str, List[str]] = {}
+    schema_sources: dict[str, list[str]] = {}
     for service_name, spec in raw_schemas.items():
         schemas = spec.get("components", {}).get("schemas", {})
         for schema_name in schemas:
@@ -100,8 +100,8 @@ def validate_schemas() -> bool:
         print("\nNo overlapping raw model names detected across services.")
 
     # 3. Simulate gateway aggregation and verify strict namespacing rules
-    merged_schemas: Dict[str, tuple[str, str]] = {}
-    errors: List[str] = []
+    merged_schemas: dict[str, tuple[str, str]] = {}
+    errors: list[str] = []
 
     for service_name, spec in raw_schemas.items():
         prefix = SERVICES_CONFIG[service_name]["prefix"]

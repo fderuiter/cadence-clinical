@@ -6,8 +6,8 @@ Requirements: PRD-SYS-001
 import base64
 import hashlib
 import json
-from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
@@ -44,8 +44,8 @@ class CryptographicSignatureBuilder:
         user_id: str,
         purpose: str,
         content_digest: str,
-        timestamp_utc: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        timestamp_utc: str | None = None,
+    ) -> dict[str, Any]:
         """Construct canonical 21 CFR Part 11 electronic signature payload.
 
         Args:
@@ -57,7 +57,7 @@ class CryptographicSignatureBuilder:
         Returns:
             Structured signature payload dictionary.
         """
-        now_iso = timestamp_utc or datetime.now(timezone.utc).isoformat()
+        now_iso = timestamp_utc or datetime.now(UTC).isoformat()
         return {
             "user_id": user_id,
             "purpose": purpose,
@@ -65,7 +65,7 @@ class CryptographicSignatureBuilder:
             "timestamp_utc": now_iso,
         }
 
-    def sign_payload_rsa(self, payload: Dict[str, Any], private_key_pem: bytes) -> str:
+    def sign_payload_rsa(self, payload: dict[str, Any], private_key_pem: bytes) -> str:
         """Sign electronic signature payload using RSA-SHA256 private key.
 
         Args:
@@ -88,7 +88,7 @@ class CryptographicSignatureBuilder:
         return base64.b64encode(signature_bytes).decode("utf-8")
 
     def verify_signature_rsa(
-        self, payload: Dict[str, Any], signature_base64: str, public_key_pem: bytes
+        self, payload: dict[str, Any], signature_base64: str, public_key_pem: bytes
     ) -> bool:
         """Verify validity of RSA-SHA256 digital signature against public key.
 

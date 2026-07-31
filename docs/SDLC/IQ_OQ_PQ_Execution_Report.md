@@ -11,6 +11,10 @@ Based on the executed automated verification suite, the platform meets all prede
 ### Validation Result Summary
 - **Total Automated Test Cases Run:** 1851
 - **Passed:** 1851 🟢
+- **Total Automated Test Cases Run:** 1853
+- **Passed:** 1853 🟢
+- **Total Automated Test Cases Run:** 1856
+- **Passed:** 1856 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -21,7 +25,7 @@ The Installation Qualification verifies that the software execution environment,
 
 ### 2.1 System Environment Metadata
 - **Operating System / Platform:** linux (containerized target specification)
-- **Python Version:** 3.12.13 (Docker execution environment baseline)
+- **Python Version:** 3.12.12 (Docker execution environment baseline)
 - **Database Provider (Execution Engine):** PostgreSQL / SQLite in-memory fallback
 - **Graph Database Provider (Designer Engine):** Neo4j (mocked in unit suite)
 - **Identity Management Gateway:** Keycloak OIDC Router
@@ -75,15 +79,12 @@ cyclonedx-python-lib     11.11.0
 defusedxml               0.7.1
 detect-secrets           1.5.0
 distlib                  0.4.3
-docraptor                3.1.0
 docxcompose              2.2.0
 docxtpl                  0.20.2
 ecdsa                    0.19.2
 et-xmlfile               2.0.0
 execnet                  2.1.2
 fastapi                  0.139.2
-fhir-core                1.1.9
-fhir-resources           8.3.0
 filelock                 3.32.0
 fonttools                4.63.0
 frozenlist               1.8.0
@@ -108,7 +109,6 @@ msgpack                  1.2.1
 multidict                6.7.1
 neo4j                    6.2.0
 nodeenv                  1.10.0
-numpy                    2.4.6
 numpy                    2.5.1
 openpyxl                 3.1.5
 packageurl-python        0.17.6
@@ -165,7 +165,6 @@ sqlalchemy               2.0.51
 sqlmodel                 0.0.39
 starlette                1.3.1
 stevedore                5.9.0
-stringcase               1.2.0
 text-unidecode           1.3
 tinycss2                 1.5.1
 tinyhtml5                2.1.0
@@ -175,7 +174,6 @@ typing-extensions        4.16.0
 typing-inspection        0.4.2
 tzdata                   2026.3
 urllib3                  2.7.0
-usdm                     0.66.0
 usdm                     0.67.0
 uvicorn                  0.51.0
 uvloop                   0.22.1
@@ -1113,6 +1111,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_lab_unit_conversion_crud_and_audit` | `tests.test_lab_master_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_absent_boundaries` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_age_boundaries` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_convert_lab_unit_db_and_fallback` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_critical_boundaries_and_exclusion` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_deterministic_ties` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_is_deleted_filtering` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1252,7 +1251,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_stem_word[vomiting-vomit]` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_token_cosine_similarity_empty` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_whodrug_matching_integration` | `tests.test_medical_coding_matcher` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_lab_reference_ranges_evolution` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_main_cli` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_new_tables_metadata_creation` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_placeholders` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_run_migrations_failure` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_run_migrations_real_sqlite` | `tests.test_migrate` | *Regression/Helper* | 🟢 PASSED | < 1s |

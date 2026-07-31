@@ -3,7 +3,7 @@
 Requirements: PRD-SYS-001
 """
 
-from typing import Any, Dict
+from typing import Any
 
 from cdisc.sentinel_models import ProtocolQualityScore
 from fastapi import APIRouter, Depends
@@ -27,7 +27,7 @@ router = APIRouter(prefix="/api/v1/designer/sentinel", tags=["QualitySentinel"])
     dependencies=[Depends(require_permission("study_design:read"))],
 )
 async def evaluate_protocol_quality_endpoint(
-    payload: Dict[str, Any],
+    payload: dict[str, Any],
     principal: Principal = Depends(get_principal),
     sentinel: ProtocolQualitySentinel = Depends(get_quality_sentinel),
 ) -> ProtocolQualityScore:

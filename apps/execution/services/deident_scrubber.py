@@ -7,7 +7,7 @@ import hashlib
 import hmac
 import re
 from datetime import timedelta
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from dateutil import parser as date_parser
 from sdtm.scrubber_models import DeidentConfig, DeidentSummary
@@ -119,7 +119,7 @@ class HIPAADataScrubber:
         Requirements: PRD-SYS-001
         """
         h = hmac.new(
-            self.salt, f"{study_id}:{subject_id}".encode("utf-8"), hashlib.sha256
+            self.salt, f"{study_id}:{subject_id}".encode(), hashlib.sha256
         ).hexdigest()
         return f"{study_id}-{h[:10].upper()}"
 
@@ -136,8 +136,8 @@ def scrub_free_text_pii(text: str) -> str:
 
 
 def scrub_dataset(
-    dataset_rows: List[Dict[str, Any]], config: DeidentConfig
-) -> Tuple[List[Dict[str, Any]], DeidentSummary]:
+    dataset_rows: list[dict[str, Any]], config: DeidentConfig
+) -> tuple[list[dict[str, Any]], DeidentSummary]:
     """Applies HIPAA de-identification and pseudonymization onto dataset rows.
 
     Requirements: PRD-SYS-001

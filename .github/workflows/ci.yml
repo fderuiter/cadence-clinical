@@ -56,7 +56,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Install dependencies
         run: uv sync --locked --all-extras
@@ -143,7 +143,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Install dependencies
         run: uv sync --locked --all-extras
@@ -255,7 +255,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Install dependencies
         run: uv sync --locked --all-extras
@@ -313,7 +313,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Install dependencies
         run: uv sync --locked --all-extras
@@ -386,7 +386,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Install dependencies
         run: uv sync --locked --all-extras
@@ -425,7 +425,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Install dependencies
         run: uv sync --locked --all-extras
@@ -531,7 +531,7 @@ jobs:
 
           SAFE=true
           while IFS= read -r file; do
-            if [[ "$file" == docs/* ]] || [[ "$file" == *.md ]] || [[ "$file" == tests/* ]] || [[ "$file" == *.sh ]] || [[ "$file" == scripts/* ]]; then
+            if [[ "$file" == docs/* ]] || [[ "$file" == *.md ]] || [[ "$file" == tests/* ]]; then
               echo "Safe file: $file"
             else
               echo "Unsafe file: $file"
@@ -597,7 +597,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Install dependencies
         run: uv sync --locked --all-extras

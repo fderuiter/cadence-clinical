@@ -1,13 +1,13 @@
 import contextlib
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from apps.execution.biostat.models import SUPPRecord
 from apps.execution.biostat.terminology import normalize_race, normalize_sex
 from apps.execution.demographics import decrypt_demographics as decrypt_demographics
 
 
-def calculate_age(rfstdtc: Optional[str], brthdtc: Optional[str]) -> Optional[int]:
+def calculate_age(rfstdtc: str | None, brthdtc: str | None) -> int | None:
     """Derive AGE from RFSTDTC and BRTHDTC where source precision supports the calculation.
 
     Requires full YYYY-MM-DD precision for both dates.
@@ -62,7 +62,7 @@ def get_demographics(subject: Any) -> dict:
     return {}
 
 
-def get_subject_rfstdtc(subj: Any, all_observations: List[Any]) -> Optional[str]:
+def get_subject_rfstdtc(subj: Any, all_observations: list[Any]) -> str | None:
     """Retrieves or derives the RFSTDTC for a subject."""
     sub_id = get_value(subj, "subject_id")
     if not sub_id:
@@ -107,9 +107,9 @@ def get_subject_rfstdtc(subj: Any, all_observations: List[Any]) -> Optional[str]
 
 
 def extract_dm(
-    subjects: List[Any],
-    observations: Optional[List[Any]] = None,
-) -> List[Dict[str, Any]]:
+    subjects: list[Any],
+    observations: list[Any] | None = None,
+) -> list[dict[str, Any]]:
     """Pure extractor for SDTM Demographics (DM) dataset from in-memory source models.
 
     Args:
@@ -122,7 +122,7 @@ def extract_dm(
     obs_list = observations or []
 
     # Pre-group observations by subject_id for fast lookup
-    obs_by_subject: Dict[str, List[Any]] = {}
+    obs_by_subject: dict[str, list[Any]] = {}
     for obs in obs_list:
         sub_id = get_value(obs, "subject_id")
         if sub_id:
@@ -299,9 +299,9 @@ def extract_dm(
 
 
 def extract_mh(
-    subjects: List[Any],
-    observations: List[Any],
-) -> Tuple[List[Dict[str, Any]], List[SUPPRecord]]:
+    subjects: list[Any],
+    observations: list[Any],
+) -> tuple[list[dict[str, Any]], list[SUPPRecord]]:
     """Pure extractor for SDTM Medical History (MH) dataset and SUPPMH records.
 
     Args:
@@ -324,14 +324,14 @@ def extract_mh(
     mh_obs = [o for o in observations if str(get_value(o, "domain")).upper() == "MH"]
 
     # 3. Group MH observations by subject_id
-    obs_by_subject: Dict[str, List[Any]] = {}
+    obs_by_subject: dict[str, list[Any]] = {}
     for o in mh_obs:
         sub_id = get_value(o, "subject_id")
         if sub_id:
             obs_by_subject.setdefault(sub_id, []).append(o)
 
-    mh_records: List[Dict[str, Any]] = []
-    supp_records: List[SUPPRecord] = []
+    mh_records: list[dict[str, Any]] = []
+    supp_records: list[SUPPRecord] = []
 
     # 4. For each subject, process and sequence their MH events
     for sub_id, sub_obs in obs_by_subject.items():
@@ -356,7 +356,7 @@ def extract_mh(
 
         # Group observations by page_id (or observation_date if page_id is missing/None)
         # to identify a single medical history record/form submission
-        groups: Dict[str, List[Any]] = {}
+        groups: dict[str, list[Any]] = {}
         for o in sub_obs:
             page_id = get_value(o, "page_id")
             if page_id:
@@ -482,9 +482,9 @@ def extract_mh(
 
 
 def extract_ae(
-    subjects: List[Any],
-    observations: List[Any],
-) -> Tuple[List[Dict[str, Any]], List[SUPPRecord]]:
+    subjects: list[Any],
+    observations: list[Any],
+) -> tuple[list[dict[str, Any]], list[SUPPRecord]]:
     """Pure extractor for SDTM Adverse Events (AE) dataset and SUPPAE records.
 
     Args:
@@ -509,14 +509,14 @@ def extract_ae(
     ae_obs = [o for o in observations if str(get_value(o, "domain")).upper() == "AE"]
 
     # 3. Group AE observations by subject_id
-    obs_by_subject: Dict[str, List[Any]] = {}
+    obs_by_subject: dict[str, list[Any]] = {}
     for o in ae_obs:
         sub_id = get_value(o, "subject_id")
         if sub_id:
             obs_by_subject.setdefault(sub_id, []).append(o)
 
-    ae_records: List[Dict[str, Any]] = []
-    supp_records: List[SUPPRecord] = []
+    ae_records: list[dict[str, Any]] = []
+    supp_records: list[SUPPRecord] = []
 
     # 4. For each subject, process and sequence their AE events
     for sub_id, sub_obs in obs_by_subject.items():
@@ -541,7 +541,7 @@ def extract_ae(
 
         # Group observations by page_id (or observation_date if page_id is missing/None)
         # to identify a single adverse event record/form submission
-        groups: Dict[str, List[Any]] = {}
+        groups: dict[str, list[Any]] = {}
         for o in sub_obs:
             page_id = get_value(o, "page_id")
             if page_id:
@@ -709,9 +709,9 @@ def extract_ae(
 
 
 def extract_vs(
-    subjects: List[Any],
-    observations: List[Any],
-) -> Tuple[List[Dict[str, Any]], List[SUPPRecord]]:
+    subjects: list[Any],
+    observations: list[Any],
+) -> tuple[list[dict[str, Any]], list[SUPPRecord]]:
     """Pure extractor for SDTM Vital Signs (VS) dataset and SUPPVS records.
 
     Args:
@@ -734,14 +734,14 @@ def extract_vs(
     vs_obs = [o for o in observations if str(get_value(o, "domain")).upper() == "VS"]
 
     # 3. Group VS observations by subject_id
-    obs_by_subject: Dict[str, List[Any]] = {}
+    obs_by_subject: dict[str, list[Any]] = {}
     for o in vs_obs:
         sub_id = get_value(o, "subject_id")
         if sub_id:
             obs_by_subject.setdefault(sub_id, []).append(o)
 
-    vs_records: List[Dict[str, Any]] = []
-    supp_records: List[SUPPRecord] = []
+    vs_records: list[dict[str, Any]] = []
+    supp_records: list[SUPPRecord] = []
 
     # 4. For each subject, process and sequence their VS records
     for sub_id, sub_obs in obs_by_subject.items():
@@ -769,7 +769,7 @@ def extract_vs(
 
         # Group observations by page_id (or observation_date + visit_id if page_id is missing/None)
         # to identify a single vital sign assessment form session
-        groups: Dict[str, List[Any]] = {}
+        groups: dict[str, list[Any]] = {}
         for o in sub_obs:
             page_id = get_value(o, "page_id")
             if page_id:
@@ -873,7 +873,7 @@ def extract_vs(
         )
 
         # 6. Apply baseline vital-sign logic to produce VSBLFL according to the blueprint rule
-        by_testcd: Dict[str, List[Dict[str, Any]]] = {}
+        by_testcd: dict[str, list[dict[str, Any]]] = {}
         for r in subject_vs_records:
             by_testcd.setdefault(r["VSTESTCD"], []).append(r)
 
@@ -943,9 +943,9 @@ def extract_vs(
 
 
 def extract_lb(
-    subjects: List[Any],
-    observations: List[Any],
-) -> Tuple[List[Dict[str, Any]], List[SUPPRecord]]:
+    subjects: list[Any],
+    observations: list[Any],
+) -> tuple[list[dict[str, Any]], list[SUPPRecord]]:
     """Pure extractor for SDTM Laboratory Findings (LB) dataset and SUPPLB records.
 
     Args:
@@ -968,14 +968,14 @@ def extract_lb(
     lb_obs = [o for o in observations if str(get_value(o, "domain")).upper() == "LB"]
 
     # 3. Group LB observations by subject_id
-    obs_by_subject: Dict[str, List[Any]] = {}
+    obs_by_subject: dict[str, list[Any]] = {}
     for o in lb_obs:
         sub_id = get_value(o, "subject_id")
         if sub_id:
             obs_by_subject.setdefault(sub_id, []).append(o)
 
-    lb_records: List[Dict[str, Any]] = []
-    supp_records: List[SUPPRecord] = []
+    lb_records: list[dict[str, Any]] = []
+    supp_records: list[SUPPRecord] = []
 
     # 4. For each subject, process and sequence their LB records
     for sub_id, sub_obs in obs_by_subject.items():
@@ -1000,7 +1000,7 @@ def extract_lb(
 
         # Group observations by page_id (or observation_date + visit_id if page_id is missing/None)
         # to identify a single lab panel/form session
-        groups: Dict[str, List[Any]] = {}
+        groups: dict[str, list[Any]] = {}
         for o in sub_obs:
             page_id = get_value(o, "page_id")
             if page_id:

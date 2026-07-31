@@ -4,7 +4,7 @@ Requirements: PRD-SYS-001
 """
 
 import re
-from typing import Any, Dict, List
+from typing import Any
 
 import packages  # noqa: F401
 
@@ -24,7 +24,7 @@ class PHINameEntityScrubber:
         "DOB": r"\bDOB[:#\s]*\d{2}/\d{2}/\d{4}\b|\bDOB[:#\s]*\d{4}-\d{2}-\d{2}\b",
     }
 
-    def detect_phi(self, text: str) -> List[Dict[str, Any]]:
+    def detect_phi(self, text: str) -> list[dict[str, Any]]:
         """Detect PHI entities in input text.
 
         Args:
@@ -33,7 +33,7 @@ class PHINameEntityScrubber:
         Returns:
             List of detected PHI entity dicts containing type, text, start, and end indices.
         """
-        entities: List[Dict[str, Any]] = []
+        entities: list[dict[str, Any]] = []
 
         for entity_type, pattern in self._PATTERNS.items():
             for match in re.finditer(pattern, text, re.IGNORECASE):

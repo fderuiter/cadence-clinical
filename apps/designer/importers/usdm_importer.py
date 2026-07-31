@@ -7,7 +7,7 @@ Requirements: PRD-SYS-001
 """
 
 import logging
-from typing import Any, Dict, List, Union
+from typing import Any
 
 from cdisc.usdm_models import USDMStudy
 from pydantic import BaseModel, Field
@@ -23,7 +23,7 @@ class USDMImportResult(BaseModel):
     study_id: str
     nodes_created: int = 0
     relationships_created: int = 0
-    validation_warnings: List[str] = Field(default_factory=list)
+    validation_warnings: list[str] = Field(default_factory=list)
 
 
 class USDMImporter:
@@ -41,7 +41,7 @@ class USDMImporter:
         self.driver = neo4j_driver
 
     async def import_usdm(
-        self, payload: Union[Dict[str, Any], USDMStudy]
+        self, payload: dict[str, Any] | USDMStudy
     ) -> USDMImportResult:
         """Parse USDM payload and import graph nodes and relationships.
 
@@ -54,7 +54,7 @@ class USDMImporter:
         Raises:
             ValueError: If payload cannot be parsed as valid USDM study.
         """
-        warnings: List[str] = []
+        warnings: list[str] = []
 
         if isinstance(payload, dict):
             try:

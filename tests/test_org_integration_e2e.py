@@ -6,7 +6,7 @@ API Gateway, and eISF/eTMF archival handoff workflows.
 import json
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import httpx
@@ -320,7 +320,7 @@ async def test_doa_signoff_automatic_archival_handoff(
         "site_id": "site_boston_01",
         "study_id": "study_alpha",
         "duties": ["Informed Consent", "CRF Data Entry"],
-        "start_date": datetime.now(timezone.utc).isoformat(),
+        "start_date": datetime.now(UTC).isoformat(),
         "reason_for_change": "Onboarding coordinator",
     }
 
@@ -523,7 +523,7 @@ def test_doa_signoff_tampered_payload_rejected() -> None:
         "site_id": "site_boston_01",
         "study_id": "study_alpha",
         "duties": ["Informed Consent", "CRF Data Entry"],
-        "start_date": datetime.now(timezone.utc).isoformat(),
+        "start_date": datetime.now(UTC).isoformat(),
         "reason_for_change": "Onboarding coordinator",
     }
     grant_resp = org_client.post(

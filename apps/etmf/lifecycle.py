@@ -4,8 +4,6 @@ Defines allowed transitions, role permissions, and a helper to execute status ch
 with immutable audit trail logging in compliance with 21 CFR Part 11.
 """
 
-from typing import Dict, Set
-
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,7 +11,7 @@ from apps.etmf.models import DocumentQCTransition, DocumentStatus, TMFDocument
 from packages.security.rbac import Principal, has_permission, normalize_role
 
 # Defined allowed forward and rejection transitions
-ALLOWED_TRANSITIONS: Dict[str, Set[str]] = {
+ALLOWED_TRANSITIONS: dict[str, set[str]] = {
     DocumentStatus.DRAFT: {DocumentStatus.TECHNICAL_QC},
     DocumentStatus.TECHNICAL_QC: {DocumentStatus.CLINICAL_QC, DocumentStatus.REJECTED},
     DocumentStatus.CLINICAL_QC: {

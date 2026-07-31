@@ -7,7 +7,7 @@ eligibility criteria.
 Requirements: PRD-SYS-001
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -19,7 +19,7 @@ class Code(BaseModel):
 
     code: str
     code_system: str = Field(alias="codeSystem")
-    code_system_version: Optional[str] = Field(default=None, alias="codeSystemVersion")
+    code_system_version: str | None = Field(default=None, alias="codeSystemVersion")
     decode: str
 
 
@@ -29,9 +29,9 @@ class SyntaxTemplate(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="ignore")
 
     id: str
-    name: Optional[str] = None
+    name: str | None = None
     text: str
-    notes: List[str] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
 
 
 class EligibilityCriterion(BaseModel):
@@ -44,9 +44,9 @@ class EligibilityCriterion(BaseModel):
     criterion_type: str = Field(
         alias="criterionType", description="Inclusion or Exclusion"
     )
-    category: Optional[str] = None
-    text: Optional[str] = None
-    template: Optional[SyntaxTemplate] = None
+    category: str | None = None
+    text: str | None = None
+    template: SyntaxTemplate | None = None
 
 
 class Activity(BaseModel):
@@ -56,8 +56,8 @@ class Activity(BaseModel):
 
     id: str
     name: str
-    description: Optional[str] = None
-    defined_procedures: List[Dict[str, Any]] = Field(
+    description: str | None = None
+    defined_procedures: list[dict[str, Any]] = Field(
         default_factory=list, alias="definedProcedures"
     )
 
@@ -70,8 +70,8 @@ class Encounter(BaseModel):
     id: str
     name: str
     encounter_type: str = Field(default="Visit", alias="encounterType")
-    start_date: Optional[str] = Field(default=None, alias="startDate")
-    end_date: Optional[str] = Field(default=None, alias="endDate")
+    start_date: str | None = Field(default=None, alias="startDate")
+    end_date: str | None = Field(default=None, alias="endDate")
 
 
 class StudyArm(BaseModel):
@@ -82,7 +82,7 @@ class StudyArm(BaseModel):
     id: str
     name: str
     arm_type: str = Field(default="Treatment", alias="armType")
-    description: Optional[str] = None
+    description: str | None = None
 
 
 class StudyEpoch(BaseModel):
@@ -103,12 +103,12 @@ class StudyDesign(BaseModel):
 
     id: str
     name: str
-    design_type: Optional[str] = Field(default=None, alias="designType")
-    arms: List[StudyArm] = Field(default_factory=list)
-    epochs: List[StudyEpoch] = Field(default_factory=list)
-    encounters: List[Encounter] = Field(default_factory=list)
-    activities: List[Activity] = Field(default_factory=list)
-    eligibility_criteria: List[EligibilityCriterion] = Field(
+    design_type: str | None = Field(default=None, alias="designType")
+    arms: list[StudyArm] = Field(default_factory=list)
+    epochs: list[StudyEpoch] = Field(default_factory=list)
+    encounters: list[Encounter] = Field(default_factory=list)
+    activities: list[Activity] = Field(default_factory=list)
+    eligibility_criteria: list[EligibilityCriterion] = Field(
         default_factory=list, alias="eligibilityCriteria"
     )
 
@@ -122,4 +122,4 @@ class USDMStudy(BaseModel):
     name: str
     protocol_title: str = Field(alias="protocolTitle")
     usdm_version: str = Field(default="3.0", alias="usdmVersion")
-    study_designs: List[StudyDesign] = Field(default_factory=list, alias="studyDesigns")
+    study_designs: list[StudyDesign] = Field(default_factory=list, alias="studyDesigns")

@@ -3,7 +3,7 @@
 Requirements: PRD-SYS-001
 """
 
-from typing import Any, Dict
+from typing import Any
 
 from cdisc.cascade_models import CascadeSummaryReport
 from fastapi import APIRouter, Depends
@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/v1/designer/cascade", tags=["ArtifactCascade"])
 
 @router.post("/propagate", response_model=CascadeSummaryReport)
 async def propagate_cascade_endpoint(
-    payload: Dict[str, Any],
+    payload: dict[str, Any],
     amendment_version: int = 1,
     current_user: dict = Depends(get_current_user),
     engine: ArtifactCascadeEngine = Depends(get_cascade_engine),

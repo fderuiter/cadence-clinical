@@ -1,7 +1,7 @@
 import os
 import threading
 import time
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 
 class ApprovedTranslationCache:
@@ -10,9 +10,9 @@ class ApprovedTranslationCache:
     Supports TTL, cache hits, invalidation, and stale-on-error fallback.
     """
 
-    def __init__(self, max_size: int = 1000, ttl: Optional[float] = None) -> None:
+    def __init__(self, max_size: int = 1000, ttl: float | None = None) -> None:
         self.max_size = max_size
-        self._cache: Dict[Tuple[str, int, str], Tuple[Dict[str, Any], float]] = {}
+        self._cache: dict[tuple[str, int, str], tuple[dict[str, Any], float]] = {}
         self._lock = threading.Lock()
 
         if ttl is not None:
@@ -29,7 +29,7 @@ class ApprovedTranslationCache:
 
     def get_cached(
         self, template_id: str, version_index: int, language_code: str
-    ) -> Tuple[Optional[Dict[str, Any]], bool]:
+    ) -> tuple[dict[str, Any] | None, bool]:
         """
         Retrieves the item from cache. Returns (data, is_expired).
         """
@@ -48,7 +48,7 @@ class ApprovedTranslationCache:
         template_id: str,
         version_index: int,
         language_code: str,
-        data: Dict[str, Any],
+        data: dict[str, Any],
     ) -> None:
         key = (template_id, version_index, language_code)
         with self._lock:
@@ -76,7 +76,7 @@ class ApprovedTranslationCache:
         with self._lock:
             self._cache.clear()
 
-    def get_status(self) -> Dict[str, int]:
+    def get_status(self) -> dict[str, int]:
         with self._lock:
             return {"size": len(self._cache), "max_size": self.max_size}
 
@@ -87,7 +87,7 @@ async def get_approved_template_translation(
     version_index: int,
     language_code: str,
     fetch_db_fn,  # An async function: fetch_db_fn(template_id, version_index, language_code) -> Dict[str, Any]
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Read-through cache mechanism that implements stale-on-error fallback.
     """

@@ -8,8 +8,7 @@ comply with FDA 21 CFR Part 11 / GxP audit guidelines.
 """
 
 import re
-from datetime import datetime, timezone
-from typing import Optional, Union
+from datetime import UTC, datetime
 
 from datetime_helpers import AwareDatetime
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -35,7 +34,7 @@ DTC_REGEX = re.compile(
 )
 
 
-def validate_dtc_format(val: Optional[str]) -> Optional[str]:
+def validate_dtc_format(val: str | None) -> str | None:
     """
     Validates that a string complies with CDISC DTC or ISO 8601 date-time format.
     Allows partial dates (YYYY, YYYY-MM, YYYY-MM-DD) and full ISO 8601 timestamps.
@@ -56,7 +55,7 @@ class AuditableModel(BaseModel):
     """
 
     created_at: AwareDatetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="Chronological UTC timestamp when the record was created.",
     )
     created_by: str = Field(
@@ -103,16 +102,16 @@ class DM(AuditableModel):
     STUDYID: str = Field(..., description="Study Identifier (Required)")
     DOMAIN: str = Field("DM", description="Domain Abbreviation (Required)")
     USUBJID: str = Field(..., description="Unique Subject Identifier (Required)")
-    SUBJID: Optional[str] = Field(None, description="Subject Identifier (Expected)")
-    RFSTDTC: Optional[str] = Field(
+    SUBJID: str | None = Field(None, description="Subject Identifier (Expected)")
+    RFSTDTC: str | None = Field(
         None, description="Subject Reference Start Date/Time (Expected)"
     )
-    RFENDTC: Optional[str] = Field(
+    RFENDTC: str | None = Field(
         None, description="Subject Reference End Date/Time (Expected)"
     )
-    BRTHDTC: Optional[str] = Field(None, description="Date of Birth (Permissible)")
-    AGE: Optional[Union[int, float]] = Field(None, description="Age (Expected)")
-    AGEU: Optional[str] = Field(None, description="Age Units (Expected)")
+    BRTHDTC: str | None = Field(None, description="Date of Birth (Permissible)")
+    AGE: int | float | None = Field(None, description="Age (Expected)")
+    AGEU: str | None = Field(None, description="Age Units (Expected)")
     SEX: Sex = Field(..., description="Sex (Required, normalizes to 'M', 'F', 'U')")
     RACE: Race = Field(..., description="Race (Required, normalizes to CDISC RACE CT)")
     ARM: str = Field(..., description="Description of Planned Arm (Required)")
@@ -126,19 +125,19 @@ class DM(AuditableModel):
 
     @field_validator("RFSTDTC", "RFENDTC", "BRTHDTC")
     @classmethod
-    def validate_dates(cls, v: Optional[str]) -> Optional[str]:
+    def validate_dates(cls, v: str | None) -> str | None:
         return validate_dtc_format(v)
 
     @field_validator("SEX", mode="before")
     @classmethod
-    def validate_sex(cls, v: Optional[str]) -> Optional[str]:
+    def validate_sex(cls, v: str | None) -> str | None:
         if v is None:
             return None
         return normalize_sex(v)
 
     @field_validator("RACE", mode="before")
     @classmethod
-    def validate_race(cls, v: Optional[Union[str, list]]) -> Optional[str]:
+    def validate_race(cls, v: str | list | None) -> str | None:
         if v is None:
             return None
         return normalize_race(v)
@@ -156,26 +155,26 @@ class AE(AuditableModel):
     AETERM: str = Field(
         ..., description="Reported Term for the Adverse Event (Required)"
     )
-    AELOC: Optional[str] = Field(None, description="Anatomical Location (Permissible)")
-    AELDTC: Optional[str] = Field(
+    AELOC: str | None = Field(None, description="Anatomical Location (Permissible)")
+    AELDTC: str | None = Field(
         None, description="Date/Time of Local Adverse Event Onset (Permissible)"
     )
-    AESTDTC: Optional[str] = Field(
+    AESTDTC: str | None = Field(
         None, description="Start Date/Time of Adverse Event (Expected)"
     )
-    AEENDTC: Optional[str] = Field(
+    AEENDTC: str | None = Field(
         None, description="End Date/Time of Adverse Event (Expected)"
     )
-    AESEV: Optional[AESeverity] = Field(
+    AESEV: AESeverity | None = Field(
         None, description="Severity/Intensity (Permissible)"
     )
     AESER: AESeriousness = Field(
         ..., description="Serious Adverse Event Flag (Required)"
     )
-    AEREL: Optional[AERelationship] = Field(
+    AEREL: AERelationship | None = Field(
         None, description="Causality / Relationship to treatment (Permissible)"
     )
-    AEOUT: Optional[AEOutcome] = Field(None, description="Outcome (Permissible)")
+    AEOUT: AEOutcome | None = Field(None, description="Outcome (Permissible)")
 
     @field_validator("STUDYID", "DOMAIN", "USUBJID", "AETERM")
     @classmethod
@@ -193,19 +192,19 @@ class AE(AuditableModel):
 
     @field_validator("AELDTC", "AESTDTC", "AEENDTC")
     @classmethod
-    def validate_dates(cls, v: Optional[str]) -> Optional[str]:
+    def validate_dates(cls, v: str | None) -> str | None:
         return validate_dtc_format(v)
 
     @field_validator("AESEV", mode="before")
     @classmethod
-    def validate_severity(cls, v: Optional[str]) -> Optional[str]:
+    def validate_severity(cls, v: str | None) -> str | None:
         if v is None:
             return None
         return normalize_severity(v)
 
     @field_validator("AESER", mode="before")
     @classmethod
-    def validate_seriousness(cls, v: Optional[Union[str, bool]]) -> Optional[str]:
+    def validate_seriousness(cls, v: str | bool | None) -> str | None:
         if v is None:
             return None
         return normalize_seriousness(v)
@@ -235,24 +234,22 @@ class VS(AuditableModel):
     VSSEQ: int = Field(..., description="Sequence Number (Required)")
     VSTESTCD: str = Field(..., description="Vital Signs Test Short Code (Required)")
     VSTEST: str = Field(..., description="Vital Signs Test Name (Required)")
-    VSORRES: Optional[Union[int, float]] = Field(
-        None, description="Original Result (Expected)"
-    )
-    VSORRESU: Optional[str] = Field(None, description="Original Result Unit (Expected)")
-    VSSTRESC: Optional[str] = Field(
+    VSORRES: int | float | None = Field(None, description="Original Result (Expected)")
+    VSORRESU: str | None = Field(None, description="Original Result Unit (Expected)")
+    VSSTRESC: str | None = Field(
         None, description="Standardized Result in Character Format (Expected)"
     )
-    VSSTRESN: Optional[float] = Field(
+    VSSTRESN: float | None = Field(
         None, description="Standardized Result in Numeric Format (Expected)"
     )
-    VSSTRESU: Optional[str] = Field(
+    VSSTRESU: str | None = Field(
         None, description="Standardized Result Unit (Expected)"
     )
-    VSPOS: Optional[str] = Field(None, description="Subject Position (Permissible)")
-    VSDTC: Optional[str] = Field(
+    VSPOS: str | None = Field(None, description="Subject Position (Permissible)")
+    VSDTC: str | None = Field(
         None, description="Date/Time of Vital Signs Measurement (Expected)"
     )
-    VSBLFL: Optional[str] = Field(None, description="Baseline Flag (Permissible)")
+    VSBLFL: str | None = Field(None, description="Baseline Flag (Permissible)")
 
     @field_validator("STUDYID", "DOMAIN", "USUBJID", "VSTESTCD", "VSTEST")
     @classmethod
@@ -270,7 +267,7 @@ class VS(AuditableModel):
 
     @field_validator("VSDTC")
     @classmethod
-    def validate_dates(cls, v: Optional[str]) -> Optional[str]:
+    def validate_dates(cls, v: str | None) -> str | None:
         return validate_dtc_format(v)
 
 
@@ -285,24 +282,24 @@ class LB(AuditableModel):
     LBSEQ: int = Field(..., description="Sequence Number (Required)")
     LBTESTCD: str = Field(..., description="Lab Test Short Code (Required)")
     LBTEST: str = Field(..., description="Lab Test Name (Required)")
-    LBORRES: Optional[str] = Field(None, description="Original Result (Expected)")
-    LBORRESU: Optional[str] = Field(None, description="Original Result Unit (Expected)")
-    LBSTRESC: Optional[str] = Field(
+    LBORRES: str | None = Field(None, description="Original Result (Expected)")
+    LBORRESU: str | None = Field(None, description="Original Result Unit (Expected)")
+    LBSTRESC: str | None = Field(
         None, description="Standardized Result in Character Format (Expected)"
     )
-    LBSTRESN: Optional[float] = Field(
+    LBSTRESN: float | None = Field(
         None, description="Standardized Result in Numeric Format (Expected)"
     )
-    LBSTRESU: Optional[str] = Field(
+    LBSTRESU: str | None = Field(
         None, description="Standardized Result Unit (Expected)"
     )
-    LBNRIND: Optional[str] = Field(
+    LBNRIND: str | None = Field(
         None, description="Normal Range Reference Indicator (Permissible)"
     )
-    LBDTC: Optional[str] = Field(
+    LBDTC: str | None = Field(
         None, description="Date/Time of Specimen Collection (Expected)"
     )
-    LBLOINC: Optional[str] = Field(None, description="LOINC Code (Permissible)")
+    LBLOINC: str | None = Field(None, description="LOINC Code (Permissible)")
 
     @field_validator("STUDYID", "DOMAIN", "USUBJID", "LBTESTCD", "LBTEST")
     @classmethod
@@ -320,7 +317,7 @@ class LB(AuditableModel):
 
     @field_validator("LBDTC")
     @classmethod
-    def validate_dates(cls, v: Optional[str]) -> Optional[str]:
+    def validate_dates(cls, v: str | None) -> str | None:
         return validate_dtc_format(v)
 
 
@@ -334,22 +331,20 @@ class CM(AuditableModel):
     USUBJID: str = Field(..., description="Unique Subject Identifier (Required)")
     CMSEQ: int = Field(..., description="Sequence Number (Required)")
     CMTRT: str = Field(..., description="Reported Name of Medication (Required)")
-    CMDECOD: Optional[str] = Field(
+    CMDECOD: str | None = Field(
         None, description="Standardized Medication Name (Expected)"
     )
-    CMCLAS: Optional[str] = Field(None, description="Medication Class (Permissible)")
-    CMDOSE: Optional[float] = Field(
-        None, description="Dose per Administration (Expected)"
-    )
-    CMDOSEU: Optional[str] = Field(None, description="Dose Units (Expected)")
-    CMDOSFRQ: Optional[str] = Field(None, description="Dose Frequency (Expected)")
-    CMROUTE: Optional[str] = Field(
+    CMCLAS: str | None = Field(None, description="Medication Class (Permissible)")
+    CMDOSE: float | None = Field(None, description="Dose per Administration (Expected)")
+    CMDOSEU: str | None = Field(None, description="Dose Units (Expected)")
+    CMDOSFRQ: str | None = Field(None, description="Dose Frequency (Expected)")
+    CMROUTE: str | None = Field(
         None, description="Route of Administration (Permissible)"
     )
-    CMSTDTC: Optional[str] = Field(
+    CMSTDTC: str | None = Field(
         None, description="Start Date/Time of Medication (Expected)"
     )
-    CMENDTC: Optional[str] = Field(
+    CMENDTC: str | None = Field(
         None, description="End Date/Time of Medication (Expected)"
     )
 
@@ -369,7 +364,7 @@ class CM(AuditableModel):
 
     @field_validator("CMSTDTC", "CMENDTC")
     @classmethod
-    def validate_dates(cls, v: Optional[str]) -> Optional[str]:
+    def validate_dates(cls, v: str | None) -> str | None:
         return validate_dtc_format(v)
 
     @model_validator(mode="after")
@@ -394,14 +389,14 @@ class SUPPQUAL(AuditableModel):
     STUDYID: str = Field(..., description="Study Identifier (Required)")
     RDOMAIN: str = Field(..., description="Related Domain Abbreviation (Required)")
     USUBJID: str = Field(..., description="Unique Subject Identifier (Required)")
-    IDVAR: Optional[str] = Field("", description="Identifying Variable (Expected)")
-    IDVARVAL: Optional[str] = Field(
+    IDVAR: str | None = Field("", description="Identifying Variable (Expected)")
+    IDVARVAL: str | None = Field(
         "", description="Identifying Variable Value (Expected)"
     )
     QNAM: str = Field(..., description="Qualifier Variable Name (Required)")
     QLABEL: str = Field(..., description="Qualifier Variable Label (Required)")
     QVAL: str = Field(..., description="Qualifier Value (Required)")
-    QEVAL: Optional[str] = Field("", description="Qualifier Evaluator (Expected)")
+    QEVAL: str | None = Field("", description="Qualifier Evaluator (Expected)")
 
     @field_validator("STUDYID", "RDOMAIN", "USUBJID", "QNAM", "QLABEL", "QVAL")
     @classmethod

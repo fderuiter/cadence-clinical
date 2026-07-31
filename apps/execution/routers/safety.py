@@ -4,8 +4,8 @@ Requirements: PRD-SYS-001
 """
 
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Dict
+from datetime import UTC, datetime
+from typing import Any
 
 from execution.safety_transport_models import (
     SAEReconcileRequest,
@@ -38,7 +38,7 @@ async def dispatch_safety_report_endpoint(
         )
 
     dispatch_id = f"dsp_{uuid.uuid4().hex[:8]}"
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now_iso = datetime.now(UTC).isoformat()
 
     return SafetyDispatchResponse(
         dispatch_id=dispatch_id,
@@ -53,7 +53,7 @@ async def dispatch_safety_report_endpoint(
 async def reconcile_sae_cases_endpoint(
     payload: SAEReconcileRequest,
     current_user: dict = Depends(get_current_user),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Execute automated EDC AE to Safety ICSR case reconciliation.
 
     Requirements: PRD-SYS-001

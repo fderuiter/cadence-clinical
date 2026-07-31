@@ -5,8 +5,7 @@ Requirements: PRD-SYS-001 | GxP 21 CFR Part 11 Regulated
 
 import hashlib
 import importlib
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -76,7 +75,7 @@ async def approve_delegation_with_esignature(
     delegation_id: str,
     pi_user_id: str,
     password: str,
-    totp_code: Optional[str] = None,
+    totp_code: str | None = None,
 ) -> DOADelegationRecord:
     """Approve a pending task delegation with PI 21 CFR Part 11 eSignature."""
     # 1. Re-authenticate PI credentials
@@ -101,7 +100,7 @@ async def approve_delegation_with_esignature(
         raise ValueError(f"Delegation record {delegation_id} not found.")
 
     # 3. Embed Part 11 metadata and transition status
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     verification_payload = f"{delegation_id}:{pi_user_id}:{now.isoformat()}"
     verification_hash = hashlib.sha256(verification_payload.encode("utf-8")).hexdigest()
 
@@ -189,7 +188,7 @@ class DOAManagerService:
         delegation_id: str,
         pi_user_id: str,
         password: str,
-        totp_code: Optional[str] = None,
+        totp_code: str | None = None,
     ) -> DOADelegationRecord:
         """Approve a delegation with eSignature using this service's session."""
         return await approve_delegation_with_esignature(
@@ -220,7 +219,7 @@ class DOAManagerService:
         if not record:
             raise ValueError(f"Delegation record {delegation_id} not found.")
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         record.status = "ACTIVE"
         record.pi_approved_at = now
         record.pi_signature_hash = signature_hash

@@ -3,7 +3,6 @@ import concurrent.futures
 import logging
 import os
 import time
-from typing import Dict, Optional
 
 import httpx
 
@@ -54,11 +53,11 @@ class GatewayBaseClient:
         user_id: str,
         roles: str,
         change_reason: str,
-        site_id: Optional[str] = None,
-        sponsor_id: Optional[str] = None,
+        site_id: str | None = None,
+        sponsor_id: str | None = None,
         unblinded_access: bool = False,
-        tenant_id: Optional[str] = None,
-    ) -> Dict[str, str]:
+        tenant_id: str | None = None,
+    ) -> dict[str, str]:
         """
         Builds standard gateway headers with an HMAC-SHA256 signature V2.
         """
@@ -91,11 +90,11 @@ class GatewayBaseClient:
         user_id: str,
         roles: str,
         change_reason: str,
-        site_id: Optional[str] = None,
-        sponsor_id: Optional[str] = None,
+        site_id: str | None = None,
+        sponsor_id: str | None = None,
         unblinded_access: bool = False,
-        tenant_id: Optional[str] = None,
-        headers: Optional[Dict[str, str]] = None,
+        tenant_id: str | None = None,
+        headers: dict[str, str] | None = None,
         **kwargs,
     ) -> httpx.Response:
         """

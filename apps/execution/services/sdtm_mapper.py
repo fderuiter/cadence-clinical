@@ -10,7 +10,7 @@ Requirements: PRD-SYS-001
 
 import re
 from datetime import date, datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from sdtm.sdtm_models import (
     SDTMRecordAE,
@@ -69,7 +69,7 @@ def normalize_to_nci_code(category: str, val: Any) -> str:
     return val_str
 
 
-def parse_date(val: Any) -> Optional[date]:
+def parse_date(val: Any) -> date | None:
     """
     Safely parses various date formats into a datetime.date object.
     """
@@ -93,7 +93,7 @@ def parse_date(val: Any) -> Optional[date]:
     return None
 
 
-def standardize_iso_datetime(val: Any) -> Optional[str]:
+def standardize_iso_datetime(val: Any) -> str | None:
     """
     Converts standard dates, datetimes, or validated strings into CDISC DTC ISO 8601 format (YYYY-MM-DDThh:mm:ss).
     If partial, standardizes to the matching level of precision.
@@ -129,8 +129,8 @@ def standardize_iso_datetime(val: Any) -> Optional[str]:
 
 
 def calculate_study_day(
-    event_date_str: Optional[str], rfstdtc_str: Optional[str]
-) -> Optional[int]:
+    event_date_str: str | None, rfstdtc_str: str | None
+) -> int | None:
     """
     Calculates the study day (AEDY, VSDY, LBDY, etc.) relative to RFSTDTC.
     CDISC Study Day logic:
@@ -156,8 +156,8 @@ class CDASHToSDTMMapper:
     """
 
     def map_adverse_events(
-        self, study_id: str, subject_id: str, raw_ae_forms: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+        self, study_id: str, subject_id: str, raw_ae_forms: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         """Transform raw eCRF Adverse Event observations into standard SDTM AE domain records.
 
         Requirements: PRD-SYS-001
@@ -200,8 +200,8 @@ class CDASHToSDTMMapper:
         return sdtm_ae_records
 
     def map_demographics(
-        self, study_id: str, subject_id: str, raw_dm: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, study_id: str, subject_id: str, raw_dm: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Transform raw demographics data into SDTM Record DM.
         """
@@ -243,9 +243,9 @@ class CDASHToSDTMMapper:
         self,
         study_id: str,
         subject_id: str,
-        raw_vs_forms: List[Dict[str, Any]],
-        rfstdtc: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        raw_vs_forms: list[dict[str, Any]],
+        rfstdtc: str | None = None,
+    ) -> list[dict[str, Any]]:
         """
         Transform raw Vital Signs data into SDTM Record VS with unit conversion support and Study Days.
         """
@@ -295,9 +295,9 @@ class CDASHToSDTMMapper:
         self,
         study_id: str,
         subject_id: str,
-        raw_lb_forms: List[Dict[str, Any]],
-        rfstdtc: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        raw_lb_forms: list[dict[str, Any]],
+        rfstdtc: str | None = None,
+    ) -> list[dict[str, Any]]:
         """
         Transform raw Lab findings data into SDTM Record LB with Study Days.
         """
@@ -336,9 +336,9 @@ class CDASHToSDTMMapper:
         self,
         study_id: str,
         subject_id: str,
-        raw_sv_forms: List[Dict[str, Any]],
-        rfstdtc: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        raw_sv_forms: list[dict[str, Any]],
+        rfstdtc: str | None = None,
+    ) -> list[dict[str, Any]]:
         """
         Transform raw Subject Visit data into SDTM Record SV with Study Days.
         """
@@ -364,7 +364,7 @@ class CDASHToSDTMMapper:
         return sdtm_sv_records
 
 
-def map_cdash_to_sdtm(domain_code: str, ecrf_data: List[dict]) -> List[dict]:
+def map_cdash_to_sdtm(domain_code: str, ecrf_data: list[dict]) -> list[dict]:
     """
     Executes domain-specific transformation logic.
 
@@ -407,7 +407,7 @@ def map_cdash_to_sdtm(domain_code: str, ecrf_data: List[dict]) -> List[dict]:
 
     elif domain == "AE":
         # Group raw AE entries by subject
-        subjects_ae: Dict[str, List[dict]] = {}
+        subjects_ae: dict[str, list[dict]] = {}
         for item in ecrf_data:
             sid = item.get("subject_id") or item.get("SUBJID") or subject_id
             subjects_ae.setdefault(sid, []).append(item)
@@ -416,7 +416,7 @@ def map_cdash_to_sdtm(domain_code: str, ecrf_data: List[dict]) -> List[dict]:
             results.extend(mapper.map_adverse_events(study_id, sid, forms))
 
     elif domain == "VS":
-        subjects_vs: Dict[str, List[dict]] = {}
+        subjects_vs: dict[str, list[dict]] = {}
         for item in ecrf_data:
             sid = item.get("subject_id") or item.get("SUBJID") or subject_id
             subjects_vs.setdefault(sid, []).append(item)
@@ -425,7 +425,7 @@ def map_cdash_to_sdtm(domain_code: str, ecrf_data: List[dict]) -> List[dict]:
             results.extend(mapper.map_vital_signs(study_id, sid, forms, rfstdtc))
 
     elif domain == "LB":
-        subjects_lb: Dict[str, List[dict]] = {}
+        subjects_lb: dict[str, list[dict]] = {}
         for item in ecrf_data:
             sid = item.get("subject_id") or item.get("SUBJID") or subject_id
             subjects_lb.setdefault(sid, []).append(item)
@@ -434,7 +434,7 @@ def map_cdash_to_sdtm(domain_code: str, ecrf_data: List[dict]) -> List[dict]:
             results.extend(mapper.map_laboratory(study_id, sid, forms, rfstdtc))
 
     elif domain == "SV":
-        subjects_sv: Dict[str, List[dict]] = {}
+        subjects_sv: dict[str, list[dict]] = {}
         for item in ecrf_data:
             sid = item.get("subject_id") or item.get("SUBJID") or subject_id
             subjects_sv.setdefault(sid, []).append(item)
@@ -523,7 +523,7 @@ async def persist_sdtm_records(
     domain_code: str,
     created_by: str = "system",
     reason_for_change: str = "Automated GxP CDASH-to-SDTM mapping",
-) -> List[Any]:
+) -> list[Any]:
     """
     Read eCRF form submission answers (ClinicalObservation and ClinicalSubject) from the
     database, transform them into standard SDTM records, validate against Pydantic schemas,

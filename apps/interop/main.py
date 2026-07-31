@@ -1,7 +1,7 @@
 import os
-from datetime import datetime, timezone
-from enum import Enum
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime, timezone
+from enum import StrEnum
+from typing import Any
 
 import httpx
 from eligibility import evaluate_eligibility
@@ -66,7 +66,7 @@ async def write_audit_log(
     user_role: str,
     action: str,
     details: str,
-    change_reason: Optional[str] = None,
+    change_reason: str | None = None,
 ) -> None:
     """
     Utility function to write to the immutable interop audit ledger.
@@ -89,7 +89,7 @@ class FHIRPrefillRequest(BaseModel):
     """
 
     study_id: str = Field(..., description="Unique identifier of the clinical study")
-    bundle: Dict[str, Any] = Field(
+    bundle: dict[str, Any] = Field(
         ..., description="The standard FHIR Bundle JSON payload"
     )
 
@@ -100,7 +100,7 @@ class FHIRPreScreenRequest(BaseModel):
     """
 
     study_id: str = Field(..., description="Unique identifier of the clinical study")
-    bundle: Dict[str, Any] = Field(
+    bundle: dict[str, Any] = Field(
         ..., description="The standard FHIR Bundle JSON payload"
     )
 
@@ -118,24 +118,24 @@ class CriterionExplanation(BaseModel):
 
 
 class FHIRPreScreenResponse(BaseModel):
-    eligible: Optional[bool] = Field(
+    eligible: bool | None = Field(
         None,
         description="Aggregated eligibility. True if all criteria met, False if any failed, None if indeterminate.",
     )
-    failed_criteria: List[str] = Field(
+    failed_criteria: list[str] = Field(
         default_factory=list, description="List of criterion IDs that failed."
     )
-    indeterminate_criteria: List[str] = Field(
+    indeterminate_criteria: list[str] = Field(
         default_factory=list,
         description="List of criterion IDs that were indeterminate.",
     )
-    criteria_explanations: List[CriterionExplanation] = Field(
+    criteria_explanations: list[CriterionExplanation] = Field(
         default_factory=list,
         description="Detailed list of criterion-level explanations.",
     )
 
 
-class ConflictStrategy(str, Enum):
+class ConflictStrategy(StrEnum):
     """
     Explicit validated conflict resolution strategies.
     """
@@ -158,11 +158,11 @@ class OfflineSyncMarkers(BaseModel):
         ConflictStrategy.CLIENT_WINS,
         description="Conflict strategy to resolve duplicate submissions. Supported: CLIENT_WINS, SERVER_WINS, MERGE",
     )
-    signature: Optional[str] = Field(
+    signature: str | None = Field(
         None,
         description="Optional HMAC-SHA256 signature of the payload for cryptographic integrity",
     )
-    timestamps: Optional[Dict[str, datetime]] = Field(
+    timestamps: dict[str, datetime] | None = Field(
         None,
         description="Optional per-field UTC timestamps indicating when each field in 'answers' was modified",
     )
@@ -187,7 +187,7 @@ class EPROSubmissionPayload(BaseModel):
     device_timestamp: datetime = Field(
         ..., description="ISO 8601 timestamp when the entry was created on device"
     )
-    answers: Dict[str, Any] = Field(
+    answers: dict[str, Any] = Field(
         ..., description="The questionnaire response key-values"
     )
     offline_sync_markers: OfflineSyncMarkers = Field(
@@ -200,7 +200,7 @@ class BulkSyncPayload(BaseModel):
     A bulk list of ePRO submissions for offline queue reconciliation.
     """
 
-    submissions: List[EPROSubmissionPayload] = Field(
+    submissions: list[EPROSubmissionPayload] = Field(
         ..., description="A list of queued ePRO submissions"
     )
 
@@ -211,8 +211,8 @@ async def resolve_and_save_submission(
     payload: EPROSubmissionPayload,
     user_id: str = "system",
     user_role: str = "system",
-    change_reason: Optional[str] = None,
-) -> Dict[str, Any]:
+    change_reason: str | None = None,
+) -> dict[str, Any]:
     """
     Save a new ePRO submission or reconcile existing ones based on conflict strategy.
     Detects structural conflicts and turn them into auditable clinical queries.
@@ -341,7 +341,7 @@ async def resolve_and_save_submission(
         .where(EPROSubmission.diary_id == payload.diary_id)
     )
     result = await session.execute(stmt)
-    existing: Optional[EPROSubmission] = result.scalars().first()
+    existing: EPROSubmission | None = result.scalars().first()
 
     strategy = payload.offline_sync_markers.conflict_strategy
     if isinstance(strategy, ConflictStrategy):
@@ -625,7 +625,7 @@ async def fhir_prefill(
     request: Request,
     payload: FHIRPrefillRequest,
     session: AsyncSession = Depends(get_db_session),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Ingest a standard FHIR Bundle payload, pseudonymize Patient ID,
     strip all Direct Identifiers (PII), and return mapped CDASH eCRF fields.
@@ -730,7 +730,7 @@ async def epro_submit(
     request: Request,
     payload: EPROSubmissionPayload,
     session: AsyncSession = Depends(get_db_session),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Secure REST endpoint for mobile apps to submit a single participant diary/survey entry.
     Handles offline queue reconciliation & conflict resolution on duplicate sync requests.
@@ -767,7 +767,7 @@ async def epro_sync(
     request: Request,
     payload: BulkSyncPayload,
     session: AsyncSession = Depends(get_db_session),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Secure bulk sync endpoint for offline queues. Performs reconciliation
     and conflict resolution across multiple participant submissions.
@@ -828,12 +828,12 @@ async def epro_sync(
 # Instrument and SubjectAssignment Pydantic Schemas
 class InstrumentCreate(BaseModel):
     name: str = Field(..., description="The name of the questionnaire/diary")
-    description: Optional[str] = Field(None, description="Optional description")
-    items: Dict[str, Any] = Field(..., description="Items/questions")
-    response_types: Dict[str, Any] = Field(
+    description: str | None = Field(None, description="Optional description")
+    items: dict[str, Any] = Field(..., description="Items/questions")
+    response_types: dict[str, Any] = Field(
         ..., description="Response types and options"
     )
-    scoring_metadata: Dict[str, Any] = Field(..., description="Scoring metadata")
+    scoring_metadata: dict[str, Any] = Field(..., description="Scoring metadata")
     reason_for_change: str = Field(
         ..., description="21 CFR Part 11 compliant reason for change"
     )
@@ -842,10 +842,10 @@ class InstrumentCreate(BaseModel):
 class InstrumentResponse(BaseModel):
     id: str
     name: str
-    description: Optional[str]
-    items: Dict[str, Any]
-    response_types: Dict[str, Any]
-    scoring_metadata: Dict[str, Any]
+    description: str | None
+    items: dict[str, Any]
+    response_types: dict[str, Any]
+    scoring_metadata: dict[str, Any]
     created_at: datetime
     created_by: str
     reason_for_change: str
@@ -857,10 +857,8 @@ class SubjectAssignmentCreate(BaseModel):
     instrument_id: str = Field(..., description="ID of the Instrument to assign")
     start_date: datetime = Field(..., description="Start of the due/recurrence window")
     end_date: datetime = Field(..., description="End of the due/recurrence window")
-    recurrence_pattern: Optional[str] = Field(None, description="E.g., DAILY, WEEKLY")
-    due_at: Optional[datetime] = Field(
-        None, description="Optional specific due date/time"
-    )
+    recurrence_pattern: str | None = Field(None, description="E.g., DAILY, WEEKLY")
+    due_at: datetime | None = Field(None, description="Optional specific due date/time")
     reason_for_change: str = Field(
         ..., description="21 CFR Part 11 compliant reason for change"
     )
@@ -872,8 +870,8 @@ class SubjectAssignmentResponse(BaseModel):
     instrument_id: str
     start_date: datetime
     end_date: datetime
-    recurrence_pattern: Optional[str]
-    due_at: Optional[datetime]
+    recurrence_pattern: str | None
+    due_at: datetime | None
     created_at: datetime
     created_by: str
     reason_for_change: str
@@ -885,9 +883,9 @@ class AssignmentComplianceDetail(BaseModel):
     instrument_id: str
     instrument_name: str
     status: str  # "COMPLETED", "PENDING", "OVERDUE"
-    due_at: Optional[datetime]
+    due_at: datetime | None
     end_date: datetime
-    submitted_at: Optional[datetime] = None
+    submitted_at: datetime | None = None
 
 
 class SubjectComplianceResponse(BaseModel):
@@ -896,18 +894,18 @@ class SubjectComplianceResponse(BaseModel):
     completed_count: int
     pending_count: int
     overdue_count: int
-    assignments: List[AssignmentComplianceDetail]
+    assignments: list[AssignmentComplianceDetail]
 
 
 class SubjectNotificationResponse(BaseModel):
     id: str
     subject_id: str
-    assignment_id: Optional[str]
+    assignment_id: str | None
     due_at: datetime
     channel: str
     delivery_status: str
     is_read: bool
-    read_at: Optional[datetime]
+    read_at: datetime | None
     created_at: datetime
     created_by: str
     reason_for_change: str
@@ -1066,13 +1064,13 @@ async def get_instrument(
 
 @app.get(
     "/api/v1/interop/assignments/subject/{subject_id}",
-    response_model=List[SubjectAssignmentResponse],
+    response_model=list[SubjectAssignmentResponse],
 )
 async def get_subject_assignments(
     request: Request,
     subject_id: str,
     session: AsyncSession = Depends(get_db_session),
-) -> List[SubjectAssignmentResponse]:
+) -> list[SubjectAssignmentResponse]:
     """
     Retrieve all assignments for a given subject.
     Enforces subject-scoped identity boundary (Subject can only view their own assignments).
@@ -1086,13 +1084,13 @@ async def get_subject_assignments(
 
 @app.get(
     "/api/v1/interop/subjects/{subject_id}/instruments",
-    response_model=List[InstrumentResponse],
+    response_model=list[InstrumentResponse],
 )
 async def get_subject_assigned_instruments(
     request: Request,
     subject_id: str,
     session: AsyncSession = Depends(get_db_session),
-) -> List[InstrumentResponse]:
+) -> list[InstrumentResponse]:
     """
     Retrieve all unique assigned instruments for a given subject.
     Enforces subject-scoped identity boundary (Subject can only view their own instruments).
@@ -1169,7 +1167,7 @@ class NotificationRouter:
             print(f"[STUB SMS] Delivery exception: {e}")
             return True  # Fail-soft for stubbed delivery
 
-    async def send_webhook(self, url: str, payload: Dict[str, Any]) -> bool:
+    async def send_webhook(self, url: str, payload: dict[str, Any]) -> bool:
         """Sends a stubbed webhook payload."""
         print(f"[STUB WEBHOOK] Sending webhook to {url}: {payload}")
         try:
@@ -1305,7 +1303,7 @@ async def get_subject_compliance(
 
     # Determine status and build details list
     now = (
-        datetime.now(timezone.utc).replace(tzinfo=None)
+        datetime.now(UTC).replace(tzinfo=None)
         if hasattr(timezone, "utc")
         else datetime.utcnow()
     )
@@ -1361,9 +1359,9 @@ async def get_subject_compliance(
 async def compute_reminders(
     request: Request,
     background_tasks: BackgroundTasks,
-    subject_id: Optional[str] = None,
+    subject_id: str | None = None,
     session: AsyncSession = Depends(get_db_session),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Compute due reminders from assignment schedules on demand.
     Generates notifications for uncompleted assignments whose due window is reached.
@@ -1415,7 +1413,7 @@ async def compute_reminders(
 
     # Check due assignments
     now = (
-        datetime.now(timezone.utc).replace(tzinfo=None)
+        datetime.now(UTC).replace(tzinfo=None)
         if hasattr(timezone, "utc")
         else datetime.utcnow()
     )
@@ -1488,13 +1486,13 @@ async def compute_reminders(
 
 @app.get(
     "/api/v1/interop/subjects/{subject_id}/notifications",
-    response_model=List[SubjectNotificationResponse],
+    response_model=list[SubjectNotificationResponse],
 )
 async def get_subject_notifications(
     request: Request,
     subject_id: str,
     session: AsyncSession = Depends(get_db_session),
-) -> List[SubjectNotificationResponse]:
+) -> list[SubjectNotificationResponse]:
     """
     Retrieve all notifications for a given subject.
     Enforces subject-scoped identity boundary (Subject can only view their own notifications).
@@ -1542,7 +1540,7 @@ async def acknowledge_notification(
     )
 
     now = (
-        datetime.now(timezone.utc).replace(tzinfo=None)
+        datetime.now(UTC).replace(tzinfo=None)
         if hasattr(timezone, "utc")
         else datetime.utcnow()
     )

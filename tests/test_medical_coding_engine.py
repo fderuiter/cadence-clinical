@@ -6,7 +6,7 @@ import json
 import os
 import time
 import zipfile
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 from unittest.mock import patch
 
 import httpx

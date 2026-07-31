@@ -1,6 +1,6 @@
 import os
-from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from enum import StrEnum
+from typing import Any
 
 import httpx
 import usdm_model
@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from apps.designer.db import get_study_projection, terminology_cache
 
 
-class CodeValidationState(str, Enum):
+class CodeValidationState(StrEnum):
     """
     Validation state of a controlled terminology concept code.
     """
@@ -37,10 +37,10 @@ class ConceptValidationReport(BaseModel):
 
     concept_code: str
     state: CodeValidationState
-    decode: Optional[str] = None
-    system: Optional[str] = None
-    error_message: Optional[str] = None
-    references: List[ConceptReference] = []
+    decode: str | None = None
+    system: str | None = None
+    error_message: str | None = None
+    references: list[ConceptReference] = []
 
 
 class StudyTerminologyValidationReport(BaseModel):
@@ -54,10 +54,10 @@ class StudyTerminologyValidationReport(BaseModel):
     valid_count: int
     invalid_count: int
     degraded_count: int
-    concepts: List[ConceptValidationReport]
+    concepts: list[ConceptValidationReport]
 
 
-def validate_concept_codes(codes: List[str]) -> List[ConceptValidationReport]:
+def validate_concept_codes(codes: list[str]) -> list[ConceptValidationReport]:
     """
     Validates a list of concept codes through the terminology cache.
     """
@@ -101,7 +101,7 @@ def validate_concept_codes(codes: List[str]) -> List[ConceptValidationReport]:
 
 
 def validate_study_terminology(
-    study_id: str, study_data: Optional[Dict[str, Any]] = None
+    study_id: str, study_data: dict[str, Any] | None = None
 ) -> StudyTerminologyValidationReport:
     """
     Traverses study concept references and aggregates validation outcomes.
@@ -112,7 +112,7 @@ def validate_study_terminology(
             raise ValueError(f"Study with ID '{study_id}' not found.")
 
     # Collect all references grouped by concept code
-    references_by_code: Dict[str, List[ConceptReference]] = {}
+    references_by_code: dict[str, list[ConceptReference]] = {}
 
     def add_ref(code: str, ref: ConceptReference):
         if not code:
@@ -229,8 +229,8 @@ class ItemMappingStatus(BaseModel):
         is_mapped: Boolean indicating whether this item has a corresponding ODM/CRF node mapped to it.
     """
 
-    item_id: Optional[str]
-    internal_id: Optional[int]
+    item_id: str | None
+    internal_id: int | None
     is_mapped: bool
 
 
@@ -250,15 +250,15 @@ class ActivityReport(BaseModel):
         mapped_items: List of `ItemMappingStatus` for items successfully mapped to operational nodes.
     """
 
-    epoch_id: Optional[str]
+    epoch_id: str | None
     epoch_internal_id: int
-    scheduled_event_id: Optional[str]
+    scheduled_event_id: str | None
     scheduled_event_internal_id: int
-    activity_def_id: Optional[str]
+    activity_def_id: str | None
     activity_def_internal_id: int
     status: str  # 'complete', 'incomplete', 'unmapped'
-    unmapped_items: List[ItemMappingStatus]
-    mapped_items: List[ItemMappingStatus]
+    unmapped_items: list[ItemMappingStatus]
+    mapped_items: list[ItemMappingStatus]
 
 
 class StudyAlignmentReport(BaseModel):
@@ -275,11 +275,11 @@ class StudyAlignmentReport(BaseModel):
     """
 
     study_id: str
-    complete_activities: List[ActivityReport]
-    incomplete_activities: List[ActivityReport]
-    unmapped_activities: List[ActivityReport]
-    unmapped_odm_items: List[Dict[str, Any]]
-    unmapped_crf_item_values: List[Dict[str, Any]]
+    complete_activities: list[ActivityReport]
+    incomplete_activities: list[ActivityReport]
+    unmapped_activities: list[ActivityReport]
+    unmapped_odm_items: list[dict[str, Any]]
+    unmapped_crf_item_values: list[dict[str, Any]]
 
 
 async def generate_alignment_report(study_id: str) -> StudyAlignmentReport:
@@ -339,8 +339,8 @@ async def generate_alignment_report(study_id: str) -> StudyAlignmentReport:
             pass
 
     # Flatten dictionaries recursively (Requirement 2)
-    def flatten_dict(d: Any, parent_key: str = "", sep: str = ".") -> Dict[str, Any]:
-        items: List[Tuple[str, Any]] = []
+    def flatten_dict(d: Any, parent_key: str = "", sep: str = ".") -> dict[str, Any]:
+        items: list[tuple[str, Any]] = []
         if isinstance(d, dict):
             for k, v in d.items():
                 new_key = f"{parent_key}{sep}{k}" if parent_key else k
@@ -366,9 +366,9 @@ async def generate_alignment_report(study_id: str) -> StudyAlignmentReport:
             items.append((parent_key, d))
         return dict(items)
 
-    def xml_to_dict(element: Any) -> Dict[str, Any]:
+    def xml_to_dict(element: Any) -> dict[str, Any]:
         tag = element.tag.split("}")[-1] if "}" in element.tag else element.tag
-        result: Dict[str, Any] = {}
+        result: dict[str, Any] = {}
         for k, v in element.attrib.items():
             result[f"@{k}"] = v
         children = list(element)
@@ -376,7 +376,7 @@ async def generate_alignment_report(study_id: str) -> StudyAlignmentReport:
             child_dicts = []
             for child in children:
                 child_dicts.append(xml_to_dict(child))
-            grouped: Dict[str, List[Any]] = {}
+            grouped: dict[str, list[Any]] = {}
             for cd in child_dicts:
                 for ck, cv in cd.items():
                     if ck not in grouped:
@@ -412,7 +412,7 @@ async def generate_alignment_report(study_id: str) -> StudyAlignmentReport:
         else:
             flat_odm = flatten_dict(odm_data)
 
-    def extract_activity_items(act: Any) -> List[Dict[str, Any]]:
+    def extract_activity_items(act: Any) -> list[dict[str, Any]]:
         items = []
         bc_ids = getattr(act, "biomedicalConceptIds", None) or []
         for bc_id in bc_ids:

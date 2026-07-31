@@ -7,8 +7,7 @@ with 21 CFR Part 11 and GxP compliant append-only version history and audit trai
 
 import os
 import uuid
-from datetime import datetime, timezone
-from typing import List, Optional
+from datetime import UTC, datetime
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from organization_domain import ClinicalStaffRole, OrganizationType
@@ -55,8 +54,8 @@ class OrganizationCreate(BaseModel):
 
 
 class OrganizationUpdate(BaseModel):
-    name: Optional[str] = Field(None, description="Updated name of the organization")
-    org_type: Optional[OrganizationType] = Field(
+    name: str | None = Field(None, description="Updated name of the organization")
+    org_type: OrganizationType | None = Field(
         None, description="Updated type of the organization"
     )
     reason_for_change: str = Field(
@@ -104,9 +103,9 @@ class PersonnelAssignmentCreate(BaseModel):
 
 
 class PersonnelAssignmentUpdate(BaseModel):
-    site_id: Optional[str] = Field(None, description="Updated clinical site ID")
-    study_id: Optional[str] = Field(None, description="Updated clinical study ID")
-    is_active: Optional[bool] = Field(None, description="Updated active status")
+    site_id: str | None = Field(None, description="Updated clinical site ID")
+    study_id: str | None = Field(None, description="Updated clinical study ID")
+    is_active: bool | None = Field(None, description="Updated active status")
     reason_for_change: str = Field(
         ..., description="Part 11 change justification reason"
     )
@@ -137,9 +136,9 @@ class PersonnelAssignmentResponse(BaseModel):
 
 class AssignmentResolutionResponse(BaseModel):
     personnel_id: str
-    roles: List[str]
-    assigned_sites: List[str]
-    assigned_studies: List[str]
+    roles: list[str]
+    assigned_sites: list[str]
+    assigned_studies: list[str]
 
 
 class SiteCreate(BaseModel):
@@ -150,7 +149,7 @@ class SiteCreate(BaseModel):
     organization_id: str = Field(
         ..., description="Reference to the parent organization ID"
     )
-    study_id: Optional[str] = Field(None, description="Optional clinical study ID")
+    study_id: str | None = Field(None, description="Optional clinical study ID")
     reason_for_change: str = Field(
         ..., description="Part 11 change justification reason"
     )
@@ -166,12 +165,12 @@ class SiteCreate(BaseModel):
 
 
 class SiteUpdate(BaseModel):
-    site_id: Optional[str] = Field(None, description="Updated identifier for the site")
-    name: Optional[str] = Field(None, description="Updated name of the site")
-    organization_id: Optional[str] = Field(
+    site_id: str | None = Field(None, description="Updated identifier for the site")
+    name: str | None = Field(None, description="Updated name of the site")
+    organization_id: str | None = Field(
         None, description="Updated reference to parent organization ID"
     )
-    study_id: Optional[str] = Field(None, description="Updated clinical study ID")
+    study_id: str | None = Field(None, description="Updated clinical study ID")
     reason_for_change: str = Field(
         ..., description="Part 11 change justification reason"
     )
@@ -193,7 +192,7 @@ class SiteResponse(BaseModel):
     site_id: str
     name: str
     organization_id: str
-    study_id: Optional[str] = None
+    study_id: str | None = None
     created_at: datetime
     created_by: str
     reason_for_change: str
@@ -201,18 +200,18 @@ class SiteResponse(BaseModel):
 
 
 class PersonnelCreate(BaseModel):
-    keycloak_user_id: Optional[str] = Field(
+    keycloak_user_id: str | None = Field(
         None, description="OIDC user ID linked to this staff member"
     )
     first_name: str = Field(..., description="First name")
     last_name: str = Field(..., description="Last name")
     email: str = Field(..., description="Unique email address")
     role: ClinicalStaffRole = Field(..., description="Clinical staff role")
-    organization_id: Optional[str] = Field(
+    organization_id: str | None = Field(
         None, description="Reference to parent organization ID"
     )
-    site_id: Optional[str] = Field(None, description="Reference to parent site_id")
-    study_id: Optional[str] = Field(None, description="Optional clinical study ID")
+    site_id: str | None = Field(None, description="Reference to parent site_id")
+    study_id: str | None = Field(None, description="Optional clinical study ID")
     reason_for_change: str = Field(
         ..., description="Part 11 change justification reason"
     )
@@ -228,22 +227,20 @@ class PersonnelCreate(BaseModel):
 
 
 class PersonnelUpdate(BaseModel):
-    keycloak_user_id: Optional[str] = Field(
+    keycloak_user_id: str | None = Field(
         None, description="OIDC user ID linked to this staff member"
     )
-    first_name: Optional[str] = Field(None, description="Updated first name")
-    last_name: Optional[str] = Field(None, description="Updated last name")
-    email: Optional[str] = Field(None, description="Updated email address")
-    role: Optional[ClinicalStaffRole] = Field(
+    first_name: str | None = Field(None, description="Updated first name")
+    last_name: str | None = Field(None, description="Updated last name")
+    email: str | None = Field(None, description="Updated email address")
+    role: ClinicalStaffRole | None = Field(
         None, description="Updated clinical staff role"
     )
-    organization_id: Optional[str] = Field(
+    organization_id: str | None = Field(
         None, description="Updated reference to parent organization ID"
     )
-    site_id: Optional[str] = Field(
-        None, description="Updated reference to parent site_id"
-    )
-    study_id: Optional[str] = Field(None, description="Updated clinical study ID")
+    site_id: str | None = Field(None, description="Updated reference to parent site_id")
+    study_id: str | None = Field(None, description="Updated clinical study ID")
     reason_for_change: str = Field(
         ..., description="Part 11 change justification reason"
     )
@@ -262,14 +259,14 @@ class PersonnelResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
-    keycloak_user_id: Optional[str] = None
+    keycloak_user_id: str | None = None
     first_name: str
     last_name: str
     email: str
     role: str
-    organization_id: Optional[str] = None
-    site_id: Optional[str] = None
-    study_id: Optional[str] = None
+    organization_id: str | None = None
+    site_id: str | None = None
+    study_id: str | None = None
     created_at: datetime
     created_by: str
     reason_for_change: str
@@ -305,7 +302,7 @@ async def write_audit_log(
     actor_id: str,
     actor_role: str,
     action: str,
-    record_id: Optional[str] = None,
+    record_id: str | None = None,
     details: str = "",
     reason_for_change: str = "Standard Access",
 ) -> None:
@@ -393,17 +390,15 @@ async def create_organization(
     return org
 
 
-@app.get("/api/v1/org/organizations", response_model=List[OrganizationResponse])
+@app.get("/api/v1/org/organizations", response_model=list[OrganizationResponse])
 async def list_organizations(
     request: Request,
-    name: Optional[str] = Query(
-        None, description="Filter by partial organization name"
-    ),
-    org_type: Optional[OrganizationType] = Query(
+    name: str | None = Query(None, description="Filter by partial organization name"),
+    org_type: OrganizationType | None = Query(
         None, description="Filter by organization type"
     ),
     session: AsyncSession = Depends(get_db_session),
-) -> List[OrganizationResponse]:
+) -> list[OrganizationResponse]:
     """
     List all organizations. Applies filters on partial name or exact type and returns the latest version of each.
     """
@@ -447,7 +442,7 @@ async def list_organizations(
 async def get_organization(
     request: Request,
     id: str,
-    version_index: Optional[int] = Query(
+    version_index: int | None = Query(
         None, description="Optionally retrieve a specific version"
     ),
     session: AsyncSession = Depends(get_db_session),
@@ -533,13 +528,13 @@ async def update_organization(
 
 
 @app.get(
-    "/api/v1/org/organizations/{id}/history", response_model=List[OrganizationResponse]
+    "/api/v1/org/organizations/{id}/history", response_model=list[OrganizationResponse]
 )
 async def get_organization_history(
     request: Request,
     id: str,
     session: AsyncSession = Depends(get_db_session),
-) -> List[OrganizationResponse]:
+) -> list[OrganizationResponse]:
     """
     Retrieve chronological version history for an organization.
     """
@@ -581,11 +576,11 @@ class DelegationCreate(BaseModel):
         ..., description="The site ID where authority is being delegated"
     )
     study_id: str = Field(..., description="The study ID")
-    duties: List[str] = Field(..., description="List of delegated duties")
+    duties: list[str] = Field(..., description="List of delegated duties")
     start_date: datetime = Field(
         ..., description="The effective start date of the delegation"
     )
-    end_date: Optional[datetime] = Field(
+    end_date: datetime | None = Field(
         None, description="Optional effective end date of the delegation"
     )
     reason_for_change: str = Field(
@@ -646,9 +641,9 @@ class DelegationResponse(BaseModel):
     delegatee_id: str
     site_id: str
     study_id: str
-    duties: List[str]
+    duties: list[str]
     start_date: datetime
-    end_date: Optional[datetime] = None
+    end_date: datetime | None = None
     is_active: bool
     created_at: datetime
     created_by: str
@@ -656,15 +651,15 @@ class DelegationResponse(BaseModel):
     version_index: int
 
     # Cryptographic & Signature fields
-    signature: Optional[str] = None
-    signed_payload: Optional[dict] = None
-    signed_at: Optional[datetime] = None
-    signed_by: Optional[str] = None
+    signature: str | None = None
+    signed_payload: dict | None = None
+    signed_at: datetime | None = None
+    signed_by: str | None = None
 
     # Revocation fields
-    revoked_at: Optional[datetime] = None
-    revoked_by: Optional[str] = None
-    revocation_reason: Optional[str] = None
+    revoked_at: datetime | None = None
+    revoked_by: str | None = None
+    revocation_reason: str | None = None
 
 
 # --- Delegation of Authority (DOA) REST Endpoints ---
@@ -949,7 +944,7 @@ async def sign_delegation(
         is_active=latest_doa.is_active,
         signature=payload.signature,
         signed_payload=payload.payload,
-        signed_at=datetime.now(timezone.utc).replace(tzinfo=None),
+        signed_at=datetime.now(UTC).replace(tzinfo=None),
         signed_by=user_id,
         revoked_at=latest_doa.revoked_at,
         revoked_by=latest_doa.revoked_by,
@@ -1027,7 +1022,7 @@ async def revoke_delegation(
         signed_payload=latest_doa.signed_payload,
         signed_at=latest_doa.signed_at,
         signed_by=latest_doa.signed_by,
-        revoked_at=datetime.now(timezone.utc).replace(tzinfo=None),
+        revoked_at=datetime.now(UTC).replace(tzinfo=None),
         revoked_by=user_id,
         revocation_reason=payload.reason_for_change,
         created_by=user_id,
@@ -1051,20 +1046,20 @@ async def revoke_delegation(
     return revoked_doa
 
 
-@app.get("/api/v1/org/delegations", response_model=List[DelegationResponse])
+@app.get("/api/v1/org/delegations", response_model=list[DelegationResponse])
 async def list_delegations(
     request: Request,
-    site_id: Optional[str] = Query(None, description="Filter by site_id"),
-    study_id: Optional[str] = Query(None, description="Filter by study_id"),
-    delegator_id: Optional[str] = Query(
+    site_id: str | None = Query(None, description="Filter by site_id"),
+    study_id: str | None = Query(None, description="Filter by study_id"),
+    delegator_id: str | None = Query(
         None, description="Filter by delegator personnel ID"
     ),
-    delegatee_id: Optional[str] = Query(
+    delegatee_id: str | None = Query(
         None, description="Filter by delegatee personnel ID"
     ),
-    is_active: Optional[bool] = Query(None, description="Filter by active status"),
+    is_active: bool | None = Query(None, description="Filter by active status"),
     session: AsyncSession = Depends(get_db_session),
-) -> List[DelegationResponse]:
+) -> list[DelegationResponse]:
     """
     List all delegation records, returning only the latest version of each unique record.
     """
@@ -1112,7 +1107,7 @@ async def list_delegations(
 async def get_delegation(
     request: Request,
     id: str,
-    version_index: Optional[int] = Query(
+    version_index: int | None = Query(
         None, description="Optionally retrieve a specific version"
     ),
     session: AsyncSession = Depends(get_db_session),
@@ -1149,13 +1144,13 @@ async def get_delegation(
 
 
 @app.get(
-    "/api/v1/org/delegations/{id}/history", response_model=List[DelegationResponse]
+    "/api/v1/org/delegations/{id}/history", response_model=list[DelegationResponse]
 )
 async def get_delegation_history(
     request: Request,
     id: str,
     session: AsyncSession = Depends(get_db_session),
-) -> List[DelegationResponse]:
+) -> list[DelegationResponse]:
     """
     Retrieve chronological version history for a specific Delegation of Authority record.
     """
@@ -1192,16 +1187,16 @@ class OrgAuditLogResponse(BaseModel):
     actor_id: str
     actor_role: str
     action: str
-    record_id: Optional[str] = None
+    record_id: str | None = None
     details: str
     reason_for_change: str
 
 
-@app.get("/api/v1/org/audit-logs", response_model=List[OrgAuditLogResponse])
+@app.get("/api/v1/org/audit-logs", response_model=list[OrgAuditLogResponse])
 async def list_org_audit_logs(
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-) -> List[OrgAuditLogResponse]:
+) -> list[OrgAuditLogResponse]:
     """
     Retrieve organization audit logs in descending chronological order.
     """
@@ -1253,16 +1248,14 @@ async def create_site(
     return site
 
 
-@app.get("/api/v1/org/sites", response_model=List[SiteResponse])
+@app.get("/api/v1/org/sites", response_model=list[SiteResponse])
 async def list_sites(
     request: Request,
-    site_id: Optional[str] = Query(None, description="Filter by site_id"),
-    study_id: Optional[str] = Query(None, description="Filter by study_id"),
-    organization_id: Optional[str] = Query(
-        None, description="Filter by organization_id"
-    ),
+    site_id: str | None = Query(None, description="Filter by site_id"),
+    study_id: str | None = Query(None, description="Filter by study_id"),
+    organization_id: str | None = Query(None, description="Filter by organization_id"),
     session: AsyncSession = Depends(get_db_session),
-) -> List[SiteResponse]:
+) -> list[SiteResponse]:
     """
     List all sites. Applies filters and returns the latest version of each unique site.
     """
@@ -1312,7 +1305,7 @@ async def list_sites(
 async def get_site(
     request: Request,
     id: str,
-    version_index: Optional[int] = Query(
+    version_index: int | None = Query(
         None, description="Optionally retrieve a specific version"
     ),
     session: AsyncSession = Depends(get_db_session),
@@ -1397,12 +1390,12 @@ async def update_site(
     return new_site
 
 
-@app.get("/api/v1/org/sites/{id}/history", response_model=List[SiteResponse])
+@app.get("/api/v1/org/sites/{id}/history", response_model=list[SiteResponse])
 async def get_site_history(
     request: Request,
     id: str,
     session: AsyncSession = Depends(get_db_session),
-) -> List[SiteResponse]:
+) -> list[SiteResponse]:
     """
     Retrieve chronological version history for a site.
     """
@@ -1491,20 +1484,18 @@ async def create_personnel(
     return person
 
 
-@app.get("/api/v1/org/personnel", response_model=List[PersonnelResponse])
+@app.get("/api/v1/org/personnel", response_model=list[PersonnelResponse])
 async def list_personnel(
     request: Request,
-    site_id: Optional[str] = Query(None, description="Filter by site_id"),
-    study_id: Optional[str] = Query(None, description="Filter by study_id"),
-    organization_id: Optional[str] = Query(
-        None, description="Filter by organization_id"
-    ),
-    role: Optional[ClinicalStaffRole] = Query(
+    site_id: str | None = Query(None, description="Filter by site_id"),
+    study_id: str | None = Query(None, description="Filter by study_id"),
+    organization_id: str | None = Query(None, description="Filter by organization_id"),
+    role: ClinicalStaffRole | None = Query(
         None, description="Filter by exact staff role"
     ),
-    email: Optional[str] = Query(None, description="Filter by exact or partial email"),
+    email: str | None = Query(None, description="Filter by exact or partial email"),
     session: AsyncSession = Depends(get_db_session),
-) -> List[PersonnelResponse]:
+) -> list[PersonnelResponse]:
     """
     List all personnel. Applies filters and returns the latest version of each unique staff member.
     """
@@ -1563,7 +1554,7 @@ async def list_personnel(
 async def get_personnel(
     request: Request,
     id: str,
-    version_index: Optional[int] = Query(
+    version_index: int | None = Query(
         None, description="Optionally retrieve a specific version"
     ),
     session: AsyncSession = Depends(get_db_session),
@@ -1688,12 +1679,12 @@ async def update_personnel(
     return new_person
 
 
-@app.get("/api/v1/org/personnel/{id}/history", response_model=List[PersonnelResponse])
+@app.get("/api/v1/org/personnel/{id}/history", response_model=list[PersonnelResponse])
 async def get_personnel_history(
     request: Request,
     id: str,
     session: AsyncSession = Depends(get_db_session),
-) -> List[PersonnelResponse]:
+) -> list[PersonnelResponse]:
     """
     Retrieve chronological version history for personnel.
     """
@@ -1792,13 +1783,13 @@ async def create_personnel_assignment(
 
 @app.get(
     "/api/v1/org/personnel/{personnel_id}/assignments",
-    response_model=List[PersonnelAssignmentResponse],
+    response_model=list[PersonnelAssignmentResponse],
 )
 async def list_personnel_assignments(
     request: Request,
     personnel_id: str,
     session: AsyncSession = Depends(get_db_session),
-) -> List[PersonnelAssignmentResponse]:
+) -> list[PersonnelAssignmentResponse]:
     user_id, user_role, change_reason = get_user_context(request)
 
     stmt = (
@@ -1881,13 +1872,13 @@ async def update_personnel_assignment(
 
 @app.get(
     "/api/v1/org/personnel/assignments/{id}/history",
-    response_model=List[PersonnelAssignmentResponse],
+    response_model=list[PersonnelAssignmentResponse],
 )
 async def get_personnel_assignment_history(
     request: Request,
     id: str,
     session: AsyncSession = Depends(get_db_session),
-) -> List[PersonnelAssignmentResponse]:
+) -> list[PersonnelAssignmentResponse]:
     user_id, user_role, change_reason = get_user_context(request)
 
     stmt = (

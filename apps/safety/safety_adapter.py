@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import httpx
 
@@ -12,9 +12,9 @@ class SafetyDatabaseAdapter:
 
     def __init__(
         self,
-        endpoint_url: Optional[str] = None,
-        ingestion_url: Optional[str] = None,
-        client: Optional[httpx.AsyncClient] = None,
+        endpoint_url: str | None = None,
+        ingestion_url: str | None = None,
+        client: httpx.AsyncClient | None = None,
     ):
         self.endpoint_url = endpoint_url or os.getenv(
             "SAFETY_DB_TRANSMISSION_ENDPOINT",
@@ -49,7 +49,7 @@ class SafetyDatabaseAdapter:
                 headers={"Content-Type": "application/xml"},
             )
 
-    async def fetch_case(self, case_id: str) -> Dict[str, Any]:
+    async def fetch_case(self, case_id: str) -> dict[str, Any]:
         """
         Fetches a specific safety case payload from the external safety database.
         """
@@ -63,7 +63,7 @@ class SafetyDatabaseAdapter:
             response.raise_for_status()
         return response.json()
 
-    async def fetch_cases(self) -> List[Dict[str, Any]]:
+    async def fetch_cases(self) -> list[dict[str, Any]]:
         """
         Fetches all safety cases from the external safety database ingestion endpoint.
         """

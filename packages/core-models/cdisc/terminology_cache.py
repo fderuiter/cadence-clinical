@@ -7,9 +7,9 @@ for CDASH, SDTM, and Controlled Terminology codelists.
 import json
 import logging
 import sqlite3
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 from cdisc.cdisc_library_client import CodelistDefinition, CodelistTerm
 
@@ -31,7 +31,7 @@ class CdiscTerminologyCache:
 
     def __init__(
         self,
-        db_path: Optional[Path] = None,
+        db_path: Path | None = None,
         default_ttl_seconds: int = 86400,
     ) -> None:
         """Initialize terminology cache.
@@ -81,7 +81,7 @@ class CdiscTerminologyCache:
 
     async def get_codelist(
         self, package: str, codelist_code: str
-    ) -> Optional[CodelistDefinition]:
+    ) -> CodelistDefinition | None:
         """Retrieve cached codelist definition if present and unexpired.
 
         Args:
@@ -108,11 +108,11 @@ class CdiscTerminologyCache:
 
             name, extensible, terms_json, updated_at_str, ttl_seconds = row
             updated_at = datetime.fromisoformat(updated_at_str)
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
 
             # Ensure updated_at has timezone
             if updated_at.tzinfo is None:
-                updated_at = updated_at.replace(tzinfo=timezone.utc)
+                updated_at = updated_at.replace(tzinfo=UTC)
 
             elapsed_seconds = (now - updated_at).total_seconds()
             if elapsed_seconds > ttl_seconds:
@@ -141,7 +141,7 @@ class CdiscTerminologyCache:
         self,
         package: str,
         codelist: CodelistDefinition,
-        ttl_seconds: Optional[int] = None,
+        ttl_seconds: int | None = None,
     ) -> None:
         """Save codelist definition to local SQLite cache.
 
@@ -151,7 +151,7 @@ class CdiscTerminologyCache:
             ttl_seconds: Optional TTL override in seconds.
         """
         ttl = ttl_seconds if ttl_seconds is not None else self.default_ttl_seconds
-        now_str = datetime.now(timezone.utc).isoformat()
+        now_str = datetime.now(UTC).isoformat()
         terms_json = json.dumps(
             [t.model_dump() for t in codelist.terms], ensure_ascii=False
         )
@@ -206,9 +206,9 @@ class CdiscTerminologyCache:
             updated_at_str, ttl_seconds = row
             updated_at = datetime.fromisoformat(updated_at_str)
             if updated_at.tzinfo is None:
-                updated_at = updated_at.replace(tzinfo=timezone.utc)
+                updated_at = updated_at.replace(tzinfo=UTC)
 
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             return (now - updated_at).total_seconds() > ttl_seconds
         finally:
             if str(self.db_path) != ":memory:":
@@ -227,13 +227,13 @@ class CdiscTerminologyCache:
                 "SELECT codelist_code, updated_at, ttl_seconds FROM cdisc_codelist_cache"
             )
             rows = cursor.fetchall()
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             expired_codes = []
 
             for code, updated_at_str, ttl in rows:
                 updated_at = datetime.fromisoformat(updated_at_str)
                 if updated_at.tzinfo is None:
-                    updated_at = updated_at.replace(tzinfo=timezone.utc)
+                    updated_at = updated_at.replace(tzinfo=UTC)
                 if (now - updated_at).total_seconds() > ttl:
                     expired_codes.append(code)
 
@@ -249,7 +249,7 @@ class CdiscTerminologyCache:
             if str(self.db_path) != ":memory:":
                 conn.close()
 
-    async def get_cache_stats(self) -> Dict[str, Any]:
+    async def get_cache_stats(self) -> dict[str, Any]:
         """Get cache statistics summary.
 
         Returns:

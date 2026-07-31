@@ -4,7 +4,7 @@ import importlib
 import json
 import logging
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from notifications.event_models import SystemDomainEvent
 from sqlalchemy import select
@@ -42,8 +42,8 @@ class NotificationWorker:
     """
 
     async def resolve_recipients(
-        self, event_type: str, study_id: str, payload: Dict[str, Any]
-    ) -> List[Dict[str, str]]:
+        self, event_type: str, study_id: str, payload: dict[str, Any]
+    ) -> list[dict[str, str]]:
         """
         Queries the Org microservice database to resolve target clinical users based on
         study, site, and role assignments. Falls back to deterministic mock values if database is empty.
@@ -295,7 +295,7 @@ async def publish_domain_event(event: SystemDomainEvent) -> None:
 
 
 # Control flags for background worker lifespan
-_worker_task: Optional[asyncio.Task] = None
+_worker_task: asyncio.Task | None = None
 _should_run: bool = False
 
 
@@ -317,7 +317,7 @@ async def start_notification_worker() -> None:
                 # Retrieve from mock in-memory queue
                 try:
                     message_str = await asyncio.wait_for(_mock_queue.get(), timeout=1.0)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     continue
 
                 # Process retrieved domain event with error retry & DLQ logic

@@ -3,8 +3,7 @@ import logging
 import os
 import sys
 import uuid
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from audit import AuditFields
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -75,7 +74,7 @@ class ConsentClauseCreate(AuditFields):
     Schema for creating/ingesting a new eConsent clause.
     """
 
-    clause_id: Optional[str] = Field(
+    clause_id: str | None = Field(
         None,
         description="Unique clause identifier across versions. Generated if not provided.",
     )
@@ -114,7 +113,7 @@ class ConsentTemplateCreate(AuditFields):
     Schema for creating/ingesting a new eConsent template.
     """
 
-    template_id: Optional[str] = Field(
+    template_id: str | None = Field(
         None,
         description="Unique template identifier across versions. Generated if not provided.",
     )
@@ -217,7 +216,7 @@ class ConsentTranslationCreate(AuditFields):
     Schema for creating/ingesting a new consent translation.
     """
 
-    translation_id: Optional[str] = Field(
+    translation_id: str | None = Field(
         None,
         description="Unique translation identifier across versions. Generated if not provided.",
     )
@@ -405,11 +404,11 @@ class ConsentSignatureRequest(BaseModel):
     subject_pseudonym: str = Field(
         ..., description="Pseudonym identifier of the subject"
     )
-    signature_data: Optional[str] = Field(
+    signature_data: str | None = Field(
         None, description="Electronic signature data (drawing or string)"
     )
     reason_for_change: str = Field(..., description="Change reason for signing")
-    site_id: Optional[str] = Field(None, description="Optional site identifier")
+    site_id: str | None = Field(None, description="Optional site identifier")
 
 
 class ConsentSignatureResponse(AuditFields):
@@ -423,7 +422,7 @@ class ConsentSignatureResponse(AuditFields):
     template_id: str
     version_index: int
     subject_pseudonym: str
-    signature_data: Optional[str]
+    signature_data: str | None
     signed_at: datetime
 
 
@@ -437,17 +436,17 @@ class ArchivalDeliveryResponse(AuditFields):
     id: str
     status: str
     attempts: int
-    last_error: Optional[str] = None
-    next_retry_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
+    last_error: str | None = None
+    next_retry_at: datetime | None = None
+    completed_at: datetime | None = None
     retry_eligible: bool
     correlation_id: str
     template_id: str
     version_index: int
     subject_pseudonym: str
     study_id: str
-    site_id: Optional[str] = None
-    etmf_document_id: Optional[str] = None
+    site_id: str | None = None
+    etmf_document_id: str | None = None
 
 
 class SubjectConsentCaptureRequest(BaseModel):
@@ -455,9 +454,7 @@ class SubjectConsentCaptureRequest(BaseModel):
         ..., description="Pseudonym identifier of the subject"
     )
     site_id: str = Field(..., description="Unique clinical site identifier")
-    device_timestamp: Optional[datetime] = Field(
-        None, description="Device-side timestamp"
-    )
+    device_timestamp: datetime | None = Field(None, description="Device-side timestamp")
     source_content_identity: str = Field(
         ..., description="Hash/clause-set identifier at capture time"
     )
@@ -487,7 +484,7 @@ class SubjectConsentResponse(AuditFields):
     server_timestamp: datetime = Field(
         ..., description="Server-side chronological capture timestamp"
     )
-    device_timestamp: Optional[datetime] = Field(
+    device_timestamp: datetime | None = Field(
         None, description="Device-side capture timestamp"
     )
     signature_manifest: dict = Field(
@@ -521,13 +518,13 @@ async def poll_and_dispatch() -> None:
     Queries, claims, and dispatches PENDING/FAILED eTMF archival delivery records.
     Uses pessimistic locking (.with_for_update()) to avoid double delivery.
     """
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
 
     from apps.econsent.etmf_client import forward_icf_to_etmf
 
     session_maker = db_manager.get_session_maker()
     async with session_maker() as session:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         stmt = (
             select(EtmfArchivalDelivery)
             .where(
@@ -577,7 +574,7 @@ async def poll_and_dispatch() -> None:
 
                 delivery.status = "SUCCESS"
                 delivery.etmf_document_id = doc_id
-                delivery.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+                delivery.completed_at = datetime.now(UTC).replace(tzinfo=None)
                 delivery.last_error = None
 
                 await write_audit_log(
@@ -600,7 +597,7 @@ async def poll_and_dispatch() -> None:
                     delivery.retry_eligible = False
 
                 backoff_seconds = min(60, 2**delivery.attempts)
-                delivery.next_retry_at = datetime.now(timezone.utc) + timedelta(
+                delivery.next_retry_at = datetime.now(UTC) + timedelta(
                     seconds=backoff_seconds
                 )
 
@@ -684,7 +681,7 @@ async def write_audit_log(
     actor_id: str,
     actor_role: str,
     action: str,
-    document_id: Optional[str],
+    document_id: str | None,
     details: str,
     reason_for_change: str,
 ) -> None:
@@ -925,8 +922,8 @@ async def update_consent_clause(
 )
 async def list_consent_clauses(
     request: Request,
-    study_id: Optional[str] = None,
-    clause_id: Optional[str] = None,
+    study_id: str | None = None,
+    clause_id: str | None = None,
     all_versions: bool = False,
     session: AsyncSession = Depends(get_db_session),
 ) -> list[ConsentClauseResponse]:
@@ -978,7 +975,7 @@ async def list_consent_clauses(
 async def get_consent_clause(
     request: Request,
     clause_id: str,
-    version_index: Optional[int] = None,
+    version_index: int | None = None,
     session: AsyncSession = Depends(get_db_session),
 ) -> ConsentClauseResponse:
     """
@@ -1100,10 +1097,10 @@ async def get_archival_status_endpoint(
     response_model=ArchivalDeliveryResponse,
 )
 async def get_archival_status_query_endpoint(
-    correlation_id: Optional[str] = None,
-    template_id: Optional[str] = None,
-    version_index: Optional[int] = None,
-    subject_pseudonym: Optional[str] = None,
+    correlation_id: str | None = None,
+    template_id: str | None = None,
+    version_index: int | None = None,
+    subject_pseudonym: str | None = None,
     session: AsyncSession = Depends(get_db_session),
 ) -> ArchivalDeliveryResponse:
     """
@@ -1234,7 +1231,6 @@ async def capture_subject_consent(
         )
 
     # 4. Generate canonical payload and compute canonical HMAC signature
-    from datetime import timezone
 
     from packages.security.signing import (
         canonical_serialize,
@@ -1242,9 +1238,9 @@ async def capture_subject_consent(
         generate_canonical_signature,
     )
 
-    server_timestamp = datetime.now(timezone.utc)
+    server_timestamp = datetime.now(UTC)
 
-    def normalize_timestamp_str(dt) -> Optional[str]:
+    def normalize_timestamp_str(dt) -> str | None:
         if not dt:
             return None
         if isinstance(dt, datetime):
@@ -1345,7 +1341,7 @@ async def capture_subject_consent(
 )
 async def get_subject_consent_status_endpoint(
     subject_pseudonym: str,
-    study_id: Optional[str] = None,
+    study_id: str | None = None,
     session: AsyncSession = Depends(get_db_session),
 ) -> SubjectConsentStatusResponse:
     """
@@ -1733,7 +1729,7 @@ async def sign_consent_template_endpoint(
             "subject_pseudonym": payload.subject_pseudonym,
             "signed_at": sig.signed_at.isoformat()
             if sig.signed_at
-            else datetime.now(timezone.utc).isoformat(),
+            else datetime.now(UTC).isoformat(),
             "created_by": user_id,
             "signature_data": payload.signature_data,
         },
@@ -1965,10 +1961,10 @@ async def update_consent_translation(
 )
 async def list_consent_translations(
     request: Request,
-    source_id: Optional[str] = None,
-    source_type: Optional[str] = None,
-    language_code: Optional[str] = None,
-    status: Optional[str] = None,
+    source_id: str | None = None,
+    source_type: str | None = None,
+    language_code: str | None = None,
+    status: str | None = None,
     all_versions: bool = False,
     session: AsyncSession = Depends(get_db_session),
 ) -> list[ConsentTranslationResponse]:
@@ -2027,7 +2023,7 @@ async def list_consent_translations(
 async def get_consent_translation(
     request: Request,
     translation_id: str,
-    version_index: Optional[int] = None,
+    version_index: int | None = None,
     session: AsyncSession = Depends(get_db_session),
 ) -> ConsentTranslationResponse:
     """
@@ -2279,7 +2275,7 @@ async def get_approved_composed_template(
     request: Request,
     template_id: str,
     language_code: str,
-    version_index: Optional[int] = None,
+    version_index: int | None = None,
     session: AsyncSession = Depends(get_db_session),
 ) -> dict:
     """
@@ -2425,8 +2421,8 @@ async def update_consent_template(
 )
 async def list_consent_templates(
     request: Request,
-    study_id: Optional[str] = None,
-    template_id: Optional[str] = None,
+    study_id: str | None = None,
+    template_id: str | None = None,
     all_versions: bool = False,
     session: AsyncSession = Depends(get_db_session),
 ) -> list[ConsentTemplateResponse]:
@@ -2480,7 +2476,7 @@ async def list_consent_templates(
 async def get_consent_template(
     request: Request,
     template_id: str,
-    version_index: Optional[int] = None,
+    version_index: int | None = None,
     session: AsyncSession = Depends(get_db_session),
 ) -> ConsentTemplateResponse:
     """
@@ -2526,7 +2522,7 @@ async def get_consent_template(
 async def compose_consent_template(
     request: Request,
     template_id: str,
-    version_index: Optional[int] = None,
+    version_index: int | None = None,
     session: AsyncSession = Depends(get_db_session),
 ) -> ComposedTemplateResponse:
     """

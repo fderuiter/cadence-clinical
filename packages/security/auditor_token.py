@@ -5,8 +5,8 @@ Requirements: PRD-SYS-001
 
 import os
 import time
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from jose import JWTError, jwt
 
@@ -19,7 +19,7 @@ class AuditorAccessTokenService:
     Requirements: PRD-SYS-001
     """
 
-    def __init__(self, secret_key: Optional[str] = None) -> None:
+    def __init__(self, secret_key: str | None = None) -> None:
         """Initialize service with gateway secret key."""
         self._secret = (
             secret_key or os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
@@ -30,8 +30,8 @@ class AuditorAccessTokenService:
         auditor_email: str,
         study_id: str,
         duration_hours: int = 24,
-        scopes: Optional[List[str]] = None,
-    ) -> Dict[str, Any]:
+        scopes: list[str] | None = None,
+    ) -> dict[str, Any]:
         """Generate signed time-bounded JWT access token for external regulatory inspection.
 
         Args:
@@ -43,7 +43,7 @@ class AuditorAccessTokenService:
         Returns:
             Dictionary containing access_token, expires_at, and scopes.
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expires_at = now + timedelta(hours=duration_hours)
         iat = time.time()
         exp = expires_at.timestamp()
@@ -77,7 +77,7 @@ class AuditorAccessTokenService:
             "scopes": effective_scopes,
         }
 
-    def validate_auditor_token(self, token: str) -> Dict[str, Any]:
+    def validate_auditor_token(self, token: str) -> dict[str, Any]:
         """Validate signature and expiration of auditor JWT token.
 
         Args:

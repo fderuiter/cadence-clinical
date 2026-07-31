@@ -1,9 +1,7 @@
-from typing import Tuple
-
 import defusedxml.ElementTree as ET
 
 
-def validate_cdisc_xml_structure(xml_content: str) -> Tuple[bool, str]:
+def validate_cdisc_xml_structure(xml_content: str) -> tuple[bool, str]:
     """Validate structural correctness of the generated CDISC ODM XML export.
 
     Ensures that the XML is well-formed, complies with the official CDISC namespace,

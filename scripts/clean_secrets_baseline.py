@@ -10,7 +10,7 @@ def clean_baseline(filepath):
         return
 
     try:
-        with open(filepath, "r", encoding="utf-8") as f:
+        with open(filepath, encoding="utf-8") as f:
             data = json.load(f)
 
         # Remove generated_at timestamp to prevent merge friction

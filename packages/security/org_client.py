@@ -1,14 +1,14 @@
 import logging
 import os
 import sys
-from typing import Any, Dict
+from typing import Any
 
 from packages.security.gateway_client import GatewayBaseClient
 
 logger = logging.getLogger("packages.security.org_client")
 
 
-async def resolve_personnel_assignments(keycloak_user_id: str) -> Dict[str, Any]:
+async def resolve_personnel_assignments(keycloak_user_id: str) -> dict[str, Any]:
     """
     Enriches Principal with authoritative site and study assignments from apps/org service.
     """

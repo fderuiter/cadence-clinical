@@ -38,7 +38,7 @@ def compute_signature(
 ) -> str:
     """Helper to compute valid HMAC-SHA256 signature for testing."""
     return hmac.new(
-        secret.encode("utf-8"), f"{timestamp}{token}".encode("utf-8"), hashlib.sha256
+        secret.encode("utf-8"), f"{timestamp}{token}".encode(), hashlib.sha256
     ).hexdigest()
 
 

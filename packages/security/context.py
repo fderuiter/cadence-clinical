@@ -1,8 +1,9 @@
 import contextvars
 import functools
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
-from datetime import datetime, timezone
-from typing import Any, Callable, Generator, ParamSpec, TypeVar
+from datetime import UTC, datetime
+from typing import Any, ParamSpec, TypeVar
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -58,11 +59,7 @@ def audit_context(
     u = user_id if user_id is not None else "system"
     r = change_reason if change_reason is not None else "system_operation"
     ip = ip_address if ip_address is not None else "127.0.0.1"
-    ts = (
-        timestamp
-        if timestamp is not None
-        else datetime.now(timezone.utc).replace(tzinfo=None)
-    )
+    ts = timestamp if timestamp is not None else datetime.now(UTC).replace(tzinfo=None)
 
     user_token = current_user_id.set(u)
     reason_token = current_change_reason.set(r)

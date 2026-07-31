@@ -1,5 +1,4 @@
 import time
-from typing import Optional
 
 import pytest
 import pytest_asyncio
@@ -1185,8 +1184,8 @@ def test_principal_agreement_with_middleware_coercion() -> None:
     def get_scoped_auth_headers(
         roles: str = "sponsor_designer",
         change_reason: str = "Authorized change",
-        site_id: Optional[str] = None,
-        sponsor_id: Optional[str] = None,
+        site_id: str | None = None,
+        sponsor_id: str | None = None,
         unblinded_access: bool = False,
         tenant_id: str = "tenant_default",
     ) -> dict:
@@ -1298,14 +1297,14 @@ def test_principal_agreement_with_middleware_coercion() -> None:
 def test_lab_range_rbac_permissions() -> None:
     """Verify that lab_range permissions are mapped correctly for all canonical/legacy roles."""
     from packages.security.rbac import (
-        ROLE_SYSADMIN,
-        ROLE_SPONSOR_DM,
-        ROLE_CRA_CANONICAL,
-        ROLE_INVESTIGATOR,
-        ROLE_CRC,
-        ROLE_PRINCIPAL_INVESTIGATOR,
         ROLE_AUTHORIZED_ER_PHYSICIAN,
+        ROLE_CRA_CANONICAL,
+        ROLE_CRC,
+        ROLE_INVESTIGATOR,
         ROLE_LEAD_INVESTIGATOR,
+        ROLE_PRINCIPAL_INVESTIGATOR,
+        ROLE_SPONSOR_DM,
+        ROLE_SYSADMIN,
         Principal,
         has_permission,
     )

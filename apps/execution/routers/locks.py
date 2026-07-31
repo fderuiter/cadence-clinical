@@ -4,8 +4,7 @@ Requirements: PRD-SYS-001
 """
 
 import uuid
-from datetime import datetime, timezone
-from typing import List
+from datetime import UTC, datetime
 
 from execution.lock_models import (
     DataLockRecord,
@@ -42,7 +41,7 @@ async def lock_data_endpoint(
         )
 
     lock_id = f"dl_{uuid.uuid4().hex[:8]}"
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now_iso = datetime.now(UTC).isoformat()
     action = payload.action.upper()
 
     status = LockStatusEnum.FROZEN if action == "FREEZE" else LockStatusEnum.LOCKED
@@ -87,7 +86,7 @@ async def unlock_data_endpoint(
         )
 
     lock_id = f"dl_{uuid.uuid4().hex[:8]}"
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now_iso = datetime.now(UTC).isoformat()
 
     record = DataLockRecord(
         lock_id=lock_id,
@@ -113,11 +112,11 @@ async def unlock_data_endpoint(
     )
 
 
-@router.get("/status/{form_id}", response_model=List[DataLockRecord])
+@router.get("/status/{form_id}", response_model=list[DataLockRecord])
 async def get_form_lock_status_endpoint(
     form_id: str,
     current_user: dict = Depends(get_current_user),
-) -> List[DataLockRecord]:
+) -> list[DataLockRecord]:
     """Retrieve active data locks for specified eCRF form submission.
 
     Requirements: PRD-SYS-001
