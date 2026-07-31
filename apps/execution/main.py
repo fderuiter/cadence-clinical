@@ -51,7 +51,6 @@ from apps.execution.database.context import (
 )
 from apps.execution.database.core import db_manager
 from apps.execution.database.middleware import ContextResetMiddleware
-from apps.execution.sdv_helper import validate_and_upsert_sdv_target
 from apps.execution.database.models import (
     AuditLog,
     BiostatExport,
@@ -109,6 +108,7 @@ from apps.execution.rtsm_supply import (
     SiteInventoryNotFoundError,
     dispense_kit_transaction,
 )
+from apps.execution.sdv_helper import validate_and_upsert_sdv_target
 from apps.execution.subject_lifecycle import InvalidStateTransitionError
 from apps.execution.translator import process_translation
 from apps.execution.trial_lock import TrialLockManager

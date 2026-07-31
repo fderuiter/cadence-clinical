@@ -1048,7 +1048,7 @@ class LabUnitConversion(AuditedModel):
     )
 
 
-class LabTestMasters(AuditedModel):
+class LabTestMaster(AuditedModel):
     """Represents a laboratory test catalog master record, enabling standardized catalog definition.
 
     Attributes:

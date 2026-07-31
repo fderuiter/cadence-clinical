@@ -69,15 +69,15 @@ class BulkSdvSignOffResponse(BaseModel):
         description="List of skipped targets with details on skip reasons",
     )
 
-    # Legacy fields for backward compatibility during phased rollouts
-    signed_count: Optional[int] = Field(
-        None, description="Legacy total number of successfully signed SDV items"
+    signed_count: int = Field(
+        ..., description="Total number of successfully signed SDV items"
     )
-    signed_target_ids: Optional[List[str]] = Field(
-        None, description="Legacy list of target IDs that were successfully signed"
+    signed_target_ids: List[str] = Field(
+        ..., description="List of target IDs that were successfully signed"
     )
-    skipped_target_ids: Optional[List[str]] = Field(
-        None, description="Legacy list of target IDs that were skipped or already signed"
+    skipped_target_ids: List[str] = Field(
+        ...,
+        description="List of target IDs that were skipped or already signed",
     )
 
 
