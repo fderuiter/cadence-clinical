@@ -156,6 +156,7 @@ async def test_defeated_record_persistence_on_conflicts():
         defeated_records = res.scalars().all()
         assert len(defeated_records) == 1
         assert defeated_records[0].answers == {"pain": 1, "nausea": "none"}
+        assert defeated_records[0].winning_answers == {"pain": 5, "nausea": "severe"}
         assert (
             defeated_records[0].status == "Defeated by online-merge conflict resolution"
         )
@@ -207,8 +208,13 @@ async def test_defeated_record_persistence_on_conflicts():
         assert 1 in pains
         assert 9 in pains
 
+        # Verify winning_answers are preserved
         for record in defeated_records:
             assert record.status == "Defeated by online-merge conflict resolution"
+            if record.answers["pain"] == 1:
+                assert record.winning_answers == {"pain": 5, "nausea": "severe"}
+            elif record.answers["pain"] == 9:
+                assert record.winning_answers == {"pain": 5, "nausea": "severe"}
 
         # Verify audit log contains decision and current version (no increment)
         stmt_audit = (
