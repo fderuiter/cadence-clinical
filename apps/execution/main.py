@@ -138,6 +138,60 @@ from packages.security.signing import generate_canonical_signature
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 
+async def recover_translation_jobs(session_factory: Any) -> None:
+    """Query the job database and recover any lingering 'PROCESSING' translation jobs.
+
+    This startup cleanup routine sweeps the database for translation job records
+    stuck in the 'PROCESSING' status (for example, due to an unexpected system
+    restart or server container crash), transitions them to 'FAILED' status, and
+    populates their error message field with a diagnostic note. The cleanup
+    executes and finishes its isolated database session before other startup processes
+    yield control back to the FastAPI server.
+
+    Args:
+        session_factory (Any): The async session factory used to obtain session instances.
+
+    Returns:
+        None
+
+    Raises:
+        None: Errors are handled and logged internally to prevent startup failure.
+    """
+    import logging
+
+    from sqlalchemy import select
+
+    from packages.security.context import audit_context
+
+    logger = logging.getLogger("cadence.execution.recovery")
+
+    with audit_context(user_id="system", change_reason="system_operation"):
+        async with session_factory() as session:
+            try:
+                async with session.begin():
+                    stmt = select(TranslationJob).where(
+                        TranslationJob.status == "PROCESSING"
+                    )
+                    result = await session.execute(stmt)
+                    jobs = result.scalars().all()
+
+                    if jobs:
+                        logger.info(
+                            f"Found {len(jobs)} stuck translation jobs in PROCESSING state. Transitioning them to FAILED."
+                        )
+                        for job in jobs:
+                            job.status = "FAILED"
+                            job.error_message = (
+                                "Translation was interrupted by a system restart."
+                            )
+                    else:
+                        logger.info(
+                            "No stuck translation jobs found in PROCESSING state."
+                        )
+            except Exception as e:
+                logger.error(f"Failed to recover translation jobs: {e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Handle the lifespan events for the FastAPI application.
@@ -153,6 +207,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     # Initialize shared database library
     db_manager.init_db(DATABASE_URL)
+
+    # Perform translation job recovery sweep inside startup lifespan
+    # to guarantee it runs before accepting any client connections.
+    await recover_translation_jobs(db_manager.get_session_maker())
 
     # Start the background ledger sealer
     from apps.execution.database.sealer import (
@@ -1280,11 +1338,13 @@ async def update_subject_state_endpoint(
 ) -> SubjectResponse:
     # Ensure change justification headers are present and valid
     verify_change_justification(request)
-    change_reason = request.headers.get("X-Change-Reason")
+    request.headers.get("X-Change-Reason")
 
     target_state = payload.status or payload.state
     if not target_state:
-        raise HTTPException(status_code=400, detail="Either status or state must be provided.")
+        raise HTTPException(
+            status_code=400, detail="Either status or state must be provided."
+        )
 
     async with db_manager.get_session_maker()() as session:
         async with session.begin():
@@ -1334,7 +1394,7 @@ async def update_subject_demographics_endpoint(
 ) -> SubjectResponse:
     # Ensure change justification headers are present and valid
     verify_change_justification(request)
-    change_reason = request.headers.get("X-Change-Reason")
+    request.headers.get("X-Change-Reason")
 
     async with db_manager.get_session_maker()() as session:
         async with session.begin():
@@ -1368,7 +1428,9 @@ async def update_subject_demographics_endpoint(
                 current_demo = {}
                 if subject.encrypted_demographics:
                     try:
-                        current_demo = decrypt_demographics(subject.encrypted_demographics)
+                        current_demo = decrypt_demographics(
+                            subject.encrypted_demographics
+                        )
                     except Exception:
                         pass
 
@@ -1409,7 +1471,7 @@ async def delete_subject_demographics_endpoint(
 ) -> SubjectResponse:
     # Ensure change justification headers are present and valid
     verify_change_justification(request)
-    change_reason = request.headers.get("X-Change-Reason")
+    request.headers.get("X-Change-Reason")
 
     async with db_manager.get_session_maker()() as session:
         async with session.begin():
@@ -1431,9 +1493,7 @@ async def delete_subject_demographics_endpoint(
             )
 
             if is_post_rand:
-                raise HTTPException(
-                    status_code=403, detail="SOFT_DELETE_BLOCKED"
-                )
+                raise HTTPException(status_code=403, detail="SOFT_DELETE_BLOCKED")
 
             # Pre-randomization: we can clear demographics/factors
             subject.encrypted_demographics = None
@@ -1539,6 +1599,7 @@ async def get_subject_detail(
 
         # 2. Enforce site isolation (PRD-SYS-004)
         from packages.security import enforce_site_isolation
+
         enforce_site_isolation(request, subject.site_id, principal)
 
         # 3. Retrieve Randomization if available
@@ -1554,6 +1615,7 @@ async def get_subject_detail(
 
         if rand:
             from apps.execution.cryptography import AllocationKeyManager
+
             key_mgr = AllocationKeyManager()
             await key_mgr.load_from_db(session)
             try:
@@ -1577,6 +1639,7 @@ async def get_subject_detail(
 
         # 4. Apply dynamic blinding filter
         from apps.execution.field_masking import apply_rtsm_blinded_filter
+
         roles = getattr(request.state, "roles", None)
         if roles is None:
             roles = principal.roles
@@ -1603,7 +1666,9 @@ async def get_visit_detail(
             raise HTTPException(status_code=404, detail="Visit not found")
 
         # 2. Fetch corresponding Subject
-        stmt_subj = select(ClinicalSubject).where(ClinicalSubject.subject_id == visit.subject_id)
+        stmt_subj = select(ClinicalSubject).where(
+            ClinicalSubject.subject_id == visit.subject_id
+        )
         subj_res = await session.execute(stmt_subj)
         subject = subj_res.scalars().first()
         if not subject:
@@ -1611,6 +1676,7 @@ async def get_visit_detail(
 
         # 3. Enforce site isolation (PRD-SYS-004) using Subject's site_id
         from packages.security import enforce_site_isolation
+
         enforce_site_isolation(request, subject.site_id, principal)
 
         # 4. Retrieve Randomization if available
@@ -1626,6 +1692,7 @@ async def get_visit_detail(
 
         if rand:
             from apps.execution.cryptography import AllocationKeyManager
+
             key_mgr = AllocationKeyManager()
             await key_mgr.load_from_db(session)
             try:
@@ -1650,6 +1717,7 @@ async def get_visit_detail(
 
         # 5. Apply dynamic blinding filter
         from apps.execution.field_masking import apply_rtsm_blinded_filter
+
         roles = getattr(request.state, "roles", None)
         if roles is None:
             roles = principal.roles

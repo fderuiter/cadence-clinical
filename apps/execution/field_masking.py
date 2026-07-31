@@ -134,7 +134,11 @@ def apply_rtsm_blinded_filter(data: dict, roles: Any) -> dict:
         return data
 
     masked = dict(data)
-    for field in ("treatment_group", "randomization_seed", "investigational_product_id"):
+    for field in (
+        "treatment_group",
+        "randomization_seed",
+        "investigational_product_id",
+    ):
         if field in masked:
             masked[field] = "MASKED"
     return masked

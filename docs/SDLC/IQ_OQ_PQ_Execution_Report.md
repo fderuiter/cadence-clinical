@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1806
-- **Passed:** 1806 🟢
+- **Total Automated Test Cases Run:** 1821
+- **Passed:** 1821 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1860,6 +1860,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_usdm_endpoint_returns_nested_schema_and_fast` | `tests.test_transformers` | PRD-MDR-003, PRD-MDR-004 | 🟢 PASSED | < 1s |
 | `test_usdm_validation_error_on_invalid_data` | `tests.test_transformers` | PRD-MDR-001 | 🟢 PASSED | < 1s |
 | `test_security_gate_unauthenticated_requests` | `tests.test_translation_recovery` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_startup_translation_job_recovery` | `tests.test_translation_recovery` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_startup_translation_job_recovery_performance` | `tests.test_translation_recovery` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_translation_error_status_and_rollback` | `tests.test_translation_recovery` | Trace-12 | 🟢 PASSED | < 1s |
 | `test_translation_status_and_listing_success` | `tests.test_translation_recovery` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_worker_context_and_session_cleanup` | `tests.test_translation_recovery` | *Regression/Helper* | 🟢 PASSED | < 1s |

@@ -201,3 +201,95 @@ async def test_worker_context_and_session_cleanup():
     assert current_session.get() is None
     assert current_user_id.get() == "system"
     assert current_change_reason.get() == "system_operation"
+
+
+@pytest.mark.asyncio
+async def test_startup_translation_job_recovery():
+    """Verify that translation jobs in PROCESSING status are recovered on startup.
+
+    Requirements: Trace-12
+    """
+    from sqlalchemy import select
+
+    from apps.execution.database.models import TranslationJob
+    from apps.execution.main import recover_translation_jobs
+
+    session_maker = db_manager.get_session_maker()
+
+    # Step 1: Create a mock TranslationJob with "PROCESSING" status
+    async with session_maker() as session:
+        async with session.begin():
+            job = TranslationJob(
+                id="stuck_job_1", study_id="test_stuck_study", status="PROCESSING"
+            )
+            session.add(job)
+
+    # Step 2: Trigger the recovery routine
+    await recover_translation_jobs(session_maker)
+
+    # Step 3: Assert that the job has been recovered and status set to FAILED with message
+    async with session_maker() as session:
+        stmt = select(TranslationJob).where(TranslationJob.id == "stuck_job_1")
+        result = await session.execute(stmt)
+        recovered_job = result.scalar_one_or_none()
+
+        assert recovered_job is not None
+        assert recovered_job.status == "FAILED"
+        assert "interrupted by a system restart" in recovered_job.error_message
+
+
+@pytest.mark.asyncio
+async def test_startup_translation_job_recovery_performance():
+    """Verify that the recovery database query completes in under 2 seconds under a load of 5000 legacy records.
+
+    Requirements: Trace-12
+    """
+    import time
+
+    from sqlalchemy import select
+
+    from apps.execution.database.models import TranslationJob
+    from apps.execution.main import recover_translation_jobs
+
+    session_maker = db_manager.get_session_maker()
+
+    # Generate 5,000 legacy records to simulate load
+    # Insert them efficiently inside one transaction
+    async with session_maker() as session:
+        async with session.begin():
+            # Let's insert a mix: some PROCESSING, some COMPLETED
+            for i in range(5000):
+                status = "PROCESSING" if i % 10 == 0 else "COMPLETED"
+                job = TranslationJob(
+                    id=f"perf_job_{i}", study_id=f"study_{i}", status=status
+                )
+                session.add(job)
+
+    # Measure recovery execution time
+    start_time = time.perf_counter()
+    await recover_translation_jobs(session_maker)
+    end_time = time.perf_counter()
+    duration = end_time - start_time
+
+    # Assert duration is well under 2 seconds
+    assert duration < 2.0, f"Recovery took too long: {duration:.2f} seconds"
+
+    # Verify that PROCESSING records were transitioned, and COMPLETED records were untouched
+    async with session_maker() as session:
+        # Check a sample of PROCESSING record
+        result = await session.execute(
+            select(TranslationJob).where(TranslationJob.id == "perf_job_0")
+        )
+        job_0 = result.scalar_one_or_none()
+        assert job_0 is not None
+        assert job_0.status == "FAILED"
+        assert "interrupted by a system restart" in job_0.error_message
+
+        # Check a sample of COMPLETED record
+        result = await session.execute(
+            select(TranslationJob).where(TranslationJob.id == "perf_job_1")
+        )
+        job_1 = result.scalar_one_or_none()
+        assert job_1 is not None
+        assert job_1.status == "COMPLETED"
+        assert job_1.error_message is None
