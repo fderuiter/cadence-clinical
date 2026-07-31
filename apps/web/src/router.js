@@ -75,6 +75,14 @@ const routes = [
     },
   },
   {
+    path: "/icf-builder",
+    name: "icf-builder",
+    component: () => import("./views/ICFBuilderView.vue"),
+    meta: {
+      requiresAuth: false,
+    },
+  },
+  {
     path: "/econsent-authoring",
     name: "econsent-authoring",
     component: () => import("./views/ConsentAuthoringView.vue"),
