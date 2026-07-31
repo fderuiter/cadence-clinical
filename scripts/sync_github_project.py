@@ -62,6 +62,9 @@ def handle_permission_error(stderr_msg):
         "unauthorized",
         "forbidden",
         "permission",
+        "rate limit",
+        "rate-limit",
+        "not found",
     ]
     if any(p in combined for p in patterns):
         print(
@@ -81,7 +84,11 @@ def handle_permission_error(stderr_msg):
 
 
 def run_cmd(args):
-    res = subprocess.run(args, capture_output=True, text=True)
+    try:
+        res = subprocess.run(args, capture_output=True, text=True)
+    except FileNotFoundError:
+        handle_permission_error(f"command not found: {args[0]}")
+        return None
     if res.returncode != 0:
         handle_permission_error(res.stderr)
         print(
@@ -97,7 +104,11 @@ def run_gql(query, variables=None):
     if variables:
         for k, v in variables.items():
             cmd.extend(["-F", f"{k}={v}"])
-    res = subprocess.run(cmd, capture_output=True, text=True)
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True)
+    except FileNotFoundError:
+        handle_permission_error("gh command not found")
+        return None
     if res.returncode != 0:
         handle_permission_error(res.stderr)
         print(f"GraphQL Query failed: {res.stderr.strip()}", file=sys.stderr)
