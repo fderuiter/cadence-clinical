@@ -125,7 +125,9 @@ from apps.designer.library import (
     UpdateLibraryObjectRequest,
 )
 from apps.designer.mapper import map_study_to_usdm
+from apps.designer.serialization import serialize_usdm
 from apps.designer.rendering import TemplateRenderingError
+from fastapi.responses import PlainTextResponse
 from apps.designer.rules import (
     CreateRuleRequest,
     compile_to_xpath,
@@ -134,7 +136,12 @@ from apps.designer.rules import (
 )
 from apps.designer.usdm_ingestion import (
     validate_usdm_payload,
+    safe_parse_payload,
+    normalize_usdm_payload,
 )
+from apps.designer.inverse_mapper import map_usdm_to_study
+from apps.designer.db import import_mapped_usdm_study
+from packages.security.context import audit_context
 from apps.designer.validator import (
     CodeValidationState,
     ConceptValidationReport,
@@ -492,14 +499,23 @@ async def get_legacy_study(study_id: str) -> Dict[str, Any]:
 
 
 @app.get("/api/v2/studies/{study_id}/usdm")
-async def get_usdm_study(study_id: str) -> Dict[str, Any]:
-    """Dynamically processes the internal projection and returns a compliant USDM structure.
+async def get_usdm_study(
+    study_id: str,
+    format: Optional[str] = Query(None, description="Output format ('json' or 'yaml')"),
+    style: Optional[str] = Query("canonical", description="Output style ('canonical', 'legacy', or 'both')"),
+    validate: Optional[bool] = Query(True, description="Validate the output"),
+) -> Any:
+    """Dynamically processes the internal projection and returns a compliant USDM structure,
+    supporting on-the-fly serialization to JSON or YAML.
 
     Args:
         study_id (str): The unique identifier of the study.
+        format (str, optional): Output serialization format: 'json' or 'yaml'.
+        style (str, optional): Export layout style: 'canonical', 'legacy', or 'both'.
+        validate (bool, optional): Whether to validate the exported content.
 
     Returns:
-        Dict[str, Any]: The dynamically mapped USDM study data.
+        Any: Either a JSON/YAML plain text response or a dict payload if no format is specified.
 
     Raises:
         HTTPException: If the study is not found or validation fails.
@@ -521,7 +537,105 @@ async def get_usdm_study(study_id: str) -> Dict[str, Any]:
     if duration > 200:
         pass  # In a real app we might log a warning
 
+    if format:
+        fmt = format.strip().lower()
+        if fmt not in ("json", "yaml", "yml"):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported format '{format}'. Must be 'json', 'yaml', or 'yml'."
+            )
+        try:
+            serialized_content = serialize_usdm(
+                usdm_study, format_type=fmt, style=style, validate=validate
+            )
+            media_type = "application/json" if fmt == "json" else "application/yaml"
+            return PlainTextResponse(content=serialized_content, media_type=media_type)
+        except Exception as e:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Serialization or validation error: {str(e)}"
+            )
+
     return usdm_study
+
+
+@app.post(
+    "/api/v2/studies/{study_id}/usdm",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_permission("study_design:update"))],
+)
+async def import_usdm_study_v2(
+    study_id: str,
+    request: Request,
+    override: Optional[str] = Query(None, description="Explicit USDM version override ('v2' or 'v3')"),
+) -> Dict[str, Any]:
+    """Consumes a validated, normalized USDM JSON or YAML payload and reconstructs the internal study projection.
+
+    Args:
+        study_id (str): The unique identifier of the study.
+        request (Request): The incoming request object.
+        override (str, optional): Explicit version override ('v2' or 'v3').
+
+    Returns:
+        Dict[str, Any]: The reconstructed internal study projection dictionary.
+    """
+    body_bytes = await request.body()
+    body_text = body_bytes.decode("utf-8")
+
+    # Use shared validation foundation
+    report = validate_usdm_payload(body_text, override=override)
+    if not report.validity:
+        invalid_params = []
+        for err in report.errors:
+            invalid_params.append(
+                InvalidParam(
+                    field=err.field or "payload", reason=err.reason, value=err.value
+                )
+            )
+        problem = ProblemDetails(
+            type="https://api.cadence-clinical.com/errors/usdm-validation-failed",
+            title="USDM Ingestion Validation Failed",
+            status=422,
+            detail=f"The provided {report.format} payload failed USDM {report.version} validation.",
+            instance=request.url.path,
+            code="USDM_VALIDATION_ERROR",
+            invalid_params=invalid_params,
+        )
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content=problem.model_dump(exclude_none=True),
+        )
+
+    try:
+        parsed_payload, detected_format = safe_parse_payload(body_text)
+        normalized_payload = normalize_usdm_payload(parsed_payload, report.version)
+        study_projection = map_usdm_to_study(normalized_payload)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to parse or map USDM payload: {str(e)}",
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Error mapping USDM payload: {str(e)}",
+        )
+
+    # Ensure the path study_id matches the parsed/mapped study_id
+    mapped_study_id = study_projection.get("study_id")
+    if mapped_study_id != study_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Path study_id '{study_id}' does not match payload study_id '{mapped_study_id}'.",
+        )
+
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = request.headers.get("X-Change-Reason") or "USDM Import"
+
+    with audit_context(user_id=user_id, change_reason=change_reason):
+        import_mapped_usdm_study(study_projection)
+
+    return study_projection
 
 
 @app.post(

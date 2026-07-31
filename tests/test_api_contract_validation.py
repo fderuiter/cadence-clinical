@@ -599,6 +599,7 @@ def is_whitelisted(method: str, path: str) -> bool:
         "/api/v1/designer/sentinel",
         "/api/v1/designer/cascade",
         "/api/v1/designer/export",
+        "/api/v2/studies",
     ]
     for w in wildcards:
         if p_norm.startswith(w):

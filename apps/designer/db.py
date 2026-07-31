@@ -433,3 +433,114 @@ async def is_concept_referenced_by_active_recruiting_study(
             pass
 
     return False
+
+
+def import_mapped_usdm_study(study_projection: Dict[str, Any]) -> None:
+    """Persists the mapped internal study projection into mock database tables/dicts."""
+    study_id = study_projection["study_id"]
+
+    # 1. Store study metadata in MOCK_STUDIES
+    MOCK_STUDIES[study_id] = {
+        "study_id": study_id,
+        "title": study_projection["title"],
+        "current_version": study_projection["current_version"],
+        "desc": study_projection.get("desc"),
+        "arms": study_projection.get("arms", []),
+    }
+
+    # 2. Store rules in MOCK_RULES
+    MOCK_RULES[study_id] = []
+    for rule in study_projection.get("rules", []):
+        MOCK_RULES[study_id].append({
+            "id": rule["id"],
+            "study_id": study_id,
+            "type": rule.get("type"),
+            "condition": rule.get("condition"),
+            "action": rule.get("action"),
+            "target_field": rule.get("target_field"),
+            "target_form": rule.get("target_form"),
+            "target_group": rule.get("target_group"),
+            "query_message": rule.get("query_message"),
+            "version_index": rule.get("version_index", 1),
+            "is_deleted": rule.get("is_deleted", False),
+        })
+
+    # 3. Store eligibility criteria in MOCK_ELIGIBILITY_CRITERIA
+    MOCK_ELIGIBILITY_CRITERIA[study_id] = []
+    for crit in study_projection.get("eligibility_criteria", []):
+        MOCK_ELIGIBILITY_CRITERIA[study_id].append({
+            "id": crit.get("id") or crit.get("criterion_id"),
+            "criterion_id": crit.get("id") or crit.get("criterion_id"),
+            "criterion_type": crit.get("criterion_type"),
+            "description": crit.get("description"),
+            "dsl_source": crit.get("dsl_source"),
+            "is_deleted": False,
+        })
+
+    # 4. Store blocks in MOCK_SOA_DATA and create study version if not exist
+    if study_id not in MOCK_STUDY_VERSIONS:
+        MOCK_STUDY_VERSIONS[study_id] = []
+
+    version_index = 1
+    try:
+        raw_version = study_projection["current_version"]
+        import re
+        match = re.search(r'\d+', str(raw_version))
+        if match:
+            version_index = int(match.group())
+    except Exception:
+        version_index = 1
+
+    v_exists = any(v.get("version_tag") == study_projection["current_version"] for v in MOCK_STUDY_VERSIONS[study_id])
+    if not v_exists:
+        version_id = f"ver_import_{study_id}_{version_index}"
+        version_payload = {
+            "id": version_id,
+            "version_tag": study_projection["current_version"],
+            "status": "DRAFT",
+            "version_index": version_index,
+            "created_by": "system",
+            "change_reason": "Import from USDM",
+        }
+        try:
+            create_mock_study_version(study_id, version_payload)
+        except Exception:
+            pass
+
+    # Populate blocks in MOCK_SOA_DATA
+    from apps.designer.delta import MOCK_SOA_DATA, _init_mock_soa
+    versions_list = MOCK_STUDY_VERSIONS[study_id]
+    if not versions_list:
+        version_id = f"ver_import_{study_id}_{version_index}"
+        MOCK_STUDY_VERSIONS[study_id].append({
+            "id": version_id,
+            "version_tag": study_projection["current_version"],
+            "status": "DRAFT",
+            "version_index": version_index,
+            "created_by": "system",
+        })
+    else:
+        latest_ver = sorted(versions_list, key=lambda x: x.get("version_index", 0))[-1]
+        version_id = latest_ver.get("id")
+    _init_mock_soa(version_id)
+
+    MOCK_SOA_DATA[version_id]["blocks"] = {}
+    for b in study_projection.get("blocks", []):
+        b_id = b["block_id"]
+        MOCK_SOA_DATA[version_id]["blocks"][b_id] = {
+            "id": b_id,
+            "block_id": b_id,
+            "block_type": b.get("block_type"),
+            "order": b.get("order", 1),
+            "parent_id": b.get("parent_id"),
+            "title": b.get("title"),
+            "text": b.get("text", ""),
+            "objective_id": b.get("objective_id"),
+            "criterion_id": b.get("criterion_id"),
+            "criterion_type": b.get("criterion_type"),
+            "dsl_source": b.get("dsl_source"),
+            "derived_from_soa": b.get("derived_from_soa", False),
+            "version_index": b.get("version_index", 1),
+            "created_by": b.get("created_by", "system"),
+            "reason_for_change": b.get("reason_for_change") or "Initial setup",
+        }

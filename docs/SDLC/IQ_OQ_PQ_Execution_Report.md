@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1737
-- **Passed:** 1737 🟢
+- **Total Automated Test Cases Run:** 1745
+- **Passed:** 1745 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1851,6 +1851,14 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_serialize_usdm_canonical_json` | `tests.test_usdm_serialization` | PRD-MDR-007 | 🟢 PASSED | < 1s |
 | `test_serialize_usdm_canonical_yaml` | `tests.test_usdm_serialization` | PRD-MDR-007 | 🟢 PASSED | < 1s |
 | `test_serialize_usdm_validation_errors` | `tests.test_usdm_serialization` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_get_usdm_study_v2_fallback` | `tests.test_usdm_v2_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_get_usdm_study_v2_format_json` | `tests.test_usdm_v2_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_get_usdm_study_v2_format_yaml` | `tests.test_usdm_v2_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_get_usdm_study_v2_invalid_format` | `tests.test_usdm_v2_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_import_usdm_study_v2_id_mismatch` | `tests.test_usdm_v2_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_import_usdm_study_v2_invalid_structure` | `tests.test_usdm_v2_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_import_usdm_study_v2_valid_json` | `tests.test_usdm_v2_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_import_usdm_study_v2_valid_yaml` | `tests.test_usdm_v2_endpoints` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_adr_compliance_validation_logic` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_check_architectural_changes_require_adr_missing_adr` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_check_architectural_changes_require_adr_no_changes` | `tests.test_validate_adrs` | *Regression/Helper* | 🟢 PASSED | < 1s |
