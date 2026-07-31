@@ -147,6 +147,18 @@
               </router-link>
             </li>
             <li
+              v-if="canViewEtmf"
+              id="tab-btn-etmf"
+              class="nav-item"
+              :class="{ active: $route.name === 'etmf' }"
+            >
+              <router-link v-slot="{ navigate }" to="/etmf" custom>
+                <button type="button" @click="navigate">
+                  <span>📁</span> eTMF Document Manager
+                </button>
+              </router-link>
+            </li>
+            <li
               id="tab-btn-notifications"
               class="nav-item"
               :class="{ active: $route.name === 'notifications' }"
@@ -211,6 +223,10 @@ const canViewRules = computed(() => {
 
 const canViewAudit = computed(() => {
   return hasRequiredRole(authStore.normalizedRoles, ["auditor", "tmf_auditor", "sponsor_admin"]);
+});
+
+const canViewEtmf = computed(() => {
+  return hasRequiredRole(authStore.normalizedRoles, ["cra", "monitor", "auditor", "tmf_auditor", "sponsor_admin"]);
 });
 
 onMounted(async () => {

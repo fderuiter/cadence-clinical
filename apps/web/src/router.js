@@ -125,6 +125,15 @@ const routes = [
     },
   },
   {
+    path: "/etmf",
+    name: "etmf",
+    component: () => import("./views/DocumentManagerView.vue"),
+    meta: {
+      requiresAuth: true,
+      requiresRole: ["cra", "monitor", "auditor", "tmf_auditor", "sponsor_admin"],
+    },
+  },
+  {
     path: "/notifications",
     name: "notifications",
     component: () => import("./views/NotificationsView.vue"),
