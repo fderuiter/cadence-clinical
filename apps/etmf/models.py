@@ -319,6 +319,14 @@ class DocumentExpirationAlertState(Base):
         DateTime, default=func.now(), nullable=False
     )
 
+    # Dispatch tracking fields
+    dispatched: Mapped[bool] = mapped_column(default=False, nullable=False, index=True)
+    notification_id: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True, index=True
+    )
+    attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_error: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
+
     # Standard Part 11 Audit Fields
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), nullable=False

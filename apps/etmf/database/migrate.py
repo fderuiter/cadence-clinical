@@ -514,6 +514,118 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
             except Exception:
                 pass
 
+    # 3. Upgrade and Backfill tmf_document_expiration_alert_states table
+    has_alert_states = await conn.run_sync(
+        lambda sc: inspect(sc).has_table("tmf_document_expiration_alert_states")
+    )
+    if has_alert_states:
+        alert_cols = await conn.run_sync(
+            lambda sc: get_table_columns(sc, "tmf_document_expiration_alert_states")
+        )
+        if "dispatched" not in alert_cols:
+            if dialect_name == "sqlite":
+                print(
+                    "[Migration] Rebuilding tmf_document_expiration_alert_states for SQLite..."
+                )
+                await conn.execute(
+                    text("""
+                    CREATE TABLE IF NOT EXISTS tmf_document_expiration_alert_states_new (
+                        id VARCHAR(36) PRIMARY KEY,
+                        document_id VARCHAR(36) NOT NULL,
+                        warning_window VARCHAR(50) NOT NULL,
+                        alerted_at DATETIME NOT NULL,
+                        dispatched BOOLEAN NOT NULL DEFAULT 0,
+                        notification_id VARCHAR(255),
+                        attempts INTEGER NOT NULL DEFAULT 0,
+                        last_error VARCHAR(1000),
+                        created_at DATETIME NOT NULL,
+                        created_by VARCHAR(255) NOT NULL,
+                        reason_for_change VARCHAR(1000) NOT NULL,
+                        version_index INTEGER NOT NULL,
+                        FOREIGN KEY (document_id) REFERENCES tmf_documents(id) ON DELETE CASCADE,
+                        UNIQUE (document_id, warning_window)
+                    );
+                """)
+                )
+
+                await conn.execute(
+                    text("""
+                    INSERT INTO tmf_document_expiration_alert_states_new (
+                        id, document_id, warning_window, alerted_at, dispatched, notification_id, attempts, last_error,
+                        created_at, created_by, reason_for_change, version_index
+                    )
+                    SELECT id, document_id, warning_window, alerted_at, 0, NULL, 0, NULL,
+                           created_at, created_by, reason_for_change, version_index
+                    FROM tmf_document_expiration_alert_states;
+                """)
+                )
+
+                await conn.execute(
+                    text("DROP TABLE tmf_document_expiration_alert_states;")
+                )
+                await conn.execute(
+                    text(
+                        "ALTER TABLE tmf_document_expiration_alert_states_new RENAME TO tmf_document_expiration_alert_states;"
+                    )
+                )
+
+                # Recreate indices
+                await conn.execute(
+                    text(
+                        "CREATE INDEX IF NOT EXISTS ix_tmf_document_expiration_alert_states_document_id ON tmf_document_expiration_alert_states (document_id);"
+                    )
+                )
+                await conn.execute(
+                    text(
+                        "CREATE INDEX IF NOT EXISTS ix_tmf_document_expiration_alert_states_warning_window ON tmf_document_expiration_alert_states (warning_window);"
+                    )
+                )
+                await conn.execute(
+                    text(
+                        "CREATE INDEX IF NOT EXISTS ix_tmf_document_expiration_alert_states_dispatched ON tmf_document_expiration_alert_states (dispatched);"
+                    )
+                )
+                await conn.execute(
+                    text(
+                        "CREATE INDEX IF NOT EXISTS ix_tmf_document_expiration_alert_states_notification_id ON tmf_document_expiration_alert_states (notification_id);"
+                    )
+                )
+
+            elif dialect_name == "postgresql":
+                print(
+                    "[Migration] Setting constraints for PostgreSQL dialect on tmf_document_expiration_alert_states..."
+                )
+                await conn.execute(
+                    text(
+                        "ALTER TABLE tmf_document_expiration_alert_states ADD COLUMN IF NOT EXISTS dispatched BOOLEAN NOT NULL DEFAULT FALSE;"
+                    )
+                )
+                await conn.execute(
+                    text(
+                        "ALTER TABLE tmf_document_expiration_alert_states ADD COLUMN IF NOT EXISTS notification_id VARCHAR(255);"
+                    )
+                )
+                await conn.execute(
+                    text(
+                        "ALTER TABLE tmf_document_expiration_alert_states ADD COLUMN IF NOT EXISTS attempts INTEGER NOT NULL DEFAULT 0;"
+                    )
+                )
+                await conn.execute(
+                    text(
+                        "ALTER TABLE tmf_document_expiration_alert_states ADD COLUMN IF NOT EXISTS last_error VARCHAR(1000);"
+                    )
+                )
+                await conn.execute(
+                    text(
+                        "CREATE INDEX IF NOT EXISTS ix_tmf_document_expiration_alert_states_dispatched ON tmf_document_expiration_alert_states (dispatched);"
+                    )
+                )
+                await conn.execute(
+                    text(
+                        "CREATE INDEX IF NOT EXISTS ix_tmf_document_expiration_alert_states_notification_id ON tmf_document_expiration_alert_states (notification_id);"
+                    )
+                )
+
         # For tmf_audit_logs, add nullable column reason_for_change
         if dialect_name == "sqlite":
             # Rebuild is optional, but SQLite's ALTER TABLE supports adding nullable columns directly!

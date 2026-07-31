@@ -356,3 +356,279 @@ async def test_audit_attribution():
         alert = res.scalars().one()
         assert alert.created_by == "expiration_scanner"
         assert alert.reason_for_change == "System-initiated expiration alert generation"
+
+
+@pytest.mark.asyncio
+async def test_dispatch_successful_owner_routing():
+    """Verify document owner routing and correct signature header properties on success."""
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    session_maker = db_manager.get_session_maker()
+    now = datetime.now(timezone.utc)
+
+    # 1. Create a document with document_owner_id
+    async with session_maker() as session:
+        doc = TMFDocument(
+            study_id="study_abc",
+            zone=5,
+            section="02",
+            artifact_type="Informed Consent Form",
+            filename="owner_consent.pdf",
+            content="owner content",
+            mime_type="application/pdf",
+            created_by="test_user",
+            expiration_date=now - timedelta(days=2),
+            document_owner_id="owner_usr_123",
+        )
+        session.add(doc)
+        await session.commit()
+        doc_id = doc.id
+
+    # 2. Mock httpx POST call to return 201 (success)
+    mock_response = MagicMock()
+    mock_response.status_code = 201
+    mock_response.json.return_value = {"id": "notif-abc-123"}
+
+    with patch(
+        "httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_response
+    ) as mock_post:
+        # Run scan cycle
+        await execute_expiration_scan_cycle(session_maker)
+
+        # 3. Assert notification creation request was sent
+        assert mock_post.call_count == 1
+        call_args, call_kwargs = mock_post.call_args
+
+        # Check payload/JSON content
+        json_data = call_kwargs["json"]
+        assert json_data["recipient_user_id"] == "owner_usr_123"
+        assert json_data["recipient_role"] is None
+        assert json_data["category"] == "ALERTS"
+        assert json_data["priority"] == "HIGH"
+        assert json_data["related_entity_type"] == "tmf_document_expiration"
+        assert f"{doc_id}:EXPIRED" in json_data["related_entity_id"]
+
+        # 4. Check gateway signature headers
+        headers = call_kwargs["headers"]
+        assert headers["X-User-Id"] == "etmf-service"
+        assert headers["X-User-Roles"] == "admin"
+        assert "X-Gateway-Signature" in headers
+
+        # Verify gateway signature
+        from packages.security.signing import verify_gateway_signature
+
+        gateway_secret = os.getenv(
+            "GATEWAY_SECRET", "internal-gateway-secret-12345"
+        ).encode("utf-8")
+        is_valid = verify_gateway_signature(
+            user_id=headers["X-User-Id"],
+            roles=headers["X-User-Roles"],
+            timestamp=headers["X-Gateway-Timestamp"],
+            signature=headers["X-Gateway-Signature"],
+            secret=gateway_secret,
+            change_reason=headers["X-Change-Reason"],
+        )
+        assert is_valid is True
+
+    # 5. Check persistent database state
+    async with session_maker() as session:
+        res = await session.execute(
+            select(DocumentExpirationAlertState).where(
+                DocumentExpirationAlertState.document_id == doc_id
+            )
+        )
+        alert = res.scalars().one()
+        assert alert.dispatched is True
+        assert alert.notification_id == "notif-abc-123"
+        assert alert.attempts == 1
+        assert alert.last_error is None
+
+        # Check TMFAuditLog
+        from apps.etmf.models import TMFAuditLog
+
+        res_audit = await session.execute(
+            select(TMFAuditLog).where(TMFAuditLog.action == "EXPIRATION_ALERT_DISPATCH")
+        )
+        audits = res_audit.scalars().all()
+        assert len(audits) == 1
+        assert (
+            f"Successfully dispatched expiration alert for document ID '{doc_id}'"
+            in audits[0].details
+        )
+
+
+@pytest.mark.asyncio
+async def test_dispatch_fallback_cra_routing():
+    """Verify fallback role routing to 'CRA' when document_owner_id is missing."""
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    session_maker = db_manager.get_session_maker()
+    now = datetime.now(timezone.utc)
+
+    # Create document without owner
+    async with session_maker() as session:
+        doc = TMFDocument(
+            study_id="study_abc",
+            zone=5,
+            section="02",
+            artifact_type="Informed Consent Form",
+            filename="fallback_consent.pdf",
+            content="fallback content",
+            mime_type="application/pdf",
+            created_by="test_user",
+            expiration_date=now - timedelta(days=2),
+            document_owner_id=None,
+        )
+        session.add(doc)
+        await session.commit()
+
+    mock_response = MagicMock()
+    mock_response.status_code = 201
+    mock_response.json.return_value = {"id": "notif-fallback-456"}
+
+    with patch(
+        "httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_response
+    ) as mock_post:
+        await execute_expiration_scan_cycle(session_maker)
+
+        assert mock_post.call_count == 1
+        json_data = mock_post.call_args[1]["json"]
+        assert json_data["recipient_user_id"] is None
+        assert json_data["recipient_role"] == "CRA"
+
+
+@pytest.mark.asyncio
+async def test_dispatch_failure_and_retryability():
+    """Verify failed dispatch handling, retry states, and audit log writing on failure."""
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    session_maker = db_manager.get_session_maker()
+    now = datetime.now(timezone.utc)
+
+    async with session_maker() as session:
+        doc = TMFDocument(
+            study_id="study_abc",
+            zone=5,
+            section="02",
+            artifact_type="Informed Consent Form",
+            filename="retry_consent.pdf",
+            content="retry content",
+            mime_type="application/pdf",
+            created_by="test_user",
+            expiration_date=now - timedelta(days=2),
+        )
+        session.add(doc)
+        await session.commit()
+        doc_id = doc.id
+
+    # 1. First run with failure response (HTTP 500)
+    mock_failed_resp = MagicMock()
+    mock_failed_resp.status_code = 500
+    mock_failed_resp.text = "Internal Server Error"
+
+    with patch(
+        "httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_failed_resp
+    ) as mock_post:
+        await execute_expiration_scan_cycle(session_maker)
+
+        assert mock_post.call_count == 1
+
+    # Verify state remains undispatched, with recorded failure and attempt increment
+    async with session_maker() as session:
+        res = await session.execute(
+            select(DocumentExpirationAlertState).where(
+                DocumentExpirationAlertState.document_id == doc_id
+            )
+        )
+        alert = res.scalars().one()
+        assert alert.dispatched is False
+        assert alert.attempts == 1
+        assert "HTTP 500" in alert.last_error
+
+        # Check TMFAuditLog for failed dispatch
+        from apps.etmf.models import TMFAuditLog
+
+        res_audit = await session.execute(
+            select(TMFAuditLog).where(
+                TMFAuditLog.action == "EXPIRATION_ALERT_DISPATCH_FAILED"
+            )
+        )
+        audits = res_audit.scalars().all()
+        assert len(audits) == 1
+        assert "Failed to dispatch" in audits[0].details
+
+    # 2. Second run with success response (HTTP 201)
+    mock_success_resp = MagicMock()
+    mock_success_resp.status_code = 201
+    mock_success_resp.json.return_value = {"id": "notif-success-789"}
+
+    with patch(
+        "httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_success_resp
+    ) as mock_post:
+        await execute_expiration_scan_cycle(session_maker)
+
+        assert mock_post.call_count == 1
+
+    # Verify state transitions to dispatched, attempts=2, last_error is None
+    async with session_maker() as session:
+        res = await session.execute(
+            select(DocumentExpirationAlertState).where(
+                DocumentExpirationAlertState.document_id == doc_id
+            )
+        )
+        alert = res.scalars().one()
+        assert alert.dispatched is True
+        assert alert.notification_id == "notif-success-789"
+        assert alert.attempts == 2
+        assert alert.last_error is None
+
+        # Check TMFAuditLog for successful dispatch
+        from apps.etmf.models import TMFAuditLog
+
+        res_audit = await session.execute(
+            select(TMFAuditLog).where(TMFAuditLog.action == "EXPIRATION_ALERT_DISPATCH")
+        )
+        audits = res_audit.scalars().all()
+        assert len(audits) == 1
+
+
+@pytest.mark.asyncio
+async def test_dispatch_idempotency_limit():
+    """Verify that once dispatched, no further authenticated notification requests are generated."""
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    session_maker = db_manager.get_session_maker()
+    now = datetime.now(timezone.utc)
+
+    async with session_maker() as session:
+        doc = TMFDocument(
+            study_id="study_abc",
+            zone=5,
+            section="02",
+            artifact_type="Informed Consent Form",
+            filename="idempotency_consent.pdf",
+            content="idempotency content",
+            mime_type="application/pdf",
+            created_by="test_user",
+            expiration_date=now - timedelta(days=2),
+        )
+        session.add(doc)
+        await session.commit()
+
+    mock_response = MagicMock()
+    mock_response.status_code = 201
+    mock_response.json.return_value = {"id": "notif-idem-999"}
+
+    # 1. First run: should dispatch successfully
+    with patch(
+        "httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_response
+    ) as mock_post:
+        await execute_expiration_scan_cycle(session_maker)
+        assert mock_post.call_count == 1
+
+    # 2. Second run: already marked dispatched, should NOT call POST again
+    with patch(
+        "httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_response
+    ) as mock_post:
+        await execute_expiration_scan_cycle(session_maker)
+        assert mock_post.call_count == 0

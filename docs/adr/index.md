@@ -159,3 +159,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-26: Durable and Idempotent eTMF Expiration Scanning Service](2026-08-26-durable-idempotent-etmf-expiration-scanner.md)
 - [2026-08-26: ADR 112: Site-Aware Synchronized Document Deduplication](2026-08-26-site-aware-synchronized-document-deduplication.md)
 - [2026-08-26: GxP Compliance Change Request Workflow](2026-08-26-gxp-compliance-change-request-workflow.md)
+- [2026-08-27: eTMF Expiration Alert Notification Dispatch and Recipient Routing](2026-08-27-etmf-expiration-notifications-dispatch.md)
