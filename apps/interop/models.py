@@ -192,7 +192,9 @@ class EPROSubmissionDefeated(Base):
     diary_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     device_timestamp: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     answers: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
-    winning_answers: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    winning_answers: Mapped[Optional[Dict[str, Any]]] = mapped_column(
+        JSON, nullable=True
+    )
     offline_sync_markers: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
     status: Mapped[str] = mapped_column(
         String(100),
