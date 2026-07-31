@@ -2,7 +2,8 @@ from typing import Any, Optional
 
 from fastapi import HTTPException, status
 
-from apps.execution.notifications_client import publish_notification, run_async
+from apps.execution.notifications_client import publish_notification
+from packages.security import run_async
 from packages.security.rbac import (
     SITE_SCOPED_ROLES,
     Principal,

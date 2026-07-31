@@ -3,7 +3,7 @@ import concurrent.futures
 import logging
 import os
 import time
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 
 import httpx
 
@@ -32,14 +32,17 @@ def run_async(coro):
 class GatewayBaseClient:
     """
     Standardized client wrapper for service-to-service communication.
-    Handles automated signature generation, gateway secret resolution, 
+    Handles automated signature generation, gateway secret resolution,
     header formatting, and consistent logging of failed requests.
     """
+
     def __init__(self, base_url: str = "", timeout: float = 5.0):
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         # Resolved gateway secret
-        gateway_secret_env = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
+        gateway_secret_env = os.getenv(
+            "GATEWAY_SECRET", "internal-gateway-secret-12345"
+        )
         self.secret = (
             gateway_secret_env.encode("utf-8")
             if isinstance(gateway_secret_env, str)
@@ -100,7 +103,11 @@ class GatewayBaseClient:
         Logs all failures (transport or non-2xx responses) at the error level.
         """
         # Resolve full URL
-        url = f"{self.base_url}{path}" if path.startswith("/") else f"{self.base_url}/{path}"
+        url = (
+            f"{self.base_url}{path}"
+            if path.startswith("/")
+            else f"{self.base_url}/{path}"
+        )
         if not self.base_url:
             url = path
 
@@ -114,7 +121,7 @@ class GatewayBaseClient:
             unblinded_access=unblinded_access,
             tenant_id=tenant_id,
         )
-        
+
         if headers:
             gw_headers.update(headers)
 
@@ -136,7 +143,9 @@ class GatewayBaseClient:
                 elif method_lower == "patch":
                     response = await client.patch(url, headers=gw_headers, **kwargs)
                 else:
-                    response = await client.request(method, url, headers=gw_headers, **kwargs)
+                    response = await client.request(
+                        method, url, headers=gw_headers, **kwargs
+                    )
 
                 # Check if the response is a failure (not 2xx)
                 if response.status_code < 200 or response.status_code >= 300:

@@ -1,10 +1,7 @@
 import logging
 import os
 import sys
-import time
 from typing import Any, Dict
-
-import httpx
 
 from packages.security.gateway_client import GatewayBaseClient
 
@@ -113,4 +110,3 @@ async def resolve_personnel_assignments(keycloak_user_id: str) -> Dict[str, Any]
             "assigned_sites": [],
             "assigned_studies": [],
         }
-

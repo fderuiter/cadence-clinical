@@ -3,7 +3,8 @@ import logging
 import time
 from typing import List
 
-from apps.execution.notifications_client import publish_notification, run_async
+from apps.execution.notifications_client import publish_notification
+from packages.security import run_async
 
 """
 Module for managing automated trial locks and security notifications.

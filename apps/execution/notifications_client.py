@@ -1,7 +1,7 @@
 import logging
 import os
 
-from packages.security import GatewayBaseClient, run_async
+from packages.security import GatewayBaseClient
 from packages.security.context import current_change_reason, current_user_id
 
 logger = logging.getLogger("execution-notifications-client")
@@ -14,9 +14,7 @@ async def publish_notification(payload: dict) -> bool:
     Logs and swallows all transport or non-2xx errors.
     """
     try:
-        notifications_url = os.getenv(
-            "NOTIFICATIONS_URL", "http://localhost:8006"
-        )
+        notifications_url = os.getenv("NOTIFICATIONS_URL", "http://localhost:8006")
         client = GatewayBaseClient(base_url=notifications_url, timeout=2.0)
 
         # Retrieve ContextVars or fallback
