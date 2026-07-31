@@ -26,13 +26,22 @@ async def setup_notifications_db():
     """
     Setup in-memory Notifications database for unit and integration testing.
     """
-    from apps.notifications.main import active_deliveries
+    from apps.notifications.main import active_deliveries, active_tasks
 
     active_deliveries.clear()
+    active_tasks.clear()
     db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
+    # Clean up outstanding background tasks robustly
+    for task in list(active_tasks):
+        if not task.done():
+            task.cancel()
+    if active_tasks:
+        await asyncio.gather(*active_tasks, return_exceptions=True)
+    active_tasks.clear()
+
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
     await db_manager.close()
@@ -149,8 +158,21 @@ async def test_notification_creation_and_auditing():
         "apps.notifications.delivery.send_email_notification", new_callable=AsyncMock
     ):
         await poll_and_dispatch()
-        # Allow async task processing
-        await asyncio.sleep(0.1)
+        # Allow async task processing robustly
+        for _ in range(160):
+            await asyncio.sleep(0.05)
+            headers_recipient = get_auth_headers(
+                user_id="pi_john",
+                roles="investigator",
+            )
+            response_detail = client.get(
+                f"/api/v1/notifications/{notification_id}", headers=headers_recipient
+            )
+            if (
+                response_detail.status_code == 200
+                and response_detail.json()["delivery_state"] == "DELIVERED"
+            ):
+                break
 
     # Re-fetch notification detail as the target recipient to satisfy visibility checks
     headers_recipient = get_auth_headers(
@@ -440,8 +462,8 @@ async def test_email_delivery_channel_success():
     mock_smtp_client = AsyncMock()
     with patch("aiosmtplib.SMTP", return_value=mock_smtp_client):
         await poll_and_dispatch()
-        # Wait up to 1.5 seconds for the background task to update the status to SUCCESS
-        for _ in range(30):
+        # Wait up to 8 seconds for the background task to update the status to SUCCESS
+        for _ in range(160):
             await asyncio.sleep(0.05)
             async with db_manager.get_session_maker()() as session:
                 stmt = select(NotificationDelivery).where(
@@ -509,8 +531,8 @@ async def test_webhook_delivery_channel_success():
 
     with patch("httpx.AsyncClient", return_value=mock_context):
         await poll_and_dispatch()
-        # Wait up to 1.5 seconds for the background task to update the status to SUCCESS
-        for _ in range(30):
+        # Wait up to 8 seconds for the background task to update the status to SUCCESS
+        for _ in range(160):
             await asyncio.sleep(0.05)
             async with db_manager.get_session_maker()() as session:
                 stmt = select(NotificationDelivery).where(
@@ -569,7 +591,17 @@ async def test_webhook_delivery_channel_failure_and_retry_backoff():
     # 1st Attempt: Fails with a network/timeout exception
     with patch("httpx.AsyncClient", side_effect=Exception("Connection timed out")):
         await poll_and_dispatch()
-        await asyncio.sleep(0.1)
+        for _ in range(160):
+            await asyncio.sleep(0.05)
+            async with db_manager.get_session_maker()() as session:
+                res = await session.execute(
+                    select(NotificationDelivery).where(
+                        NotificationDelivery.id == delivery_id
+                    )
+                )
+                delivery_1 = res.scalars().first()
+                if delivery_1.status == "FAILED":
+                    break
 
     async with db_manager.get_session_maker()() as session:
         stmt = select(NotificationDelivery).where(
@@ -590,7 +622,17 @@ async def test_webhook_delivery_channel_failure_and_retry_backoff():
     # 2nd Attempt: Fails again
     with patch("httpx.AsyncClient", side_effect=Exception("Temporary server error")):
         await poll_and_dispatch()
-        await asyncio.sleep(0.1)
+        for _ in range(160):
+            await asyncio.sleep(0.05)
+            async with db_manager.get_session_maker()() as session:
+                res = await session.execute(
+                    select(NotificationDelivery).where(
+                        NotificationDelivery.id == delivery_id
+                    )
+                )
+                delivery_2 = res.scalars().first()
+                if delivery_2.status == "FAILED" and delivery_2.attempts == 2:
+                    break
 
     async with db_manager.get_session_maker()() as session:
         stmt = select(NotificationDelivery).where(
@@ -611,7 +653,17 @@ async def test_webhook_delivery_channel_failure_and_retry_backoff():
     # 3rd Attempt: Reaches maximum allowed attempts
     with patch("httpx.AsyncClient", side_effect=Exception("Terminal failure")):
         await poll_and_dispatch()
-        await asyncio.sleep(0.1)
+        for _ in range(160):
+            await asyncio.sleep(0.05)
+            async with db_manager.get_session_maker()() as session:
+                res = await session.execute(
+                    select(NotificationDelivery).where(
+                        NotificationDelivery.id == delivery_id
+                    )
+                )
+                delivery_3 = res.scalars().first()
+                if delivery_3.status == "FAILED" and delivery_3.attempts == 5:
+                    break
 
     async with db_manager.get_session_maker()() as session:
         stmt = select(NotificationDelivery).where(
@@ -661,7 +713,7 @@ async def test_email_delivery_channel_failure_and_exhaustion():
         await poll_and_dispatch()
 
         # Robustly wait for first attempt to complete
-        for _ in range(30):
+        for _ in range(160):
             await asyncio.sleep(0.05)
             async with db_manager.get_session_maker()() as session:
                 res = await session.execute(
@@ -694,7 +746,7 @@ async def test_email_delivery_channel_failure_and_exhaustion():
         await poll_and_dispatch()
 
         # Robustly wait for final attempt to complete
-        for _ in range(30):
+        for _ in range(160):
             await asyncio.sleep(0.05)
             async with db_manager.get_session_maker()() as session:
                 res = await session.execute(
@@ -771,7 +823,7 @@ async def test_multi_channel_edge_case_in_app_succeeds_email_exhausts():
         await poll_and_dispatch()
 
         # Robustly wait for the first dispatch to complete
-        for _ in range(30):
+        for _ in range(160):
             await asyncio.sleep(0.05)
             async with db_manager.get_session_maker()() as session:
                 res_email = await session.execute(
@@ -800,7 +852,7 @@ async def test_multi_channel_edge_case_in_app_succeeds_email_exhausts():
         await poll_and_dispatch()
 
         # Robustly wait for the second dispatch to complete
-        for _ in range(30):
+        for _ in range(160):
             await asyncio.sleep(0.05)
             async with db_manager.get_session_maker()() as session:
                 res_email = await session.execute(

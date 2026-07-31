@@ -73,6 +73,7 @@ DATABASE_URL = os.getenv("NOTIFICATIONS_DATABASE_URL", "sqlite+aiosqlite:///:mem
 
 # Global set to track active deliveries in memory
 active_deliveries = set()
+active_tasks = set()
 
 
 async def poll_and_dispatch() -> None:
@@ -104,7 +105,9 @@ async def poll_and_dispatch() -> None:
             if d.id in active_deliveries:
                 continue
             active_deliveries.add(d.id)
-            asyncio.create_task(deliver_channel_wrapper(d.id))
+            task = asyncio.create_task(deliver_channel_wrapper(d.id))
+            active_tasks.add(task)
+            task.add_done_callback(active_tasks.discard)
 
 
 async def deliver_channel_wrapper(delivery_id: str) -> None:
