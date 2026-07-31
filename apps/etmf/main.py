@@ -39,6 +39,7 @@ from apps.etmf.models import (
     TMFAuditLog,
     TMFDocument,
 )
+from apps.etmf.routers.archive import router as archive_router
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.deid.detector import DeidDetector
 from packages.deid.manifest import build_redaction_manifest, sign_manifest_symmetric
@@ -155,6 +156,8 @@ app = FastAPI(
 
 # Enforce secure gateway authentication middleware
 app.add_middleware(GatewayAuthMiddleware)
+
+app.include_router(archive_router)
 
 
 # Dependable to obtain database session

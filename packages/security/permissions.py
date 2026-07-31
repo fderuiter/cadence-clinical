@@ -42,6 +42,11 @@ class PermissionEnum(str, enum.Enum):
     ESIGN_EXECUTE = "esign:execute"
     CHANGE_REQUEST_APPROVE = "change_request:approve"
 
+    # Document & Archival Permissions
+    DOCUMENTS_READ = "documents:read"
+    DOCUMENTS_WRITE = "documents:write"
+    ARCHIVE_EXPORT = "archive:export"
+
 
 class RoleEnum(str, enum.Enum):
     """Canonical system roles within Cadence Clinical eClinical platform."""
@@ -66,6 +71,9 @@ ROLE_PERMISSIONS_MAP: Dict[str, Set[PermissionEnum]] = {
         PermissionEnum.EXPORT_SDTM,
         PermissionEnum.CHANGE_REQUEST_APPROVE,
         PermissionEnum.ESIGN_EXECUTE,
+        PermissionEnum.DOCUMENTS_READ,
+        PermissionEnum.DOCUMENTS_WRITE,
+        PermissionEnum.ARCHIVE_EXPORT,
     },
     RoleEnum.SPONSOR_DESIGNER.value: {
         PermissionEnum.STUDY_READ,
@@ -81,6 +89,8 @@ ROLE_PERMISSIONS_MAP: Dict[str, Set[PermissionEnum]] = {
         PermissionEnum.SAE_REPORT,
         PermissionEnum.ESIGN_EXECUTE,
         PermissionEnum.QUERY_MANAGE,
+        PermissionEnum.DOCUMENTS_READ,
+        PermissionEnum.DOCUMENTS_WRITE,
     },
     RoleEnum.CRC.value: {
         PermissionEnum.STUDY_READ,
@@ -89,12 +99,16 @@ ROLE_PERMISSIONS_MAP: Dict[str, Set[PermissionEnum]] = {
         PermissionEnum.RTSM_RANDOMIZE,
         PermissionEnum.SAE_REPORT,
         PermissionEnum.QUERY_MANAGE,
+        PermissionEnum.DOCUMENTS_READ,
+        PermissionEnum.DOCUMENTS_WRITE,
     },
     RoleEnum.CRA.value: {
         PermissionEnum.STUDY_READ,
         PermissionEnum.SDV_VERIFY,
         PermissionEnum.QUERY_MANAGE,
         PermissionEnum.AUDIT_VIEW,
+        PermissionEnum.DOCUMENTS_READ,
+        PermissionEnum.DOCUMENTS_WRITE,
     },
     RoleEnum.DATA_MANAGER.value: {
         PermissionEnum.STUDY_READ,
@@ -104,10 +118,15 @@ ROLE_PERMISSIONS_MAP: Dict[str, Set[PermissionEnum]] = {
         PermissionEnum.QUERY_MANAGE,
         PermissionEnum.EXPORT_SDTM,
         PermissionEnum.AUDIT_VIEW,
+        PermissionEnum.DOCUMENTS_READ,
+        PermissionEnum.DOCUMENTS_WRITE,
+        PermissionEnum.ARCHIVE_EXPORT,
     },
     RoleEnum.AUDITOR.value: {
         PermissionEnum.STUDY_READ,
         PermissionEnum.AUDIT_VIEW,
+        PermissionEnum.DOCUMENTS_READ,
+        PermissionEnum.ARCHIVE_EXPORT,
     },
     RoleEnum.SUBJECT.value: {
         PermissionEnum.FORM_WRITE,

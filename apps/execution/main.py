@@ -94,6 +94,7 @@ from apps.execution.routers.amendments import router as amendments_router
 from apps.execution.routers.anonymization import router as anonymization_router
 from apps.execution.routers.auditor import router as auditor_router
 from apps.execution.routers.doa import router as doa_router
+from apps.execution.routers.documents import router as documents_router
 from apps.execution.routers.eisf import router as eisf_router
 from apps.execution.routers.locks import router as locks_router
 from apps.execution.routers.offline import router as offline_router
@@ -299,6 +300,7 @@ app.include_router(eisf_router)
 app.include_router(anonymization_router)
 app.include_router(doa_router)
 app.include_router(offline_router)
+app.include_router(documents_router)
 
 
 @app.exception_handler(RequestValidationError)

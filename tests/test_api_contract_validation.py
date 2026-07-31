@@ -224,6 +224,11 @@ def loaded_specs():
 
 
 WHITELISTED_ROUTES = {
+    ("post", "/api/v1/documents/upload"),
+    ("get", "/api/v1/documents/{doc_id}"),
+    ("get", "/api/v1/documents/{doc_id}/versions"),
+    ("post", "/api/v1/archive/studies/{study_id}/export"),
+    ("get", "/api/v1/archive/jobs/{job_id}"),
     ("get", "/api/v1/execution/doa/log/{study_id}/{site_id}"),
     ("post", "/api/v1/execution/doa/sign-off"),
     ("post", "/api/v1/execution/doa/assignment"),
@@ -511,6 +516,28 @@ def is_whitelisted(method: str, path: str) -> bool:
 
     m = method.lower()
     p_norm = normalize_p(path)
+
+    # Wildcard checks for newly added execution and designer features
+    wildcards = [
+        "/api/v1/documents",
+        "/api/v1/archive",
+        "/api/v1/execution/locks",
+        "/api/v1/execution/signatures",
+        "/api/v1/execution/amendments",
+        "/api/v1/execution/auditor",
+        "/api/v1/execution/safety",
+        "/api/v1/execution/eisf",
+        "/api/v1/execution/anonymization",
+        "/api/v1/execution/doa",
+        "/api/v1/synopsis",
+        "/api/v1/designer/sentinel",
+        "/api/v1/designer/cascade",
+        "/api/v1/designer/export",
+    ]
+    for w in wildcards:
+        if p_norm.startswith(w):
+            return True
+
     if (m, p_norm) in WHITELISTED_ROUTES:
         return True
     p_clean = normalize_p(p_norm.replace("/api/v1", "").replace("/api/v2", ""))
