@@ -851,12 +851,18 @@ if (typeof window !== "undefined") {
   window.syncEngine = syncEngine;
 }
 
-const showConflictModal = computed(() => syncStore.status === "CONFLICT_DETECTED");
+const showConflictModal = computed(
+  () => syncStore.status === "CONFLICT_DETECTED"
+);
 const activeConflict = computed(() => syncStore.conflict);
 
 async function handleResolveConflict({ strategy, reason }) {
   if (activeConflict.value && activeConflict.value.conflictItem) {
-    await syncEngine.resolveConflict(activeConflict.value.conflictItem.deltaId, strategy, reason);
+    await syncEngine.resolveConflict(
+      activeConflict.value.conflictItem.deltaId,
+      strategy,
+      reason
+    );
   }
 }
 

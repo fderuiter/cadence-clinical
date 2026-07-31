@@ -4,9 +4,7 @@
     <header class="portal-header">
       <div class="header-branding">
         <h1>My <span>Cadence</span></h1>
-        <p class="role-badge">
-          Participant Companion Portal
-        </p>
+        <p class="role-badge">Participant Companion Portal</p>
       </div>
       <div class="compliance-badges">
         <span class="badge badge-epro">ePRO Companion</span>
@@ -18,10 +16,7 @@
     <!-- Main Layout -->
     <div class="portal-container">
       <!-- Patient Navigation Tabs -->
-      <nav
-        class="portal-navigation"
-        aria-label="Participant navigation"
-      >
+      <nav class="portal-navigation" aria-label="Participant navigation">
         <ul
           class="nav-tabs"
           role="tablist"
@@ -37,10 +32,16 @@
             role="none"
           >
             <button
-              :ref="el => { if (el) tabRefs[tab.id] = el }"
+              :ref="
+                (el) => {
+                  if (el) tabRefs[tab.id] = el;
+                }
+              "
               type="button"
               role="tab"
-              :aria-selected="state.currentView === tab.viewId ? 'true' : 'false'"
+              :aria-selected="
+                state.currentView === tab.viewId ? 'true' : 'false'
+              "
               :aria-controls="tab.viewId"
               :tabindex="state.currentView === tab.viewId ? 0 : -1"
               @click="selectView(tab.viewId)"
@@ -59,15 +60,12 @@
 
         <!-- Active Participant Card -->
         <div class="participant-info-card">
-          <div class="info-title">
-            Participant Session
-          </div>
+          <div class="info-title">Participant Session</div>
           <div class="info-row">
             <span class="info-lbl">ID:</span>
-            <span
-              id="session-subject-id"
-              class="info-val"
-            >{{ state.session.userId || 'Loading...' }}</span>
+            <span id="session-subject-id" class="info-val">{{
+              state.session.userId || "Loading..."
+            }}</span>
           </div>
           <div class="info-row">
             <span class="info-lbl">Status:</span>
@@ -96,11 +94,7 @@
           </div>
 
           <!-- Tasks Loading Placeholder -->
-          <div
-            id="tasks-loading"
-            class="loading-state"
-            style="display: none"
-          >
+          <div id="tasks-loading" class="loading-state" style="display: none">
             Loading your assigned tasks...
           </div>
 
@@ -125,23 +119,14 @@
             >
               Unknown error
             </p>
-            <button
-              id="btn-retry-tasks"
-              type="button"
-              class="btn btn-primary"
-            >
+            <button id="btn-retry-tasks" type="button" class="btn btn-primary">
               Retry
             </button>
           </div>
 
           <!-- List of tasks -->
-          <div
-            id="tasks-list-container"
-            class="tasks-list"
-          >
-            <div class="loading-state">
-              Loading your assigned tasks...
-            </div>
+          <div id="tasks-list-container" class="tasks-list">
+            <div class="loading-state">Loading your assigned tasks...</div>
           </div>
 
           <!-- Offline Sync Status Panel -->
@@ -161,7 +146,9 @@
                 margin-bottom: 12px;
               "
             >
-              <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+              <h3
+                style="margin: 0; display: flex; align-items: center; gap: 8px"
+              >
                 <span>🔄</span> Offline Sync Queue
               </h3>
               <button
@@ -196,16 +183,10 @@
           :class="{ active: state.currentView === 'view-questionnaire' }"
         >
           <div class="view-header">
-            <button
-              id="btn-back-to-tasks"
-              type="button"
-              class="btn-back"
-            >
+            <button id="btn-back-to-tasks" type="button" class="btn-back">
               ← Back to My Tasks
             </button>
-            <h2 id="questionnaire-title">
-              Questionnaire
-            </h2>
+            <h2 id="questionnaire-title">Questionnaire</h2>
             <p id="questionnaire-desc">
               Please answer all questions accurately.
             </p>
@@ -294,15 +275,8 @@
             <!-- Compliance Score Card -->
             <div class="card compliance-score-card">
               <div class="score-radial">
-                <div
-                  id="compliance-rate-pct"
-                  class="score-value"
-                >
-                  0%
-                </div>
-                <div class="score-lbl">
-                  Compliance Rate
-                </div>
+                <div id="compliance-rate-pct" class="score-value">0%</div>
+                <div class="score-lbl">Compliance Rate</div>
               </div>
               <div class="score-breakdown">
                 <div class="breakdown-item">
@@ -310,21 +284,20 @@
                   <strong
                     id="compliance-completed-count"
                     class="val text-success"
-                  >0</strong>
+                    >0</strong
+                  >
                 </div>
                 <div class="breakdown-item">
                   <span class="lbl">Pending:</span>
-                  <strong
-                    id="compliance-pending-count"
-                    class="val text-warning"
-                  >0</strong>
+                  <strong id="compliance-pending-count" class="val text-warning"
+                    >0</strong
+                  >
                 </div>
                 <div class="breakdown-item">
                   <span class="lbl">Overdue:</span>
-                  <strong
-                    id="compliance-overdue-count"
-                    class="val text-danger"
-                  >0</strong>
+                  <strong id="compliance-overdue-count" class="val text-danger"
+                    >0</strong
+                  >
                 </div>
               </div>
             </div>
@@ -344,12 +317,7 @@
                   </thead>
                   <tbody id="compliance-history-tbody">
                     <tr>
-                      <td
-                        colspan="4"
-                        class="no-data"
-                      >
-                        No history found.
-                      </td>
+                      <td colspan="4" class="no-data">No history found.</td>
                     </tr>
                   </tbody>
                 </table>
@@ -370,17 +338,13 @@
           <div class="view-header">
             <h2>My Notification Inbox</h2>
             <p>
-              Receive reminders, alerts, and system notifications regarding
-              your trial schedule.
+              Receive reminders, alerts, and system notifications regarding your
+              trial schedule.
             </p>
           </div>
 
           <!-- Inbox Loading Placeholder -->
-          <div
-            id="inbox-loading"
-            class="loading-state"
-            style="display: none"
-          >
+          <div id="inbox-loading" class="loading-state" style="display: none">
             Loading notifications...
           </div>
 
@@ -405,22 +369,13 @@
             >
               Unknown error
             </p>
-            <button
-              id="btn-retry-inbox"
-              type="button"
-              class="btn btn-primary"
-            >
+            <button id="btn-retry-inbox" type="button" class="btn btn-primary">
               Retry
             </button>
           </div>
 
-          <div
-            id="inbox-container"
-            class="inbox-list"
-          >
-            <div class="loading-state">
-              Loading notifications...
-            </div>
+          <div id="inbox-container" class="inbox-list">
+            <div class="loading-state">Loading notifications...</div>
           </div>
         </section>
 
@@ -457,7 +412,8 @@
               <label
                 for="consent-lang-selector"
                 style="font-weight: bold; margin-right: 8px"
-              >Select Language:</label>
+                >Select Language:</label
+              >
               <select
                 id="consent-lang-selector"
                 style="
@@ -468,32 +424,19 @@
                   color: var(--text-color);
                 "
               >
-                <option value="en">
-                  English (en)
-                </option>
-                <option value="es">
-                  Español (es)
-                </option>
-                <option value="nl">
-                  Nederlands (nl)
-                </option>
-                <option value="fr">
-                  Français (fr)
-                </option>
+                <option value="en">English (en)</option>
+                <option value="es">Español (es)</option>
+                <option value="nl">Nederlands (nl)</option>
+                <option value="fr">Français (fr)</option>
               </select>
             </div>
-            <span
-              id="consent-status-badge"
-              class="status-pill pending"
-            >Pending Check</span>
+            <span id="consent-status-badge" class="status-pill pending"
+              >Pending Check</span
+            >
           </div>
 
           <!-- Loading indicator -->
-          <div
-            id="consent-loading"
-            class="loading-state"
-            style="display: none"
-          >
+          <div id="consent-loading" class="loading-state" style="display: none">
             Loading informed consent details...
           </div>
 
@@ -528,15 +471,9 @@
           </div>
 
           <!-- Consent Document Content & Visual Renderer -->
-          <div
-            id="consent-content-wrapper"
-            style="display: none"
-          >
+          <div id="consent-content-wrapper" style="display: none">
             <!-- Metadata and Clauses -->
-            <div
-              class="card"
-              style="margin-bottom: 24px"
-            >
+            <div class="card" style="margin-bottom: 24px">
               <h3
                 id="consent-template-title"
                 style="margin-top: 0; color: var(--primary-color)"
@@ -574,7 +511,14 @@
               class="card"
               style="margin-bottom: 24px"
             >
-              <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px;">
+              <h3
+                style="
+                  margin-top: 0;
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                "
+              >
                 <span>🧠</span> Step 1: Comprehension Verification Check
               </h3>
               <p
@@ -609,10 +553,7 @@
                 <!-- Dynamically rendered questions using radio grids -->
               </div>
 
-              <div
-                class="form-actions"
-                style="margin-top: 20px"
-              >
+              <div class="form-actions" style="margin-top: 20px">
                 <button
                   id="btn-submit-consent-answers"
                   type="button"
@@ -629,7 +570,14 @@
               class="card"
               style="margin-bottom: 24px"
             >
-              <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px;">
+              <h3
+                style="
+                  margin-top: 0;
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                "
+              >
                 <span>✍️</span> Step 2: Electronic Signature
               </h3>
               <p
@@ -670,10 +618,7 @@
       @keydown="handleModalKeyDown"
     >
       <div class="modal">
-        <div
-          id="portal-modal-title"
-          class="modal-header"
-        >
+        <div id="portal-modal-title" class="modal-header">
           Electronic Signature Required
         </div>
         <div class="modal-body">
@@ -714,13 +659,13 @@
               <option value="Acknowledge important reminder">
                 Acknowledge important reminder
               </option>
-              <option value="Other">
-                Other (specify below)
-              </option>
+              <option value="Other">Other (specify below)</option>
             </select>
           </div>
           <div class="form-group mb-12">
-            <label for="sign-reason-custom">Custom Reason Detail (Optional)</label>
+            <label for="sign-reason-custom"
+              >Custom Reason Detail (Optional)</label
+            >
             <textarea
               id="sign-reason-custom"
               placeholder="Provide extra detail if 'Other' selected..."
@@ -733,7 +678,7 @@
               type="text"
               placeholder="Enter your participant identifier..."
               required
-            >
+            />
           </div>
           <div class="form-group">
             <label for="sign-password">Security PIN / Password</label>
@@ -742,22 +687,14 @@
               type="password"
               placeholder="••••••••"
               required
-            >
+            />
           </div>
         </div>
         <div class="modal-footer">
-          <button
-            id="btn-modal-cancel"
-            type="button"
-            class="btn btn-secondary"
-          >
+          <button id="btn-modal-cancel" type="button" class="btn btn-secondary">
             Cancel
           </button>
-          <button
-            id="btn-modal-sign"
-            type="button"
-            class="btn btn-primary"
-          >
+          <button id="btn-modal-sign" type="button" class="btn btn-primary">
             Sign and Confirm
           </button>
         </div>
@@ -769,10 +706,7 @@
       <div class="footer-title">
         My Digital Activity Audit Log (21 CFR Part 11 Compliant)
       </div>
-      <div
-        id="portal-ledger-timeline"
-        class="ledger-timeline"
-      >
+      <div id="portal-ledger-timeline" class="ledger-timeline">
         <!-- Ledger records shown here -->
       </div>
     </footer>
@@ -785,24 +719,29 @@ import { state, showView } from "./index.js";
 
 const tabs = [
   { id: "tasks", label: "My Tasks", icon: "📋", viewId: "view-tasks" },
-  { id: "compliance", label: "My Compliance", icon: "📈", viewId: "view-compliance" },
+  {
+    id: "compliance",
+    label: "My Compliance",
+    icon: "📈",
+    viewId: "view-compliance",
+  },
   { id: "inbox", label: "My Inbox", icon: "✉️", viewId: "view-inbox" },
-  { id: "consent", label: "My Consent", icon: "✍️", viewId: "view-consent" }
+  { id: "consent", label: "My Consent", icon: "✍️", viewId: "view-consent" },
 ];
 
 const tabRefs = {};
 
 function handleTabKeyDown(event) {
-  const currentTabId = tabs.find(t => t.viewId === state.currentView)?.id;
+  const currentTabId = tabs.find((t) => t.viewId === state.currentView)?.id;
   if (!currentTabId) return;
 
-  const currentIndex = tabs.findIndex(t => t.id === currentTabId);
+  const currentIndex = tabs.findIndex((t) => t.id === currentTabId);
   let nextIndex;
 
-  if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+  if (event.key === "ArrowRight" || event.key === "ArrowDown") {
     nextIndex = (currentIndex + 1) % tabs.length;
     event.preventDefault();
-  } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+  } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
     nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
     event.preventDefault();
   } else {
@@ -811,7 +750,7 @@ function handleTabKeyDown(event) {
 
   const nextTab = tabs[nextIndex];
   selectView(nextTab.viewId);
-  
+
   // Focus the newly active tab button
   nextTick(() => {
     const btn = tabRefs[nextTab.id];
@@ -827,13 +766,16 @@ function handleModalKeyDown(e) {
   if (e.key === "Tab") {
     const modal = document.getElementById("portal-sign-modal");
     if (!modal) return;
-    const focusableSelectors = 'input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])';
-    const focusableElements = Array.from(modal.querySelectorAll(focusableSelectors));
+    const focusableSelectors =
+      "input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])";
+    const focusableElements = Array.from(
+      modal.querySelectorAll(focusableSelectors)
+    );
     if (focusableElements.length === 0) return;
-    
+
     const first = focusableElements[0];
     const last = focusableElements[focusableElements.length - 1];
-    
+
     if (e.shiftKey) {
       if (document.activeElement === first) {
         last.focus();

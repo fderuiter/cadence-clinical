@@ -4,7 +4,8 @@
       <div class="header-titles">
         <h2>Artifact Documents Registry</h2>
         <p v-if="selectedArtifactCode" class="active-artifact-subtitle">
-          Showing documents for Artifact: <strong>{{ selectedArtifactCode }}</strong>
+          Showing documents for Artifact:
+          <strong>{{ selectedArtifactCode }}</strong>
         </p>
         <p v-else class="active-artifact-subtitle">
           Please select an artifact from the binder tree to view documents.
@@ -42,7 +43,9 @@
           <tr v-for="doc in documents" :key="doc.id" class="document-row">
             <td class="doc-name-cell">
               <span class="file-icon">📄</span>
-              <span class="filename" :title="doc.filename">{{ doc.filename }}</span>
+              <span class="filename" :title="doc.filename">{{
+                doc.filename
+              }}</span>
             </td>
             <td>
               <span class="taxonomy-pill">
@@ -91,7 +94,9 @@
           <!-- GxP Compliance Warning Box -->
           <div class="gxp-warning-alert">
             <strong>⚠️ Regulated Record Ingestion Warning:</strong>
-            All actions are logged in the append-only eTMF audit ledger. You must provide a valid electronic signature context and change reason justification to submit this record.
+            All actions are logged in the append-only eTMF audit ledger. You
+            must provide a valid electronic signature context and change reason
+            justification to submit this record.
           </div>
 
           <!-- Drag and Drop Target -->
@@ -113,12 +118,14 @@
             <div class="drop-prompt-content">
               <span class="upload-cloud-icon">☁️</span>
               <p v-if="!selectedFile" class="drop-text">
-                Drag and drop your regulated PDF here, or <span class="highlight">browse</span>
+                Drag and drop your regulated PDF here, or
+                <span class="highlight">browse</span>
               </p>
               <div v-else class="selected-file-details">
                 <p class="file-name-success">🎉 {{ selectedFile.name }}</p>
                 <p class="file-size-meta">
-                  Size: {{ (selectedFile.size / 1024).toFixed(1) }} KB | Type: {{ selectedFile.type || "application/pdf" }}
+                  Size: {{ (selectedFile.size / 1024).toFixed(1) }} KB | Type:
+                  {{ selectedFile.type || "application/pdf" }}
                 </p>
               </div>
             </div>
@@ -198,7 +205,9 @@
               <button
                 type="submit"
                 class="btn btn-primary"
-                :disabled="isSubmitting || !selectedFile || !reasonForChange.trim()"
+                :disabled="
+                  isSubmitting || !selectedFile || !reasonForChange.trim()
+                "
               >
                 <span v-if="isSubmitting">Uploading & Indexing...</span>
                 <span v-else>🔒 Commit Electronic Record</span>
@@ -358,7 +367,7 @@ async function submitUpload() {
     const fileContent = await new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = (e) => {
-        resolve((e.target?.result) || "Mock text content of eTMF PDF");
+        resolve(e.target?.result || "Mock text content of eTMF PDF");
       };
       reader.onerror = () => {
         resolve("Mock fallback PDF plain text index content.");
@@ -376,7 +385,10 @@ async function submitUpload() {
     formData.append("site_id", siteId.value || "");
     formData.append("artifact_type", artifactType.value);
     formData.append("filename", file.name);
-    formData.append("content", `Document content index for: ${file.name}. Raw plaintext: ${fileContent}`);
+    formData.append(
+      "content",
+      `Document content index for: ${file.name}. Raw plaintext: ${fileContent}`
+    );
     formData.append("mime_type", file.type || "application/pdf");
     formData.append("artifact_code", artifactCode.value);
     formData.append("zone", String(zoneInt));
@@ -389,7 +401,9 @@ async function submitUpload() {
     closeUploadModal();
   } catch (err) {
     console.error("Upload failed in component:", err);
-    uploadError.value = err.message || "Ingestion transaction rejected. Verify site/study lock status.";
+    uploadError.value =
+      err.message ||
+      "Ingestion transaction rejected. Verify site/study lock status.";
   } finally {
     isSubmitting.value = false;
   }
@@ -570,7 +584,9 @@ async function submitUpload() {
 .modal-card {
   background-color: #ffffff;
   border-radius: 12px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
   max-width: 600px;
   width: 90%;
   display: flex;

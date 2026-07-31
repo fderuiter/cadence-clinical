@@ -54,7 +54,9 @@
               @click="toggleNode(section.id)"
               :class="{ 'is-expanded': isExpanded(section.id) }"
             >
-              <span class="toggle-icon">{{ isExpanded(section.id) ? "▼" : "▶" }}</span>
+              <span class="toggle-icon">{{
+                isExpanded(section.id) ? "▼" : "▶"
+              }}</span>
               <span class="folder-icon">📁</span>
               <span class="section-label">Section {{ section.code }}:</span>
               <span class="node-name">{{ section.name }}</span>
@@ -66,7 +68,10 @@
               </span>
             </div>
 
-            <div v-if="isExpanded(section.id)" class="node-children section-children">
+            <div
+              v-if="isExpanded(section.id)"
+              class="node-children section-children"
+            >
               <div
                 v-for="artifact in section.children"
                 :key="artifact.id"
@@ -201,7 +206,10 @@ const filteredTree = computed(() => {
             expandedNodes.value[section.id] = true;
             return {
               ...section,
-              children: matchingArtifacts.length > 0 ? matchingArtifacts : section.children,
+              children:
+                matchingArtifacts.length > 0
+                  ? matchingArtifacts
+                  : section.children,
             };
           }
           return null;
@@ -217,7 +225,8 @@ const filteredTree = computed(() => {
         expandedNodes.value[zone.id] = true;
         return {
           ...zone,
-          children: matchingSections.length > 0 ? matchingSections : zone.children,
+          children:
+            matchingSections.length > 0 ? matchingSections : zone.children,
         };
       }
 

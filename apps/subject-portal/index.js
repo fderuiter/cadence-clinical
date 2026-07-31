@@ -637,7 +637,9 @@ function markFieldInvalid(fieldId, msg) {
       input.setAttribute("aria-invalid", "true");
     } else {
       // Handle radio options
-      const radioInputs = container.querySelectorAll(`input[name="${fieldId}"]`);
+      const radioInputs = container.querySelectorAll(
+        `input[name="${fieldId}"]`
+      );
       radioInputs.forEach((radio) => {
         radio.setAttribute("aria-describedby", `${fieldId}-error`);
         radio.setAttribute("aria-invalid", "true");
@@ -682,7 +684,7 @@ function openSignatureModal(actionType = "epro") {
   }
 
   document.getElementById("sign-reason-custom").value = "";
-  
+
   const modal = document.getElementById("portal-sign-modal");
   if (modal) {
     modal.style.display = "flex";
@@ -702,7 +704,10 @@ function closeSignatureModal() {
   }
 
   // Restore focus to initiating button on close
-  if (state.previouslyFocusedElement && typeof state.previouslyFocusedElement.focus === "function") {
+  if (
+    state.previouslyFocusedElement &&
+    typeof state.previouslyFocusedElement.focus === "function"
+  ) {
     state.previouslyFocusedElement.focus();
   }
 }
@@ -1626,13 +1631,16 @@ async function initializeApp() {
         if (e.key === "Tab") {
           const modal = document.getElementById("portal-sign-modal");
           if (modal && modal.style.display !== "none") {
-            const focusableSelectors = 'input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])';
-            const focusableElements = Array.from(modal.querySelectorAll(focusableSelectors));
+            const focusableSelectors =
+              "input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])";
+            const focusableElements = Array.from(
+              modal.querySelectorAll(focusableSelectors)
+            );
             if (focusableElements.length === 0) return;
-            
+
             const first = focusableElements[0];
             const last = focusableElements[focusableElements.length - 1];
-            
+
             if (e.shiftKey) {
               if (document.activeElement === first) {
                 last.focus();
