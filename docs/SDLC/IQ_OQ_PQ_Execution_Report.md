@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1737
-- **Passed:** 1737 🟢
+- **Total Automated Test Cases Run:** 1746
+- **Passed:** 1746 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1301,10 +1301,12 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_template_immutability` | `tests.test_protocol_export` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_rendered_protocol_narrative_completeness` | `tests.test_protocol_narrative` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_synopsis_endpoint_end_to_end_flow` | `tests.test_protocol_narrative` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_export_metadata_dual_fields` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_metadata_invalid_version` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_metadata_missing_change_reason_on_version_bump` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_metadata_valid_initial` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_export_metadata_valid_version_bump` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_narrative_content_usdm_models` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_narrative_item_and_section_views` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_render_protocol_to_html_combined` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_render_protocol_to_html_narrative_only` | `tests.test_protocol_render` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1419,6 +1421,13 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_role_enum_canonical_names` | `tests.test_rbac_permissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_unknown_role_returns_empty_permissions` | `tests.test_rbac_permissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_subject_consent_blocking_and_reconsent_lifecycle` | `tests.test_reconsent_blocking` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_renderer_jinja_environment_config` | `tests.test_renderer_module` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_renderer_module_async_docx_rendering` | `tests.test_renderer_module` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_renderer_module_async_pdf_rendering` | `tests.test_renderer_module` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_renderer_module_docx_rendering` | `tests.test_renderer_module` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_renderer_module_error_handling` | `tests.test_renderer_module` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_renderer_module_html_rendering` | `tests.test_renderer_module` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_renderer_module_pdf_rendering` | `tests.test_renderer_module` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reset_db_safety_guard_non_local` | `tests.test_reset_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reset_db_safety_guard_production` | `tests.test_reset_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reset_db_success_offline` | `tests.test_reset_db` | *Regression/Helper* | 🟢 PASSED | < 1s |

@@ -20,12 +20,12 @@ class ExportMetadata(BaseModel):
     protocol documents.
     """
 
-    creator: str = Field(
-        ...,
+    creator: Optional[str] = Field(
+        None,
         description="The unique identifier (e.g. username/OIDC user_id) of the user who generated/exported the document.",
     )
-    timestamp: AwareDatetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+    timestamp: Optional[AwareDatetime] = Field(
+        None,
         description="Chronological UTC timestamp when the document export was requested.",
     )
     change_reason: Optional[str] = Field(
@@ -37,19 +37,64 @@ class ExportMetadata(BaseModel):
         description="Sequential version index or counter, starting at 1.",
     )
 
+    # Mandated 21 CFR Part 11 audit fields pattern
+    created_by: Optional[str] = Field(
+        None,
+        description="21 CFR Part 11 audit field: Who created this document version.",
+    )
+    created_at: Optional[AwareDatetime] = Field(
+        None,
+        description="21 CFR Part 11 audit field: Timestamp when this document version was created.",
+    )
+    reason_for_change: Optional[str] = Field(
+        None,
+        description="21 CFR Part 11 audit field: Mandatory explanation or audit justification for mutating this document version.",
+    )
+
     @model_validator(mode="after")
     def validate_version_metadata(self) -> "ExportMetadata":
         """
-        Ensures that change_reason is non-empty/non-blank for version index > 1
-        to satisfy strict 21 CFR Part 11 compliance.
+        Ensures that change_reason / reason_for_change is non-empty/non-blank for version index > 1
+        to satisfy strict 21 CFR Part 11 compliance. Also populates duplicate audit fields for
+        backwards compatibility and consistent schema integration.
         """
+        # Synchronize creator and created_by
+        if not self.created_by and self.creator:
+            self.created_by = self.creator
+        elif self.created_by and not self.creator:
+            self.creator = self.created_by
+
+        if not self.created_by:
+            raise ValueError("Field 'creator' or 'created_by' is required.")
+
+        # Synchronize timestamp and created_at
+        if not self.created_at and self.timestamp:
+            self.created_at = self.timestamp
+        elif self.created_at and not self.timestamp:
+            self.timestamp = self.created_at
+
+        if not self.created_at:
+            now_time = datetime.now(timezone.utc)
+            self.created_at = now_time
+            self.timestamp = now_time
+
+        # Synchronize change_reason and reason_for_change
+        if not self.reason_for_change and self.change_reason:
+            self.reason_for_change = self.change_reason
+        elif self.reason_for_change and not self.change_reason:
+            self.change_reason = self.reason_for_change
+
         if self.version_index < 1:
             raise ValueError("version_index must be greater than or equal to 1")
+
+        # Verify non-empty reason for follow-up versions
         if self.version_index > 1:
-            if not self.change_reason or not self.change_reason.strip():
+            reason = self.reason_for_change or self.change_reason
+            if not reason or not reason.strip():
                 raise ValueError(
                     "change_reason is required and must be non-empty for follow-up versions (version_index > 1)"
                 )
+
         return self
 
 
@@ -251,3 +296,32 @@ class RenderedProtocolDocument(BaseModel):
         None,
         description="Optional backup reference to the official, full CDISC USDM source model.",
     )
+
+
+class NarrativeContentItem(BaseModel):
+    """
+    USDM-aligned Narrative Content Item representing flat text or block contents.
+    """
+
+    id: str = Field(..., description="Unique identifier for the item.")
+    name: Optional[str] = Field(None, description="The name/tag of the item.")
+    text: str = Field(..., description="The textual content.")
+    instanceType: str = Field("NarrativeContentItem", description="USDM type identifier.")
+
+
+class NarrativeContent(BaseModel):
+    """
+    USDM-aligned Narrative Content node representing a document section or structure.
+    """
+
+    id: str = Field(..., description="Unique identifier for the section.")
+    name: Optional[str] = Field(None, description="The name/tag of the section.")
+    sectionNumber: Optional[str] = Field(None, description="E.g., '1.1', '2.3.1'.")
+    sectionTitle: str = Field(..., description="The heading or title of the section.")
+    displaySectionNumber: Optional[bool] = Field(None, description="Flag to display section number.")
+    displaySectionTitle: Optional[bool] = Field(None, description="Flag to display section title.")
+    childIds: List[str] = Field(default_factory=list, description="Ordered references to child sections or items.")
+    previousId: Optional[str] = Field(None, description="Reference to previous sibling section.")
+    nextId: Optional[str] = Field(None, description="Reference to next sibling section.")
+    contentItemId: Optional[str] = Field(None, description="Reference to content item if directly holding text.")
+    instanceType: str = Field("NarrativeContent", description="USDM type identifier.")
