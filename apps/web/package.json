@@ -8,6 +8,7 @@
     "build": "vite build --base=/cadence-clinical/ && node ../../scripts/build-docs.js",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write ."
   },
@@ -27,6 +28,7 @@
     "jsdom": "^29.1.1",
     "keycloak-js": "^26.2.4",
     "pinia": "^4.0.2",
+    "typescript": "^7.0.2",
     "vite": "^8.1.5",
     "vue": "^3.5.40",
     "vue-router": "^5.2.0"
