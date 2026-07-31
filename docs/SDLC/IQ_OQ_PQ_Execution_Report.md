@@ -13,6 +13,8 @@ Based on the executed automated verification suite, the platform meets all prede
 - **Passed:** 1725 🟢
 - **Total Automated Test Cases Run:** 1571
 - **Passed:** 1571 🟢
+- **Total Automated Test Cases Run:** 1626
+- **Passed:** 1626 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1533,6 +1535,16 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_middleware_unblinded_access_parametrization[true-True]` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_middleware_unblinded_access_parametrization[yes-True]` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_middleware_unblinded_access_parametrization` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_middleware_unblinded_access_parametrization[-False]` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_middleware_unblinded_access_parametrization[0-False]` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_middleware_unblinded_access_parametrization[1-True]` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_middleware_unblinded_access_parametrization[TRUE-True]` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_middleware_unblinded_access_parametrization[YeS-True]` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_middleware_unblinded_access_parametrization[false-False]` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_middleware_unblinded_access_parametrization[no-False]` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_middleware_unblinded_access_parametrization[random-False]` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_middleware_unblinded_access_parametrization[true-True]` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_middleware_unblinded_access_parametrization[yes-True]` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_middleware_unsupported_version_rejected` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_middleware_v2_invalid_signature` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_middleware_v2_mismatched_reason` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
