@@ -3,7 +3,8 @@ import hashlib
 import hmac
 import os
 import time
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Optional, Union
+from collections.abc import Awaitable, Callable
+from typing import TYPE_CHECKING, Any
 
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
@@ -40,14 +41,14 @@ downstream_replay_cache = DownstreamReplayCache()
 
 
 def verify_sig_token(
-    sig_token: Optional[str],
+    sig_token: str | None,
     user_id: str,
     request_path: str,
     secret: bytes,
     replay_cache: Any,
-    expected_semantic_action: Optional[str] = None,
+    expected_semantic_action: str | None = None,
     check_replay: bool = True,
-) -> tuple[bool, Union[dict, str]]:
+) -> tuple[bool, dict | str]:
     """
     Standalone function to verify a signature token (JWT).
     Validates presence, signature, expiration, identity binding, action/semantic_action binding,
@@ -458,7 +459,7 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
         reason_token = current_change_reason.set(change_reason or "system_operation")
         ip_token = current_ip_address.set(ip_address)
         ts_token = current_timestamp.set(
-            datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+            datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
         )
         site_token = current_site_id.set(site_id)
         sponsor_token = current_sponsor_id.set(sponsor_id)

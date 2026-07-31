@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
-from enum import Enum
-from typing import Any, Dict, List, Optional
+from enum import StrEnum
+from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -57,7 +57,7 @@ app.include_router(doa_router)
 get_db_session = DatabaseSessionDependency(db_manager)
 
 
-class ConflictStrategy(str, Enum):
+class ConflictStrategy(StrEnum):
     """
     Explicit validated conflict resolution strategies.
     """
@@ -70,7 +70,7 @@ class ConflictStrategy(str, Enum):
 class FindingCreate(BaseModel):
     text: str = Field(..., description="The observation or action item text")
     severity: str = Field(..., description="Finding severity (MINOR, MAJOR, CRITICAL)")
-    resolution_status: Optional[str] = Field("OPEN", description="Resolution status")
+    resolution_status: str | None = Field("OPEN", description="Resolution status")
 
 
 class OfflineSyncMarkers(BaseModel):
@@ -86,11 +86,11 @@ class OfflineSyncMarkers(BaseModel):
         ConflictStrategy.CLIENT_WINS,
         description="Conflict strategy to resolve duplicate submissions. Supported: CLIENT_WINS, SERVER_WINS, MERGE",
     )
-    signature: Optional[str] = Field(
+    signature: str | None = Field(
         None,
         description="Optional HMAC-SHA256 signature of the payload for cryptographic integrity",
     )
-    timestamps: Optional[Dict[str, datetime]] = Field(
+    timestamps: dict[str, datetime] | None = Field(
         None,
         description="Optional per-field UTC timestamps indicating when each field in 'answers' was modified",
     )
@@ -102,12 +102,12 @@ class MonitoringVisitOfflineSync(BaseModel):
     """
 
     visit_id: str = Field(..., description="Unique ID of the target MonitoringVisit")
-    study_id: Optional[str] = Field(None, description="Optional study ID")
-    site_id: Optional[str] = Field(None, description="Optional site ID")
+    study_id: str | None = Field(None, description="Optional study ID")
+    site_id: str | None = Field(None, description="Optional site ID")
     actual_date: datetime = Field(
         ..., description="Actual date/time when the visit was conducted"
     )
-    findings: List[FindingCreate] = Field(
+    findings: list[FindingCreate] = Field(
         default=[], description="List of recorded findings"
     )
     device_timestamp: datetime = Field(
@@ -122,7 +122,7 @@ class MonitoringVisitOfflineSync(BaseModel):
 class CTMSStudyCreate(BaseModel):
     study_id: str = Field(..., description="Unique clinical study ID")
     name: str = Field(..., description="Descriptive name of the clinical study")
-    status: Optional[str] = Field("ACTIVE", description="Initial status of the study")
+    status: str | None = Field("ACTIVE", description="Initial status of the study")
 
 
 class CTMSStudyResponse(BaseModel):
@@ -162,7 +162,7 @@ class MonitoringVisitComplete(BaseModel):
     actual_date: datetime = Field(
         ..., description="Actual date/time when the visit was conducted"
     )
-    findings: List[FindingCreate] = Field(
+    findings: list[FindingCreate] = Field(
         default=[], description="List of recorded findings"
     )
 
@@ -174,7 +174,7 @@ class MonitoringVisitResponse(BaseModel):
     cra_id: str
     visit_type: str
     scheduled_date: str
-    actual_date: Optional[str]
+    actual_date: str | None
     status: str
     created_at: str
     created_by: str
@@ -212,7 +212,7 @@ class RecruitmentRecordCreate(BaseModel):
     screened_count: int = Field(0, description="Total number of screened subjects")
     enrolled_count: int = Field(0, description="Total number of enrolled subjects")
     target_count: int = Field(0, description="Target enrollment count")
-    as_of_date: Optional[datetime] = Field(
+    as_of_date: datetime | None = Field(
         None, description="The date/time as of which metrics apply"
     )
 
@@ -236,15 +236,15 @@ class SiteMilestoneCreate(BaseModel):
     site_id: str = Field(..., description="Site ID")
     study_id: str = Field(..., description="Study ID")
     milestone_type: str = Field(..., description="The type of milestone")
-    planned_date: Optional[datetime] = Field(None, description="Planned milestone date")
-    actual_date: Optional[datetime] = Field(None, description="Actual milestone date")
-    status: Optional[str] = Field("PLANNED", description="Status of the milestone")
+    planned_date: datetime | None = Field(None, description="Planned milestone date")
+    actual_date: datetime | None = Field(None, description="Actual milestone date")
+    status: str | None = Field("PLANNED", description="Status of the milestone")
 
 
 class SiteMilestoneUpdate(BaseModel):
-    planned_date: Optional[datetime] = Field(None, description="Planned milestone date")
-    actual_date: Optional[datetime] = Field(None, description="Actual milestone date")
-    status: Optional[str] = Field(None, description="Status of the milestone")
+    planned_date: datetime | None = Field(None, description="Planned milestone date")
+    actual_date: datetime | None = Field(None, description="Actual milestone date")
+    status: str | None = Field(None, description="Status of the milestone")
 
 
 class SiteMilestoneResponse(BaseModel):
@@ -252,8 +252,8 @@ class SiteMilestoneResponse(BaseModel):
     site_id: str
     study_id: str
     milestone_type: str
-    planned_date: Optional[str]
-    actual_date: Optional[str]
+    planned_date: str | None
+    actual_date: str | None
     status: str
     created_at: str
     created_by: str
@@ -266,24 +266,20 @@ class CRAAllocationCreate(BaseModel):
     cra_id: str = Field(..., description="CRA ID being allocated")
     site_id: str = Field(..., description="Site ID")
     study_id: str = Field(..., description="Study ID")
-    status: Optional[str] = Field("ACTIVE", description="Allocation status")
-    effective_start_date: Optional[datetime] = Field(
+    status: str | None = Field("ACTIVE", description="Allocation status")
+    effective_start_date: datetime | None = Field(
         None, description="Effective start date"
     )
-    effective_end_date: Optional[datetime] = Field(
-        None, description="Effective end date"
-    )
+    effective_end_date: datetime | None = Field(None, description="Effective end date")
 
 
 class CRAAllocationUpdate(BaseModel):
-    cra_id: Optional[str] = Field(None, description="CRA ID being allocated")
-    status: Optional[str] = Field(None, description="Allocation status")
-    effective_start_date: Optional[datetime] = Field(
+    cra_id: str | None = Field(None, description="CRA ID being allocated")
+    status: str | None = Field(None, description="Allocation status")
+    effective_start_date: datetime | None = Field(
         None, description="Effective start date"
     )
-    effective_end_date: Optional[datetime] = Field(
-        None, description="Effective end date"
-    )
+    effective_end_date: datetime | None = Field(None, description="Effective end date")
 
 
 class CRAAllocationResponse(BaseModel):
@@ -293,7 +289,7 @@ class CRAAllocationResponse(BaseModel):
     study_id: str
     status: str
     effective_start_date: str
-    effective_end_date: Optional[str]
+    effective_end_date: str | None
     created_at: str
     created_by: str
     reason_for_change: str
@@ -303,8 +299,8 @@ class CRAAllocationResponse(BaseModel):
 class CRAWorkloadItem(BaseModel):
     cra_id: str
     active_allocations_count: int
-    allocated_sites: List[str]
-    allocated_studies: List[str]
+    allocated_sites: list[str]
+    allocated_studies: list[str]
 
 
 # --- Investigator Grant & Financial Schemas ---
@@ -347,7 +343,7 @@ class PaymentMilestoneResponse(BaseModel):
     trigger_condition: str
     amount: float
     is_triggered: bool
-    triggered_at: Optional[str]
+    triggered_at: str | None
     created_at: str
     created_by: str
     reason_for_change: str
@@ -360,13 +356,13 @@ class InvestigatorGrantCreate(BaseModel):
     total_budget: float = Field(
         0.0, description="Overall budget allocated for the site"
     )
-    currency: Optional[str] = Field("USD", description="Currency code")
+    currency: str | None = Field("USD", description="Currency code")
 
 
 class InvestigatorGrantUpdate(BaseModel):
-    total_budget: Optional[float] = Field(None, description="Updated budget")
-    currency: Optional[str] = Field(None, description="Updated currency")
-    status: Optional[str] = Field(None, description="Updated status (DRAFT, APPROVED)")
+    total_budget: float | None = Field(None, description="Updated budget")
+    currency: str | None = Field(None, description="Updated currency")
+    status: str | None = Field(None, description="Updated status (DRAFT, APPROVED)")
 
 
 class InvestigatorGrantResponse(BaseModel):
@@ -385,11 +381,11 @@ class InvestigatorGrantResponse(BaseModel):
 class InvestigatorPayableResponse(BaseModel):
     id: str
     grant_id: str
-    milestone_id: Optional[str]
+    milestone_id: str | None
     amount: float
     payment_status: str
-    due_date: Optional[str]
-    paid_at: Optional[str]
+    due_date: str | None
+    paid_at: str | None
     created_at: str
     created_by: str
     reason_for_change: str
@@ -533,12 +529,12 @@ async def create_study(
     )
 
 
-@app.get("/api/v1/ctms/studies", response_model=List[CTMSStudyResponse])
+@app.get("/api/v1/ctms/studies", response_model=list[CTMSStudyResponse])
 async def list_studies(
     request: Request,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
-) -> List[CTMSStudyResponse]:
+) -> list[CTMSStudyResponse]:
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
@@ -572,12 +568,12 @@ async def list_studies(
     ]
 
 
-@app.get("/api/v1/ctms/audit-logs", response_model=List[CTMSAuditLogResponse])
+@app.get("/api/v1/ctms/audit-logs", response_model=list[CTMSAuditLogResponse])
 async def get_audit_trail(
     request: Request,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
-) -> List[CTMSAuditLogResponse]:
+) -> list[CTMSAuditLogResponse]:
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
@@ -874,17 +870,17 @@ async def complete_monitoring_visit(
 
 @app.get(
     "/api/v1/ctms/monitoring-visits",
-    response_model=List[MonitoringVisitResponse],
+    response_model=list[MonitoringVisitResponse],
 )
 async def list_monitoring_visits(
     request: Request,
-    study_id: Optional[str] = None,
-    site_id: Optional[str] = None,
-    cra_id: Optional[str] = None,
-    status: Optional[str] = None,
+    study_id: str | None = None,
+    site_id: str | None = None,
+    cra_id: str | None = None,
+    status: str | None = None,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
-) -> List[MonitoringVisitResponse]:
+) -> list[MonitoringVisitResponse]:
     """
     Lists and filters clinical trial site monitoring visits.
     """
@@ -951,14 +947,14 @@ async def list_monitoring_visits(
 
 @app.get(
     "/api/v1/ctms/monitoring-visits/{visit_id}/letters",
-    response_model=List[GeneratedLetterResponse],
+    response_model=list[GeneratedLetterResponse],
 )
 async def get_monitoring_visit_letters(
     visit_id: str,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
-) -> List[GeneratedLetterResponse]:
+) -> list[GeneratedLetterResponse]:
     """
     Retrieves all generated letters associated with a specific monitoring visit.
     Guarantees no re-rendering of previously issued letters by returning stored content.
@@ -1182,15 +1178,15 @@ async def record_recruitment(
 
 @app.get(
     "/api/v1/ctms/recruitment",
-    response_model=List[RecruitmentRecordResponse],
+    response_model=list[RecruitmentRecordResponse],
 )
 async def list_recruitment_records(
     request: Request,
-    study_id: Optional[str] = None,
-    site_id: Optional[str] = None,
+    study_id: str | None = None,
+    site_id: str | None = None,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
-) -> List[RecruitmentRecordResponse]:
+) -> list[RecruitmentRecordResponse]:
     """
     List recorded recruitment metrics, optionally filtered by site and/or study.
     """
@@ -1370,15 +1366,15 @@ async def update_site_milestone(
 
 @app.get(
     "/api/v1/ctms/site-milestones",
-    response_model=List[SiteMilestoneResponse],
+    response_model=list[SiteMilestoneResponse],
 )
 async def list_site_milestones(
     request: Request,
-    study_id: Optional[str] = None,
-    site_id: Optional[str] = None,
+    study_id: str | None = None,
+    site_id: str | None = None,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
-) -> List[SiteMilestoneResponse]:
+) -> list[SiteMilestoneResponse]:
     """
     List site milestones, optionally filtered by site and/or study.
     """
@@ -1588,17 +1584,17 @@ async def update_cra_allocation(
 
 @app.get(
     "/api/v1/ctms/cra-allocations",
-    response_model=List[CRAAllocationResponse],
+    response_model=list[CRAAllocationResponse],
 )
 async def list_cra_allocations(
     request: Request,
-    study_id: Optional[str] = None,
-    site_id: Optional[str] = None,
-    cra_id: Optional[str] = None,
-    status: Optional[str] = None,
+    study_id: str | None = None,
+    site_id: str | None = None,
+    cra_id: str | None = None,
+    status: str | None = None,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
-) -> List[CRAAllocationResponse]:
+) -> list[CRAAllocationResponse]:
     """
     List CRA allocations, optionally filtered.
     """
@@ -1652,13 +1648,13 @@ async def list_cra_allocations(
 
 @app.get(
     "/api/v1/ctms/cra-allocations/workload",
-    response_model=List[CRAWorkloadItem],
+    response_model=list[CRAWorkloadItem],
 )
 async def retrieve_workload_summaries(
     request: Request,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
-) -> List[CRAWorkloadItem]:
+) -> list[CRAWorkloadItem]:
     """
     Retrieve workload summaries reflecting active CRA allocations.
     """
@@ -1764,15 +1760,15 @@ async def create_grant(
 
 @app.get(
     "/api/v1/ctms/grants",
-    response_model=List[InvestigatorGrantResponse],
+    response_model=list[InvestigatorGrantResponse],
 )
 async def list_grants(
     request: Request,
-    study_id: Optional[str] = None,
-    site_id: Optional[str] = None,
+    study_id: str | None = None,
+    site_id: str | None = None,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
-) -> List[InvestigatorGrantResponse]:
+) -> list[InvestigatorGrantResponse]:
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
@@ -2025,14 +2021,14 @@ async def create_budget_line_item(
 
 @app.get(
     "/api/v1/ctms/grants/{grant_id}/budget-items",
-    response_model=List[BudgetLineItemResponse],
+    response_model=list[BudgetLineItemResponse],
 )
 async def list_budget_line_items(
     grant_id: str,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
-) -> List[BudgetLineItemResponse]:
+) -> list[BudgetLineItemResponse]:
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
@@ -2154,14 +2150,14 @@ async def create_payment_milestone(
 
 @app.get(
     "/api/v1/ctms/grants/{grant_id}/milestones",
-    response_model=List[PaymentMilestoneResponse],
+    response_model=list[PaymentMilestoneResponse],
 )
 async def list_payment_milestones(
     grant_id: str,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
-) -> List[PaymentMilestoneResponse]:
+) -> list[PaymentMilestoneResponse]:
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
@@ -2360,14 +2356,14 @@ async def evaluate_grant_milestones(
 
 @app.get(
     "/api/v1/ctms/grants/{grant_id}/payables",
-    response_model=List[InvestigatorPayableResponse],
+    response_model=list[InvestigatorPayableResponse],
 )
 async def list_investigator_payables(
     grant_id: str,
     request: Request,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
-) -> List[InvestigatorPayableResponse]:
+) -> list[InvestigatorPayableResponse]:
     user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
 
@@ -2416,7 +2412,7 @@ async def list_investigator_payables(
 
 async def process_visit_sync(
     session: AsyncSession, payload: MonitoringVisitOfflineSync, principal: Principal
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     # 1. Look up the target MonitoringVisit using payload.visit_id
     visit_stmt = select(MonitoringVisit).where(MonitoringVisit.id == payload.visit_id)
     visit_res = await session.execute(visit_stmt)
@@ -2757,7 +2753,7 @@ async def sync_monitoring_visit(
     payload: MonitoringVisitOfflineSync,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Secure sync endpoint for offline monitoring visits completion and findings.
     """
@@ -2770,10 +2766,10 @@ async def sync_monitoring_visit(
 @app.post("/api/v1/ctms/monitoring-visits/bulk-sync", status_code=200)
 async def bulk_sync_monitoring_visits(
     request: Request,
-    payloads: List[MonitoringVisitOfflineSync],
+    payloads: list[MonitoringVisitOfflineSync],
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Secure bulk sync endpoint for offline monitoring visits completion and findings.
     """

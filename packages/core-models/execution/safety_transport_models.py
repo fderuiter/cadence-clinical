@@ -3,7 +3,7 @@
 Requirements: PRD-SYS-001
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -50,9 +50,9 @@ class SAEReconcileRequest(BaseModel):
     """
 
     study_id: str = Field(..., description="Target study ID")
-    edc_ae_events: List[Dict[str, Any]] = Field(
+    edc_ae_events: list[dict[str, Any]] = Field(
         ..., description="List of EDC AE form data dicts"
     )
-    safety_cases_xml: Optional[List[str]] = Field(
+    safety_cases_xml: list[str] | None = Field(
         None, description="Optional raw E2B XML reports to parse"
     )

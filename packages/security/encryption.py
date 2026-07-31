@@ -1,7 +1,7 @@
 import base64
 import json
 import os
-from typing import Any, Dict, Optional
+from typing import Any
 
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -36,10 +36,10 @@ def derive_session_key(
 
 
 def encrypt(
-    payload: Dict[str, Any],
+    payload: dict[str, Any],
     key: bytes,
     version: int = ENVELOPE_VERSION,
-    aad: Optional[bytes] = None,
+    aad: bytes | None = None,
 ) -> str:
     """Encrypts a payload dictionary using AES-GCM and packages it in a versioned envelope.
 
@@ -59,8 +59,8 @@ def decrypt(
     encrypted_str: str,
     key: bytes,
     expected_version: int = ENVELOPE_VERSION,
-    aad: Optional[bytes] = None,
-) -> Dict[str, Any]:
+    aad: bytes | None = None,
+) -> dict[str, Any]:
     """Decrypts a versioned AES-GCM envelope and deserializes the JSON payload.
 
     Raises ValueError on unrecognized version, tampered data, or invalid AAD.

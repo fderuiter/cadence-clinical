@@ -5,8 +5,8 @@ Defines Pydantic v2 entity-specific contracts for StudyArm, Epoch, Visit, Proced
 relationships, audit metadata, and projection cells.
 """
 
-from datetime import datetime, timezone
-from typing import List, Literal, Optional
+from datetime import UTC, datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -24,28 +24,28 @@ except ImportError:
         epoch_id: str
         epoch_name: str
         sequence: int
-        arm_id: Optional[str] = None
+        arm_id: str | None = None
 
     class SoAHeaderEncounter(BaseModel):
         encounter_id: str
         encounter_name: str
         epoch_id: str
         sequence: int
-        arm_id: Optional[str] = None
+        arm_id: str | None = None
 
     class SoACellView(BaseModel):
         activity_id: str
         encounter_id: str
         epoch_id: str
         is_applicable: bool
-        details: Optional[str] = None
-        arm_id: Optional[str] = None
+        details: str | None = None
+        arm_id: str | None = None
         derived_from_soa: bool = False
 
     class SoARowView(BaseModel):
         activity_id: str
         activity_name: str
-        cells: List[SoACellView] = []
+        cells: list[SoACellView] = []
 
     class SoAHeaderArm(BaseModel):
         arm_id: str
@@ -64,15 +64,15 @@ class SoAAuditMixin(BaseModel):
 
     version: str = Field("1.0.0", description="Version identifier of the entity.")
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="Timestamp of creation.",
     )
     created_by: str = Field(..., description="User ID of the creator.")
-    updated_at: Optional[datetime] = Field(
+    updated_at: datetime | None = Field(
         None, description="Timestamp of the last update."
     )
-    updated_by: Optional[str] = Field(None, description="User ID of the last updater.")
-    reason_for_change: Optional[str] = Field(
+    updated_by: str | None = Field(None, description="User ID of the last updater.")
+    reason_for_change: str | None = Field(
         None, description="Justification/reason for the change."
     )
 
@@ -93,7 +93,7 @@ class AuditMetadata(BaseModel):
         max_length=255,
         description="Auditable justification reason for this change.",
     )
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class SoAEntityCreatedResponse(BaseModel):
@@ -129,9 +129,7 @@ class StudyArm(SoAAuditMixin):
     """
 
     id: str = Field(..., description="Unique identifier for the study arm.")
-    study_id: Optional[str] = Field(
-        None, description="Study identifier scoping this arm."
-    )
+    study_id: str | None = Field(None, description="Study identifier scoping this arm.")
     study_version_id: str = Field(
         ..., description="Study version identifier scoping this arm."
     )
@@ -143,7 +141,7 @@ class StudyArm(SoAAuditMixin):
     arm_type: str = Field(
         ..., min_length=1, description="The classification type of the arm."
     )
-    sequence: Optional[int] = Field(None, ge=1, description="Sequential ordering rank.")
+    sequence: int | None = Field(None, ge=1, description="Sequential ordering rank.")
 
     @model_validator(mode="before")
     @classmethod
@@ -162,7 +160,7 @@ class Epoch(SoAAuditMixin):
     """
 
     id: str = Field(..., description="Unique identifier for the epoch.")
-    study_id: Optional[str] = Field(
+    study_id: str | None = Field(
         None, description="Study identifier scoping this epoch."
     )
     study_version_id: str = Field(
@@ -201,7 +199,7 @@ class Visit(SoAAuditMixin):
     """
 
     id: str = Field(..., description="Unique identifier for the visit.")
-    study_id: Optional[str] = Field(
+    study_id: str | None = Field(
         None, description="Study identifier scoping this visit."
     )
     study_version_id: str = Field(
@@ -212,10 +210,10 @@ class Visit(SoAAuditMixin):
     sequence: int = Field(
         ..., ge=1, description="Sequential ordering rank of the visit."
     )
-    visit_window_days: Optional[int] = Field(
+    visit_window_days: int | None = Field(
         None, description="Generalized window fields."
     )
-    arm_ids: List[str] = Field(
+    arm_ids: list[str] = Field(
         default_factory=list,
         description="IDs of study arms applicable to this visit.",
     )
@@ -237,7 +235,7 @@ class Procedure(SoAAuditMixin):
     """
 
     id: str = Field(..., description="Unique identifier for the procedure.")
-    study_id: Optional[str] = Field(
+    study_id: str | None = Field(
         None, description="Study identifier scoping this procedure."
     )
     study_version_id: str = Field(
@@ -246,13 +244,13 @@ class Procedure(SoAAuditMixin):
     name: str = Field(
         ..., min_length=1, description="The display name of the procedure."
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
         None, description="Detailed description of the procedure."
     )
-    visit_ids: List[str] = Field(
+    visit_ids: list[str] = Field(
         default_factory=list, description="Associated visit/encounter references."
     )
-    arm_ids: List[str] = Field(
+    arm_ids: list[str] = Field(
         default_factory=list,
         description="IDs of study arms applicable to this procedure.",
     )
@@ -277,7 +275,7 @@ class TimingWindow(SoAAuditMixin):
     """
 
     id: str = Field(..., description="Unique identifier for the timing window.")
-    study_id: Optional[str] = Field(
+    study_id: str | None = Field(
         None, description="Study identifier scoping this timing window."
     )
     study_version_id: str = Field(
@@ -288,16 +286,16 @@ class TimingWindow(SoAAuditMixin):
         min_length=1,
         description="Label or duration specification of the timing window.",
     )
-    anchor_reference: Optional[str] = Field(
+    anchor_reference: str | None = Field(
         None, description="Anchor reference, e.g. a visit name."
     )
-    target_day: Optional[int] = Field(None, description="Target scheduled day.")
-    min_offset: Optional[int] = Field(None, description="Minimum day offset.")
-    max_offset: Optional[int] = Field(None, description="Maximum day offset.")
+    target_day: int | None = Field(None, description="Target scheduled day.")
+    min_offset: int | None = Field(None, description="Minimum day offset.")
+    max_offset: int | None = Field(None, description="Maximum day offset.")
     conditional: bool = Field(
         False, description="Flag indicating if timing/applicability is conditional."
     )
-    reason: Optional[str] = Field(
+    reason: str | None = Field(
         None,
         description="Mandatory justification reason required if conditional is True.",
     )
@@ -327,7 +325,7 @@ class StudyArmProperties(BaseModel):
     type: str = Field(
         ..., min_length=1, description="The classification type of the arm."
     )
-    sequence: Optional[int] = Field(None, ge=1, description="Sequential ordering rank.")
+    sequence: int | None = Field(None, ge=1, description="Sequential ordering rank.")
 
 
 class EpochProperties(BaseModel):
@@ -335,12 +333,12 @@ class EpochProperties(BaseModel):
     Properties specific to a Study Epoch.
     """
 
-    name: Optional[str] = Field(
+    name: str | None = Field(
         None,
         min_length=1,
         description="The name of the study epoch, e.g., 'Screening'.",
     )
-    epoch_name: Optional[str] = Field(
+    epoch_name: str | None = Field(
         None, min_length=1, description="Alternate/legacy field name for epoch name."
     )
     sequence: int = Field(
@@ -361,10 +359,10 @@ class VisitProperties(BaseModel):
     Properties specific to a Visit / Encounter.
     """
 
-    name: Optional[str] = Field(
+    name: str | None = Field(
         None, min_length=1, description="The display name of the visit."
     )
-    encounter_name: Optional[str] = Field(
+    encounter_name: str | None = Field(
         None,
         min_length=1,
         description="Alternate/legacy field name for encounter/visit.",
@@ -387,10 +385,10 @@ class ProcedureProperties(BaseModel):
     Properties specific to a clinical Procedure / Activity.
     """
 
-    name: Optional[str] = Field(
+    name: str | None = Field(
         None, min_length=1, description="The display name of the procedure."
     )
-    activity_name: Optional[str] = Field(
+    activity_name: str | None = Field(
         None, min_length=1, description="Alternate/legacy field name for the procedure."
     )
 
@@ -413,11 +411,11 @@ class TimingWindowProperties(BaseModel):
         min_length=1,
         description="Label or duration specification of the timing window.",
     )
-    conditional: Optional[bool] = Field(
+    conditional: bool | None = Field(
         None,
         description="Flag indicating if the timing or applicability is conditional.",
     )
-    reason: Optional[str] = Field(
+    reason: str | None = Field(
         None,
         min_length=1,
         description="Mandatory justification reason required if conditional is True.",
@@ -558,10 +556,10 @@ class ProjectionCell(BaseModel):
         ...,
         description="Whether the activity is planned to occur during this encounter.",
     )
-    details: Optional[str] = Field(
+    details: str | None = Field(
         None, description="Optional timing windows, constraints, or instruction notes."
     )
-    arm_id: Optional[str] = Field(None, description="Optional associated arm ID.")
+    arm_id: str | None = Field(None, description="Optional associated arm ID.")
     derived_from_soa: bool = Field(
         False, description="Flag indicating selective lineage."
     )
@@ -574,17 +572,17 @@ class SoAMatrixProjectionResponse(BaseModel):
     Follows existing designer response conventions.
     """
 
-    epochs: List[SoAHeaderEpoch] = Field(
+    epochs: list[SoAHeaderEpoch] = Field(
         default_factory=list, description="Ordered list of Study Epoch columns."
     )
-    encounters: List[SoAHeaderEncounter] = Field(
+    encounters: list[SoAHeaderEncounter] = Field(
         default_factory=list,
         description="Ordered list of Encounter/Visit sub-columns.",
     )
-    rows: List[SoARowView] = Field(
+    rows: list[SoARowView] = Field(
         default_factory=list,
         description="Ordered list of row-wise activity procedures.",
     )
-    arms: List[SoAHeaderArm] = Field(
+    arms: list[SoAHeaderArm] = Field(
         default_factory=list, description="Ordered list of Study Arm columns."
     )

@@ -2,7 +2,7 @@ import hashlib
 import hmac
 import json
 import time
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 import httpx
 import pytest

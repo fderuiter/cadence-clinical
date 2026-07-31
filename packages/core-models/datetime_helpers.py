@@ -2,7 +2,7 @@
 Centralized datetime helpers for strict timezone-aware validation and UTC Z serialization in Pydantic v2.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Annotated, Any
 
 from pydantic import PlainSerializer, WrapValidator
@@ -21,14 +21,14 @@ def validate_timezone_aware_datetime(v: Any, handler) -> datetime:
         raise ValueError(
             "Datetime must be timezone-aware (e.g. contain a 'Z' or offset like '+00:00')"
         )
-    return dt.astimezone(timezone.utc)
+    return dt.astimezone(UTC)
 
 
 def serialize_utc_z(dt: datetime) -> str:
     """
     Formats the datetime back into an ISO-8601 string, enforcing a trailing 'Z' for UTC.
     """
-    utc_dt = dt.astimezone(timezone.utc)
+    utc_dt = dt.astimezone(UTC)
     return utc_dt.isoformat().replace("+00:00", "Z")
 
 

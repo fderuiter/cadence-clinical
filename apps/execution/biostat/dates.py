@@ -1,11 +1,10 @@
 import calendar
 from datetime import date
-from typing import Optional, Tuple
 
 
 def parse_partial_date(
-    date_str: Optional[str],
-) -> Tuple[Optional[int], Optional[int], Optional[int]]:
+    date_str: str | None,
+) -> tuple[int | None, int | None, int | None]:
     """Parses a date string (possibly partial) into (year, month, day).
 
     Supports format like YYYY-MM-DD, YYYY-MM, YYYY, or with missing indicators like 'UN', 'UNK', '00'.
@@ -20,11 +19,11 @@ def parse_partial_date(
         return None, None, None
 
     parts = clean_str.split("-")
-    year: Optional[int] = None
-    month: Optional[int] = None
-    day: Optional[int] = None
+    year: int | None = None
+    month: int | None = None
+    day: int | None = None
 
-    def parse_part(part_str: str) -> Optional[int]:
+    def parse_part(part_str: str) -> int | None:
         part_str = part_str.strip()
         if not part_str:
             return None
@@ -48,7 +47,7 @@ def parse_partial_date(
     return year, month, day
 
 
-def to_date_obj(val) -> Optional[date]:
+def to_date_obj(val) -> date | None:
     """Converts a value (date, datetime, or string) to a Python date object."""
     if not val:
         return None
@@ -68,11 +67,11 @@ def to_date_obj(val) -> Optional[date]:
 
 
 def impute_partial_date(
-    date_str: Optional[str],
+    date_str: str | None,
     direction: str = "START",
-    treatment_start_date: Optional[str] = None,
-    end_of_study_date: Optional[str] = None,
-) -> Optional[str]:
+    treatment_start_date: str | None = None,
+    end_of_study_date: str | None = None,
+) -> str | None:
     """Imputes a partial date string (e.g. YYYY-MM-UN) according to direction-aware rules.
 
     Returns date as 'YYYY-MM-DD' string, or None if year is missing or invalid.
@@ -121,7 +120,7 @@ def impute_partial_date(
     return None
 
 
-def to_sas_date(date_val) -> Optional[int]:
+def to_sas_date(date_val) -> int | None:
     """Converts a date string or object to a SAS numeric date (days since 1960-01-01).
 
     Returns None if date_val is invalid or incomplete.

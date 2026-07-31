@@ -1,5 +1,4 @@
 import time
-from typing import Optional
 
 import pytest
 from fastapi import Depends, FastAPI, Request
@@ -1047,7 +1046,7 @@ def test_verify_sig_token_helper_scenarios() -> None:
 
     # 1. Helper to construct tokens easily
     def make_token(
-        semantic_action: Optional[str] = None,
+        semantic_action: str | None = None,
         expired: bool = False,
         wrong_action: bool = False,
         wrong_user: bool = False,
@@ -1450,7 +1449,7 @@ def test_middleware_unblinded_access_edge_cases() -> None:
     change_reason = "gxp signoff"
 
     def make_headers(
-        unblinded_hdr_val: Optional[str],
+        unblinded_hdr_val: str | None,
         expected_bool: bool,
         other_headers: dict = None,
     ) -> dict:

@@ -4,8 +4,8 @@ Requirements: PRD-SYS-001 | GxP 21 CFR Part 11 Regulated
 """
 
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Type
+from datetime import UTC, datetime
+from typing import Any
 
 from execution.offline_models import (
     OfflineBatchSyncRequest,
@@ -40,13 +40,13 @@ class OfflineSyncEngine:
     @staticmethod
     async def process_delta_batch(
         session,
-        deltas: List[OfflineDeltaItem],
-    ) -> tuple[int, List[Dict[str, Any]]]:
+        deltas: list[OfflineDeltaItem],
+    ) -> tuple[int, list[dict[str, Any]]]:
         """Process a list of offline delta items.
 
         Requirements: PRD-SYS-001
         """
-        entity_map: Dict[str, Type] = {
+        entity_map: dict[str, type] = {
             "form_submission": FormSubmission,
             "form_submissions": FormSubmission,
             "clinical_observation": ClinicalObservation,
@@ -206,7 +206,7 @@ async def sync_offline_batch(
                 ip_address=getattr(request.client, "host", None) or "127.0.0.1"
                 if request.client
                 else "127.0.0.1",
-                timestamp=datetime.now(timezone.utc).replace(tzinfo=None),
+                timestamp=datetime.now(UTC).replace(tzinfo=None),
                 old_values={},
                 new_values={
                     "device_id": payload.device_id,
@@ -225,7 +225,7 @@ async def sync_offline_batch(
                 client_batch_id=payload.client_batch_id,
                 device_id=payload.device_id,
                 processed_count=processed_count,
-                processed_at=datetime.now(timezone.utc).replace(tzinfo=None),
+                processed_at=datetime.now(UTC).replace(tzinfo=None),
             )
             session.add(idempotency_key_record)
 
@@ -240,9 +240,9 @@ async def sync_offline_batch(
 @router.post(
     "/api/v1/execution/offline/sync",
     status_code=status.HTTP_200_OK,
-    response_model=Dict[str, Any],
+    response_model=dict[str, Any],
 )
-async def offline_sync_endpoint(payload: Dict[str, Any]) -> Dict[str, Any]:
+async def offline_sync_endpoint(payload: dict[str, Any]) -> dict[str, Any]:
     """Synchronize queued offline delta transactions.
 
     Requirements: PRD-SYS-001

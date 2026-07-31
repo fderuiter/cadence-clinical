@@ -3,8 +3,7 @@
 Requirements: PRD-SYS-001
 """
 
-from datetime import datetime, timezone
-from typing import Dict, Tuple
+from datetime import UTC, datetime
 
 from cryptography import x509
 
@@ -17,8 +16,8 @@ class CertificateStoreService:
 
     def __init__(self) -> None:
         """Initialize in-memory certificate registry and CRL revocation set."""
-        self._cert_registry: Dict[str, dict] = {}
-        self._revocation_list: Dict[str, str] = {}
+        self._cert_registry: dict[str, dict] = {}
+        self._revocation_list: dict[str, str] = {}
 
     def register_certificate(self, user_id: str, cert_pem: str) -> dict:
         """Register user X.509 digital certificate credential in certificate store.
@@ -32,7 +31,7 @@ class CertificateStoreService:
         """
         cert = x509.load_pem_x509_certificate(cert_pem.encode("utf-8"))
         serial_hex = hex(cert.serial_number)[2:]
-        now_iso = datetime.now(timezone.utc).isoformat()
+        now_iso = datetime.now(UTC).isoformat()
 
         record = {
             "user_id": user_id,
@@ -58,7 +57,7 @@ class CertificateStoreService:
         clean_serial = cert_serial.lower().replace("0x", "")
         self._revocation_list[clean_serial] = reason
 
-    def verify_certificate_status(self, cert_pem: str) -> Tuple[bool, str]:
+    def verify_certificate_status(self, cert_pem: str) -> tuple[bool, str]:
         """Validate certificate expiration and CRL revocation status.
 
         Args:
@@ -70,7 +69,7 @@ class CertificateStoreService:
         try:
             cert = x509.load_pem_x509_certificate(cert_pem.encode("utf-8"))
             serial_hex = hex(cert.serial_number)[2:].lower()
-            now_utc = datetime.now(timezone.utc)
+            now_utc = datetime.now(UTC)
 
             # Check revocation
             if serial_hex in self._revocation_list:

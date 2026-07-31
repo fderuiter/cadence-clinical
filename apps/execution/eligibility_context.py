@@ -22,7 +22,7 @@ Precedence Rules:
 
 import logging
 from datetime import date
-from typing import Any, Dict, Optional, Union
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,10 +34,10 @@ logger = logging.getLogger("execution-eligibility-context")
 
 
 async def build_eligibility_context(
-    subject: Union[str, ClinicalSubject],
+    subject: str | ClinicalSubject,
     session: AsyncSession,
-    observation_date: Optional[Union[date, Any]] = None,
-) -> Dict[str, Any]:
+    observation_date: date | Any | None = None,
+) -> dict[str, Any]:
     """Derive demographic and observation key-values for clinical eligibility evaluation.
 
     Args:
@@ -49,11 +49,11 @@ async def build_eligibility_context(
     Returns:
         Dict[str, Any]: Mapping of eCRF.<DOMAIN>.<VARIABLE> to non-PHI values.
     """
-    context: Dict[str, Any] = {}
+    context: dict[str, Any] = {}
 
     # 1. Resolve Subject object
-    subject_obj: Optional[ClinicalSubject] = None
-    subject_id: Optional[str] = None
+    subject_obj: ClinicalSubject | None = None
+    subject_id: str | None = None
 
     if isinstance(subject, str):
         # Resolve by subject_id or id (UUID)
@@ -92,7 +92,7 @@ async def build_eligibility_context(
     observations = list(res_obs.scalars().all())
 
     # 3. Derive observation keys: latest wins
-    latest_obs_date: Optional[Any] = None
+    latest_obs_date: Any | None = None
     if observations:
         latest_obs_date = observations[0].observation_date
 

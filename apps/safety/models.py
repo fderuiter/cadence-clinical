@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, event, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship
@@ -25,7 +25,7 @@ class SafetyCaseICSR(Base):
         String(255), nullable=False, index=True
     )
     patient_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    case_data: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
+    case_data: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
 
     # 21 CFR Part 11 Compliance Auditing Metadata
     created_at: Mapped[datetime] = mapped_column(
@@ -50,7 +50,7 @@ class SafetyExportJob(Base):
     status: Mapped[str] = mapped_column(
         String(50), default="PENDING", nullable=False
     )  # PENDING, COMPLETED, FAILED
-    error_message: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(String(200), nullable=True)
 
     # 21 CFR Part 11 Compliance Auditing Metadata
     created_at: Mapped[datetime] = mapped_column(
@@ -108,9 +108,9 @@ class SAEDiscrepancy(Base):
     )  # EDC, SAFETY, or RECONCILIATION
     case_event_key: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     field_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    expected_value: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
-    actual_value: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
-    meddra_version: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    expected_value: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    actual_value: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    meddra_version: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     # 21 CFR Part 11 Compliance Auditing Metadata
     created_at: Mapped[datetime] = mapped_column(
@@ -139,8 +139,8 @@ class SAEReconciliationJob(Base):
     status: Mapped[str] = mapped_column(
         String(50), default="PENDING", nullable=False
     )  # PENDING, PROCESSING, COMPLETED, FAILED
-    error_message: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
-    run_id: Mapped[Optional[str]] = mapped_column(
+    error_message: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    run_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("sae_reconciliation_runs.id"), nullable=True, index=True
     )
 
@@ -169,14 +169,12 @@ class SafetyAuditLog(Base):
         DateTime, default=func.now(), nullable=False, index=True
     )
     created_by: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    reason_for_change: Mapped[Optional[str]] = mapped_column(
-        String(1000), nullable=True
-    )
+    reason_for_change: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     action: Mapped[str] = mapped_column(String(100), nullable=False)
     details: Mapped[str] = mapped_column(String(1000), nullable=False)
-    record_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    record_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
 
 @event.listens_for(Session, "before_flush")

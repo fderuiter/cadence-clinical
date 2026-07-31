@@ -5,7 +5,6 @@ Requirements: PRD-SYS-001
 
 import hashlib
 from datetime import date
-from typing import List, Optional
 
 from etmf.eisf_transport_models import (
     EISFDocumentDetail,
@@ -95,7 +94,7 @@ async def write_local_audit_log(
     actor_id: str,
     actor_role: str,
     action: str,
-    document_id: Optional[str],
+    document_id: str | None,
     details: str,
     reason_for_change: str,
 ) -> None:
@@ -117,13 +116,13 @@ async def write_local_audit_log(
 
 @router.get(
     "/sites/{site_id}/binder",
-    response_model=List[EISFFolderNode],
+    response_model=list[EISFFolderNode],
 )
 async def get_site_eisf_binder(
     site_id: str,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
-) -> List[EISFFolderNode]:
+) -> list[EISFFolderNode]:
     """Retrieve eISF regulatory binder folder taxonomy with document counts.
 
     Requirements: PRD-SYS-001

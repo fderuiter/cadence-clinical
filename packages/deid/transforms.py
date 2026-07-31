@@ -7,7 +7,6 @@ import hashlib
 import hmac
 import re
 from datetime import timedelta
-from typing import List, Optional, Union
 
 from dateutil import parser as date_parser
 from pydantic import BaseModel, Field
@@ -39,7 +38,7 @@ class RedactionRecordItem(BaseModel):
     replacement: str = Field(..., description="The sanitized replacement text")
 
 
-def pseudonymize_value(value: str, salt: Union[str, bytes]) -> str:
+def pseudonymize_value(value: str, salt: str | bytes) -> str:
     """
     Generates a deterministic HMAC-SHA256 pseudonym for the given value.
 
@@ -118,13 +117,13 @@ def cap_age_string(age_str: str, cap: int = 89) -> str:
 
 def apply_deid_transforms(
     text: str,
-    results: List[DetectionResult],
-    strategies: Optional[dict] = None,
+    results: list[DetectionResult],
+    strategies: dict | None = None,
     default_strategy: str = "mask",
-    salt: Union[str, bytes] = "secure-clinical-salt-98765",
+    salt: str | bytes = "secure-clinical-salt-98765",
     shift_days: int = DEFAULT_DATE_SHIFT_DAYS,
     age_cap: int = 89,
-) -> tuple[str, List[RedactionRecordItem]]:
+) -> tuple[str, list[RedactionRecordItem]]:
     """
     Apply de-identification transforms from right to left so original character offsets remain valid,
     and generate a redaction record that completely excludes raw matched identifiers.
@@ -145,7 +144,7 @@ def apply_deid_transforms(
     clean_results = resolve_overlaps(results)
 
     parts = list(text)
-    redaction_record: List[RedactionRecordItem] = []
+    redaction_record: list[RedactionRecordItem] = []
 
     # Process from right to left so offsets remain valid
     for res in reversed(clean_results):

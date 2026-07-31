@@ -2,14 +2,12 @@
 Service for analyzing configuration changes and assessing GxP and regulatory risks.
 """
 
-from typing import Optional
-
 from fastapi import HTTPException
 
 from apps.tickets.models.diff_models import RegulatoryRiskAssessment
 
 
-def parse_value(val: Optional[str]) -> any:
+def parse_value(val: str | None) -> any:
     """
     Parses a string value to its Python equivalent for type-aware diff comparison.
     """

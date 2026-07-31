@@ -10,7 +10,7 @@ All computations are pure and run without database I/O.
 import contextlib
 import re
 from datetime import date, datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 # Import shared SDTM models and terminology normalizers
 from sdtm.models import AE, CM, DM, LB, VS
@@ -34,7 +34,7 @@ def _get_val(obj: Any, key: str, default: Any = None) -> Any:
     return getattr(obj, key, default)
 
 
-def to_dtc(val: Any) -> Optional[str]:
+def to_dtc(val: Any) -> str | None:
     """
     Converts standard dates, datetimes, or validated strings into CDISC DTC format.
     Allows partial dates and full ISO 8601 timestamps, normalizing slashes.
@@ -55,7 +55,7 @@ def to_dtc(val: Any) -> Optional[str]:
     return str(val)
 
 
-def get_demographics(subject: Any) -> Dict[str, Any]:
+def get_demographics(subject: Any) -> dict[str, Any]:
     """
     Retrieves and decrypts the demographics dictionary from a ClinicalSubject.
     Uses the secure helper from apps.execution.demographics if encrypted.
@@ -79,7 +79,7 @@ def get_demographics(subject: Any) -> Dict[str, Any]:
     return {}
 
 
-def compute_age(rfstdtc: Optional[str], brthdtc: Optional[str]) -> Optional[int]:
+def compute_age(rfstdtc: str | None, brthdtc: str | None) -> int | None:
     """
     Derives AGE from RFSTDTC and BRTHDTC when source precision supports it.
     Uses month and day comparison for full precision, falling back to year subtraction.
@@ -126,7 +126,7 @@ def compute_age(rfstdtc: Optional[str], brthdtc: Optional[str]) -> Optional[int]
     return None
 
 
-def _get_obs_date(obs: Any, visits_by_id: Dict[str, Any]) -> Optional[str]:
+def _get_obs_date(obs: Any, visits_by_id: dict[str, Any]) -> str | None:
     """
     Gets DTC format date for observation, falling back to visit date if missing.
     """
@@ -145,7 +145,7 @@ def _get_obs_date(obs: Any, visits_by_id: Dict[str, Any]) -> Optional[str]:
     return to_dtc(obs_dt)
 
 
-def parse_float(val: Any) -> Optional[float]:
+def parse_float(val: Any) -> float | None:
     """
     Safely parses any numeric or string representation into a float.
     """
@@ -159,7 +159,7 @@ def parse_float(val: Any) -> Optional[float]:
         return None
 
 
-def normalize_aerel(val: Optional[str]) -> Optional[str]:
+def normalize_aerel(val: str | None) -> str | None:
     """
     Normalizes treatment relationship string to match AERelationship enum.
     """
@@ -175,7 +175,7 @@ def normalize_aerel(val: Optional[str]) -> Optional[str]:
     return cleaned
 
 
-def normalize_aeout(val: Optional[str]) -> Optional[str]:
+def normalize_aeout(val: str | None) -> str | None:
     """
     Normalizes outcome string to match AEOutcome enum.
     """
@@ -198,13 +198,13 @@ def normalize_aeout(val: Optional[str]) -> Optional[str]:
 
 
 def map_dm(
-    subjects: List[Any],
-    visits: List[Any],
-    observations: List[Any],
+    subjects: list[Any],
+    visits: list[Any],
+    observations: list[Any],
     created_by: str = "system",
     reason_for_change: str = "Automated EDC-to-SDTM DM mapping",
     **kwargs,
-) -> List[DM]:
+) -> list[DM]:
     """
     Stateless rule-based mapping from EDC sources to SDTM DM (Demographics) records.
     """
@@ -216,13 +216,13 @@ def map_dm(
             visits_by_id[v_id] = v
 
     # Group observations by subject_id
-    obs_by_subject: Dict[str, List[Any]] = {}
+    obs_by_subject: dict[str, list[Any]] = {}
     for o in observations:
         sub_id = _get_val(o, "subject_id")
         if sub_id:
             obs_by_subject.setdefault(sub_id, []).append(o)
 
-    dm_records: List[DM] = []
+    dm_records: list[DM] = []
 
     for s in subjects:
         sub_id = _get_val(s, "subject_id")
@@ -406,13 +406,13 @@ def map_dm(
 
 
 def map_vs(
-    subjects: List[Any],
-    visits: List[Any],
-    observations: List[Any],
+    subjects: list[Any],
+    visits: list[Any],
+    observations: list[Any],
     created_by: str = "system",
     reason_for_change: str = "Automated EDC-to-SDTM VS mapping",
     **kwargs,
-) -> List[VS]:
+) -> list[VS]:
     """
     Stateless rule-based mapping from EDC sources to SDTM VS (Vital Signs) records.
     """
@@ -429,13 +429,13 @@ def map_vs(
         if sub_id:
             subjects_by_id[sub_id] = s
 
-    vs_records: List[VS] = []
+    vs_records: list[VS] = []
 
     # Map observations for VS domain
     vs_obs = [o for o in observations if str(_get_val(o, "domain")).upper() == "VS"]
 
     # Process per subject to ensure deterministic monotonic sequencing per subject
-    obs_by_subject: Dict[str, List[Any]] = {}
+    obs_by_subject: dict[str, list[Any]] = {}
     for o in vs_obs:
         sub_id = _get_val(o, "subject_id")
         if sub_id:
@@ -525,13 +525,13 @@ def map_vs(
 
 
 def map_lb(
-    subjects: List[Any],
-    visits: List[Any],
-    observations: List[Any],
+    subjects: list[Any],
+    visits: list[Any],
+    observations: list[Any],
     created_by: str = "system",
     reason_for_change: str = "Automated EDC-to-SDTM LB mapping",
     **kwargs,
-) -> List[LB]:
+) -> list[LB]:
     """
     Stateless rule-based mapping from EDC sources to SDTM LB (Laboratory Findings) records.
     """
@@ -548,13 +548,13 @@ def map_lb(
         if sub_id:
             subjects_by_id[sub_id] = s
 
-    lb_records: List[LB] = []
+    lb_records: list[LB] = []
 
     # Map observations for LB domain
     lb_obs = [o for o in observations if str(_get_val(o, "domain")).upper() == "LB"]
 
     # Process per subject
-    obs_by_subject: Dict[str, List[Any]] = {}
+    obs_by_subject: dict[str, list[Any]] = {}
     for o in lb_obs:
         sub_id = _get_val(o, "subject_id")
         if sub_id:
@@ -640,13 +640,13 @@ def map_lb(
 
 
 def map_ae(
-    subjects: List[Any],
-    visits: List[Any],
-    observations: List[Any],
+    subjects: list[Any],
+    visits: list[Any],
+    observations: list[Any],
     created_by: str = "system",
     reason_for_change: str = "Automated EDC-to-SDTM AE mapping",
     **kwargs,
-) -> List[AE]:
+) -> list[AE]:
     """
     Stateless rule-based mapping from EDC sources to SDTM AE (Adverse Events) records.
     Supports both grouped CDASH structures (multi-record observations with matching page_id)
@@ -665,13 +665,13 @@ def map_ae(
         if sub_id:
             subjects_by_id[sub_id] = s
 
-    ae_records: List[AE] = []
+    ae_records: list[AE] = []
 
     # Map observations for AE domain
     ae_obs = [o for o in observations if str(_get_val(o, "domain")).upper() == "AE"]
 
     # Process per subject
-    obs_by_subject: Dict[str, List[Any]] = {}
+    obs_by_subject: dict[str, list[Any]] = {}
     for o in ae_obs:
         sub_id = _get_val(o, "subject_id")
         if sub_id:
@@ -695,7 +695,7 @@ def map_ae(
             usubjid = f"{study_id}-{site_id}-{sub_id}"
 
         # Group observations by event (page_id or observation_date)
-        groups: Dict[str, List[Any]] = {}
+        groups: dict[str, list[Any]] = {}
         for o in sub_obs:
             page_id = _get_val(o, "page_id")
             if page_id is not None and str(page_id).strip() != "":
@@ -754,7 +754,7 @@ def map_ae(
                     )
             else:
                 # standard CDASH grouped structure
-                event_data: Dict[str, Any] = {
+                event_data: dict[str, Any] = {
                     "AETERM": None,
                     "AELOC": None,
                     "AELDTC": None,
@@ -854,13 +854,13 @@ def map_ae(
 
 
 def map_cm(
-    subjects: List[Any],
-    visits: List[Any],
-    observations: List[Any],
+    subjects: list[Any],
+    visits: list[Any],
+    observations: list[Any],
     created_by: str = "system",
     reason_for_change: str = "Automated EDC-to-SDTM CM mapping",
     **kwargs,
-) -> List[CM]:
+) -> list[CM]:
     """
     Stateless rule-based mapping from EDC sources to SDTM CM (Concomitant Medications) records.
     Supports both grouped CDASH structures (multi-record observations with matching page_id)
@@ -879,13 +879,13 @@ def map_cm(
         if sub_id:
             subjects_by_id[sub_id] = s
 
-    cm_records: List[CM] = []
+    cm_records: list[CM] = []
 
     # Map observations for CM domain
     cm_obs = [o for o in observations if str(_get_val(o, "domain")).upper() == "CM"]
 
     # Process per subject
-    obs_by_subject: Dict[str, List[Any]] = {}
+    obs_by_subject: dict[str, list[Any]] = {}
     for o in cm_obs:
         sub_id = _get_val(o, "subject_id")
         if sub_id:
@@ -909,7 +909,7 @@ def map_cm(
             usubjid = f"{study_id}-{site_id}-{sub_id}"
 
         # Group observations by event (page_id or observation_date)
-        groups: Dict[str, List[Any]] = {}
+        groups: dict[str, list[Any]] = {}
         for o in sub_obs:
             page_id = _get_val(o, "page_id")
             if page_id is not None and str(page_id).strip() != "":
@@ -977,7 +977,7 @@ def map_cm(
                     )
             else:
                 # Grouped CDASH
-                event_data: Dict[str, Any] = {
+                event_data: dict[str, Any] = {
                     "CMTRT": None,
                     "CMDECOD": None,
                     "CMCLAS": None,
@@ -1076,13 +1076,13 @@ def map_cm(
 
 def map_to_sdtm(
     domain: str,
-    subjects: List[Any],
-    visits: List[Any],
-    observations: List[Any],
+    subjects: list[Any],
+    visits: list[Any],
+    observations: list[Any],
     created_by: str = "system",
-    reason_for_change: Optional[str] = None,
+    reason_for_change: str | None = None,
     **kwargs,
-) -> List[Any]:
+) -> list[Any]:
     """
     Central dispatcher orchestrating standard SDTM mappings by domain string.
     """

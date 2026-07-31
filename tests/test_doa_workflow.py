@@ -5,7 +5,7 @@ including PI scope validation, Part 11 re-authentication, canonical signature ve
 
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
@@ -155,7 +155,7 @@ async def test_complete_doa_workflow_lifecycle(db_session_fixture) -> None:
             "site_id": "site_100",
             "study_id": "study_alpha",
             "duties": ["Informed Consent", "CRF Data Entry"],
-            "start_date": datetime.now(timezone.utc).isoformat(),
+            "start_date": datetime.now(UTC).isoformat(),
             "reason_for_change": "Onboarding coordinator",
         }
 

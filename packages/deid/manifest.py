@@ -2,8 +2,7 @@
 Tamper-evident, privacy-preserving signed manifests for clinical redaction operations.
 """
 
-from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -24,10 +23,10 @@ class RedactionManifest(BaseModel):
     without exposing any raw matched identifiers.
     """
 
-    categories_counts: Dict[str, int] = Field(
+    categories_counts: dict[str, int] = Field(
         ..., description="Count of redacted items per category"
     )
-    strategies: Dict[str, str] = Field(
+    strategies: dict[str, str] = Field(
         ..., description="Mapping of category to applied redaction strategy"
     )
     operator_identity: str = Field(
@@ -43,7 +42,7 @@ class RedactionManifest(BaseModel):
     target_version: str = Field(
         ..., description="Reference/hash of the target document/version"
     )
-    signature: Optional[str] = Field(
+    signature: str | None = Field(
         None, description="The cryptographic signature (HMAC hex or asymmetric base64)"
     )
 
@@ -56,12 +55,12 @@ class RedactionManifest(BaseModel):
 
 
 def build_redaction_manifest(
-    redaction_record: List[RedactionRecordItem],
+    redaction_record: list[RedactionRecordItem],
     operator_identity: str,
     reason: str,
     source_version: str,
     target_version: str,
-    timestamp: Optional[str] = None,
+    timestamp: str | None = None,
 ) -> RedactionManifest:
     """
     Builds a RedactionManifest from a redaction record.
@@ -77,15 +76,15 @@ def build_redaction_manifest(
     Returns:
         RedactionManifest: Unsigned redaction manifest.
     """
-    categories_counts: Dict[str, int] = {}
-    strategies: Dict[str, str] = {}
+    categories_counts: dict[str, int] = {}
+    strategies: dict[str, str] = {}
 
     for item in redaction_record:
         categories_counts[item.category] = categories_counts.get(item.category, 0) + 1
         strategies[item.category] = item.strategy
 
     if not timestamp:
-        timestamp = datetime.now(timezone.utc).isoformat()
+        timestamp = datetime.now(UTC).isoformat()
 
     return RedactionManifest(
         categories_counts=categories_counts,
@@ -134,7 +133,7 @@ def verify_manifest_symmetric(manifest: RedactionManifest, secret_key: bytes) ->
 
 
 def sign_manifest_asymmetric(
-    manifest: RedactionManifest, private_key_pem: str, password: Optional[bytes] = None
+    manifest: RedactionManifest, private_key_pem: str, password: bytes | None = None
 ) -> RedactionManifest:
     """
     Signs the manifest canonically using a private key (RSA or Elliptic Curve).

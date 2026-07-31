@@ -1,6 +1,5 @@
 import uuid
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from sqlalchemy import (
     JSON,
@@ -31,15 +30,15 @@ class AwareDateTime(TypeDecorator):
                 value = parse(value)
             if isinstance(value, datetime):
                 if value.tzinfo is None:
-                    return value.replace(tzinfo=timezone.utc)
-                return value.astimezone(timezone.utc)
+                    return value.replace(tzinfo=UTC)
+                return value.astimezone(UTC)
         return value
 
     def process_result_value(self, value, dialect):
         if value is not None:
             if value.tzinfo is None:
-                return value.replace(tzinfo=timezone.utc)
-            return value.astimezone(timezone.utc)
+                return value.replace(tzinfo=UTC)
+            return value.astimezone(UTC)
         return value
 
 
@@ -85,13 +84,9 @@ class EtmfArchivalDelivery(Base):
     )
     status: Mapped[str] = mapped_column(String(50), default="PENDING", nullable=False)
     attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    last_error: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    next_retry_at: Mapped[Optional[datetime]] = mapped_column(
-        AwareDateTime, nullable=True
-    )
-    completed_at: Mapped[Optional[datetime]] = mapped_column(
-        AwareDateTime, nullable=True
-    )
+    last_error: Mapped[str | None] = mapped_column(String, nullable=True)
+    next_retry_at: Mapped[datetime | None] = mapped_column(AwareDateTime, nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(AwareDateTime, nullable=True)
     retry_eligible: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     correlation_id: Mapped[str] = mapped_column(
         String(255), unique=True, index=True, nullable=False
@@ -102,9 +97,9 @@ class EtmfArchivalDelivery(Base):
         String(255), index=True, nullable=False
     )
     study_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    site_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    site_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     artifact_content: Mapped[str] = mapped_column(String, nullable=False)
-    etmf_document_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+    etmf_document_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
 
     # 21 CFR Part 11 Compliance Auditing Metadata
     created_at: Mapped[datetime] = mapped_column(
@@ -137,7 +132,7 @@ class SubjectConsent(Base):
     server_timestamp: Mapped[datetime] = mapped_column(
         AwareDateTime, default=func.now(), nullable=False
     )
-    device_timestamp: Mapped[Optional[datetime]] = mapped_column(
+    device_timestamp: Mapped[datetime | None] = mapped_column(
         AwareDateTime, nullable=True
     )
     signature_manifest: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
@@ -227,7 +222,7 @@ class ConsentSignature(Base):
     subject_pseudonym: Mapped[str] = mapped_column(
         String(255), nullable=False, index=True
     )
-    signature_data: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    signature_data: Mapped[str | None] = mapped_column(String, nullable=True)
     signed_at: Mapped[datetime] = mapped_column(
         AwareDateTime, default=func.now(), nullable=False
     )
@@ -314,7 +309,7 @@ class ConsentAuditLog(Base):
     actor_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     actor_role: Mapped[str] = mapped_column(String(255), nullable=False)
     action: Mapped[str] = mapped_column(String(50), nullable=False)
-    document_id: Mapped[Optional[str]] = mapped_column(
+    document_id: Mapped[str | None] = mapped_column(
         String(36), nullable=True, index=True
     )
     details: Mapped[str] = mapped_column(String(1000), nullable=False)

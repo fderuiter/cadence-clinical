@@ -3,7 +3,7 @@ import contextlib
 import logging
 import os
 from datetime import datetime, timedelta
-from typing import Any, Optional
+from typing import Any
 
 from sqlalchemy import select
 
@@ -12,9 +12,9 @@ from apps.execution.trial_lock import NotificationRouter
 
 logger = logging.getLogger("queries_escalation")
 
-_escalation_task: Optional[asyncio.Task] = None
+_escalation_task: asyncio.Task | None = None
 _should_run: bool = False
-_last_digest_sent_at: Optional[datetime] = None
+_last_digest_sent_at: datetime | None = None
 
 
 async def execute_query_escalation_cycle(session_maker: Any) -> None:
@@ -128,7 +128,7 @@ async def execute_query_escalation_cycle(session_maker: Any) -> None:
 
 
 async def start_background_query_escalation(
-    session_maker: Any, interval: Optional[float] = None
+    session_maker: Any, interval: float | None = None
 ) -> None:
     """Start the asynchronous background query escalation polling loop."""
     global _escalation_task, _should_run

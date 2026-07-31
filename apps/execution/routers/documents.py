@@ -7,7 +7,6 @@ import datetime
 import hashlib
 import io
 import uuid
-from typing import Dict, List
 
 from fastapi import (
     APIRouter,
@@ -33,7 +32,7 @@ from packages.security.middleware import get_current_user
 router = APIRouter(prefix="/api/v1/documents", tags=["Documents"])
 
 # In-memory document database
-_DOCUMENTS_DB: Dict[str, dict] = {}
+_DOCUMENTS_DB: dict[str, dict] = {}
 
 
 try:
@@ -47,7 +46,7 @@ except (ImportError, AttributeError):
         content: str, mime_type: str, user_id: str, user_role: str
     ) -> str:
         """Fallback watermarking logic."""
-        now_utc = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        now_utc = datetime.datetime.now(datetime.UTC).isoformat()
         marker = "CONFIDENTIAL — Auditor Copy"
         watermark_msg = (
             f"{marker} | Access by: {user_id} ({user_role}) | UTC Time: {now_utc}"
@@ -97,7 +96,7 @@ async def upload_document(
     sha256_hash = hashlib.sha256(content).hexdigest()
 
     document_id = f"doc_{uuid.uuid4().hex[:8]}"
-    created_at = datetime.datetime.now(datetime.timezone.utc)
+    created_at = datetime.datetime.now(datetime.UTC)
 
     doc_record = {
         "document_id": document_id,
@@ -175,12 +174,12 @@ async def download_document(
     )
 
 
-@router.get("/{doc_id}/versions", response_model=List[DocumentMetadataResponse])
+@router.get("/{doc_id}/versions", response_model=list[DocumentMetadataResponse])
 async def list_document_versions(
     doc_id: str,
     request: Request,
     current_user: dict = Depends(get_current_user),
-) -> List[DocumentMetadataResponse]:
+) -> list[DocumentMetadataResponse]:
     """Return complete version history list.
 
     Requirements: PRD-SYS-001

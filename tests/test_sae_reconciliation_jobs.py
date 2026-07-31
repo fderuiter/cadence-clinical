@@ -1,7 +1,7 @@
 import os
 import time
 import uuid
-from typing import Any, Dict, List
+from typing import Any
 
 import httpx
 import pytest
@@ -89,7 +89,7 @@ def get_signed_headers(
 
 class MockAsyncClientForJobs:
     def __init__(self):
-        self.notification_calls: List[Dict[str, Any]] = []
+        self.notification_calls: list[dict[str, Any]] = []
         self.should_fail_reconciliation = False
 
     async def get(self, url: str, headers=None, params=None, timeout=10.0):

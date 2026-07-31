@@ -1,7 +1,6 @@
 import logging
 import os
 import time
-from typing import Optional
 
 import httpx
 from fastapi import HTTPException
@@ -22,7 +21,7 @@ class EConsentClient:
 
     def __init__(
         self,
-        base_url: Optional[str] = None,
+        base_url: str | None = None,
         timeout: float = 10.0,
     ) -> None:
         self.base_url = (
@@ -33,8 +32,8 @@ class EConsentClient:
     async def get_subject_consent_status(
         self,
         subject_pseudonym: str,
-        study_id: Optional[str] = None,
-        client: Optional[httpx.AsyncClient] = None,
+        study_id: str | None = None,
+        client: httpx.AsyncClient | None = None,
     ) -> dict:
         """Fetch canonical subject consent status from the eConsent service.
 
@@ -121,7 +120,7 @@ class EConsentClient:
 # Module level convenience helper function
 async def fetch_subject_consent_status(
     subject_pseudonym: str,
-    study_id: Optional[str] = None,
+    study_id: str | None = None,
 ) -> dict:
     """Convenience module helper to fetch canonical subject consent status."""
     client = EConsentClient()

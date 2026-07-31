@@ -8,7 +8,6 @@ the randomization guard.
 """
 
 import logging
-from typing import Union
 
 from eligibility.evaluator import evaluate_eligibility
 from eligibility.models import AggregateEligibilityResult
@@ -24,7 +23,7 @@ logger = logging.getLogger("execution-eligibility-service")
 
 async def evaluate_subject_eligibility(
     study_id: str,
-    subject: Union[str, ClinicalSubject],
+    subject: str | ClinicalSubject,
     session: AsyncSession,
 ) -> AggregateEligibilityResult:
     """Fetch eligibility criteria, build subject context, and evaluate overall eligibility.

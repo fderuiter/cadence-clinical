@@ -3,7 +3,7 @@
 Requirements: PRD-SYS-001
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
@@ -23,7 +23,7 @@ def _generate_test_certificate() -> str:
             x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Cadence Clinical"),
         ]
     )
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     cert = (
         x509.CertificateBuilder()
         .subject_name(name)

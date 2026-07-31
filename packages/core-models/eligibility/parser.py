@@ -7,7 +7,6 @@ normalized ExpressionNode AST at authoring/design time. Avoids any eval/exec.
 """
 
 import re
-from typing import List, Optional
 
 from eligibility.models import ExpressionNode, FieldReference
 
@@ -41,7 +40,7 @@ class Token:
         return f"Token({self.type}, {self.value!r}, position={self.position})"
 
 
-def tokenize(code: str) -> List[Token]:
+def tokenize(code: str) -> list[Token]:
     """
     Splits the clinical DSL code string into a list of Tokens.
     Raises ValueError on syntax error/unsupported character.
@@ -75,12 +74,12 @@ class DSLParser:
     Recursive descent parser for compiling clinical DSL tokens into an AST (ExpressionNode).
     """
 
-    def __init__(self, tokens: List[Token], raw_source: str):
+    def __init__(self, tokens: list[Token], raw_source: str):
         self.tokens = tokens
         self.raw_source = raw_source
         self.pos = 0
 
-    def current_token(self) -> Optional[Token]:
+    def current_token(self) -> Token | None:
         """
         Return the token at the current parsing pointer, or None if EOF.
         """

@@ -5,8 +5,6 @@ Requirements: PRD-SYS-001
 
 # Phase 1 — Backend Contracts and Domain Support (PRD-SYS-001)
 
-from typing import List, Optional
-
 from pydantic import BaseModel, Field
 
 
@@ -19,14 +17,14 @@ class BulkSdvSignOffRequest(BaseModel):
     study_id: str = Field(..., description="Target protocol study ID")
     subject_id: str = Field(..., description="Target subject ID")
     scope: str = Field(..., description="SDV scope boundary: FIELD, PAGE, or VISIT")
-    target_ids: List[str] = Field(
+    target_ids: list[str] = Field(
         ...,
         description="List of target database or artifact IDs corresponding to the scope",
     )
     reason_for_change: str = Field(
         ..., description="Mandatory GxP 21 CFR Part 11 justification reason"
     )
-    site_id: Optional[str] = Field(
+    site_id: str | None = Field(
         None, description="Optional site identifier for the targets"
     )
 
@@ -40,10 +38,10 @@ class BulkSdvSignOffResponse(BaseModel):
     signed_count: int = Field(
         ..., description="Total number of successfully signed SDV items"
     )
-    signed_target_ids: List[str] = Field(
+    signed_target_ids: list[str] = Field(
         ..., description="List of target IDs that were successfully signed"
     )
-    skipped_target_ids: List[str] = Field(
+    skipped_target_ids: list[str] = Field(
         ..., description="List of target IDs that were skipped or already signed"
     )
     content_digest: str = Field(..., description="SHA-256 digest of bulk signed data")
@@ -79,11 +77,11 @@ class BulkQueryGenerationRequest(BaseModel):
     """
 
     study_id: str = Field(..., description="Target protocol study ID")
-    site_id: Optional[str] = Field(None, description="Optional target site identifier")
-    subject_id: Optional[str] = Field(
+    site_id: str | None = Field(None, description="Optional target site identifier")
+    subject_id: str | None = Field(
         None, description="Optional target subject identifier"
     )
-    targets: List[QueryTargetDescriptor] = Field(
+    targets: list[QueryTargetDescriptor] = Field(
         ..., description="List of query target coordinate fields and explanations"
     )
     reason_for_change: str = Field(
@@ -98,10 +96,10 @@ class BulkQueryGenerationResponse(BaseModel):
     """
 
     generated_count: int = Field(..., description="Total number of generated queries")
-    generated_query_ids: List[str] = Field(
+    generated_query_ids: list[str] = Field(
         ..., description="List of generated unique query IDs"
     )
-    skipped_targets: List[QueryTargetDescriptor] = Field(
+    skipped_targets: list[QueryTargetDescriptor] = Field(
         ...,
         description="List of target descriptors that were skipped due to already having an active query",
     )

@@ -1,8 +1,8 @@
 import enum
-from typing import Any, Dict, Set
+from typing import Any
 
 
-class SubjectState(str, enum.Enum):
+class SubjectState(enum.StrEnum):
     """Enumeration of clinical trial subject lifecycle states.
 
     States follow a strict, regulated flow to prevent protocol deviations.
@@ -53,7 +53,7 @@ class LockedFactorMutationError(ValueError):
 
 
 # Strict map of allowed state transitions
-ALLOWED_SUBJECT_TRANSITIONS: Dict[SubjectState, Set[SubjectState]] = {
+ALLOWED_SUBJECT_TRANSITIONS: dict[SubjectState, set[SubjectState]] = {
     SubjectState.SCREENING: {
         SubjectState.SCREEN_FAILED,
         SubjectState.ENROLLED,

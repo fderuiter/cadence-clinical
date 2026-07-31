@@ -3,7 +3,7 @@
 Requirements: PRD-SYS-001
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from execution.safety_models import (
     CausalityEnum,
@@ -21,7 +21,7 @@ def test_e2b_xml_generation_and_parser_roundtrip() -> None:
 
     Requirements: PRD-SYS-001
     """
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now_iso = datetime.now(UTC).isoformat()
     original_case = SAECaseRecord(
         case_id="sae_rt_01",
         study_id="study_rt_01",

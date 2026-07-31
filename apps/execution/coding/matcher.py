@@ -11,7 +11,7 @@ import os
 import re
 import threading
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from rapidfuzz.distance import Levenshtein
 from sqlalchemy import select
@@ -208,10 +208,10 @@ def calculate_combined_score(v_normalized: str, d_normalized: str) -> float:
 class CodingCache:
     """Thread-safe in-memory cache for version-aware medical coding lookups."""
 
-    def __init__(self, max_size: int = 1000, ttl: Optional[float] = None) -> None:
+    def __init__(self, max_size: int = 1000, ttl: float | None = None) -> None:
         self.max_size = max_size
         # Map key (dict_type, version, normalized_term, target_level) -> (data, store_time)
-        self._cache: Dict[Tuple[str, str, str, Optional[str]], Tuple[Any, float]] = {}
+        self._cache: dict[tuple[str, str, str, str | None], tuple[Any, float]] = {}
         self._lock = threading.Lock()
 
         if ttl is not None:
@@ -232,8 +232,8 @@ class CodingCache:
                 self.ttl = 3600.0
 
     def get(
-        self, key: Tuple[str, str, str, Optional[str]]
-    ) -> Tuple[Optional[Any], Optional[Any]]:
+        self, key: tuple[str, str, str, str | None]
+    ) -> tuple[Any | None, Any | None]:
         """Retrieves an entry. Returns (hit_data, expired_data)."""
         now = time.time()
         with self._lock:
@@ -244,7 +244,7 @@ class CodingCache:
                 return None, data
         return None, None
 
-    def set(self, key: Tuple[str, str, str, Optional[str]], data: Any) -> None:
+    def set(self, key: tuple[str, str, str, str | None], data: Any) -> None:
         """Stores an entry in the cache, enforcing max_size eviction."""
         with self._lock:
             store_time = time.time()
@@ -268,7 +268,7 @@ coding_cache = CodingCache()
 
 async def _get_meddra_hierarchy(
     session: AsyncSession, term: MedDRATerm, version: str
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Retrieves full hierarchy paths for a MedDRA term."""
     stmt = select(MedDRAHierarchy).where(MedDRAHierarchy.dictionary_version == version)
     if term.level == "LLT":
@@ -335,8 +335,8 @@ async def _match_meddra(
     verbatim: str,
     norm_verbatim: str,
     version: str,
-    target_level: Optional[str] = None,
-) -> Dict[str, Any]:
+    target_level: str | None = None,
+) -> dict[str, Any]:
     """Matches a verbatim term against MedDRA dictionary candidates."""
     stmt = select(MedDRATerm).where(MedDRATerm.dictionary_version == version)
     if target_level:
@@ -408,7 +408,7 @@ async def _match_meddra(
 
 async def _get_whodrug_context(
     session: AsyncSession, record: WHODrugRecord, version: str
-) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Retrieves ATC context and ingredients for a WHODrug record."""
     atc_links_stmt = select(WHODrugDrugATC).where(
         WHODrugDrugATC.dictionary_version == version,
@@ -456,7 +456,7 @@ async def _match_whodrug(
     verbatim: str,
     norm_verbatim: str,
     version: str,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Matches a verbatim term against WHODrug record candidates."""
     stmt = select(WHODrugRecord).where(WHODrugRecord.dictionary_version == version)
     res = await session.execute(stmt)
@@ -542,8 +542,8 @@ async def match_verbatim_term(
     verbatim: str,
     dictionary_type: str,
     version: str,
-    target_level: Optional[str] = None,
-) -> Dict[str, Any]:
+    target_level: str | None = None,
+) -> dict[str, Any]:
     """Exposes version-aware, cached, and deterministic clinical terminology matching."""
     if not verbatim:
         return {

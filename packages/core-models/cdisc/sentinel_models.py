@@ -3,8 +3,6 @@
 Requirements: PRD-SYS-001
 """
 
-from typing import List, Optional
-
 from pydantic import BaseModel, Field
 
 
@@ -22,7 +20,7 @@ class QualityRuleFinding(BaseModel):
         ..., description="Category: Structural, Regulatory, Burden, Inconsistency"
     )
     message: str = Field(..., description="Human-readable rule finding message")
-    target_node_id: Optional[str] = Field(None, description="Target USDM graph node ID")
+    target_node_id: str | None = Field(None, description="Target USDM graph node ID")
 
 
 class ReadabilityReport(BaseModel):
@@ -63,7 +61,7 @@ class BurdenTraceReport(BaseModel):
         ..., description="Aggregated burden of CRFs and forms"
     )
     total_burden: float = Field(..., description="Total clinical burden score")
-    trace: List[BurdenTraceItem] = Field(
+    trace: list[BurdenTraceItem] = Field(
         default_factory=list, description="Trace details explaining the sum"
     )
 
@@ -71,10 +69,8 @@ class BurdenTraceReport(BaseModel):
 class AmendmentImpactReport(BaseModel):
     """Analysis of changes and cost estimates of a study amendment."""
 
-    base_version: Optional[str] = Field(None, description="Parent/base version tag")
-    amended_version: Optional[str] = Field(
-        None, description="Current amended version tag"
-    )
+    base_version: str | None = Field(None, description="Parent/base version tag")
+    amended_version: str | None = Field(None, description="Current amended version tag")
     added_forms_count: int = Field(0, description="Count of added forms")
     modified_forms_count: int = Field(0, description="Count of modified forms")
     deleted_forms_count: int = Field(0, description="Count of deleted forms")
@@ -119,7 +115,7 @@ class FeasibilityReport(BaseModel):
     overall_eligibility_rate: float = Field(
         ..., description="Percentage of cohort that is eligible"
     )
-    attrition_steps: List[AttritionStep] = Field(
+    attrition_steps: list[AttritionStep] = Field(
         default_factory=list, description="Step-by-step funnel of attrition"
     )
 
@@ -137,21 +133,21 @@ class ProtocolQualityScore(BaseModel):
     patient_burden_index: float = Field(
         ..., description="Calculated patient operational burden score"
     )
-    findings: List[QualityRuleFinding] = Field(
+    findings: list[QualityRuleFinding] = Field(
         default_factory=list, description="Quality findings"
     )
     passed: bool = Field(..., description="True if no ERROR severity findings exist")
 
     # Expanded sub-reports (Optional for backward compatibility)
-    readability: Optional[ReadabilityReport] = Field(
+    readability: ReadabilityReport | None = Field(
         None, description="Readability metrics of narrative text blocks"
     )
-    burden_details: Optional[BurdenTraceReport] = Field(
+    burden_details: BurdenTraceReport | None = Field(
         None, description="Traceable operational burden details"
     )
-    amendment_impact: Optional[AmendmentImpactReport] = Field(
+    amendment_impact: AmendmentImpactReport | None = Field(
         None, description="Amendment impact and cost estimation"
     )
-    feasibility: Optional[FeasibilityReport] = Field(
+    feasibility: FeasibilityReport | None = Field(
         None, description="Pluggable patient population feasibility metrics"
     )

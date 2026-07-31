@@ -4,8 +4,8 @@ CDISC Dataset-JSON v1.0 builder and automated pilot validator engine.
 Requirements Traceability: PRD-SYS-001 | GxP 21 CFR Part 11 Regulated
 """
 
-from datetime import datetime, timezone
-from typing import Any, Dict, List
+from datetime import UTC, datetime
+from typing import Any
 
 from jsonschema import validate
 from jsonschema.exceptions import ValidationError
@@ -289,8 +289,8 @@ class DatasetJsonBuilder:
         self.study_id = study_id
 
     def build_domain_dataset(
-        self, domain_code: str, records: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+        self, domain_code: str, records: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         """Serialize domain records into CDISC Dataset-JSON v1.0 compliant structure.
 
         Requirements: PRD-SYS-001
@@ -300,7 +300,7 @@ class DatasetJsonBuilder:
 
 
 def build_dataset_json(
-    domain_code: str, rows: List[Dict[str, Any]], study_id: str = "study001"
+    domain_code: str, rows: list[dict[str, Any]], study_id: str = "study001"
 ) -> DatasetJsonPayload:
     """Build a CDISC Dataset-JSON v1.0 compliant payload.
 
@@ -357,7 +357,7 @@ def build_dataset_json(
         item_data.append(row_values)
 
     # Build clinicalData structures
-    now_str = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    now_str = datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
     clinical_data = {
         "studyOID": study_id,
@@ -387,7 +387,7 @@ def build_dataset_json(
     return DatasetJsonPayload(**payload_dict)
 
 
-def validate_dataset_json_conformance(payload: dict) -> List[ValidationError]:
+def validate_dataset_json_conformance(payload: dict) -> list[ValidationError]:
     """Verify mandatory SDTM variables exist and data types match expected metadata.
 
     Requirements: PRD-SYS-001

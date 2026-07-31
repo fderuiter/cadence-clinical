@@ -3,7 +3,7 @@
 Requirements: PRD-SYS-001
 """
 
-from typing import Any, Dict, List
+from typing import Any
 
 from execution.lock_models import DataLockRecord, LockScopeEnum, LockStatusEnum
 
@@ -28,8 +28,8 @@ class DataLockEnforcer:
     def assert_submission_allowed(
         self,
         form_id: str,
-        field_updates: Dict[str, Any],
-        active_locks: List[DataLockRecord],
+        field_updates: dict[str, Any],
+        active_locks: list[DataLockRecord],
     ) -> None:
         """Validate that target eCRF form or field updates do not violate active data locks.
 

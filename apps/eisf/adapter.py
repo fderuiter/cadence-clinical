@@ -7,11 +7,11 @@ provides a stable mechanism for generating deterministic, cross-system correlati
 classifying incoming documents for deduplication and update tracking.
 """
 
-from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from enum import StrEnum
+from typing import Any
 
 
-class DocumentClassification(str, Enum):
+class DocumentClassification(StrEnum):
     """
     Standard classification options for incoming documents.
     """
@@ -33,7 +33,7 @@ class DocumentClassification(str, Enum):
 # Any custom extensions must be registered using the explicit extension mechanism.
 #
 # Note: Financial Disclosure / Medical License cross-walk entries are deferred and tracked under issue #688.
-FORWARD_MAPPING: Dict[Tuple[str, str], Tuple[int, str, str, str]] = {
+FORWARD_MAPPING: dict[tuple[str, str], tuple[int, str, str, str]] = {
     ("investigator & staff", "investigator cv"): (
         5,
         "05.02",
@@ -87,7 +87,7 @@ FORWARD_MAPPING: Dict[Tuple[str, str], Tuple[int, str, str, str]] = {
 # Reverse mapping structure derived to ensure perfect bidirectional consistency.
 # Maps (etmf_zone, etmf_section, etmf_artifact_type, etmf_artifact_code) to (eisf_binder_classification, eisf_artifact_type)
 # Lookups normalize string components.
-REVERSE_MAPPING: Dict[Tuple[int, str, str, str], Tuple[str, str]] = {
+REVERSE_MAPPING: dict[tuple[int, str, str, str], tuple[str, str]] = {
     (5, "05.02", "investigator cv", "05.02.03"): (
         "Investigator & Staff",
         "Investigator CV",
@@ -138,7 +138,7 @@ def normalize_string(value: str) -> str:
     return value.strip().lower()
 
 
-def map_eisf_to_etmf(binder_classification: str, artifact_type: str) -> Dict[str, Any]:
+def map_eisf_to_etmf(binder_classification: str, artifact_type: str) -> dict[str, Any]:
     """
     Map eISF binder classification and artifact type to eTMF zone, section, artifact type, and code.
 
@@ -179,8 +179,8 @@ def map_etmf_to_eisf(
     zone: int,
     section: str,
     artifact_type: str,
-    artifact_code: Optional[str] = None,
-) -> Dict[str, str]:
+    artifact_code: str | None = None,
+) -> dict[str, str]:
     """
     Map eTMF zone, section, artifact type, and artifact code back to eISF.
 
@@ -259,8 +259,8 @@ def derive_correlation_key(
 
 def classify_incoming_document(
     incoming_checksum: str,
-    existing_documents_for_key: List[Any],
-) -> Tuple[DocumentClassification, Optional[Any]]:
+    existing_documents_for_key: list[Any],
+) -> tuple[DocumentClassification, Any | None]:
     """
     Classify an incoming document compared to existing documents sharing the same correlation key.
 

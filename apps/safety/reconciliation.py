@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from sae_icsr import IndividualCaseSafetyReport, MedDRACoding, SeriousAdverseEvent
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,7 +29,7 @@ def generate_stable_event_key(subject_key: str, sae: SeriousAdverseEvent) -> str
 
 
 def normalize_edc_ae_to_sae(
-    ae_dict: Dict[str, Any], meddra_coding: Optional[MedDRACoding] = None
+    ae_dict: dict[str, Any], meddra_coding: MedDRACoding | None = None
 ) -> SeriousAdverseEvent:
     """
     Normalizes an EDC Adverse Event dict into a SeriousAdverseEvent model.
@@ -67,8 +67,8 @@ def normalize_edc_ae_to_sae(
 
 
 def normalize_external_icsr_to_saes(
-    icsr_dict: Dict[str, Any],
-) -> List[SeriousAdverseEvent]:
+    icsr_dict: dict[str, Any],
+) -> list[SeriousAdverseEvent]:
     """
     Normalizes reaction events inside an external safety case / ICSR payload dict into SeriousAdverseEvent models.
     """
@@ -141,10 +141,10 @@ def normalize_external_icsr_to_saes(
 
 
 def compare_sae_records(
-    edc_saes: List[SeriousAdverseEvent],
-    safety_saes: List[SeriousAdverseEvent],
+    edc_saes: list[SeriousAdverseEvent],
+    safety_saes: list[SeriousAdverseEvent],
     meddra_version: str = "26.0",
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     Pure, DB-free function that compares normalized EDC and external Safety SAE representations.
     Compares AESER, AESTDTC, AEENDTC, AESEV, AEREL, AEOUT, and MedDRA coding.
@@ -153,7 +153,7 @@ def compare_sae_records(
     edc_map = {generate_stable_event_key(s.subject_key, s): s for s in edc_saes}
     safety_map = {generate_stable_event_key(s.subject_key, s): s for s in safety_saes}
 
-    discrepancies: List[Dict[str, Any]] = []
+    discrepancies: list[dict[str, Any]] = []
     all_keys = sorted(list(set(edc_map.keys()) | set(safety_map.keys())))
 
     for key in all_keys:
@@ -263,9 +263,9 @@ async def run_reconciliation(
     session: AsyncSession,
     created_by: str,
     reason_for_change: str,
-    client: Optional[Any] = None,
+    client: Any | None = None,
     meddra_version: str = "26.0",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Orchestration function running safety reconciliation:
     1. Gathers EDC AE data via execution client.

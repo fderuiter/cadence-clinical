@@ -1,5 +1,4 @@
 import datetime
-from datetime import timezone
 
 import pytest
 from cryptography import x509
@@ -45,10 +44,10 @@ def crypto_material():
         .public_key(private_key.public_key())
         .serial_number(x509.random_serial_number())
         .not_valid_before(
-            datetime.datetime.now(timezone.utc) - datetime.timedelta(days=1)
+            datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=1)
         )
         .not_valid_after(
-            datetime.datetime.now(timezone.utc) + datetime.timedelta(days=10)
+            datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=10)
         )
         .add_extension(
             x509.SubjectKeyIdentifier.from_public_key(private_key.public_key()),
@@ -140,7 +139,7 @@ def test_signature_manifestation_lifecycle(crypto_material):
 
     manifest = SignatureManifestation(
         signer_id="usr_007",
-        timestamp=datetime.datetime.now(timezone.utc),
+        timestamp=datetime.datetime.now(datetime.UTC),
         signing_reason=SigningReason.INVESTIGATOR_SIGNATURE,
         ip_address="192.168.1.50",
         user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64)",

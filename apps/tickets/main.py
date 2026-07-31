@@ -7,7 +7,6 @@ import contextlib
 import logging
 import os
 from datetime import datetime
-from typing import List, Optional
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
@@ -64,15 +63,15 @@ class TicketCreate(BaseModel):
     priority: TicketPriority = Field(
         TicketPriority.LOW, description="Priority level of the ticket"
     )
-    reporter: Optional[str] = Field(None, description="Reporter of the ticket")
-    assignee_user: Optional[str] = Field(None, description="Assigned user")
-    assignee_role: Optional[str] = Field(None, description="Assigned role")
-    org_id: Optional[str] = Field(None, description="Scope organization ID")
-    site_id: Optional[str] = Field(None, description="Scope site ID")
-    study_id: Optional[str] = Field(None, description="Scope study ID")
-    related_entity_type: Optional[str] = Field(None, description="Related entity type")
-    related_entity_id: Optional[str] = Field(None, description="Related entity ID")
-    due_date: Optional[datetime] = Field(None, description="Optional due date")
+    reporter: str | None = Field(None, description="Reporter of the ticket")
+    assignee_user: str | None = Field(None, description="Assigned user")
+    assignee_role: str | None = Field(None, description="Assigned role")
+    org_id: str | None = Field(None, description="Scope organization ID")
+    site_id: str | None = Field(None, description="Scope site ID")
+    study_id: str | None = Field(None, description="Scope study ID")
+    related_entity_type: str | None = Field(None, description="Related entity type")
+    related_entity_id: str | None = Field(None, description="Related entity ID")
+    due_date: datetime | None = Field(None, description="Optional due date")
 
 
 class TicketUpdate(BaseModel):
@@ -80,25 +79,23 @@ class TicketUpdate(BaseModel):
     Pydantic schema for updating an existing support ticket.
     """
 
-    title: Optional[str] = Field(None, description="Updated title")
-    description: Optional[str] = Field(None, description="Updated description")
-    category: Optional[TicketCategory] = Field(None, description="Updated category")
-    priority: Optional[TicketPriority] = Field(None, description="Updated priority")
-    status: Optional[TicketStatus] = Field(None, description="Updated status")
-    assignee_user: Optional[str] = Field(None, description="Updated assigned user")
-    assignee_role: Optional[str] = Field(None, description="Updated assigned role")
-    org_id: Optional[str] = Field(None, description="Updated organization scope")
-    site_id: Optional[str] = Field(None, description="Updated site scope")
-    study_id: Optional[str] = Field(None, description="Updated study scope")
-    related_entity_type: Optional[str] = Field(
+    title: str | None = Field(None, description="Updated title")
+    description: str | None = Field(None, description="Updated description")
+    category: TicketCategory | None = Field(None, description="Updated category")
+    priority: TicketPriority | None = Field(None, description="Updated priority")
+    status: TicketStatus | None = Field(None, description="Updated status")
+    assignee_user: str | None = Field(None, description="Updated assigned user")
+    assignee_role: str | None = Field(None, description="Updated assigned role")
+    org_id: str | None = Field(None, description="Updated organization scope")
+    site_id: str | None = Field(None, description="Updated site scope")
+    study_id: str | None = Field(None, description="Updated study scope")
+    related_entity_type: str | None = Field(
         None, description="Updated related entity type"
     )
-    related_entity_id: Optional[str] = Field(
-        None, description="Updated related entity ID"
-    )
-    due_date: Optional[datetime] = Field(None, description="Updated due date")
-    is_deleted: Optional[bool] = Field(None, description="Soft delete state")
-    version_index: Optional[int] = Field(
+    related_entity_id: str | None = Field(None, description="Updated related entity ID")
+    due_date: datetime | None = Field(None, description="Updated due date")
+    is_deleted: bool | None = Field(None, description="Soft delete state")
+    version_index: int | None = Field(
         None, description="Expected version index for optimistic locking"
     )
 
@@ -108,8 +105,8 @@ class TicketAssignPayload(BaseModel):
     Pydantic schema for assigning a support ticket.
     """
 
-    assignee_user: Optional[str] = Field(None, description="Username of the assignee")
-    assignee_role: Optional[str] = Field(None, description="Role-based routing target")
+    assignee_user: str | None = Field(None, description="Username of the assignee")
+    assignee_role: str | None = Field(None, description="Role-based routing target")
     version_index: int = Field(
         ..., description="Expected version index for optimistic locking"
     )
@@ -143,14 +140,14 @@ class TicketResponse(BaseModel):
     priority: str
     status: str
     reporter: str
-    assignee_user: Optional[str] = None
-    assignee_role: Optional[str] = None
-    org_id: Optional[str] = None
-    site_id: Optional[str] = None
-    study_id: Optional[str] = None
-    related_entity_type: Optional[str] = None
-    related_entity_id: Optional[str] = None
-    due_date: Optional[str] = None
+    assignee_user: str | None = None
+    assignee_role: str | None = None
+    org_id: str | None = None
+    site_id: str | None = None
+    study_id: str | None = None
+    related_entity_type: str | None = None
+    related_entity_id: str | None = None
+    due_date: str | None = None
     is_deleted: bool
     created_at: str
     created_by: str
@@ -190,14 +187,14 @@ class TicketAuditLogResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
-    ticket_id: Optional[str] = None
+    ticket_id: str | None = None
     created_at: str
     created_by: str
-    reason_for_change: Optional[str] = None
+    reason_for_change: str | None = None
     version_index: int
     action: str
     details: str
-    record_id: Optional[str] = None
+    record_id: str | None = None
 
 
 class PaginatedTicketAuditLogResponse(BaseModel):
@@ -205,13 +202,13 @@ class PaginatedTicketAuditLogResponse(BaseModel):
     Paginated representation of ticket audit trail logs.
     """
 
-    items: List[TicketAuditLogResponse]
+    items: list[TicketAuditLogResponse]
     total_count: int
     limit: int
     offset: int
     has_more: bool
-    next_page: Optional[str] = None
-    next_cursor: Optional[str] = None
+    next_page: str | None = None
+    next_cursor: str | None = None
 
 
 DATABASE_URL = os.getenv("TICKETS_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
@@ -223,16 +220,16 @@ logger = logging.getLogger("tickets-notifications-client")
 async def dispatch_ticket_notifications(
     ticket_id: str,
     reference: str,
-    assignee_user: Optional[str],
-    assignee_role: Optional[str],
+    assignee_user: str | None,
+    assignee_role: str | None,
     reporter: str,
     version_index: int,
     event_type: str,
     actor_id: str,
-    change_reason: Optional[str],
-    old_status: Optional[str] = None,
-    new_status: Optional[str] = None,
-    comment_body: Optional[str] = None,
+    change_reason: str | None,
+    old_status: str | None = None,
+    new_status: str | None = None,
+    comment_body: str | None = None,
 ) -> None:
     """
     Background task to generate and publish notifications for ticket events.
@@ -318,9 +315,9 @@ async def write_ticket_audit_log(
     user_id: str,
     action: str,
     details: str,
-    record_id: Optional[str] = None,
-    ticket_id: Optional[str] = None,
-    change_reason: Optional[str] = None,
+    record_id: str | None = None,
+    ticket_id: str | None = None,
+    change_reason: str | None = None,
     version_index: int = 1,
 ) -> None:
     """
@@ -403,7 +400,7 @@ TICKET_CREATION_LOCK = asyncio.Lock()
 
 
 def check_optimistic_locking(
-    ticket: Ticket, payload_version: Optional[int], request: Request
+    ticket: Ticket, payload_version: int | None, request: Request
 ) -> None:
     """
     Verifies that the requested mutation specifies a matching expected version index.
@@ -496,23 +493,23 @@ async def create_ticket(
     return map_ticket_to_response(ticket)
 
 
-@app.get("/api/v1/tickets", response_model=List[TicketResponse])
+@app.get("/api/v1/tickets", response_model=list[TicketResponse])
 async def list_tickets(
     request: Request,
-    status: Optional[TicketStatus] = None,
-    category: Optional[TicketCategory] = None,
-    priority: Optional[TicketPriority] = None,
-    reporter: Optional[str] = None,
-    assignee: Optional[str] = None,
-    org_id: Optional[str] = None,
-    site_id: Optional[str] = None,
-    study_id: Optional[str] = None,
+    status: TicketStatus | None = None,
+    category: TicketCategory | None = None,
+    priority: TicketPriority | None = None,
+    reporter: str | None = None,
+    assignee: str | None = None,
+    org_id: str | None = None,
+    site_id: str | None = None,
+    study_id: str | None = None,
     include_deleted: bool = False,
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     principal: Principal = Depends(get_principal),
     session: AsyncSession = Depends(get_db_session),
-) -> List[TicketResponse]:
+) -> list[TicketResponse]:
     """
     List and filter tickets with pagination and scope-awareness.
     """
@@ -597,11 +594,11 @@ async def list_tickets(
 @app.get("/api/v1/tickets/audit-logs", response_model=PaginatedTicketAuditLogResponse)
 async def list_ticket_audit_logs(
     request: Request,
-    ticket_id: Optional[str] = None,
+    ticket_id: str | None = None,
     limit: int = Query(50, ge=1, le=250),
     offset: int = Query(0, ge=0),
-    start_time: Optional[datetime] = Query(None),
-    end_time: Optional[datetime] = Query(None),
+    start_time: datetime | None = Query(None),
+    end_time: datetime | None = Query(None),
     principal: Principal = Depends(get_principal),
     session: AsyncSession = Depends(get_db_session),
 ) -> PaginatedTicketAuditLogResponse:
@@ -1266,13 +1263,13 @@ async def create_ticket_comment(
     )
 
 
-@app.get("/api/v1/tickets/{id}/comments", response_model=List[CommentResponse])
+@app.get("/api/v1/tickets/{id}/comments", response_model=list[CommentResponse])
 async def list_ticket_comments(
     request: Request,
     id: str,
     principal: Principal = Depends(get_principal),
     session: AsyncSession = Depends(get_db_session),
-) -> List[CommentResponse]:
+) -> list[CommentResponse]:
     """
     Retrieve all comments for a specific ticket in ascending chronological order.
     """

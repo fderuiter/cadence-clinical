@@ -1,15 +1,15 @@
 """ADVS derivation module for SDTM VS and ADSL datasets."""
 
 import contextlib
-from typing import Any, Dict, List
+from typing import Any
 
 from apps.execution.biostat.dates import to_sas_date
 
 
 def derive_advs(
-    adsl_records: List[Dict[str, Any]],
-    vs_records: List[Dict[str, Any]],
-) -> List[Dict[str, Any]]:
+    adsl_records: list[dict[str, Any]],
+    vs_records: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
     """Derives the Basic Data Structure Vital Signs Analysis Dataset (ADVS).
 
     Each VS record is matched and joined to its ADSL subject based on USUBJID.
@@ -29,7 +29,7 @@ def derive_advs(
     }
 
     # Step 1: Pre-process records, join ADSL variables, and calculate basic ADVS variables
-    advs_raw: List[Dict[str, Any]] = []
+    advs_raw: list[dict[str, Any]] = []
 
     for vs_rec in vs_records:
         usubjid = vs_rec.get("USUBJID")
@@ -136,7 +136,7 @@ def derive_advs(
 
     # Step 2: Determine baseline and compute change metrics grouped by subject and parameter
     # Group records by (USUBJID, PARAMCD)
-    grouped: Dict[tuple, List[Dict[str, Any]]] = {}
+    grouped: dict[tuple, list[dict[str, Any]]] = {}
     for rec in advs_raw:
         sub_param_key = (rec["USUBJID"], rec["PARAMCD"])
         grouped.setdefault(sub_param_key, []).append(rec)

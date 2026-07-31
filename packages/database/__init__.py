@@ -1,5 +1,6 @@
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, Optional
+from typing import Any
 
 from fastapi import FastAPI
 from sqlalchemy import event
@@ -14,7 +15,7 @@ class RelationalDatabaseManager:
     def __init__(self, service_name: str) -> None:
         self.service_name = service_name
         self.engine: Any = None
-        self.session_maker: Optional[async_sessionmaker[AsyncSession]] = None
+        self.session_maker: async_sessionmaker[AsyncSession] | None = None
 
     def init_db(self, database_url: str, **kwargs: Any) -> None:
         self.engine = create_async_engine(database_url, **kwargs)
@@ -72,9 +73,9 @@ class DatabaseSessionDependency:
 def get_relational_db_lifespan(
     db_manager: RelationalDatabaseManager,
     database_url: str,
-    base_metadata: Optional[Any] = None,
-    startup_hooks: Optional[list] = None,
-    shutdown_hooks: Optional[list] = None,
+    base_metadata: Any | None = None,
+    startup_hooks: list | None = None,
+    shutdown_hooks: list | None = None,
     **kwargs: Any,
 ) -> Any:
     """

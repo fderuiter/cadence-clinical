@@ -9,7 +9,6 @@ Requirements: PRD-SYS-001, 21 CFR Part 11
 import base64
 import hashlib
 import hmac
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -25,7 +24,7 @@ class SignatureVerificationRequest(BaseModel):
     signing_reason: str = Field(
         ..., description="Part 11 signing reason (e.g. AUTHORS_APPROVAL, PI_SIGN_OFF)"
     )
-    public_key_pem: Optional[str] = Field(
+    public_key_pem: str | None = Field(
         default=None,
         description="Optional RSA PEM public key for asymmetric verification",
     )
@@ -37,10 +36,10 @@ class SignatureVerificationResult(BaseModel):
     is_valid: bool = Field(
         ..., description="True if signature is authentic and untampered"
     )
-    error_code: Optional[str] = Field(
+    error_code: str | None = Field(
         default=None, description="Failure code if verification failed"
     )
-    error_message: Optional[str] = Field(
+    error_message: str | None = Field(
         default=None, description="Detailed explanation if invalid"
     )
     signer_id: str

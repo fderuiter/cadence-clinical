@@ -1,5 +1,5 @@
 import uuid
-from typing import Any, Dict
+from typing import Any
 
 from apps.designer.db import terminology_cache
 
@@ -16,7 +16,7 @@ def to_uuid(val: Any, namespace_suffix: str = "") -> str:
         return str(uuid.uuid5(uuid.NAMESPACE_DNS, composite))
 
 
-def map_study_to_usdm(study_data: Dict[str, Any]) -> Dict[str, Any]:
+def map_study_to_usdm(study_data: dict[str, Any]) -> dict[str, Any]:
     """Maps the internal study projection dictionary into a USDM-like structure.
 
     Args:
@@ -161,7 +161,7 @@ def map_study_to_usdm(study_data: Dict[str, Any]) -> Dict[str, Any]:
         default_code: str,
         default_decode: str,
         default_system: str = "NCI",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         concept_data = None
         if concept_id:
             concept_data = terminology_cache.get(concept_id)
