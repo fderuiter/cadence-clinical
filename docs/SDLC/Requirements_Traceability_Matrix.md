@@ -9,11 +9,8 @@
 - **Total Mapped to Automated Tests:** 91
 - **Traceability Coverage:** 100.0%
 - **SRS Requirements Mapped:** 31 of 31 (100.0%)
-- **Total Mapped to Automated Tests:** 61
-- **Traceability Coverage:** 67.0%
-- **SRS Requirements Mapped:** 16 of 31 (51.6%)
 
-⚠️ **WARNING:** SRS coverage is below 100%. GxP validation requires 100% of functional requirements defined in the SRS to map to automated test cases.
+✅ **COMPLIANCE CONFIRMED:** 100% of SRS functional compliance requirements are mapped to automated verification test cases.
 
 ## 2. Requirements Mapping Table
 
@@ -34,21 +31,6 @@
 | PRD-CRF-013 | PRD | **Site & Tenant Data Isolation** | `test_tenant_data_isolation` (tests/test_crf_builder_compliance.py) 🟢 | ✅ **Passed** |
 | PRD-CRF-014 | PRD | **Failure Recovery & High Availability** | `test_failure_recovery_high_availability` (tests/test_crf_builder_compliance.py) 🟢 | ✅ **Passed** |
 | PRD-CRF-015 | PRD | **In-Memory Accessibility Auditing** | `test_in_memory_accessibility_auditing` (tests/test_crf_builder_compliance.py) 🟢 | ✅ **Passed** |
-| PRD-CRF-001 | PRD | **CRF Authoring & Global Library Instantiation** | *None* | ❌ **Unmapped** |
-| PRD-CRF-002 | PRD | **Real-time Contextual Preview** | *None* | ❌ **Unmapped** |
-| PRD-CRF-003 | PRD | **Collaborative Workspace Review Workflow** | *None* | ❌ **Unmapped** |
-| PRD-CRF-004 | PRD | **Declarative Rule Generation & Multi-Layer Edit Checks** | *None* | ❌ **Unmapped** |
-| PRD-CRF-005 | PRD | **Simulation and Dry-Run Cycle Detection** | *None* | ❌ **Unmapped** |
-| PRD-CRF-006 | PRD | **CDASH, USDM, and CSV Mapping Fidelity** | *None* | ❌ **Unmapped** |
-| PRD-CRF-007 | PRD | **FHIR eSource Readiness & CDASH Pre-fill** | *None* | ❌ **Unmapped** |
-| PRD-CRF-008 | PRD | **Regulatory & Protocol Document Export** | *None* | ❌ **Unmapped** |
-| PRD-CRF-009 | PRD | **Role-Based Authorization Gates** | *None* | ❌ **Unmapped** |
-| PRD-CRF-010 | PRD | **GxP Change-Reason Justification** | *None* | ❌ **Unmapped** |
-| PRD-CRF-011 | PRD | **Immutable Audit Attribution** | *None* | ❌ **Unmapped** |
-| PRD-CRF-012 | PRD | **Version Pinning and Lock Enforcement** | *None* | ❌ **Unmapped** |
-| PRD-CRF-013 | PRD | **Site & Tenant Data Isolation** | *None* | ❌ **Unmapped** |
-| PRD-CRF-014 | PRD | **Failure Recovery & High Availability** | *None* | ❌ **Unmapped** |
-| PRD-CRF-015 | PRD | **In-Memory Accessibility Auditing** | *None* | ❌ **Unmapped** |
 | PRD-CTMS-001 | PRD | **Operational Site and Milestone Tracking** | `test_site_milestones_crud_and_audit` (tests/test_ctms.py) 🟢 | ✅ **Passed** |
 | PRD-CTMS-002 | PRD | **Monitoring Visit Reports (MVR) Correspondence Lifecycle** | `test_monitoring_visit_invalid_state_and_findings` (tests/test_ctms.py) 🟢<br>`test_monitoring_visit_workflow_happy_path` (tests/test_ctms.py) 🟢<br>`test_monitoring_visit_workflow_rbac_denials` (tests/test_ctms.py) 🟢 | ✅ **Passed** |
 | PRD-CTMS-003 | PRD | **CRA Allocation and Workload Summaries** | `test_cra_allocations_rbac_reassignment_workload` (tests/test_ctms.py) 🟢<br>`test_monitoring_visit_scheduling_respects_cra_allocation` (tests/test_ctms.py) 🟢 | ✅ **Passed** |
@@ -119,23 +101,6 @@
 | Trace-3 | SRS | **Read-Only Trial Locks & Alert Routing**<br>*Upon detecting any data compromise, the system immediately freezes clinical transactions by throwing `PermissionError` for write operations (in `audit.py`) while permitting authorized `SELECT` queries. Concurrently, high-priority notifications are dispatched to designated contacts (Email, SMS, Webhook) via the `TrialLockManager` module in `apps/execution/trial_lock.py` within one minute.* | `test_trial_lock_freeze` (tests/test_trial_lock.py) 🟢 | ✅ **Passed** |
 | Trace-30 | SRS | **Failure Recovery & High Availability**<br>*The local storage sync engine (`apps/subject-portal` and `apps/interop` sync) preserves drafts and unsynced submissions in client-side IndexedDB caches during network disconnects, supporting transactional batch flushes with deterministic conflict resolution upon reconnection to fulfill `PRD-CRF-014`.* | `test_failure_recovery_high_availability` (tests/test_crf_builder_compliance.py) 🟢 | ✅ **Passed** |
 | Trace-31 | SRS | **In-Memory Accessibility Auditing**<br>*The frontend rendering canvas supports automated, in-memory WCAG 2.1 accessibility scans to verify structural layout contrast ratios, element labeling, and keyboard focus routing during form design time to satisfy `PRD-CRF-015`.* | `test_in_memory_accessibility_auditing` (tests/test_crf_builder_compliance.py) 🟢 | ✅ **Passed** |
-| Trace-17 | SRS | **CRF Authoring & Global Library Instantiation**<br>*The layout designer in `apps/designer` allows authorized users to load, reference, and instantiate version-controlled templates from the Global Library. All instantiations preserve a strict, non-destructive trace link (`INSTANTIATED_FROM` relationship) to the source template's global library ID and version index without modifying the source template itself, in compliance with `PRD-CRF-001`.* | *None* | ❌ **Unmapped** |
-| Trace-18 | SRS | **Real-time Contextual Preview**<br>*The `apps/designer` workspace provides a real-time, high-fidelity contextual preview of CRF layouts, simulating exact web rendering grids and input controls directly within the authoring canvas to satisfy `PRD-CRF-002`.* | *None* | ❌ **Unmapped** |
-| Trace-19 | SRS | **Collaborative Workspace Review Workflow**<br>*The platform enforces peer review and sign-off status controls (`DRAFT`, `IN_REVIEW`, `APPROVED`, `PUBLISHED`, `ARCHIVED`) for CRF drafts within `apps/designer`, gating layout modifications when a draft is in locked/frozen states and requiring dual-signature authorization prior to formal publication, fulfilling `PRD-CRF-003`.* | *None* | ❌ **Unmapped** |
-| Trace-2 | SRS | **Cryptographic Key Multi-Sharing & Rotation**<br>*The system utilizes mathematical polynomial splitting (Shamir's Secret Sharing pattern) to split treatment allocation blinding keys, alongside an automatic 365-day rotation scheme for encryption keys. These operations are explicitly enforced by `AllocationKeyManager` in `apps/execution/cryptography.py`.* | `test_encryption_decryption_with_rotation` (tests/test_cryptography.py) 🟢<br>`test_key_splitting` (tests/test_cryptography.py) 🟢 | ✅ **Passed** |
-| Trace-20 | SRS | **Declarative Rule Generation & Multi-Layer Edit Checks**<br>*The CRF Builder programmatically outputs declarative, CDISC USDM-aligned rule structures covering skip logic, field constraints, and cross-form validation, compiled into open-standard XPath expressions by compilers in `apps/designer` to satisfy `PRD-CRF-004`.* | *None* | ❌ **Unmapped** |
-| Trace-21 | SRS | **Simulation and Dry-Run Cycle Detection**<br>*Before study activation, `apps/designer` provides a dry-run execution environment that scans compiled rules and transition graphs, running cycle-detection algorithms to detect infinite skip-logic loops or circular dependencies, satisfying `PRD-CRF-005`.* | *None* | ❌ **Unmapped** |
-| Trace-22 | SRS | **CDASH, USDM, and CSV Mapping Fidelity**<br>*The spreadsheet ingestion and mapping pipeline inside `apps/designer` maintains 100% data fidelity when parsing CDASH variables, USDM schema structures, or tabular CSV specifications, ensuring correct mapping to target schemas without data truncation, conforming to `PRD-CRF-006`.* | *None* | ❌ **Unmapped** |
-| Trace-23 | SRS | **FHIR eSource Readiness & CDASH Pre-fill**<br>*The `apps/interop` service supports ingestion of HL7 FHIR resources, mapping FHIR demographics and clinical variables into CDASH/SDTM-conformant CRF fields to enable automated form pre-fill capabilities, fulfilling `PRD-CRF-007`.* | *None* | ❌ **Unmapped** |
-| Trace-24 | SRS | **Regulatory & Protocol Document Export**<br>*The clinical protocol rendering module in `apps/designer` compiles and generates completed protocols, study layouts, and annotated eCRFs to PDF/DOCX formats, offloading CPU-heavy rendering to separate thread pools to preserve event-loop performance, satisfying `PRD-CRF-008`.* | *None* | ❌ **Unmapped** |
-| Trace-25 | SRS | **Role-Based Authorization Gates**<br>*The platform restricts CRF creation, draft modification, rules configuration, and publication to authorized roles (e.g., `sponsor_designer`, `sponsor_dm`, `sponsor_admin`, or `sysadmin`) while blocking auditor, investigator, or regulatory inspector roles from accessing mutation endpoints, reusing security package helpers to fulfill `PRD-CRF-009`.* | *None* | ❌ **Unmapped** |
-| Trace-26 | SRS | **GxP Change-Reason Justification**<br>*Every save, update, state transition, or soft deletion of a CRF layout, clinical rule, or template mapping requires a user-supplied change justification string (`X-Change-Reason` or `reason_for_change`) of at least 10 characters to comply with `PRD-CRF-010`.* | *None* | ❌ **Unmapped** |
-| Trace-27 | SRS | **Immutable Audit Attribution**<br>*All modifications to the CRF designs or clinical rules write transaction-bound, append-only log entries containing the UTC timestamp, user ID, version index, and change justification to the immutable audit database ledger, reusing core-models audit features to fulfill `PRD-CRF-011`.* | *None* | ❌ **Unmapped** |
-| Trace-28 | SRS | **Version Pinning and Lock Enforcement**<br>*Once a CRF design or rule-set is marked as `APPROVED` or `PUBLISHED`, the specific version index is pinned. Any subsequent update requires incrementing the version index by 1 and creating a new draft, preventing retroactive modifications, in compliance with `PRD-CRF-012`.* | *None* | ❌ **Unmapped** |
-| Trace-29 | SRS | **Site & Tenant Data Isolation**<br>*Multi-tenant namespaces are strictly isolated in `apps/designer`. Users of Sponsor A are blocked from reading or cloning CRF templates and drafts belonging to Sponsor B, returning a `403 Forbidden` response to satisfy `PRD-CRF-013`.* | *None* | ❌ **Unmapped** |
-| Trace-3 | SRS | **Read-Only Trial Locks & Alert Routing**<br>*Upon detecting any data compromise, the system immediately freezes clinical transactions by throwing `PermissionError` for write operations (in `audit.py`) while permitting authorized `SELECT` queries. Concurrently, high-priority notifications are dispatched to designated contacts (Email, SMS, Webhook) via the `TrialLockManager` module in `apps/execution/trial_lock.py` within one minute.* | `test_trial_lock_freeze` (tests/test_trial_lock.py) 🟢 | ✅ **Passed** |
-| Trace-30 | SRS | **Failure Recovery & High Availability**<br>*The local storage sync engine (`apps/subject-portal` and `apps/interop` sync) preserves drafts and unsynced submissions in client-side IndexedDB caches during network disconnects, supporting transactional batch flushes with deterministic conflict resolution upon reconnection to fulfill `PRD-CRF-014`.* | *None* | ❌ **Unmapped** |
-| Trace-31 | SRS | **In-Memory Accessibility Auditing**<br>*The frontend rendering canvas supports automated, in-memory WCAG 2.1 accessibility scans to verify structural layout contrast ratios, element labeling, and keyboard focus routing during form design time to satisfy `PRD-CRF-015`.* | *None* | ❌ **Unmapped** |
 | Trace-4 | SRS | **Data-Driven Expected Document Lists (EDLs)**<br>*The system implements a data-driven Expected Document List reference data model and site-aware completeness tracking APIs under `/api/v1/etmf/edl` and `/api/v1/etmf/completeness` using the `ExpectedDocument` model to replace hardcoded validation logic with a dynamic backbone.* | `test_edl_definitions_and_crud` (tests/test_etmf.py) 🟢<br>`test_site_aware_completeness` (tests/test_etmf.py) 🟢 | ✅ **Passed** |
 | Trace-5 | SRS | **TMF Taxonomy Validation & Integration Assurance**<br>*The eTMF microservice enforces strict catalog-driven classification during document ingestion, rejecting unknown/invalid artifacts or mismatched configurations with HTTP 422, while persisting the resolved taxonomy version and artifact code to ensure compliance.* | `test_canonical_catalog_ingestion_validations` (tests/test_etmf.py) 🟢<br>`test_qualify_catalog_cutover_and_extension_persistence` (tests/test_etmf.py) 🟢 | ✅ **Passed** |
 | Trace-6 | SRS | **CTMS Monitoring and Site Operations Tracking**<br>*The CTMS microservice (`apps/ctms/main.py`, `apps/ctms/models.py`) owns online CRA monitoring, implementing a structured site monitoring visit lifecycle via entities such as `MonitoringVisit` (manipulated in `schedule_monitoring_visit`) and CRA workload allocation maps via `CRAAllocation` (queried in `retrieve_workload_summaries`). This boundary isolates CRA monitoring in CTMS from ePRO offline sync (which is owned by Subject Portal and Interop). All CTMS mutations are secured via OIDC auth, audited via append-only `CTMSAuditLog` entries with explicit change reasons under 21 CFR Part 11 requirements, and covered by automated tests to ensure compliance.* | `test_cra_allocations_rbac_reassignment_workload` (tests/test_ctms.py) 🟢<br>`test_create_and_list_studies_rbac` (tests/test_ctms.py) 🟢<br>`test_get_audit_trail_rbac` (tests/test_ctms.py) 🟢<br>`test_monitoring_visit_invalid_state_and_findings` (tests/test_ctms.py) 🟢<br>`test_monitoring_visit_scheduling_respects_cra_allocation` (tests/test_ctms.py) 🟢<br>`test_monitoring_visit_workflow_happy_path` (tests/test_ctms.py) 🟢<br>`test_monitoring_visit_workflow_rbac_denials` (tests/test_ctms.py) 🟢<br>`test_recruitment_records_crud_and_audit` (tests/test_ctms.py) 🟢<br>`test_site_milestones_crud_and_audit` (tests/test_ctms.py) 🟢 | ✅ **Passed** |
@@ -145,33 +110,4 @@
 
 ## 3. Unmapped Requirements
 
-- **PRD-CRF-001** (PRD): CRF Authoring & Global Library Instantiation
-- **PRD-CRF-002** (PRD): Real-time Contextual Preview
-- **PRD-CRF-003** (PRD): Collaborative Workspace Review Workflow
-- **PRD-CRF-004** (PRD): Declarative Rule Generation & Multi-Layer Edit Checks
-- **PRD-CRF-005** (PRD): Simulation and Dry-Run Cycle Detection
-- **PRD-CRF-006** (PRD): CDASH, USDM, and CSV Mapping Fidelity
-- **PRD-CRF-007** (PRD): FHIR eSource Readiness & CDASH Pre-fill
-- **PRD-CRF-008** (PRD): Regulatory & Protocol Document Export
-- **PRD-CRF-009** (PRD): Role-Based Authorization Gates
-- **PRD-CRF-010** (PRD): GxP Change-Reason Justification
-- **PRD-CRF-011** (PRD): Immutable Audit Attribution
-- **PRD-CRF-012** (PRD): Version Pinning and Lock Enforcement
-- **PRD-CRF-013** (PRD): Site & Tenant Data Isolation
-- **PRD-CRF-014** (PRD): Failure Recovery & High Availability
-- **PRD-CRF-015** (PRD): In-Memory Accessibility Auditing
-- **Trace-17** (SRS): CRF Authoring & Global Library Instantiation
-- **Trace-18** (SRS): Real-time Contextual Preview
-- **Trace-19** (SRS): Collaborative Workspace Review Workflow
-- **Trace-20** (SRS): Declarative Rule Generation & Multi-Layer Edit Checks
-- **Trace-21** (SRS): Simulation and Dry-Run Cycle Detection
-- **Trace-22** (SRS): CDASH, USDM, and CSV Mapping Fidelity
-- **Trace-23** (SRS): FHIR eSource Readiness & CDASH Pre-fill
-- **Trace-24** (SRS): Regulatory & Protocol Document Export
-- **Trace-25** (SRS): Role-Based Authorization Gates
-- **Trace-26** (SRS): GxP Change-Reason Justification
-- **Trace-27** (SRS): Immutable Audit Attribution
-- **Trace-28** (SRS): Version Pinning and Lock Enforcement
-- **Trace-29** (SRS): Site & Tenant Data Isolation
-- **Trace-30** (SRS): Failure Recovery & High Availability
-- **Trace-31** (SRS): In-Memory Accessibility Auditing
+All documented requirements have been successfully mapped to automated test cases.
