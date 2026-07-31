@@ -14,6 +14,7 @@ from apps.interop.auth import (
     require_staff_role,
     verify_subject_bulk_identity,
     verify_subject_identity,
+    subject_identity_guard,
 )
 from apps.interop.database import db_manager
 from apps.interop.designer_client import fetch_eligibility_criteria
@@ -1137,7 +1138,7 @@ async def deliver_notification_task(
             elif channel == "WEBHOOK":
                 # Simulated webhook delivery
                 print(
-                    f"[STUB WEBHOOK] Sending webhook to https://hooks.example.com/subject/{subject_id}"  # deid: ignore
+                    f"[STUB WEBHOOK] Sending webhook to https://hooks.example.com/subject/{subject_id}"  # deid-ignore
                 )
             elif channel == "IN_APP":
                 # Delivered in-app
