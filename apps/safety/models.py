@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 
 from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, event, func
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship
 
 
@@ -36,9 +37,14 @@ class SafetyCaseICSR(Base):
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
 
-class SafetyExportJob(Base):
+# Aliases for SafetyCase / ICSR
+SafetyCase = SafetyCaseICSR
+ICSR = SafetyCaseICSR
+
+
+class ExportJob(Base):
     """
-    Represents a persisted export job record for ICSR XML exports.
+    Represents a persisted export job record for ICSR XML exports, mirroring TranslationJob.
     """
 
     __tablename__ = "safety_export_jobs"
@@ -50,7 +56,8 @@ class SafetyExportJob(Base):
     status: Mapped[str] = mapped_column(
         String(50), default="PENDING", nullable=False
     )  # PENDING, COMPLETED, FAILED
-    error_message: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    output: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # xml payload output
+    error: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # error message
 
     # 21 CFR Part 11 Compliance Auditing Metadata
     created_at: Mapped[datetime] = mapped_column(
@@ -59,6 +66,18 @@ class SafetyExportJob(Base):
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    @property
+    def error_message(self) -> Optional[str]:
+        return self.error
+
+    @error_message.setter
+    def error_message(self, val: Optional[str]) -> None:
+        self.error = val
+
+
+# Alias for SafetyExportJob
+SafetyExportJob = ExportJob
 
 
 class SAEReconciliationRun(Base):
@@ -197,3 +216,27 @@ def prevent_audit_log_modification(session: Session, flush_context, instances) -
             raise ValueError(
                 "Deletions from SafetyAuditLog are strictly forbidden to comply with 21 CFR Part 11."
             )
+
+
+async def write_audit_log(
+    session: AsyncSession,
+    created_by: str,
+    action: str,
+    details: str,
+    reason_for_change: Optional[str] = None,
+    version_index: int = 1,
+    record_id: Optional[str] = None,
+) -> None:
+    """
+    Utility function to write to the immutable Safety audit ledger.
+    """
+    log_entry = SafetyAuditLog(
+        created_by=created_by,
+        action=action,
+        details=details,
+        record_id=record_id,
+        reason_for_change=reason_for_change,
+        version_index=version_index,
+    )
+    session.add(log_entry)
+    await session.flush()

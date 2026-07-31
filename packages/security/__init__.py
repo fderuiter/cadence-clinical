@@ -85,6 +85,11 @@ from packages.security.signing import (
     generate_canonical_signature,
     verify_canonical_signature,
 )
+from packages.security.sig_token_verifier import (
+    TokenConsumptionCache,
+    token_consumption_cache,
+    verify_and_consume_sig_token,
+)
 from packages.security.trial_roles import (
     TrialRole,
     check_trial_role,
@@ -92,6 +97,9 @@ from packages.security.trial_roles import (
 )
 
 __all__ = [
+    "TokenConsumptionCache",
+    "token_consumption_cache",
+    "verify_and_consume_sig_token",
     "TrialRole",
     "check_trial_role",
     "enforce_site_isolation",
