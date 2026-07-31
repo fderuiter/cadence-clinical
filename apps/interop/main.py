@@ -1219,9 +1219,11 @@ async def deliver_notification_task(
             success = False
 
             if channel == "EMAIL":
-                success = await router.send_email(f"{subject_id}@example.com", message)
+                email_target = f"user_{subject_id}@domain.internal"
+                success = await router.send_email(email_target, message)
             elif channel == "SMS":
-                success = await router.send_sms("+1234567890", message)
+                sms_target = f"sms_{subject_id}"
+                success = await router.send_sms(sms_target, message)
             elif channel == "WEBHOOK":
                 webhook_payload = {
                     "event": "REMINDER_DUE",
@@ -1229,8 +1231,9 @@ async def deliver_notification_task(
                     "message": message,
                     "notification_id": notification_id,
                 }
+                webhook_target = f"endpoint_{subject_id}"
                 success = await router.send_webhook(
-                    f"https://hooks.example.com/subject/{subject_id}",
+                    webhook_target,
                     webhook_payload,
                 )
             elif channel == "IN_APP":
@@ -1571,66 +1574,3 @@ async def acknowledge_notification(
     )
 
     return notification
-
-
-class NotificationRouter:
-    """
-    Generalized router to simulate and dispatch in-app and out-of-app reminders.
-    Utilizes httpx with fail-soft exception handling to make outbound HTTP calls
-    to the central notifications service (/api/v1/notifications) while maintaining
-    clearly marked stub behaviors across channels.
-    """
-
-    def __init__(self, base_url: str = "http://localhost:8000"):
-        self.base_url = base_url
-
-    async def _post_notification(self, payload: dict) -> bool:
-        try:
-            async with httpx.AsyncClient() as client:
-                resp = await client.post(f"{self.base_url}/api/v1/notifications", json=payload)
-                if resp.status_code == 201:
-                    return True
-                return False
-        except httpx.RequestError:
-            # fail-soft exception handling, fallback to stubbed success
-            return True
-
-    async def send_email(self, email: str, message: str) -> bool:
-        payload = {
-            "recipient_user_id": email,
-            "category": "REMINDERS",
-            "priority": "MEDIUM",
-            "channels": "EMAIL",
-            "message_content": message,
-        }
-        return await self._post_notification(payload)
-
-    async def send_sms(self, phone: str, message: str) -> bool:
-        payload = {
-            "recipient_user_id": phone,
-            "category": "REMINDERS",
-            "priority": "MEDIUM",
-            "channels": "SMS",
-            "message_content": message,
-        }
-        return await self._post_notification(payload)
-
-    async def send_webhook(self, url: str, message: Any) -> bool:
-        payload = {
-            "recipient_user_id": url,
-            "category": "REMINDERS",
-            "priority": "MEDIUM",
-            "channels": "WEBHOOK",
-            "message_content": str(message),
-        }
-        return await self._post_notification(payload)
-
-    async def send_in_app(self, user_id: str, message: str) -> bool:
-        payload = {
-            "recipient_user_id": user_id,
-            "category": "REMINDERS",
-            "priority": "MEDIUM",
-            "channels": "IN_APP",
-            "message_content": message,
-        }
-        return await self._post_notification(payload)
