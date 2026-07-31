@@ -887,6 +887,11 @@ class LabReferenceRange(AuditedModel):
     critical_low: Mapped[float] = mapped_column(Float, nullable=True)
     critical_high: Mapped[float] = mapped_column(Float, nullable=True)
 
+    @property
+    def has_critical_boundaries(self) -> bool:
+        """Returns True if the reference range has configured critical boundaries."""
+        return self.critical_low is not None or self.critical_high is not None
+
 
 class FormSubmission(AuditedModel):
     """Represents a CRF form submission as the auditable unit of PI sign-off.

@@ -448,3 +448,68 @@ def test_is_deleted_filtering():
         [r_deleted], study, tcode, unit, "CENTRAL", sex="M", age=30.0
     )
     assert matched_deleted_only is None
+
+
+def test_dispatch_lab_alert_if_critical(monkeypatch):
+    """Verify that dispatch_lab_alert_if_critical triggers critical notifications correctly."""
+    from apps.execution.database.models import ClinicalObservation
+    from apps.execution.lab_ranges import dispatch_lab_alert_if_critical
+
+    dispatched = []
+
+    class MockNotificationRouter:
+        def send_dashboard_notification(self, recipients, payload):
+            dispatched.append((recipients, payload))
+
+    monkeypatch.setattr(
+        "apps.execution.trial_lock.NotificationRouter", MockNotificationRouter
+    )
+
+    # 1. Normal observation (no alert)
+    obs_normal = ClinicalObservation(
+        subject_id="SUBJ-001",
+        study_id="STUDY-001",
+        test_code="WBC",
+        test_name="White Blood Cells",
+        value=5.0,
+        unit="10^9/L",
+    )
+    dispatch_lab_alert_if_critical(obs_normal, "NORMAL")
+    assert len(dispatched) == 0
+
+    # 2. Critical observation (low low - trigger alert)
+    obs_critical = ClinicalObservation(
+        subject_id="SUBJ-001",
+        study_id="STUDY-001",
+        test_code="WBC",
+        test_name="White Blood Cells",
+        value=1.0,
+        unit="10^9/L",
+    )
+    dispatch_lab_alert_if_critical(obs_critical, "LOW LOW")
+    assert len(dispatched) == 1
+    recipients, payload = dispatched[0]
+    assert recipients == ["safety_lead", "lead_cra"]
+    assert payload["event_type"] == "critical-lab-alert"
+    assert "CRITICAL LAB ALERT" in payload["message"]
+    assert payload["indicator"] == "LOW LOW"
+
+
+def test_lab_reference_range_has_critical_boundaries_property():
+    """Verify that the has_critical_boundaries property correctly evaluates on LabReferenceRange."""
+    from apps.execution.database.models import LabReferenceRange
+
+    # No critical bounds
+    r_no_crit = LabReferenceRange(
+        low_bound=4.0,
+        high_bound=11.0,
+    )
+    assert r_no_crit.has_critical_boundaries is False
+
+    # With critical bounds
+    r_crit = LabReferenceRange(
+        low_bound=4.0,
+        high_bound=11.0,
+        critical_low=2.0,
+    )
+    assert r_crit.has_critical_boundaries is True

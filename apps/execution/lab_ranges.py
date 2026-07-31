@@ -384,3 +384,37 @@ async def recalculate_range_flags(session: Any, study_id: str, test_code: str) -
         await session.commit()
 
     return updated_count
+
+
+def dispatch_lab_alert_if_critical(
+    obs: Any,
+    indicator: Optional[str],
+) -> None:
+    """Dispatches real-time GxP out-of-range and critical alerts to safety leads.
+
+    Args:
+        obs (Any): The ClinicalObservation object.
+        indicator (Optional[str]): The evaluated lab indicator ('LOW LOW', 'HIGH HIGH', etc.).
+    """
+    if indicator in ("LOW LOW", "HIGH HIGH"):
+        from apps.execution.trial_lock import NotificationRouter
+
+        router = NotificationRouter()
+        msg = (
+            f"CRITICAL LAB ALERT: Subject {obs.subject_id} has a critical out-of-range "
+            f"lab value for {obs.test_name} ({obs.test_code}): {obs.value} {obs.unit} (Indicator: {indicator})."
+        )
+        payload = {
+            "event_type": "critical-lab-alert",
+            "message": msg,
+            "subject_id": obs.subject_id,
+            "study_id": obs.study_id,
+            "test_code": obs.test_code,
+            "indicator": indicator,
+            "value": obs.value,
+            "unit": obs.unit,
+            "related_entity_type": "observation",
+            "related_entity_id": str(obs.id),
+        }
+        # Dispatch to Safety Leads / CRAs
+        router.send_dashboard_notification(["safety_lead", "lead_cra"], payload)

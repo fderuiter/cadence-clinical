@@ -1490,6 +1490,10 @@ async def create_observation(
         )
         session.add(obs)
 
+        from apps.execution.lab_ranges import dispatch_lab_alert_if_critical
+
+        dispatch_lab_alert_if_critical(obs, indicator)
+
         # Connect clinical observations to coded-term assignments
         domain_upper = payload.domain.upper()
         if domain_upper in {"AE", "MH", "CM"}:
