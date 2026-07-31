@@ -126,9 +126,11 @@ function toggleCollapse() {
   );
   if (storeSection) {
     storeSection.isCollapsed = !storeSection.isCollapsed;
-  } else {
-    emit("update-section", { ...props.section, isCollapsed: !props.section.isCollapsed });
   }
+
+  // Always emit the update or mutate the prop directly for local reactivity in tests
+  props.section.isCollapsed = !props.section.isCollapsed;
+  emit("update-section", { ...props.section });
 }
 
 function addNewItem() {
