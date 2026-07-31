@@ -8,20 +8,17 @@ delegation workflows in compliance with ICH E6(R2) and 21 CFR Part 11.
 from typing import List, Optional
 
 from fastapi import HTTPException, Request, status
-from organization_domain import ClinicalStaffRole
+from organization_domain import StaffRole
 
 from packages.security.rbac import get_normalized_roles
-
-# StaffRole alias matching shared ClinicalStaffRole vocabulary
-StaffRole = ClinicalStaffRole
 
 
 def normalize_and_validate_staff_role(role_str: str) -> StaffRole:
     """
-    Normalizes a role string and validates it against the shared ClinicalStaffRole (StaffRole) vocabulary.
+    Normalizes a role string and validates it against the shared StaffRole vocabulary.
 
     Returns:
-        StaffRole: The mapped ClinicalStaffRole enum value.
+        StaffRole: The mapped StaffRole enum value.
 
     Raises:
         HTTPException: Raises 400 Bad Request if the role is malformed or invalid.
@@ -33,7 +30,7 @@ def normalize_and_validate_staff_role(role_str: str) -> StaffRole:
         "principal_investigator",
         "principalinvestigator",
     }:
-        return ClinicalStaffRole.PRINCIPAL_INVESTIGATOR
+        return StaffRole.PRINCIPAL_INVESTIGATOR
     if norm in {
         "sub-investigator",
         "sub investigator",
@@ -41,9 +38,9 @@ def normalize_and_validate_staff_role(role_str: str) -> StaffRole:
         "subinvestigator",
         "sub-invest",
     }:
-        return ClinicalStaffRole.SUB_INVESTIGATOR
+        return StaffRole.SUB_INVESTIGATOR
     if norm in {"crc", "clinical research coordinator"}:
-        return ClinicalStaffRole.CRC
+        return StaffRole.CRC
     if norm in {
         "cra/monitor",
         "cra monitor",
@@ -52,7 +49,7 @@ def normalize_and_validate_staff_role(role_str: str) -> StaffRole:
         "cra",
         "monitor",
     }:
-        return ClinicalStaffRole.CRA_MONITOR
+        return StaffRole.CRA_MONITOR
 
     # Note: External Monitor ("external monitor"/"external_monitor") is intentionally
     # excluded from the Delegation-of-Authority (DOA) scope because monitors perform
@@ -106,7 +103,7 @@ def verify_delegation_scope(
         enforce_pi: If True, requires the delegator to possess the Principal Investigator role.
 
     Returns:
-        List[StaffRole]: The list of validated ClinicalStaffRoles for the user.
+        List[StaffRole]: The list of validated StaffRoles for the user.
 
     Raises:
         HTTPException:
@@ -118,7 +115,7 @@ def verify_delegation_scope(
 
     # 2. Enforce only PI can delegate (if enforce_pi is True)
     if enforce_pi:
-        if ClinicalStaffRole.PRINCIPAL_INVESTIGATOR not in validated_roles:
+        if StaffRole.PRINCIPAL_INVESTIGATOR not in validated_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Forbidden: Only a Principal Investigator may delegate.",
@@ -171,6 +168,24 @@ def verify_delegation_scope(
             )
 
     return validated_roles
+
+
+def check_delegation_authority(
+    request: Request,
+    target_site_id: str,
+    target_sponsor_id: Optional[str] = None,
+    enforce_pi: bool = True,
+) -> List[StaffRole]:
+    """
+    Parses and validates the current user's roles and site/sponsor context
+    to ensure they are authorized to delegate authority or act on behalf of the site.
+    """
+    return verify_delegation_scope(
+        request=request,
+        target_site_id=target_site_id,
+        target_sponsor_id=target_sponsor_id,
+        enforce_pi=enforce_pi,
+    )
 
 
 class DelegationChecker:
@@ -229,3 +244,21 @@ def require_delegation(enforce_pi: bool = True) -> DelegationChecker:
     Example: Depends(require_delegation(enforce_pi=True))
     """
     return DelegationChecker(enforce_pi=enforce_pi)
+
+
+def require_staff_role(*allowed_roles: StaffRole):
+    """
+    FastAPI dependency factory that returns a dependency function to enforce
+    that at least one of the allowed StaffRoles is present.
+    """
+
+    def dependency(request: Request) -> List[StaffRole]:
+        validated_roles = validate_request_staff_roles(request)
+        if not any(role in allowed_roles for role in validated_roles):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Forbidden: Missing required clinical staff role. Allowed roles: {[r.value for r in allowed_roles]}.",
+            )
+        return validated_roles
+
+    return dependency

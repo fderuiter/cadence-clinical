@@ -6,16 +6,20 @@ import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
-from packages.deid.detector import DeidDetector, resolve_overlaps
-from packages.deid.manifest import (
+from packages.deidentification.detectors import DeidDetector, resolve_overlaps
+from packages.deidentification.manifest import (
     build_redaction_manifest,
     sign_manifest_asymmetric,
     sign_manifest_symmetric,
     verify_manifest_asymmetric,
     verify_manifest_symmetric,
 )
-from packages.deid.models import ComplianceProfile, DetectionResult, DetectorCategory
-from packages.deid.transforms import (
+from packages.deidentification.models import (
+    ComplianceProfile,
+    DetectionResult,
+    DetectorCategory,
+)
+from packages.deidentification.transforms import (
     apply_deid_transforms,
     cap_age_string,
     pseudonymize_value,
@@ -27,6 +31,9 @@ from packages.deid.transforms import (
 def temp_rsa_keypair():
     """Generates an ephemeral RSA keypair for asymmetric manifest signing validation."""
     # @req:PRD-TMF-005
+    # @req:PRD-MDR-006
+    # @req:EU-CTR-001
+    # @req:HIPAA-001
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     private_pem = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
@@ -48,6 +55,7 @@ def test_detections_all_categories():
     Verify DeidDetector successfully identifies PII/PHI across all supported categories.
     """
     # @req:PRD-TMF-005
+    # @req:HIPAA-001
     detector = DeidDetector()
 
     # 1. Email detection
@@ -152,6 +160,8 @@ def test_compliance_profiles():
     - EU_CTR: restricted (e.g. EMAIL/DATES/CUSTOM active, but IP_MAC_ADDRESSES/TELEPHONE_FAX disabled).
     """
     # @req:PRD-TMF-005
+    # @req:EU-CTR-001
+    # @req:HIPAA-001
     detector = DeidDetector()
     text = "Write to doctor@clinic.org, check server at 10.0.0.1, born on 1990-01-01."
 
@@ -179,6 +189,7 @@ def test_overlap_resolution_comprehensive():
       4. value length descending
     """
     # @req:PRD-TMF-005
+    # @req:PRD-MDR-006
     results = [
         # Overlapping set 1: nested/wider overlap
         DetectionResult(category="custom", start=5, end=15, value="John Smith"),
@@ -217,6 +228,7 @@ def test_transforms_all_strategies():
     Verify application of various de-identification strategies (mask, pseudonymize, date_shift, age_cap).
     """
     # @req:PRD-TMF-005
+    # @req:PRD-MDR-006
     text = "CRA Bob (age 95) visited on 2026-07-30. Contact at bob@gmail.com."
 
     results = [
@@ -262,6 +274,7 @@ def test_hmac_pseudonymization_determinism():
     - Given different values or different salts, it generates distinct secure tokens.
     """
     # @req:PRD-TMF-005
+    # @req:PRD-MDR-006
     val_1 = "Alice Smith"
     val_2 = "Bob Jones"
     salt_1 = "trial-salt-1"

@@ -27,6 +27,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-30: ADR 2026-07-30: Rule Authoring, Validation, and DDF Delivery](2026-07-30-rule-authoring-validation-and-ddf-delivery.md)
 - [2026-08-02: Shared Eligibility Criteria Domain Contract, DSL Parser, and Deterministic Evaluator](2026-08-02-eligibility-criteria-evaluation-engine.md)
 - [2026-08-02: Protocol Document Rendering Architecture and Content Contract](2026-08-02-protocol-rendering-architecture.md)
+- [2026-08-28: Protocol Document Rendering Architecture](2026-08-28-protocol-document-rendering-architecture.md)
 - [2026-08-09: Global Library Object Instantiation in Clinical Studies](2026-08-09-global-library-object-instantiation.md)
 - [2026-08-11: Unified Parameterized Relational Database Lifespan Wrapper](2026-08-11-unified-parameterized-relational-database-lifespan-wrapper.md)
 - [2026-08-19: Global Library Architecture, Lifecycle, and Multi-Tenant Isolation](2026-08-19-global-library-architecture-lifecycle-tenancy.md)
@@ -110,6 +111,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-09: eTMF Filterable and Paginated Audit Log API](2026-08-09-etmf-filterable-paginated-audit-log.md)
 
 ### 5. Compliance, Audit & Governance
+- [2026-08-28: Regulatory Inspection Portal & Auditor View Access Control Foundation](2026-08-28-auditor-access-control-foundation.md)
 - [2026-07-31: GxP 21 CFR Part 11 eConsent Audit Trails](2026-07-31-gxp-21-cfr-part-11-econsent-audit-trails.md)
 
 - [2026-07-22: ADR 2026-07-22: Audit Log Design](2026-07-22-audit-log-design.md)
@@ -165,3 +167,6 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-26: eSignature-Backed Delegation of Authority (DOA) Log and Task Delegation Service](2026-08-26-esignature-backed-doa-task-delegation-service.md)
 - [2026-08-27: Offline Data Ingestion & Sync Engine](2026-08-27-offline-data-reconciliation-integrity.md)
 - [2026-08-27: 21 CFR Part 11 Batch Electronic Signatures for PI Casebook Sign-Off](2026-08-27-prd-sys-001-compliance-batch-e-signatures.md)
+- [2026-08-28: Shared Domain Vocabulary and Authorization Foundation](2026-08-28-shared-domain-vocabulary-and-authorization-foundation.md)
+- [2026-08-28: Extend Centralized Permission Matrix for Clinical Execution](2026-08-28-extend-centralized-permission-matrix-for-execution.md)
+- [2026-08-28: Shared eSignature Foundations](2026-08-28-shared-esignature-foundations.md)

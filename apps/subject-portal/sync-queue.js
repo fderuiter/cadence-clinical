@@ -1,3 +1,7 @@
+/**
+ * IndexedDB Submission Queue for Offline Capture & Synchronisation (Phase 19).
+ * Manages client UUIDs, sequence numbers, and offline submission states.
+ */
 export function openDatabase() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open("SubjectPortalSyncDB", 1);
