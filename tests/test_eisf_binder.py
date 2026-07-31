@@ -31,6 +31,7 @@ async def db_session() -> AsyncGenerator:
     engine = create_async_engine(
         "sqlite+aiosqlite:///:memory:",
         poolclass=StaticPool,
+        connect_args={"check_same_thread": False},
         echo=False,
     )
     async with engine.begin() as conn:
@@ -51,7 +52,12 @@ async def setup_eisf_db() -> AsyncGenerator:
 
     Requirements: PRD-SYS-001
     """
-    db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)
+    db_manager.init_db(
+        "sqlite+aiosqlite:///:memory:",
+        poolclass=StaticPool,
+        connect_args={"check_same_thread": False},
+        echo=False,
+    )
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(EisfModelBase.metadata.create_all)
     yield
