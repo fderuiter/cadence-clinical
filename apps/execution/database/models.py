@@ -440,11 +440,15 @@ class ClinicalObservation(AuditedModel):
     normalized_value: Mapped[float] = mapped_column(Float, nullable=True)
     normalized_unit: Mapped[str] = mapped_column(String(50), nullable=True)
     is_outlier: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Phase 11: field-level SDV verification state column (Boolean, default False)
     is_sdv_verified: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False
     )
+    # Phase 11: verifying CRA UUID (nullable)
     sdv_verified_by: Mapped[str] = mapped_column(String(255), nullable=True)
+    # Phase 11: timestamp of verification (nullable)
     sdv_verified_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    # Phase 11: nullable string page/CRF grouping key
     page_id: Mapped[str] = mapped_column(String(255), nullable=True)
 
     # Lab reference range snapshot fields
@@ -541,6 +545,7 @@ class ClinicalQuery(AuditedModel):
     action_required: Mapped[str] = mapped_column(String(255), nullable=True)
 
 
+# Phase 11: Level-agnostic SDV sign-off record for page and visit levels
 class SDVSignOff(AuditedModel):
     """Represents an aggregate sign-off record for SDV/TSDV verification.
 
@@ -577,6 +582,7 @@ class SDVSignOff(AuditedModel):
     dropped_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
 
+# Phase 11: TSDV configuration model for RBQM rules
 class TSDVConfig(AuditedModel):
     """Represents the Targeted SDV (TSDV) sampling configuration for a study.
 
