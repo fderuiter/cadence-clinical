@@ -168,7 +168,7 @@ SERVICES = {
     "ctms": os.getenv("CTMS_URL", "http://localhost:8005"),
     "notifications": os.getenv("NOTIFICATIONS_URL", "http://localhost:8006"),
     "quality": os.getenv("QUALITY_URL", "http://localhost:8005"),
-    "safety": os.getenv("SAFETY_URL", "http://localhost:8008"),
+    "safety": os.getenv("SAFETY_URL", "http://localhost:8008"),  # Registered Safety microservice scaffold URL
     "tickets": os.getenv("TICKETS_URL", "http://localhost:8009"),
     "org": os.getenv("ORG_URL", "http://localhost:8012"),
     "eisf": os.getenv("EISF_URL", "http://localhost:8010"),
