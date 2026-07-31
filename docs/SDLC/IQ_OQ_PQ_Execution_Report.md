@@ -9,12 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1690
-- **Passed:** 1690 🟢
-- **Total Automated Test Cases Run:** 1571
-- **Passed:** 1571 🟢
-- **Total Automated Test Cases Run:** 1627
-- **Passed:** 1627 🟢
+- **Total Automated Test Cases Run:** 1696
+- **Passed:** 1696 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -581,9 +577,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_doa_delegation_record_validation` | `tests.test_doa_models` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ctms_doa_lifecycle_flow` | `tests.test_doa_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ctms_doa_rbac_violations` | `tests.test_doa_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_doa_historical_audit_trail_logging` | `tests.test_doa_audit_suite` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_doa_assignment_record_creation` | `tests.test_doa_models` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_doa_assignment_and_signoff_api_flow` | `tests.test_doa_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_doa_service_assignment_and_pi_signoff` | `tests.test_doa_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_complete_doa_workflow_lifecycle` | `tests.test_doa_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_document_renderer_render_docx` | `tests.test_document_renderer` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -684,8 +677,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_get_site_eisf_binder_authorized` | `tests.test_eisf_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_site_eisf_binder_unauthorized_cross_site` | `tests.test_eisf_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_upload_and_get_site_document` | `tests.test_eisf_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_get_site_regulatory_binder_endpoint` | `tests.test_eisf_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_upload_eisf_document_post_endpoint` | `tests.test_eisf_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_upload_and_watermark` | `tests.test_eisf_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_completeness_site_isolation` | `tests.test_eisf_site_scope` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_external_monitor_role` | `tests.test_eisf_site_scope` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1031,6 +1022,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_lab_reference_range_audit_and_triggers` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_lab_reference_range_crud_and_precision` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_schema_evolution_migration_upgrade` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001, PRD-QRY-005 | 🟢 PASSED | < 1s |
+| `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_scrambled_sequence` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_valid` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ledger_sealing_and_validation` | `tests.test_ledger_and_triggers` | PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_out_of_band_update_triggers_audit_entry` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_prevent_audit_ledger_seals_mutation` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1290,9 +1286,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_quality_health_check` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_sqlite_foreign_key_constraints` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_sqlite_pragma_exception_handling` | `tests.test_quality` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_quality_sentinel_complete_protocol` | `tests.test_quality_sentinel` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_quality_sentinel_incomplete_protocol_detects_errors` | `tests.test_quality_sentinel` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_quality_sentinel_router_endpoint` | `tests.test_quality_sentinel` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_amendment_impact_and_cost_estimation` | `tests.test_quality_sentinel` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_block_eligibility_soa_inconsistencies` | `tests.test_quality_sentinel` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_burden_tracing_with_invasiveness_modifiers` | `tests.test_quality_sentinel` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1524,7 +1517,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_middleware_unblinded_access_parametrization[random-False]` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_middleware_unblinded_access_parametrization[true-True]` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_middleware_unblinded_access_parametrization[yes-True]` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_middleware_unblinded_access_parametrization` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_middleware_unsupported_version_rejected` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_middleware_v2_invalid_signature` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_middleware_v2_mismatched_reason` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
