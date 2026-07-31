@@ -40,6 +40,37 @@ FIX_COMMANDS: dict[str, str] = {
 }
 
 
+def handle_github_api_error(stderr_msg: str) -> None:
+    """Check for permission, authorization, or other non-blocking errors and exit gracefully.
+
+    Args:
+        stderr_msg: The standard error output message from the CLI command.
+    """
+    combined = stderr_msg.lower()
+    patterns = [
+        "resource not accessible by integration",
+        "403",
+        "http 403",
+        "must have admin rights",
+        "viewer can't make query",
+        "not logged in",
+        "gh auth login",
+        "populate the gh_token",
+        "unauthorized",
+        "forbidden",
+        "permission",
+        "api error",
+    ]
+    if any(p in combined for p in patterns):
+        print(
+            "WARNING: GitHub API permission or authentication error occurred.\n"
+            f"Error details: {stderr_msg.strip()}\n"
+            "Skipping PR quality checklist comment.",
+            file=sys.stderr,
+        )
+        sys.exit(0)
+
+
 def run_command(args: list[str], check: bool = True) -> tuple[str, str]:
     """Run a system command and return output with a finite timeout."""
     try:
@@ -62,23 +93,14 @@ def run_command(args: list[str], check: bool = True) -> tuple[str, str]:
         if check:
             raise e
         return "", "Timeout expired"
-    except FileNotFoundError as e:
-        print(f"Command executable not found: {args[0]}")
-        if check:
-            raise e
-        return "", "Executable not found"
     except subprocess.CalledProcessError as e:
         print(f"Command failed: {' '.join(args)}")
         print(f"Stdout: {e.stdout}")
         print(f"Stderr: {e.stderr}")
+        handle_github_api_error(e.stderr)
         if check:
             raise e
         return "", e.stderr.strip()
-    except FileNotFoundError as e:
-        print(f"Command executable not found: {args[0]}")
-        if check:
-            raise e
-        return "", "Executable not found"
 
 
 def get_status_emoji(outcome: str | None) -> str:
@@ -459,124 +481,149 @@ Before approving a PR or signing off on a merged state, verify completion of thi
 
 
 def main() -> None:
-    repo = os.environ.get("GITHUB_REPOSITORY")
-    pr_number = os.environ.get("PR_NUMBER")
+    try:
+        repo = os.environ.get("GITHUB_REPOSITORY")
+        pr_number = os.environ.get("PR_NUMBER")
 
-    if not repo or not pr_number:
+        if not repo or not pr_number:
+            print(
+                "Missing GITHUB_REPOSITORY or PR_NUMBER environment variables. Skipping PR comment posting."
+            )
+            sys.exit(0)
+
+        audit_outcome = os.environ.get("AUDIT_OUTCOME", "").lower()
+        static_outcome = os.environ.get("STATIC_OUTCOME", "").lower()
+        secrets_outcome = os.environ.get(
+            "SECRETS_OUTCOME",
+            "",  # pragma: allowlist secret
+        ).lower()  # pragma: allowlist secret
+        combined_audit = ""
+        if "failure" in (
+            audit_outcome,
+            static_outcome,
+            secrets_outcome,  # pragma: allowlist secret
+        ):
+            combined_audit = "failure"
+        elif (
+            audit_outcome == "success"
+            and static_outcome == "success"
+            and secrets_outcome == "success"  # pragma: allowlist secret
+        ):
+            combined_audit = "success"
+        else:
+            combined_audit = next(
+                (
+                    val
+                    for val in (
+                        audit_outcome,
+                        static_outcome,
+                        secrets_outcome,  # pragma: allowlist secret
+                    )
+                    if val
+                ),
+                "",
+            )
+
+        raw_new_outcomes: dict[str, str] = {
+            "lint": os.environ.get("LINTING_OUTCOME", ""),
+            "test": os.environ.get("TEST_OUTCOME", ""),
+            "frontend": os.environ.get("FRONTEND_OUTCOME", ""),
+            "adr": os.environ.get("ADR_OUTCOME", ""),
+            "audit": combined_audit,
+            "conflict": os.environ.get("CONFLICT_OUTCOME", ""),
+            "deid": os.environ.get("DEID_OUTCOME", ""),
+            "duplication": os.environ.get("DUPLICATION_OUTCOME", ""),
+            "traceability": os.environ.get("TRACEABILITY_OUTCOME", ""),
+        }
+
+        # Fetch existing comments to see if we have an existing checklist comment
+        comments_json, comments_err = run_command(
+            [
+                "gh",
+                "api",
+                f"repos/{repo}/issues/{pr_number}/comments",
+                "--paginate",
+            ],
+            check=False,
+        )
+        if comments_err:
+            handle_github_api_error(comments_err)
+
+        existing_comment_id: str | None = None
+        existing_outcomes: dict[str, str] = {}
+        if comments_json:
+            try:
+                comments = json.loads(comments_json)
+                for comment in comments:
+                    body = comment.get("body", "")
+                    if "<!-- ID: CADENCE_PR_QUALITY_GATE_CHECKLIST -->" in body:
+                        existing_comment_id = comment["id"]
+                        existing_outcomes = parse_existing_outcomes(body)
+                        break
+            except Exception as e:
+                print(f"Error parsing comments JSON: {e}")
+
+        merged_outcomes = merge_outcomes(raw_new_outcomes, existing_outcomes)
+
+        job_status = os.environ.get("JOB_STATUS", "success")
+        has_failures = job_status.lower() == "failure" or any(
+            val.lower() in ("failure", "failed", "true", "yes")
+            for val in merged_outcomes.values()
+        )
+
+        comment_body = build_comment_body(
+            merged_outcomes, has_failures, repo, pr_number
+        )
+
+        if has_failures or existing_comment_id:
+            if existing_comment_id:
+                print(f"Updating existing comment {existing_comment_id}...")
+                _, patch_err = run_command(
+                    [
+                        "gh",
+                        "api",
+                        f"repos/{repo}/issues/comments/{existing_comment_id}",
+                        "-X",
+                        "PATCH",
+                        "-F",
+                        f"body={comment_body}",
+                    ],
+                    check=False,
+                )
+                if patch_err:
+                    handle_github_api_error(patch_err)
+                    print(
+                        f"WARNING: Failed to patch existing PR comment: {patch_err}",
+                        file=sys.stderr,
+                    )
+            else:
+                print("Creating a new PR comment...")
+                _, post_err = run_command(
+                    [
+                        "gh",
+                        "api",
+                        f"repos/{repo}/issues/{pr_number}/comments",
+                        "-X",
+                        "POST",
+                        "-F",
+                        f"body={comment_body}",
+                    ],
+                    check=False,
+                )
+                if post_err:
+                    handle_github_api_error(post_err)
+                    print(
+                        f"WARNING: Failed to post new PR comment: {post_err}",
+                        file=sys.stderr,
+                    )
+        else:
+            print("All checks passed and no existing comment found. No action needed.")
+    except Exception as e:
         print(
-            "Missing GITHUB_REPOSITORY or PR_NUMBER environment variables. Skipping PR comment posting."
+            f"WARNING: Skipping PR comment generation due to unexpected error: {e}",
+            file=sys.stderr,
         )
         sys.exit(0)
-
-    audit_outcome = os.environ.get("AUDIT_OUTCOME", "").lower()
-    static_outcome = os.environ.get("STATIC_OUTCOME", "").lower()
-    secrets_outcome = os.environ.get(
-        "SECRETS_OUTCOME",
-        "",  # pragma: allowlist secret
-    ).lower()  # pragma: allowlist secret
-    combined_audit = ""
-    if "failure" in (
-        audit_outcome,
-        static_outcome,
-        secrets_outcome,  # pragma: allowlist secret
-    ):
-        combined_audit = "failure"
-    elif (
-        audit_outcome == "success"
-        and static_outcome == "success"
-        and secrets_outcome == "success"  # pragma: allowlist secret
-    ):
-        combined_audit = "success"
-    else:
-        combined_audit = next(
-            (
-                val
-                for val in (
-                    audit_outcome,
-                    static_outcome,
-                    secrets_outcome,  # pragma: allowlist secret
-                )
-                if val
-            ),
-            "",
-        )
-
-    raw_new_outcomes: dict[str, str] = {
-        "lint": os.environ.get("LINTING_OUTCOME", ""),
-        "test": os.environ.get("TEST_OUTCOME", ""),
-        "frontend": os.environ.get("FRONTEND_OUTCOME", ""),
-        "adr": os.environ.get("ADR_OUTCOME", ""),
-        "audit": combined_audit,
-        "conflict": os.environ.get("CONFLICT_OUTCOME", ""),
-        "deid": os.environ.get("DEID_OUTCOME", ""),
-        "duplication": os.environ.get("DUPLICATION_OUTCOME", ""),
-        "traceability": os.environ.get("TRACEABILITY_OUTCOME", ""),
-    }
-
-    # Fetch existing comments to see if we have an existing checklist comment
-    comments_json, _ = run_command(
-        [
-            "gh",
-            "api",
-            f"repos/{repo}/issues/{pr_number}/comments",
-            "--paginate",
-        ],
-        check=False,
-    )
-
-    existing_comment_id: str | None = None
-    existing_outcomes: dict[str, str] = {}
-    if comments_json:
-        try:
-            comments = json.loads(comments_json)
-            for comment in comments:
-                body = comment.get("body", "")
-                if "<!-- ID: CADENCE_PR_QUALITY_GATE_CHECKLIST -->" in body:
-                    existing_comment_id = comment["id"]
-                    existing_outcomes = parse_existing_outcomes(body)
-                    break
-        except Exception as e:
-            print(f"Error parsing comments JSON: {e}")
-
-    merged_outcomes = merge_outcomes(raw_new_outcomes, existing_outcomes)
-
-    job_status = os.environ.get("JOB_STATUS", "success")
-    has_failures = job_status.lower() == "failure" or any(
-        val.lower() in ("failure", "failed", "true", "yes")
-        for val in merged_outcomes.values()
-    )
-
-    comment_body = build_comment_body(merged_outcomes, has_failures, repo, pr_number)
-
-    if has_failures or existing_comment_id:
-        if existing_comment_id:
-            print(f"Updating existing comment {existing_comment_id}...")
-            run_command(
-                [
-                    "gh",
-                    "api",
-                    f"repos/{repo}/issues/comments/{existing_comment_id}",
-                    "-X",
-                    "PATCH",
-                    "-F",
-                    f"body={comment_body}",
-                ]
-            )
-        else:
-            print("Creating a new PR comment...")
-            run_command(
-                [
-                    "gh",
-                    "api",
-                    f"repos/{repo}/issues/{pr_number}/comments",
-                    "-X",
-                    "POST",
-                    "-F",
-                    f"body={comment_body}",
-                ]
-            )
-    else:
-        print("All checks passed and no existing comment found. No action needed.")
 
 
 if __name__ == "__main__":
