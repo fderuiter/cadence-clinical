@@ -60,7 +60,12 @@ describe("AuditorView.vue Component Unit Tests", () => {
     const buttons = wrapper.findAll("button");
     const editOrDeleteButtons = buttons.filter((btn) => {
       const text = btn.text().toLowerCase();
-      return text.includes("edit") || text.includes("delete") || text.includes("remove") || text.includes("create");
+      return (
+        text.includes("edit") ||
+        text.includes("delete") ||
+        text.includes("remove") ||
+        text.includes("create")
+      );
     });
     expect(editOrDeleteButtons.length).toBe(0);
   });

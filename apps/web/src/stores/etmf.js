@@ -33,9 +33,24 @@ export const useEtmfStore = defineStore("etmf", {
               code: "01.01",
               type: "section",
               children: [
-                { id: "01.01.01", name: "Clinical Trial Protocol", code: "01.01.01", type: "artifact" },
-                { id: "01.01.02", name: "Clinical Trial Protocol Amendment", code: "01.01.02", type: "artifact" },
-                { id: "01.01.03", name: "Protocol Sign-off", code: "01.01.03", type: "artifact" },
+                {
+                  id: "01.01.01",
+                  name: "Clinical Trial Protocol",
+                  code: "01.01.01",
+                  type: "artifact",
+                },
+                {
+                  id: "01.01.02",
+                  name: "Clinical Trial Protocol Amendment",
+                  code: "01.01.02",
+                  type: "artifact",
+                },
+                {
+                  id: "01.01.03",
+                  name: "Protocol Sign-off",
+                  code: "01.01.03",
+                  type: "artifact",
+                },
               ],
             },
             {
@@ -44,7 +59,12 @@ export const useEtmfStore = defineStore("etmf", {
               code: "01.02",
               type: "section",
               children: [
-                { id: "01.02.01", name: "Trial Oversight Committee Charter", code: "01.02.01", type: "artifact" },
+                {
+                  id: "01.02.01",
+                  name: "Trial Oversight Committee Charter",
+                  code: "01.02.01",
+                  type: "artifact",
+                },
               ],
             },
             {
@@ -53,7 +73,12 @@ export const useEtmfStore = defineStore("etmf", {
               code: "01.03",
               type: "section",
               children: [
-                { id: "01.03.01", name: "Trial Monitoring Plan", code: "01.03.01", type: "artifact" },
+                {
+                  id: "01.03.01",
+                  name: "Trial Monitoring Plan",
+                  code: "01.03.01",
+                  type: "artifact",
+                },
               ],
             },
             {
@@ -62,7 +87,12 @@ export const useEtmfStore = defineStore("etmf", {
               code: "01.04",
               type: "section",
               children: [
-                { id: "01.04.01", name: "Trial Close-out Report", code: "01.04.01", type: "artifact" },
+                {
+                  id: "01.04.01",
+                  name: "Trial Close-out Report",
+                  code: "01.04.01",
+                  type: "artifact",
+                },
               ],
             },
           ],
@@ -79,7 +109,12 @@ export const useEtmfStore = defineStore("etmf", {
               code: "02.01",
               type: "section",
               children: [
-                { id: "02.01.01", name: "Investigator's Brochure", code: "02.01.01", type: "artifact" },
+                {
+                  id: "02.01.01",
+                  name: "Investigator's Brochure",
+                  code: "02.01.01",
+                  type: "artifact",
+                },
               ],
             },
             {
@@ -88,7 +123,12 @@ export const useEtmfStore = defineStore("etmf", {
               code: "02.02",
               type: "section",
               children: [
-                { id: "02.02.01", name: "Clinical Trial Material Specifications", code: "02.02.01", type: "artifact" },
+                {
+                  id: "02.02.01",
+                  name: "Clinical Trial Material Specifications",
+                  code: "02.02.01",
+                  type: "artifact",
+                },
               ],
             },
           ],
@@ -105,7 +145,12 @@ export const useEtmfStore = defineStore("etmf", {
               code: "03.01",
               type: "section",
               children: [
-                { id: "03.01.01", name: "Regulatory Authority Submission", code: "03.01.01", type: "artifact" },
+                {
+                  id: "03.01.01",
+                  name: "Regulatory Authority Submission",
+                  code: "03.01.01",
+                  type: "artifact",
+                },
               ],
             },
             {
@@ -114,7 +159,12 @@ export const useEtmfStore = defineStore("etmf", {
               code: "03.02",
               type: "section",
               children: [
-                { id: "03.02.01", name: "Regulatory Authority Approval", code: "03.02.01", type: "artifact" },
+                {
+                  id: "03.02.01",
+                  name: "Regulatory Authority Approval",
+                  code: "03.02.01",
+                  type: "artifact",
+                },
               ],
             },
           ],
@@ -131,7 +181,12 @@ export const useEtmfStore = defineStore("etmf", {
               code: "04.01",
               type: "section",
               children: [
-                { id: "04.01.01", name: "IRB/IEC Approval", code: "04.01.01", type: "artifact" },
+                {
+                  id: "04.01.01",
+                  name: "IRB/IEC Approval",
+                  code: "04.01.01",
+                  type: "artifact",
+                },
               ],
             },
             {
@@ -140,7 +195,12 @@ export const useEtmfStore = defineStore("etmf", {
               code: "04.02",
               type: "section",
               children: [
-                { id: "04.02.01", name: "IRB/IEC Approval Notification", code: "04.02.01", type: "artifact" },
+                {
+                  id: "04.02.01",
+                  name: "IRB/IEC Approval Notification",
+                  code: "04.02.01",
+                  type: "artifact",
+                },
               ],
             },
           ],
@@ -157,7 +217,12 @@ export const useEtmfStore = defineStore("etmf", {
               code: "05.01",
               type: "section",
               children: [
-                { id: "05.01.01", name: "Site Feasibility Survey", code: "05.01.01", type: "artifact" },
+                {
+                  id: "05.01.01",
+                  name: "Site Feasibility Survey",
+                  code: "05.01.01",
+                  type: "artifact",
+                },
               ],
             },
             {
@@ -166,11 +231,36 @@ export const useEtmfStore = defineStore("etmf", {
               code: "05.02",
               type: "section",
               children: [
-                { id: "05.02.01", name: "FDA Form 1572", code: "05.02.01", type: "artifact" },
-                { id: "05.02.02", name: "Financial Disclosure", code: "05.02.02", type: "artifact" },
-                { id: "05.02.03", name: "Investigator CV", code: "05.02.03", type: "artifact" },
-                { id: "05.02.04", name: "Delegation of Authority Log", code: "05.02.04", type: "artifact" },
-                { id: "05.02.05", name: "Informed Consent Form", code: "05.02.05", type: "artifact" },
+                {
+                  id: "05.02.01",
+                  name: "FDA Form 1572",
+                  code: "05.02.01",
+                  type: "artifact",
+                },
+                {
+                  id: "05.02.02",
+                  name: "Financial Disclosure",
+                  code: "05.02.02",
+                  type: "artifact",
+                },
+                {
+                  id: "05.02.03",
+                  name: "Investigator CV",
+                  code: "05.02.03",
+                  type: "artifact",
+                },
+                {
+                  id: "05.02.04",
+                  name: "Delegation of Authority Log",
+                  code: "05.02.04",
+                  type: "artifact",
+                },
+                {
+                  id: "05.02.05",
+                  name: "Informed Consent Form",
+                  code: "05.02.05",
+                  type: "artifact",
+                },
               ],
             },
             {
@@ -179,7 +269,12 @@ export const useEtmfStore = defineStore("etmf", {
               code: "05.03",
               type: "section",
               children: [
-                { id: "05.03.01", name: "Site Training Records", code: "05.03.01", type: "artifact" },
+                {
+                  id: "05.03.01",
+                  name: "Site Training Records",
+                  code: "05.03.01",
+                  type: "artifact",
+                },
               ],
             },
             {
@@ -188,7 +283,12 @@ export const useEtmfStore = defineStore("etmf", {
               code: "05.04",
               type: "section",
               children: [
-                { id: "05.04.01", name: "Site Communication Log", code: "05.04.01", type: "artifact" },
+                {
+                  id: "05.04.01",
+                  name: "Site Communication Log",
+                  code: "05.04.01",
+                  type: "artifact",
+                },
               ],
             },
           ],
@@ -205,7 +305,12 @@ export const useEtmfStore = defineStore("etmf", {
               code: "06.01",
               type: "section",
               children: [
-                { id: "06.01.01", name: "Investigational Product Records", code: "06.01.01", type: "artifact" },
+                {
+                  id: "06.01.01",
+                  name: "Investigational Product Records",
+                  code: "06.01.01",
+                  type: "artifact",
+                },
               ],
             },
             {
@@ -214,7 +319,12 @@ export const useEtmfStore = defineStore("etmf", {
               code: "06.02",
               type: "section",
               children: [
-                { id: "06.02.01", name: "IP Shipping Records", code: "06.02.01", type: "artifact" },
+                {
+                  id: "06.02.01",
+                  name: "IP Shipping Records",
+                  code: "06.02.01",
+                  type: "artifact",
+                },
               ],
             },
           ],
@@ -231,7 +341,12 @@ export const useEtmfStore = defineStore("etmf", {
               code: "07.01",
               type: "section",
               children: [
-                { id: "07.01.01", name: "Serious Adverse Event Report", code: "07.01.01", type: "artifact" },
+                {
+                  id: "07.01.01",
+                  name: "Serious Adverse Event Report",
+                  code: "07.01.01",
+                  type: "artifact",
+                },
               ],
             },
             {
@@ -240,7 +355,12 @@ export const useEtmfStore = defineStore("etmf", {
               code: "07.02",
               type: "section",
               children: [
-                { id: "07.02.01", name: "Safety Management Plan", code: "07.02.01", type: "artifact" },
+                {
+                  id: "07.02.01",
+                  name: "Safety Management Plan",
+                  code: "07.02.01",
+                  type: "artifact",
+                },
               ],
             },
           ],
@@ -257,7 +377,12 @@ export const useEtmfStore = defineStore("etmf", {
               code: "08.01",
               type: "section",
               children: [
-                { id: "08.01.01", name: "Central Laboratory Certificate", code: "08.01.01", type: "artifact" },
+                {
+                  id: "08.01.01",
+                  name: "Central Laboratory Certificate",
+                  code: "08.01.01",
+                  type: "artifact",
+                },
               ],
             },
             {
@@ -266,7 +391,12 @@ export const useEtmfStore = defineStore("etmf", {
               code: "08.02",
               type: "section",
               children: [
-                { id: "08.02.01", name: "Laboratory Reference Ranges", code: "08.02.01", type: "artifact" },
+                {
+                  id: "08.02.01",
+                  name: "Laboratory Reference Ranges",
+                  code: "08.02.01",
+                  type: "artifact",
+                },
               ],
             },
           ],
@@ -283,7 +413,12 @@ export const useEtmfStore = defineStore("etmf", {
               code: "09.01",
               type: "section",
               children: [
-                { id: "09.01.01", name: "Vendor Service Agreement", code: "09.01.01", type: "artifact" },
+                {
+                  id: "09.01.01",
+                  name: "Vendor Service Agreement",
+                  code: "09.01.01",
+                  type: "artifact",
+                },
               ],
             },
             {
@@ -292,7 +427,12 @@ export const useEtmfStore = defineStore("etmf", {
               code: "09.02",
               type: "section",
               children: [
-                { id: "09.02.01", name: "Vendor Audit Report", code: "09.02.01", type: "artifact" },
+                {
+                  id: "09.02.01",
+                  name: "Vendor Audit Report",
+                  code: "09.02.01",
+                  type: "artifact",
+                },
               ],
             },
           ],
@@ -309,8 +449,18 @@ export const useEtmfStore = defineStore("etmf", {
               code: "10.01",
               type: "section",
               children: [
-                { id: "10.01.01", name: "Data Management Plan", code: "10.01.01", type: "artifact" },
-                { id: "10.01.02", name: "Define-XML Specifications", code: "10.01.02", type: "artifact" },
+                {
+                  id: "10.01.01",
+                  name: "Data Management Plan",
+                  code: "10.01.01",
+                  type: "artifact",
+                },
+                {
+                  id: "10.01.02",
+                  name: "Define-XML Specifications",
+                  code: "10.01.02",
+                  type: "artifact",
+                },
               ],
             },
             {
@@ -319,7 +469,12 @@ export const useEtmfStore = defineStore("etmf", {
               code: "10.02",
               type: "section",
               children: [
-                { id: "10.02.01", name: "Blank CRF", code: "10.02.01", type: "artifact" },
+                {
+                  id: "10.02.01",
+                  name: "Blank CRF",
+                  code: "10.02.01",
+                  type: "artifact",
+                },
               ],
             },
             {
@@ -328,7 +483,12 @@ export const useEtmfStore = defineStore("etmf", {
               code: "10.03",
               type: "section",
               children: [
-                { id: "10.03.01", name: "Data Review Guidelines", code: "10.03.01", type: "artifact" },
+                {
+                  id: "10.03.01",
+                  name: "Data Review Guidelines",
+                  code: "10.03.01",
+                  type: "artifact",
+                },
               ],
             },
           ],
@@ -345,8 +505,18 @@ export const useEtmfStore = defineStore("etmf", {
               code: "11.01",
               type: "section",
               children: [
-                { id: "11.01.01", name: "Statistical Analysis Plan", code: "11.01.01", type: "artifact" },
-                { id: "11.01.02", name: "Data Lock Certificate", code: "11.01.02", type: "artifact" },
+                {
+                  id: "11.01.01",
+                  name: "Statistical Analysis Plan",
+                  code: "11.01.01",
+                  type: "artifact",
+                },
+                {
+                  id: "11.01.02",
+                  name: "Data Lock Certificate",
+                  code: "11.01.02",
+                  type: "artifact",
+                },
               ],
             },
             {
@@ -355,7 +525,12 @@ export const useEtmfStore = defineStore("etmf", {
               code: "11.02",
               type: "section",
               children: [
-                { id: "11.02.01", name: "Clinical Study Report", code: "11.02.01", type: "artifact" },
+                {
+                  id: "11.02.01",
+                  name: "Clinical Study Report",
+                  code: "11.02.01",
+                  type: "artifact",
+                },
               ],
             },
           ],
@@ -379,7 +554,11 @@ export const useEtmfStore = defineStore("etmf", {
           this.documentsList = allDocs || [];
         }
       } catch (err) {
-        console.error("Failed to fetch documents for artifact:", artifactId, err);
+        console.error(
+          "Failed to fetch documents for artifact:",
+          artifactId,
+          err
+        );
         this.documentsList = [];
       }
     },
@@ -395,11 +574,16 @@ export const useEtmfStore = defineStore("etmf", {
           body = {
             study_id: formData.get("study_id") || this.currentStudyId,
             site_id: formData.get("site_id") || null,
-            artifact_type: formData.get("artifact_type") || "Clinical Trial Protocol",
+            artifact_type:
+              formData.get("artifact_type") || "Clinical Trial Protocol",
             filename: formData.get("filename") || "document.pdf",
-            content: formData.get("content") || "Mock base64 or plaintext content",
+            content:
+              formData.get("content") || "Mock base64 or plaintext content",
             mime_type: formData.get("mime_type") || "application/pdf",
-            artifact_code: formData.get("artifact_code") || this.selectedArtifactId || "01.01.01",
+            artifact_code:
+              formData.get("artifact_code") ||
+              this.selectedArtifactId ||
+              "01.01.01",
             zone: parseInt(formData.get("zone")) || 1,
             section: formData.get("section") || "01.01",
             reason_for_change: changeReason,
@@ -414,7 +598,8 @@ export const useEtmfStore = defineStore("etmf", {
             filename: formData.filename || "document.pdf",
             content: formData.content || "Mock base64 or plaintext content",
             mime_type: formData.mime_type || "application/pdf",
-            artifact_code: formData.artifact_code || this.selectedArtifactId || "01.01.01",
+            artifact_code:
+              formData.artifact_code || this.selectedArtifactId || "01.01.01",
             zone: formData.zone || 1,
             section: formData.section || "01.01",
             reason_for_change: changeReason,

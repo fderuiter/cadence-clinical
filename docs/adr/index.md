@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-07-31: Async JWKS Refresh and Cooldown Throttling](2026-07-31-async-jwks-refresh-and-cooldown-throttling.md)
 - [2026-07-29: Consolidated eClinical Services and Compliance Enhancements](2026-07-29-consolidated-eclinical-services-and-compliance-enhancements.md)
 - [2026-07-30: Durable and Immutable Subject Enrollment Sequence for TSDV](2026-07-30-durable-and-immutable-subject-enrollment-sequence-for-tsdv.md)
 - [2026-07-29: Standardize PR Quality Gate Comments and Developer Verification Workflows](2026-07-29-standardize-pr-quality-gate-comments-and-developer-verification-workflows.md)
@@ -169,8 +170,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-31: SDV & TSDV Metadata and Database Migrations](2026-07-31-sdv-tsdv-metadata-enhancements.md)
 - [2026-08-28: ADR-119: SDV Sign-Off Workflow & Automatic Verification Drop](2026-08-28-sdv-sign-off-workflow-and-automatic-verification-drop.md)
 - [2026-08-28: Centralized RBAC Matrix for Metadata Designer Mutations](2026-08-28-centralized-rbac-matrix-for-metadata-designer-mutations.md)
-- [2026-08-28: Shared Domain Vocabulary and Authorization Foundation](2026-08-28-shared-domain-vocabulary-and-authorization-foundation.md)
-- [2026-08-28: Extend Centralized Permission Matrix for Clinical Execution](2026-08-28-extend-centralized-permission-matrix-for-execution.md)
-- [2026-08-28: Shared eSignature Foundations](2026-08-28-shared-esignature-foundations.md)
-- [2026-08-29: SDV and TSDV Endpoint Hardening, RBAC Permission Mapping, and Local Study Scope Enforcement](2026-08-29-sdv-tsdv-endpoint-hardening-rbac-study-scope.md)
 - [2026-08-28: Reference Range Data Model & Persistence](2026-08-28-reference-range-data-model-and-persistence.md)

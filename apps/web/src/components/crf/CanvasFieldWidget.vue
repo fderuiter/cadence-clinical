@@ -4,7 +4,7 @@
     :class="[
       isSelected
         ? 'border-indigo-600 ring-2 ring-indigo-100'
-        : 'border-gray-200 hover:border-gray-300'
+        : 'border-gray-200 hover:border-gray-300',
     ]"
     @click="selectField"
   >
@@ -19,7 +19,7 @@
           ⋮⋮
         </span>
         <span class="font-medium text-gray-800 text-sm">
-          {{ field.label || 'Untitled Field' }}
+          {{ field.label || "Untitled Field" }}
           <span v-if="field.required" class="text-red-500 font-bold">*</span>
         </span>
       </div>
@@ -82,12 +82,16 @@
           <label
             v-for="opt in field.options || [
               { value: 'Y', label: 'Yes' },
-              { value: 'N', label: 'No' }
+              { value: 'N', label: 'No' },
             ]"
             :key="opt.value"
             class="flex items-center gap-1.5 text-sm text-gray-500 cursor-not-allowed"
           >
-            <input type="radio" disabled class="text-indigo-600 focus:ring-indigo-500 h-4 w-4 border-gray-300" />
+            <input
+              type="radio"
+              disabled
+              class="text-indigo-600 focus:ring-indigo-500 h-4 w-4 border-gray-300"
+            />
             <span>{{ opt.label }}</span>
           </label>
         </div>
@@ -116,7 +120,9 @@
         </div>
       </template>
 
-      <template v-else-if="field.type === 'file' || field.type === 'file upload'">
+      <template
+        v-else-if="field.type === 'file' || field.type === 'file upload'"
+      >
         <div
           class="border-2 border-dashed border-gray-300 rounded-md p-4 text-center bg-gray-50 text-xs text-gray-400 cursor-not-allowed flex flex-col items-center justify-center gap-1"
         >
@@ -126,7 +132,9 @@
       </template>
 
       <template v-else>
-        <div class="text-xs text-gray-400 italic">Custom field type preview</div>
+        <div class="text-xs text-gray-400 italic">
+          Custom field type preview
+        </div>
       </template>
     </div>
 
@@ -168,12 +176,12 @@ import { computed } from "vue";
 const props = defineProps({
   field: {
     type: Object,
-    required: true
+    required: true,
   },
   selectedFieldId: {
     type: String,
-    default: null
-  }
+    default: null,
+  },
 });
 
 const emit = defineEmits(["select-field", "duplicate-field", "delete-field"]);
