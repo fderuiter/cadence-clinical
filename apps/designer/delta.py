@@ -2476,7 +2476,7 @@ async def transition_section_status(
         actor_id=actor_id,
         actor_role=actor_role,
         reason_for_change=reason_for_change,
-        timestamp=dt.datetime.utcnow(),
+        timestamp=dt.datetime.now(dt.timezone.utc),
     )
 
     if driver is None:
@@ -2591,7 +2591,7 @@ async def create_comment_thread(
     thread_id = f"th_{uuid.uuid4().hex[:12]}"
     comment_id = f"co_{uuid.uuid4().hex[:12]}"
 
-    now = dt.datetime.utcnow()
+    now = dt.datetime.now(dt.timezone.utc)
     comment = Comment(
         comment_id=comment_id,
         thread_id=thread_id,
@@ -2763,7 +2763,7 @@ async def add_comment_to_thread(
     await assert_section_not_locked(driver, study_version_id, thread.section_id)
 
     comment_id = f"co_{uuid.uuid4().hex[:12]}"
-    now = dt.datetime.utcnow()
+    now = dt.datetime.now(dt.timezone.utc)
     comment = Comment(
         comment_id=comment_id,
         thread_id=thread_id,
@@ -2866,7 +2866,7 @@ async def create_suggestion(
     await assert_section_not_locked(driver, study_version_id, block.get("section_id"))
 
     suggestion_id = f"su_{uuid.uuid4().hex[:12]}"
-    now = dt.datetime.utcnow()
+    now = dt.datetime.now(dt.timezone.utc)
 
     suggestion = Suggestion(
         suggestion_id=suggestion_id,
@@ -3025,7 +3025,7 @@ async def decide_suggestion(
 
     await assert_section_not_locked(driver, study_version_id, block.get("section_id"))
 
-    now = dt.datetime.utcnow()
+    now = dt.datetime.now(dt.timezone.utc)
 
     if decision == "accept":
         # Check stale-version

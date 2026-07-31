@@ -6137,15 +6137,13 @@
           },
           "created_at": {
             "type": "string",
-            "format": "date-time",
             "title": "Created At",
             "description": "Creation timestamp."
           },
           "updated_at": {
             "anyOf": [
               {
-                "type": "string",
-                "format": "date-time"
+                "type": "string"
               },
               {
                 "type": "null"
@@ -6219,7 +6217,6 @@
           },
           "created_at": {
             "type": "string",
-            "format": "date-time",
             "title": "Created At",
             "description": "Creation timestamp."
           },
@@ -7152,7 +7149,6 @@
         "properties": {
           "created_at": {
             "type": "string",
-            "format": "date-time",
             "title": "Created At",
             "description": "Chronological UTC timestamp when the record was created."
           },
@@ -8392,7 +8388,6 @@
           },
           "timestamp": {
             "type": "string",
-            "format": "date-time",
             "title": "Timestamp",
             "description": "Transition timestamp."
           }
@@ -8981,7 +8976,6 @@
           },
           "created_at": {
             "type": "string",
-            "format": "date-time",
             "title": "Created At",
             "description": "Creation timestamp."
           },
@@ -9017,8 +9011,7 @@
           "decided_at": {
             "anyOf": [
               {
-                "type": "string",
-                "format": "date-time"
+                "type": "string"
               },
               {
                 "type": "null"

@@ -2441,21 +2441,26 @@ def map_db_to_criterion(db_crit: Dict[str, Any]) -> EligibilityCriterion:
         created_at = datetime.datetime.now(datetime.timezone.utc)
     elif isinstance(created_at, str):
         try:
-            created_at = datetime.datetime.fromisoformat(
-                created_at.replace("Z", "+00:00")
-            )
+            val = created_at
+            if "Z" not in val and "+" not in val and "-" not in val[10:]:
+                val += "+00:00"
+            created_at = datetime.datetime.fromisoformat(val.replace("Z", "+00:00"))
         except Exception:
             created_at = datetime.datetime.now(datetime.timezone.utc)
     else:
         try:
             if hasattr(created_at, "isoformat"):
-                created_at = datetime.datetime.fromisoformat(
-                    created_at.isoformat().replace("Z", "+00:00")
-                )
+                val = created_at.isoformat()
+                if "Z" not in val and "+" not in val and "-" not in val[10:]:
+                    val += "+00:00"
+                created_at = datetime.datetime.fromisoformat(val.replace("Z", "+00:00"))
             else:
                 created_at = datetime.datetime.now(datetime.timezone.utc)
         except Exception:
             created_at = datetime.datetime.now(datetime.timezone.utc)
+
+    if hasattr(created_at, "tzinfo") and created_at.tzinfo is None:
+        created_at = created_at.replace(tzinfo=datetime.timezone.utc)
 
     return EligibilityCriterion(
         criterion_id=db_crit["id"] if "id" in db_crit else db_crit["criterion_id"],

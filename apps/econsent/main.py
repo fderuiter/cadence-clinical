@@ -3,7 +3,7 @@ import logging
 import os
 import sys
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from audit import AuditFields
@@ -520,13 +520,13 @@ async def poll_and_dispatch() -> None:
     Queries, claims, and dispatches PENDING/FAILED eTMF archival delivery records.
     Uses pessimistic locking (.with_for_update()) to avoid double delivery.
     """
-    from datetime import datetime, timedelta
+    from datetime import datetime, timedelta, timezone
 
     from apps.econsent.etmf_client import forward_icf_to_etmf
 
     session_maker = db_manager.get_session_maker()
     async with session_maker() as session:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         stmt = (
             select(EtmfArchivalDelivery)
             .where(
@@ -576,7 +576,7 @@ async def poll_and_dispatch() -> None:
 
                 delivery.status = "SUCCESS"
                 delivery.etmf_document_id = doc_id
-                delivery.completed_at = datetime.utcnow()
+                delivery.completed_at = datetime.now(timezone.utc)
                 delivery.last_error = None
 
                 await write_audit_log(
@@ -599,7 +599,7 @@ async def poll_and_dispatch() -> None:
                     delivery.retry_eligible = False
 
                 backoff_seconds = min(60, 2**delivery.attempts)
-                delivery.next_retry_at = datetime.utcnow() + timedelta(
+                delivery.next_retry_at = datetime.now(timezone.utc) + timedelta(
                     seconds=backoff_seconds
                 )
 
@@ -1239,7 +1239,7 @@ async def capture_subject_consent(
         generate_canonical_signature,
     )
 
-    server_timestamp = datetime.utcnow()
+    server_timestamp = datetime.now(timezone.utc)
 
     def normalize_timestamp_str(dt) -> Optional[str]:
         if not dt:
@@ -1715,7 +1715,7 @@ async def sign_consent_template_endpoint(
             "subject_pseudonym": payload.subject_pseudonym,
             "signed_at": sig.signed_at.isoformat()
             if sig.signed_at
-            else datetime.utcnow().isoformat(),
+            else datetime.now(timezone.utc).isoformat(),
             "created_by": user_id,
             "signature_data": payload.signature_data,
         },
