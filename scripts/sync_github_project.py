@@ -488,7 +488,7 @@ def main():
     formatted_count = 0
     unblocked_count = 0
     blocked_count = 0
-    tmp_file = "/tmp/cadence_issue_body.md"
+    tmp_file = "/tmp/cadence_issue_body.md"  # nosec B108
 
     for i in open_issues:
         num = i["number"]
