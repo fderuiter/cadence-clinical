@@ -594,7 +594,10 @@ async def test_structural_conflict_on_missing_or_deleted_targets():
         defeated = res_def.scalars().first()
         assert defeated is not None
         assert defeated.answers == {"pain": 10}
-        assert defeated.status == "Defeated by online-merge conflict resolution"
+        assert (
+            defeated.status
+            == "Defeated by structural conflict: referential integrity check failed"
+        )
 
         # Open Clinical Query exists
         stmt_q = select(ClinicalQuery).where(

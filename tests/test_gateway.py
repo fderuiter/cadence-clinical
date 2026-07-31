@@ -502,7 +502,10 @@ def test_gateway_subject_role_routing_restrictions(
                 "Authorization": f"Bearer {token}",
                 "X-Change-Reason": "submit diary",
             },
-            json={"subject_id": "patient_123"},
+            json={
+                "subject_id": "patient_123",
+                "offline_sync_markers": {"signature": "mock_sig"},
+            },
         )
         assert res.status_code == 200
 
@@ -1282,6 +1285,7 @@ def test_gateway_startup_production_with_test_secret() -> None:
     env = {
         "APP_ENV": "production",
         "JWT_TEST_SECRET": "some_test_secret",  # pragma: allowlist secret
+        "GATEWAY_SECRET": "test_secret_1234",
     }
     result = subprocess.run(
         [sys.executable, "-c", "import apps.gateway.main"],
@@ -1305,6 +1309,7 @@ def test_gateway_startup_production_with_unverified_jwt() -> None:
     env = {
         "APP_ENV": "production",
         "ALLOW_UNVERIFIED_JWT_FOR_TEST": "true",
+        "GATEWAY_SECRET": "test_secret_1234",
     }
     result = subprocess.run(
         [sys.executable, "-c", "import apps.gateway.main"],
@@ -1328,6 +1333,7 @@ def test_gateway_startup_production_with_skip_jwks() -> None:
     env = {
         "APP_ENV": "production",
         "SKIP_JWKS_FETCH": "true",
+        "GATEWAY_SECRET": "test_secret_1234",
     }
     result = subprocess.run(
         [sys.executable, "-c", "import apps.gateway.main"],
@@ -1353,6 +1359,7 @@ def test_gateway_startup_development_with_bypass_configs() -> None:
         "JWT_TEST_SECRET": "some_secret",  # pragma: allowlist secret
         "ALLOW_UNVERIFIED_JWT_FOR_TEST": "true",
         "SKIP_JWKS_FETCH": "true",
+        "GATEWAY_SECRET": "test_secret_1234",
     }
     result = subprocess.run(
         [sys.executable, "-c", "import apps.gateway.main"],
@@ -2103,6 +2110,7 @@ def test_gateway_startup_production_no_bypass_configs() -> None:
 
     env = {
         "APP_ENV": "production",
+        "GATEWAY_SECRET": "test_secret_1234",
     }
     # Ensure bypass env vars are not in the environment
     env_keys = ["JWT_TEST_SECRET", "ALLOW_UNVERIFIED_JWT_FOR_TEST", "SKIP_JWKS_FETCH"]
@@ -2117,3 +2125,23 @@ def test_gateway_startup_production_no_bypass_configs() -> None:
         text=True,
     )
     assert result.returncode == 0
+
+
+def test_gateway_startup_fails_without_secret() -> None:
+    """
+    Test that the gateway terminates with a non-zero exit code if launched without the GATEWAY_SECRET.
+    """
+    import subprocess
+    import sys
+
+    env = {
+        "APP_ENV": "development",
+    }
+    result = subprocess.run(
+        [sys.executable, "-c", "import apps.gateway.main"],
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode != 0
+    assert "GATEWAY_SECRET environment variable is missing" in result.stderr

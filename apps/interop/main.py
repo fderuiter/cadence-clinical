@@ -56,6 +56,15 @@ app = FastAPI(
 app.add_middleware(GatewayAuthMiddleware)
 
 
+def ensure_aware(dt: datetime) -> datetime:
+    """
+    Ensure that the given datetime is timezone-aware (UTC).
+    """
+    if dt.tzinfo is None or dt.tzinfo.utcoffset(dt) is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
 get_db_session = DatabaseSessionDependency(db_manager)
 
 
@@ -331,7 +340,7 @@ async def resolve_and_save_submission(
             answers=payload.answers,
             winning_answers=None,
             offline_sync_markers=markers_dict,
-            status="Defeated by online-merge conflict resolution",
+            status="Defeated by structural conflict: referential integrity check failed",
         )
         session.add(defeated_sub)
 
@@ -1190,7 +1199,10 @@ async def get_subject_compliance(
     assignments = res_assigns.scalars().all()
 
     # Fetch all submissions for the subject
-    stmt_subs = select(EPROSubmission).where(EPROSubmission.subject_id == subject_id)
+    stmt_subs = select(EPROSubmission).where(
+        EPROSubmission.subject_id == subject_id,
+        EPROSubmission.sync_status != "CONFLICT_IGNORED",
+    )
     res_subs = await session.execute(stmt_subs)
     submissions = res_subs.scalars().all()
 
@@ -1217,11 +1229,7 @@ async def get_subject_compliance(
                 sub_idx += 1
 
     # Determine status and build details list
-    now = (
-        datetime.now(timezone.utc).replace(tzinfo=None)
-        if hasattr(timezone, "utc")
-        else datetime.utcnow()
-    )
+    now = datetime.now(timezone.utc)
     details = []
     completed_cnt = 0
     pending_cnt = 0
@@ -1238,7 +1246,7 @@ async def get_subject_compliance(
         else:
             submitted_at = None
             threshold = assign.due_at if assign.due_at else assign.end_date
-            if now > threshold:
+            if now > ensure_aware(threshold):
                 status = "OVERDUE"
                 overdue_cnt += 1
             else:
@@ -1296,7 +1304,9 @@ async def compute_reminders(
     assignments = res_assigns.scalars().all()
 
     # Retrieve submissions
-    stmt_subs = select(EPROSubmission)
+    stmt_subs = select(EPROSubmission).where(
+        EPROSubmission.sync_status != "CONFLICT_IGNORED"
+    )
     if subject_id:
         stmt_subs = stmt_subs.where(EPROSubmission.subject_id == subject_id)
     res_subs = await session.execute(stmt_subs)
@@ -1327,11 +1337,7 @@ async def compute_reminders(
                 sub_idx += 1
 
     # Check due assignments
-    now = (
-        datetime.now(timezone.utc).replace(tzinfo=None)
-        if hasattr(timezone, "utc")
-        else datetime.utcnow()
-    )
+    now = datetime.now(timezone.utc)
     created_count = 0
 
     stmt_notifs = select(SubjectNotification)
@@ -1356,7 +1362,7 @@ async def compute_reminders(
             continue
 
         threshold = assign.due_at if assign.due_at else assign.end_date
-        if now >= threshold:
+        if now >= ensure_aware(threshold):
             for channel in channels:
                 if (assign.id, channel) in existing_keys:
                     continue

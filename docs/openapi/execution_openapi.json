@@ -792,6 +792,435 @@
         }
       }
     },
+    "/api/v1/offline/sync-batch": {
+      "post": {
+        "tags": [
+          "Offline Sync"
+        ],
+        "summary": "Sync Offline Batch",
+        "description": "Ingest batch of queued offline eCRF/ePRO deltas idempotently.\n\nRequirements: PRD-SYS-001",
+        "operationId": "sync_offline_batch_api_v1_offline_sync_batch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OfflineBatchSyncRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfflineBatchSyncResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/offline/sync": {
+      "post": {
+        "tags": [
+          "Offline Sync"
+        ],
+        "summary": "Offline Sync Endpoint",
+        "description": "Synchronize queued offline delta transactions.\n\nRequirements: PRD-SYS-001",
+        "operationId": "offline_sync_endpoint_api_v1_execution_offline_sync_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "type": "object",
+                "title": "Payload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Offline Sync Endpoint Api V1 Execution Offline Sync Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/documents/upload": {
+      "post": {
+        "tags": [
+          "Documents"
+        ],
+        "summary": "Upload Document",
+        "description": "Upload regulated document, compute SHA-256 hash, and record GxP audit trail.\n\nRequirements: PRD-SYS-001",
+        "operationId": "upload_document_api_v1_documents_upload_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_document_api_v1_documents_upload_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentUploadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/documents/{doc_id}": {
+      "get": {
+        "tags": [
+          "Documents"
+        ],
+        "summary": "Download Document",
+        "description": "Stream file content with dynamic watermarking.\n\nRequirements: PRD-SYS-001",
+        "operationId": "download_document_api_v1_documents__doc_id__get",
+        "parameters": [
+          {
+            "name": "doc_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Doc Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/documents/{doc_id}/versions": {
+      "get": {
+        "tags": [
+          "Documents"
+        ],
+        "summary": "List Document Versions",
+        "description": "Return complete version history list.\n\nRequirements: PRD-SYS-001",
+        "operationId": "list_document_versions_api_v1_documents__doc_id__versions_get",
+        "parameters": [
+          {
+            "name": "doc_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Doc Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DocumentMetadataResponse"
+                  },
+                  "title": "Response List Document Versions Api V1 Documents  Doc Id  Versions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/tsdv/config": {
+      "post": {
+        "tags": [
+          "SDV/TSDV"
+        ],
+        "summary": "Create Or Update Tsdv Config",
+        "description": "Create or update Targeted SDV (TSDV) configuration for a study.\n\nRestricts config writes to CRA/Data Manager roles with GxP change justifications.",
+        "operationId": "create_or_update_tsdv_config_api_v1_execution_tsdv_config_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TSDVConfigCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TSDVConfigResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/tsdv/config/{study_id}": {
+      "get": {
+        "tags": [
+          "SDV/TSDV"
+        ],
+        "summary": "Get Tsdv Config",
+        "description": "Retrieve existing TSDV configuration for a study.",
+        "operationId": "get_tsdv_config_api_v1_execution_tsdv_config__study_id__get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TSDVConfigResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/tsdv/required": {
+      "get": {
+        "tags": [
+          "SDV/TSDV"
+        ],
+        "summary": "Evaluate Tsdv Rule",
+        "description": "Evaluate Targeted SDV (TSDV) requirement for a given context.\n\nCalculates deterministic sampling decisions and returns component results with an audit explanation.",
+        "operationId": "evaluate_tsdv_rule_api_v1_execution_tsdv_required_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Subject Id"
+            }
+          },
+          {
+            "name": "domain",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Domain"
+            }
+          },
+          {
+            "name": "enrollment_index",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Enrollment Index"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TSDVEvaluationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/sdv/signoff": {
+      "post": {
+        "tags": [
+          "SDV/TSDV"
+        ],
+        "summary": "Sdv Signoff",
+        "description": "CRA/monitor-gated SDV sign-off endpoint for Field, Page, or Visit scopes.",
+        "operationId": "sdv_signoff_api_v1_execution_sdv_signoff_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SDVSignOffRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SDVSignOffResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health Check",
@@ -2294,205 +2723,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ClinicalQueryResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/execution/tsdv/config": {
-      "post": {
-        "summary": "Create Or Update Tsdv Config",
-        "description": "Create or update Targeted SDV (TSDV) configuration for a study.\n\nRestricts config writes to CRA/Data Manager roles with GxP change justifications.",
-        "operationId": "create_or_update_tsdv_config_api_v1_execution_tsdv_config_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TSDVConfigCreate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TSDVConfigResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/execution/tsdv/config/{study_id}": {
-      "get": {
-        "summary": "Get Tsdv Config",
-        "description": "Retrieve Targeted SDV (TSDV) configuration for a study.",
-        "operationId": "get_tsdv_config_api_v1_execution_tsdv_config__study_id__get",
-        "parameters": [
-          {
-            "name": "study_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Study Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TSDVConfigResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/execution/tsdv/required": {
-      "get": {
-        "summary": "Evaluate Tsdv Rule",
-        "description": "Evaluate Targeted SDV (TSDV) requirement for a given context.\n\nCalculates deterministic sampling decisions and returns component results with an audit explanation.",
-        "operationId": "evaluate_tsdv_rule_api_v1_execution_tsdv_required_get",
-        "parameters": [
-          {
-            "name": "study_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Study Id"
-            }
-          },
-          {
-            "name": "subject_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Subject Id"
-            }
-          },
-          {
-            "name": "domain",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Domain"
-            }
-          },
-          {
-            "name": "enrollment_index",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Enrollment Index"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TSDVEvaluationResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/execution/sdv/signoff": {
-      "post": {
-        "summary": "Sdv Signoff",
-        "description": "CRA/monitor-gated SDV sign-off endpoint for Field, Page, or Visit scopes.",
-        "operationId": "sdv_signoff_api_v1_execution_sdv_signoff_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SDVSignOffRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SDVSignOffResponse"
                 }
               }
             }
@@ -4651,6 +4881,30 @@
         ],
         "title": "Body_import_dictionary_api_v1_dictionaries_import_post"
       },
+      "Body_upload_document_api_v1_documents_upload_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          },
+          "dia_tmf_code": {
+            "type": "string",
+            "title": "Dia Tmf Code"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file",
+          "dia_tmf_code",
+          "reason_for_change"
+        ],
+        "title": "Body_upload_document_api_v1_documents_upload_post"
+      },
       "ClinicalQueryResponse": {
         "properties": {
           "id": {
@@ -5648,6 +5902,85 @@
           "resupply_triggered"
         ],
         "title": "DispenseResponse"
+      },
+      "DocumentMetadataResponse": {
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "title": "Document Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "version_index": {
+            "type": "string",
+            "title": "Version Index"
+          },
+          "sha256_hash": {
+            "type": "string",
+            "title": "Sha256 Hash"
+          },
+          "dia_tmf_code": {
+            "type": "string",
+            "title": "Dia Tmf Code"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id",
+          "filename",
+          "version_index",
+          "sha256_hash",
+          "dia_tmf_code",
+          "status",
+          "created_by",
+          "created_at"
+        ],
+        "title": "DocumentMetadataResponse",
+        "description": "Schema representing complete document metadata.\n\nRequirements: PRD-SYS-001"
+      },
+      "DocumentUploadResponse": {
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "title": "Document Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "version_index": {
+            "type": "string",
+            "title": "Version Index"
+          },
+          "sha256_hash": {
+            "type": "string",
+            "title": "Sha256 Hash"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id",
+          "filename",
+          "version_index",
+          "sha256_hash"
+        ],
+        "title": "DocumentUploadResponse",
+        "description": "Schema representing upload response.\n\nRequirements: PRD-SYS-001"
       },
       "EISFDocumentRecord": {
         "properties": {
@@ -7227,6 +7560,50 @@
               }
             ],
             "title": "Protocol Version Index"
+          },
+          "range_indicator": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Range Indicator"
+          },
+          "is_out_of_range": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Out Of Range"
+          },
+          "reference_range_low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Range Low"
+          },
+          "reference_range_high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Range High"
           }
         },
         "type": "object",
@@ -7242,6 +7619,134 @@
         ],
         "title": "ObservationResponse",
         "description": "Pydantic schema returning observation details."
+      },
+      "OfflineBatchSyncRequest": {
+        "properties": {
+          "client_batch_id": {
+            "type": "string",
+            "title": "Client Batch Id",
+            "description": "Unique client-supplied batch identifier for idempotency"
+          },
+          "device_id": {
+            "type": "string",
+            "title": "Device Id",
+            "description": "Identifier of the device performing the sync"
+          },
+          "deltas": {
+            "items": {
+              "$ref": "#/components/schemas/OfflineDeltaItem"
+            },
+            "type": "array",
+            "title": "Deltas",
+            "description": "List of sync deltas to process"
+          }
+        },
+        "type": "object",
+        "required": [
+          "client_batch_id",
+          "device_id",
+          "deltas"
+        ],
+        "title": "OfflineBatchSyncRequest",
+        "description": "Request schema for offline batch delta sync.\n\nRequirements: PRD-SYS-001"
+      },
+      "OfflineBatchSyncResponse": {
+        "properties": {
+          "client_batch_id": {
+            "type": "string",
+            "title": "Client Batch Id",
+            "description": "Unique client-supplied batch identifier"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "SUCCESS",
+              "PARTIAL_SUCCESS",
+              "ALREADY_PROCESSED"
+            ],
+            "title": "Status",
+            "description": "Processing status of the batch"
+          },
+          "processed_count": {
+            "type": "integer",
+            "title": "Processed Count",
+            "description": "Number of successfully processed deltas"
+          },
+          "conflicts": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Conflicts",
+            "description": "List of conflicts encountered during processing"
+          }
+        },
+        "type": "object",
+        "required": [
+          "client_batch_id",
+          "status",
+          "processed_count"
+        ],
+        "title": "OfflineBatchSyncResponse",
+        "description": "Response schema for offline batch delta sync.\n\nRequirements: PRD-SYS-001"
+      },
+      "OfflineDeltaItem": {
+        "properties": {
+          "delta_id": {
+            "type": "string",
+            "title": "Delta Id",
+            "description": "Unique delta identifier"
+          },
+          "entity_type": {
+            "type": "string",
+            "title": "Entity Type",
+            "description": "Type of mutated entity"
+          },
+          "entity_id": {
+            "type": "string",
+            "title": "Entity Id",
+            "description": "Unique ID of mutated entity"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "CREATE",
+              "UPDATE",
+              "SUBMIT"
+            ],
+            "title": "Action",
+            "description": "Mutation action type"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload",
+            "description": "Payload data for the entity"
+          },
+          "client_timestamp_utc": {
+            "type": "string",
+            "title": "Client Timestamp Utc",
+            "description": "UTC timestamp of the mutation on client"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Reason for the mutation change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "delta_id",
+          "entity_type",
+          "entity_id",
+          "action",
+          "payload",
+          "client_timestamp_utc",
+          "reason_for_change"
+        ],
+        "title": "OfflineDeltaItem",
+        "description": "An individual sync delta item representing an entity mutation.\n\nRequirements: PRD-SYS-001"
       },
       "OutlierRecalculateRequest": {
         "properties": {

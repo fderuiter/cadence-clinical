@@ -8,6 +8,7 @@ from neo4j.exceptions import TransientError
 
 # Ensure offline terminology fallback is active for test isolation and speed
 os.environ.setdefault("TERMINOLOGY_OFFLINE", "true")
+os.environ.setdefault("GATEWAY_SECRET", "internal-gateway-secret-12345")
 
 
 # Identify and override Database URL for workers early, and ensure database isolation

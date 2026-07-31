@@ -27,6 +27,11 @@ def validate_environment() -> None:
     Validate that no test bypass configurations are enabled in production or staging environments.
     Crashes the application immediately if any bypass variables are active.
     """
+    if "GATEWAY_SECRET" not in os.environ:
+        error_msg = "SECURITY CRITICAL: GATEWAY_SECRET environment variable is missing. Application cannot start."
+        print(error_msg, file=sys.stderr)
+        sys.exit(1)
+
     app_env = os.getenv("APP_ENV", "").strip().lower()
     # Non-development environments (e.g. production or staging)
     if app_env and app_env not in ("development", "dev", "test"):
@@ -901,6 +906,37 @@ async def proxy_requests(request: Request, path: str) -> Response:
             body_json = json.loads(body_bytes)
         except Exception:
             pass
+
+    # Enforce mandatory signature for ePRO sync/submit requests
+    normalized_path = path.strip("/")
+    if normalized_path.endswith("epro/submit") or normalized_path.endswith("epro/sync"):
+        missing_sig = False
+        if not body_json or not isinstance(body_json, dict):
+            missing_sig = True
+        elif normalized_path.endswith("epro/submit"):
+            markers = body_json.get("offline_sync_markers")
+            if not isinstance(markers, dict) or not markers.get("signature"):
+                missing_sig = True
+        elif normalized_path.endswith("epro/sync"):
+            submissions = body_json.get("submissions")
+            if not isinstance(submissions, list):
+                missing_sig = True
+            else:
+                for sub in submissions:
+                    if not isinstance(sub, dict):
+                        missing_sig = True
+                        break
+                    markers = sub.get("offline_sync_markers")
+                    if not isinstance(markers, dict) or not markers.get("signature"):
+                        missing_sig = True
+                        break
+        if missing_sig:
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "detail": "Unauthorized: Cryptographic signature is required for sync submissions"
+                },
+            )
 
     from packages.security.gating import is_path_signature_gated
     from packages.security.regulated_actions import resolve_regulated_action
