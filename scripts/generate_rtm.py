@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import os
+import platform
 import re
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
@@ -472,7 +473,7 @@ def generate_qualification_report(
             "- **Operating System / Platform:** linux (containerized target specification)\n"
         )
         f.write(
-            "- **Python Version:** 3.12.13 (Docker execution environment baseline)\n"
+            f"- **Python Version:** {platform.python_version()} (Docker execution environment baseline)\n"
         )
         f.write(
             "- **Database Provider (Execution Engine):** PostgreSQL / SQLite in-memory fallback\n"

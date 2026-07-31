@@ -75,15 +75,12 @@ cyclonedx-python-lib     11.11.0
 defusedxml               0.7.1
 detect-secrets           1.5.0
 distlib                  0.4.3
-docraptor                3.1.0
 docxcompose              2.2.0
 docxtpl                  0.20.2
 ecdsa                    0.19.2
 et-xmlfile               2.0.0
 execnet                  2.1.2
 fastapi                  0.139.2
-fhir-core                1.1.9
-fhir-resources           8.3.0
 filelock                 3.32.0
 fonttools                4.63.0
 frozenlist               1.8.0
@@ -108,7 +105,6 @@ msgpack                  1.2.1
 multidict                6.7.1
 neo4j                    6.2.0
 nodeenv                  1.10.0
-numpy                    2.4.6
 numpy                    2.5.1
 openpyxl                 3.1.5
 packageurl-python        0.17.6
@@ -165,7 +161,6 @@ sqlalchemy               2.0.51
 sqlmodel                 0.0.39
 starlette                1.3.1
 stevedore                5.9.0
-stringcase               1.2.0
 text-unidecode           1.3
 tinycss2                 1.5.1
 tinyhtml5                2.1.0
@@ -175,7 +170,6 @@ typing-extensions        4.16.0
 typing-inspection        0.4.2
 tzdata                   2026.3
 urllib3                  2.7.0
-usdm                     0.66.0
 usdm                     0.67.0
 uvicorn                  0.51.0
 uvloop                   0.22.1
