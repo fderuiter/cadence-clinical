@@ -13,6 +13,8 @@ from apps.execution.database.models import (  # noqa: F401
     ClinicalCodingLedger,
     ClinicalObservation,
     ClinicalQuery,
+    ConsentFormRecord,
+    ConsentSignature,
     DictionaryImportJob,
     FormSubmission,
     LabReferenceRange,

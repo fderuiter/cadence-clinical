@@ -16,6 +16,7 @@ class SubjectState(str, enum.Enum):
     COMPLETED = "COMPLETED"
     UNBLINDED = "UNBLINDED"
     WITHDRAWN = "WITHDRAWN"
+    RECONSENT_REQUIRED = "RECONSENT_REQUIRED"
 
 
 class InvalidStateTransitionError(ValueError):
@@ -57,22 +58,42 @@ ALLOWED_SUBJECT_TRANSITIONS: Dict[SubjectState, Set[SubjectState]] = {
         SubjectState.SCREEN_FAILED,
         SubjectState.ENROLLED,
         SubjectState.WITHDRAWN,
+        SubjectState.RECONSENT_REQUIRED,
     },
-    SubjectState.ENROLLED: {SubjectState.RANDOMIZED, SubjectState.WITHDRAWN},
+    SubjectState.ENROLLED: {
+        SubjectState.RANDOMIZED,
+        SubjectState.WITHDRAWN,
+        SubjectState.RECONSENT_REQUIRED,
+    },
     SubjectState.RANDOMIZED: {
         SubjectState.ACTIVE,
         SubjectState.WITHDRAWN,
         SubjectState.UNBLINDED,
+        SubjectState.RECONSENT_REQUIRED,
     },
     SubjectState.ACTIVE: {
         SubjectState.COMPLETED,
         SubjectState.WITHDRAWN,
         SubjectState.UNBLINDED,
+        SubjectState.RECONSENT_REQUIRED,
     },
-    SubjectState.UNBLINDED: {SubjectState.WITHDRAWN, SubjectState.COMPLETED},
+    SubjectState.UNBLINDED: {
+        SubjectState.WITHDRAWN,
+        SubjectState.COMPLETED,
+        SubjectState.RECONSENT_REQUIRED,
+    },
     SubjectState.SCREEN_FAILED: set(),
     SubjectState.COMPLETED: set(),
     SubjectState.WITHDRAWN: set(),
+    SubjectState.RECONSENT_REQUIRED: {
+        SubjectState.SCREENING,
+        SubjectState.ENROLLED,
+        SubjectState.RANDOMIZED,
+        SubjectState.ACTIVE,
+        SubjectState.COMPLETED,
+        SubjectState.WITHDRAWN,
+        SubjectState.UNBLINDED,
+    },
 }
 
 

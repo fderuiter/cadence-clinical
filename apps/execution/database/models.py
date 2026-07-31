@@ -24,6 +24,7 @@ from sqlalchemy.orm import (
     relationship,
 )
 
+from sqlalchemy import event, inspect
 from apps.execution.subject_lifecycle import (
     LockedFactorMutationError,
     guard_subject_transition,
@@ -268,6 +269,79 @@ class SubjectConsent(AuditedModel):
     requires_reconsent: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False
     )
+
+
+class ConsentFormRecord(AuditedModel):
+    """Represents an eConsent form record bound to a specific ICF version.
+
+    Requirements: PRD-SYS-001
+    """
+
+    __tablename__ = "consent_form_records"
+
+    subject_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    icf_version_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    status: Mapped[str] = mapped_column(String(50), default="PENDING", nullable=False)
+    signed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+
+class ConsentSignature(AuditedModel):
+    """Represents a GxP 21 CFR Part 11 compliant consent signature.
+
+    Requirements: PRD-SYS-001
+    """
+
+    __tablename__ = "consent_signatures"
+
+    subject_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    icf_version_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    printed_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    signature_svg_data: Mapped[str] = mapped_column(String, nullable=False)
+    otp_auth_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    meaning: Mapped[str] = mapped_column(
+        String(255), nullable=False, default="I agree to participate in this research study"
+    )
+    cryptographic_token: Mapped[str] = mapped_column(String(255), nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now, nullable=False
+    )
+    status: Mapped[str] = mapped_column(String(50), default="SIGNED", nullable=False)
+
+
+@event.listens_for(ConsentSignature, "before_update")
+def lock_consent_signature_update(mapper, connection, target):
+    raise ValueError("Cannot modify signed consent records")
+
+
+@event.listens_for(ConsentSignature, "before_delete")
+def lock_consent_signature_delete(mapper, connection, target):
+    raise ValueError("Cannot delete consent records")
+
+
+@event.listens_for(ConsentFormRecord, "before_update")
+def lock_consent_form_record_update(mapper, connection, target):
+    from sqlalchemy.orm.attributes import get_history
+
+    state = inspect(target)
+    status_history = get_history(target, "status")
+    was_signed = "SIGNED" in status_history.deleted
+
+    is_currently_signed = getattr(target, "status") == "SIGNED"
+    is_transitioning_to_signed = is_currently_signed and "PENDING" in status_history.deleted
+
+    if was_signed or (is_currently_signed and not is_transitioning_to_signed):
+        new_status = getattr(target, "status")
+        if new_status != "RECONSENT_REQUIRED":
+            raise ValueError("Cannot modify signed consent records")
+        # Ensure immutable fields are not modified
+        for field in ("subject_id", "icf_version_id"):
+            if get_history(target, field).has_changes():
+                raise ValueError("Cannot modify signed consent records")
+
+
+@event.listens_for(ConsentFormRecord, "before_delete")
+def lock_consent_form_record_delete(mapper, connection, target):
+    raise ValueError("Cannot delete consent records")
 
 
 class ClinicalVisit(AuditedModel):
