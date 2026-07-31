@@ -578,7 +578,7 @@ jobs:
             --repo "${{ github.repository }}" \
             --auto \
             --squash || echo "::warning::Automerge enablement skipped or failed."
-            
+
   sync-ruleset:
     name: Sync Branch Ruleset
     runs-on: ubuntu-latest

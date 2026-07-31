@@ -1,5 +1,8 @@
 <template>
-  <div id="section-notifications" class="dashboard-section active">
+  <div
+    id="section-notifications"
+    class="dashboard-section active"
+  >
     <div class="section-header">
       <h2>Notifications & Action-Items</h2>
       <p>
@@ -9,85 +12,120 @@
     </div>
 
     <!-- Filters Row -->
-    <div class="card" style="margin-bottom: 24px">
+    <div
+      class="card"
+      style="margin-bottom: 24px"
+    >
       <div
         style="display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap"
       >
-        <div class="form-group" style="flex: 1; min-width: 150px">
+        <div
+          class="form-group"
+          style="flex: 1; min-width: 150px"
+        >
           <label
             for="filter-category"
             style="margin-bottom: 6px; font-weight: 600; font-size: 0.85rem"
-            >Category</label
-          >
+          >Category</label>
           <select
             id="filter-category"
             v-model="store.filters.category"
-            @change="onFilterChange"
             style="
               width: 100%;
               padding: 8px;
               border: 1px solid var(--border);
               border-radius: 6px;
             "
+            @change="onFilterChange"
           >
-            <option value="">All Categories</option>
-            <option value="ALERTS">ALERTS</option>
-            <option value="SYSTEM">SYSTEM</option>
-            <option value="ACTION_ITEMS">ACTION_ITEMS</option>
+            <option value="">
+              All Categories
+            </option>
+            <option value="ALERTS">
+              ALERTS
+            </option>
+            <option value="SYSTEM">
+              SYSTEM
+            </option>
+            <option value="ACTION_ITEMS">
+              ACTION_ITEMS
+            </option>
           </select>
         </div>
-        <div class="form-group" style="flex: 1; min-width: 150px">
+        <div
+          class="form-group"
+          style="flex: 1; min-width: 150px"
+        >
           <label
             for="filter-priority"
             style="margin-bottom: 6px; font-weight: 600; font-size: 0.85rem"
-            >Priority</label
-          >
+          >Priority</label>
           <select
             id="filter-priority"
             v-model="store.filters.priority"
-            @change="onFilterChange"
             style="
               width: 100%;
               padding: 8px;
               border: 1px solid var(--border);
               border-radius: 6px;
             "
+            @change="onFilterChange"
           >
-            <option value="">All Priorities</option>
-            <option value="LOW">LOW</option>
-            <option value="MEDIUM">MEDIUM</option>
-            <option value="HIGH">HIGH</option>
-            <option value="CRITICAL">CRITICAL</option>
+            <option value="">
+              All Priorities
+            </option>
+            <option value="LOW">
+              LOW
+            </option>
+            <option value="MEDIUM">
+              MEDIUM
+            </option>
+            <option value="HIGH">
+              HIGH
+            </option>
+            <option value="CRITICAL">
+              CRITICAL
+            </option>
           </select>
         </div>
-        <div class="form-group" style="flex: 1; min-width: 150px">
+        <div
+          class="form-group"
+          style="flex: 1; min-width: 150px"
+        >
           <label
             for="filter-status"
             style="margin-bottom: 6px; font-weight: 600; font-size: 0.85rem"
-            >Status</label
-          >
+          >Status</label>
           <select
             id="filter-status"
             v-model="store.filters.status"
-            @change="onFilterChange"
             style="
               width: 100%;
               padding: 8px;
               border: 1px solid var(--border);
               border-radius: 6px;
             "
+            @change="onFilterChange"
           >
-            <option value="">All Statuses</option>
-            <option value="OPEN">OPEN</option>
-            <option value="ACKNOWLEDGED">ACKNOWLEDGED</option>
-            <option value="RESOLVED">RESOLVED</option>
+            <option value="">
+              All Statuses
+            </option>
+            <option value="OPEN">
+              OPEN
+            </option>
+            <option value="ACKNOWLEDGED">
+              ACKNOWLEDGED
+            </option>
+            <option value="RESOLVED">
+              RESOLVED
+            </option>
           </select>
         </div>
         <button
           id="btn-reset-filters"
           class="btn"
-          @click="resetFilters"
           style="padding: 8px 16px"
+          @click="resetFilters"
         >
           Reset Filters
         </button>
@@ -101,9 +139,7 @@
       id="notifications-loading"
       style="text-align: center; padding: 48px"
     >
-      <span style="font-size: 1.2rem; color: #64748b"
-        >Loading notifications...</span
-      >
+      <span style="font-size: 1.2rem; color: #64748b">Loading notifications...</span>
     </div>
 
     <!-- 403 Forbidden State -->
@@ -204,18 +240,15 @@
             <span
               class="badge category-badge"
               style="background-color: var(--primary-light); color: white"
-              >{{ notif.category }}</span
-            >
+            >{{ notif.category }}</span>
             <span
               class="badge priority-badge"
               :style="getPriorityStyle(notif.priority)"
-              >{{ notif.priority }}</span
-            >
+            >{{ notif.priority }}</span>
             <span
               class="badge status-badge"
               :style="getStatusStyle(notif.status)"
-              >{{ notif.status }}</span
-            >
+            >{{ notif.status }}</span>
             <span
               class="badge delivery-badge"
               style="
@@ -223,10 +256,12 @@
                 color: #475569;
                 border-color: #cbd5e1;
               "
-              >{{ notif.delivery_state }}</span
-            >
+            >{{ notif.delivery_state }}</span>
           </div>
-          <span class="timestamp" style="font-size: 0.8rem; color: #94a3b8">{{
+          <span
+            class="timestamp"
+            style="font-size: 0.8rem; color: #94a3b8"
+          >{{
             formatTimestamp(notif.created_at)
           }}</span>
         </div>
@@ -255,27 +290,26 @@
           <div class="target-context">
             <strong>Recipient Context:</strong>
             <span v-if="notif.recipient_user_id || notif.recipient_role">
-              <span v-if="notif.recipient_user_id" style="margin-right: 12px"
-                >User: <code>{{ notif.recipient_user_id }}</code></span
-              >
-              <span v-if="notif.recipient_role"
-                >Role: <code>{{ notif.recipient_role }}</code></span
-              >
+              <span
+                v-if="notif.recipient_user_id"
+                style="margin-right: 12px"
+              >User: <code>{{ notif.recipient_user_id }}</code></span>
+              <span v-if="notif.recipient_role">Role: <code>{{ notif.recipient_role }}</code></span>
             </span>
             <span
               v-else
               class="global-indicator"
               style="font-style: italic; color: #94a3b8"
-              >Global / Broadcast</span
-            >
+            >Global / Broadcast</span>
           </div>
-          <div v-if="notif.related_entity_id" class="linkage">
+          <div
+            v-if="notif.related_entity_id"
+            class="linkage"
+          >
             <strong>Related:</strong>
-            <code
-              >{{ notif.related_entity_type }} ({{
-                notif.related_entity_id
-              }})</code
-            >
+            <code>{{ notif.related_entity_type }} ({{
+              notif.related_entity_id
+            }})</code>
           </div>
         </div>
 
@@ -354,7 +388,10 @@
         >
           21 CFR Part 11 Justification Reason Required
         </div>
-        <div class="modal-body" style="padding: 0; margin-bottom: 16px">
+        <div
+          class="modal-body"
+          style="padding: 0; margin-bottom: 16px"
+        >
           <p style="font-size: 0.9rem; color: #475569; margin-bottom: 12px">
             To complete this transition, you must provide a justification change
             reason:
@@ -377,12 +414,14 @@
             {{ modalError }}
           </div>
 
-          <div class="form-group" style="margin-bottom: 12px">
+          <div
+            class="form-group"
+            style="margin-bottom: 12px"
+          >
             <label
               for="modal-reason-select"
               style="display: block; margin-bottom: 4px; font-weight: 600"
-              >Standard Reason</label
-            >
+            >Standard Reason</label>
             <select
               id="modal-reason-select"
               v-model="selectedReason"
@@ -405,7 +444,9 @@
               <option value="Corrective action documented">
                 Corrective action documented
               </option>
-              <option value="Other">Other (specify custom explanation)</option>
+              <option value="Other">
+                Other (specify custom explanation)
+              </option>
             </select>
           </div>
 
@@ -413,8 +454,7 @@
             <label
               for="modal-custom-reason"
               style="display: block; margin-bottom: 4px; font-weight: 600"
-              >Custom Explanation</label
-            >
+            >Custom Explanation</label>
             <textarea
               id="modal-custom-reason"
               v-model="customReason"
@@ -427,7 +467,7 @@
                 border-radius: 6px;
                 resize: none;
               "
-            ></textarea>
+            />
           </div>
         </div>
         <div
@@ -441,7 +481,11 @@
             gap: 12px;
           "
         >
-          <button id="btn-cancel-modal" class="btn" @click="closeModal">
+          <button
+            id="btn-cancel-modal"
+            class="btn"
+            @click="closeModal"
+          >
             Cancel
           </button>
           <button
