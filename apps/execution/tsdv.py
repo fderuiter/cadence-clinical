@@ -1,5 +1,20 @@
 import hashlib
-from typing import Optional, Tuple
+from typing import List, NamedTuple, Optional, Tuple
+
+
+class TSDVTargetEvaluation(NamedTuple):
+    """Structured evaluation decision for a single target.
+
+    Requirements: PRD-SYS-001
+    """
+
+    subject_uuid: str
+    enrollment_index: int
+    domain: Optional[str]
+    required: bool
+    subject_selected: bool
+    field_decision: Optional[bool]
+    explanation: str
 
 
 def is_subject_selected_for_sdv(
@@ -150,3 +165,37 @@ def evaluate_tsdv_requirement(
             f"under {sampling_model} model."
         )
         return False, subject_selected, field_decision, explanation
+
+
+def evaluate_bulk_tsdv(
+    config,
+    targets: List[Tuple[str, int, Optional[str]]]
+) -> List[TSDVTargetEvaluation]:
+    """Evaluate a bulk list of target coordinate inputs against a TSDVConfig.
+
+    Reuses evaluate_tsdv_requirement to determine the target-specific decision.
+
+    Args:
+        config: Configuration object containing TSDV specifications.
+        targets: List of (subject_uuid, enrollment_index, domain) inputs.
+
+    Returns:
+        List[TSDVTargetEvaluation]: Structured evaluation results for each target.
+    """
+    results: List[TSDVTargetEvaluation] = []
+    for subject_uuid, enrollment_index, domain in targets:
+        required, subject_selected, field_decision, explanation = evaluate_tsdv_requirement(
+            config, subject_uuid, enrollment_index, domain
+        )
+        results.append(
+            TSDVTargetEvaluation(
+                subject_uuid=subject_uuid,
+                enrollment_index=enrollment_index,
+                domain=domain,
+                required=required,
+                subject_selected=subject_selected,
+                field_decision=field_decision,
+                explanation=explanation,
+            )
+        )
+    return results
