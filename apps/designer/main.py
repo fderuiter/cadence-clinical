@@ -3999,12 +3999,14 @@ async def amend_protocol(
     """
     # GxP 21 CFR Part 11 compliant audit trail: capture user and reasoning for version change
     user_id = getattr(request.state, "user_id", "system")
-    change_reason = getattr(request.state, "change_reason", "system_operation")
+    change_reason = getattr(request.state, "change_reason", None) or request.headers.get("X-Change-Reason")
 
-    if not change_reason or change_reason == "system_operation":
-        change_reason = request.headers.get(
-            "X-Change-Reason", "Clinical amendment operation"
+    if not change_reason or not change_reason.strip() or change_reason == "system_operation":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Missing change justification reason",
         )
+    change_reason = change_reason.strip()
 
     bump_type = payload.type or payload.amendment_type or "minor"
 
