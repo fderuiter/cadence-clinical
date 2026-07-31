@@ -972,8 +972,8 @@ class LabReferenceRange(AuditedModel):
     )
 
 
-class LabTestMaster(AuditedModel):
-    """Represents the lab test master catalog.
+class LabTestMasterLegacy(AuditedModel):
+    """Represents the legacy lab test master catalog.
 
     Attributes:
         study_id (str): Unique clinical trial study identifier.
@@ -985,7 +985,7 @@ class LabTestMaster(AuditedModel):
     """
 
     __tablename__ = "lab_test_master"
-    __table_args__ = (Index("idx_lab_master_lookup", "study_id", "test_code"),)
+    __table_args__ = (Index("idx_lab_master_legacy_lookup", "study_id", "test_code"),)
 
     study_id: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
     test_code: Mapped[str] = mapped_column(String(100), index=True, nullable=False)
