@@ -112,9 +112,7 @@ async def test_econsent_signature_capture_success(db_session) -> None:
     assert record.signed_at is not None
 
     # Query the stored ConsentSignature record
-    stmt_sig = select(ConsentSignature).where(
-        ConsentSignature.subject_id == "SUBJ-102"
-    )
+    stmt_sig = select(ConsentSignature).where(ConsentSignature.subject_id == "SUBJ-102")
     res_sig = await db_session.execute(stmt_sig)
     db_signature = res_sig.scalar_one()
     assert db_signature.id == signature.id
@@ -237,15 +235,15 @@ async def test_consent_record_immutability(db_session) -> None:
     record = res_record.scalar_one()
     await db_session.delete(record)
 
-    with pytest.raises(ValueError, match="Hard deletion of ConsentFormRecord is forbidden"):
+    with pytest.raises(
+        ValueError, match="Hard deletion of ConsentFormRecord is forbidden"
+    ):
         await db_session.commit()
 
     await db_session.rollback()
 
     # Query signature and attempt to modify fields
-    stmt_sig = select(ConsentSignature).where(
-        ConsentSignature.subject_id == "SUBJ-104"
-    )
+    stmt_sig = select(ConsentSignature).where(ConsentSignature.subject_id == "SUBJ-104")
     res_sig = await db_session.execute(stmt_sig)
     sig_record = res_sig.scalar_one()
 
