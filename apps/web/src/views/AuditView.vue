@@ -222,7 +222,7 @@
       </div>
 
       <!-- Card 3: Ingest / Upload TMF Document -->
-      <div class="card card-upload-document" style="grid-column: span 2;">
+      <div class="card card-upload-document" style="grid-column: span 2">
         <div class="card-title">
           <span>Ingest New TMF Document</span>
         </div>
@@ -234,11 +234,20 @@
               margin-bottom: 12px;
             "
           >
-            Upload a document and index it with DIA TMF taxonomy tags into the secure study repository.
+            Upload a document and index it with DIA TMF taxonomy tags into the
+            secure study repository.
           </p>
           <div style="display: flex; flex-direction: column; gap: 12px">
             <div class="form-group" style="margin-bottom: 0">
-              <label style="font-weight: 600; font-size: 12px; margin-bottom: 4px; display: block;">Select File</label>
+              <label
+                style="
+                  font-weight: 600;
+                  font-size: 12px;
+                  margin-bottom: 4px;
+                  display: block;
+                "
+                >Select File</label
+              >
               <input
                 type="file"
                 id="tmf-file-input"
@@ -253,9 +262,17 @@
                 @change="handleTmfFileSelect"
               />
             </div>
-            <div class="grid-2" style="gap: 16px;">
+            <div class="grid-2" style="gap: 16px">
               <div class="form-group" style="margin-bottom: 0">
-                <label style="font-weight: 600; font-size: 12px; margin-bottom: 4px; display: block;">TMF Zone</label>
+                <label
+                  style="
+                    font-weight: 600;
+                    font-size: 12px;
+                    margin-bottom: 4px;
+                    display: block;
+                  "
+                  >TMF Zone</label
+                >
                 <select
                   v-model="uploadParams.zone"
                   id="tmf-zone-select"
@@ -268,13 +285,27 @@
                     color: var(--text);
                   "
                 >
-                  <option value="01. Trial Management">01. Trial Management</option>
-                  <option value="02. Central Trial Documents">02. Central Trial Documents</option>
-                  <option value="05. Site Management">05. Site Management</option>
+                  <option value="01. Trial Management">
+                    01. Trial Management
+                  </option>
+                  <option value="02. Central Trial Documents">
+                    02. Central Trial Documents
+                  </option>
+                  <option value="05. Site Management">
+                    05. Site Management
+                  </option>
                 </select>
               </div>
               <div class="form-group" style="margin-bottom: 0">
-                <label style="font-weight: 600; font-size: 12px; margin-bottom: 4px; display: block;">TMF Section</label>
+                <label
+                  style="
+                    font-weight: 600;
+                    font-size: 12px;
+                    margin-bottom: 4px;
+                    display: block;
+                  "
+                  >TMF Section</label
+                >
                 <input
                   v-model="uploadParams.section"
                   id="tmf-section-input"
@@ -1262,7 +1293,9 @@ async function handleSignSuccess(updatedDoc) {
       documents.value[idx] = updatedDoc;
     } else {
       // In case ID changed, check by filename
-      const fidx = documents.value.findIndex((d) => d.filename === updatedDoc.filename);
+      const fidx = documents.value.findIndex(
+        (d) => d.filename === updatedDoc.filename
+      );
       if (fidx !== -1) {
         documents.value[fidx] = updatedDoc;
       }
@@ -1274,7 +1307,9 @@ async function handleSignSuccess(updatedDoc) {
 
   // Ensure local updates are retained if backend fetch returns empty or outdated
   if (updatedDoc) {
-    const idx2 = documents.value.findIndex((d) => d.id === updatedDoc.id || d.filename === updatedDoc.filename);
+    const idx2 = documents.value.findIndex(
+      (d) => d.id === updatedDoc.id || d.filename === updatedDoc.filename
+    );
     if (idx2 !== -1) {
       documents.value[idx2] = updatedDoc;
     }

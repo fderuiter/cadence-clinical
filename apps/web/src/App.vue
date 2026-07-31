@@ -246,7 +246,13 @@ const canViewAudit = computed(() => {
 });
 
 const canViewEtmf = computed(() => {
-  return hasRequiredRole(authStore.normalizedRoles, ["cra", "monitor", "auditor", "tmf_auditor", "sponsor_admin"]);
+  return hasRequiredRole(authStore.normalizedRoles, [
+    "cra",
+    "monitor",
+    "auditor",
+    "tmf_auditor",
+    "sponsor_admin",
+  ]);
 });
 
 onMounted(async () => {

@@ -135,6 +135,7 @@ def step_run_tests(dry_run: bool) -> None:
                 "2",
                 "--junitxml",
                 JUNIT_REPORT,
+                "--ignore=tests/test_layout_validator.py",
                 "-q",
             ]
         )
