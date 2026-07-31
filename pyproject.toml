@@ -88,6 +88,7 @@ dependencies = [
     "pyyaml>=6.0.1",
     "docxtpl>=0.20.2",
     "docxcompose>=2.2.0",
+    "sqlmodel>=0.0.39",
 ]
 
 [project.scripts]

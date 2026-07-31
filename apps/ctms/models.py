@@ -1,14 +1,19 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime, timezone
 from typing import Any, Dict, Optional
 
 from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlmodel import Field, SQLModel
 
 
 class Base(DeclarativeBase):
     pass
+
+
+# Bind SQLModel metadata to Base metadata to support unified relational db management
+SQLModel.metadata = Base.metadata
 
 
 class CTMSAuditLog(Base):
@@ -454,6 +459,50 @@ class RegulatoryForm(Base):
     signing_timestamp: Mapped[Optional[datetime]] = mapped_column(
         DateTime, nullable=True
     )
+
+
+class SiteStaffMember(SQLModel, table=True):
+    __tablename__ = "site_staff_members"
+
+    id: str = Field(primary_key=True)
+    site_id: str = Field(index=True)
+    user_id: str = Field(index=True, unique=True)
+    first_name: str
+    last_name: str
+    email: str
+    primary_role: str
+    license_number: Optional[str] = None
+    gcp_certified: bool = Field(default=False)
+
+    # GxP Audit fields
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_by: str
+    reason_for_change: str = "Initial Staff Registration"
+    version_index: int = Field(default=1)
+    is_active: bool = Field(default=True)
+    is_deleted: bool = Field(default=False)
+
+
+class DOADelegationRecord(SQLModel, table=True):
+    __tablename__ = "doa_delegation_records"
+
+    id: str = Field(primary_key=True)
+    site_id: str = Field(index=True)
+    staff_user_id: str = Field(index=True, foreign_key="site_staff_members.user_id")
+    task_code: str = Field(index=True)
+    start_date: date
+    end_date: Optional[date] = None
+    status: str = Field(default="PENDING_PI_APPROVAL")
+    pi_signature_hash: Optional[str] = None
+    pi_approved_at: Optional[datetime] = None
+
+    # GxP Audit fields
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_by: str
+    reason_for_change: str
+    version_index: int = Field(default=1)
+    is_active: bool = Field(default=True)
+    is_deleted: bool = Field(default=False)
 
 
 GeneratedForm = RegulatoryForm
