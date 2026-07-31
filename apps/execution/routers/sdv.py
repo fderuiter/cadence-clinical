@@ -3,7 +3,7 @@
 Requirements: PRD-QRY-005, PRD-QRY-006, PRD-QRY-007
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import List, Optional
 
@@ -22,10 +22,13 @@ from apps.execution.database.models import (
 )
 from apps.execution.tsdv import evaluate_tsdv_requirement
 from packages.security.rbac import (
+    ROLE_CRA,
+    ROLE_DATA_MANAGER,
     Principal,
     can_access_study,
     get_principal,
     require_permission,
+    require_roles,
 )
 
 router = APIRouter(prefix="/api/v1/execution", tags=["SDV/TSDV"])
@@ -187,7 +190,7 @@ class SDVSignOffResponse(BaseModel):
 async def create_or_update_tsdv_config(
     request: Request,
     payload: TSDVConfigCreate,
-    principal: Principal = Depends(require_permission("sdv:update")),
+    roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER)),
     _study_scope: Principal = Depends(require_study_scope()),
 ) -> TSDVConfig:
     """Create or update Targeted SDV (TSDV) configuration for a study.
@@ -413,7 +416,7 @@ async def sdv_signoff(
 
         # 3. Apply sign-off behavior
         verifier_id = current_user_id.get() or "system"
-        verified_at = datetime.utcnow()
+        verified_at = datetime.now(timezone.utc)
 
         # Update or create the matching SDVSignOff record
         stmt_signoff = select(SDVSignOff).where(
