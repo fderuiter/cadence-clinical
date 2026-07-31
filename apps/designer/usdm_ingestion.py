@@ -353,6 +353,13 @@ def validate_usdm_payload(
                     )
                 )
                 continue
+            if not ver.get("id"):
+                errors.append(
+                    ValidationIssue(
+                        field=f"versions[{v_idx}].id",
+                        reason="Missing mandatory study version element: 'id'",
+                    )
+                )
             add_id(ver.get("id"), f"versions[{v_idx}]")
 
             designs = ver.get("studyDesigns", [])
@@ -367,6 +374,20 @@ def validate_usdm_payload(
                             )
                         )
                         continue
+                    if not design.get("id"):
+                        errors.append(
+                            ValidationIssue(
+                                field=f"versions[{v_idx}].studyDesigns[{d_idx}].id",
+                                reason="Missing mandatory study design element: 'id'",
+                            )
+                        )
+                    if not design.get("name"):
+                        errors.append(
+                            ValidationIssue(
+                                field=f"versions[{v_idx}].studyDesigns[{d_idx}].name",
+                                reason="Missing mandatory study design element: 'name'",
+                            )
+                        )
                     add_id(design.get("id"), f"versions[{v_idx}].studyDesigns[{d_idx}]")
 
                     # Arms
@@ -382,6 +403,20 @@ def validate_usdm_payload(
                                     )
                                 )
                                 continue
+                            if not arm.get("id"):
+                                errors.append(
+                                    ValidationIssue(
+                                        field=f"versions[{v_idx}].studyDesigns[{d_idx}].arms[{a_idx}].id",
+                                        reason="Missing mandatory study arm element: 'id'",
+                                    )
+                                )
+                            if not arm.get("name"):
+                                errors.append(
+                                    ValidationIssue(
+                                        field=f"versions[{v_idx}].studyDesigns[{d_idx}].arms[{a_idx}].name",
+                                        reason="Missing mandatory study arm element: 'name'",
+                                    )
+                                )
                             add_id(
                                 arm.get("id"),
                                 f"versions[{v_idx}].studyDesigns[{d_idx}].arms[{a_idx}]",
@@ -400,6 +435,20 @@ def validate_usdm_payload(
                                     )
                                 )
                                 continue
+                            if not epoch.get("id"):
+                                errors.append(
+                                    ValidationIssue(
+                                        field=f"versions[{v_idx}].studyDesigns[{d_idx}].epochs[{ep_idx}].id",
+                                        reason="Missing mandatory study epoch element: 'id'",
+                                    )
+                                )
+                            if not epoch.get("name"):
+                                errors.append(
+                                    ValidationIssue(
+                                        field=f"versions[{v_idx}].studyDesigns[{d_idx}].epochs[{ep_idx}].name",
+                                        reason="Missing mandatory study epoch element: 'name'",
+                                    )
+                                )
                             add_id(
                                 epoch.get("id"),
                                 f"versions[{v_idx}].studyDesigns[{d_idx}].epochs[{ep_idx}]",
@@ -456,14 +505,15 @@ def validate_usdm_payload(
     if not normalized_payload.get("id"):
         errors.append(
             ValidationIssue(
-                field="id", reason="Study must contain a non-empty physical ID."
+                field="id",
+                reason="Study must contain a non-empty physical ID. Missing mandatory study root element: 'id'",
             )
         )
     if not normalized_payload.get("name"):
         errors.append(
             ValidationIssue(
                 field="name",
-                reason="Study must contain a non-empty physical name/title.",
+                reason="Study must contain a non-empty physical name/title. Missing mandatory study root element: 'name'",
             )
         )
 
