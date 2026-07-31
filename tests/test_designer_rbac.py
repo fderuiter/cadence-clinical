@@ -8,6 +8,7 @@ Requirements: PRD-SYS-001, 21 CFR Part 11
 """
 
 import pytest
+
 from packages.security.rbac import (
     ROLE_AUDITOR_CANONICAL,
     ROLE_CRA_CANONICAL,
