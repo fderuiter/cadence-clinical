@@ -321,3 +321,62 @@ async def test_subject_notification_skips_clinical_auditing():
         result = await session.execute(select(AuditLog))
         logs = result.scalars().all()
         assert len(logs) == 0
+
+
+def test_audit_action_enum_and_stability():
+    """
+    Verify the AuditAction enum has all required members and values match their names exactly.
+
+    Requirements: PRD-SYS-001
+    """
+    # @Req:PRD-SYS-001
+    # @req:PRD-SYS-001
+    from audit import AuditAction
+
+    # 1. Verify bare-name import was successful and type is correct
+    assert issubclass(AuditAction, str)
+
+    # 2. Verify all members have member name == member value
+    for action in AuditAction:
+        assert action.name == action.value
+
+    # 3. Verify specific required categories exist in the enum
+    # Generic CRUD
+    assert AuditAction.CREATE == "CREATE"
+    assert AuditAction.READ == "READ"
+    assert AuditAction.UPDATE == "UPDATE"
+    assert AuditAction.DELETE == "DELETE"
+    assert AuditAction.VIEW == "VIEW"
+    assert AuditAction.LIST == "LIST"
+
+    # Document lifecycle
+    assert AuditAction.INGEST == "INGEST"
+    assert AuditAction.DOWNLOAD == "DOWNLOAD"
+    assert AuditAction.WATERMARKED_DOWNLOAD == "WATERMARKED_DOWNLOAD"
+    assert AuditAction.REDACT == "REDACT"
+    assert AuditAction.SIGN == "SIGN"
+    assert AuditAction.APPROVE == "APPROVE"
+    assert AuditAction.QC_TRANSITION == "QC_TRANSITION"
+    assert AuditAction.BINDER_EXPORT == "BINDER_EXPORT"
+    assert AuditAction.COMPLETENESS == "COMPLETENESS"
+    assert AuditAction.MUTATION_REJECTED == "MUTATION_REJECTED"
+    assert AuditAction.AUDIT_VIEW == "AUDIT_VIEW"
+    assert AuditAction.EDL_VIEW == "EDL_VIEW"
+    assert AuditAction.EDL_UPDATE == "EDL_UPDATE"
+    assert AuditAction.QC_HISTORY_VIEW == "QC_HISTORY_VIEW"
+
+    # Approval / Sign-off / Security
+    assert AuditAction.SIGN_OFF == "SIGN_OFF"
+    assert AuditAction.SIGN_OFF_VISIT == "SIGN_OFF_VISIT"
+    assert AuditAction.SECURITY_ALERT == "SECURITY_ALERT"
+
+    # 4. Verify domain-specific actions mapped to today's strings exist
+    assert AuditAction.SYNC == "SYNC"
+    assert AuditAction.CREATE_DOCUMENT == "CREATE_DOCUMENT"
+    assert AuditAction.EPRO_RECONCILE == "EPRO_RECONCILE"
+    assert AuditAction.CAPA_CREATE == "CAPA_CREATE"
+    assert AuditAction.DEVIATION_CREATE == "DEVIATION_CREATE"
+    assert AuditAction.SAE_RECONCILIATION_RUN == "SAE_RECONCILIATION_RUN"
+    assert AuditAction.ORGANIZATION_CREATE == "ORGANIZATION_CREATE"
+    assert AuditAction.SITE_CREATE == "SITE_CREATE"
+    assert AuditAction.TICKET_CREATE == "TICKET_CREATE"

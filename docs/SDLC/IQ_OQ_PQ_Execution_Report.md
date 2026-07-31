@@ -9,10 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1773
-- **Passed:** 1773 🟢
-- **Total Automated Test Cases Run:** 1772
-- **Passed:** 1772 🟢
+- **Total Automated Test Cases Run:** 1774
+- **Passed:** 1774 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -242,6 +240,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_validation_fails_on_route_path_mismatch` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_artifact_cascade_engine_generation` | `tests.test_artifact_cascade` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_artifact_cascade_router_endpoint` | `tests.test_artifact_cascade` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_audit_action_enum_and_stability` | `tests.test_audit` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_audit_records_ip_and_custom_timestamp` | `tests.test_audit` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_hard_delete_is_prevented` | `tests.test_audit` | Trace-1 | 🟢 PASSED | < 1s |
 | `test_insert_generates_audit_log` | `tests.test_audit` | PRD-SYS-001 | 🟢 PASSED | < 1s |

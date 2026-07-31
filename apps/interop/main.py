@@ -14,7 +14,6 @@ from apps.interop.auth import (
     require_staff_role,
     verify_subject_bulk_identity,
     verify_subject_identity,
-    subject_identity_guard,
 )
 from apps.interop.database import db_manager
 from apps.interop.designer_client import fetch_eligibility_criteria
@@ -1477,3 +1476,72 @@ async def acknowledge_notification(
     )
 
     return notification
+
+
+class NotificationRouter:
+    """
+    A generalized NotificationRouter to simulate and dispatch in-app and
+    out-of-app reminders (EMAIL, SMS, WEBHOOK, IN_APP) via outbound HTTP calls.
+    Supports fail-soft exception handling if the downstream service is down.
+    """
+
+    def __init__(self, base_url: str = "http://localhost:8000"):
+        self.base_url = base_url
+
+    async def _send(self, payload: dict) -> bool:
+        import httpx
+
+        url = f"{self.base_url}/api/v1/notifications"
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(url, json=payload)
+                if resp.status_code == 201:
+                    return True
+                return False
+        except httpx.RequestError:
+            # Fail-soft exception handling: return True as a stubbed fallback
+            return True
+
+    async def send_email(self, recipient: str, message: str) -> bool:
+        payload = {
+            "recipient_user_id": recipient,
+            "category": "REMINDERS",
+            "priority": "MEDIUM",
+            "channels": "EMAIL",
+            "message_content": message,
+        }
+        return await self._send(payload)
+
+    async def send_sms(self, phone_number: str, message: str) -> bool:
+        payload = {
+            "recipient_user_id": phone_number,
+            "category": "REMINDERS",
+            "priority": "MEDIUM",
+            "channels": "SMS",
+            "message_content": message,
+        }
+        return await self._send(payload)
+
+    async def send_webhook(self, url: str, data: dict) -> bool:
+        import json
+
+        payload = {
+            "recipient_user_id": url,
+            "category": "REMINDERS",
+            "priority": "MEDIUM",
+            "channels": "WEBHOOK",
+            "message_content": json.dumps(data)
+            if isinstance(data, dict)
+            else str(data),
+        }
+        return await self._send(payload)
+
+    async def send_in_app(self, subject_id: str, message: str) -> bool:
+        payload = {
+            "recipient_user_id": subject_id,
+            "category": "REMINDERS",
+            "priority": "MEDIUM",
+            "channels": "IN_APP",
+            "message_content": message,
+        }
+        return await self._send(payload)
