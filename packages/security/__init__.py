@@ -75,6 +75,9 @@ from packages.security.rbac import (
     require_roles,
     verify_is_auditor,
     verify_not_auditor,
+    require_role,
+    require_any_role,
+    is_auditor,
 )
 from packages.security.signing import (
     asymmetric_sign,
@@ -113,6 +116,9 @@ __all__ = [
     "ROLE_AUDITOR",
     "ROLE_SPONSOR_ADMIN",
     "require_roles",
+    "require_role",
+    "require_any_role",
+    "is_auditor",
     "StaffRole",
     "normalize_and_validate_staff_role",
     "validate_request_staff_roles",
