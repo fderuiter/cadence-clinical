@@ -1,17 +1,23 @@
 import time
+
 import pytest
 import pytest_asyncio
-from fastapi import Request, HTTPException
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
-from sqlalchemy import select
 
 from apps.execution.database.core import db_manager as exec_db_manager
-from apps.execution.database.models import Base as ExecBase, ClinicalSubject, ClinicalVisit, SubjectRandomization
+from apps.execution.database.models import Base as ExecBase
+from apps.execution.database.models import (
+    ClinicalSubject,
+    ClinicalVisit,
+    SubjectRandomization,
+)
 from apps.execution.main import app as exec_app
 from apps.gateway.main import generate_signature
 from packages.security import TrialRole, check_trial_role, enforce_site_isolation
-from packages.security.rbac import Principal, ROLE_INVESTIGATOR, ROLE_CRA_CANONICAL
 from packages.security.audit_logger import audit_logger_engine
+from packages.security.rbac import Principal
+
 
 @pytest_asyncio.fixture(autouse=True)
 async def setup_dbs():

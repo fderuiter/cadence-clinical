@@ -7,14 +7,14 @@ logic propagation, invalid syntax rejections, and aggregate eligibility outcomes
 
 import pytest
 from eligibility import (
+    ComparisonOperator,
     EligibilityCriterion,
+    LogicalOperator,
+    evaluate_criteria_group,
     evaluate_eligibility,
     evaluate_node,
-    parse_dsl,
-    ComparisonOperator,
-    LogicalOperator,
     evaluate_structured_expression,
-    evaluate_criteria_group,
+    parse_dsl,
 )
 
 

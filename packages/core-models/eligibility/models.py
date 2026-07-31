@@ -6,12 +6,12 @@ structured AST expression trees, and comprehensive detailed node/aggregate
 evaluation outputs. All models conform to FDA 21 CFR Part 11 auditing principles.
 """
 
-from enum import Enum
 import re
+from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Union
 
 # Import standard GxP audit fields
-from audit import AuditFields, Part11AuditMixin
+from audit import Part11AuditMixin
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 

@@ -1,7 +1,14 @@
 from enum import Enum
-from fastapi import Request, HTTPException, status, Depends
-from packages.security.rbac import normalize_role, Principal, get_principal, can_access_site
+
+from fastapi import HTTPException, Request
+
 from packages.security.audit_logger import CentralAuditLogger
+from packages.security.rbac import (
+    Principal,
+    can_access_site,
+    normalize_role,
+)
+
 
 class TrialRole(str, Enum):
     SITE_PI = "principal_investigator"

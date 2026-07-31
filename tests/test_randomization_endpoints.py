@@ -8,15 +8,14 @@
 
 import os
 import time
+
 import httpx
 import pytest
 import pytest_asyncio
 from sqlalchemy import select
 
-from apps.execution.database.context import current_session
 from apps.execution.database.core import db_manager
-from apps.execution.database.decorators import transactional
-from apps.execution.database.models import Base, ClinicalSubject, SubjectConsent
+from apps.execution.database.models import Base, ClinicalSubject
 from apps.execution.main import app
 
 GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")

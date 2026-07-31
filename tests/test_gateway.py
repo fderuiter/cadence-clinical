@@ -2121,10 +2121,11 @@ def test_gateway_startup_production_no_bypass_configs() -> None:
 
 
 def generate_test_rsa_jwks_and_token(kid: str = "new-kid-123") -> tuple[dict, str]:
-    from cryptography.hazmat.primitives.asymmetric import rsa
-    from cryptography.hazmat.primitives import serialization
-    from jose import jwt
     import base64
+
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from jose import jwt
 
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     pem = private_key.private_bytes(
@@ -2196,8 +2197,9 @@ async def test_verify_token_stampede_protection(monkeypatch: pytest.MonkeyPatch)
     Test that concurrent verification requests for an unknown kid
     trigger exactly one network call to the identity provider.
     """
-    from apps.gateway import main as gateway_main
     import asyncio
+
+    from apps.gateway import main as gateway_main
 
     monkeypatch.setattr(gateway_main, "jwks_cache", {"keys": []})
 

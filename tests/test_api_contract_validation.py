@@ -38,21 +38,28 @@ def extract_openapi_yaml(filepath: str) -> str:
     return sec_content[start_pos:end_pos].strip()
 
 
-def resolve_schema(schema: Any, spec: Dict[str, Any]) -> Any:
-    """Recursively resolve $ref references in the spec dictionary."""
+def resolve_schema(schema: Any, spec: Dict[str, Any], seen: Any = None) -> Any:
+    """Recursively resolve $ref references in the spec dictionary with recursion guard."""
+    if seen is None:
+        seen = set()
     if isinstance(schema, dict):
         if "$ref" in schema:
-            ref_path = schema["$ref"].split("/")
+            ref = schema["$ref"]
+            if ref in seen:
+                return {"type": "object", "description": f"Recursive reference to {ref}"}
+            new_seen = set(seen)
+            new_seen.add(ref)
+            ref_path = ref.split("/")
             # e.g., ["#", "components", "schemas", "ConceptDetail"]
             resolved = spec
             for part in ref_path[1:]:
                 resolved = resolved.get(part, {})
             # Resolve recursively in case the referenced schema contains other references
-            return resolve_schema(resolved, spec)
+            return resolve_schema(resolved, spec, new_seen)
         else:
-            return {k: resolve_schema(v, spec) for k, v in schema.items()}
+            return {k: resolve_schema(v, spec, seen) for k, v in schema.items()}
     elif isinstance(schema, list):
-        return [resolve_schema(item, spec) for item in schema]
+        return [resolve_schema(item, spec, seen) for item in schema]
     return schema
 
 
@@ -223,7 +230,7 @@ def loaded_specs():
     return {"spec_dict": spec_dict, "code_routes": code_routes, "code_full": code_full}
 
 
-WHITELISTED_ROUTES = {
+_RAW_WHITELISTED_ROUTES = {
     ("post", "/api/v1/documents/upload"),
     ("get", "/api/v1/documents/{doc_id}"),
     ("get", "/api/v1/documents/{doc_id}/versions"),
@@ -570,6 +577,11 @@ WHITELISTED_ROUTES = {
     ("get", "/api/v1/execution/doa/log/{study_id}/{site_id}"),
 }
 
+WHITELISTED_ROUTES = {
+    (method, path) for (method, path) in _RAW_WHITELISTED_ROUTES
+    if "/execution" not in path
+}
+
 
 def find_spec_route(code_path: str, spec_paths: dict) -> str:
     clean_code = code_path.replace("/api/v1", "").strip("/")
@@ -590,14 +602,6 @@ def is_whitelisted(method: str, path: str) -> bool:
     wildcards = [
         "/api/v1/documents",
         "/api/v1/archive",
-        "/api/v1/execution/locks",
-        "/api/v1/execution/signatures",
-        "/api/v1/execution/amendments",
-        "/api/v1/execution/auditor",
-        "/api/v1/execution/safety",
-        "/api/v1/execution/eisf",
-        "/api/v1/execution/anonymization",
-        "/api/v1/execution/doa",
         "/api/v1/synopsis",
         "/api/v1/designer/sentinel",
         "/api/v1/designer/cascade",
@@ -614,14 +618,6 @@ def is_whitelisted(method: str, path: str) -> bool:
         "/synopsis/render",
         "/designer/sentinel/evaluate",
         "/designer/cascade/propagate",
-        "/execution/locks",
-        "/execution/signatures/batch-sign-off",
-        "/execution/amendments",
-        "/execution/auditor",
-        "/execution/safety",
-        "/execution/eisf",
-        "/execution/anonymization",
-        "/execution/doa",
     ]:
         if p_clean.startswith(prefix):
             return True
