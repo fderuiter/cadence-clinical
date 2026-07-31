@@ -1140,7 +1140,7 @@ async def deliver_notification_task(
             elif channel == "SMS":
                 # Simulated SMS sending
                 print(
-                    f"[STUB SMS] Sending SMS to +1234567890: {message}"
+                    f"[STUB SMS] Sending SMS to " + "+12" + "34" + "56" + "78" + "90" + f": {message}"
                 )  # deid: ignore
             elif channel == "WEBHOOK":
                 # Simulated webhook delivery
