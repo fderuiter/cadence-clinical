@@ -85,8 +85,16 @@ from packages.security.signing import (
     generate_canonical_signature,
     verify_canonical_signature,
 )
+from packages.security.trial_roles import (
+    TrialRole,
+    check_trial_role,
+    enforce_site_isolation,
+)
 
 __all__ = [
+    "TrialRole",
+    "check_trial_role",
+    "enforce_site_isolation",
     "GatewayBaseClient",
     "run_async",
     "current_user_id",

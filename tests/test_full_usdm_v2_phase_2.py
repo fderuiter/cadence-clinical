@@ -1,19 +1,20 @@
 import json
+
 import pytest
 import yaml
 from fastapi.testclient import TestClient
 
-from apps.designer.main import app as designer_app
 from apps.designer.db import MOCK_STUDIES
+from apps.designer.main import app as designer_app
 
 client = TestClient(designer_app)
 
 
 def get_auth_headers(change_reason="system_operation", roles="sponsor_designer"):
+    import hashlib
+    import hmac
     import json
     import time
-    import hmac
-    import hashlib
 
     user_id = "test-user"
     timestamp = str(time.time())
@@ -47,14 +48,20 @@ def test_api_v2_export_default():
 
 def test_api_v2_export_json_and_yaml():
     # If format is json, should return serialized JSON
-    response = client.get("/api/v2/studies/study_1/usdm?format=json", headers=get_auth_headers())
+    response = client.get(
+        "/api/v2/studies/study_1/usdm?format=json", headers=get_auth_headers()
+    )
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/json"
     parsed_json = json.loads(response.text)
-    assert parsed_json["id"] == "1407067d-bde8-5c1b-9aec-5bf54117ff51"  # proper to_uuid representation of study_1
+    assert (
+        parsed_json["id"] == "1407067d-bde8-5c1b-9aec-5bf54117ff51"
+    )  # proper to_uuid representation of study_1
 
     # If format is yaml, should return serialized YAML
-    response_yaml = client.get("/api/v2/studies/study_1/usdm?format=yaml", headers=get_auth_headers())
+    response_yaml = client.get(
+        "/api/v2/studies/study_1/usdm?format=yaml", headers=get_auth_headers()
+    )
     assert response_yaml.status_code == 200
     assert response_yaml.headers["content-type"] == "application/x-yaml"
     parsed_yaml = yaml.safe_load(response_yaml.text)
@@ -62,7 +69,9 @@ def test_api_v2_export_json_and_yaml():
 
 
 def test_api_v2_export_invalid_format():
-    response = client.get("/api/v2/studies/study_1/usdm?format=invalid_format", headers=get_auth_headers())
+    response = client.get(
+        "/api/v2/studies/study_1/usdm?format=invalid_format", headers=get_auth_headers()
+    )
     assert response.status_code == 400
     assert "Unsupported format type" in response.json()["detail"]
 
@@ -81,7 +90,9 @@ def test_api_v2_import_valid_yaml():
 
     usdm_payload = map_study_to_usdm(proj)
     # Serialize it as canonical YAML
-    valid_payload_yaml = serialize_usdm(usdm_payload, format_type="yaml", style="canonical", validate=True)
+    valid_payload_yaml = serialize_usdm(
+        usdm_payload, format_type="yaml", style="canonical", validate=True
+    )
 
     headers = get_auth_headers(change_reason="Valid YAML Import GxP comment")
 
@@ -140,8 +151,9 @@ versions: []
 
 def test_gateway_proxying_v2_studies(monkeypatch: pytest.MonkeyPatch):
     # Verify that the Gateway router proxies /api/v2/studies correctly
-    from apps.gateway.main import app as gateway_app
     import httpx
+
+    from apps.gateway.main import app as gateway_app
 
     # Mock httpx AsyncClient send to check the target proxy URL
     sent_request_url = None
@@ -155,20 +167,21 @@ def test_gateway_proxying_v2_studies(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("JWT_TEST_SECRET", "internal-gateway-secret-12345")
 
     # Generate a mock token signed with JWT_TEST_SECRET
-    from jose import jwt
     import time
+
+    from jose import jwt
+
     claims = {
         "sub": "test-user-gateway",
         "username": "test-user-gateway",
         "realm_access": {"roles": ["sponsor_designer"]},
-        "exp": time.time() + 3600
+        "exp": time.time() + 3600,
     }
     token = jwt.encode(claims, "internal-gateway-secret-12345", algorithm="HS256")
 
     with TestClient(gateway_app) as gateway_client:
         response = gateway_client.get(
-            "/api/v2/studies/study_1/usdm",
-            headers={"Authorization": f"Bearer {token}"}
+            "/api/v2/studies/study_1/usdm", headers={"Authorization": f"Bearer {token}"}
         )
         assert response.status_code == 200
         # Check that the gateway proxied to the correct designer URL on port 8001
