@@ -3452,6 +3452,7 @@ async def open_query(
 # ==========================================
 
 
+# Phase 11: Shared Sampling Model enums for the API layer
 class SamplingModelEnum(str, Enum):
     SUBJECT_BASED = "SUBJECT_BASED"
     FIELD_BASED = "FIELD_BASED"
@@ -3667,6 +3668,7 @@ async def evaluate_tsdv_rule(
         )
 
 
+# Phase 11: Shared SDV scope enums for the API layer
 class SDVScopeEnum(str, Enum):
     FIELD = "FIELD"
     PAGE = "PAGE"

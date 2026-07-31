@@ -370,6 +370,7 @@ async def upgrade_existing_tables(conn) -> None:
         lambda sc: get_table_columns(sc, "clinical_observations")
     )
     if obs_cols:
+        # Phase 11: Schema migration touchpoint to upgrade clinical_observations with SDV/TSDV columns
         new_obs_cols = [
             ("lab_source", "VARCHAR(50)"),
             ("lab_site_id", "VARCHAR(255)"),
