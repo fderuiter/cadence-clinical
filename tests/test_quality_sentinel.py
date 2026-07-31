@@ -104,6 +104,7 @@ def test_quality_sentinel_router_endpoint() -> None:
 # ADDED SENTINEL / FEASIBILITY TESTS (PRD-SYS-001)
 # =====================================================================
 
+
 def test_syllable_counter_deterministic() -> None:
     """Validate the deterministic heuristic syllable counter."""
     assert count_syllables_word("age") == 1
@@ -123,9 +124,9 @@ def test_readability_metrics_and_scoring() -> None:
                 "id": "b1",
                 "properties": {
                     "text": "The patient must sign the informed consent form before any clinical procedures are initiated."
-                }
+                },
             }
-        ]
+        ],
     }
     sentinel = ProtocolQualitySentinel()
     report = sentinel.evaluate_protocol_quality(payload)
@@ -148,10 +149,16 @@ def test_burden_tracing_with_invasiveness_modifiers() -> None:
                 "objectives": [{"id": "o1"}],
                 "encounters": [{"id": "visit_01"}, {"id": "visit_02"}],
                 "activities": [
-                    {"id": "act_01", "name": "Surgical Biopsy"},  # High invasiveness (+10.0)
-                    {"id": "act_02", "name": "Blood Phlebotomy"},  # Moderate invasiveness (+3.0)
-                    {"id": "act_03", "name": "Standard Vitals"},   # Base procedure (2.0)
-                ]
+                    {
+                        "id": "act_01",
+                        "name": "Surgical Biopsy",
+                    },  # High invasiveness (+10.0)
+                    {
+                        "id": "act_02",
+                        "name": "Blood Phlebotomy",
+                    },  # Moderate invasiveness (+3.0)
+                    {"id": "act_03", "name": "Standard Vitals"},  # Base procedure (2.0)
+                ],
             }
         ],
         "eligibilityCriteria": [{"id": "e1"}],
@@ -191,7 +198,7 @@ def test_block_eligibility_soa_inconsistencies() -> None:
                 "activities": [
                     {
                         "id": "proc_exist",
-                        "forms": [{"id": "form1", "fields": [{"id": "field_exist"}]}]
+                        "forms": [{"id": "form1", "fields": [{"id": "field_exist"}]}],
                     }
                 ],
             }
@@ -200,13 +207,13 @@ def test_block_eligibility_soa_inconsistencies() -> None:
             {
                 "id": "e1",
                 "dsl_source": "eCRF.DM.AGE >= 18",  # AGE is standard, allowed fallback
-                "condition": {"type": "constant", "value": True}
+                "condition": {"type": "constant", "value": True},
             },
             {
                 "id": "e2",
                 "dsl_source": "eCRF.VS.NONEXISTENT_VAR < 50",  # NONEXISTENT_VAR is undefined -> finding
-                "condition": {"type": "constant", "value": True}
-            }
+                "condition": {"type": "constant", "value": True},
+            },
         ],
         "blocks": [
             {
@@ -214,16 +221,16 @@ def test_block_eligibility_soa_inconsistencies() -> None:
                 "properties": {
                     "visit_id": "visit_nonexistent",  # Mismatch visit
                     "activity_id": "proc_exist",
-                }
+                },
             },
             {
                 "id": "b2",
                 "properties": {
                     "visit_id": "visit_exist",
                     "activity_id": "proc_nonexistent",  # Mismatch procedure
-                }
-            }
-        ]
+                },
+            },
+        ],
     }
 
     sentinel = ProtocolQualitySentinel()
@@ -262,9 +269,13 @@ def test_amendment_impact_and_cost_estimation() -> None:
                 "activities": [
                     {
                         "id": "p1",
-                        "forms": [{"id": "f1"}, {"id": "f2"}, {"id": "f3"}]  # 3 forms (+2 added)
+                        "forms": [
+                            {"id": "f1"},
+                            {"id": "f2"},
+                            {"id": "f3"},
+                        ],  # 3 forms (+2 added)
                     }
-                ]
+                ],
             }
         ],
         "eligibilityCriteria": [{"id": "e1"}],
@@ -303,26 +314,40 @@ def test_pluggable_fixture_patient_attrition() -> None:
                     "type": "comparison",
                     "operator": ">=",
                     "operands": [
-                        {"type": "field_ref", "field_ref": {"raw_reference": "eCRF.DM.AGE", "domain": "DM", "variable": "AGE"}},
-                        {"type": "constant", "value": 18}
-                    ]
-                }
+                        {
+                            "type": "field_ref",
+                            "field_ref": {
+                                "raw_reference": "eCRF.DM.AGE",
+                                "domain": "DM",
+                                "variable": "AGE",
+                            },
+                        },
+                        {"type": "constant", "value": 18},
+                    ],
+                },
             },
             {
                 "id": "crit_liver",
                 "criterion_type": "exclusion",
                 "description": "Exclude patients with liver disease",
                 "dsl_source": "eCRF.MH.LIVER_DISEASE == True",
-                "expected_outcome": False, # Expect False to pass/meet exclusion
+                "expected_outcome": False,  # Expect False to pass/meet exclusion
                 "condition": {
                     "type": "comparison",
                     "operator": "==",
                     "operands": [
-                        {"type": "field_ref", "field_ref": {"raw_reference": "eCRF.MH.LIVER_DISEASE", "domain": "MH", "variable": "LIVER_DISEASE"}},
-                        {"type": "constant", "value": True}
-                    ]
-                }
-            }
+                        {
+                            "type": "field_ref",
+                            "field_ref": {
+                                "raw_reference": "eCRF.MH.LIVER_DISEASE",
+                                "domain": "MH",
+                                "variable": "LIVER_DISEASE",
+                            },
+                        },
+                        {"type": "constant", "value": True},
+                    ],
+                },
+            },
         ],
     }
 

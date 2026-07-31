@@ -81,7 +81,7 @@ PATIENT_FIXTURES = [
         "diastolic_bp": 78,
         "has_diabetes": False,
         "has_liver_disease": True,  # Liver disease
-        "pregnancy_status": True,   # Pregnant
+        "pregnancy_status": True,  # Pregnant
     },
     {
         "id": "PT_05",
@@ -232,7 +232,11 @@ class ProtocolQualitySentinel:
                     encounters_list.extend(encs)
                     for enc in encs:
                         if isinstance(enc, dict):
-                            enc_id = enc.get("id") or enc.get("encounter_id") or enc.get("visit_id")
+                            enc_id = (
+                                enc.get("id")
+                                or enc.get("encounter_id")
+                                or enc.get("visit_id")
+                            )
                             if enc_id:
                                 valid_visits.add(str(enc_id))
 
@@ -241,8 +245,16 @@ class ProtocolQualitySentinel:
                     procedures_list.extend(acts)
                     for act in acts:
                         if isinstance(act, dict):
-                            act_id = act.get("id") or act.get("activity_id") or act.get("procedure_id")
-                            act_name = act.get("name") or act.get("activity_name") or act.get("procedure_name")
+                            act_id = (
+                                act.get("id")
+                                or act.get("activity_id")
+                                or act.get("procedure_id")
+                            )
+                            act_name = (
+                                act.get("name")
+                                or act.get("activity_name")
+                                or act.get("procedure_name")
+                            )
                             if act_id:
                                 valid_procedures.add(str(act_id))
                             if act_name:
@@ -257,7 +269,9 @@ class ProtocolQualitySentinel:
                                     for f in fields:
                                         if isinstance(f, dict):
                                             f_id = f.get("id") or f.get("field_id")
-                                            f_name = f.get("name") or f.get("field_name")
+                                            f_name = f.get("name") or f.get(
+                                                "field_name"
+                                            )
                                             if f_id:
                                                 valid_fields.add(str(f_id))
                                             if f_name:
@@ -278,7 +292,9 @@ class ProtocolQualitySentinel:
             for block in blocks_data:
                 if isinstance(block, dict):
                     props = block.get("properties", {}) or block
-                    block_id = block.get("id") or block.get("block_id") or "block_unnamed"
+                    block_id = (
+                        block.get("id") or block.get("block_id") or "block_unnamed"
+                    )
 
                     # Check referenced visits in blocks
                     ref_visit = props.get("visit_id")
@@ -310,20 +326,45 @@ class ProtocolQualitySentinel:
         if isinstance(criteria, list):
             for crit in criteria:
                 if isinstance(crit, dict):
-                    crit_id = crit.get("id") or crit.get("criterion_id") or "criterion_unnamed"
+                    crit_id = (
+                        crit.get("id")
+                        or crit.get("criterion_id")
+                        or "criterion_unnamed"
+                    )
                     dsl_src = crit.get("dsl_source", "")
                     # Extract referenced variables from DSL (simple variable-name extractor)
                     variables = re.findall(r"\b[a-zA-Z_][a-zA-Z0-9_\.]*\b", dsl_src)
                     for var in variables:
                         # Skip numeric/boolean keywords or namespaces
-                        if var in ("True", "False", "true", "false", "and", "or", "not", "eCRF", "DM", "VS", "MH"):
+                        if var in (
+                            "True",
+                            "False",
+                            "true",
+                            "false",
+                            "and",
+                            "or",
+                            "not",
+                            "eCRF",
+                            "DM",
+                            "VS",
+                            "MH",
+                        ):
                             continue
                         # If namespaced (e.g. eCRF.DM.AGE), extract final part
                         final_part = var.split(".")[-1]
                         if (
                             final_part not in valid_fields
                             and var not in valid_fields
-                            and final_part.upper() not in ("AGE", "SEX", "SYSBP", "DIABP", "DIABETES", "LIVER_DISEASE", "PREGNANT")
+                            and final_part.upper()
+                            not in (
+                                "AGE",
+                                "SEX",
+                                "SYSBP",
+                                "DIABP",
+                                "DIABETES",
+                                "LIVER_DISEASE",
+                                "PREGNANT",
+                            )
                         ):
                             findings.append(
                                 QualityRuleFinding(
@@ -347,7 +388,11 @@ class ProtocolQualitySentinel:
 
         # Fallback text if no blocks are present
         if not narratives:
-            narratives.append(str(study_payload.get("desc", "")) or str(study_payload.get("description", "")) or "Clinical protocol for testing.")
+            narratives.append(
+                str(study_payload.get("desc", ""))
+                or str(study_payload.get("description", ""))
+                or "Clinical protocol for testing."
+            )
 
         full_text = " ".join(narratives)
         words = [w.strip(".,;:?!\"'()[]{}") for w in full_text.split() if w.strip()]
@@ -358,8 +403,16 @@ class ProtocolQualitySentinel:
         syllable_count = sum(count_syllables_word(w) for w in words)
 
         if word_count > 0:
-            fre = 206.835 - 1.015 * (word_count / sentence_count) - 84.6 * (syllable_count / word_count)
-            fkgl = 0.39 * (word_count / sentence_count) + 11.8 * (syllable_count / word_count) - 15.59
+            fre = (
+                206.835
+                - 1.015 * (word_count / sentence_count)
+                - 84.6 * (syllable_count / word_count)
+            )
+            fkgl = (
+                0.39 * (word_count / sentence_count)
+                + 11.8 * (syllable_count / word_count)
+                - 15.59
+            )
             fre = max(0.0, min(100.0, fre))
             fkgl = max(0.0, min(20.0, fkgl))
         else:
@@ -410,7 +463,12 @@ class ProtocolQualitySentinel:
         # Calculate procedure-level burden recursively with invasiveness modifiers
         for proc in procedures_list:
             if isinstance(proc, dict):
-                p_name = str(proc.get("name") or proc.get("activity_name") or proc.get("procedure_name") or "").lower()
+                p_name = str(
+                    proc.get("name")
+                    or proc.get("activity_name")
+                    or proc.get("procedure_name")
+                    or ""
+                ).lower()
                 base_w = 2.0
                 inv_modifier = 0.0
                 modifier_explanation = ""
@@ -418,13 +476,29 @@ class ProtocolQualitySentinel:
                 if "biopsy" in p_name or "surgery" in p_name or "surgical" in p_name:
                     inv_modifier = 10.0
                     modifier_explanation = " (+10.0 high invasiveness)"
-                elif "blood" in p_name or "phlebotomy" in p_name or "venipuncture" in p_name or "lab" in p_name:
+                elif (
+                    "blood" in p_name
+                    or "phlebotomy" in p_name
+                    or "venipuncture" in p_name
+                    or "lab" in p_name
+                ):
                     inv_modifier = 3.0
                     modifier_explanation = " (+3.0 moderate invasiveness)"
-                elif "mri" in p_name or "ct scan" in p_name or "imaging" in p_name or "x-ray" in p_name or "ecg" in p_name or "electrocardiogram" in p_name:
+                elif (
+                    "mri" in p_name
+                    or "ct scan" in p_name
+                    or "imaging" in p_name
+                    or "x-ray" in p_name
+                    or "ecg" in p_name
+                    or "electrocardiogram" in p_name
+                ):
                     inv_modifier = 5.0
                     modifier_explanation = " (+5.0 device burden)"
-                elif "injection" in p_name or "infusion" in p_name or "intravenous" in p_name:
+                elif (
+                    "injection" in p_name
+                    or "infusion" in p_name
+                    or "intravenous" in p_name
+                ):
                     inv_modifier = 8.0
                     modifier_explanation = " (+8.0 delivery burden)"
 
@@ -479,6 +553,7 @@ class ProtocolQualitySentinel:
         if parent_version:
             # Look up parent frozen projection from mock memory
             from apps.designer.db import MOCK_STUDY_PROJECTIONS_BY_VERSION
+
             parent_key = f"{study_id}:{parent_version}"
             parent_projection = MOCK_STUDY_PROJECTIONS_BY_VERSION.get(parent_key)
 
@@ -497,7 +572,10 @@ class ProtocolQualitySentinel:
                 cost += deleted_forms * 100.0
                 cost += 5000.0  # Base protocol writing & IRB resubmission overhead
 
-                p_burden = float(len(parent_projection.get("visits", [])) * 1.5 + len(parent_projection.get("activities", [])) * 2.0)
+                p_burden = float(
+                    len(parent_projection.get("visits", [])) * 1.5
+                    + len(parent_projection.get("activities", [])) * 2.0
+                )
                 burden_change = total_burden - p_burden
 
                 explanation = (
@@ -560,7 +638,11 @@ class ProtocolQualitySentinel:
 
                                 # Evaluate expected outcome match
                                 expected = crit.get("expected_outcome", True)
-                                is_met = node_eval.value == expected if not node_eval.is_indeterminate else False
+                                is_met = (
+                                    node_eval.value == expected
+                                    if not node_eval.is_indeterminate
+                                    else False
+                                )
 
                                 if is_met:
                                     passed_pts.append(pt)
@@ -570,7 +652,11 @@ class ProtocolQualitySentinel:
                             # Update remaining active cohort
                             current_cohort = passed_pts
                             lost_cnt = prior_count - len(current_cohort)
-                            rate_lost = (lost_cnt / prior_count) * 100.0 if prior_count > 0 else 0.0
+                            rate_lost = (
+                                (lost_cnt / prior_count) * 100.0
+                                if prior_count > 0
+                                else 0.0
+                            )
 
                             attrition_steps.append(
                                 AttritionStep(
@@ -585,7 +671,9 @@ class ProtocolQualitySentinel:
                             )
 
         final_eligible = len(current_cohort)
-        eligibility_rate = (final_eligible / starting_cohort) * 100.0 if starting_cohort > 0 else 0.0
+        eligibility_rate = (
+            (final_eligible / starting_cohort) * 100.0 if starting_cohort > 0 else 0.0
+        )
 
         feasibility_report = FeasibilityReport(
             starting_cohort_size=starting_cohort,
