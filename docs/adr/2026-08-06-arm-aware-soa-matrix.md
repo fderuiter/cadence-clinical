@@ -21,7 +21,7 @@ This decision implements requirements under Trace-6.
 
 ## 3. Options Considered
 ### Option 1: Dedicated Sibling Component with Automatic Integration
-* **Overview:** Build `createClinicalSoAMatrix` as a focused sibling component in `packages/ui/index.js`, and extend the original wrapper `createClinicalVisitMatrix` to dynamically detect the shape of input data and delegate to this new component when needed.
+* **Overview:** Build `createClinicalSoAMatrix` as a focused sibling component in `packages/ui/src/index.ts`, and extend the original wrapper `createClinicalVisitMatrix` to dynamically detect the shape of input data and delegate to this new component when needed.
 * **Pros:**
   * ✅ High modularity and 100% backwards compatibility.
   * ✅ Clean API design separating simple visit-form matrices from rich hierarchical SoA matrices.
@@ -51,7 +51,7 @@ This decision implements requirements under Trace-6.
 
 ## 6. Implementation & Verification
 * **Affected Repositories / Services:**
-  * `packages/ui/index.js` (Component implementation)
+  * `packages/ui/src/index.ts` (Component implementation)
   * `apps/web/src/style.css` (CSS styles)
   * `apps/web/src/views/MdrView.vue` (Visualizer integration)
 * **Verification Plan:**

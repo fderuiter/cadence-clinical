@@ -43,7 +43,7 @@ This decision implements requirements under Trace-1.
 * **Affected Repositories / Services:**
   * Frontend store: `apps/web/src/stores/clinical.js`
   * Frontend view: `apps/web/src/views/EcrfView.vue`
-  * Shared security: `packages/security/middleware.py` and `packages/ui/signing.js`
+  * Shared security: `packages/security/middleware.py` and `packages/ui/src/signing.js`
   * Execution backend router: `apps/execution/main.py`
 * **Verification Plan:**
   * Comprehensive Jest/Vitest unit tests covering frontend background queue and storage state.

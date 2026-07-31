@@ -8,7 +8,7 @@
 ---
 
 ## 1. Context & Problem Statement
-The Cadence Clinical platform requires an authenticated web API client under `apps/web/src/api/` to securely interact with the API Gateway endpoints for controlled terminology (CT) validation, text-based terminology search, and study-level terminology reports. The client must reuse the cryptographic signing library in `packages/ui/signing.js` to construct canonical gateway signatures and verify transmission boundaries.
+The Cadence Clinical platform requires an authenticated web API client under `apps/web/src/api/` to securely interact with the API Gateway endpoints for controlled terminology (CT) validation, text-based terminology search, and study-level terminology reports. The client must reuse the cryptographic signing library in `packages/ui/src/signing.js` to construct canonical gateway signatures and verify transmission boundaries.
 
 Additionally, this change aligns standard GxP formatting and style standardizations across database entities, including `apps/execution/database/models.py`.
 
@@ -28,7 +28,7 @@ This decision implements requirements under Trace-8.
   * ❌ Violates 21 CFR Part 11 identity tracking and GxP compliance.
   * ❌ Bypasses API Gateway security and rate-limiting blocks.
 
-### Option 2: Gateway-Targeted signed client using packages/ui/signing.js (Selected)
+### Option 2: Gateway-Targeted signed client using packages/ui/src/signing.js (Selected)
 * **Overview:** Implement `terminologyClient` inside `apps/web/src/api/` to target the gateway base URL, generate HMAC signatures dynamically using the shared cryptographic helper, and map terminology status fields distinctly from physical transmission errors via `TerminologyNetworkError`.
 * **Pros:**
   * ✅ High security: Uses GxP-compliant canonical JSON signatures for identity propagation.

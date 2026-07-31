@@ -9,7 +9,7 @@
 
 ## 1. Context & Problem Statement
 
-The platform is moving towards a standardized Vue 3 single page application (SPA) architecture as part of ADR-052. The eConsent features (`apps/econsent`) are being fully integrated into modular Vue 3 components and the Subject Portal PWA. Having a standalone utility file at `packages/ui/econsent.js` duplicates logic and introduces maintenance overhead, as normalization and presentation parsing have been encapsulated directly within the reactive frontend stores and views. We need to deprecate and remove this legacy helper to ensure system-wide codebase cleanliness and eliminate duplicate validation pathways. This change is traced to PRD-SYS-001.
+The platform is moving towards a standardized Vue 3 single page application (SPA) architecture as part of ADR-052. The eConsent features (`apps/econsent`) are being fully integrated into modular Vue 3 components and the Subject Portal PWA. Having a standalone utility file at `packages/ui/src/econsent.js` duplicates logic and introduces maintenance overhead, as normalization and presentation parsing have been encapsulated directly within the reactive frontend stores and views. We need to deprecate and remove this legacy helper to ensure system-wide codebase cleanliness and eliminate duplicate validation pathways. This change is traced to PRD-SYS-001.
 
 ## 2. Decision Drivers & Constraints
 
@@ -19,8 +19,8 @@ The platform is moving towards a standardized Vue 3 single page application (SPA
 
 ## 3. Options Considered
 
-1. **Option A (Selected)**: Completely deprecate and remove `packages/ui/econsent.js` and consolidate all normalization and state logic inside `apps/web/src/api/econsent.js` and Pinia stores.
-2. **Option B (Alternative)**: Retain `packages/ui/econsent.js` as a compatibility shim and proxy all Vue 3 store calls through it.
+1. **Option A (Selected)**: Completely deprecate and remove `packages/ui/src/econsent.js` and consolidate all normalization and state logic inside `apps/web/src/api/econsent.js` and Pinia stores.
+2. **Option B (Alternative)**: Retain `packages/ui/src/econsent.js` as a compatibility shim and proxy all Vue 3 store calls through it.
 
 ## 4. Decision Outcome
 
@@ -33,6 +33,6 @@ Chosen option: **Option A** because it completely removes duplicate code pathway
 
 ## 6. Implementation & Verification
 
-* Removed `packages/ui/econsent.js`.
+* Removed `packages/ui/src/econsent.js`.
 * Consolidated client-side integration and API contracts in `apps/web/src/api/econsent.js`.
 * Verified by running all unit, integration, and UI tests (e.g. `tests/test_econsent_capture.py` and front-end vitest specs) successfully.

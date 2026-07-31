@@ -52,7 +52,7 @@ This decision implements requirements under PRD-QRY-001.
 
 ## 6. Implementation & Verification
 * **Affected Repositories / Services:**
-  * `packages/ui`: Modified `packages/ui/index.js` and `packages/ui/tests/index.test.js` to implement and test `createClinicalLookupInput` and `debounce`.
+  * `packages/ui`: Modified `packages/ui/src/index.ts` and `packages/ui/tests/index.test.js` to implement and test `createClinicalLookupInput` and `debounce`.
   * `apps/web`: Modified `apps/web/src/style.css` to add CSS rules for lookups.
 * **Verification Plan:**
   * Unit tests in `packages/ui/tests/index.test.js` run via Vitest.
