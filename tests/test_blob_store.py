@@ -170,7 +170,7 @@ async def test_s3_storage_provider_lifecycle():
         provider = S3StorageProvider(
             bucket_name="test-bucket",
             aws_access_key_id="test",
-            aws_secret_access_key="test",
+            aws_secret_access_key="test",  # pragma: allowlist secret
             region_name="us-east-1",
             endpoint_url="http://localhost:9000",
             sse_algorithm="AES256",

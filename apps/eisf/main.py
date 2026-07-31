@@ -1152,7 +1152,9 @@ async def sync_documents(
 
     for item in payload.submissions:
         # Enforce site isolation for each item
-        await enforce_document_site_visibility(principal, item.site_id, session, request)
+        await enforce_document_site_visibility(
+            principal, item.site_id, session, request
+        )
 
         processed_count += 1
 
