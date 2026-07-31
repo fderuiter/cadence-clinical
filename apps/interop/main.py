@@ -13,7 +13,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from apps.interop.auth import (
     has_subject_role,
     require_staff_role,
-    subject_identity_guard,  # noqa: F401
     verify_subject_bulk_identity,
     verify_subject_identity,
 )
@@ -1481,59 +1480,104 @@ async def acknowledge_notification(
 
 
 class NotificationRouter:
-    """Routes reminders to central notifications service using fail-soft exception handling."""
+    """
+    Generalized notification router for the eCOA/ePRO Interop service.
+    Routes email, SMS, webhook, and in-app reminders to the central notifications service.
+    """
 
-    async def _send(self, payload: dict) -> bool:
+    def __init__(self):
+        self.notifications_url = os.getenv(
+            "NOTIFICATIONS_URL", "http://localhost:8005/api/v1/notifications"
+        )
+
+    async def send_email(self, recipient: str, message: str) -> bool:
         try:
             async with httpx.AsyncClient() as client:
                 resp = await client.post(
-                    "http://localhost:8000/api/v1/notifications", json=payload
+                    self.notifications_url,
+                    json={
+                        "recipient_user_id": recipient,
+                        "category": "SYSTEM",
+                        "priority": "MEDIUM",
+                        "channels": "EMAIL",
+                        "message_content": message,
+                    },
+                    timeout=5.0,
                 )
                 if resp.status_code == 201:
                     return True
                 return False
         except httpx.RequestError:
-            # GxP Fail-soft behavior: return True to represent fallback stubbed delivery
+            # GxP fail-soft fallback: return True for stubbed delivery/resilience
             return True
+        except Exception:
+            return False
 
-    async def send_email(self, email_address: str, message: str) -> bool:
-        payload = {
-            "recipient_user_id": email_address,
-            "category": "REMINDERS",
-            "priority": "MEDIUM",
-            "channels": "EMAIL",
-            "message_content": message,
-        }
-        return await self._send(payload)
-
-    async def send_sms(self, phone_number: str, message: str) -> bool:
-        payload = {
-            "recipient_user_id": phone_number,
-            "category": "REMINDERS",
-            "priority": "MEDIUM",
-            "channels": "SMS",
-            "message_content": message,
-        }
-        return await self._send(payload)
+    async def send_sms(self, recipient: str, message: str) -> bool:
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    self.notifications_url,
+                    json={
+                        "recipient_user_id": recipient,
+                        "category": "SYSTEM",
+                        "priority": "MEDIUM",
+                        "channels": "SMS",
+                        "message_content": message,
+                    },
+                    timeout=5.0,
+                )
+                if resp.status_code == 201:
+                    return True
+                return False
+        except httpx.RequestError:
+            # GxP fail-soft fallback: return True for stubbed delivery/resilience
+            return True
+        except Exception:
+            return False
 
     async def send_webhook(self, url: str, payload: dict) -> bool:
-        message = payload.get("data") or str(payload)
-        notification_payload = {
-            "category": "REMINDERS",
-            "priority": "MEDIUM",
-            "channels": "WEBHOOK",
-            "message_content": message,
-            "related_entity_id": url,
-            "related_entity_type": "webhook",
-        }
-        return await self._send(notification_payload)
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    self.notifications_url,
+                    json={
+                        "recipient_user_id": url,
+                        "category": "SYSTEM",
+                        "priority": "MEDIUM",
+                        "channels": "WEBHOOK",
+                        "message_content": str(payload),
+                    },
+                    timeout=5.0,
+                )
+                if resp.status_code == 201:
+                    return True
+                return False
+        except httpx.RequestError:
+            # GxP fail-soft fallback: return True for stubbed delivery/resilience
+            return True
+        except Exception:
+            return False
 
-    async def send_in_app(self, subject_id: str, message: str) -> bool:
-        payload = {
-            "recipient_user_id": subject_id,
-            "category": "REMINDERS",
-            "priority": "MEDIUM",
-            "channels": "IN_APP",
-            "message_content": message,
-        }
-        return await self._send(payload)
+    async def send_in_app(self, recipient: str, message: str) -> bool:
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    self.notifications_url,
+                    json={
+                        "recipient_user_id": recipient,
+                        "category": "SYSTEM",
+                        "priority": "MEDIUM",
+                        "channels": "IN_APP",
+                        "message_content": message,
+                    },
+                    timeout=5.0,
+                )
+                if resp.status_code == 201:
+                    return True
+                return False
+        except httpx.RequestError:
+            # GxP fail-soft fallback: return True for stubbed delivery/resilience
+            return True
+        except Exception:
+            return False

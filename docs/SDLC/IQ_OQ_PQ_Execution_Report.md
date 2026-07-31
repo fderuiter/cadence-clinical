@@ -9,10 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1773
-- **Passed:** 1773 🟢
-- **Total Automated Test Cases Run:** 1772
-- **Passed:** 1772 🟢
+- **Total Automated Test Cases Run:** 1777
+- **Passed:** 1777 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -250,6 +248,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_soft_delete_generates_audit_log` | `tests.test_audit` | PRD-SYS-002 | 🟢 PASSED | < 1s |
 | `test_subject_notification_skips_clinical_auditing` | `tests.test_audit` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_update_generates_audit_log` | `tests.test_audit` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_audit_action_imports_bare_name` | `tests.test_audit_action_taxonomy` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_audit_action_members_value_stability` | `tests.test_audit_action_taxonomy` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_audit_action_target_service_literals` | `tests.test_audit_action_taxonomy` | PRD-SYS-001 | 🟢 PASSED | < 1s |
+| `test_audit_action_taxonomy_groupings` | `tests.test_audit_action_taxonomy` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_generate_auditor_token_post_endpoint` | `tests.test_auditor_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_inspect_study_audit_trail_endpoint` | `tests.test_auditor_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_expired_auditor_token_raises_error` | `tests.test_auditor_token` | *Regression/Helper* | 🟢 PASSED | < 1s |
