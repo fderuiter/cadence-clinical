@@ -9,3 +9,10 @@ onlyBuiltDependencies:
   - esbuild
   - "@shikijs/core"
   - shiki
+
+minimumReleaseAge: 0
+minimumReleaseAgeExclude:
+  - "@playwright/test"
+  - "playwright-core"
+  - "playwright"
+
