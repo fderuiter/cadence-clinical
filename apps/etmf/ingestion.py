@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from protocol_version_ref import ProtocolVersionRef
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,21 +16,21 @@ async def ingest_document_service(
     mime_type: str,
     user_id: str,
     user_roles: str,
-    site_id: Optional[str] = None,
-    idempotency_key: Optional[str] = None,
-    assigned_sites: Optional[List[str]] = None,
-    zone: Optional[int] = None,
-    section: Optional[str] = None,
-    artifact_code: Optional[str] = None,
-    taxonomy_version: Optional[str] = None,
-    metadata_json: Optional[Dict[str, Any]] = None,
+    site_id: str | None = None,
+    idempotency_key: str | None = None,
+    assigned_sites: list[str] | None = None,
+    zone: int | None = None,
+    section: str | None = None,
+    artifact_code: str | None = None,
+    taxonomy_version: str | None = None,
+    metadata_json: dict[str, Any] | None = None,
     audit_action: str = "INGEST",
-    audit_details: Optional[str] = None,
-    reason_for_change: Optional[str] = None,
-    protocol_version: Optional[ProtocolVersionRef] = None,
-    correlation_key: Optional[str] = None,
-    content_checksum: Optional[str] = None,
-    source_system: Optional[str] = None,
+    audit_details: str | None = None,
+    reason_for_change: str | None = None,
+    protocol_version: ProtocolVersionRef | None = None,
+    correlation_key: str | None = None,
+    content_checksum: str | None = None,
+    source_system: str | None = None,
 ) -> TMFDocument:
     """Compatibility wrapper that delegates to ingest_tmf_document."""
     return await ingest_tmf_document(

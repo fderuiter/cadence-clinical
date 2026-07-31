@@ -1,6 +1,6 @@
 import logging
-from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -20,7 +20,7 @@ class SyncMetadata(BaseModel):
     Conflict resolution and validation metadata for a record.
     """
 
-    timestamps: Dict[str, datetime] = Field(
+    timestamps: dict[str, datetime] = Field(
         default_factory=dict,
         description="Per-field UTC timestamps indicating when each field in 'data' was modified",
     )
@@ -28,7 +28,7 @@ class SyncMetadata(BaseModel):
         ...,
         description="The identity/device/user that modified this record, used for tiebreaking",
     )
-    signature: Optional[str] = Field(
+    signature: str | None = Field(
         None,
         description="HMAC-SHA256 signature of the payload for cryptographic integrity",
     )
@@ -43,7 +43,7 @@ class SyncRecord(BaseModel):
         ...,
         description="Caller-supplied natural deduplication key (e.g. subject_id:diary_id)",
     )
-    data: Dict[str, Any] = Field(..., description="The record data key-values")
+    data: dict[str, Any] = Field(..., description="The record data key-values")
     metadata: SyncMetadata = Field(
         ..., description="Conflict resolution and validation metadata"
     )
@@ -52,11 +52,11 @@ class SyncRecord(BaseModel):
 def normalize_to_utc(dt: datetime) -> datetime:
     """Normalizes a datetime object to timezone-aware UTC."""
     if dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc)
+        return dt.replace(tzinfo=UTC)
+    return dt.astimezone(UTC)
 
 
-def get_signature_payload(record: SyncRecord) -> Dict[str, Any]:
+def get_signature_payload(record: SyncRecord) -> dict[str, Any]:
     """
     Constructs the canonical signature payload by serializing datetimes to ISO-8601 strings
     and omitting the signature field.
@@ -89,13 +89,13 @@ def verify_record_signature(record: SyncRecord, secret: bytes) -> bool:
 
 
 def reconcile_records(
-    existing_data: Dict[str, Any],
-    existing_metadata: Optional[SyncMetadata],
+    existing_data: dict[str, Any],
+    existing_metadata: SyncMetadata | None,
     incoming_record: SyncRecord,
     strategy: str,
-    secret: Optional[bytes] = None,
+    secret: bytes | None = None,
     require_signature: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Reconciles existing data/metadata and an incoming SyncRecord based on the selected conflict strategy.
 
@@ -142,9 +142,7 @@ def reconcile_records(
     if strategy_upper == "SERVER_WINS":
         # Keep existing, construct default/fallback metadata if missing
         fallback_metadata = existing_metadata or SyncMetadata(
-            timestamps={
-                k: datetime(1970, 1, 1, tzinfo=timezone.utc) for k in existing_data
-            },
+            timestamps={k: datetime(1970, 1, 1, tzinfo=UTC) for k in existing_data},
             modified_by="server",
         )
         return {
@@ -156,11 +154,11 @@ def reconcile_records(
     if strategy_upper == "MERGE":
         # Initialize merged data and timestamps
         merged_data = {}
-        merged_timestamps: Dict[str, datetime] = {}
+        merged_timestamps: dict[str, datetime] = {}
 
         # Set up helper to get existing field metadata safely
         existing_m_by = existing_metadata.modified_by if existing_metadata else "server"
-        epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+        epoch = datetime(1970, 1, 1, tzinfo=UTC)
 
         all_keys = set(existing_data.keys()).union(incoming_record.data.keys())
 

@@ -4,7 +4,7 @@ import logging
 import os
 import sys
 from datetime import datetime, timedelta
-from typing import Any, Optional
+from typing import Any
 
 from sqlalchemy import and_, or_, select
 
@@ -12,7 +12,7 @@ from apps.tickets.models import TERMINAL_STATES, Ticket
 
 logger = logging.getLogger("tickets_escalation")
 
-_escalation_task: Optional[asyncio.Task] = None
+_escalation_task: asyncio.Task | None = None
 _should_run: bool = False
 
 NEXT_PRIORITY = {
@@ -37,8 +37,8 @@ def is_notification_owed(ticket: Ticket) -> bool:
 async def dispatch_escalation_notification(
     ticket_id: str,
     reference: str,
-    assignee_user: Optional[str],
-    assignee_role: Optional[str],
+    assignee_user: str | None,
+    assignee_role: str | None,
     priority: str,
     version_index: int,
 ) -> bool:

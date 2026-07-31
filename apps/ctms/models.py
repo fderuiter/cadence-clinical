@@ -1,6 +1,6 @@
 import uuid
-from datetime import date, datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, date, datetime
+from typing import Any
 
 from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -75,7 +75,7 @@ class MonitoringVisit(Base):
     cra_id: Mapped[str] = mapped_column(String(255), nullable=False)
     visit_type: Mapped[str] = mapped_column(String(50), nullable=False)
     scheduled_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    actual_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    actual_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     status: Mapped[str] = mapped_column(String(50), default="SCHEDULED", nullable=False)
 
     # Standard Part 11 Audit Fields
@@ -86,18 +86,16 @@ class MonitoringVisit(Base):
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
-    signature_manifestation: Mapped[Optional[Dict[str, Any]]] = mapped_column(
+    signature_manifestation: Mapped[dict[str, Any] | None] = mapped_column(
         JSON, nullable=True
     )
-    signer: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    signing_timestamp: Mapped[Optional[datetime]] = mapped_column(
-        DateTime, nullable=True
-    )
+    signer: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    signing_timestamp: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
-    offline_sync_markers: Mapped[Optional[Dict[str, Any]]] = mapped_column(
+    offline_sync_markers: Mapped[dict[str, Any] | None] = mapped_column(
         JSON, nullable=True
     )
-    sync_status: Mapped[Optional[str]] = mapped_column(
+    sync_status: Mapped[str | None] = mapped_column(
         String(50), default="RESOLVED", nullable=True
     )
 
@@ -129,10 +127,10 @@ class MonitoringVisitFinding(Base):
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
-    offline_sync_markers: Mapped[Optional[Dict[str, Any]]] = mapped_column(
+    offline_sync_markers: Mapped[dict[str, Any] | None] = mapped_column(
         JSON, nullable=True
     )
-    sync_status: Mapped[Optional[str]] = mapped_column(
+    sync_status: Mapped[str | None] = mapped_column(
         String(50), default="RESOLVED", nullable=True
     )
 
@@ -149,10 +147,10 @@ class MonitoringVisitDefeated(Base):
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
     visit_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    actual_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    findings: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    actual_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    findings: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     device_timestamp: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    offline_sync_markers: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
+    offline_sync_markers: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
     status: Mapped[str] = mapped_column(
         String(100),
         default="Defeated by online-merge conflict resolution",
@@ -161,8 +159,8 @@ class MonitoringVisitDefeated(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), nullable=False
     )
-    created_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    reason_for_change: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    created_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    reason_for_change: Mapped[str | None] = mapped_column(String(500), nullable=True)
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
 
@@ -179,9 +177,7 @@ class CTMSClinicalQuery(Base):
     )
     study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    visit_id: Mapped[Optional[str]] = mapped_column(
-        String(255), nullable=True, index=True
-    )
+    visit_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     status: Mapped[str] = mapped_column(String(50), default="OPEN", nullable=False)
     explanation: Mapped[str] = mapped_column(String(1000), nullable=True)
 
@@ -259,8 +255,8 @@ class SiteMilestone(Base):
     site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     milestone_type: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
-    planned_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    actual_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    planned_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    actual_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     status: Mapped[str] = mapped_column(String(50), default="PLANNED", nullable=False)
 
     # Standard Part 11 Audit Fields
@@ -289,9 +285,7 @@ class CRAAllocation(Base):
     effective_start_date: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), nullable=False
     )
-    effective_end_date: Mapped[Optional[datetime]] = mapped_column(
-        DateTime, nullable=True
-    )
+    effective_end_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # Standard Part 11 Audit Fields
     created_at: Mapped[datetime] = mapped_column(
@@ -377,7 +371,7 @@ class PaymentMilestone(Base):
     trigger_condition: Mapped[str] = mapped_column(String(100), nullable=False)
     amount: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     is_triggered: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    triggered_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    triggered_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # Standard Part 11 Audit Fields
     created_at: Mapped[datetime] = mapped_column(
@@ -404,7 +398,7 @@ class InvestigatorPayable(Base):
         nullable=False,
         index=True,
     )
-    milestone_id: Mapped[Optional[str]] = mapped_column(
+    milestone_id: Mapped[str | None] = mapped_column(
         String(36),
         ForeignKey("ctms_payment_milestones.id", ondelete="SET NULL"),
         nullable=True,
@@ -414,8 +408,8 @@ class InvestigatorPayable(Base):
     payment_status: Mapped[str] = mapped_column(
         String(50), default="PENDING", nullable=False
     )
-    due_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    paid_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    due_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # Standard Part 11 Audit Fields
     created_at: Mapped[datetime] = mapped_column(
@@ -437,9 +431,7 @@ class RegulatoryForm(Base):
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
     study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    site_id: Mapped[Optional[str]] = mapped_column(
-        String(255), nullable=True, index=True
-    )
+    site_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     form_type: Mapped[str] = mapped_column(String(50), nullable=False)
     rendered_content: Mapped[str] = mapped_column(String(100000), nullable=False)
     approval_status: Mapped[str] = mapped_column(
@@ -455,13 +447,11 @@ class RegulatoryForm(Base):
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     # Embedded signatures
-    signature_manifestation: Mapped[Optional[Dict[str, Any]]] = mapped_column(
+    signature_manifestation: Mapped[dict[str, Any] | None] = mapped_column(
         JSON, nullable=True
     )
-    signer: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    signing_timestamp: Mapped[Optional[datetime]] = mapped_column(
-        DateTime, nullable=True
-    )
+    signer: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    signing_timestamp: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class SiteStaffMember(SQLModel, table=True):
@@ -474,11 +464,11 @@ class SiteStaffMember(SQLModel, table=True):
     last_name: str
     email: str
     primary_role: str
-    license_number: Optional[str] = None
+    license_number: str | None = None
     gcp_certified: bool = Field(default=False)
 
     # GxP Audit fields
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     created_by: str
     reason_for_change: str = "Initial Staff Registration"
     version_index: int = Field(default=1)
@@ -494,13 +484,13 @@ class DOADelegationRecord(SQLModel, table=True):
     staff_user_id: str = Field(index=True, foreign_key="site_staff_members.user_id")
     task_code: str = Field(index=True)
     start_date: date
-    end_date: Optional[date] = None
+    end_date: date | None = None
     status: str = Field(default="PENDING_PI_APPROVAL")
-    pi_signature_hash: Optional[str] = None
-    pi_approved_at: Optional[datetime] = None
+    pi_signature_hash: str | None = None
+    pi_approved_at: datetime | None = None
 
     # GxP Audit fields
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     created_by: str
     reason_for_change: str
     version_index: int = Field(default=1)
@@ -525,9 +515,9 @@ class CTMSDelegation(Base):
     )
     site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     staff_user_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    task_codes: Mapped[List[str]] = mapped_column(JSON, nullable=False)
+    task_codes: Mapped[list[str]] = mapped_column(JSON, nullable=False)
     start_date: Mapped[str] = mapped_column(String(50), nullable=False)
-    end_date: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    end_date: Mapped[str | None] = mapped_column(String(50), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     signed_off: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 

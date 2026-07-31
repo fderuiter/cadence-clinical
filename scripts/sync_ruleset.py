@@ -20,8 +20,7 @@ def run_command(args: list[str], check: bool = True) -> tuple[str, str]:
     try:
         res = subprocess.run(
             args,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             text=True,
             check=check,
             timeout=30,
@@ -85,7 +84,7 @@ def sync_ruleset():
     for config_file_path in config_files:
         print(f"Loading ruleset configuration from {config_file_path}...")
         try:
-            with open(config_file_path, "r") as f:
+            with open(config_file_path) as f:
                 config_data = json.load(f)
         except Exception as e:
             print(f"Error parsing JSON from {config_file_path}: {e}")

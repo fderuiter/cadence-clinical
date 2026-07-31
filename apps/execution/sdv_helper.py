@@ -3,8 +3,7 @@
 Requirements: PRD-SYS-001
 """
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 
@@ -22,9 +21,9 @@ async def validate_and_upsert_sdv_target(
     target_id: str,
     subject_id: str,
     study_id: str,
-    site_id: Optional[str] = None,
+    site_id: str | None = None,
     verifier_id: str = "system",
-) -> tuple[bool, Optional[str]]:
+) -> tuple[bool, str | None]:
     """Validate subject/study consistency and scope-specific target existence,
 
     then upsert the corresponding SDVSignOff record without committing the database session.
@@ -97,7 +96,7 @@ async def validate_and_upsert_sdv_target(
         return False, "Invalid scope."
 
     # 3. Apply sign-off behavior
-    verified_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    verified_at = datetime.now(UTC).replace(tzinfo=None)
 
     # Update or create the matching SDVSignOff record
     stmt_signoff = select(SDVSignOff).where(

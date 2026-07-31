@@ -1,13 +1,13 @@
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from apps.execution.biostat.dates import impute_partial_date, to_sas_date
 from apps.execution.biostat.extractors import get_demographics, get_value
 
 
 def derive_adsl(
-    subjects: List[Any],
-    observations: Optional[List[Any]] = None,
-) -> List[Dict[str, Any]]:
+    subjects: list[Any],
+    observations: list[Any] | None = None,
+) -> list[dict[str, Any]]:
     """Derives the Subject-Level Analysis Dataset (ADSL).
 
     ADSL is unique as it contains exactly one record per subject, consolidating
@@ -23,7 +23,7 @@ def derive_adsl(
     obs_list = observations or []
 
     # Pre-group observations by subject_id for fast lookup
-    obs_by_subject: Dict[str, List[Any]] = {}
+    obs_by_subject: dict[str, list[Any]] = {}
     for obs in obs_list:
         sub_id = get_value(obs, "subject_id")
         if sub_id:

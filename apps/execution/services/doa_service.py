@@ -4,8 +4,7 @@ Requirements: PRD-SYS-001
 """
 
 import uuid
-from datetime import datetime, timezone
-from typing import Dict, List
+from datetime import UTC, datetime
 
 from execution.doa_models import (
     DOAAssignmentRecord,
@@ -25,7 +24,7 @@ class DOAService:
 
     def __init__(self) -> None:
         """Initialize in-memory DOA log store and signature builder."""
-        self._store: Dict[str, DOAAssignmentRecord] = {}
+        self._store: dict[str, DOAAssignmentRecord] = {}
         self._sig_builder = CryptographicSignatureBuilder()
 
     def add_assignment(
@@ -35,7 +34,7 @@ class DOAService:
         personnel_name: str,
         personnel_email: str,
         role: DOATaskRoleEnum,
-        delegated_tasks: List[DOATaskDelegationEnum],
+        delegated_tasks: list[DOATaskDelegationEnum],
         start_date: str,
     ) -> DOAAssignmentRecord:
         """Add new site personnel task delegation entry to DOA log.
@@ -92,7 +91,7 @@ class DOAService:
 
         record = self._store[record_id]
 
-        now_iso = datetime.now(timezone.utc).isoformat()
+        now_iso = datetime.now(UTC).isoformat()
         digest = self._sig_builder.compute_content_digest(record.model_dump())
         self._sig_builder.build_signature_payload(
             user_id=pi_user_id,
@@ -107,7 +106,7 @@ class DOAService:
 
     def get_site_doa_log(
         self, study_id: str, site_id: str
-    ) -> List[DOAAssignmentRecord]:
+    ) -> list[DOAAssignmentRecord]:
         """Retrieve active Delegation of Authority log entries for site.
 
         Args:

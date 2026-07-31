@@ -11,7 +11,7 @@
 #   avoiding dependencies on external IAM networks.
 
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 import pytest_asyncio
@@ -98,7 +98,7 @@ async def test_subject_only_authorization_and_cross_subject_rejection():
     assert resp.status_code == 201
     inst_id = resp.json()["id"]
 
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    now = datetime.now(UTC).replace(tzinfo=None)
     assign_payload = {
         "subject_id": "subject_alice",
         "instrument_id": inst_id,
@@ -238,7 +238,7 @@ async def test_instrument_retrieval_and_assignment_boundaries():
     ).json()
 
     # Assign inst_1 to subject_alice only
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    now = datetime.now(UTC).replace(tzinfo=None)
     client.post(
         "/api/v1/interop/assignments",
         json={
@@ -308,7 +308,7 @@ async def test_assignment_compliance_states_and_recalculations():
         headers=staff_headers,
     ).json()
 
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    now = datetime.now(UTC).replace(tzinfo=None)
 
     # 1. Create one overdue assignment (due_at in the past)
     client.post(
@@ -409,7 +409,7 @@ async def test_offline_submission_conflict_resolution_lifecycles():
         headers=staff_headers,
     ).json()
 
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    now = datetime.now(UTC).replace(tzinfo=None)
     client.post(
         "/api/v1/interop/assignments",
         json={
@@ -556,7 +556,7 @@ async def test_structural_conflict_on_missing_or_deleted_targets():
     sub_payload = {
         "subject_id": "subject_ghost",
         "diary_id": "non_existent_diary",
-        "device_timestamp": datetime.now(timezone.utc).isoformat(),
+        "device_timestamp": datetime.now(UTC).isoformat(),
         "answers": {"pain": 10},
         "offline_sync_markers": {
             "sequence_number": 1,
@@ -645,7 +645,7 @@ async def test_notifications_lifecycle_reminders_and_acknowledgments():
         headers=staff_headers,
     ).json()
 
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    now = datetime.now(UTC).replace(tzinfo=None)
 
     # Overdue assignment
     client.post(

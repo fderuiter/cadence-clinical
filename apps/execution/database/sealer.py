@@ -4,8 +4,8 @@ import hashlib
 import json
 import logging
 import os
-from datetime import datetime, timezone
-from typing import Any, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,7 +19,7 @@ from packages.security.signing import (
 
 logger = logging.getLogger("sealer")
 
-_sealer_task: Optional[asyncio.Task] = None
+_sealer_task: asyncio.Task | None = None
 _should_run: bool = False
 
 
@@ -33,9 +33,7 @@ def clean_query(query_str: str, db: AsyncSession) -> str:
     return query_str
 
 
-async def execute_audit_sealing_cycle(
-    db: AsyncSession, limit: int = 100
-) -> Optional[str]:
+async def execute_audit_sealing_cycle(db: AsyncSession, limit: int = 100) -> str | None:
     """
     Compiles chronological batches of unsealed audit events and hashes them using SHA-256
     with sequential block-level chaining to create cryptographic seals.
@@ -122,7 +120,7 @@ async def execute_audit_sealing_cycle(
         {
             "prev": previous_hash,
             "curr": current_block_hash,
-            "timestamp": datetime.now(timezone.utc).replace(tzinfo=None),
+            "timestamp": datetime.now(UTC).replace(tzinfo=None),
             "count": len(records),
             "merkle": merkle_root,
         },
@@ -274,7 +272,7 @@ async def validate_ledger_integrity(db: AsyncSession) -> bool:
 
 
 async def start_background_sealer(
-    session_maker: Any, interval: Optional[float] = None
+    session_maker: Any, interval: float | None = None
 ) -> None:
     """
     Start the asynchronous background ledger sealer thread.

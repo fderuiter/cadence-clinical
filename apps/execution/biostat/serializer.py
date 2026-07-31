@@ -5,8 +5,8 @@ Provides functions to serialize SDTM or ADaM clinical datasets into
 CDISC Dataset-JSON format using Pydantic v2 models.
 """
 
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Union
+from datetime import UTC, datetime
+from typing import Any
 
 from apps.execution.biostat.models import (
     ClinicalData,
@@ -225,7 +225,7 @@ STANDARD_DATASETS = {
 }
 
 
-def _to_dict(record: Any) -> Dict[str, Any]:
+def _to_dict(record: Any) -> dict[str, Any]:
     """Helper to safely convert pydantic models or dict-like objects to a standard dict."""
     if hasattr(record, "model_dump"):
         return record.model_dump()
@@ -252,7 +252,7 @@ def _infer_type(value: Any) -> str:
 
 def _build_item_group(
     dataset_name: str,
-    records: List[Any],
+    records: list[Any],
 ) -> DatasetJSONItemGroup:
     """Constructs a DatasetJSONItemGroup for a specific dataset list."""
     name_upper = dataset_name.strip().upper()
@@ -338,13 +338,13 @@ def _build_item_group(
 
 
 def serialize_to_dataset_json(
-    data: Union[List[Any], Dict[str, List[Any]]],
+    data: list[Any] | dict[str, list[Any]],
     study_id: str,
     metadata_version_id: str = "MDV.001",
-    file_oid: Optional[str] = None,
-    originator: Optional[str] = None,
-    source_system: Optional[str] = None,
-    source_system_version: Optional[str] = None,
+    file_oid: str | None = None,
+    originator: str | None = None,
+    source_system: str | None = None,
+    source_system_version: str | None = None,
 ) -> DatasetJSON:
     """Serializes dataset lists or mapped bundles into CDISC Dataset-JSON structure."""
     item_group_data = {}
@@ -372,7 +372,7 @@ def serialize_to_dataset_json(
     )
 
     return DatasetJSON(
-        creationDateTime=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        creationDateTime=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
         datasetJSONVersion="1.0.0",
         fileOID=file_oid,
         originator=originator,

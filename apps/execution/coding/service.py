@@ -1,6 +1,5 @@
 import logging
-from datetime import datetime, timezone
-from typing import List, Optional
+from datetime import UTC, datetime
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -30,7 +29,7 @@ async def search_dictionary(
     term: str,
     dictionary_type: str,
     version: str,
-    target_level: Optional[str] = None,
+    target_level: str | None = None,
 ) -> dict:
     """Delegates interactive terminology search or auto-complete lookup to match_verbatim_term."""
     if not term or not term.strip():
@@ -61,11 +60,11 @@ async def search_dictionary(
 
 async def list_coding_assignments(
     session: AsyncSession,
-    observation_id: Optional[str] = None,
-    status: Optional[str] = None,
-    verbatim_text: Optional[str] = None,
-    dictionary_type: Optional[str] = None,
-) -> List[ClinicalCodingAssignment]:
+    observation_id: str | None = None,
+    status: str | None = None,
+    verbatim_text: str | None = None,
+    dictionary_type: str | None = None,
+) -> list[ClinicalCodingAssignment]:
     """Retrieves and filters active, non-deleted medical coding assignments."""
     stmt = select(ClinicalCodingAssignment).where(
         ClinicalCodingAssignment.is_deleted.is_(False)
@@ -105,10 +104,10 @@ async def process_coding_action(
     session: AsyncSession,
     assignment_id: str,
     action: str,
-    code: Optional[str] = None,
-    term: Optional[str] = None,
-    suggestion_index: Optional[int] = None,
-    reason_for_change: Optional[str] = None,
+    code: str | None = None,
+    term: str | None = None,
+    suggestion_index: int | None = None,
+    reason_for_change: str | None = None,
     actor: str = "system",
 ) -> ClinicalCodingAssignment:
     """Processes a data manager coding action (ACCEPT, OVERRIDE, or QUERY).
@@ -324,7 +323,7 @@ async def process_coding_action(
     assignment.score = score
     assignment.hierarchy = hierarchy
     assignment.assigned_by = actor
-    assignment.assigned_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    assignment.assigned_at = datetime.now(UTC).replace(tzinfo=None)
 
     # 3. Create a ledger record for ACCEPT or OVERRIDE
     if action_upper in ("ACCEPT", "OVERRIDE"):
@@ -341,7 +340,7 @@ async def process_coding_action(
             new_coded_term=coded_term,
             recoding_reason=reason_for_change or f"Manual decision: {action_upper}",
             decision_by=actor,
-            decision_at=datetime.now(timezone.utc).replace(tzinfo=None),
+            decision_at=datetime.now(UTC).replace(tzinfo=None),
         )
         session.add(ledger)
 
@@ -357,7 +356,7 @@ async def process_coding_action(
         for active_q in active_queries:
             active_q.status = "CLOSED"
             active_q.resolver = actor
-            active_q.resolved_at = datetime.now(timezone.utc).replace(tzinfo=None)
+            active_q.resolved_at = datetime.now(UTC).replace(tzinfo=None)
             active_q.response = f"Resolved via manual coding action: {action_upper} on code {coded_code}."
             session.add(active_q)
 

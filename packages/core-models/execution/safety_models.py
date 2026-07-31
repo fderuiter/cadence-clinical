@@ -3,13 +3,12 @@
 Requirements: PRD-SYS-001
 """
 
-from enum import Enum
-from typing import Optional
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class SeriousnessCriteriaEnum(str, Enum):
+class SeriousnessCriteriaEnum(StrEnum):
     """ICH E2B(R3) seriousness criteria.
 
     Requirements: PRD-SYS-001
@@ -23,7 +22,7 @@ class SeriousnessCriteriaEnum(str, Enum):
     OTHER_MEDICALLY_IMPORTANT = "OTHER_MEDICALLY_IMPORTANT"
 
 
-class CausalityEnum(str, Enum):
+class CausalityEnum(StrEnum):
     """WHO-UMC / ICH causality assessment categories.
 
     Requirements: PRD-SYS-001
@@ -62,6 +61,6 @@ class SAECaseRecord(BaseModel):
     expedited_reporting_required: bool = Field(
         False, description="True if 7/15-day expedited reporting required"
     )
-    parsed_at: Optional[str] = Field(
+    parsed_at: str | None = Field(
         None, description="UTC ISO timestamp of E2B XML ingestion"
     )

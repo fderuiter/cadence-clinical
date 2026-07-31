@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 import yaml
@@ -13,7 +13,7 @@ def extract_openapi_yaml(filepath: str) -> str:
     if not os.path.exists(filepath):
         raise FileNotFoundError(f"Markdown specification file not found: {filepath}")
 
-    with open(filepath, "r", encoding="utf-8") as f:
+    with open(filepath, encoding="utf-8") as f:
         content = f.read()
 
     # Find the Section 7 title
@@ -38,7 +38,7 @@ def extract_openapi_yaml(filepath: str) -> str:
     return sec_content[start_pos:end_pos].strip()
 
 
-def resolve_schema(schema: Any, spec: Dict[str, Any], seen: Any = None) -> Any:
+def resolve_schema(schema: Any, spec: dict[str, Any], seen: Any = None) -> Any:
     """Recursively resolve $ref references in the spec dictionary with recursion guard."""
     if seen is None:
         seen = set()
@@ -89,8 +89,8 @@ def compare_types(type_spec: Any, type_code: Any) -> bool:
 def assert_schema_parity(
     spec_schema: Any,
     code_schema: Any,
-    spec_full: Dict[str, Any],
-    code_full: Dict[str, Any],
+    spec_full: dict[str, Any],
+    code_full: dict[str, Any],
     path_context: str = "",
     bidirectional_required: bool = True,
 ) -> None:
@@ -185,7 +185,7 @@ def assert_schema_parity(
         )
 
 
-def find_code_route(spec_path: str, code_routes: Dict[str, Any]) -> Any:
+def find_code_route(spec_path: str, code_routes: dict[str, Any]) -> Any:
     """Match a specification relative path to its registered codebase route, stripping prefixes like /api/v1."""
     # Strip prefixes like /api/v1 or leading/trailing slashes for comparison
     clean_spec = spec_path.replace("/api/v1", "").strip("/")

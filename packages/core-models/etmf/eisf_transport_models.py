@@ -4,7 +4,6 @@ Requirements: PRD-SYS-001
 """
 
 from datetime import datetime
-from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -20,7 +19,7 @@ class EISFFolderNode(BaseModel):
     document_count: int = Field(
         ..., description="Count of documents inside this folder"
     )
-    subfolders: List["EISFFolderNode"] = Field(
+    subfolders: list["EISFFolderNode"] = Field(
         default_factory=list, description="List of child folder nodes"
     )
 
@@ -38,14 +37,14 @@ class EISFDocumentDetail(BaseModel):
     )
     filename: str = Field(..., description="Document file name")
     version: str = Field(..., description="Document version index/string")
-    expiration_date: Optional[str] = Field(
+    expiration_date: str | None = Field(
         None, description="Optional document expiration date (YYYY-MM-DD)"
     )
     created_at: datetime = Field(
         ..., description="Chronological UTC timestamp when record was created"
     )
     created_by: str = Field(..., description="Unique identifier of creator")
-    download_url: Optional[str] = Field(
+    download_url: str | None = Field(
         None, description="Direct download URL for document streaming"
     )
 
@@ -66,6 +65,6 @@ class EISFDocumentUploadRequest(BaseModel):
     reason_for_change: str = Field(
         ..., min_length=10, max_length=1000, description="Part 11 change justification"
     )
-    expiration_date: Optional[str] = Field(
+    expiration_date: str | None = Field(
         None, description="Optional document expiration date (YYYY-MM-DD)"
     )

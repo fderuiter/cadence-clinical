@@ -3,7 +3,7 @@
 Requirements: PRD-SYS-001
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from execution.safety_models import (
     CausalityEnum,
@@ -20,7 +20,7 @@ def test_sae_reconciler_concordant_and_discrepant() -> None:
 
     Requirements: PRD-SYS-001
     """
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now_iso = datetime.now(UTC).isoformat()
 
     safety_case_1 = SAECaseRecord(
         case_id="sae_01",

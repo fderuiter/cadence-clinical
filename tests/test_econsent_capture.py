@@ -3,7 +3,7 @@ import hmac
 import json
 import time
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 import pytest
@@ -48,7 +48,7 @@ def get_sig_token(
 def get_gateway_headers(
     user_id: str = "test_patient",
     roles: str = "patient",
-    sig_token: Optional[str] = None,
+    sig_token: str | None = None,
     change_reason: str = "test consent capture",
     secret: str = TEST_GATEWAY_SECRET,
 ) -> dict:
@@ -383,7 +383,7 @@ async def test_signature_tamper_detection() -> None:
         sig_manifest = sc_data["signature_manifest"]
         canonical_sig = sig_manifest["canonical_signature"]
 
-        def normalize_timestamp_str(dt: Any) -> Optional[str]:
+        def normalize_timestamp_str(dt: Any) -> str | None:
             if not dt:
                 return None
             if isinstance(dt, datetime):

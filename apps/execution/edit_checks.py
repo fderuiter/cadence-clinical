@@ -2,7 +2,7 @@ import contextlib
 import copy
 import logging
 from datetime import datetime
-from typing import Any, List, Optional
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -54,7 +54,7 @@ class EditCheckRule:
 
     async def evaluate(
         self, session: AsyncSession, observation: ClinicalObservation
-    ) -> Optional[str]:
+    ) -> str | None:
         raise NotImplementedError()
 
 
@@ -65,7 +65,7 @@ class OutlierCheckRule(EditCheckRule):
 
     async def evaluate(
         self, session: AsyncSession, observation: ClinicalObservation
-    ) -> Optional[str]:
+    ) -> str | None:
         if observation.is_outlier:
             return self.message
         return None
@@ -78,7 +78,7 @@ class HighSystolicBPCheckRule(EditCheckRule):
 
     async def evaluate(
         self, session: AsyncSession, observation: ClinicalObservation
-    ) -> Optional[str]:
+    ) -> str | None:
         if observation.test_code == "SYSBP" and observation.value is not None:
             if observation.value > 200.0:
                 return self.message.format(value=observation.value)
@@ -92,7 +92,7 @@ class AEConsentTemporalCheckRule(EditCheckRule):
 
     async def evaluate(
         self, session: AsyncSession, observation: ClinicalObservation
-    ) -> Optional[str]:
+    ) -> str | None:
         # This rule evaluates if we have both AE onset and Informed Consent date
         subject_id = observation.subject_id
 
@@ -174,7 +174,7 @@ def extract_fields_from_dict(node: dict) -> list:
 
 async def resolve_authored_rule_context(
     session: AsyncSession, observation: ClinicalObservation, condition: dict
-) -> tuple[Optional[dict], Optional[str]]:
+) -> tuple[dict | None, str | None]:
     """
     Resolves the data context for an authored rule's condition.
     Returns (context_dict, sentinel) where sentinel is "PENDING_PREDECESSOR" or None.
@@ -319,7 +319,7 @@ class AuthoredCrossFormRule(EditCheckRule):
 
     async def evaluate(
         self, session: AsyncSession, observation: ClinicalObservation
-    ) -> Optional[str]:
+    ) -> str | None:
         # 1. Resolve context & check for pending predecessor
         context, sentinel = await resolve_authored_rule_context(
             session, observation, self.condition
@@ -344,7 +344,7 @@ class AuthoredCrossFormRule(EditCheckRule):
 
 async def load_active_authored_rules(
     session: AsyncSession, study_id: str
-) -> List[AuthoredCrossFormRule]:
+) -> list[AuthoredCrossFormRule]:
     stmt = select(StudyAuthoredRule).where(
         StudyAuthoredRule.study_id == study_id,
         StudyAuthoredRule.is_active.is_(True),
@@ -362,7 +362,7 @@ class WeightLossCheckRule(EditCheckRule):
 
     async def evaluate(
         self, session: AsyncSession, observation: ClinicalObservation
-    ) -> Optional[str]:
+    ) -> str | None:
         # Only evaluates weight parameters
         if observation.test_code not in ["WEIGHT", "VSWT"]:
             return None
@@ -471,12 +471,12 @@ class WeightLossCheckRule(EditCheckRule):
 
 
 # Rule Registries
-FIELD_LEVEL_RULES: List[EditCheckRule] = [
+FIELD_LEVEL_RULES: list[EditCheckRule] = [
     OutlierCheckRule(),
     HighSystolicBPCheckRule(),
 ]
 
-CROSS_FORM_LONGITUDINAL_RULES: List[EditCheckRule] = [
+CROSS_FORM_LONGITUDINAL_RULES: list[EditCheckRule] = [
     AEConsentTemporalCheckRule(),
     WeightLossCheckRule(),
 ]
@@ -544,8 +544,8 @@ async def run_synchronous_edit_checks(
 async def run_asynchronous_edit_checks(
     session_factory: async_sessionmaker[AsyncSession],
     observation_id: str,
-    user_id: Optional[str] = None,
-    change_reason: Optional[str] = None,
+    user_id: str | None = None,
+    change_reason: str | None = None,
 ) -> None:
     """Asynchronous background task runner for cross-form and longitudinal check evaluations."""
     logger.info(f"Background edit checks started for observation {observation_id}")
@@ -793,8 +793,8 @@ async def resolve_pending_predecessor_checks_for_form(
     session_factory: async_sessionmaker[AsyncSession],
     subject_id: str,
     visit_id: str,
-    user_id: Optional[str] = None,
-    change_reason: Optional[str] = None,
+    user_id: str | None = None,
+    change_reason: str | None = None,
 ) -> None:
     """Background task to re-evaluate and resume any pending checks that were waiting for this visit to be completed."""
     logger.info(

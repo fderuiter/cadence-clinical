@@ -5,10 +5,10 @@ This module provides the shared controlled vocabularies (enums) for SDTM domains
 SEX, RACE, Adverse Event severity/seriousness/relationship/outcome, and HL7 Null-Flavor codes.
 """
 
-from enum import Enum
+from enum import StrEnum
 
 
-class SDTMDomain(str, Enum):
+class SDTMDomain(StrEnum):
     """
     Standard CDISC SDTM domains.
     """
@@ -21,7 +21,7 @@ class SDTMDomain(str, Enum):
     MH = "MH"
 
 
-class Sex(str, Enum):
+class Sex(StrEnum):
     """
     CDISC SEX controlled terminology.
     """
@@ -31,7 +31,7 @@ class Sex(str, Enum):
     U = "U"
 
 
-class Race(str, Enum):
+class Race(StrEnum):
     """
     CDISC RACE controlled terminology (including MULTIPLE and OTHER).
     """
@@ -47,7 +47,7 @@ class Race(str, Enum):
     OTHER = "OTHER"
 
 
-class AESeverity(str, Enum):
+class AESeverity(StrEnum):
     """
     Adverse Event Severity (AESEV) controlled terminology.
     """
@@ -57,7 +57,7 @@ class AESeverity(str, Enum):
     SEVERE = "SEVERE"
 
 
-class AESeriousness(str, Enum):
+class AESeriousness(StrEnum):
     """
     Adverse Event Seriousness (AESER) controlled terminology.
     """
@@ -66,7 +66,7 @@ class AESeriousness(str, Enum):
     N = "N"
 
 
-class AERelationship(str, Enum):
+class AERelationship(StrEnum):
     """
     Adverse Event Relationship to Treatment (AEREL) controlled terminology.
     """
@@ -76,7 +76,7 @@ class AERelationship(str, Enum):
     POSSIBLY_RELATED = "POSSIBLY RELATED"
 
 
-class AEOutcome(str, Enum):
+class AEOutcome(StrEnum):
     """
     Adverse Event Outcome (AEOUT) controlled terminology.
     """
@@ -89,7 +89,7 @@ class AEOutcome(str, Enum):
     UNKNOWN = "UNKNOWN"
 
 
-class NullFlavor(str, Enum):
+class NullFlavor(StrEnum):
     """
     Standard HL7/CDISC Null Flavor codes representing why clinical data is missing.
     """

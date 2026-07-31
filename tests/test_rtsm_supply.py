@@ -267,7 +267,7 @@ def get_gateway_headers(
         user_id=user_id,
         roles=roles,
         timestamp=timestamp,
-        secret="internal-gateway-secret-12345".encode(),  # pragma: allowlist secret
+        secret=b"internal-gateway-secret-12345",  # pragma: allowlist secret
         change_reason=change_reason,
     )
     return {

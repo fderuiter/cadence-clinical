@@ -3,8 +3,8 @@
 Requirements: PRD-SYS-001
 """
 
+# Phase 1 — Backend Contracts and Domain Support (PRD-SYS-001)
 import uuid
-from typing import Any, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -28,14 +28,14 @@ class BulkSdvSignOffRequest(BaseModel):
     study_id: str = Field(..., description="Target protocol study ID")
     subject_id: str = Field(..., description="Target subject ID")
     scope: str = Field(..., description="SDV scope boundary: FIELD, PAGE, or VISIT")
-    target_ids: List[str] = Field(
+    target_ids: list[str] = Field(
         ...,
         description="List of target database or artifact IDs corresponding to the scope",
     )
     reason_for_change: str = Field(
         ..., description="Mandatory GxP 21 CFR Part 11 justification reason"
     )
-    site_id: Optional[str] = Field(
+    site_id: str | None = Field(
         None, description="Optional site identifier for the targets"
     )
     signing_reason: str = Field(
@@ -50,7 +50,7 @@ class BulkSdvSignOffResponse(BaseModel):
     Requirements: PRD-SYS-001
     """
 
-    bulk_id: Optional[str] = Field(
+    bulk_id: str | None = Field(
         None, description="Unique bulk signature operation identifier"
     )
     content_digest: str = Field(..., description="SHA-256 digest of bulk signed data")
@@ -58,13 +58,13 @@ class BulkSdvSignOffResponse(BaseModel):
         ..., description="UTC ISO timestamp of signature execution"
     )
     audit_tx: str = Field(..., description="Immutable GxP audit ledger transaction ID")
-    verified_count: Optional[int] = Field(
+    verified_count: int | None = Field(
         None, description="Total number of successfully verified SDV items"
     )
-    verified_target_ids: Optional[List[str]] = Field(
+    verified_target_ids: list[str] | None = Field(
         None, description="List of target IDs that were successfully signed"
     )
-    skipped_targets: Optional[List[dict]] = Field(
+    skipped_targets: list[dict] | None = Field(
         default_factory=list,
         description="List of skipped targets with details on skip reasons",
     )
@@ -72,10 +72,10 @@ class BulkSdvSignOffResponse(BaseModel):
     signed_count: int = Field(
         ..., description="Total number of successfully signed SDV items"
     )
-    signed_target_ids: List[str] = Field(
+    signed_target_ids: list[str] = Field(
         ..., description="List of target IDs that were successfully signed"
     )
-    skipped_target_ids: List[str] = Field(
+    skipped_target_ids: list[str] = Field(
         ...,
         description="List of target IDs that were skipped or already signed",
     )
@@ -87,17 +87,17 @@ class QueryTargetDescriptor(BaseModel):
     Requirements: PRD-SYS-001
     """
 
-    study_id: Optional[str] = Field(None, description="Target study trial identifier")
+    study_id: str | None = Field(None, description="Target study trial identifier")
     subject_id: str = Field(..., description="Target clinical trial subject ID")
     visit_id: str = Field(..., description="Target visit identifier")
     domain: str = Field(..., description="Target SDTM domain code")
     test_code: str = Field(..., description="Target clinical test code")
-    observation_id: Optional[str] = Field(
+    observation_id: str | None = Field(
         None, description="Optional target unique clinical observation ID"
     )
-    form_id: Optional[str] = Field(None, description="Optional form identifier")
-    field_id: Optional[str] = Field(None, description="Optional field identifier")
-    explanation: Optional[str] = Field(
+    form_id: str | None = Field(None, description="Optional form identifier")
+    field_id: str | None = Field(None, description="Optional field identifier")
+    explanation: str | None = Field(
         None,
         description="Contextual explanation/issue description triggering query generation",
     )
@@ -109,12 +109,12 @@ class BulkQueryGenerationRequest(BaseModel):
     Requirements: PRD-SYS-001
     """
 
-    study_id: Optional[str] = Field(None, description="Target protocol study ID")
-    site_id: Optional[str] = Field(None, description="Optional target site identifier")
-    subject_id: Optional[str] = Field(
+    study_id: str | None = Field(None, description="Target protocol study ID")
+    site_id: str | None = Field(None, description="Optional target site identifier")
+    subject_id: str | None = Field(
         None, description="Optional target subject identifier"
     )
-    targets: List[QueryTargetDescriptor] = Field(
+    targets: list[QueryTargetDescriptor] = Field(
         ..., description="List of query target coordinate fields and explanations"
     )
     reason_for_change: str = Field(
@@ -128,24 +128,23 @@ class BulkQueryGenerationResponse(BaseModel):
     Requirements: PRD-SYS-001
     """
 
-    batch_id: Optional[str] = Field(
-        None, description="Unique bulk query batch identifier"
-    )
-    audit_tx: Optional[str] = Field(
+    batch_id: str | None = Field(None, description="Unique bulk query batch identifier")
+    audit_tx: str | None = Field(
         None, description="Immutable GxP audit ledger transaction ID"
     )
-    generated_query_ids: List[str] = Field(
+    generated_count: int = Field(..., description="Total number of generated queries")
+    generated_query_ids: list[str] = Field(
         ..., description="List of generated unique query IDs"
     )
-    skipped_targets: List[Any] = Field(
+    skipped_targets: list[QueryTargetDescriptor] = Field(
         default_factory=list,
-        description="List of target descriptors that were skipped",
+        description="List of target descriptors that were skipped due to already having an active query",
     )
 
     # Legacy fields for backward compatibility during phased rollouts
-    generated_count: Optional[int] = Field(
+    generated_count: int | None = Field(
         None, description="Legacy generated query count"
     )
-    timestamp_utc: Optional[str] = Field(
+    timestamp_utc: str | None = Field(
         None, description="UTC ISO timestamp of query generation execution"
     )

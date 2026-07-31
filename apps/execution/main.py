@@ -4,10 +4,11 @@ import shutil
 import tempfile
 import uuid
 import zipfile
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, suppress
-from datetime import datetime, timezone
-from enum import Enum
-from typing import Any, AsyncGenerator, List, Optional
+from datetime import UTC, datetime
+from enum import StrEnum
+from typing import Any
 
 from fastapi import (
     BackgroundTasks,
@@ -179,9 +180,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 class InvalidParam(BaseModel):
-    field: Optional[str] = None
-    reason: Optional[str] = None
-    value: Optional[str] = None
+    field: str | None = None
+    reason: str | None = None
+    value: str | None = None
 
 
 class ProblemDetails(BaseModel):
@@ -191,10 +192,10 @@ class ProblemDetails(BaseModel):
     detail: str
     instance: str
     code: str
-    invalid_params: Optional[List[InvalidParam]] = None
+    invalid_params: list[InvalidParam] | None = None
 
 
-class UnblindingReasonCode(str, Enum):
+class UnblindingReasonCode(StrEnum):
     """Controlled vocabulary of approved reason codes for emergency unblinding.
 
     Only these three regulatory-approved scenarios authorise an emergency
@@ -215,7 +216,7 @@ class UnblindingReasonCode(str, Enum):
     REQUIRED_BY_REGULATORY_AUTHORITY = "Required-by-Regulatory-Authority"
 
 
-class CustodianEnum(str, Enum):
+class CustodianEnum(StrEnum):
     """Enumeration of the two permissible dual-custody key holders.
 
     The Shamir secret-sharing scheme used for emergency unblinding mandates
@@ -282,7 +283,7 @@ class UnblindRequest(BaseModel):
 
     reason_code: UnblindingReasonCode
     justification: str = Field(..., min_length=MIN_JUSTIFICATION_LENGTH)
-    shares: List[CustodianShare] = Field(
+    shares: list[CustodianShare] = Field(
         ...,
         min_length=2,
         max_length=2,
@@ -482,9 +483,9 @@ class TranslationJobResponse(BaseModel):
     id: str
     study_id: str
     status: str
-    odm_payload: Optional[str] = None
-    openrosa_payload: Optional[str] = None
-    error_message: Optional[str] = None
+    odm_payload: str | None = None
+    openrosa_payload: str | None = None
+    error_message: str | None = None
 
 
 @app.get(
@@ -549,10 +550,10 @@ def verify_change_justification(request: Request) -> None:
 class Demographics(BaseModel):
     """Pydantic schema representing demographic details."""
 
-    name: Optional[str] = None
-    birthdate: Optional[str] = None
-    gender: Optional[str] = None
-    race: Optional[str] = None
+    name: str | None = None
+    birthdate: str | None = None
+    gender: str | None = None
+    race: str | None = None
 
 
 class SubjectCreate(BaseModel):
@@ -560,7 +561,7 @@ class SubjectCreate(BaseModel):
 
     subject_id: str
     study_id: str
-    demographics: Optional[Demographics] = None
+    demographics: Demographics | None = None
 
 
 class SubjectResponse(BaseModel):
@@ -569,7 +570,7 @@ class SubjectResponse(BaseModel):
     id: str
     subject_id: str
     study_id: str
-    encrypted_demographics: Optional[str] = None
+    encrypted_demographics: str | None = None
 
 
 class CriterionLevelResult(BaseModel):
@@ -586,16 +587,16 @@ class CriterionLevelResult(BaseModel):
 class SubjectScreeningResponse(BaseModel):
     """Pydantic schema for subject screening evaluation outcome, excluding PHI."""
 
-    eligible: Optional[bool] = None
-    failed_criteria: List[str] = Field(default_factory=list)
-    indeterminate_criteria: List[str] = Field(default_factory=list)
-    criterion_evaluations: List[CriterionLevelResult] = Field(default_factory=list)
+    eligible: bool | None = None
+    failed_criteria: list[str] = Field(default_factory=list)
+    indeterminate_criteria: list[str] = Field(default_factory=list)
+    criterion_evaluations: list[CriterionLevelResult] = Field(default_factory=list)
 
 
 class SubjectScreeningRequest(BaseModel):
     """Pydantic schema for requesting subject eligibility screening."""
 
-    study_id: Optional[str] = None
+    study_id: str | None = None
 
 
 class SubjectConsentRequest(BaseModel):
@@ -603,7 +604,7 @@ class SubjectConsentRequest(BaseModel):
 
     protocol_version: ProtocolVersionRef
     icf_signed: bool
-    icf_signed_date: Optional[datetime] = None
+    icf_signed_date: datetime | None = None
     requires_reconsent: bool = False
 
 
@@ -616,7 +617,7 @@ class SubjectConsentResponse(BaseModel):
     version_tag: str
     version_index: int
     icf_signed: bool
-    icf_signed_date: Optional[datetime] = None
+    icf_signed_date: datetime | None = None
     requires_reconsent: bool
     version: int
 
@@ -627,7 +628,7 @@ class VisitCreate(BaseModel):
     subject_id: str
     visit_name: str
     study_id: str
-    visit_date: Optional[datetime] = None
+    visit_date: datetime | None = None
 
 
 class VisitResponse(BaseModel):
@@ -638,25 +639,25 @@ class VisitResponse(BaseModel):
     visit_name: str
     visit_date: datetime
     study_id: str
-    protocol_version_tag: Optional[str] = None
-    protocol_version_index: Optional[int] = None
+    protocol_version_tag: str | None = None
+    protocol_version_index: int | None = None
 
 
 class ObservationCreate(BaseModel):
     """Pydantic schema for creating a clinical observation."""
 
     subject_id: str
-    study_id: Optional[str] = None
-    visit_id: Optional[str] = None
+    study_id: str | None = None
+    visit_id: str | None = None
     domain: str
     test_code: str
     test_name: str
-    value: Optional[float] = None
-    value_string: Optional[str] = None
-    unit: Optional[str] = None
-    observation_date: Optional[datetime] = None
-    lab_source: Optional[str] = None
-    lab_site_id: Optional[str] = None
+    value: float | None = None
+    value_string: str | None = None
+    unit: str | None = None
+    observation_date: datetime | None = None
+    lab_source: str | None = None
+    lab_site_id: str | None = None
 
 
 class ObservationResponse(BaseModel):
@@ -665,28 +666,28 @@ class ObservationResponse(BaseModel):
     id: str
     subject_id: str
     study_id: str
-    visit_id: Optional[str] = None
+    visit_id: str | None = None
     domain: str
     observation_date: datetime
     test_code: str
     test_name: str
-    value: Optional[float] = None
-    value_string: Optional[str] = None
-    unit: Optional[str] = None
-    normalized_value: Optional[float] = None
-    normalized_unit: Optional[str] = None
+    value: float | None = None
+    value_string: str | None = None
+    unit: str | None = None
+    normalized_value: float | None = None
+    normalized_unit: str | None = None
     is_outlier: bool
-    lab_source: Optional[str] = None
-    lab_site_id: Optional[str] = None
-    lab_indicator: Optional[str] = None
-    lab_out_of_range: Optional[bool] = None
-    matched_normal_bounds: Optional[str] = None
-    range_indicator: Optional[str] = None
-    is_out_of_range: Optional[bool] = None
-    reference_range_low: Optional[float] = None
-    reference_range_high: Optional[float] = None
-    protocol_version_tag: Optional[str] = None
-    protocol_version_index: Optional[int] = None
+    lab_source: str | None = None
+    lab_site_id: str | None = None
+    lab_indicator: str | None = None
+    lab_out_of_range: bool | None = None
+    matched_normal_bounds: str | None = None
+    range_indicator: str | None = None
+    is_out_of_range: bool | None = None
+    reference_range_low: float | None = None
+    reference_range_high: float | None = None
+    protocol_version_tag: str | None = None
+    protocol_version_index: int | None = None
 
     @model_validator(mode="after")
     def populate_range_fields(self) -> "ObservationResponse":
@@ -712,10 +713,10 @@ class MigrationRuleCreate(BaseModel):
     source_version: str
     target_version: str
     rule_type: str
-    source_field: Optional[str] = None
-    target_field: Optional[str] = None
-    default_value_string: Optional[str] = None
-    default_value_float: Optional[float] = None
+    source_field: str | None = None
+    target_field: str | None = None
+    default_value_string: str | None = None
+    default_value_float: float | None = None
 
 
 class MigrationRuleResponse(BaseModel):
@@ -724,10 +725,10 @@ class MigrationRuleResponse(BaseModel):
     source_version: str
     target_version: str
     rule_type: str
-    source_field: Optional[str] = None
-    target_field: Optional[str] = None
-    default_value_string: Optional[str] = None
-    default_value_float: Optional[float] = None
+    source_field: str | None = None
+    target_field: str | None = None
+    default_value_string: str | None = None
+    default_value_float: float | None = None
 
 
 @app.post("/api/v1/execution/subjects", response_model=SubjectResponse)
@@ -855,7 +856,7 @@ async def record_subject_consent_endpoint(
 async def evaluate_and_transition_screening(
     subject_id: str,
     request: Request,
-    payload: Optional[SubjectScreeningRequest] = None,
+    payload: SubjectScreeningRequest | None = None,
     roles: list[str] = Depends(
         require_roles(ROLE_SITE_INVESTIGATOR, ROLE_DATA_MANAGER, "investigator")
     ),
@@ -960,10 +961,10 @@ class SubjectRandomizationResponse(BaseModel):
 
     subject_id: str
     status: str
-    stratum_key: Optional[str] = None
+    stratum_key: str | None = None
     randomized_at: datetime
-    kit_reference: Optional[str] = None
-    treatment_arm: Optional[str] = None
+    kit_reference: str | None = None
+    treatment_arm: str | None = None
 
 
 class SubjectUnblindResponse(BaseModel):
@@ -972,11 +973,11 @@ class SubjectUnblindResponse(BaseModel):
     subject_id: str
     status: str
     is_unblinded: bool
-    treatment_arm: Optional[str] = None
-    drug_code: Optional[str] = None
-    unblinded_at: Optional[datetime] = None
-    unblinded_by: Optional[str] = None
-    unblinded_reason: Optional[str] = None
+    treatment_arm: str | None = None
+    drug_code: str | None = None
+    unblinded_at: datetime | None = None
+    unblinded_by: str | None = None
+    unblinded_reason: str | None = None
 
 
 @app.post(
@@ -1131,7 +1132,7 @@ async def unblind_subject(
 
         # Single canonical timestamp for the entire unblinding event — avoids
         # drift between the audit log, the signature payload, and subject fields.
-        unblind_utc = datetime.now(timezone.utc)
+        unblind_utc = datetime.now(UTC)
         timestamp_str = unblind_utc.isoformat()
         allocation_reference = rand.kit_reference or "unknown"
 
@@ -1320,13 +1321,13 @@ async def randomize_subject_endpoint(
 
 
 class SubjectStateUpdateRequest(BaseModel):
-    status: Optional[str] = None
-    state: Optional[str] = None
+    status: str | None = None
+    state: str | None = None
 
 
 class SubjectDemographicsUpdateRequest(BaseModel):
-    demographics: Optional[Demographics] = None
-    strat_factors: Optional[dict[str, Any]] = None
+    demographics: Demographics | None = None
+    strat_factors: dict[str, Any] | None = None
 
 
 @app.patch(
@@ -1564,10 +1565,10 @@ class SubjectDetailResponse(BaseModel):
     subject_id: str
     study_id: str
     status: str
-    site_id: Optional[str] = None
-    treatment_group: Optional[str] = None
-    randomization_seed: Optional[str] = None
-    investigational_product_id: Optional[str] = None
+    site_id: str | None = None
+    treatment_group: str | None = None
+    randomization_seed: str | None = None
+    investigational_product_id: str | None = None
 
 
 class VisitDetailResponse(BaseModel):
@@ -1576,9 +1577,9 @@ class VisitDetailResponse(BaseModel):
     visit_name: str
     visit_date: datetime
     study_id: str
-    treatment_group: Optional[str] = None
-    randomization_seed: Optional[str] = None
-    investigational_product_id: Optional[str] = None
+    treatment_group: str | None = None
+    randomization_seed: str | None = None
+    investigational_product_id: str | None = None
 
 
 @app.get(
@@ -2168,16 +2169,16 @@ class LabReferenceRangeResponse(BaseModel):
     test_code: str
     test_name: str
     source: str
-    site_id: Optional[str] = None
+    site_id: str | None = None
     unit: str
     normalized_unit: str
     sex_applicability: str
-    age_low: Optional[float] = None
-    age_high: Optional[float] = None
-    low_bound: Optional[float] = None
-    high_bound: Optional[float] = None
-    critical_low: Optional[float] = None
-    critical_high: Optional[float] = None
+    age_low: float | None = None
+    age_high: float | None = None
+    low_bound: float | None = None
+    high_bound: float | None = None
+    critical_low: float | None = None
+    critical_high: float | None = None
     version: int
     is_deleted: bool
 
@@ -2189,35 +2190,35 @@ class LabReferenceRangeCreate(BaseModel):
     test_code: str
     test_name: str
     source: str
-    site_id: Optional[str] = None
+    site_id: str | None = None
     unit: str
     normalized_unit: str
     sex_applicability: str
-    age_low: Optional[float] = None
-    age_high: Optional[float] = None
-    low_bound: Optional[float] = None
-    high_bound: Optional[float] = None
-    critical_low: Optional[float] = None
-    critical_high: Optional[float] = None
+    age_low: float | None = None
+    age_high: float | None = None
+    low_bound: float | None = None
+    high_bound: float | None = None
+    critical_low: float | None = None
+    critical_high: float | None = None
 
 
 class LabReferenceRangeUpdate(BaseModel):
     """Pydantic schema for updating a reference range."""
 
-    study_id: Optional[str] = None
-    test_code: Optional[str] = None
-    test_name: Optional[str] = None
-    source: Optional[str] = None
-    site_id: Optional[str] = None
-    unit: Optional[str] = None
-    normalized_unit: Optional[str] = None
-    sex_applicability: Optional[str] = None
-    age_low: Optional[float] = None
-    age_high: Optional[float] = None
-    low_bound: Optional[float] = None
-    high_bound: Optional[float] = None
-    critical_low: Optional[float] = None
-    critical_high: Optional[float] = None
+    study_id: str | None = None
+    test_code: str | None = None
+    test_name: str | None = None
+    source: str | None = None
+    site_id: str | None = None
+    unit: str | None = None
+    normalized_unit: str | None = None
+    sex_applicability: str | None = None
+    age_low: float | None = None
+    age_high: float | None = None
+    low_bound: float | None = None
+    high_bound: float | None = None
+    critical_low: float | None = None
+    critical_high: float | None = None
 
 
 def validate_lab_range_payload(data: dict) -> None:
@@ -2444,16 +2445,16 @@ async def create_lab_range(
 
 @app.get(
     "/api/v1/execution/lab-ranges",
-    response_model=List[LabReferenceRangeResponse],
+    response_model=list[LabReferenceRangeResponse],
 )
 async def list_lab_ranges(
-    study_id: Optional[str] = None,
-    test_code: Optional[str] = None,
-    source: Optional[str] = None,
-    lab_source: Optional[str] = None,
+    study_id: str | None = None,
+    test_code: str | None = None,
+    source: str | None = None,
+    lab_source: str | None = None,
     include_deleted: bool = False,
     roles: list[str] = Depends(get_normalized_roles),
-) -> List[LabReferenceRangeResponse]:
+) -> list[LabReferenceRangeResponse]:
     """List and filter reference ranges."""
     from apps.execution.database.models import LabReferenceRange
 
@@ -2844,7 +2845,7 @@ class UCUMConvertResponse(BaseModel):
     target: UCUMUnitValue
     is_compatible: bool
     scale_factor: float
-    offset: Optional[float] = None
+    offset: float | None = None
 
 
 def validate_archive_layout(temp_zip_path: str, dictionary_type: DictTypeEnum) -> None:
@@ -3024,7 +3025,7 @@ async def get_dictionary_import_job(
         )
 
 
-class MedDRATargetLevelEnum(str, Enum):
+class MedDRATargetLevelEnum(StrEnum):
     LLT = "LLT"
     PT = "PT"
 
@@ -3032,8 +3033,8 @@ class MedDRATargetLevelEnum(str, Enum):
 @app.get("/api/v1/dictionaries/meddra/code", response_model=MedDRACodingResult)
 async def get_meddra_code(
     term: str,
-    version: Optional[str] = Query("26.0"),
-    target_level: Optional[MedDRATargetLevelEnum] = Query(MedDRATargetLevelEnum.LLT),
+    version: str | None = Query("26.0"),
+    target_level: MedDRATargetLevelEnum | None = Query(MedDRATargetLevelEnum.LLT),
     roles: list[str] = Depends(get_normalized_roles),
 ) -> MedDRACodingResult:
     """Performs coding or interactive auto-complete lookup on adverse events using version-aware matcher.
@@ -3240,11 +3241,11 @@ class QueryHistoryItem(BaseModel):
     """Pydantic schema representing a single audited event in query history."""
 
     action: str
-    user_id: Optional[str] = None
+    user_id: str | None = None
     timestamp: datetime
-    old_values: Optional[dict[str, Any]] = None
-    new_values: Optional[dict[str, Any]] = None
-    change_reason: Optional[str] = None
+    old_values: dict[str, Any] | None = None
+    new_values: dict[str, Any] | None = None
+    change_reason: str | None = None
     version_index: int
 
 
@@ -3254,33 +3255,33 @@ class ClinicalQueryResponse(BaseModel):
     id: str
     study_id: str
     subject_id: str
-    visit_id: Optional[str] = None
-    domain: Optional[str] = None
+    visit_id: str | None = None
+    domain: str | None = None
     test_code: str
     status: str
-    explanation: Optional[str] = None
-    response: Optional[str] = None
+    explanation: str | None = None
+    response: str | None = None
     created_at: datetime
     updated_at: datetime
-    history: List[QueryHistoryItem] = []
+    history: list[QueryHistoryItem] = []
 
-    observation_id: Optional[str] = None
-    field_link: Optional[str] = None
-    message: Optional[str] = None
-    origin: Optional[str] = None
-    priority: Optional[str] = None
-    rule_id: Optional[str] = None
-    created_by: Optional[str] = None
-    responder: Optional[str] = None
-    resolver: Optional[str] = None
-    resolved_at: Optional[datetime] = None
-    cancellation_reason: Optional[str] = None
-    escalated_at: Optional[datetime] = None
+    observation_id: str | None = None
+    field_link: str | None = None
+    message: str | None = None
+    origin: str | None = None
+    priority: str | None = None
+    rule_id: str | None = None
+    created_by: str | None = None
+    responder: str | None = None
+    resolver: str | None = None
+    resolved_at: datetime | None = None
+    cancellation_reason: str | None = None
+    escalated_at: datetime | None = None
 
-    form_id: Optional[str] = None
-    field_id: Optional[str] = None
-    query_type: Optional[str] = None
-    action_required: Optional[str] = None
+    form_id: str | None = None
+    field_id: str | None = None
+    query_type: str | None = None
+    action_required: str | None = None
 
 
 class QueryCreate(BaseModel):
@@ -3288,30 +3289,30 @@ class QueryCreate(BaseModel):
 
     study_id: str
     subject_id: str
-    visit_id: Optional[str] = None
-    domain: Optional[str] = None
+    visit_id: str | None = None
+    domain: str | None = None
     test_code: str
     explanation: str
-    status: Optional[str] = "OPEN"
+    status: str | None = "OPEN"
 
-    observation_id: Optional[str] = None
-    field_link: Optional[str] = None
-    message: Optional[str] = None
-    origin: Optional[str] = None
-    priority: Optional[str] = None
-    rule_id: Optional[str] = None
-    created_by: Optional[str] = None
+    observation_id: str | None = None
+    field_link: str | None = None
+    message: str | None = None
+    origin: str | None = None
+    priority: str | None = None
+    rule_id: str | None = None
+    created_by: str | None = None
 
-    form_id: Optional[str] = None
-    field_id: Optional[str] = None
-    query_type: Optional[str] = None
-    action_required: Optional[str] = None
+    form_id: str | None = None
+    field_id: str | None = None
+    query_type: str | None = None
+    action_required: str | None = None
 
 
 class QueryReopen(BaseModel):
     """Pydantic schema for reopening a query with a reason."""
 
-    reason: Optional[str] = None
+    reason: str | None = None
 
 
 class QueryCancel(BaseModel):
@@ -3324,33 +3325,33 @@ class QueryRespond(BaseModel):
     """Pydantic schema for responding to an open query."""
 
     response: str
-    responder: Optional[str] = None
+    responder: str | None = None
 
 
 class QueryUpdate(BaseModel):
     """Pydantic schema for general state transitions."""
 
     status: str
-    explanation: Optional[str] = None
-    response: Optional[str] = None
+    explanation: str | None = None
+    response: str | None = None
 
-    observation_id: Optional[str] = None
-    field_link: Optional[str] = None
-    message: Optional[str] = None
-    origin: Optional[str] = None
-    priority: Optional[str] = None
-    rule_id: Optional[str] = None
-    created_by: Optional[str] = None
-    responder: Optional[str] = None
-    resolver: Optional[str] = None
-    resolved_at: Optional[datetime] = None
-    cancellation_reason: Optional[str] = None
-    escalated_at: Optional[datetime] = None
+    observation_id: str | None = None
+    field_link: str | None = None
+    message: str | None = None
+    origin: str | None = None
+    priority: str | None = None
+    rule_id: str | None = None
+    created_by: str | None = None
+    responder: str | None = None
+    resolver: str | None = None
+    resolved_at: datetime | None = None
+    cancellation_reason: str | None = None
+    escalated_at: datetime | None = None
 
-    form_id: Optional[str] = None
-    field_id: Optional[str] = None
-    query_type: Optional[str] = None
-    action_required: Optional[str] = None
+    form_id: str | None = None
+    field_id: str | None = None
+    query_type: str | None = None
+    action_required: str | None = None
 
 
 class SyncBlockQuery(BaseModel):
@@ -3359,14 +3360,14 @@ class SyncBlockQuery(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     status: str
-    message: Optional[str] = None
-    created_by: Optional[str] = Field(None, alias="createdBy")
-    created_at: Optional[str] = Field(None, alias="createdAt")
-    response: Optional[str] = None
-    responded_by: Optional[str] = Field(None, alias="respondedBy")
-    responded_at: Optional[str] = Field(None, alias="respondedAt")
-    closed_by: Optional[str] = Field(None, alias="closedBy")
-    closed_at: Optional[str] = Field(None, alias="closedAt")
+    message: str | None = None
+    created_by: str | None = Field(None, alias="createdBy")
+    created_at: str | None = Field(None, alias="createdAt")
+    response: str | None = None
+    responded_by: str | None = Field(None, alias="respondedBy")
+    responded_at: str | None = Field(None, alias="respondedAt")
+    closed_by: str | None = Field(None, alias="closedBy")
+    closed_at: str | None = Field(None, alias="closedAt")
 
 
 class SyncBlockDetails(BaseModel):
@@ -3375,16 +3376,16 @@ class SyncBlockDetails(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     field_id: str = Field(..., alias="fieldId")
-    study_id: Optional[str] = Field(None, alias="studyId")
-    subject_id: Optional[str] = Field(None, alias="subjectId")
-    visit_id: Optional[str] = Field(None, alias="visitId")
-    domain: Optional[str] = None
-    test_code: Optional[str] = Field(None, alias="testCode")
-    query: Optional[SyncBlockQuery] = None
-    label: Optional[str] = None
-    cdash: Optional[str] = None
-    old_value: Optional[str] = Field(None, alias="oldValue")
-    new_value: Optional[str] = Field(None, alias="newValue")
+    study_id: str | None = Field(None, alias="studyId")
+    subject_id: str | None = Field(None, alias="subjectId")
+    visit_id: str | None = Field(None, alias="visitId")
+    domain: str | None = None
+    test_code: str | None = Field(None, alias="testCode")
+    query: SyncBlockQuery | None = None
+    label: str | None = None
+    cdash: str | None = None
+    old_value: str | None = Field(None, alias="oldValue")
+    new_value: str | None = Field(None, alias="newValue")
 
 
 class LocalLedgerBlock(BaseModel):
@@ -3435,7 +3436,7 @@ def validate_transition(current_status: str, new_status: str) -> None:
         )
 
 
-async def fetch_history(session: Any, query_id: str) -> List[QueryHistoryItem]:
+async def fetch_history(session: Any, query_id: str) -> list[QueryHistoryItem]:
     """Fetch and parse audit logs for a specific query."""
     stmt_history = (
         select(AuditLog)
@@ -3471,14 +3472,14 @@ async def fetch_history(session: Any, query_id: str) -> List[QueryHistoryItem]:
     return history
 
 
-@app.get("/api/v1/execution/queries", response_model=List[ClinicalQueryResponse])
+@app.get("/api/v1/execution/queries", response_model=list[ClinicalQueryResponse])
 async def list_queries(
-    study_id: Optional[str] = None,
-    subject_id: Optional[str] = None,
-    visit_id: Optional[str] = None,
-    status: Optional[str] = None,
+    study_id: str | None = None,
+    subject_id: str | None = None,
+    visit_id: str | None = None,
+    status: str | None = None,
     principal: Principal = Depends(get_principal),
-) -> List[ClinicalQueryResponse]:
+) -> list[ClinicalQueryResponse]:
     """Retrieve a list of clinical queries with optional filtering.
 
     Args:
@@ -3728,7 +3729,7 @@ async def open_query(
 
 
 # Phase 11: Shared Sampling Model enums for the API layer
-class SamplingModelEnum(str, Enum):
+class SamplingModelEnum(StrEnum):
     SUBJECT_BASED = "SUBJECT_BASED"
     FIELD_BASED = "FIELD_BASED"
     COMBINED = "COMBINED"
@@ -3739,10 +3740,10 @@ class TSDVConfigCreate(BaseModel):
     sampling_model: SamplingModelEnum
     initial_full_sdv_subject_count: int = Field(default=0, ge=0)
     random_sample_percentage: float = Field(default=0.0, ge=0.0, le=100.0)
-    full_sdv_domains: Optional[list[str]] = None
-    safety_endpoints: Optional[list[str]] = None
-    zero_sdv_domains: Optional[list[str]] = None
-    trial_random_seed: Optional[int] = Field(default=None, ge=0)
+    full_sdv_domains: list[str] | None = None
+    safety_endpoints: list[str] | None = None
+    zero_sdv_domains: list[str] | None = None
+    trial_random_seed: int | None = Field(default=None, ge=0)
 
     @model_validator(mode="after")
     def validate_seed(self) -> "TSDVConfigCreate":
@@ -3759,10 +3760,10 @@ class TSDVConfigResponse(BaseModel):
     sampling_model: str
     initial_full_sdv_subject_count: int
     random_sample_percentage: float
-    full_sdv_domains: Optional[list[str]] = None
-    safety_endpoints: Optional[list[str]] = None
-    zero_sdv_domains: Optional[list[str]] = None
-    trial_random_seed: Optional[int] = None
+    full_sdv_domains: list[str] | None = None
+    safety_endpoints: list[str] | None = None
+    zero_sdv_domains: list[str] | None = None
+    trial_random_seed: int | None = None
     version: int
 
     class Config:
@@ -3844,7 +3845,7 @@ async def get_tsdv_config(
 class TSDVEvaluationResponse(BaseModel):
     required: bool
     subject_selected: bool
-    field_decision: Optional[bool] = None
+    field_decision: bool | None = None
     sampling_model: str
     config_id: str
     enrollment_index: int
@@ -3858,8 +3859,8 @@ class TSDVEvaluationResponse(BaseModel):
 async def evaluate_tsdv_rule(
     study_id: str,
     subject_id: str,
-    domain: Optional[str] = None,
-    enrollment_index: Optional[int] = None,
+    domain: str | None = None,
+    enrollment_index: int | None = None,
     roles: list[str] = Depends(get_normalized_roles),
 ) -> TSDVEvaluationResponse:
     """Evaluate Targeted SDV (TSDV) requirement for a given context.
@@ -3942,7 +3943,7 @@ async def evaluate_tsdv_rule(
 
 
 # Phase 11: Shared SDV scope enums for the API layer
-class SDVScopeEnum(str, Enum):
+class SDVScopeEnum(StrEnum):
     FIELD = "FIELD"
     PAGE = "PAGE"
     VISIT = "VISIT"
@@ -3960,7 +3961,7 @@ class SDVSignoffCreate(BaseModel):
     target_id: str
     subject_id: str
     study_id: str
-    site_id: Optional[str] = None
+    site_id: str | None = None
 
 
 class SDVSignoffResponse(BaseModel):
@@ -3971,12 +3972,12 @@ class SDVSignoffResponse(BaseModel):
     target_id: str
     subject_id: str
     study_id: str
-    site_id: Optional[str] = None
+    site_id: str | None = None
     is_verified: bool
-    verified_by: Optional[str] = None
-    verified_at: Optional[datetime] = None
-    dropped_reason: Optional[str] = None
-    dropped_at: Optional[datetime] = None
+    verified_by: str | None = None
+    verified_at: datetime | None = None
+    dropped_reason: str | None = None
+    dropped_at: datetime | None = None
 
 
 # Keep the old names as aliases for backward compatibility or testing
@@ -4056,13 +4057,13 @@ VALID_SIGNING_REASONS = {
 }
 
 
-class FormSubmissionStatusEnum(str, Enum):
+class FormSubmissionStatusEnum(StrEnum):
     DRAFT = FormSubmissionStatus.DRAFT.value
     COMPLETED = FormSubmissionStatus.COMPLETED.value
     APPROVED = FormSubmissionStatus.APPROVED.value
 
 
-class SigningReasonCode(str, Enum):
+class SigningReasonCode(StrEnum):
     DATA_RECORDING = "DATA_RECORDING"
     PI_APPROVAL = "PI_APPROVAL"
     REVIEW_CONFIRMATION = "REVIEW_CONFIRMATION"
@@ -4073,7 +4074,7 @@ class FormSubmissionCreate(BaseModel):
     study_id: str
     site_id: str
     subject_id: str
-    visit_id: Optional[str] = None
+    visit_id: str | None = None
     form_id: str
 
 
@@ -4082,12 +4083,12 @@ class FormSubmissionResponse(BaseModel):
     study_id: str
     site_id: str
     subject_id: str
-    visit_id: Optional[str] = None
+    visit_id: str | None = None
     form_id: str
     status: FormSubmissionStatusEnum
     version: int
     is_deleted: bool
-    signature_manifest: Optional[dict[str, Any]] = None
+    signature_manifest: dict[str, Any] | None = None
 
 
 class FormSubmissionApprove(BaseModel):
@@ -4098,7 +4099,7 @@ class FormSubmissionApprove(BaseModel):
 class BatchSignOffRequest(BaseModel):
     study_id: str
     target_type: str  # "FORM", "VISIT", or "SUBJECT"
-    target_ids: List[str]
+    target_ids: list[str]
     signing_reason: str
 
     @model_validator(mode="after")
@@ -4115,9 +4116,9 @@ class BatchSignOffRequest(BaseModel):
 
 class BatchSignOffResponse(BaseModel):
     status: str
-    approved_submission_ids: List[str]
-    skipped_submission_ids: List[str]
-    skipped_targets: List[str]
+    approved_submission_ids: list[str]
+    skipped_submission_ids: list[str]
+    skipped_targets: list[str]
 
 
 @app.post(
@@ -4546,15 +4547,15 @@ async def post_batch_sign_off(
 
 @app.get(
     "/api/v1/execution/form-submissions",
-    response_model=List[FormSubmissionResponse],
+    response_model=list[FormSubmissionResponse],
 )
 async def list_form_submissions(
-    study_id: Optional[str] = None,
-    subject_id: Optional[str] = None,
-    visit_id: Optional[str] = None,
-    form_id: Optional[str] = None,
+    study_id: str | None = None,
+    subject_id: str | None = None,
+    visit_id: str | None = None,
+    form_id: str | None = None,
     principal: Principal = Depends(get_principal),
-) -> List[FormSubmissionResponse]:
+) -> list[FormSubmissionResponse]:
     """List form submissions with filters."""
     if study_id and not can_access_study(principal, study_id):
         return []
@@ -4816,7 +4817,7 @@ async def close_query(
 async def reopen_query(
     query_id: str,
     request: Request,
-    payload: Optional[QueryReopen] = None,
+    payload: QueryReopen | None = None,
     roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER)),
 ) -> ClinicalQueryResponse:
     """Reopen an answered or closed clinical query for further clarification.
@@ -5513,15 +5514,15 @@ async def post_impact_analysis(
 
 @app.get(
     "/api/v1/execution/coding/assignments",
-    response_model=List[CodingAssignmentResponse],
+    response_model=list[CodingAssignmentResponse],
 )
 async def list_coding_assignments(
-    observation_id: Optional[str] = None,
-    status: Optional[str] = None,
-    verbatim_text: Optional[str] = None,
-    dictionary_type: Optional[str] = None,
+    observation_id: str | None = None,
+    status: str | None = None,
+    verbatim_text: str | None = None,
+    dictionary_type: str | None = None,
     roles: list[str] = Depends(get_normalized_roles),
-) -> List[CodingAssignmentResponse]:
+) -> list[CodingAssignmentResponse]:
     """Lists and filters medical coding assignments."""
     from apps.execution.coding import (
         list_coding_assignments as list_assignments_service,
@@ -5650,7 +5651,7 @@ async def process_coding_action(
 
 async def run_sdtm_extraction(
     session, study_id: str, domain: str
-) -> tuple[List[dict], List[Any]]:
+) -> tuple[list[dict], list[Any]]:
     """Helper to retrieve and transform raw observations to SDTM records."""
     stmt_subj = select(ClinicalSubject).where(
         ClinicalSubject.study_id == study_id,
@@ -5716,7 +5717,7 @@ async def run_sdtm_extraction(
     return records, supp_records
 
 
-async def run_adam_derivation(session, study_id: str, dataset: str) -> List[dict]:
+async def run_adam_derivation(session, study_id: str, dataset: str) -> list[dict]:
     """Helper to retrieve and derive ADaM analysis records."""
     stmt_subj = select(ClinicalSubject).where(
         ClinicalSubject.study_id == study_id,
@@ -6013,12 +6014,12 @@ async def create_migration_rule(
 
 @app.get(
     "/api/v1/execution/migration-rules",
-    response_model=List[MigrationRuleResponse],
+    response_model=list[MigrationRuleResponse],
 )
 async def list_migration_rules(
     study_id: str,
     roles: list[str] = Depends(get_normalized_roles),
-) -> List[MigrationRuleResponse]:
+) -> list[MigrationRuleResponse]:
     """List migration rules for a clinical study."""
     async with db_manager.get_session_maker()() as session:
         stmt = select(MigrationRule).where(

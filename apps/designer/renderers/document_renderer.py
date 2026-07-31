@@ -50,13 +50,9 @@ class ProtocolDocumentRenderer:
             b"3 0 obj <</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R>> endobj\n"
         )
         stream_content = (
-            "BT /F1 12 Tf 50 750 Td (Clinical Protocol Synopsis Export) Tj ET".encode(
-                "utf-8"
-            )
+            b"BT /F1 12 Tf 50 750 Td (Clinical Protocol Synopsis Export) Tj ET"
         )
-        pdf_buffer.write(
-            f"4 0 obj <</Length {len(stream_content)}>> stream\n".encode("utf-8")
-        )
+        pdf_buffer.write(f"4 0 obj <</Length {len(stream_content)}>> stream\n".encode())
         pdf_buffer.write(stream_content)
         pdf_buffer.write(b"\nendstream\nendobj\n")
         pdf_buffer.write(b"xref\n0 5\n0000000000 65535 f \n0000000009 00000 n \n")

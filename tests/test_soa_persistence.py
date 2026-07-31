@@ -1,3 +1,4 @@
+from datetime import UTC
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -187,7 +188,7 @@ def test_soa_domain_models_schema_alignment():
     properly validate and synchronize synonyms, carry 21 CFR Part 11 audit fields,
     and express arm-applicability and entity relationships.
     """
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from apps.designer.soa_models import (
         Epoch,
@@ -198,7 +199,7 @@ def test_soa_domain_models_schema_alignment():
         Visit,
     )
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # 1. Test StudyArm
     arm = StudyArm(

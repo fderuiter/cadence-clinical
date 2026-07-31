@@ -5,7 +5,6 @@ Requirements: PRD-SYS-001
 
 import hashlib
 import json
-from typing import Dict
 
 import packages  # noqa: F401
 
@@ -24,9 +23,9 @@ class AuditManifestGenerator:
         signer_name: str,
         signer_user_id: str,
         signing_reason: str,
-        form_digests: Dict[str, str],
+        form_digests: dict[str, str],
         timestamp_utc: str,
-    ) -> Dict[str, str]:
+    ) -> dict[str, str]:
         """Compile Part 11 audit manifest containing form digests, master root hash, and printed signature details.
 
         Args:

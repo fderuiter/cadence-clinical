@@ -1,8 +1,8 @@
 import email.utils
 import os
 import time
-from datetime import date, datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, date, datetime
+from typing import Any
 
 from fastapi import (
     Depends,
@@ -201,8 +201,8 @@ class IngestionRequest(BaseModel):
     """
 
     study_id: str = Field(..., description="Unique identifier of the clinical study")
-    site_id: Optional[str] = Field(None, description="Optional site identifier")
-    idempotency_key: Optional[str] = Field(
+    site_id: str | None = Field(None, description="Optional site identifier")
+    idempotency_key: str | None = Field(
         None, description="Optional idempotency key for deduplication"
     )
     artifact_type: str = Field(
@@ -211,36 +211,32 @@ class IngestionRequest(BaseModel):
     filename: str = Field(..., description="Document filename")
     content: str = Field(..., description="Indexed, searchable content of the document")
     mime_type: str = Field(..., description="MIME type of the document")
-    zone: Optional[int] = Field(None, description="Optional expected DIA TMF Zone")
-    section: Optional[str] = Field(
-        None, description="Optional expected DIA TMF Section"
-    )
-    artifact_code: Optional[str] = Field(
+    zone: int | None = Field(None, description="Optional expected DIA TMF Zone")
+    section: str | None = Field(None, description="Optional expected DIA TMF Section")
+    artifact_code: str | None = Field(
         None, description="Optional canonical artifact code"
     )
-    taxonomy_version: Optional[str] = Field(
-        None, description="Optional taxonomy version"
-    )
-    metadata_json: Optional[Dict[str, Any]] = Field(
+    taxonomy_version: str | None = Field(None, description="Optional taxonomy version")
+    metadata_json: dict[str, Any] | None = Field(
         None, description="Optional metadata fields"
     )
-    protocol_version: Optional[ProtocolVersionRef] = Field(
+    protocol_version: ProtocolVersionRef | None = Field(
         None, description="Optional shared protocol version reference"
     )
-    issue_date: Optional[date] = Field(None, description="Optional document issue date")
-    expiration_date: Optional[date] = Field(
+    issue_date: date | None = Field(None, description="Optional document issue date")
+    expiration_date: date | None = Field(
         None, description="Optional document expiration date"
     )
-    document_owner_id: Optional[str] = Field(
+    document_owner_id: str | None = Field(
         None, description="Optional document owner ID"
     )
-    correlation_key: Optional[str] = Field(
+    correlation_key: str | None = Field(
         None, description="Optional stable correlation key for synchronized documents"
     )
-    content_checksum: Optional[str] = Field(
+    content_checksum: str | None = Field(
         None, description="Optional deterministic checksum of the content"
     )
-    source_system: Optional[str] = Field(
+    source_system: str | None = Field(
         None, description="Optional originating source system"
     )
 
@@ -267,7 +263,7 @@ class DocumentResponse(BaseModel):
 
     id: str
     study_id: str
-    site_id: Optional[str] = None
+    site_id: str | None = None
     zone: int
     section: str
     artifact_type: str
@@ -279,32 +275,32 @@ class DocumentResponse(BaseModel):
     status: str
     taxonomy_version: str
     artifact_code: str
-    metadata_json: Optional[Dict[str, Any]] = None
+    metadata_json: dict[str, Any] | None = None
 
     # New signature and lifecycle fields
-    document_type: Optional[str] = None
+    document_type: str | None = None
     approval_status: str = "PENDING"
-    signature_manifestation: Optional[Dict[str, Any]] = None
-    signer: Optional[str] = None
-    signing_timestamp: Optional[str] = None
+    signature_manifestation: dict[str, Any] | None = None
+    signer: str | None = None
+    signing_timestamp: str | None = None
 
     # Redaction-related fields
     is_redacted: bool = False
-    redaction_source_id: Optional[str] = None
-    redaction_manifest_json: Optional[Dict[str, Any]] = None
+    redaction_source_id: str | None = None
+    redaction_manifest_json: dict[str, Any] | None = None
 
     # Extended justification and protocol amendment version references
-    reason_for_change: Optional[str] = None
-    protocol_version: Optional[ProtocolVersionRef] = None
-    issue_date: Optional[date] = None
-    expiration_date: Optional[date] = None
-    document_owner_id: Optional[str] = None
+    reason_for_change: str | None = None
+    protocol_version: ProtocolVersionRef | None = None
+    issue_date: date | None = None
+    expiration_date: date | None = None
+    document_owner_id: str | None = None
 
     # Synchronization and provenance fields
-    correlation_key: Optional[str] = None
-    content_checksum: Optional[str] = None
-    source_system: Optional[str] = None
-    sync_status: Optional[str] = None
+    correlation_key: str | None = None
+    content_checksum: str | None = None
+    source_system: str | None = None
+    sync_status: str | None = None
 
 
 def to_document_response(doc: TMFDocument) -> DocumentResponse:
@@ -383,11 +379,11 @@ class DocumentExpirationUpdate(BaseModel):
     ``issue_date`` and ``expiration_date`` are provided together.
     """
 
-    issue_date: Optional[date] = Field(None, description="Optional document issue date")
-    expiration_date: Optional[date] = Field(
+    issue_date: date | None = Field(None, description="Optional document issue date")
+    expiration_date: date | None = Field(
         None, description="Optional document expiration date"
     )
-    document_owner_id: Optional[str] = Field(
+    document_owner_id: str | None = Field(
         None, description="Optional document owner ID"
     )
 
@@ -413,10 +409,10 @@ class RedactRequest(BaseModel):
     """
 
     redacted_content: str = Field(..., description="The redacted text content")
-    redacted_filename: Optional[str] = Field(
+    redacted_filename: str | None = Field(
         None, description="Optional new filename for the redacted document"
     )
-    manifest: Dict[str, Any] = Field(
+    manifest: dict[str, Any] = Field(
         ..., description="The signed redaction manifest and provenance data"
     )
 
@@ -430,14 +426,14 @@ class AutomatedRedactRequest(BaseModel):
         ComplianceProfile.HIPAA,
         description="The compliance profile governing active detection categories (e.g., HIPAA, GDPR, EU_CTR)",
     )
-    custom_terms: Optional[List[str]] = Field(
+    custom_terms: list[str] | None = Field(
         None, description="Optional list of custom/literal terms to scan and redact"
     )
-    strategies: Optional[Dict[str, str]] = Field(
+    strategies: dict[str, str] | None = Field(
         None,
         description="Optional custom mapping of category to specific strategy (e.g., mask, pseudonymize, date_shift, age_cap)",
     )
-    redacted_filename: Optional[str] = Field(
+    redacted_filename: str | None = Field(
         None, description="Optional new filename for the redacted successor document"
     )
 
@@ -458,10 +454,10 @@ class AutomatedRedactResponse(BaseModel):
         ..., description="Version index of the new redacted document"
     )
     filename: str = Field(..., description="Filename of the new redacted document")
-    categories_counts: Dict[str, int] = Field(
+    categories_counts: dict[str, int] = Field(
         ..., description="Count of redacted items per category"
     )
-    manifest: Dict[str, Any] = Field(
+    manifest: dict[str, Any] = Field(
         ..., description="The signed manifest and provenance data"
     )
 
@@ -473,7 +469,7 @@ class SpanItem(BaseModel):
 
     start: int = Field(..., description="The character start offset in the source text")
     end: int = Field(..., description="The character end offset in the source text")
-    label: Optional[str] = Field(
+    label: str | None = Field(
         "manual", description="Optional label or category for the redacted span"
     )
 
@@ -483,13 +479,13 @@ class ManualRedactRequest(BaseModel):
     Payload for submitting manual redaction parameters (spans and/or terms).
     """
 
-    spans: Optional[List[SpanItem]] = Field(
+    spans: list[SpanItem] | None = Field(
         None, description="Explicit character spans to redact"
     )
-    terms: Optional[List[str]] = Field(
+    terms: list[str] | None = Field(
         None, description="Literal terms to search and redact"
     )
-    redacted_filename: Optional[str] = Field(
+    redacted_filename: str | None = Field(
         None, description="Optional new filename for the redacted successor document"
     )
 
@@ -508,10 +504,10 @@ class ManualRedactResponse(BaseModel):
         ..., description="Version index of the new redacted document"
     )
     filename: str = Field(..., description="Filename of the new redacted document")
-    categories_counts: Dict[str, int] = Field(
+    categories_counts: dict[str, int] = Field(
         ..., description="Count of redacted items per category"
     )
-    manifest: Dict[str, Any] = Field(
+    manifest: dict[str, Any] = Field(
         ..., description="The signed manifest and provenance data"
     )
 
@@ -543,7 +539,7 @@ class StudyArchiveItemResult(BaseModel):
     from_status: str
     to_status: str
     status: str  # "success", "skipped", "failed"
-    error_message: Optional[str] = None
+    error_message: str | None = None
 
 
 class StudyArchiveResponse(BaseModel):
@@ -557,7 +553,7 @@ class StudyArchiveResponse(BaseModel):
     successful_count: int
     failed_count: int
     skipped_count: int
-    results: List[StudyArchiveItemResult]
+    results: list[StudyArchiveItemResult]
 
 
 class TransitionRequest(BaseModel):
@@ -613,7 +609,7 @@ class AuditLogResponse(BaseModel):
     user_id: str
     user_role: str
     action: str
-    document_id: Optional[str]
+    document_id: str | None
     details: str
 
 
@@ -622,12 +618,12 @@ class PaginatedAuditLogResponse(BaseModel):
     Paginated representation of eTMF audit trail logs.
     """
 
-    items: List[AuditLogResponse]
+    items: list[AuditLogResponse]
     total_count: int
     limit: int
     offset: int
-    next_page: Optional[str] = None
-    next_cursor: Optional[str] = None
+    next_page: str | None = None
+    next_cursor: str | None = None
     has_more: bool
 
 
@@ -637,16 +633,16 @@ class ExpectedDocumentCreate(BaseModel):
     """
 
     study_id: str = Field(..., description="Unique identifier of the clinical study")
-    site_id: Optional[str] = Field(
+    site_id: str | None = Field(
         None, description="Optional site identifier (null = study-scope)"
     )
     milestone: str = Field(
         ..., description="Milestone name (e.g. INITIATION, CONDUCT, CLOSEOUT)"
     )
     artifact_type: str = Field(..., description="Mandatory artifact type")
-    zone: Optional[int] = Field(None, description="Optional DIA TMF Zone")
-    section: Optional[str] = Field(None, description="Optional DIA TMF Section")
-    metadata_json: Optional[Dict[str, Any]] = Field(
+    zone: int | None = Field(None, description="Optional DIA TMF Zone")
+    section: str | None = Field(None, description="Optional DIA TMF Section")
+    metadata_json: dict[str, Any] | None = Field(
         None, description="Optional metadata rules or notes"
     )
     reason_for_change: str = Field(
@@ -661,12 +657,12 @@ class ExpectedDocumentResponse(BaseModel):
 
     id: str
     study_id: str
-    site_id: Optional[str] = None
+    site_id: str | None = None
     milestone: str
     artifact_type: str
-    zone: Optional[int] = None
-    section: Optional[str] = None
-    metadata_json: Optional[Dict[str, Any]] = None
+    zone: int | None = None
+    section: str | None = None
+    metadata_json: dict[str, Any] | None = None
     created_at: str
     created_by: str
     reason_for_change: str
@@ -681,8 +677,8 @@ class ArtifactDetail(BaseModel):
     artifact_type: str
     scope: str
     status: str
-    document_id: Optional[str] = None
-    version_index: Optional[int] = None
+    document_id: str | None = None
+    version_index: int | None = None
 
 
 class CompletenessResponse(BaseModel):
@@ -691,13 +687,13 @@ class CompletenessResponse(BaseModel):
     """
 
     study_id: str
-    site_id: Optional[str] = None
+    site_id: str | None = None
     milestone: str
     is_complete: bool
     scope: str
-    present_artifacts: List[str]
-    missing_artifacts: List[str]
-    per_artifact_detail: List[ArtifactDetail]
+    present_artifacts: list[str]
+    missing_artifacts: list[str]
+    per_artifact_detail: list[ArtifactDetail]
 
 
 class BinderArtifactNode(BaseModel):
@@ -708,8 +704,8 @@ class BinderArtifactNode(BaseModel):
     artifact_code: str
     artifact_name: str
     status: str  # EXPECTED/PRESENT/MISSING
-    document_id: Optional[str] = None
-    version_index: Optional[int] = None
+    document_id: str | None = None
+    version_index: int | None = None
 
 
 class BinderSectionNode(BaseModel):
@@ -719,7 +715,7 @@ class BinderSectionNode(BaseModel):
 
     section_code: str
     section_name: str
-    artifacts: List[BinderArtifactNode]
+    artifacts: list[BinderArtifactNode]
 
 
 class BinderZoneNode(BaseModel):
@@ -729,7 +725,7 @@ class BinderZoneNode(BaseModel):
 
     zone_code: int
     zone_name: str
-    sections: List[BinderSectionNode]
+    sections: list[BinderSectionNode]
 
 
 class BinderStructureResponse(BaseModel):
@@ -738,11 +734,11 @@ class BinderStructureResponse(BaseModel):
     """
 
     study_id: str
-    milestone: Optional[str] = None
-    site_id: Optional[str] = None
-    zones: List[BinderZoneNode]
-    present_artifacts: List[str]
-    missing_artifacts: List[str]
+    milestone: str | None = None
+    site_id: str | None = None
+    zones: list[BinderZoneNode]
+    present_artifacts: list[str]
+    missing_artifacts: list[str]
 
 
 class DocumentVersionEntry(BaseModel):
@@ -758,9 +754,9 @@ class DocumentVersionEntry(BaseModel):
     created_by: str
     filename: str
     artifact_code: str
-    signer: Optional[str] = None
-    signing_timestamp: Optional[str] = None
-    transitions: List[TransitionResponse]
+    signer: str | None = None
+    signing_timestamp: str | None = None
+    transitions: list[TransitionResponse]
 
 
 class DocumentVersionsResponse(BaseModel):
@@ -770,7 +766,7 @@ class DocumentVersionsResponse(BaseModel):
 
     study_id: str
     artifact_code: str
-    versions: List[DocumentVersionEntry]
+    versions: list[DocumentVersionEntry]
 
 
 # Helper to secure and log actions
@@ -779,9 +775,9 @@ async def write_audit_log(
     user_id: str,
     user_role: str | list[str],
     action: str,
-    document_id: Optional[str],
+    document_id: str | None,
     details: str,
-    reason_for_change: Optional[str] = None,
+    reason_for_change: str | None = None,
 ) -> None:
     """
     Utility function to write to the immutable eTMF audit ledger.
@@ -833,7 +829,7 @@ async def ingest_document(
     payload: IngestionRequest,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Listen to and ingest system publication events or manual document archives.
     Automatically assigns DIA TMF Zone and Section taxonomy, and indexes the content.
@@ -951,16 +947,16 @@ async def ingest_document(
     }
 
 
-@app.get("/api/v1/etmf/documents", response_model=List[DocumentResponse])
+@app.get("/api/v1/etmf/documents", response_model=list[DocumentResponse])
 async def list_documents(
     request: Request,
-    study_id: Optional[str] = Query(None, description="Filter by study ID"),
-    zone: Optional[int] = Query(None, description="Filter by TMF Zone"),
-    search: Optional[str] = Query(None, description="Search document content"),
-    status: Optional[str] = Query(None, description="Filter by status"),
+    study_id: str | None = Query(None, description="Filter by study ID"),
+    zone: int | None = Query(None, description="Filter by TMF Zone"),
+    search: str | None = Query(None, description="Search document content"),
+    status: str | None = Query(None, description="Filter by status"),
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
-) -> List[DocumentResponse]:
+) -> list[DocumentResponse]:
     """
     Retrieve and search indexed, searchable eTMF document records.
     All views are logged to the immutable audit ledger.
@@ -1284,13 +1280,13 @@ async def download_watermarked_document(
 @app.get("/api/v1/etmf/audit-logs", response_model=PaginatedAuditLogResponse)
 async def get_audit_trail(
     request: Request,
-    user_id: Optional[str] = Query(None, description="Filter logs by user ID"),
-    action: Optional[str] = Query(None, description="Filter logs by action"),
-    document_id: Optional[str] = Query(None, description="Filter logs by document ID"),
-    start_time: Optional[datetime] = Query(
+    user_id: str | None = Query(None, description="Filter logs by user ID"),
+    action: str | None = Query(None, description="Filter logs by action"),
+    document_id: str | None = Query(None, description="Filter logs by document ID"),
+    start_time: datetime | None = Query(
         None, description="Filter logs starting from this timestamp (inclusive)"
     ),
-    end_time: Optional[datetime] = Query(
+    end_time: datetime | None = Query(
         None, description="Filter logs up to this timestamp (inclusive)"
     ),
     limit: int = Query(
@@ -1404,15 +1400,15 @@ async def get_audit_trail(
     )
 
 
-@app.get("/api/v1/etmf/edl", response_model=List[ExpectedDocumentResponse])
+@app.get("/api/v1/etmf/edl", response_model=list[ExpectedDocumentResponse])
 async def list_expectations(
     request: Request,
     study_id: str = Query(..., description="The clinical study ID"),
-    site_id: Optional[str] = Query(None, description="Optional clinical site ID"),
-    milestone: Optional[str] = Query(None, description="Optional milestone"),
+    site_id: str | None = Query(None, description="Optional clinical site ID"),
+    milestone: str | None = Query(None, description="Optional milestone"),
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
-) -> List[ExpectedDocumentResponse]:
+) -> list[ExpectedDocumentResponse]:
     """
     List expected documents for a study, optionally filtered by site and milestone.
     """
@@ -1610,7 +1606,7 @@ async def check_completeness(
     request: Request,
     study_id: str = Query(..., description="The clinical study ID"),
     milestone: str = Query(..., description="The transition milestone to check"),
-    site_id: Optional[str] = Query(None, description="Optional clinical site ID"),
+    site_id: str | None = Query(None, description="Optional clinical site ID"),
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
 ) -> CompletenessResponse:
@@ -2365,7 +2361,7 @@ async def test_exception_route(session: AsyncSession = Depends(get_db_session)):
 
 
 @app.post(
-    "/api/v1/etmf/documents/{document_id}/transition", response_model=Dict[str, Any]
+    "/api/v1/etmf/documents/{document_id}/transition", response_model=dict[str, Any]
 )
 async def transition_document_status_endpoint(
     request: Request,
@@ -2373,7 +2369,7 @@ async def transition_document_status_endpoint(
     payload: TransitionRequest,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Perform a secure, 21 CFR Part 11 compliant Quality Control (QC) status transition on an eTMF document.
     Enforces role-based access gates and logs an append-only state transition history record.
@@ -2530,7 +2526,7 @@ async def update_document_expiration_endpoint(
     ):
         resolved_expiration_date = datetime.combine(
             resolved_expiration_date, datetime.min.time()
-        ).replace(tzinfo=timezone.utc)
+        ).replace(tzinfo=UTC)
     doc.expiration_date = resolved_expiration_date
     doc.document_owner_id = payload.document_owner_id
     doc.version_index += 1
@@ -2634,7 +2630,7 @@ async def sign_document_endpoint(
 
     # 3. Build SignatureManifestation
     import hashlib
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
 
     from cryptography import x509
     from cryptography.hazmat.primitives import hashes, serialization
@@ -2656,7 +2652,7 @@ async def sign_document_endpoint(
             client_ip = client_ip.split(",")[0].strip()
 
     user_agent = request.headers.get("user-agent") or "eTMF Service"
-    now_utc = datetime.now(timezone.utc)
+    now_utc = datetime.now(UTC)
     doc_hash = hashlib.sha256(doc.content.encode("utf-8")).hexdigest()
 
     manifest = SignatureManifestation(
@@ -2751,14 +2747,14 @@ async def sign_document_endpoint(
 
 @app.get(
     "/api/v1/etmf/studies/{study_id}/artifacts/{artifact_type}/history",
-    response_model=List[DocumentResponse],
+    response_model=list[DocumentResponse],
 )
 async def get_artifact_history(
     study_id: str,
     artifact_type: str,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
-) -> List[DocumentResponse]:
+) -> list[DocumentResponse]:
     """
     Retrieve the chronological, ordered version history of a specific artifact type within a study.
     All views are logged to the immutable audit trail.
@@ -2823,14 +2819,14 @@ async def get_artifact_history(
 
 @app.get(
     "/api/v1/etmf/documents/{document_id}/transitions",
-    response_model=List[TransitionResponse],
+    response_model=list[TransitionResponse],
 )
 async def get_document_transition_history(
     request: Request,
     document_id: str,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
-) -> List[TransitionResponse]:
+) -> list[TransitionResponse]:
     """
     Retrieve the append-only Quality Control (QC) transition history for a specific eTMF document.
     """
@@ -2887,7 +2883,7 @@ async def get_document_transition_history(
     ]
 
 
-def parse_recipient_address(recipient: str) -> tuple[str, Optional[str]]:
+def parse_recipient_address(recipient: str) -> tuple[str, str | None]:
     """
     Parses recipient field and extracts study_id and optional binder-hint.
     Convention: study-<STUDY_ID>[+<binder-hint>]@<domain>
@@ -2910,7 +2906,7 @@ def parse_recipient_address(recipient: str) -> tuple[str, Optional[str]]:
     return study_id, binder_hint
 
 
-def resolve_binder_hint(binder_hint: Optional[str]) -> tuple[int, str, str, str]:
+def resolve_binder_hint(binder_hint: str | None) -> tuple[int, str, str, str]:
     """
     Resolves the optional binder hint to canonical zone/section/artifact_code/artifact_type.
     If no hint is provided, defaults to 'Site Communication Log' ('05.04.01').
@@ -2960,7 +2956,7 @@ def resolve_binder_hint(binder_hint: Optional[str]) -> tuple[int, str, str, str]
 async def inbound_email_webhook(
     request: Request,
     session: AsyncSession = Depends(get_db_session),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Inbound-email webhook that validates provider requests, resolves a target study/binder location,
     and routes message content and attachments into the shared eTMF ingestion service.
@@ -3109,12 +3105,12 @@ async def inbound_email_webhook(
 
 def build_binder_structure(
     catalog,
-    archived_docs: List[TMFDocument],
+    archived_docs: list[TMFDocument],
     expected_codes: set[str],
-    site_id: Optional[str] = None,
+    site_id: str | None = None,
     is_site_scoped: bool = False,
-    principal: Optional[Principal] = None,
-) -> tuple[List[BinderZoneNode], List[str], List[str]]:
+    principal: Principal | None = None,
+) -> tuple[list[BinderZoneNode], list[str], list[str]]:
     """
     Build the nested structure models.
     """
@@ -3211,10 +3207,10 @@ def build_binder_structure(
 )
 async def get_binder_structure(
     study_id: str,
-    milestone: Optional[str] = Query(
+    milestone: str | None = Query(
         None, description="Optional clinical study milestone"
     ),
-    site_id: Optional[str] = Query(None, description="Optional clinical site ID"),
+    site_id: str | None = Query(None, description="Optional clinical site ID"),
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
 ) -> BinderStructureResponse:
@@ -3411,7 +3407,7 @@ async def bulk_archive_study_documents(
             results=[],
         )
 
-    results: List[StudyArchiveItemResult] = []
+    results: list[StudyArchiveItemResult] = []
     successful_count = 0
     failed_count = 0
     skipped_count = 0
@@ -3512,14 +3508,14 @@ async def bulk_archive_study_documents(
 
 @app.get(
     "/api/v1/etmf/documents/{document_id}/qc-history",
-    response_model=List[TransitionResponse],
+    response_model=list[TransitionResponse],
 )
 async def get_document_qc_history(
     request: Request,
     document_id: str,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
-) -> List[TransitionResponse]:
+) -> list[TransitionResponse]:
     """
     Retrieve the append-only Quality Control (QC) review history for a specific eTMF document.
     """

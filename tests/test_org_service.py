@@ -3,7 +3,7 @@ Comprehensive unit and integration tests for the Organization Directory microser
 """
 
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -228,7 +228,7 @@ async def test_delegation_of_authority_flow(db_session_fixture) -> None:
         "CRF Completion & Data Entry",
         "Clinical Query & Discrepancy Resolution",
     ]
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    now = datetime.now(UTC).replace(tzinfo=None)
 
     doa = DelegationOfAuthority(
         delegator_id=delegator.id,

@@ -4,7 +4,7 @@ Unit tests for EDC-to-SDTM Mapper.
 Tests the stateless rule-based mappings without any database I/O.
 """
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 import pytest
 from sdtm.enums import (
@@ -62,7 +62,7 @@ def test_to_dtc():
     assert to_dtc("2026/08/02") == "2026-08-02"
     assert to_dtc("2026-08-02") == "2026-08-02"
 
-    dt = datetime(2026, 8, 2, 12, 0, 0, tzinfo=timezone.utc)
+    dt = datetime(2026, 8, 2, 12, 0, 0, tzinfo=UTC)
     assert to_dtc(dt) == "2026-08-02T12:00:00Z"
 
     d = date(2026, 8, 2)
@@ -228,7 +228,7 @@ def test_map_vs():
         domain="VS",
         test_code="SYSBP",
         test_name="Systolic Blood Pressure",
-        observation_date=datetime(2026, 8, 3, 10, 0, tzinfo=timezone.utc),
+        observation_date=datetime(2026, 8, 3, 10, 0, tzinfo=UTC),
         value=130.0,
         unit="mmHg",
         normalized_value=130.0,
@@ -239,7 +239,7 @@ def test_map_vs():
         domain="VS",
         test_code="TEMP",
         test_name="Temperature",
-        observation_date=datetime(2026, 8, 2, 8, 0, tzinfo=timezone.utc),
+        observation_date=datetime(2026, 8, 2, 8, 0, tzinfo=UTC),
         value=98.6,
         unit="[degF]",
         normalized_value=37.0,
@@ -250,7 +250,7 @@ def test_map_vs():
         domain="VS",
         test_code="SYSBP",
         test_name="Systolic Blood Pressure",
-        observation_date=datetime(2026, 8, 2, 9, 0, tzinfo=timezone.utc),
+        observation_date=datetime(2026, 8, 2, 9, 0, tzinfo=UTC),
         value=120.0,
         unit="mmHg",
         normalized_value=120.0,
@@ -301,7 +301,7 @@ def test_map_lb():
         domain="LB",
         test_code="ALT",
         test_name="Alanine Aminotransferase",
-        observation_date=datetime(2026, 8, 2, 8, 0, tzinfo=timezone.utc),
+        observation_date=datetime(2026, 8, 2, 8, 0, tzinfo=UTC),
         value_string="45",
         unit="U/L",
         normalized_value=45.0,
@@ -314,7 +314,7 @@ def test_map_lb():
         domain="LB",
         test_code="AST",
         test_name="Aspartate Aminotransferase",
-        observation_date=datetime(2026, 8, 2, 8, 1, tzinfo=timezone.utc),
+        observation_date=datetime(2026, 8, 2, 8, 1, tzinfo=UTC),
         value_string="30",
         unit="U/L",
         normalized_value=30.0,

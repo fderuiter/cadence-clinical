@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import httpx
 
@@ -29,8 +29,8 @@ class EVSTransportError(EVSClientError):
 
 
 def normalize_concept(
-    concept_data: Dict[str, Any], default_system: str
-) -> Dict[str, Any]:
+    concept_data: dict[str, Any], default_system: str
+) -> dict[str, Any]:
     """Normalize EVS concept to the target concept shape: code, decode, system, plus valid."""
     code = concept_data.get("code") or ""
     # "decode" should map to the preferred name, which is "name" or "displayName" in EVS
@@ -54,9 +54,9 @@ class NCIEVSClient:
 
     def __init__(
         self,
-        base_url: Optional[str] = None,
-        terminology: Optional[str] = None,
-        timeout: Optional[httpx.Timeout] = None,
+        base_url: str | None = None,
+        terminology: str | None = None,
+        timeout: httpx.Timeout | None = None,
     ) -> None:
         """Initialize the client.
 
@@ -88,8 +88,8 @@ class NCIEVSClient:
             )
 
     async def get_concept(
-        self, code: str, client: Optional[httpx.AsyncClient] = None
-    ) -> Dict[str, Any]:
+        self, code: str, client: httpx.AsyncClient | None = None
+    ) -> dict[str, Any]:
         """Fetch concept details by concept code.
 
         Args:
@@ -158,10 +158,10 @@ class NCIEVSClient:
     async def search_concepts(
         self,
         term: str,
-        client: Optional[httpx.AsyncClient] = None,
-        from_record: Optional[int] = None,
-        page_size: Optional[int] = None,
-    ) -> List[Dict[str, Any]]:
+        client: httpx.AsyncClient | None = None,
+        from_record: int | None = None,
+        page_size: int | None = None,
+    ) -> list[dict[str, Any]]:
         """Perform a text search for terminology concepts.
 
         Args:

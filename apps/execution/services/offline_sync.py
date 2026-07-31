@@ -5,8 +5,8 @@ Requirements: PRD-SYS-001 | GxP 21 CFR Part 11 Regulated
 
 import logging
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from pydantic import BaseModel, Field
 from sqlalchemy import select
@@ -36,8 +36,8 @@ class OfflineDelta(BaseModel):
         ..., description="ISO-8601 UTC timestamp of client-side modification"
     )
     action: str = Field(..., description="Client operation type (e.g., 'SUBMIT')")
-    payload: Dict[str, Any] = Field(..., description="Stored entity key-value metrics")
-    reason_for_change: Optional[str] = Field(
+    payload: dict[str, Any] = Field(..., description="Stored entity key-value metrics")
+    reason_for_change: str | None = Field(
         None, description="21 CFR Part 11 compliant change reason justification"
     )
 
@@ -52,10 +52,10 @@ class OfflineSyncBatch(BaseModel):
         ..., description="Unique client-supplied batch transaction ID"
     )
     device_id: str = Field(..., description="The source client device identifier")
-    deltas: List[OfflineDelta] = Field(
+    deltas: list[OfflineDelta] = Field(
         default_factory=list, description="Ordered set of captured offline deltas"
     )
-    signature: Optional[str] = Field(
+    signature: str | None = Field(
         None, description="Optional HMAC signature of the entire batch"
     )
 
@@ -73,8 +73,8 @@ class OfflineSyncEngine:
         self.session = session
 
     async def process_delta_batch(
-        self, batch_payload: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, batch_payload: dict[str, Any]
+    ) -> dict[str, Any]:
         """Validate, order, and apply a batch of offline clinical deltas.
 
         Args:
@@ -156,7 +156,7 @@ class OfflineSyncEngine:
 
                     has_conflict = False
                     if latest_audit:
-                        server_ts = latest_audit.timestamp.replace(tzinfo=timezone.utc)
+                        server_ts = latest_audit.timestamp.replace(tzinfo=UTC)
                         if server_ts > client_ts:
                             has_conflict = True
 

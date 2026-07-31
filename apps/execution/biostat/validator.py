@@ -4,7 +4,8 @@ Dataset-JSON Validator Module.
 Provides conformance and referential validation for CDISC Dataset-JSON exports.
 """
 
-from typing import Any, Dict, List, Optional, Union
+import enum
+from typing import Any
 
 from apps.execution.biostat.models import DatasetJSON, DatasetJSONItemGroup
 from apps.execution.biostat.terminology import (
@@ -26,14 +27,13 @@ try:
     )
 except ImportError:
     # Fallbacks in case environment lacks packages during isolated testing
-    from enum import Enum
 
-    class Sex(str, Enum):
+    class Sex(enum.StrEnum):
         M = "M"
         F = "F"
         U = "U"
 
-    class Race(str, Enum):
+    class Race(enum.StrEnum):
         AMERICAN_INDIAN_OR_ALASKA_NATIVE = "AMERICAN INDIAN OR ALASKA NATIVE"
         ASIAN = "ASIAN"
         BLACK_OR_AFRICAN_AMERICAN = "BLACK OR AFRICAN AMERICAN"
@@ -44,21 +44,21 @@ except ImportError:
         MULTIPLE = "MULTIPLE"
         OTHER = "OTHER"
 
-    class AESeverity(str, Enum):
+    class AESeverity(enum.StrEnum):
         MILD = "MILD"
         MODERATE = "MODERATE"
         SEVERE = "SEVERE"
 
-    class AESeriousness(str, Enum):
+    class AESeriousness(enum.StrEnum):
         Y = "Y"
         N = "N"
 
-    class AERelationship(str, Enum):
+    class AERelationship(enum.StrEnum):
         RELATED = "RELATED"
         NOT_RELATED = "NOT RELATED"
         POSSIBLY_RELATED = "POSSIBLY RELATED"
 
-    class AEOutcome(str, Enum):
+    class AEOutcome(enum.StrEnum):
         RECOVERED_RESOLVED = "RECOVERED/RESOLVED"
         RECOVERING_RESOLVING = "RECOVERING/RESOLVING"
         NOT_RECOVERED_NOT_RESOLVED = "NOT RECOVERED/NOT RESOLVED"
@@ -66,7 +66,7 @@ except ImportError:
         FATAL = "FATAL"
         UNKNOWN = "UNKNOWN"
 
-    class NullFlavor(str, Enum):
+    class NullFlavor(enum.StrEnum):
         NI = "NI"
         NA = "NA"
         UNK = "UNK"
@@ -92,7 +92,7 @@ SUPPLEMENTAL_QUALIFIER_VIOLATION = "SUPPLEMENTAL_QUALIFIER_VIOLATION"
 class DatasetJSONValidationError(ValueError):
     """Custom exception raised when Dataset-JSON validation fails."""
 
-    def __init__(self, errors: List[str]):
+    def __init__(self, errors: list[str]):
         self.errors = errors
         message = "Dataset-JSON Conformance Validation Failed:\n" + "\n".join(
             f"- {err}" for err in errors
@@ -134,7 +134,7 @@ SEQUENCE_FIELDS = {
 }
 
 
-def _to_dict_list(item_group: DatasetJSONItemGroup) -> List[Dict[str, Any]]:
+def _to_dict_list(item_group: DatasetJSONItemGroup) -> list[dict[str, Any]]:
     """Converts the internal items and itemData of DatasetJSONItemGroup into a list of dicts."""
     var_names = [item.name for item in item_group.items]
     records = []
@@ -145,7 +145,7 @@ def _to_dict_list(item_group: DatasetJSONItemGroup) -> List[Dict[str, Any]]:
 
 def _extract_dataset_records(
     dataset_json: Any, dataset_name: str
-) -> Optional[List[Dict[str, Any]]]:
+) -> list[dict[str, Any]] | None:
     """Tries to extract records for a dataset by name from a DatasetJSON or parsed dict."""
     item_groups = {}
     if isinstance(dataset_json, DatasetJSON):
@@ -180,17 +180,15 @@ def _extract_dataset_records(
 
 
 def validate_dataset_json(
-    dataset_json: Union[DatasetJSON, Dict[str, Any]],
-    external_datasets: Optional[
-        Dict[str, Union[DatasetJSON, List[Dict[str, Any]]]]
-    ] = None,
+    dataset_json: DatasetJSON | dict[str, Any],
+    external_datasets: dict[str, DatasetJSON | list[dict[str, Any]]] | None = None,
 ) -> None:
     """Performs strict CDISC Dataset-JSON validation.
 
     Checks conformance rules, required variables, unique keys, and ADaM referential
     consistency against other inputs. Raises DatasetJSONValidationError if any issues exist.
     """
-    errors: List[str] = []
+    errors: list[str] = []
 
     # 1. Parse/normalize dataset_json
     item_groups = {}
@@ -209,7 +207,7 @@ def validate_dataset_json(
         errors.append("Invalid Dataset-JSON root object.")
         raise DatasetJSONValidationError(errors)
 
-    local_datasets: Dict[str, List[Dict[str, Any]]] = {}
+    local_datasets: dict[str, list[dict[str, Any]]] = {}
 
     for key, group in item_groups.items():
         ds_name = key.split(".")[-1] if "." in key else key
@@ -393,7 +391,7 @@ def validate_dataset_json(
                             )
 
     # 2. Referential consistency checks
-    def get_dataset_records(name: str) -> Optional[List[Dict[str, Any]]]:
+    def get_dataset_records(name: str) -> list[dict[str, Any]] | None:
         name_upper = name.upper()
         if name_upper in local_datasets:
             return local_datasets[name_upper]

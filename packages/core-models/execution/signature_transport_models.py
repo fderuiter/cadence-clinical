@@ -3,8 +3,6 @@
 Requirements: PRD-SYS-001
 """
 
-from typing import List
-
 from pydantic import BaseModel, Field, model_validator
 
 
@@ -19,10 +17,10 @@ class BatchSignatureRequest(BaseModel):
     target_type: str = Field(
         "FORM", description="Target artifact type: FORM, CASEBOOK, DOC"
     )
-    target_ids: List[str] = Field(
+    target_ids: list[str] = Field(
         default_factory=list, description="List of target artifact IDs"
     )
-    target_form_ids: List[str] = Field(
+    target_form_ids: list[str] = Field(
         default_factory=list, description="List of eCRF form IDs to sign"
     )
     signing_reason: str = Field(

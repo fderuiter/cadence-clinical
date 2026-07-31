@@ -1,5 +1,4 @@
 import uuid
-from typing import Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -91,7 +90,7 @@ class ComplianceChangeRequestService:
 
         return cr
 
-    async def get_change_request(self, cr_id: str) -> Optional[ComplianceChangeRequest]:
+    async def get_change_request(self, cr_id: str) -> ComplianceChangeRequest | None:
         """Fetch a change request by its ID."""
         stmt = select(ComplianceChangeRequest).where(
             ComplianceChangeRequest.id == cr_id

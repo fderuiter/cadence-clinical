@@ -4,7 +4,7 @@ import json
 import os
 import time
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -87,7 +87,7 @@ def make_mock_criterion(
     operator: str,
     const_val: Any,
     expected_outcome: bool = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     # Construct a valid eligibility criterion dict representing condition: e.g. eCRF.DM.AGE >= 18
     # Match the pydantic schema of EligibilityCriterion
     domain, var = raw_ref.replace("eCRF.", "").split(".")

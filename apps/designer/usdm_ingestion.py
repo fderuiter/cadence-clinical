@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import usdm_model
 import yaml
@@ -13,9 +13,9 @@ class ValidationIssue(BaseModel):
     Represents an individual validation error or warning.
     """
 
-    field: Optional[str] = None
+    field: str | None = None
     reason: str
-    value: Optional[str] = None
+    value: str | None = None
 
 
 class USDMValidationReport(BaseModel):
@@ -26,18 +26,18 @@ class USDMValidationReport(BaseModel):
     version: str = Field(..., description="Resolved USDM version ('v2' or 'v3')")
     format: str = Field(..., description="Detected file format ('JSON' or 'YAML')")
     validity: bool = Field(..., description="True if payload is completely valid")
-    errors: List[ValidationIssue] = Field(
+    errors: list[ValidationIssue] = Field(
         default_factory=list, description="Validation errors"
     )
-    warnings: List[ValidationIssue] = Field(
+    warnings: list[ValidationIssue] = Field(
         default_factory=list, description="Validation warnings"
     )
-    version_resolution_evidence: List[str] = Field(
+    version_resolution_evidence: list[str] = Field(
         default_factory=list, description="Evidence used to resolve version"
     )
 
 
-def safe_parse_payload(raw_text: str) -> Tuple[Dict[str, Any], str]:
+def safe_parse_payload(raw_text: str) -> tuple[dict[str, Any], str]:
     """
     Safely parses JSON or YAML payload.
     Returns parsed dictionary and detected format ("JSON" or "YAML").
@@ -69,8 +69,8 @@ def safe_parse_payload(raw_text: str) -> Tuple[Dict[str, Any], str]:
 
 
 def resolve_usdm_version(
-    payload: Dict[str, Any], override: Optional[str] = None
-) -> Tuple[str, List[str]]:
+    payload: dict[str, Any], override: str | None = None
+) -> tuple[str, list[str]]:
     """
     Resolves USDM v2 vs v3 version using structural rules or explicit override.
     """
@@ -107,7 +107,7 @@ def resolve_usdm_version(
     return "v3", evidence
 
 
-def normalize_usdm_payload(payload: Dict[str, Any], version: str) -> Dict[str, Any]:
+def normalize_usdm_payload(payload: dict[str, Any], version: str) -> dict[str, Any]:
     """
     Normalizes USDM shape differences into the contract expected by usdm_model.Study.
     """
@@ -154,8 +154,8 @@ def normalize_usdm_payload(payload: Dict[str, Any], version: str) -> Dict[str, A
 
 
 def traverse_rules_in_payload(
-    normalized_payload: Dict[str, Any],
-) -> List[Dict[str, Any]]:
+    normalized_payload: dict[str, Any],
+) -> list[dict[str, Any]]:
     """
     Extracts all rule dictionaries (top-level and activity-level) from the normalized payload.
     """
@@ -191,7 +191,7 @@ def traverse_rules_in_payload(
     return rules
 
 
-def detect_stochastic_operators(node: Any) -> List[str]:
+def detect_stochastic_operators(node: Any) -> list[str]:
     """
     Recursively check condition nodes for complex/stochastic math operators or invalid function names.
     Returns a list of unsupported operator messages.
@@ -238,14 +238,14 @@ def detect_stochastic_operators(node: Any) -> List[str]:
 
 
 def validate_usdm_payload(
-    raw_text: str, override: Optional[str] = None
+    raw_text: str, override: str | None = None
 ) -> USDMValidationReport:
     """
     Performs parsing, version resolution, normalization, and full validation (Pydantic + business checks).
     """
-    errors: List[ValidationIssue] = []
-    warnings: List[ValidationIssue] = []
-    evidence: List[str] = []
+    errors: list[ValidationIssue] = []
+    warnings: list[ValidationIssue] = []
+    evidence: list[str] = []
 
     # 1. Safe Parse
     try:
@@ -296,7 +296,7 @@ def validate_usdm_payload(
 
     # Unique ID validation across study elements
     # Gather IDs of study, versions, designs, arms, epochs, encounters, activities
-    all_ids: Dict[str, List[str]] = {}  # id -> paths where it appeared
+    all_ids: dict[str, list[str]] = {}  # id -> paths where it appeared
 
     def add_id(element_id: Any, path: str):
         if not element_id:
