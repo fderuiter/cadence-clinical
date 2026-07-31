@@ -57,7 +57,7 @@ def render_email_template(template_name: str, context: Dict[str, Any]) -> str:
     fallback_source = FALLBACK_TEMPLATES.get(
         template_name, "<h3>Notification</h3><p>{{ payload }}</p>"
     )
-    template = Template(fallback_source)
+    template = Template(fallback_source, autoescape=True)
     return template.render(**context)
 
 
