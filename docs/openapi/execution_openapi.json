@@ -792,6 +792,423 @@
         }
       }
     },
+    "/api/v1/offline/sync-batch": {
+      "post": {
+        "tags": [
+          "Offline Sync"
+        ],
+        "summary": "Sync Offline Batch",
+        "description": "Ingest batch of queued offline eCRF/ePRO deltas idempotently.\n\nRequirements: PRD-SYS-001",
+        "operationId": "sync_offline_batch_api_v1_offline_sync_batch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OfflineBatchSyncRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfflineBatchSyncResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/offline/sync": {
+      "post": {
+        "tags": [
+          "Offline Sync"
+        ],
+        "summary": "Offline Sync Endpoint",
+        "description": "Synchronize queued offline delta transactions.\n\nRequirements: PRD-SYS-001",
+        "operationId": "offline_sync_endpoint_api_v1_execution_offline_sync_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "type": "object",
+                "title": "Payload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Offline Sync Endpoint Api V1 Execution Offline Sync Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/documents/upload": {
+      "post": {
+        "tags": [
+          "Documents"
+        ],
+        "summary": "Upload Document",
+        "description": "Upload regulated document, compute SHA-256 hash, and record GxP audit trail.\n\nRequirements: PRD-SYS-001",
+        "operationId": "upload_document_api_v1_documents_upload_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_document_api_v1_documents_upload_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentUploadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/documents/{doc_id}": {
+      "get": {
+        "tags": [
+          "Documents"
+        ],
+        "summary": "Download Document",
+        "description": "Stream file content with dynamic watermarking.\n\nRequirements: PRD-SYS-001",
+        "operationId": "download_document_api_v1_documents__doc_id__get",
+        "parameters": [
+          {
+            "name": "doc_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Doc Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/documents/{doc_id}/versions": {
+      "get": {
+        "tags": [
+          "Documents"
+        ],
+        "summary": "List Document Versions",
+        "description": "Return complete version history list.\n\nRequirements: PRD-SYS-001",
+        "operationId": "list_document_versions_api_v1_documents__doc_id__versions_get",
+        "parameters": [
+          {
+            "name": "doc_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Doc Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DocumentMetadataResponse"
+                  },
+                  "title": "Response List Document Versions Api V1 Documents  Doc Id  Versions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/tsdv/config": {
+      "post": {
+        "summary": "Create Or Update Tsdv Config",
+        "description": "Create or update Targeted SDV (TSDV) configuration for a study.\n\nRestricts config writes to CRA/Data Manager roles with GxP change justifications.",
+        "operationId": "create_or_update_tsdv_config_api_v1_execution_tsdv_config_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TSDVConfigCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TSDVConfigResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/tsdv/config/{study_id}": {
+      "get": {
+        "summary": "Get Tsdv Config",
+        "description": "Retrieve Targeted SDV (TSDV) configuration for a study.",
+        "operationId": "get_tsdv_config_api_v1_execution_tsdv_config__study_id__get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TSDVConfigResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/tsdv/required": {
+      "get": {
+        "summary": "Evaluate Tsdv Rule",
+        "description": "Evaluate Targeted SDV (TSDV) requirement for a given context.\n\nCalculates deterministic sampling decisions and returns component results with an audit explanation.",
+        "operationId": "evaluate_tsdv_rule_api_v1_execution_tsdv_required_get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Subject Id"
+            }
+          },
+          {
+            "name": "domain",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Domain"
+            }
+          },
+          {
+            "name": "enrollment_index",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Enrollment Index"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TSDVEvaluationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/sdv/signoff": {
+      "post": {
+        "summary": "Sdv Signoff",
+        "description": "CRA/monitor-gated SDV sign-off endpoint for Field, Page, or Visit scopes.",
+        "operationId": "sdv_signoff_api_v1_execution_sdv_signoff_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SDVSignoffCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SDVSignoffResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health Check",
@@ -1000,57 +1417,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SubjectScreeningResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/execution/subjects/{subject_id}/consent": {
-      "post": {
-        "summary": "Record Subject Consent",
-        "description": "Record or update subject consent for a specific protocol version.\n\n[Deprecated] This is the legacy execution-side local recording endpoint.\nNew integrations should capture consent canonically via the eConsent service.",
-        "operationId": "record_subject_consent_api_v1_execution_subjects__subject_id__consent_post",
-        "deprecated": true,
-        "parameters": [
-          {
-            "name": "subject_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Subject Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SubjectConsentRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SubjectConsentResponse"
                 }
               }
             }
@@ -1557,6 +1923,22 @@
             }
           },
           {
+            "name": "lab_source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lab Source"
+            }
+          },
+          {
             "name": "include_deleted",
             "in": "query",
             "required": false,
@@ -1839,7 +2221,7 @@
     "/api/v1/dictionaries/import": {
       "post": {
         "summary": "Import Dictionary",
-        "description": "Imports raw dictionary files and schedules a background parsing task.",
+        "description": "Imports raw dictionary files and schedules a background parsing task.\n\nSatisfies Epic #109 / Issue #1122 / Phase 16: Dictionary Ingestion & Persistence.",
         "operationId": "import_dictionary_api_v1_dictionaries_import_post",
         "requestBody": {
           "content": {
@@ -1971,7 +2353,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MedDRACodingResult"
+                  "$ref": "#/components/schemas/MedDRACodeLookupResponse"
                 }
               }
             }
@@ -2020,7 +2402,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WHODrugCodingResult"
+                  "$ref": "#/components/schemas/WHODrugCodeLookupResponse"
                 }
               }
             }
@@ -2294,205 +2676,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ClinicalQueryResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/execution/tsdv/config": {
-      "post": {
-        "summary": "Create Or Update Tsdv Config",
-        "description": "Create or update Targeted SDV (TSDV) configuration for a study.\n\nRestricts config writes to CRA/Data Manager roles with GxP change justifications.",
-        "operationId": "create_or_update_tsdv_config_api_v1_execution_tsdv_config_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TSDVConfigCreate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TSDVConfigResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/execution/tsdv/config/{study_id}": {
-      "get": {
-        "summary": "Get Tsdv Config",
-        "description": "Retrieve Targeted SDV (TSDV) configuration for a study.",
-        "operationId": "get_tsdv_config_api_v1_execution_tsdv_config__study_id__get",
-        "parameters": [
-          {
-            "name": "study_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Study Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TSDVConfigResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/execution/tsdv/required": {
-      "get": {
-        "summary": "Evaluate Tsdv Rule",
-        "description": "Evaluate Targeted SDV (TSDV) requirement for a given context.\n\nCalculates deterministic sampling decisions and returns component results with an audit explanation.",
-        "operationId": "evaluate_tsdv_rule_api_v1_execution_tsdv_required_get",
-        "parameters": [
-          {
-            "name": "study_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Study Id"
-            }
-          },
-          {
-            "name": "subject_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Subject Id"
-            }
-          },
-          {
-            "name": "domain",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Domain"
-            }
-          },
-          {
-            "name": "enrollment_index",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Enrollment Index"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TSDVEvaluationResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/execution/sdv/signoff": {
-      "post": {
-        "summary": "Sdv Signoff",
-        "description": "CRA/monitor-gated SDV sign-off endpoint for Field, Page, or Visit scopes.",
-        "operationId": "sdv_signoff_api_v1_execution_sdv_signoff_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SDVSignOffRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SDVSignOffResponse"
                 }
               }
             }
@@ -4651,6 +4834,30 @@
         ],
         "title": "Body_import_dictionary_api_v1_dictionaries_import_post"
       },
+      "Body_upload_document_api_v1_documents_upload_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          },
+          "dia_tmf_code": {
+            "type": "string",
+            "title": "Dia Tmf Code"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file",
+          "dia_tmf_code",
+          "reason_for_change"
+        ],
+        "title": "Body_upload_document_api_v1_documents_upload_post"
+      },
       "ClinicalQueryResponse": {
         "properties": {
           "id": {
@@ -5083,7 +5290,14 @@
           },
           "hierarchy": {
             "anyOf": [
-              {},
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              },
               {
                 "type": "null"
               }
@@ -5092,7 +5306,14 @@
           },
           "suggestions": {
             "anyOf": [
-              {},
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              },
               {
                 "type": "null"
               }
@@ -5649,6 +5870,85 @@
         ],
         "title": "DispenseResponse"
       },
+      "DocumentMetadataResponse": {
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "title": "Document Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "version_index": {
+            "type": "string",
+            "title": "Version Index"
+          },
+          "sha256_hash": {
+            "type": "string",
+            "title": "Sha256 Hash"
+          },
+          "dia_tmf_code": {
+            "type": "string",
+            "title": "Dia Tmf Code"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id",
+          "filename",
+          "version_index",
+          "sha256_hash",
+          "dia_tmf_code",
+          "status",
+          "created_by",
+          "created_at"
+        ],
+        "title": "DocumentMetadataResponse",
+        "description": "Schema representing complete document metadata.\n\nRequirements: PRD-SYS-001"
+      },
+      "DocumentUploadResponse": {
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "title": "Document Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "version_index": {
+            "type": "string",
+            "title": "Version Index"
+          },
+          "sha256_hash": {
+            "type": "string",
+            "title": "Sha256 Hash"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id",
+          "filename",
+          "version_index",
+          "sha256_hash"
+        ],
+        "title": "DocumentUploadResponse",
+        "description": "Schema representing upload response.\n\nRequirements: PRD-SYS-001"
+      },
       "EISFDocumentRecord": {
         "properties": {
           "document_id": {
@@ -5934,8 +6234,7 @@
       "ImpactAnalysisRequest": {
         "properties": {
           "dictionary_type": {
-            "type": "string",
-            "title": "Dictionary Type"
+            "$ref": "#/components/schemas/DictTypeEnum"
           },
           "new_version": {
             "type": "string",
@@ -5953,20 +6252,18 @@
         "properties": {
           "status": {
             "type": "string",
+            "const": "success",
             "title": "Status"
           },
           "dictionary_type": {
-            "type": "string",
-            "title": "Dictionary Type"
+            "$ref": "#/components/schemas/DictTypeEnum"
           },
           "new_version": {
             "type": "string",
             "title": "New Version"
           },
           "metrics": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Metrics"
+            "$ref": "#/components/schemas/ImpactMetrics"
           }
         },
         "type": "object",
@@ -5977,6 +6274,65 @@
           "metrics"
         ],
         "title": "ImpactAnalysisResponse"
+      },
+      "ImpactMetrics": {
+        "properties": {
+          "unchanged": {
+            "type": "integer",
+            "title": "Unchanged",
+            "default": 0
+          },
+          "reclassified": {
+            "type": "integer",
+            "title": "Reclassified",
+            "default": 0
+          },
+          "deprecated": {
+            "type": "integer",
+            "title": "Deprecated",
+            "default": 0
+          },
+          "skipped": {
+            "type": "integer",
+            "title": "Skipped",
+            "default": 0
+          },
+          "verbatim_terms_affected": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verbatim Terms Affected"
+          },
+          "coded_terms_affected": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coded Terms Affected"
+          },
+          "uncodable_terms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uncodable Terms"
+          }
+        },
+        "type": "object",
+        "title": "ImpactMetrics"
       },
       "InvalidParam": {
         "properties": {
@@ -6681,7 +7037,33 @@
         "title": "LockStatusResponse",
         "description": "Pydantic model representing the active locking/freezing state of the system."
       },
-      "MedDRACodeMatch": {
+      "MedDRACodeLookupResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "AUTO-CODED",
+              "SUGGESTIONS",
+              "UNCODABLE"
+            ],
+            "title": "Status"
+          },
+          "matches": {
+            "items": {
+              "$ref": "#/components/schemas/MedDRAMatch"
+            },
+            "type": "array",
+            "title": "Matches"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "matches"
+        ],
+        "title": "MedDRACodeLookupResponse"
+      },
+      "MedDRAMatch": {
         "properties": {
           "llt_code": {
             "type": "string",
@@ -6752,28 +7134,7 @@
           "soc_name",
           "score"
         ],
-        "title": "MedDRACodeMatch"
-      },
-      "MedDRACodingResult": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "title": "Status"
-          },
-          "matches": {
-            "items": {
-              "$ref": "#/components/schemas/MedDRACodeMatch"
-            },
-            "type": "array",
-            "title": "Matches"
-          }
-        },
-        "type": "object",
-        "required": [
-          "status",
-          "matches"
-        ],
-        "title": "MedDRACodingResult"
+        "title": "MedDRAMatch"
       },
       "MedDRATargetLevelEnum": {
         "type": "string",
@@ -7206,6 +7567,50 @@
             ],
             "title": "Matched Normal Bounds"
           },
+          "range_indicator": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Range Indicator"
+          },
+          "is_out_of_range": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Out Of Range"
+          },
+          "reference_range_low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Range Low"
+          },
+          "reference_range_high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Range High"
+          },
           "protocol_version_tag": {
             "anyOf": [
               {
@@ -7242,6 +7647,134 @@
         ],
         "title": "ObservationResponse",
         "description": "Pydantic schema returning observation details."
+      },
+      "OfflineBatchSyncRequest": {
+        "properties": {
+          "client_batch_id": {
+            "type": "string",
+            "title": "Client Batch Id",
+            "description": "Unique client-supplied batch identifier for idempotency"
+          },
+          "device_id": {
+            "type": "string",
+            "title": "Device Id",
+            "description": "Identifier of the device performing the sync"
+          },
+          "deltas": {
+            "items": {
+              "$ref": "#/components/schemas/OfflineDeltaItem"
+            },
+            "type": "array",
+            "title": "Deltas",
+            "description": "List of sync deltas to process"
+          }
+        },
+        "type": "object",
+        "required": [
+          "client_batch_id",
+          "device_id",
+          "deltas"
+        ],
+        "title": "OfflineBatchSyncRequest",
+        "description": "Request schema for offline batch delta sync.\n\nRequirements: PRD-SYS-001"
+      },
+      "OfflineBatchSyncResponse": {
+        "properties": {
+          "client_batch_id": {
+            "type": "string",
+            "title": "Client Batch Id",
+            "description": "Unique client-supplied batch identifier"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "SUCCESS",
+              "PARTIAL_SUCCESS",
+              "ALREADY_PROCESSED"
+            ],
+            "title": "Status",
+            "description": "Processing status of the batch"
+          },
+          "processed_count": {
+            "type": "integer",
+            "title": "Processed Count",
+            "description": "Number of successfully processed deltas"
+          },
+          "conflicts": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Conflicts",
+            "description": "List of conflicts encountered during processing"
+          }
+        },
+        "type": "object",
+        "required": [
+          "client_batch_id",
+          "status",
+          "processed_count"
+        ],
+        "title": "OfflineBatchSyncResponse",
+        "description": "Response schema for offline batch delta sync.\n\nRequirements: PRD-SYS-001"
+      },
+      "OfflineDeltaItem": {
+        "properties": {
+          "delta_id": {
+            "type": "string",
+            "title": "Delta Id",
+            "description": "Unique delta identifier"
+          },
+          "entity_type": {
+            "type": "string",
+            "title": "Entity Type",
+            "description": "Type of mutated entity"
+          },
+          "entity_id": {
+            "type": "string",
+            "title": "Entity Id",
+            "description": "Unique ID of mutated entity"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "CREATE",
+              "UPDATE",
+              "SUBMIT"
+            ],
+            "title": "Action",
+            "description": "Mutation action type"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload",
+            "description": "Payload data for the entity"
+          },
+          "client_timestamp_utc": {
+            "type": "string",
+            "title": "Client Timestamp Utc",
+            "description": "UTC timestamp of the mutation on client"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Reason for the mutation change"
+          }
+        },
+        "type": "object",
+        "required": [
+          "delta_id",
+          "entity_type",
+          "entity_id",
+          "action",
+          "payload",
+          "client_timestamp_utc",
+          "reason_for_change"
+        ],
+        "title": "OfflineDeltaItem",
+        "description": "An individual sync delta item representing an entity mutation.\n\nRequirements: PRD-SYS-001"
       },
       "OutlierRecalculateRequest": {
         "properties": {
@@ -7365,51 +7898,6 @@
           "code"
         ],
         "title": "ProblemDetails"
-      },
-      "ProtocolVersionRef": {
-        "properties": {
-          "study_id": {
-            "type": "string",
-            "title": "Study Id",
-            "description": "Unique identifier of the clinical study (e.g. 'STUDY-101')."
-          },
-          "version_tag": {
-            "type": "string",
-            "title": "Version Tag",
-            "description": "The semantic or alphanumeric version tag representing the protocol version (e.g. '1.0', 'v2.1')."
-          },
-          "version_index": {
-            "type": "integer",
-            "title": "Version Index",
-            "description": "Chronological, incrementing index of the protocol version (must be >= 1)."
-          },
-          "status": {
-            "$ref": "#/components/schemas/ProtocolVersionStatus",
-            "description": "Current controlled status of this protocol version."
-          }
-        },
-        "type": "object",
-        "required": [
-          "study_id",
-          "version_tag",
-          "version_index",
-          "status"
-        ],
-        "title": "ProtocolVersionRef",
-        "description": "Pydantic v2 model representing a reference to a specific clinical trial protocol version.\n\nThis contract is shared between Execution, eTMF, and other services to prevent\nthe duplication of ad-hoc protocol reference fields and ensure consistent cross-service\npayload structures, validation, and serialization."
-      },
-      "ProtocolVersionStatus": {
-        "type": "string",
-        "enum": [
-          "DRAFT",
-          "ACTIVE",
-          "LOCKED",
-          "PUBLISHED",
-          "ARCHIVED",
-          "FROZEN"
-        ],
-        "title": "ProtocolVersionStatus",
-        "description": "Controlled vocabulary of statuses for a clinical protocol or study version."
       },
       "PublishAmendmentRequest": {
         "properties": {
@@ -8236,6 +8724,141 @@
         "title": "SDVSignOffResponse",
         "description": "Pydantic response schema for SDV sign-off."
       },
+      "SDVSignoffCreate": {
+        "properties": {
+          "scope": {
+            "$ref": "#/components/schemas/SDVScopeEnum"
+          },
+          "target_id": {
+            "type": "string",
+            "title": "Target Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scope",
+          "target_id",
+          "subject_id",
+          "study_id"
+        ],
+        "title": "SDVSignoffCreate",
+        "description": "Pydantic request schema for SDV sign-off."
+      },
+      "SDVSignoffResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope"
+          },
+          "target_id": {
+            "type": "string",
+            "title": "Target Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id"
+          },
+          "is_verified": {
+            "type": "boolean",
+            "title": "Is Verified"
+          },
+          "verified_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified By"
+          },
+          "verified_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified At"
+          },
+          "dropped_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dropped Reason"
+          },
+          "dropped_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dropped At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "scope",
+          "target_id",
+          "subject_id",
+          "study_id",
+          "is_verified"
+        ],
+        "title": "SDVSignoffResponse",
+        "description": "Pydantic response schema for SDV sign-off."
+      },
       "SafetyDispatchRequest": {
         "properties": {
           "study_id": {
@@ -8348,102 +8971,6 @@
         ],
         "title": "StudyEvent",
         "description": "Pydantic model representing an incoming study publication event.\n\nAttributes:\n    study_id (str): The unique identifier of the study.\n    payload (dict[str, Any]): The raw USDM protocol payload."
-      },
-      "SubjectConsentRequest": {
-        "properties": {
-          "protocol_version": {
-            "$ref": "#/components/schemas/ProtocolVersionRef"
-          },
-          "icf_signed": {
-            "type": "boolean",
-            "title": "Icf Signed"
-          },
-          "icf_signed_date": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Icf Signed Date"
-          },
-          "requires_reconsent": {
-            "type": "boolean",
-            "title": "Requires Reconsent",
-            "default": false
-          }
-        },
-        "type": "object",
-        "required": [
-          "protocol_version",
-          "icf_signed"
-        ],
-        "title": "SubjectConsentRequest",
-        "description": "Pydantic schema for recording a subject's consent to a protocol version."
-      },
-      "SubjectConsentResponse": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "subject_id": {
-            "type": "string",
-            "title": "Subject Id"
-          },
-          "study_id": {
-            "type": "string",
-            "title": "Study Id"
-          },
-          "version_tag": {
-            "type": "string",
-            "title": "Version Tag"
-          },
-          "version_index": {
-            "type": "integer",
-            "title": "Version Index"
-          },
-          "icf_signed": {
-            "type": "boolean",
-            "title": "Icf Signed"
-          },
-          "icf_signed_date": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Icf Signed Date"
-          },
-          "requires_reconsent": {
-            "type": "boolean",
-            "title": "Requires Reconsent"
-          },
-          "version": {
-            "type": "integer",
-            "title": "Version"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "subject_id",
-          "study_id",
-          "version_tag",
-          "version_index",
-          "icf_signed",
-          "requires_reconsent",
-          "version"
-        ],
-        "title": "SubjectConsentResponse",
-        "description": "Pydantic schema returning subject consent details."
       },
       "SubjectCreate": {
         "properties": {
@@ -9577,30 +10104,174 @@
       },
       "WHODrugATCContext": {
         "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
           "atc_code": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Atc Code"
           },
           "description": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Description"
           }
         },
         "type": "object",
-        "required": [
-          "atc_code",
-          "description"
-        ],
         "title": "WHODrugATCContext"
       },
-      "WHODrugCodeMatch": {
+      "WHODrugCodeLookupResponse": {
         "properties": {
-          "drug_code": {
+          "status": {
             "type": "string",
+            "enum": [
+              "AUTO-CODED",
+              "SUGGESTIONS",
+              "UNCODABLE"
+            ],
+            "title": "Status"
+          },
+          "matches": {
+            "items": {
+              "$ref": "#/components/schemas/WHODrugMatch"
+            },
+            "type": "array",
+            "title": "Matches"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "matches"
+        ],
+        "title": "WHODrugCodeLookupResponse"
+      },
+      "WHODrugIngredientItem": {
+        "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "ingredient_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingredient Code"
+          },
+          "ingredient_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ingredient Name"
+          }
+        },
+        "type": "object",
+        "title": "WHODrugIngredientItem"
+      },
+      "WHODrugMatch": {
+        "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "drug_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Drug Code"
           },
           "preferred_name": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Preferred Name"
           },
           "drug_name": {
@@ -9618,14 +10289,6 @@
             "type": "number",
             "title": "Score"
           },
-          "atc_context": {
-            "items": {
-              "$ref": "#/components/schemas/WHODrugATCContext"
-            },
-            "type": "array",
-            "title": "Atc Context",
-            "default": []
-          },
           "ingredients": {
             "items": {
               "$ref": "#/components/schemas/WHODrugIngredientItem"
@@ -9633,54 +10296,29 @@
             "type": "array",
             "title": "Ingredients",
             "default": []
-          }
-        },
-        "type": "object",
-        "required": [
-          "drug_code",
-          "preferred_name",
-          "score"
-        ],
-        "title": "WHODrugCodeMatch"
-      },
-      "WHODrugCodingResult": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "title": "Status"
           },
-          "matches": {
+          "atc": {
             "items": {
-              "$ref": "#/components/schemas/WHODrugCodeMatch"
+              "$ref": "#/components/schemas/WHODrugATCContext"
             },
             "type": "array",
-            "title": "Matches"
-          }
-        },
-        "type": "object",
-        "required": [
-          "status",
-          "matches"
-        ],
-        "title": "WHODrugCodingResult"
-      },
-      "WHODrugIngredientItem": {
-        "properties": {
-          "ingredient_code": {
-            "type": "string",
-            "title": "Ingredient Code"
+            "title": "Atc",
+            "default": []
           },
-          "ingredient_name": {
-            "type": "string",
-            "title": "Ingredient Name"
+          "atc_context": {
+            "items": {
+              "$ref": "#/components/schemas/WHODrugATCContext"
+            },
+            "type": "array",
+            "title": "Atc Context",
+            "default": []
           }
         },
         "type": "object",
         "required": [
-          "ingredient_code",
-          "ingredient_name"
+          "score"
         ],
-        "title": "WHODrugIngredientItem"
+        "title": "WHODrugMatch"
       }
     }
   }
