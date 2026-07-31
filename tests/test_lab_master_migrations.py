@@ -38,7 +38,7 @@ async def test_lab_master_migrations():
                         col["name"] for col in insp.get_columns("lab_reference_ranges")
                     ]
                     cols_master = [
-                        col["name"] for col in insp.get_columns("lab_test_masters")
+                        col["name"] for col in insp.get_columns("lab_test_master")
                     ]
                     cols_conversion = [
                         col["name"] for col in insp.get_columns("lab_unit_conversions")
@@ -50,7 +50,7 @@ async def test_lab_master_migrations():
                 )
 
                 # Assert that the tables are created
-                assert "lab_test_masters" in tables
+                assert "lab_test_master" in tables
                 assert "lab_unit_conversions" in tables
                 assert "lab_reference_ranges" in tables
 
@@ -60,7 +60,7 @@ async def test_lab_master_migrations():
                 assert "reason_for_change" in cols_ref
                 assert "version_index" in cols_ref
 
-                # Assert that lab_test_masters has correct columns
+                # Assert that lab_test_master has correct columns
                 assert "study_id" in cols_master
                 assert "test_code" in cols_master
                 assert "test_name" in cols_master

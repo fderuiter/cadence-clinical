@@ -208,6 +208,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "eisf_document": {"create", "read", "update", "delete", "sync"},
         # Medical Coding
         "medical_coding": {"create", "read", "update"},
+        "lab_range": {"create", "read", "update", "delete"},
     },
     ROLE_SPONSOR_DESIGNER: {
         "study_design": {"create", "read", "update", "delete", "approve", "reorder"},
@@ -303,6 +304,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "eisf_document": {"create", "read", "update", "delete", "sync"},
         # Medical Coding
         "medical_coding": {"create", "read", "update"},
+        "lab_range": {"create", "read", "update", "delete"},
     },
     ROLE_SPONSOR_MM: {
         "study_design": {"read"},
@@ -333,6 +335,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
             "update",
         },  # 'Ans' (Answer query) maps to update/read
         "sdv": {"read"},
+        "lab_range": {"read"},
         "system_audit_logs": {"read"},
         "regulatory_form": {"create", "read", "sign"},
         "training_log": {"create", "read", "sign"},
@@ -349,6 +352,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "quality_event": {"read"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
+        "lab_range": {"read"},
     },
     ROLE_CRC: {
         "study_design": {"read"},
@@ -375,6 +379,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "quality_event": {"read"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
+        "lab_range": {"read"},
     },
     ROLE_CRA_CANONICAL: {
         "study_design": {"read"},
@@ -382,6 +387,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "ecrf_data_entry": {"read"},
         "query_lifecycle": {"create", "read", "update", "delete"},
         "sdv": {"create", "read", "update", "delete"},
+        "lab_range": {"create", "read", "update", "delete"},
         "system_audit_logs": {"read"},
         "export_masked": {"read"},
         "regulatory_form": {"create", "read", "sign"},
@@ -407,6 +413,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
     "monitor": {
         "study_design": {"read"},
         "sdv": {"create", "read", "update", "delete"},
+        "lab_range": {"create", "read", "update", "delete"},
         "system_audit_logs": {"read"},
         "regulatory_form": {"create", "read", "sign"},
         "training_log": {"create", "read", "sign"},

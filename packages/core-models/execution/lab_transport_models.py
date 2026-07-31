@@ -2,6 +2,7 @@
 
 Requirements: PRD-SYS-001
 """
+# Transport schema definitions for lab operations.
 
 from datetime import datetime
 from typing import Optional
