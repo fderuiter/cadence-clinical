@@ -7,31 +7,76 @@
 
     <!-- Formatting Toolbar -->
     <div class="editor-toolbar">
-      <button type="button" class="toolbar-btn" @click="formatDoc('bold')" title="Bold">
+      <button
+        type="button"
+        class="toolbar-btn"
+        title="Bold"
+        @click="formatDoc('bold')"
+      >
         <strong>B</strong>
       </button>
-      <button type="button" class="toolbar-btn" @click="formatDoc('italic')" title="Italic">
+      <button
+        type="button"
+        class="toolbar-btn"
+        title="Italic"
+        @click="formatDoc('italic')"
+      >
         <em>I</em>
       </button>
-      <button type="button" class="toolbar-btn" @click="formatHeading('h2')" title="Heading 2">
+      <button
+        type="button"
+        class="toolbar-btn"
+        title="Heading 2"
+        @click="formatHeading('h2')"
+      >
         H2
       </button>
-      <button type="button" class="toolbar-btn" @click="formatHeading('h3')" title="Heading 3">
+      <button
+        type="button"
+        class="toolbar-btn"
+        title="Heading 3"
+        @click="formatHeading('h3')"
+      >
         H3
       </button>
-      <button type="button" class="toolbar-btn" @click="formatDoc('insertUnorderedList')" title="Bullet List">
+      <button
+        type="button"
+        class="toolbar-btn"
+        title="Bullet List"
+        @click="formatDoc('insertUnorderedList')"
+      >
         • List
       </button>
-      <button type="button" class="toolbar-btn" @click="formatDoc('insertOrderedList')" title="Numbered List">
+      <button
+        type="button"
+        class="toolbar-btn"
+        title="Numbered List"
+        @click="formatDoc('insertOrderedList')"
+      >
         1. List
       </button>
-      <button type="button" class="toolbar-btn" @click="insertTable" title="Insert Table">
+      <button
+        type="button"
+        class="toolbar-btn"
+        title="Insert Table"
+        @click="insertTable"
+      >
         📊 Table
       </button>
-      <button type="button" class="toolbar-btn" @click="insertImage" title="Insert Image Embed">
+      <button
+        type="button"
+        class="toolbar-btn"
+        title="Insert Image Embed"
+        @click="insertImage"
+      >
         🖼️ Image
       </button>
-      <button type="button" class="toolbar-btn glossary-btn" @click="promptGlossary" title="Annotate Glossary Term">
+      <button
+        type="button"
+        class="toolbar-btn glossary-btn"
+        title="Annotate Glossary Term"
+        @click="promptGlossary"
+      >
         🏷️ Glossary Term
       </button>
     </div>
@@ -51,10 +96,13 @@
       @focusin="handleCanvasMouseOver"
       @focusout="hidePopover"
       v-html="localHtml"
-    ></div>
+    />
 
     <!-- Glossary Term Annotation Dialog/Modal -->
-    <div v-if="showGlossaryModal" class="glossary-modal-overlay">
+    <div
+      v-if="showGlossaryModal"
+      class="glossary-modal-overlay"
+    >
       <div class="glossary-modal card">
         <h4>Annotate Selected Text as Glossary Term</h4>
         <p class="selected-text-preview">
@@ -68,11 +116,23 @@
             placeholder="e.g. An examination of tissue removed from a living body to discover the presence or cause of a disease."
             rows="3"
             class="form-control"
-          ></textarea>
+          />
         </div>
         <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" @click="showGlossaryModal = false">Cancel</button>
-          <button type="button" class="btn btn-primary" @click="applyGlossaryAnnotation">Apply Annotation</button>
+          <button
+            type="button"
+            class="btn btn-secondary"
+            @click="showGlossaryModal = false"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            @click="applyGlossaryAnnotation"
+          >
+            Apply Annotation
+          </button>
         </div>
       </div>
     </div>
@@ -83,7 +143,9 @@
       class="glossary-popover"
       :style="{ top: popoverY + 'px', left: popoverX + 'px' }"
     >
-      <div class="popover-title">Glossary Definition</div>
+      <div class="popover-title">
+        Glossary Definition
+      </div>
       <div class="popover-body">
         <strong>{{ hoveredGlossaryTerm }}</strong>: {{ hoveredGlossaryDefinition }}
       </div>

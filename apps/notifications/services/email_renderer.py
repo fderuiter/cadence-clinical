@@ -1,7 +1,7 @@
 import os
 from typing import Any, Dict
 
-from jinja2 import Environment, FileSystemLoader, Template
+from jinja2 import Environment, FileSystemLoader, Template, select_autoescape
 
 TEMPLATE_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "templates"
@@ -43,7 +43,10 @@ def render_email_template(template_name: str, context: Dict[str, Any]) -> str:
     """
     if os.path.exists(TEMPLATE_DIR):
         try:
-            env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
+            env = Environment(
+                loader=FileSystemLoader(TEMPLATE_DIR),
+                autoescape=select_autoescape(["html", "xml", "j2"]),
+            )
             template = env.get_template(template_name)
             return template.render(**context)
         except Exception:

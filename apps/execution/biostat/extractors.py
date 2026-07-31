@@ -1,3 +1,11 @@
+"""Pure extractor functions for mapping clinical data models to CDISC SDTM domains.
+
+This module provides data-driven SDTM extraction logic for Demographics (DM),
+Medical History (MH), Adverse Events (AE), Vital Signs (VS), and Laboratory (LB)
+domains based on clinical observation data structures.
+"""
+
+import logging
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -5,13 +13,32 @@ from apps.execution.biostat.models import SUPPRecord
 from apps.execution.biostat.terminology import normalize_race, normalize_sex
 from apps.execution.demographics import decrypt_demographics as decrypt_demographics
 
+# Initialize logger for the extraction engine to support production observability
+logger = logging.getLogger(__name__)
+
 
 def calculate_age(rfstdtc: Optional[str], brthdtc: Optional[str]) -> Optional[int]:
     """Derive AGE from RFSTDTC and BRTHDTC where source precision supports the calculation.
 
     Requires full YYYY-MM-DD precision for both dates.
+
+    Args:
+        rfstdtc: The reference start date string in ISO 8601 format.
+        brthdtc: The birth date string in ISO 8601 format.
+
+    Returns:
+        Optional[int]: The calculated age in years as an integer, or None if the input
+            dates are invalid or lack sufficient precision.
+
+    Raises:
+        None: Handles internal parsing exceptions gracefully and returns None.
     """
     if not rfstdtc or not brthdtc:
+        logger.warning(
+            "AGE calculation bypassed: missing RFSTDTC (%s) or BRTHDTC (%s).",
+            rfstdtc,
+            brthdtc,
+        )
         return None
 
     # Match YYYY-MM-DD at the start of strings
@@ -19,6 +46,9 @@ def calculate_age(rfstdtc: Optional[str], brthdtc: Optional[str]) -> Optional[in
     match_br = re.match(r"^(\d{4})-(\d{2})-(\d{2})", brthdtc.strip())
 
     if not match_rf or not match_br:
+        logger.info(
+            "AGE calculation bypassed: insufficient precision for RFSTDTC or BRTHDTC."
+        )
         return None
 
     try:
@@ -32,21 +62,43 @@ def calculate_age(rfstdtc: Optional[str], brthdtc: Optional[str]) -> Optional[in
 
         delta_days = (rf_date - br_date).days
         if delta_days < 0:
+            logger.error(
+                "AGE calculation error: reference start date %s is earlier than birth date %s.",
+                rf_date,
+                br_date,
+            )
             return None
         return int(delta_days // 365.25)
     except Exception:
+        logger.exception("Unexpected exception during AGE calculation")
         return None
 
 
 def get_value(obj: Any, key: str, default: Any = None) -> Any:
-    """Helper to retrieve value from dict or object attribute."""
+    """Helper to retrieve value from dict or object attribute.
+
+    Args:
+        obj: The source dictionary or object.
+        key: The key or attribute name to look up.
+        default: The default value to return if the key/attribute is not found.
+
+    Returns:
+        Any: The retrieved value or default.
+    """
     if isinstance(obj, dict):
         return obj.get(key, default)
     return getattr(obj, key, default)
 
 
 def get_demographics(subject: Any) -> dict:
-    """Extracts demographics dict from subject (handling encryption and structures)."""
+    """Extracts demographics dict from subject (handling encryption and structures).
+
+    Args:
+        subject: The clinical subject record (object or dictionary).
+
+    Returns:
+        dict: The decrypted or serialized demographics dictionary.
+    """
     demographics = get_value(subject, "demographics")
     if not demographics:
         enc = get_value(subject, "encrypted_demographics")
@@ -62,7 +114,18 @@ def get_demographics(subject: Any) -> dict:
 
 
 def get_subject_rfstdtc(subj: Any, all_observations: List[Any]) -> Optional[str]:
-    """Retrieves or derives the RFSTDTC for a subject."""
+    """Retrieves or derives the RFSTDTC (Reference Start Date/Time) for a subject.
+
+    This function first searches the subject attributes and demographics,
+    falling back to extracting the earliest date from exposure observations.
+
+    Args:
+        subj: The subject clinical record.
+        all_observations: List of all clinical observations.
+
+    Returns:
+        Optional[str]: The reference start date string, or None if not found.
+    """
     sub_id = get_value(subj, "subject_id")
     if not sub_id:
         return None
@@ -117,6 +180,9 @@ def extract_dm(
 
     Returns:
         List[Dict[str, Any]]: List of mapped DM domain dictionaries.
+
+    Raises:
+        ValueError: If controlled terminology validations fail (e.g., invalid sex).
     """
     obs_list = observations or []
 

@@ -679,6 +679,10 @@ class ObservationResponse(BaseModel):
     matched_normal_bounds: Optional[str] = None
     protocol_version_tag: Optional[str] = None
     protocol_version_index: Optional[int] = None
+    range_indicator: Optional[str] = None
+    is_out_of_range: Optional[bool] = None
+    reference_range_low: Optional[float] = None
+    reference_range_high: Optional[float] = None
 
 
 class MigrationRuleCreate(BaseModel):
@@ -757,6 +761,7 @@ async def evaluate_and_transition_screening(
         require_roles(ROLE_SITE_INVESTIGATOR, ROLE_DATA_MANAGER, "investigator")
     ),
     _justification=Depends(verify_change_justification),
+    _not_auditor: list[str] = Depends(verify_not_auditor),
 ) -> SubjectScreeningResponse:
     """Evaluate subject's eligibility criteria and execute the guarded screening lifecycle transition."""
     change_reason = request.headers.get("X-Change-Reason", "")
@@ -1004,6 +1009,7 @@ async def unblind_subject(
             detail="ROLE_INSUFFICIENT",
         )
     ),
+    _not_auditor: list[str] = Depends(verify_not_auditor),
 ) -> SubjectUnblindResponse:
     """Execute an emergency treatment-allocation unblinding for a randomised subject.
 
@@ -1280,6 +1286,7 @@ async def randomize_subject_endpoint(
             ROLE_SITE_INVESTIGATOR, ROLE_INVESTIGATOR, ROLE_CRC, "investigator"
         )
     ),
+    _not_auditor: list[str] = Depends(verify_not_auditor),
 ) -> SubjectRandomizationResponse:
     """Execute GxP compliant subject randomization allocation and block-index advancement."""
     # Ensure change justification headers are present and valid
@@ -1669,6 +1676,16 @@ async def create_observation(
             change_reason=change_reason,
         )
 
+        ref_low = None
+        ref_high = None
+        if obs_db.matched_normal_bounds:
+            try:
+                bounds = json.loads(obs_db.matched_normal_bounds)
+                ref_low = bounds.get("low")
+                ref_high = bounds.get("high")
+            except Exception:
+                pass
+
         return ObservationResponse(
             id=obs_db.id,
             subject_id=obs_db.subject_id,
@@ -1691,6 +1708,10 @@ async def create_observation(
             matched_normal_bounds=obs_db.matched_normal_bounds,
             protocol_version_tag=obs_db.protocol_version_tag,
             protocol_version_index=obs_db.protocol_version_index,
+            range_indicator=obs_db.lab_indicator,
+            is_out_of_range=obs_db.lab_out_of_range,
+            reference_range_low=ref_low,
+            reference_range_high=ref_high,
         )
 
 
