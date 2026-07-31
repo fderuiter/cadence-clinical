@@ -1340,3 +1340,19 @@ class ProcessedOfflineBatch(Base):
     client_batch_id: Mapped[str] = mapped_column(String(255), primary_key=True)
     device_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     synced_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+
+
+class ExecutionCopilotSuggestion(AuditedModel):
+    """Tracks Execution Copilot suggestions and findings for compliance checks under PRD-SYS-001."""
+
+    __tablename__ = "execution_copilot_suggestions"
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    subject_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[str] = mapped_column(String(50), nullable=False)  # "COMPLIANT", "DISCREPANCY_ALERT"
+    findings: Mapped[dict] = mapped_column(JSON, nullable=False)  # JSON list/dict of findings
+    action_items: Mapped[dict] = mapped_column(JSON, nullable=False)  # JSON list/dict of action items
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1)

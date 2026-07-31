@@ -47,6 +47,10 @@ class PermissionEnum(str, enum.Enum):
     DOCUMENTS_WRITE = "documents:write"
     ARCHIVE_EXPORT = "archive:export"
 
+    # AI Co-Pilot & Protocol Intelligence Assistant Permissions
+    COPILOT_SUGGEST = "copilot:suggest"
+    COPILOT_ANALYZE = "copilot:analyze"
+
 
 class RoleEnum(str, enum.Enum):
     """Canonical system roles within Cadence Clinical eClinical platform."""
@@ -74,11 +78,14 @@ ROLE_PERMISSIONS_MAP: Dict[str, Set[PermissionEnum]] = {
         PermissionEnum.DOCUMENTS_READ,
         PermissionEnum.DOCUMENTS_WRITE,
         PermissionEnum.ARCHIVE_EXPORT,
+        PermissionEnum.COPILOT_SUGGEST,
+        PermissionEnum.COPILOT_ANALYZE,
     },
     RoleEnum.SPONSOR_DESIGNER.value: {
         PermissionEnum.STUDY_READ,
         PermissionEnum.PROTOCOL_AUTHOR,
         PermissionEnum.GLOBAL_LIBRARY_MANAGE,
+        PermissionEnum.COPILOT_SUGGEST,
     },
     RoleEnum.PRINCIPAL_INVESTIGATOR.value: {
         PermissionEnum.STUDY_READ,
@@ -91,6 +98,7 @@ ROLE_PERMISSIONS_MAP: Dict[str, Set[PermissionEnum]] = {
         PermissionEnum.QUERY_MANAGE,
         PermissionEnum.DOCUMENTS_READ,
         PermissionEnum.DOCUMENTS_WRITE,
+        PermissionEnum.COPILOT_ANALYZE,
     },
     RoleEnum.CRC.value: {
         PermissionEnum.STUDY_READ,
@@ -101,6 +109,7 @@ ROLE_PERMISSIONS_MAP: Dict[str, Set[PermissionEnum]] = {
         PermissionEnum.QUERY_MANAGE,
         PermissionEnum.DOCUMENTS_READ,
         PermissionEnum.DOCUMENTS_WRITE,
+        PermissionEnum.COPILOT_ANALYZE,
     },
     RoleEnum.CRA.value: {
         PermissionEnum.STUDY_READ,
@@ -109,6 +118,7 @@ ROLE_PERMISSIONS_MAP: Dict[str, Set[PermissionEnum]] = {
         PermissionEnum.AUDIT_VIEW,
         PermissionEnum.DOCUMENTS_READ,
         PermissionEnum.DOCUMENTS_WRITE,
+        PermissionEnum.COPILOT_ANALYZE,
     },
     RoleEnum.DATA_MANAGER.value: {
         PermissionEnum.STUDY_READ,
@@ -121,6 +131,7 @@ ROLE_PERMISSIONS_MAP: Dict[str, Set[PermissionEnum]] = {
         PermissionEnum.DOCUMENTS_READ,
         PermissionEnum.DOCUMENTS_WRITE,
         PermissionEnum.ARCHIVE_EXPORT,
+        PermissionEnum.COPILOT_ANALYZE,
     },
     RoleEnum.AUDITOR.value: {
         PermissionEnum.STUDY_READ,

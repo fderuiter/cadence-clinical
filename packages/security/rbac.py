@@ -194,9 +194,11 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "quality_audit_logs": {"read"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
+        "copilot": {"suggest", "analyze"},
     },
     ROLE_SPONSOR_DESIGNER: {
         "study_design": {"create", "read", "update", "delete", "approve", "reorder"},
+        "copilot": {"suggest"},
         "global_library": {
             "create",
             "update",
@@ -268,6 +270,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "quality_audit_logs": {"read"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
+        "copilot": {"analyze"},
     },
     ROLE_SPONSOR_MM: {
         "study_design": {"read"},
@@ -314,6 +317,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "quality_event": {"read"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
+        "copilot": {"analyze"},
     },
     ROLE_CRC: {
         "study_design": {"read"},
@@ -340,6 +344,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "quality_event": {"read"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
+        "copilot": {"analyze"},
     },
     ROLE_CRA_CANONICAL: {
         "study_design": {"read"},
@@ -366,6 +371,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "quality_event": {"create", "read", "update"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
+        "copilot": {"analyze"},
     },
     "monitor": {
         "study_design": {"read"},
@@ -508,6 +514,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "quality_audit_logs": {"read"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
+        "copilot": {"suggest", "analyze"},
     },
     "quality_manager": {
         "quality_event": {"create", "read", "update", "delete", "investigate"},
@@ -552,6 +559,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "training_log": {"create", "read", "sign"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
+        "copilot": {"suggest", "analyze"},
     },
     "anonymous": {
         "ctms_study": {"read"},

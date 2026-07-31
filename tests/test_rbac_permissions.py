@@ -28,6 +28,8 @@ def test_permission_matrix_enum_values():
     assert PermissionEnum.SUBJECT_ENROLL == "subject:enroll"
     assert PermissionEnum.EXPORT_SDTM == "export:sdtm"
     assert PermissionEnum.ESIGN_EXECUTE == "esign:execute"
+    assert PermissionEnum.COPILOT_SUGGEST == "copilot:suggest"
+    assert PermissionEnum.COPILOT_ANALYZE == "copilot:analyze"
 
 
 def test_role_enum_canonical_names():
@@ -71,6 +73,8 @@ def test_get_permissions_for_role_sponsor_admin():
     assert PermissionEnum.EXPORT_SDTM in perms
     assert PermissionEnum.CHANGE_REQUEST_APPROVE in perms
     assert PermissionEnum.ESIGN_EXECUTE in perms
+    assert PermissionEnum.COPILOT_SUGGEST in perms
+    assert PermissionEnum.COPILOT_ANALYZE in perms
     # SponsorAdmin does NOT have raw CRA SDV or form data entry permissions
     assert PermissionEnum.SDV_VERIFY not in perms
 
@@ -85,6 +89,7 @@ def test_get_permissions_for_role_cra():
     assert PermissionEnum.SDV_VERIFY in perms
     assert PermissionEnum.QUERY_MANAGE in perms
     assert PermissionEnum.AUDIT_VIEW in perms
+    assert PermissionEnum.COPILOT_ANALYZE in perms
     assert PermissionEnum.FORM_WRITE not in perms
     assert PermissionEnum.DATA_LOCK not in perms
 
@@ -100,6 +105,7 @@ def test_get_permissions_for_role_data_manager():
     assert PermissionEnum.DATA_UNLOCK in perms
     assert PermissionEnum.EXPORT_SDTM in perms
     assert PermissionEnum.AUDIT_VIEW in perms
+    assert PermissionEnum.COPILOT_ANALYZE in perms
 
 
 def test_get_permissions_for_roles_aggregated():
