@@ -83,6 +83,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-14: Biostatistical Export Pipeline Interoperability and Architecture](2026-08-14-biostatistical-export-pipeline-interoperability.md)
 
 ### 4. Clinical Operations & Business Modules
+- [2026-08-27: Add SQLModel Dependency for eISF Structured Section Taxonomy and Versioning](2026-08-27-add-sqlmodel-dependency-for-eisf-taxonomy-and-versioning.md)
 - [2026-08-26: ADR-111: eISF Gateway Integration, Docker-Compose Wiring, and eTMF Sync Topology](2026-08-26-eisf-gateway-compose-and-etmf-sync-topology.md)
 - [2026-08-25: CTMS Offline Sync Reconciliation and Structural Clinical Queries](2026-08-25-ctms-offline-sync-reconciliation-and-structural-clinical-queries.md)
 - [2026-08-23: Tickets-to-Notifications Integration Architecture](2026-08-23-tickets-notifications-integration.md)
