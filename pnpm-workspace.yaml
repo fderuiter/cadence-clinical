@@ -12,6 +12,5 @@ onlyBuiltDependencies:
 
 minimumReleaseAgeExclude:
   - "@playwright/test"
-  - "playwright-core"
   - "playwright"
-
+  - "playwright-core"

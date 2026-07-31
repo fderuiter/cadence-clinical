@@ -4,7 +4,9 @@
     <header class="builder-header">
       <div class="header-left">
         <h2>ICF Authoring: {{ econsentStore.currentIcf?.title }}</h2>
-        <span class="version-tag">Version {{ econsentStore.currentIcf?.version }}</span>
+        <span class="version-tag"
+          >Version {{ econsentStore.currentIcf?.version }}</span
+        >
       </div>
       <div class="header-right">
         <button
@@ -31,7 +33,10 @@
             <li
               v-for="sec in econsentStore.sections"
               :key="sec.id"
-              :class="['outline-item', { active: activeSectionId === sec.id && !showQuiz }]"
+              :class="[
+                'outline-item',
+                { active: activeSectionId === sec.id && !showQuiz },
+              ]"
               @click="selectSection(sec.id)"
             >
               <span class="item-icon">📄</span>
@@ -47,7 +52,7 @@
               placeholder="New Section Title..."
               class="form-control inline-input"
               @keyup.enter="handleCreateSection"
-            >
+            />
             <button
               type="button"
               class="btn btn-secondary btn-small"
@@ -82,11 +87,11 @@
             >
               <div class="history-ver">
                 <strong>{{ hist.version }}</strong>
-                <span class="history-time">{{ formatTime(hist.timestamp) }}</span>
+                <span class="history-time">{{
+                  formatTime(hist.timestamp)
+                }}</span>
               </div>
-              <p class="history-reason">
-                "{{ hist.reason }}"
-              </p>
+              <p class="history-reason">"{{ hist.reason }}"</p>
             </div>
           </div>
         </div>
@@ -103,36 +108,32 @@
         <div v-else-if="showQuiz">
           <ComprehensionQuizBuilder />
         </div>
-        <div
-          v-else
-          class="no-selection-pane"
-        >
-          <p>Please select a Consent Section or the Comprehension Quiz from the left outline to start editing.</p>
+        <div v-else class="no-selection-pane">
+          <p>
+            Please select a Consent Section or the Comprehension Quiz from the
+            left outline to start editing.
+          </p>
         </div>
       </main>
     </div>
 
     <!-- Publish Version GxP Modal -->
-    <div
-      v-if="showPublishModal"
-      class="publish-modal-overlay"
-    >
+    <div v-if="showPublishModal" class="publish-modal-overlay">
       <div class="publish-modal card">
         <div class="modal-header">
           <h3>21 CFR Part 11 Change Reason Capture</h3>
-          <button
-            class="close-btn"
-            @click="showPublishModal = false"
-          >
-            ✕
-          </button>
+          <button class="close-btn" @click="showPublishModal = false">✕</button>
         </div>
         <div class="modal-body">
           <p class="warning-text">
-            ⚠️ Publishing this Informed Consent Form (ICF) increments the active protocol design version. All future subject enrollments and re-consents will bind to the new version index.
+            ⚠️ Publishing this Informed Consent Form (ICF) increments the active
+            protocol design version. All future subject enrollments and
+            re-consents will bind to the new version index.
           </p>
           <div class="form-group">
-            <label for="publish-reason">Mandatory Change Justification / Audit Reason:</label>
+            <label for="publish-reason"
+              >Mandatory Change Justification / Audit Reason:</label
+            >
             <textarea
               id="publish-reason"
               v-model="publishReason"
@@ -140,10 +141,9 @@
               rows="4"
               class="form-control"
             />
-            <span
-              v-if="publishError"
-              class="error-text"
-            >{{ publishError }}</span>
+            <span v-if="publishError" class="error-text">{{
+              publishError
+            }}</span>
           </div>
         </div>
         <div class="modal-footer">
@@ -154,11 +154,7 @@
           >
             Cancel
           </button>
-          <button
-            type="button"
-            class="btn btn-primary"
-            @click="handlePublish"
-          >
+          <button type="button" class="btn btn-primary" @click="handlePublish">
             Confirm & Publish
           </button>
         </div>
@@ -168,22 +164,22 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { useEconsentStore } from '../stores/econsent.js';
-import IcfSectionEditor from '../components/econsent/IcfSectionEditor.vue';
-import ComprehensionQuizBuilder from '../components/econsent/ComprehensionQuizBuilder.vue';
-import LanguageTranslationTabs from '../components/econsent/LanguageTranslationTabs.vue';
+import { ref, computed, onMounted } from "vue";
+import { useEconsentStore } from "../stores/econsent.js";
+import IcfSectionEditor from "../components/econsent/IcfSectionEditor.vue";
+import ComprehensionQuizBuilder from "../components/econsent/ComprehensionQuizBuilder.vue";
+import LanguageTranslationTabs from "../components/econsent/LanguageTranslationTabs.vue";
 
 const econsentStore = useEconsentStore();
 const activeSectionId = ref(null);
 const showQuiz = ref(false);
 const showPublishModal = ref(false);
-const publishReason = ref('');
-const publishError = ref('');
-const newSectionTitle = ref('');
+const publishReason = ref("");
+const publishError = ref("");
+const newSectionTitle = ref("");
 
 const activeSection = computed(() =>
-  econsentStore.sections.find(s => s.id === activeSectionId.value)
+  econsentStore.sections.find((s) => s.id === activeSectionId.value)
 );
 
 onMounted(() => {
@@ -213,27 +209,28 @@ const handleCreateSection = () => {
   if (title) {
     const newSec = econsentStore.addSection(title);
     selectSection(newSec.id);
-    newSectionTitle.value = '';
+    newSectionTitle.value = "";
   }
 };
 
 const handlePublish = () => {
-  publishError.value = '';
+  publishError.value = "";
   const reason = publishReason.value.trim();
   if (!reason) {
-    publishError.value = 'Justification is mandatory under GxP compliance guidelines.';
+    publishError.value =
+      "Justification is mandatory under GxP compliance guidelines.";
     return;
   }
 
   econsentStore.publishIcfVersion(reason);
   showPublishModal.value = false;
-  publishReason.value = '';
+  publishReason.value = "";
 };
 
 const formatTime = (isoString) => {
   try {
     const d = new Date(isoString);
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   } catch {
     return isoString;
   }

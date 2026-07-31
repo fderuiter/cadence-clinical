@@ -40,10 +40,7 @@
       >
         Electronic Signature & Identity Verification
       </div>
-      <div
-        class="modal-body"
-        style="padding: 16px"
-      >
+      <div class="modal-body" style="padding: 16px">
         <p
           style="
             margin-bottom: 16px;
@@ -57,10 +54,7 @@
           to apply this digital signature.
         </p>
 
-        <div
-          class="form-group"
-          style="margin-bottom: 12px"
-        >
+        <div class="form-group" style="margin-bottom: 12px">
           <label
             for="sig-username"
             style="
@@ -70,7 +64,8 @@
               font-size: 13px;
               color: #475569;
             "
-          >Username</label>
+            >Username</label
+          >
           <input
             id="sig-username"
             v-model="usernameVal"
@@ -84,13 +79,10 @@
               border-radius: 4px;
               font-size: 13px;
             "
-          >
+          />
         </div>
 
-        <div
-          class="form-group"
-          style="margin-bottom: 12px"
-        >
+        <div class="form-group" style="margin-bottom: 12px">
           <label
             for="sig-password"
             style="
@@ -100,7 +92,8 @@
               font-size: 13px;
               color: #475569;
             "
-          >Password</label>
+            >Password</label
+          >
           <input
             id="sig-password"
             v-model="password"
@@ -115,13 +108,10 @@
               font-size: 13px;
             "
             @keyup.enter="confirm"
-          >
+          />
         </div>
 
-        <div
-          class="form-group"
-          style="margin-bottom: 12px"
-        >
+        <div class="form-group" style="margin-bottom: 12px">
           <label
             for="sig-totp"
             style="
@@ -131,7 +121,8 @@
               font-size: 13px;
               color: #475569;
             "
-          >MFA/TOTP Token (Optional)</label>
+            >MFA/TOTP Token (Optional)</label
+          >
           <input
             id="sig-totp"
             v-model="totp"
@@ -145,13 +136,10 @@
               border-radius: 4px;
               font-size: 13px;
             "
-          >
+          />
         </div>
 
-        <div
-          class="form-group"
-          style="margin-bottom: 16px"
-        >
+        <div class="form-group" style="margin-bottom: 16px">
           <label
             for="sig-reason"
             style="
@@ -161,7 +149,8 @@
               font-size: 13px;
               color: #475569;
             "
-          >Signing Reason</label>
+            >Signing Reason</label
+          >
           <select
             id="sig-reason"
             v-model="signingReason"
@@ -175,17 +164,8 @@
               background: white;
             "
           >
-            <option
-              value=""
-              disabled
-            >
-              -- Select Reason --
-            </option>
-            <option
-              v-for="r in reasons"
-              :key="r"
-              :value="r"
-            >
+            <option value="" disabled>-- Select Reason --</option>
+            <option v-for="r in reasons" :key="r" :value="r">
               {{ r }}
             </option>
           </select>

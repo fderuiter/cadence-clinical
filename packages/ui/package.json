@@ -11,5 +11,9 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "vite": "^8.1.5",
+    "vitest": "^4.1.10"
+  }
 }

@@ -22,11 +22,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { useEtmfStore } from '../stores/etmf';
-import TmfBinderTree from '../components/etmf/TmfBinderTree.vue';
-import DocumentGrid from '../components/etmf/DocumentGrid.vue';
-import PdfPreviewModal from '../components/etmf/PdfPreviewModal.vue';
+import { ref, onMounted } from "vue";
+import { useEtmfStore } from "../stores/etmf";
+import TmfBinderTree from "../components/etmf/TmfBinderTree.vue";
+import DocumentGrid from "../components/etmf/DocumentGrid.vue";
+import PdfPreviewModal from "../components/etmf/PdfPreviewModal.vue";
 
 const etmfStore = useEtmfStore();
 const selectedDoc = ref(null);

@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1794
-- **Passed:** 1794 🟢
+- **Total Automated Test Cases Run:** 1799
+- **Passed:** 1799 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -341,6 +341,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_low_risk_ui_display_changes` | `tests.test_change_analyzer` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_medium_risk_configuration_changes` | `tests.test_change_analyzer` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_type_aware_diff_no_op` | `tests.test_change_analyzer` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_classify_safe_scripts_and_tests` | `tests.test_ci_classification` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_classify_standard_markdown` | `tests.test_ci_classification` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_classify_unsafe_other_files` | `tests.test_ci_classification` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_classify_vulnerability_ledger` | `tests.test_ci_classification` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_classify_vulnerability_script` | `tests.test_ci_classification` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_rtm_generation_conftest_hook_detection` | `tests.test_cli_etmf_archival` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_rtm_generation_with_cli_overrides` | `tests.test_cli_etmf_archival` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_gateway_routing` | `tests.test_clinical_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
