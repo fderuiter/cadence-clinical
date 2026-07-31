@@ -771,6 +771,83 @@ async def create_subject(
 
 
 @app.post(
+    "/api/v1/execution/subjects/{subject_id}/consent",
+    response_model=SubjectConsentResponse,
+)
+@app.post(
+    "/api/v1/execution/subjects/{subject_id}/consents",
+    response_model=SubjectConsentResponse,
+)
+async def record_subject_consent_endpoint(
+    subject_id: str,
+    payload: SubjectConsentRequest,
+    roles: list[str] = Depends(verify_not_auditor),
+) -> SubjectConsentResponse:
+    """Record/upload a signed informed consent form (ICF) for a subject, clearing any requires_reconsent gate."""
+    async with db_manager.get_session_maker()() as session:
+        async with session.begin():
+            study_id = payload.protocol_version.study_id
+            version_tag = payload.protocol_version.version_tag
+            version_index = payload.protocol_version.version_index
+
+            stmt = select(SubjectConsent).where(
+                SubjectConsent.subject_id == subject_id,
+                SubjectConsent.study_id == study_id,
+                SubjectConsent.version_index == version_index,
+            )
+            existing = (await session.execute(stmt)).scalars().first()
+            if existing:
+                existing.version_tag = version_tag
+                existing.icf_signed = payload.icf_signed
+                if payload.icf_signed_date:
+                    existing.icf_signed_date = payload.icf_signed_date
+                elif not existing.icf_signed_date:
+                    existing.icf_signed_date = datetime.utcnow()
+                existing.requires_reconsent = payload.requires_reconsent
+                consent_db = existing
+            else:
+                consent_db = SubjectConsent(
+                    subject_id=subject_id,
+                    study_id=study_id,
+                    version_tag=version_tag,
+                    version_index=version_index,
+                    icf_signed=payload.icf_signed,
+                    icf_signed_date=payload.icf_signed_date or datetime.utcnow(),
+                    requires_reconsent=payload.requires_reconsent,
+                )
+                session.add(consent_db)
+
+            # If this consent is signed and does not require re-consent,
+            # clear requires_reconsent for any other/older consents of this subject
+            if payload.icf_signed and not payload.requires_reconsent:
+                stmt_others = select(SubjectConsent).where(
+                    SubjectConsent.subject_id == subject_id,
+                    SubjectConsent.study_id == study_id,
+                )
+                others = (await session.execute(stmt_others)).scalars().all()
+                for other in others:
+                    other.requires_reconsent = False
+
+            await session.flush()
+
+        stmt_ref = select(SubjectConsent).where(SubjectConsent.id == consent_db.id)
+        res_ref = await session.execute(stmt_ref)
+        saved = res_ref.scalar_one()
+
+        return SubjectConsentResponse(
+            id=saved.id,
+            subject_id=saved.subject_id,
+            study_id=saved.study_id,
+            version_tag=saved.version_tag,
+            version_index=saved.version_index,
+            icf_signed=saved.icf_signed,
+            icf_signed_date=saved.icf_signed_date,
+            requires_reconsent=saved.requires_reconsent,
+            version=saved.version,
+        )
+
+
+@app.post(
     "/api/v1/execution/subjects/{subject_id}/screening",
     response_model=SubjectScreeningResponse,
 )

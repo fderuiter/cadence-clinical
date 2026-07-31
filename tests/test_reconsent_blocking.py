@@ -259,3 +259,153 @@ async def test_subject_consent_blocking_and_reconsent_lifecycle() -> None:
                 actions = [log.action for log in logs]
                 assert "INSERT" in actions
                 assert "UPDATE" in actions
+
+
+@pytest.mark.asyncio
+async def test_subject_consent_endpoint_lifecycle() -> None:
+    """Verify that the new subject consent endpoint (POST /api/v1/execution/subjects/{id}/consent)
+
+    correctly registers a subject's consent and clears requires_reconsent gates.
+    """
+    from unittest.mock import patch
+    from fastapi import HTTPException
+
+    async def mock_fetch(subject_pseudonym, study_id=None):
+        raise HTTPException(status_code=404, detail="No signed consent found")
+
+    with patch(
+        "apps.execution.econsent_client.fetch_subject_consent_status",
+        side_effect=mock_fetch,
+    ):
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            # 1. Create a subject
+            subject_payload = {
+                "subject_id": "SUBJ-Y",
+                "study_id": "STUDY-456",
+                "demographics": {
+                    "name": "Jane Smith",
+                    "birthdate": "1992-02-02",
+                    "gender": "F",
+                    "race": "Black",
+                },
+            }
+            res_subj = await client.post(
+                "/api/v1/execution/subjects",
+                json=subject_payload,
+                headers=get_auth_headers(),
+            )
+            assert res_subj.status_code == 200
+
+            # Initially, no consent exists. Try to create a visit (should fail)
+            visit_payload = {
+                "subject_id": "SUBJ-Y",
+                "visit_name": "Screening",
+                "study_id": "STUDY-456",
+            }
+            with pytest.raises(PermissionError) as exc_info:
+                await client.post(
+                    "/api/v1/execution/visits",
+                    json=visit_payload,
+                    headers=get_auth_headers(),
+                )
+            assert "Re-Consent Required - Demographics & Visit Forms Locked" in str(exc_info.value)
+
+            # 2. Record initial protocol version 1 consent using our new POST endpoint!
+            consent_payload = {
+                "protocol_version": {
+                    "study_id": "STUDY-456",
+                    "version_tag": "1.0",
+                    "version_index": 1,
+                    "status": "PUBLISHED"
+                },
+                "icf_signed": True,
+                "requires_reconsent": False,
+            }
+            res_consent = await client.post(
+                "/api/v1/execution/subjects/SUBJ-Y/consent",
+                json=consent_payload,
+                headers=get_auth_headers(),
+            )
+            assert res_consent.status_code == 200
+            consent_resp = res_consent.json()
+            assert consent_resp["subject_id"] == "SUBJ-Y"
+            assert consent_resp["study_id"] == "STUDY-456"
+            assert consent_resp["version_tag"] == "1.0"
+            assert consent_resp["version_index"] == 1
+            assert consent_resp["icf_signed"] is True
+            assert consent_resp["requires_reconsent"] is False
+
+            # Now, creating a visit should succeed!
+            res_visit_ok = await client.post(
+                "/api/v1/execution/visits",
+                json=visit_payload,
+                headers=get_auth_headers(),
+            )
+            assert res_visit_ok.status_code == 200
+            assert res_visit_ok.json()["visit_name"] == "Screening"
+            assert res_visit_ok.json()["protocol_version_tag"] == "1.0"
+
+            # 3. Introduce re-consent requirement by posting a consent requiring re-consent
+            consent_payload_reconsent = {
+                "protocol_version": {
+                    "study_id": "STUDY-456",
+                    "version_tag": "1.0",
+                    "version_index": 1,
+                    "status": "PUBLISHED"
+                },
+                "icf_signed": True,
+                "requires_reconsent": True,
+            }
+            res_re = await client.post(
+                "/api/v1/execution/subjects/SUBJ-Y/consent",
+                json=consent_payload_reconsent,
+                headers=get_auth_headers(),
+            )
+            assert res_re.status_code == 200
+            assert res_re.json()["requires_reconsent"] is True
+
+            # Subsequent writes should now be blocked!
+            visit_payload_2 = {
+                "subject_id": "SUBJ-Y",
+                "visit_name": "Week 2",
+                "study_id": "STUDY-456",
+            }
+            with pytest.raises(PermissionError) as exc_info_re:
+                await client.post(
+                    "/api/v1/execution/visits",
+                    json=visit_payload_2,
+                    headers=get_auth_headers(),
+                )
+            assert "Re-Consent Required - Demographics & Visit Forms Locked" in str(exc_info_re.value)
+
+            # 4. Clear the gate by recording signed ICF for version 2.0 (requires_reconsent = False)
+            consent_payload_clear = {
+                "protocol_version": {
+                    "study_id": "STUDY-456",
+                    "version_tag": "2.0",
+                    "version_index": 2,
+                    "status": "PUBLISHED"
+                },
+                "icf_signed": True,
+                "requires_reconsent": False,
+            }
+            res_clear = await client.post(
+                "/api/v1/execution/subjects/SUBJ-Y/consent",
+                json=consent_payload_clear,
+                headers=get_auth_headers(),
+            )
+            assert res_clear.status_code == 200
+            assert res_clear.json()["version_tag"] == "2.0"
+            assert res_clear.json()["requires_reconsent"] is False
+
+            # Creating a visit should now succeed and be stamped with version 2.0!
+            res_visit_unblocked = await client.post(
+                "/api/v1/execution/visits",
+                json=visit_payload_2,
+                headers=get_auth_headers(),
+            )
+            assert res_visit_unblocked.status_code == 200
+            assert res_visit_unblocked.json()["visit_name"] == "Week 2"
+            assert res_visit_unblocked.json()["protocol_version_tag"] == "2.0"
