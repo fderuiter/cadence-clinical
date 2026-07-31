@@ -6,18 +6,30 @@ from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
-from signature import ApprovalStatus, SignatureManifestation, SigningReason
+from signature import (
+    ApprovalStatus,
+    SignatureManifestation,
+    SigningReason,
+    SigningReasonCode,
+)
 
 from packages.security.context import (
     audit_context,
     audit_context_decorator,
     current_signature_context,
+    current_signature_manifestation,
 )
 from packages.security.signing import (
     asymmetric_sign,
     asymmetric_verify,
     capture_certificate_identifiers,
+    compute_manifestation_hash,
     compute_sha256_hash,
+    get_server_certificate_pem,
+    get_server_private_key_pem,
+    serialize_manifestation_canonically,
+    sign_manifestation,
+    verify_manifestation,
 )
 
 
@@ -215,3 +227,208 @@ async def test_async_signature_context_decorator():
     result = await async_operation()
     assert result == dummy_manifestation
     assert current_signature_context.get() is None
+
+
+def test_part11_signing_reason_code_meanings():
+    """Validates that SigningReasonCode enums have associated human-readable meanings."""
+    assert SigningReasonCode.AUTHOR == "author"
+    assert SigningReasonCode.PI_APPROVAL == "approve"
+    assert SigningReasonCode.VERIFY == "verify"
+    assert SigningReasonCode.REVIEW == "review"
+    assert SigningReasonCode.AUTHORIZE_UNBLINDING == "authorize-unblinding"
+
+    assert "author of the document" in SigningReasonCode.AUTHOR.meaning
+    assert "Principal Investigator approval" in SigningReasonCode.PI_APPROVAL.meaning
+    assert "Verification of source data" in SigningReasonCode.VERIFY.meaning
+    assert "Reviewer acknowledgement" in SigningReasonCode.REVIEW.meaning
+    assert (
+        "Authorization of emergency treatment"
+        in SigningReasonCode.AUTHORIZE_UNBLINDING.meaning
+    )
+
+
+def test_part11_approval_status_new_members():
+    """Validates that ApprovalStatus contains DRAFT, PENDING_SIGNATURE, and SIGNED."""
+    assert ApprovalStatus.DRAFT == "DRAFT"
+    assert ApprovalStatus.PENDING_SIGNATURE == "PENDING_SIGNATURE"
+    assert ApprovalStatus.SIGNED == "SIGNED"
+
+
+def test_part11_manifestation_mapping_and_validation(crypto_material):
+    """Validates that SignatureManifestation maps and validates both legacy and Part 11 fields correctly."""
+    # 1. Instantiate with Part 11 compliant fields and check legacy fallbacks
+    now_utc = datetime.datetime.now(timezone.utc)
+    manifest = SignatureManifestation(
+        signer_username="dr_jones",
+        signer_full_name="Dr. Indiana Jones",
+        signing_timestamp_utc=now_utc,
+        signing_reason_code=SigningReasonCode.PI_APPROVAL,
+        signing_reason_text="PI approval of monitoring report",
+        network_ip_address="192.168.10.12",
+        device_user_agent="Safari 15.0",
+        signature_hash_sha256="abcde1234567890f" * 4,  # pragma: allowlist secret
+    )
+
+    # Check Part 11 fields
+    assert manifest.signer_username == "dr_jones"
+    assert manifest.signer_full_name == "Dr. Indiana Jones"
+    assert manifest.signing_timestamp_utc == now_utc
+    assert manifest.signing_reason_code == SigningReasonCode.PI_APPROVAL
+    assert (
+        manifest.signing_reason_text == "Indiana Jones" in manifest.signing_reason_text
+        or "PI approval" in manifest.signing_reason_text
+    )
+    assert manifest.network_ip_address == "192.168.10.12"
+    assert manifest.device_user_agent == "Safari 15.0"
+    assert (
+        manifest.signature_hash_sha256 == "abcde1234567890f" * 4
+    )  # pragma: allowlist secret
+
+    # Check legacy fields have been mapped/populated properly via validator
+    assert manifest.signer_id == "dr_jones"
+    assert manifest.timestamp == now_utc
+    assert manifest.signing_reason == SigningReason.APPROVAL
+    assert manifest.ip_address == "192.168.10.12"
+    assert manifest.user_agent == "Safari 15.0"
+    assert manifest.sha256_hash == "abcde1234567890f" * 4  # pragma: allowlist secret
+
+    # 2. Instantiate with legacy fields and check Part 11 fields are populated
+    legacy_manifest = SignatureManifestation(
+        signer_id="nurse_smith",
+        timestamp=now_utc,
+        signing_reason=SigningReason.REVIEW,
+        ip_address="10.0.0.5",
+        user_agent="Firefox 90.0",
+        sha256_hash="12345abcde" * 6 + "1234",  # pragma: allowlist secret
+    )
+
+    # Check legacy fields
+    assert legacy_manifest.signer_id == "nurse_smith"
+    assert legacy_manifest.timestamp == now_utc
+    assert legacy_manifest.signing_reason == SigningReason.REVIEW
+    assert legacy_manifest.ip_address == "10.0.0.5"
+    assert legacy_manifest.user_agent == "Firefox 90.0"
+    assert (
+        legacy_manifest.sha256_hash == "12345abcde" * 6 + "1234"
+    )  # pragma: allowlist secret
+
+    # Check mapped Part 11 fields
+    assert legacy_manifest.signer_username == "nurse_smith"
+    assert legacy_manifest.signer_full_name == "nurse_smith"
+    assert legacy_manifest.signing_timestamp_utc == now_utc
+    assert legacy_manifest.signing_reason_code == SigningReasonCode.REVIEW
+    assert legacy_manifest.signing_reason_text == "REVIEW"
+    assert legacy_manifest.network_ip_address == "10.0.0.5"
+    assert legacy_manifest.device_user_agent == "Firefox 90.0"
+    assert (
+        legacy_manifest.signature_hash_sha256 == "12345abcde" * 6 + "1234"
+    )  # pragma: allowlist secret
+
+
+def test_part11_signing_verification_primitives(crypto_material, monkeypatch):
+    """Validates serialize, hash, sign, verify primitives on Part 11 manifestations."""
+    now_utc = datetime.datetime.now(timezone.utc)
+    manifest = SignatureManifestation(
+        signer_username="dr_jones",
+        signer_full_name="Dr. Indiana Jones",
+        signing_timestamp_utc=now_utc,
+        signing_reason_code=SigningReasonCode.PI_APPROVAL,
+        signing_reason_text="PI approval of monitoring report",
+        network_ip_address="192.168.10.12",
+        device_user_agent="Safari 15.0",
+        signature_hash_sha256="abcde1234567890f" * 4,  # pragma: allowlist secret
+    )
+
+    # 1. Test canonical serialization
+    serialized = serialize_manifestation_canonically(manifest)
+    assert isinstance(serialized, bytes)
+    assert b"Indiana Jones" in serialized
+    assert b"dr_jones" in serialized
+    assert b"approve" in serialized
+
+    # 2. Test hash computation
+    h = compute_manifestation_hash(manifest)
+    assert isinstance(h, str)
+    assert len(h) == 64
+
+    # 3. Test signing/verifying with transient fallback key
+    signed_man = sign_manifestation(manifest)
+    assert signed_man.signature is not None
+    assert signed_man.certificate_pem is not None
+    assert signed_man.key_identifier is not None
+
+    assert verify_manifestation(signed_man) is True
+
+    # 4. Test environment loading of keys
+    # Override server key env vars with custom test keys
+    private_key_pem = crypto_material["private_key_pem"]
+    cert_pem = crypto_material["cert_pem"]
+
+    monkeypatch.setenv("SERVER_PRIVATE_KEY", private_key_pem)
+    monkeypatch.setenv("SERVER_CERTIFICATE", cert_pem)
+
+    assert get_server_private_key_pem() == private_key_pem
+    assert get_server_certificate_pem() == cert_pem
+
+    # Re-sign with new keys
+    manifest_custom = SignatureManifestation(
+        signer_username="user_custom",
+        signer_full_name="Custom User Name",
+        signing_timestamp_utc=now_utc,
+        signing_reason_code=SigningReasonCode.AUTHOR,
+        signing_reason_text="Author sign-off",
+        network_ip_address="127.0.0.1",
+        signature_hash_sha256="ff" * 32,
+    )
+    signed_custom = sign_manifestation(manifest_custom)
+    assert signed_custom.certificate_pem == cert_pem
+    assert verify_manifestation(signed_custom) is True
+
+
+def test_signature_manifestation_contextvar_propagation():
+    """Validates the new current_signature_manifestation context variable propagation."""
+    now_utc = datetime.datetime.now(timezone.utc)
+    manifest = SignatureManifestation(
+        signer_username="dr_jones",
+        signer_full_name="Dr. Indiana Jones",
+        signing_timestamp_utc=now_utc,
+        signing_reason_code=SigningReasonCode.PI_APPROVAL,
+        signing_reason_text="PI approval",
+        network_ip_address="192.168.10.12",
+        signature_hash_sha256="abcde1234567890f" * 4,  # pragma: allowlist secret
+    )
+
+    assert current_signature_manifestation.get() is None
+
+    # Test sync with audit_context
+    with audit_context(signature_manifestation=manifest):
+        assert current_signature_manifestation.get() == manifest
+        assert current_signature_manifestation.get().signer_username == "dr_jones"
+
+    assert current_signature_manifestation.get() is None
+
+
+@pytest.mark.asyncio
+async def test_async_signature_manifestation_context_decorator():
+    """Validates decorating asynchronous functions with audit context including signature manifestation."""
+    now_utc = datetime.datetime.now(timezone.utc)
+    manifest = SignatureManifestation(
+        signer_username="dr_jones",
+        signer_full_name="Dr. Indiana Jones",
+        signing_timestamp_utc=now_utc,
+        signing_reason_code=SigningReasonCode.PI_APPROVAL,
+        signing_reason_text="PI approval",
+        network_ip_address="192.168.10.12",
+        signature_hash_sha256="abcde1234567890f" * 4,  # pragma: allowlist secret
+    )
+
+    def get_manifest(*args, **kwargs):
+        return manifest
+
+    @audit_context_decorator(signature_manifestation_getter=get_manifest)
+    async def async_operation():
+        return current_signature_manifestation.get()
+
+    result = await async_operation()
+    assert result == manifest
+    assert current_signature_manifestation.get() is None

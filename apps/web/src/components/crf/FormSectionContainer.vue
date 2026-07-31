@@ -25,7 +25,10 @@
       </div>
 
       <!-- Action Controls -->
-      <div class="flex items-center gap-2" @click.stop>
+      <div
+        class="flex items-center gap-2"
+        @click.stop
+      >
         <button
           class="btn-add-item bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold px-2.5 py-1.5 rounded transition flex items-center gap-1"
           @click="addNewItem"
@@ -66,7 +69,10 @@
         @end="isDragging = false"
       >
         <template #item="{ element: field }">
-          <div :class="gridSpanClass(field.gridSpan)" class="field-item-wrapper relative">
+          <div
+            :class="gridSpanClass(field.gridSpan)"
+            class="field-item-wrapper relative"
+          >
             <CanvasFieldWidget
               :field="field"
               :selected-field-id="selectedFieldId"

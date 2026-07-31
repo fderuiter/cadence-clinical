@@ -379,3 +379,203 @@ def verify_inbound_email_signature(
     ).hexdigest()
 
     return hmac.compare_digest(expected_sig, signature)
+
+
+_transient_key_pair = None
+
+
+def _get_or_generate_transient_keys():
+    global _transient_key_pair
+    if _transient_key_pair is not None:
+        return _transient_key_pair
+
+    # Generate a transient RSA 2048 key pair & self-signed certificate
+    from datetime import datetime, timedelta, timezone
+
+    from cryptography import x509
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography.x509.oid import NameOID
+
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    private_pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    ).decode("utf-8")
+
+    name = x509.Name(
+        [
+            x509.NameAttribute(NameOID.COMMON_NAME, "Cadence Server Node"),
+        ]
+    )
+    now = datetime.now(timezone.utc)
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(name)
+        .issuer_name(name)
+        .public_key(private_key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(now - timedelta(days=1))
+        .not_valid_after(now + timedelta(days=365))
+        .sign(private_key, hashes.SHA256())
+    )
+    cert_pem = cert.public_bytes(serialization.Encoding.PEM).decode("utf-8")
+    _transient_key_pair = (private_pem, cert_pem)
+    return _transient_key_pair
+
+
+def get_server_private_key_pem() -> str:
+    """Returns the server's PEM-encoded private key from environment or falls back to transient key."""
+    import os
+
+    val = os.getenv("SERVER_PRIVATE_KEY") or os.getenv("SERVER_PRIVATE_KEY_PEM")
+    if val:
+        # Check if it starts with "-----BEGIN" or if it's a file path
+        if val.strip().startswith("-----BEGIN"):
+            return val
+        if os.path.exists(val):
+            with open(val, "r") as f:
+                return f.read()
+    return _get_or_generate_transient_keys()[0]
+
+
+def get_server_certificate_pem() -> str:
+    """Returns the server's PEM-encoded certificate from environment or falls back to transient certificate."""
+    import os
+
+    val = os.getenv("SERVER_CERTIFICATE") or os.getenv("SERVER_CERTIFICATE_PEM")
+    if val:
+        # Check if it starts with "-----BEGIN" or if it's a file path
+        if val.strip().startswith("-----BEGIN"):
+            return val
+        if os.path.exists(val):
+            with open(val, "r") as f:
+                return f.read()
+    return _get_or_generate_transient_keys()[1]
+
+
+def serialize_manifestation_canonically(manifestation: Any) -> bytes:
+    """Canonically serializes a Part 11 SignatureManifestation model, excluding cryptographic fields."""
+    # Synchronize legacy fields and new fields in case of post-instantiation attribute mutations
+    signer_username = getattr(manifestation, "signer_username", None)
+    signer_id = getattr(manifestation, "signer_id", None)
+    if signer_id is not None and signer_id != signer_username:
+        signer_username = signer_id
+
+    signer_full_name = getattr(manifestation, "signer_full_name", None)
+    if signer_full_name is None or signer_full_name == getattr(
+        manifestation, "signer_username", None
+    ):
+        signer_full_name = signer_username
+
+    ts = getattr(manifestation, "signing_timestamp_utc", None)
+    ts_legacy = getattr(manifestation, "timestamp", None)
+    if ts_legacy is not None and ts_legacy != ts:
+        ts = ts_legacy
+
+    reason_code = getattr(manifestation, "signing_reason_code", None)
+    reason_legacy = getattr(manifestation, "signing_reason", None)
+    # If reason_legacy is set, let's map it back if reason_code is None
+    if reason_legacy is not None and reason_code is None:
+        if hasattr(reason_legacy, "value"):
+            reason_str = reason_legacy.value
+        else:
+            reason_str = str(reason_legacy)
+        # map reason_str back to a code
+        if reason_str == "AUTHOR":
+            reason_code = "author"
+        elif reason_str in ("APPROVAL", "SPONSOR_APPROVAL", "INVESTIGATOR_SIGNATURE"):
+            reason_code = "approve"
+        elif reason_str == "REVIEW":
+            reason_code = "review"
+        elif reason_str in ("TECHNICAL_QC", "CLINICAL_QC"):
+            reason_code = "verify"
+
+    reason_text = getattr(manifestation, "signing_reason_text", None)
+    if reason_legacy is not None and reason_text is None:
+        reason_text = (
+            reason_legacy.value
+            if hasattr(reason_legacy, "value")
+            else str(reason_legacy)
+        )
+
+    network_ip_address = getattr(manifestation, "network_ip_address", None)
+    ip_address = getattr(manifestation, "ip_address", None)
+    if ip_address is not None and ip_address != network_ip_address:
+        network_ip_address = ip_address
+
+    device_user_agent = getattr(manifestation, "device_user_agent", None)
+    user_agent = getattr(manifestation, "user_agent", None)
+    if user_agent is not None and user_agent != device_user_agent:
+        device_user_agent = user_agent
+
+    signature_hash_sha256 = getattr(manifestation, "signature_hash_sha256", None)
+    sha256_hash = getattr(manifestation, "sha256_hash", None)
+    if sha256_hash is not None and sha256_hash != signature_hash_sha256:
+        signature_hash_sha256 = sha256_hash
+
+    # Ensure standard datetime to string representation
+    if ts.tzinfo is None:
+        from datetime import timezone
+
+        ts_str = ts.replace(tzinfo=timezone.utc).isoformat()
+    else:
+        from datetime import timezone
+
+        ts_str = ts.astimezone(timezone.utc).isoformat()
+
+    # Create payload of core fields
+    payload = {
+        "signer_username": signer_username,
+        "signer_full_name": signer_full_name or signer_username,
+        "signing_timestamp_utc": ts_str,
+        "signing_reason_code": str(
+            reason_code.value if hasattr(reason_code, "value") else reason_code
+        ),
+        "signing_reason_text": reason_text or str(reason_legacy or reason_code),
+        "network_ip_address": network_ip_address,
+        "device_user_agent": device_user_agent,
+        "signature_hash_sha256": signature_hash_sha256,
+    }
+    return canonical_serialize(payload)
+
+
+def compute_manifestation_hash(manifestation: Any) -> str:
+    """Computes the SHA-256 hex digest of the canonically serialized manifestation."""
+    serialized = serialize_manifestation_canonically(manifestation)
+    return compute_sha256_hash(serialized)
+
+
+def sign_manifestation(manifestation: Any) -> Any:
+    """Signs a manifestation model instance using the server private key from environment.
+
+    Records the generated signature, certificate, and key identifier in the manifestation's
+    signature, certificate_pem, and key_identifier fields.
+    """
+    canonical_bytes = serialize_manifestation_canonically(manifestation)
+    private_key_pem = get_server_private_key_pem()
+    cert_pem = get_server_certificate_pem()
+
+    signature_b64 = asymmetric_sign(canonical_bytes, private_key_pem)
+    ids = capture_certificate_identifiers(cert_pem)
+
+    manifestation.signature = signature_b64
+    manifestation.certificate_pem = cert_pem
+    manifestation.key_identifier = ids.get("subject_key_identifier") or ids.get(
+        "sha256_fingerprint"
+    )
+
+    return manifestation
+
+
+def verify_manifestation(manifestation: Any) -> bool:
+    """Verifies a signed manifestation model instance's asymmetric signature."""
+    if not manifestation.signature or not manifestation.certificate_pem:
+        return False
+    canonical_bytes = serialize_manifestation_canonically(manifestation)
+    return asymmetric_verify(
+        data=canonical_bytes,
+        signature_b64=manifestation.signature,
+        public_key_pem_or_cert_pem=manifestation.certificate_pem,
+    )
