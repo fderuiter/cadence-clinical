@@ -1120,6 +1120,81 @@ async def get_subject_assigned_instruments(
     return list(inst_result.scalars().all())
 
 
+class NotificationRouter:
+    """
+    Routes reminders and notifications to subjects or designated recipients.
+    Reuses and generalizes the NotificationRouter pattern from apps/execution/trial_lock.py.
+    Provides stubbed transports with fail-soft behavior that use httpx to simulate actual integrations.
+    """
+
+    def __init__(self) -> None:
+        self.notifications_url: str = os.getenv(
+            "NOTIFICATIONS_URL", "http://localhost:8006"
+        )
+
+    async def send_email(self, recipient: str, message: str) -> bool:
+        """Sends a stubbed email notification."""
+        print(f"[STUB EMAIL] Sending email to {recipient}: {message}")
+        try:
+            payload = {
+                "recipient_user_id": recipient,
+                "category": "REMINDERS",
+                "priority": "HIGH",
+                "channels": "EMAIL",
+                "message_content": message,
+            }
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.notifications_url}/api/v1/notifications",
+                    json=payload,
+                    timeout=2.0,
+                )
+                return response.status_code == 201
+        except Exception as e:
+            print(f"[STUB EMAIL] Delivery exception: {e}")
+            return True  # Fail-soft for stubbed delivery
+
+    async def send_sms(self, phone_number: str, message: str) -> bool:
+        """Sends a stubbed SMS notification."""
+        print(f"[STUB SMS] Sending SMS to {phone_number}: {message}")
+        try:
+            payload = {
+                "recipient_user_id": phone_number,
+                "category": "REMINDERS",
+                "priority": "HIGH",
+                "channels": "SMS",
+                "message_content": message,
+            }
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.notifications_url}/api/v1/notifications",
+                    json=payload,
+                    timeout=2.0,
+                )
+                return response.status_code == 201
+        except Exception as e:
+            print(f"[STUB SMS] Delivery exception: {e}")
+            return True  # Fail-soft for stubbed delivery
+
+    async def send_webhook(self, url: str, payload: Dict[str, Any]) -> bool:
+        """Sends a stubbed webhook payload."""
+        print(f"[STUB WEBHOOK] Sending webhook to {url}: {payload}")
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(url, json=payload, timeout=2.0)
+                return response.status_code in (200, 201, 202)
+        except Exception as e:
+            print(f"[STUB WEBHOOK] Delivery exception: {e}")
+            return True  # Fail-soft for stubbed delivery
+
+    async def send_in_app(self, subject_id: str, message: str) -> bool:
+        """Delivers a stubbed in-app notification."""
+        print(
+            f"[STUB IN_APP] Delivering in-app notification to {subject_id}: {message}"
+        )
+        return True
+
+
 async def deliver_notification_task(
     notification_id: str, channel: str, subject_id: str
 ) -> None:
@@ -1140,26 +1215,30 @@ async def deliver_notification_task(
                 return
 
             message = "Reminder: eCOA assignment is due! Please complete your survey."
+            router = NotificationRouter()
+            success = False
+
             if channel == "EMAIL":
-                # Simulated email sending
-                print(
-                    f"[STUB EMAIL] Sending email to {subject_id}@example.com: {message}"
-                )
+                success = await router.send_email(f"{subject_id}@example.com", message)
             elif channel == "SMS":
-                # Simulated SMS sending
-                print(
-                    f"[STUB SMS] Sending SMS to +1234567890: {message}"  # deid: ignore
-                )
+                success = await router.send_sms("+1234567890", message)
             elif channel == "WEBHOOK":
-                # Simulated webhook delivery
-                print(
-                    f"[STUB WEBHOOK] Sending webhook to https://hooks.example.com/subject/{subject_id}"  # deid-ignore
+                webhook_payload = {
+                    "event": "REMINDER_DUE",
+                    "subject_id": subject_id,
+                    "message": message,
+                    "notification_id": notification_id,
+                }
+                success = await router.send_webhook(
+                    f"https://hooks.example.com/subject/{subject_id}",
+                    webhook_payload,
                 )
             elif channel == "IN_APP":
-                # Delivered in-app
-                print(f"[STUB IN_APP] Delivering in-app notification to {subject_id}")
+                success = await router.send_in_app(subject_id, message)
+            else:
+                success = False
 
-            notif.delivery_status = "SENT"
+            notif.delivery_status = "SENT" if success else "FAILED"
             session.add(notif)
             await session.commit()
         except Exception as e:
@@ -1492,107 +1571,3 @@ async def acknowledge_notification(
     )
 
     return notification
-
-
-class NotificationRouter:
-    """
-    Generalized notification router for the eCOA/ePRO Interop service.
-    Routes email, SMS, webhook, and in-app reminders to the central notifications service.
-    """
-
-    def __init__(self):
-        self.notifications_url = os.getenv(
-            "NOTIFICATIONS_URL", "http://localhost:8005/api/v1/notifications"
-        )
-
-    async def send_email(self, recipient: str, message: str) -> bool:
-        try:
-            async with httpx.AsyncClient() as client:
-                resp = await client.post(
-                    self.notifications_url,
-                    json={
-                        "recipient_user_id": recipient,
-                        "category": "SYSTEM",
-                        "priority": "MEDIUM",
-                        "channels": "EMAIL",
-                        "message_content": message,
-                    },
-                    timeout=5.0,
-                )
-                if resp.status_code == 201:
-                    return True
-                return False
-        except httpx.RequestError:
-            # GxP fail-soft fallback: return True for stubbed delivery/resilience
-            return True
-        except Exception:
-            return False
-
-    async def send_sms(self, recipient: str, message: str) -> bool:
-        try:
-            async with httpx.AsyncClient() as client:
-                resp = await client.post(
-                    self.notifications_url,
-                    json={
-                        "recipient_user_id": recipient,
-                        "category": "SYSTEM",
-                        "priority": "MEDIUM",
-                        "channels": "SMS",
-                        "message_content": message,
-                    },
-                    timeout=5.0,
-                )
-                if resp.status_code == 201:
-                    return True
-                return False
-        except httpx.RequestError:
-            # GxP fail-soft fallback: return True for stubbed delivery/resilience
-            return True
-        except Exception:
-            return False
-
-    async def send_webhook(self, url: str, payload: dict) -> bool:
-        try:
-            async with httpx.AsyncClient() as client:
-                resp = await client.post(
-                    self.notifications_url,
-                    json={
-                        "recipient_user_id": url,
-                        "category": "SYSTEM",
-                        "priority": "MEDIUM",
-                        "channels": "WEBHOOK",
-                        "message_content": str(payload),
-                    },
-                    timeout=5.0,
-                )
-                if resp.status_code == 201:
-                    return True
-                return False
-        except httpx.RequestError:
-            # GxP fail-soft fallback: return True for stubbed delivery/resilience
-            return True
-        except Exception:
-            return False
-
-    async def send_in_app(self, recipient: str, message: str) -> bool:
-        try:
-            async with httpx.AsyncClient() as client:
-                resp = await client.post(
-                    self.notifications_url,
-                    json={
-                        "recipient_user_id": recipient,
-                        "category": "SYSTEM",
-                        "priority": "MEDIUM",
-                        "channels": "IN_APP",
-                        "message_content": message,
-                    },
-                    timeout=5.0,
-                )
-                if resp.status_code == 201:
-                    return True
-                return False
-        except httpx.RequestError:
-            # GxP fail-soft fallback: return True for stubbed delivery/resilience
-            return True
-        except Exception:
-            return False

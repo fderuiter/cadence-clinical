@@ -453,6 +453,13 @@ class ClinicalObservation(AuditedModel):
     lab_indicator: Mapped[str] = mapped_column(String(50), nullable=True)
     lab_out_of_range: Mapped[bool] = mapped_column(Boolean, nullable=True)
     matched_normal_bounds: Mapped[str] = mapped_column(String(255), nullable=True)
+
+    # Added outcome columns for range evaluation
+    range_indicator: Mapped[str] = mapped_column(String(50), nullable=True)
+    is_out_of_range: Mapped[bool] = mapped_column(Boolean, nullable=True)
+    reference_range_low: Mapped[float] = mapped_column(Float, nullable=True)
+    reference_range_high: Mapped[float] = mapped_column(Float, nullable=True)
+
     protocol_version_tag: Mapped[Optional[str]] = mapped_column(
         String(50), nullable=True
     )

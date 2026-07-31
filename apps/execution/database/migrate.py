@@ -376,15 +376,15 @@ async def upgrade_existing_tables(conn) -> None:
             ("lab_indicator", "VARCHAR(50)"),
             ("lab_out_of_range", "BOOLEAN"),
             ("matched_normal_bounds", "VARCHAR(255)"),
+            ("range_indicator", "VARCHAR(50)"),
+            ("is_out_of_range", "BOOLEAN"),
+            ("reference_range_low", "FLOAT"),
+            ("reference_range_high", "FLOAT"),
             ("site_id", "VARCHAR(255)"),
             ("is_sdv_verified", "BOOLEAN NOT NULL DEFAULT FALSE"),
             ("sdv_verified_by", "VARCHAR(255)"),
             ("sdv_verified_at", "TIMESTAMP"),
             ("page_id", "VARCHAR(255)"),
-            ("range_indicator", "VARCHAR(50)"),
-            ("is_out_of_range", "BOOLEAN"),
-            ("reference_range_low", "FLOAT"),
-            ("reference_range_high", "FLOAT"),
         ]
         for col_name, col_type in new_obs_cols:
             if col_name not in obs_cols:
