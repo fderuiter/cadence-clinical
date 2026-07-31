@@ -5353,12 +5353,15 @@ async def post_impact_analysis(
 
     async with db_manager.get_session_maker()() as session:
         async with session.begin():
-            metrics = await run_impact_analysis(
-                session=session,
-                dictionary_type=payload.dictionary_type,
-                new_version=payload.new_version,
-                actor=current_user_id.get() or "system",
-            )
+            try:
+                metrics = await run_impact_analysis(
+                    session=session,
+                    dictionary_type=payload.dictionary_type,
+                    new_version=payload.new_version,
+                    actor=current_user_id.get() or "system",
+                )
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
             return ImpactAnalysisResponse(
                 status="success",
                 dictionary_type=payload.dictionary_type,
@@ -5719,7 +5722,7 @@ async def process_coding_action(
         assignment.score = score
         assignment.hierarchy = hierarchy
         assignment.assigned_by = actor
-        assignment.assigned_at = datetime.utcnow()
+        assignment.assigned_at = datetime.now(timezone.utc)
 
         # 3. Create a ledger record for ACCEPT or OVERRIDE
         if action_upper in ("ACCEPT", "OVERRIDE"):
@@ -5737,7 +5740,7 @@ async def process_coding_action(
                 recoding_reason=payload.reason_for_change
                 or f"Manual decision: {action_upper}",
                 decision_by=actor,
-                decision_at=datetime.utcnow(),
+                decision_at=datetime.now(timezone.utc),
             )
             session.add(ledger)
 
@@ -5753,7 +5756,7 @@ async def process_coding_action(
             for active_q in active_queries:
                 active_q.status = "CLOSED"
                 active_q.resolver = actor
-                active_q.resolved_at = datetime.utcnow()
+                active_q.resolved_at = datetime.now(timezone.utc)
                 active_q.response = f"Resolved via manual coding action: {action_upper} on code {coded_code}."
                 session.add(active_q)
 

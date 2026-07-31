@@ -6,7 +6,7 @@ records in accordance with FDA 21 CFR Part 11 and GxP standards.
 """
 
 import os
-from typing import Any, Dict, Iterable, Iterator, List
+from typing import IO, Any, Dict, Iterable, Iterator, List, Union
 
 
 class MedDRAParseError(ValueError):
@@ -80,7 +80,7 @@ class MedDRAParser:
 
     def parse(
         self,
-        file_input: Any,
+        file_input: Union[str, bytes, os.PathLike, Iterable[str], IO[str], IO[bytes]],
         file_type: str = None,
         file_name: str = None,
     ) -> Iterator[Dict[str, Any]]:
@@ -118,7 +118,7 @@ class MedDRAParser:
 
     def parse_in_batches(
         self,
-        file_input: Any,
+        file_input: Union[str, bytes, os.PathLike, Iterable[str], IO[str], IO[bytes]],
         file_type: str = None,
         file_name: str = None,
         batch_size: int = 1000,
@@ -448,7 +448,7 @@ class MedDRAParser:
 
 
 def parse_meddra_file(
-    file_input: Any,
+    file_input: Union[str, bytes, os.PathLike, Iterable[str], IO[str], IO[bytes]],
     dictionary_version: str,
     file_type: str = None,
     file_name: str = None,
@@ -659,7 +659,7 @@ class WHODrugParser:
 
     def parse(
         self,
-        file_input: Any,
+        file_input: Union[str, bytes, os.PathLike, Iterable[str], IO[str], IO[bytes]],
         file_type: str = None,
         file_name: str = None,
     ) -> Iterator[Dict[str, Any]]:
@@ -697,7 +697,7 @@ class WHODrugParser:
 
     def parse_in_batches(
         self,
-        file_input: Any,
+        file_input: Union[str, bytes, os.PathLike, Iterable[str], IO[str], IO[bytes]],
         file_type: str = None,
         file_name: str = None,
         batch_size: int = 1000,
@@ -1166,7 +1166,7 @@ class WHODrugParser:
 
 
 def parse_whodrug_file(
-    file_input: Any,
+    file_input: Union[str, bytes, os.PathLike, Iterable[str], IO[str], IO[bytes]],
     dictionary_version: str,
     file_type: str = None,
     file_name: str = None,
