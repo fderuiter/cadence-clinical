@@ -45,7 +45,7 @@ test.describe("eTMF Document Management Workflow", () => {
     });
 
     // Intercept watermarked preview endpoint
-    await page.route("**/watermarked**", async (route) => {
+    await page.route("**/watermark**", async (route) => {
       await route.fulfill({
         status: 200,
         contentType: "text/plain",
