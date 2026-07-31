@@ -1,5 +1,7 @@
 import logging
 import re
+import threading
+import time
 from typing import Any, Dict, List, Optional
 
 from sae_icsr import IndividualCaseSafetyReport, MedDRACoding, SeriousAdverseEvent
@@ -10,6 +12,57 @@ from apps.safety.execution_client import ExecutionClient
 from apps.safety.models import SAEDiscrepancy, SAEReconciliationRun
 
 logger = logging.getLogger("safety-reconciliation")
+
+
+class TerminologyCache:
+    """Thread-safe in-memory cache for MedDRA term resolutions."""
+
+    def __init__(self, max_size: int = 1000, ttl: Optional[float] = None) -> None:
+        self.max_size = max_size
+        self._cache: Dict[tuple[str, str], tuple[Dict[str, Any], float]] = {}
+        self._lock = threading.Lock()
+
+        if ttl is not None:
+            self.ttl = float(ttl)
+        else:
+            import os
+            env_ttl = os.getenv("TERMINOLOGY_CACHE_TTL") or os.getenv("CACHE_TTL")
+            if env_ttl is not None:
+                try:
+                    self.ttl = float(env_ttl)
+                except ValueError:
+                    self.ttl = 3600.0
+            else:
+                self.ttl = 3600.0
+
+    def get(self, term: str, version: str) -> Optional[Dict[str, Any]]:
+        now = time.time()
+        key = (term, version)
+        with self._lock:
+            if key in self._cache:
+                data, timestamp = self._cache[key]
+                if now - timestamp < self.ttl:
+                    return data
+        return None
+
+    def set(self, term: str, version: str, data: Dict[str, Any]) -> None:
+        key = (term, version)
+        with self._lock:
+            if len(self._cache) >= self.max_size:
+                # Basic eviction policy
+                self._cache.pop(next(iter(self._cache)))
+            self._cache[key] = (data, time.time())
+
+    def clear(self) -> None:
+        with self._lock:
+            self._cache.clear()
+
+    def get_status(self) -> Dict[str, int]:
+        with self._lock:
+            return {"size": len(self._cache), "max_size": self.max_size}
+
+
+terminology_cache = TerminologyCache()
 
 
 def generate_stable_event_key(subject_key: str, sae: SeriousAdverseEvent) -> str:
@@ -289,10 +342,39 @@ async def run_reconciliation(
         meddra_coding = None
 
         if aeterm:
-            try:
-                res = await exec_client.resolve_meddra_code(
-                    term=aeterm, version=meddra_version, client=client
-                )
+            key = (aeterm, meddra_version)
+            res = None
+            expired_data = None
+
+            # Retrieve from cache under lock
+            with terminology_cache._lock:
+                if key in terminology_cache._cache:
+                    data, timestamp = terminology_cache._cache[key]
+                    if time.time() - timestamp < terminology_cache.ttl:
+                        res = data
+                    else:
+                        expired_data = data
+
+            if res is None:
+                try:
+                    res = await exec_client.resolve_meddra_code(
+                        term=aeterm, version=meddra_version, client=client
+                    )
+                    terminology_cache.set(aeterm, meddra_version, res)
+                except Exception as e:
+                    if expired_data is not None:
+                        logger.warning(
+                            "Failed to resolve MedDRA code for term '%s', falling back to expired cache: %s",
+                            aeterm,
+                            e,
+                        )
+                        res = expired_data
+                    else:
+                        logger.warning(
+                            "Failed to resolve MedDRA code for term '%s': %s", aeterm, e
+                        )
+
+            if res:
                 matches = res.get("matches") or []
                 if matches:
                     top_match = matches[0]
@@ -310,10 +392,6 @@ async def run_reconciliation(
                         primary_soc_flag=top_match.get("primary_soc_flag"),
                         score=top_match.get("score", 1.0),
                     )
-            except Exception as e:
-                logger.warning(
-                    "Failed to resolve MedDRA code for term '%s': %s", aeterm, e
-                )
 
         normalized_edc_saes.append(normalize_edc_ae_to_sae(ae_rec, meddra_coding))
 

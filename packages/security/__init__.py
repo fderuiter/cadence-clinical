@@ -76,6 +76,11 @@ from packages.security.rbac import (
     verify_is_auditor,
     verify_not_auditor,
 )
+from packages.security.sig_token_verifier import (
+    TokenConsumptionCache,
+    token_consumption_cache,
+    verify_and_consume_sig_token,
+)
 from packages.security.signing import (
     asymmetric_sign,
     asymmetric_verify,
@@ -84,11 +89,6 @@ from packages.security.signing import (
     compute_sha256_hash,
     generate_canonical_signature,
     verify_canonical_signature,
-)
-from packages.security.sig_token_verifier import (
-    TokenConsumptionCache,
-    token_consumption_cache,
-    verify_and_consume_sig_token,
 )
 from packages.security.trial_roles import (
     TrialRole,

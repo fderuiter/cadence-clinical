@@ -5,9 +5,11 @@ Requirements: PRD-SYS-001
 
 import os
 import tempfile
+
 import pytest
-from sqlalchemy import text, inspect
+from sqlalchemy import inspect
 from sqlalchemy.ext.asyncio import create_async_engine
+
 from apps.execution.database.migrate import run_migrations
 
 
