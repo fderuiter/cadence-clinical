@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1737
-- **Passed:** 1737 🟢
+- **Total Automated Test Cases Run:** 1738
+- **Passed:** 1738 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1202,6 +1202,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_notifications_negative_security_paths` | `tests.test_notifications` | PRD-SYS-004 | 🟢 PASSED | < 1s |
 | `test_webhook_delivery_channel_failure_and_retry_backoff` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_webhook_delivery_channel_success` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_observation_response_extended_fields` | `tests.test_observation_response_fields` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_offline_sync_batch_success_and_idempotency` | `tests.test_offline_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_offline_sync_batch_update_action` | `tests.test_offline_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_offline_batch_sync_success` | `tests.test_offline_sync` | *Regression/Helper* | 🟢 PASSED | < 1s |
