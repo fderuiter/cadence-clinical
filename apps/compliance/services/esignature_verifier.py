@@ -1,7 +1,8 @@
 import base64
+
 from cryptography import x509
 from cryptography.exceptions import InvalidSignature
-from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 
 
@@ -72,9 +73,7 @@ class ESignatureVerifier:
             original_data = signed_data[:cert_start].rstrip()
             cert_pem = signed_data[cert_start:sig_start].strip()
             sig_b64 = (
-                signed_data[
-                    sig_start + len(b"-----BEGIN SIGNATURE-----") : sig_end
-                ]
+                signed_data[sig_start + len(b"-----BEGIN SIGNATURE-----") : sig_end]
                 .strip()
                 .decode("utf-8", errors="ignore")
             )
@@ -98,9 +97,7 @@ class ESignatureVerifier:
                 cert_serial in self.revoked_certs
                 or cert_fingerprint in self.revoked_certs
                 or cert_pem_str in self.revoked_certs
-                or any(
-                    str(rev_id) in cert_pem_str for rev_id in self.revoked_certs
-                )
+                or any(str(rev_id) in cert_pem_str for rev_id in self.revoked_certs)
             )
 
             if is_revoked:
