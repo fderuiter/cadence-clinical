@@ -26,7 +26,12 @@ def normalize_line(line: str) -> str:
     """
     cleaned = line.strip()
 
-    # 1. Handle CSS / JS block comments on single line or partial line
+    # 1. Normalize standard URLs to avoid false positives from different URLs.
+    # Mask standard HTTP/HTTPS URLs before stripping comments.
+    # The placeholder must omit double-slash sequences to prevent downstream comment-stripping.
+    cleaned = re.sub(r"https?://[^\s\"';`()\[\]{}]+", "http-url-placeholder", cleaned)
+
+    # 2. Handle CSS / JS block comments on single line or partial line
     cleaned = re.sub(r"/\*.*?\*/", "", cleaned).strip()
 
     # If the line is part of a block comment or starts with comment markers
@@ -41,9 +46,6 @@ def normalize_line(line: str) -> str:
         cleaned = cleaned.split("#", 1)[0].strip()
     if "//" in cleaned:
         cleaned = cleaned.split("//", 1)[0].strip()
-
-    # 2. Normalize standard URLs to avoid false positives from different URLs
-    cleaned = re.sub(r"https?://\S+", "http://url-placeholder", cleaned)
 
     # 3. Normalize string formats (single quotes, backticks to double quotes)
     cleaned = cleaned.replace("'", '"').replace("`", '"')
