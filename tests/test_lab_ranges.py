@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from apps.execution.lab_ranges import evaluate_lab_value, select_reference_range
 
 
@@ -448,3 +450,65 @@ def test_is_deleted_filtering():
         [r_deleted], study, tcode, unit, "CENTRAL", sex="M", age=30.0
     )
     assert matched_deleted_only is None
+
+
+@pytest.mark.asyncio
+async def test_convert_lab_unit_db_and_fallback():
+    """Verify test-code-aware unit conversion helper with database and fallback behavior.
+
+    Requirements: PRD-LAB-001
+    """
+    from apps.execution.database.core import db_manager
+    from apps.execution.database.models import Base, LabUnitConversion
+    from apps.execution.lab_ranges import convert_lab_unit
+
+    db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)
+    try:
+        async with db_manager.engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
+        session_maker = db_manager.get_session_maker()
+        async with session_maker() as session:
+            # 1. Test static ucum fallback (no DB conversion row exists)
+            # Mass: 1.5 kg to g -> should be 1500.0
+            val_fallback = await convert_lab_unit(session, "WBC", "kg", "g", 1.5)
+            assert abs(val_fallback - 1500.0) < 1e-9
+
+            # Temperature: 100 [Fahr] to Cel -> should be 37.777777778
+            val_temp = await convert_lab_unit(session, "TEMP", "F", "C", 100.0)
+            assert abs(val_temp - 37.777777778) < 1e-5
+
+            # 2. Insert custom database-driven conversion row for HEMOGLOBIN (g/dL to g/L)
+            # Custom factor = 10.0, offset = 0.5
+            conv = LabUnitConversion(
+                study_id="STUDY-123",
+                test_code="HEMOGLOBIN",
+                from_unit="g/dL",
+                to_unit="g/L",
+                factor=10.0,
+                offset=0.5,
+                created_by="test_user",
+                reason_for_change="Custom conversion formula",
+                version_index=1,
+            )
+            session.add(conv)
+            await session.commit()
+
+        # Re-open session to fetch from DB
+        async with session_maker() as session:
+            # Test custom database conversion
+            # 12.0 * 10.0 + 0.5 = 120.5
+            val_custom = await convert_lab_unit(
+                session, "HEMOGLOBIN", "g/dL", "g/L", 12.0
+            )
+            assert abs(val_custom - 120.5) < 1e-9
+
+            # 3. Test that other test code (e.g. "OTHER") or different units fallback properly
+            # even if "HEMOGLOBIN" conversion exists
+            val_custom_fallback = await convert_lab_unit(
+                session, "OTHER", "kg", "g", 2.0
+            )
+            assert abs(val_custom_fallback - 2000.0) < 1e-9
+
+    finally:
+        await db_manager.close()
