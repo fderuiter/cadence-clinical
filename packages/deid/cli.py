@@ -310,7 +310,7 @@ def is_excluded_path(path: str, root_dir: str) -> bool:
 
     # Exclude files starting with test_ or ending with .test.js, etc. or specific workspace documents
     name = os.path.basename(path).lower()
-    if (
+    return bool(
         name.startswith("test_")
         or name.endswith(".test.js")
         or name.endswith(".test.ts")
@@ -334,10 +334,7 @@ def is_excluded_path(path: str, root_dir: str) -> bool:
             "architecture.md",
             "eslint.config.mjs",
         }
-    ):
-        return True
-
-    return False
+    )
 
 
 def get_files_to_scan(paths: List[str], root_dir: str) -> List[str]:

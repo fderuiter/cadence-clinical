@@ -270,7 +270,7 @@ class PocockSimonMinimizationStrategy(RandomizationStrategy):
 
         weights = self.config.factor_weights or {}
         arms = list(self.config.arms_ratios.keys())
-        K = len(arms)
+        k_arms = len(arms)
 
         # Imbalance score for each potential arm assignment
         imbalance_scores: Dict[str, float] = {}
@@ -334,17 +334,17 @@ class PocockSimonMinimizationStrategy(RandomizationStrategy):
             arm for arm, score in imbalance_scores.items() if score > min_score
         ]
 
-        M = len(best_arms)
+        m_best = len(best_arms)
         num_other = len(other_arms)
 
         # Compute selection probabilities
         probabilities = {}
         if num_other == 0:
             for arm in arms:
-                probabilities[arm] = 1.0 / K
+                probabilities[arm] = 1.0 / k_arms
         else:
             for arm in best_arms:
-                probabilities[arm] = self.config.p_preferred / M
+                probabilities[arm] = self.config.p_preferred / m_best
             for arm in other_arms:
                 probabilities[arm] = (1.0 - self.config.p_preferred) / num_other
 

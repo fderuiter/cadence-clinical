@@ -21,7 +21,9 @@ async def resolve_personnel_assignments(keycloak_user_id: str) -> Dict[str, Any]
 
                 db_mgr = sys.modules["apps.org.database"].db_manager
                 personnel_cls = sys.modules["apps.org.models"].Personnel
-                personnel_assignment_cls = sys.modules["apps.org.models"].PersonnelAssignment
+                personnel_assignment_cls = sys.modules[
+                    "apps.org.models"
+                ].PersonnelAssignment
 
                 session_maker = db_mgr.get_session_maker()
                 async with session_maker() as session:

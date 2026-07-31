@@ -1149,12 +1149,17 @@ async def get_principal(request: Request) -> Principal:
         principal.change_reason = principal.change_reason.strip()
 
     # Reject write operations with a descriptive error if the resolved change justification is missing
-    if hasattr(request, "method") and request.method in (
-        "POST",
-        "PUT",
-        "PATCH",
-        "DELETE",
-    ) and (not principal.change_reason or not principal.change_reason.strip()):
+    if (
+        hasattr(request, "method")
+        and request.method
+        in (
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE",
+        )
+        and (not principal.change_reason or not principal.change_reason.strip())
+    ):
         raise HTTPException(
             status_code=403,
             detail="Missing change justification reason",

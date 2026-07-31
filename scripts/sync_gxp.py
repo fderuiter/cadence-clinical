@@ -110,33 +110,34 @@ def _git_diff_docs() -> list[str]:
 
 def _merge_reports(main_path: str, notif_path: str, dest_path: str) -> None:
     import xml.etree.ElementTree as ET
+
     try:
         main_tree = ET.parse(main_path)
         main_root = main_tree.getroot()
-        
+
         main_suite = main_root.find("testsuite")
         if main_suite is None:
             main_suite = main_root
-            
+
         notif_tree = ET.parse(notif_path)
         notif_root = notif_tree.getroot()
         notif_suite = notif_root.find("testsuite")
         if notif_suite is None:
             notif_suite = notif_root
-            
+
         for testcase in list(notif_suite.findall("testcase")):
             main_suite.append(testcase)
-            
+
         for attr in ["tests", "failures", "errors", "skipped"]:
             main_val = int(main_suite.get(attr) or 0)
             notif_val = int(notif_suite.get(attr) or 0)
             main_suite.set(attr, str(main_val + notif_val))
-        
+
         for attr in ["tests", "failures", "errors", "skipped"]:
             main_val = int(main_root.get(attr) or 0)
             notif_val = int(notif_root.get(attr) or 0)
             main_root.set(attr, str(main_val + notif_val))
-            
+
         main_tree.write(dest_path, encoding="utf-8", xml_declaration=True)
         print("✔  Successfully merged JUnit XML reports.")
     except Exception as e:
