@@ -1,15 +1,28 @@
 <template>
-  <div v-if="hasError" class="clinical-visit-matrix-error">
+  <div
+    v-if="hasError"
+    class="clinical-visit-matrix-error"
+  >
     Invalid SoA matrix data.
   </div>
-  <div v-else-if="cols.length === 0" class="clinical-visit-matrix-error">
+  <div
+    v-else-if="cols.length === 0"
+    class="clinical-visit-matrix-error"
+  >
     No encounters defined for SoA matrix.
   </div>
-  <table v-else class="clinical-visit-matrix clinical-soa-matrix">
+  <table
+    v-else
+    class="clinical-visit-matrix clinical-soa-matrix"
+  >
     <thead>
       <!-- Arm Row (only if arms are defined) -->
       <tr v-if="hasArms">
-        <th scope="col" :rowspan="totalHeaderRows" class="corner-header">
+        <th
+          scope="col"
+          :rowspan="totalHeaderRows"
+          class="corner-header"
+        >
           Form / Procedure
         </th>
         <th
@@ -36,7 +49,11 @@
         </th>
       </tr>
       <tr v-else>
-        <th scope="col" :rowspan="totalHeaderRows" class="corner-header">
+        <th
+          scope="col"
+          :rowspan="totalHeaderRows"
+          class="corner-header"
+        >
           Form / Procedure
         </th>
         <th
@@ -52,7 +69,10 @@
 
       <!-- Encounter/Visit Row -->
       <tr>
-        <th v-if="!hasArms" style="display: none"></th>
+        <th
+          v-if="!hasArms"
+          style="display: none"
+        />
         <th
           v-for="c in cols"
           :key="c.encounter.encounter_id"
@@ -64,8 +84,13 @@
       </tr>
     </thead>
     <tbody>
-      <tr v-for="row in rows" :key="row.activity_id">
-        <th scope="row">{{ row.activity_name }}</th>
+      <tr
+        v-for="row in rows"
+        :key="row.activity_id"
+      >
+        <th scope="row">
+          {{ row.activity_name }}
+        </th>
         <td
           v-for="col in cols"
           :key="col.encounter.encounter_id"
@@ -80,7 +105,9 @@
               {{ getCellDetails(row, col.encounter.encounter_id) }}
             </span>
           </template>
-          <template v-else>-</template>
+          <template v-else>
+            -
+          </template>
         </td>
       </tr>
     </tbody>

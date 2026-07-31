@@ -275,6 +275,7 @@ async def enforce_document_site_visibility(
     principal: Principal,
     resource_site_id: str,
     session: AsyncSession,
+    request: Optional[Request] = None,
 ) -> None:
     """
     Enforces site isolation constraints using Principal and can_access_site.
@@ -290,10 +291,11 @@ async def enforce_document_site_visibility(
         caller_scope = (
             ",".join(principal.assigned_sites) if principal.assigned_sites else "global"
         )
+        client_ip = request.client.host if request and request.client else "unknown"
 
         details = (
             f"SECURITY ALERT: Access Violation. User '{actor_id}' with roles '{actor_roles}' (scope: '{caller_scope}') "
-            f"attempted to access/mutate resource at site '{resource_site_id}' but is not permitted."
+            f"attempted to access/mutate resource at site '{resource_site_id}' from IP '{client_ip}' but is not permitted."
         )
         reason_for_change = "Security Violation: Cross-site access denied"
 
@@ -337,6 +339,7 @@ async def health_check() -> dict[str, str]:
 @app.get("/api/v1/eisf/binders/{site_id}", response_model=List[DocumentResponse])
 async def get_site_binder_endpoint(
     site_id: str,
+    request: Request,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
 ):
@@ -344,7 +347,7 @@ async def get_site_binder_endpoint(
     Retrieve site-isolated regulatory binder documents for specified site.
     Enforces site isolation strictly.
     """
-    await enforce_document_site_visibility(principal, site_id, session)
+    await enforce_document_site_visibility(principal, site_id, session, request)
 
     stmt = select(ISFDocument).where(ISFDocument.site_id == site_id)
     result = await session.execute(stmt)
@@ -450,7 +453,7 @@ async def create_document(
     )
 
     # Enforce site isolation
-    await enforce_document_site_visibility(principal, payload.site_id, session)
+    await enforce_document_site_visibility(principal, payload.site_id, session, request)
 
     # Enforce manage_expiration permission if any expiration metadata is provided
     if (
@@ -559,7 +562,7 @@ async def ingest_document(
     )
 
     # Enforce site isolation
-    await enforce_document_site_visibility(principal, payload.site_id, session)
+    await enforce_document_site_visibility(principal, payload.site_id, session, request)
 
     # Enforce manage_expiration permission if any expiration metadata is provided
     if (
@@ -684,7 +687,7 @@ async def get_document(
         )
 
     # Enforce site isolation
-    await enforce_document_site_visibility(principal, doc.site_id, session)
+    await enforce_document_site_visibility(principal, doc.site_id, session, request)
 
     actor_id = principal.user_id or "system"
     actor_roles = (
@@ -728,7 +731,7 @@ async def download_document(
         )
 
     # Enforce site isolation
-    await enforce_document_site_visibility(principal, doc.site_id, session)
+    await enforce_document_site_visibility(principal, doc.site_id, session, request)
 
     actor_id = principal.user_id or "system"
     actor_roles = (
@@ -782,8 +785,8 @@ async def update_document(
         )
 
     # Enforce site isolation
-    await enforce_document_site_visibility(principal, doc.site_id, session)
-    await enforce_document_site_visibility(principal, payload.site_id, session)
+    await enforce_document_site_visibility(principal, doc.site_id, session, request)
+    await enforce_document_site_visibility(principal, payload.site_id, session, request)
 
     # Enforce manage_expiration permission if any expiration metadata is set or changed
     is_expiration_metadata_changing = (
@@ -864,7 +867,7 @@ async def delete_document(
         )
 
     # Enforce site isolation
-    await enforce_document_site_visibility(principal, doc.site_id, session)
+    await enforce_document_site_visibility(principal, doc.site_id, session, request)
 
     # Log deletion to audit trail
     await write_audit_log(
@@ -1149,7 +1152,9 @@ async def sync_documents(
 
     for item in payload.submissions:
         # Enforce site isolation for each item
-        await enforce_document_site_visibility(principal, item.site_id, session)
+        await enforce_document_site_visibility(
+            principal, item.site_id, session, request
+        )
 
         processed_count += 1
 

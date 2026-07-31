@@ -109,18 +109,18 @@ The following matrix defines the granular operations allowed for each role acros
 - **`D`**: Soft-Delete / Inactivate
 - **`N`**: No Access
 
-| Clinical Role | Study Design (USDM) | Subject Enrollment | eCRF Data Entry | Query Lifecycle | Source Doc Verification (SDV) | System Audit Logs | Export Unmasked | Export Masked |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **SysAdmin** | R | N | N | N | N | R | N | N | R |
-| **Sponsor Designer**| C/R/U/D | N | N | N | N | R | N | N | N |
-| **Sponsor DM** | R | R | R | C/R/U/D | N | R | N | R | C/R/U |
-| **Sponsor MM** | R | R | R | C/R/U | N | R | N | R | R |
-| **Sponsor Statistician**| R | N | N | N | N | R | N | N | C/R/U |
-| **Site Investigator (PI)**| R | C/R/U | C/R/U | R/U (Ans) | R | R (Site) | N | N | N |
-| **Site Coordinator (CRC)**| R | C/R/U | C/R/U (Draft) | R/U (Ans) | N | R (Site) | N | N | N |
-| **Site Monitor (CRA)** | R | R | R | C/R/U/D | C/R/U/D | R (Site) | N | N | R (Site) |
-| **Patient (ePRO)** | N | N | C/U (Diary) | N | N | N | N | N | N |
-| **External Monitor (CRO)** | R | N | N | N | N | R | N | N | R |
+| Clinical Role | Study Design (USDM) | Subject Enrollment | eCRF Data Entry | Query Lifecycle | Source Doc Verification (SDV) | System Audit Logs | Export Unmasked | Export Masked | TSDV Config | Form Submission | PI Sign-off | Medical Coding | Trial Lock |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **SysAdmin** | R | N | N | N | N | R | C/R/U/D | R | C/R/U/D | C/R/U/D | C/R/U/D | C/R/U/D | C/R/U/D |
+| **Sponsor Designer**| C/R/U/D | N | N | N | N | R | N | N | N | N | N | N | R |
+| **Sponsor DM** | R | R | R | C/R/U/D | N | R | N | C/R/U | R | R | R | C/R/U/D | C/R/U/D |
+| **Sponsor MM** | R | R | R | C/R/U | N | R | N | R | N | R | R | R | R |
+| **Sponsor Statistician**| R | N | N | N | N | R | C/R/U | C/R/U | N | N | N | N | R |
+| **Site Investigator (PI)**| R | C/R/U | C/R/U | R/U (Ans) | R | R (Site) | N | N | R | C/R/U | C/R/U | N | R |
+| **Site Coordinator (CRC)**| R | C/R/U | C/R/U (Draft) | R/U (Ans) | N | R (Site) | N | N | N | C/R/U | R | N | R |
+| **Site Monitor (CRA)** | R | R | R | C/R/U/D | C/R/U/D | R (Site) | N | R (Site) | C/R/U/D | R | R | N | R |
+| **Patient (ePRO)** | N | N | C/U (Diary) | N | N | N | N | N | N | C/U | N | N | N |
+| **External Monitor (CRO)** | R | N | N | N | N | R | N | R | R | R | R | N | R |
 
 ### 2.3 Field-Level Visibility & Blinding Matrix
 To guarantee compliance with blinding regulations, several parameters must be completely hidden or obfuscated from blinded roles. Blinded roles include CRCs, PIs, CRAs, and general Sponsor Data Managers during active trial phases. Unblinded roles include designated unblinded statisticians, unblinded pharmacists, and specific safety monitoring boards (DSMB).
