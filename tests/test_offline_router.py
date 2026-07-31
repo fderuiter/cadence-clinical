@@ -189,18 +189,17 @@ async def test_offline_sync_batch_update_action() -> None:
     form_id_2 = f"form_{uuid.uuid4().hex[:12]}"
 
     # Seed an existing form submission in the database first
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            existing_sub = FormSubmission(
-                id=form_id_2,
-                study_id="study_offline_02",
-                site_id="site_offline_02",
-                subject_id="sub_offline_02",
-                form_id="form_vs_02",
-                status="DRAFT",
-                version=1,
-            )
-            session.add(existing_sub)
+    async with db_manager.get_session_maker()() as session, session.begin():
+        existing_sub = FormSubmission(
+            id=form_id_2,
+            study_id="study_offline_02",
+            site_id="site_offline_02",
+            subject_id="sub_offline_02",
+            form_id="form_vs_02",
+            status="DRAFT",
+            version=1,
+        )
+        session.add(existing_sub)
 
     client_batch_id = f"batch_{uuid.uuid4().hex[:12]}"
     update_payload = {

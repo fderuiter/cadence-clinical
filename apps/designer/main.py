@@ -321,12 +321,11 @@ class StudyScopeChecker:
         if sponsor_id:
             sponsor_id = str(sponsor_id).strip()
 
-        if study_id:
-            if not can_access_study(principal, study_id):
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Forbidden: Insufficient scope access for this study.",
-                )
+        if study_id and not can_access_study(principal, study_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: Insufficient scope access for this study.",
+            )
 
         is_library_or_instance = (
             "/library" in request.url.path
@@ -1045,7 +1044,7 @@ async def transition_section(
         actor_role = (
             ",".join(principal.roles) if principal.roles else "sponsor_designer"
         )
-        transition = await transition_section_status(
+        return await transition_section_status(
             driver=driver,
             study_version_id=study_id,
             section_id=section_id,
@@ -1055,7 +1054,6 @@ async def transition_section(
             reason_for_change=payload.reason_for_change,
             signature_manifestation=signature_manifestation,
         )
-        return transition
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -1111,7 +1109,7 @@ async def create_thread_endpoint(
 
     driver = await get_neo4j_driver(request)
     try:
-        thread = await create_comment_thread(
+        return await create_comment_thread(
             driver=driver,
             study_version_id=study_id,
             section_id=section_id,
@@ -1119,7 +1117,6 @@ async def create_thread_endpoint(
             text=payload.text,
             created_by=principal.user_id,
         )
-        return thread
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except ImmutabilityViolationError as e:
@@ -1141,8 +1138,7 @@ async def get_threads_endpoint(
         raise HTTPException(status_code=403, detail="Forbidden")
 
     driver = await get_neo4j_driver(request)
-    threads = await get_comment_threads(driver, study_id, section_id)
-    return threads
+    return await get_comment_threads(driver, study_id, section_id)
 
 
 @app.post(
@@ -1162,14 +1158,13 @@ async def add_comment_endpoint(
 
     driver = await get_neo4j_driver(request)
     try:
-        thread = await add_comment_to_thread(
+        return await add_comment_to_thread(
             driver=driver,
             study_version_id=study_id,
             thread_id=thread_id,
             text=payload.text,
             created_by=principal.user_id,
         )
-        return thread
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except ImmutabilityViolationError as e:
@@ -1192,12 +1187,11 @@ async def resolve_thread_endpoint(
 
     driver = await get_neo4j_driver(request)
     try:
-        thread = await resolve_comment_thread(
+        return await resolve_comment_thread(
             driver=driver,
             study_version_id=study_id,
             thread_id=thread_id,
         )
-        return thread
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except ImmutabilityViolationError as e:
@@ -1231,7 +1225,7 @@ async def create_suggestion_endpoint(
 
     driver = await get_neo4j_driver(request)
     try:
-        suggestion = await create_suggestion(
+        return await create_suggestion(
             driver=driver,
             study_version_id=study_id,
             block_id=block_id,
@@ -1239,7 +1233,6 @@ async def create_suggestion_endpoint(
             reason=payload.reason,
             created_by=principal.user_id,
         )
-        return suggestion
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except ImmutabilityViolationError as e:
@@ -1261,8 +1254,7 @@ async def get_suggestions_endpoint(
         raise HTTPException(status_code=403, detail="Forbidden")
 
     driver = await get_neo4j_driver(request)
-    suggestions = await get_suggestions(driver, study_id, block_id)
-    return suggestions
+    return await get_suggestions(driver, study_id, block_id)
 
 
 @app.post(
@@ -1282,7 +1274,7 @@ async def decide_suggestion_endpoint(
 
     driver = await get_neo4j_driver(request)
     try:
-        suggestion = await decide_suggestion(
+        return await decide_suggestion(
             driver=driver,
             study_version_id=study_id,
             suggestion_id=suggestion_id,
@@ -1290,7 +1282,6 @@ async def decide_suggestion_endpoint(
             decided_by=principal.user_id,
             decision_reason=payload.decision_reason,
         )
-        return suggestion
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except ConcurrentLockingError as e:
@@ -2193,10 +2184,7 @@ async def export_protocol(
                     status_code=500,
                     detail=f"Strict Archival Failure: Failed to archive generated protocol to eTMF. Error: {str(e)}",
                 )
-            else:
-                print(
-                    f"[ARCHIVAL WARNING] Best-effort eTMF forwarding failed: {str(e)}"
-                )
+            print(f"[ARCHIVAL WARNING] Best-effort eTMF forwarding failed: {str(e)}")
 
     headers = {"Content-Disposition": f'attachment; filename="{result.filename}"'}
     return Response(
@@ -2896,8 +2884,7 @@ async def run_round_trip_endpoint(
     """
     from apps.designer.orchestration import execute_round_trip
 
-    report = execute_round_trip(payload)
-    return report
+    return execute_round_trip(payload)
 
 
 # ==========================================
@@ -3778,8 +3765,7 @@ async def get_study_rules(study_id: str, request: Request) -> List[Dict[str, Any
     driver = getattr(request.app.state, "driver", None)
     if driver is not None:
         return await get_rules_from_graph(driver, study_id)
-    else:
-        return get_mock_rules(study_id)
+    return get_mock_rules(study_id)
 
 
 @app.post(
@@ -3817,14 +3803,13 @@ async def create_study_rule(
         rule_dict["version_index"] = 1
         rule_dict["is_deleted"] = False
         return rule_dict
-    else:
-        # Check immutability for the mock/in-memory path
-        assert_mock_study_mutable(study_id)
-        created = create_mock_rule(study_id, rule_dict)
-        # Verify the change justification is captured in the response/metadata
-        created["created_by"] = user_id
-        created["change_reason"] = change_reason
-        return created
+    # Check immutability for the mock/in-memory path
+    assert_mock_study_mutable(study_id)
+    created = create_mock_rule(study_id, rule_dict)
+    # Verify the change justification is captured in the response/metadata
+    created["created_by"] = user_id
+    created["change_reason"] = change_reason
+    return created
 
 
 @app.get("/api/v1/studies/{study_id}/rules/{rule_id}", status_code=status.HTTP_200_OK)
@@ -3845,11 +3830,10 @@ async def get_study_rule_by_id(
             if r["id"] == rule_id:
                 return r
         raise HTTPException(status_code=404, detail="Rule not found")
-    else:
-        rule = get_mock_rule_by_id(study_id, rule_id)
-        if not rule:
-            raise HTTPException(status_code=404, detail="Rule not found")
-        return rule
+    rule = get_mock_rule_by_id(study_id, rule_id)
+    if not rule:
+        raise HTTPException(status_code=404, detail="Rule not found")
+    return rule
 
 
 @app.put(
@@ -3889,16 +3873,15 @@ async def update_study_rule_by_id(
         rule_dict["version_index"] = new_version
         rule_dict["is_deleted"] = False
         return rule_dict
-    else:
-        # Check immutability for the mock/in-memory path
-        assert_mock_study_mutable(study_id)
-        rule = get_mock_rule_by_id(study_id, rule_id)
-        if not rule:
-            raise HTTPException(status_code=404, detail="Rule not found")
-        updated = update_mock_rule(study_id, rule_id, payload.model_dump())
-        updated["updated_by"] = user_id
-        updated["change_reason"] = change_reason
-        return updated
+    # Check immutability for the mock/in-memory path
+    assert_mock_study_mutable(study_id)
+    rule = get_mock_rule_by_id(study_id, rule_id)
+    if not rule:
+        raise HTTPException(status_code=404, detail="Rule not found")
+    updated = update_mock_rule(study_id, rule_id, payload.model_dump())
+    updated["updated_by"] = user_id
+    updated["change_reason"] = change_reason
+    return updated
 
 
 @app.delete(
@@ -3931,13 +3914,12 @@ async def delete_study_rule_by_id(
 
         await delete_rule_node(driver, study_id, rule_id, user_id, change_reason)
         return {"status": "success", "message": "Rule successfully deleted"}
-    else:
-        # Check immutability for the mock/in-memory path
-        assert_mock_study_mutable(study_id)
-        success = delete_mock_rule(study_id, rule_id)
-        if not success:
-            raise HTTPException(status_code=404, detail="Rule not found")
-        return {"status": "success", "message": "Rule successfully deleted"}
+    # Check immutability for the mock/in-memory path
+    assert_mock_study_mutable(study_id)
+    success = delete_mock_rule(study_id, rule_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Rule not found")
+    return {"status": "success", "message": "Rule successfully deleted"}
 
 
 @app.post(

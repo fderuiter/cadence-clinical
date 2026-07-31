@@ -1,3 +1,4 @@
+import contextlib
 import hashlib
 import os
 import tempfile
@@ -69,10 +70,8 @@ class LocalStorageProvider(BlobStorageProvider):
             return calculated_hash
         except Exception:
             if temp_path.exists():
-                try:
+                with contextlib.suppress(OSError):
                     os.unlink(temp_path)
-                except OSError:
-                    pass
             raise
 
     async def get_object(self, key: str) -> Tuple[bytes, str]:

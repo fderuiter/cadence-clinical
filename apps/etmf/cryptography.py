@@ -1,4 +1,5 @@
 import base64
+import contextlib
 import logging
 import re
 from typing import Any, Dict, Optional, Tuple
@@ -29,17 +30,7 @@ def requires_signature(
         return True
 
     # Check for mandatory in-scope regulatory document types
-    if norm in (
-        "fda form 1572",
-        "financial disclosure",
-        "protocol sign-off",
-        "form_1572",
-        "financial_disclosure",
-        "protocol_signoff",
-    ):
-        return True
-
-    return False
+    return norm in ("fda form 1572", "financial disclosure", "protocol sign-off", "form_1572", "financial_disclosure", "protocol_signoff")
 
 
 def extract_signature_from_content(
@@ -77,10 +68,8 @@ def extract_signature_from_content(
                     # Try Base64 first, then hex
                     sig_bytes = base64.b64decode(sig_str)
                 except Exception:
-                    try:
+                    with contextlib.suppress(Exception):
                         sig_bytes = bytes.fromhex(sig_str)
-                    except Exception:
-                        pass
 
             # Strip signature and cert blocks to get the signed data
             signed_data = content
@@ -121,10 +110,8 @@ def extract_signature_from_content(
                 try:
                     sig_bytes = base64.b64decode(sig_str)
                 except Exception:
-                    try:
+                    with contextlib.suppress(Exception):
                         sig_bytes = bytes.fromhex(sig_str)
-                    except Exception:
-                        pass
 
             # Strip Signature tags to get the signed data
             signed_data = content
@@ -207,10 +194,8 @@ def validate_document_signature(
                     try:
                         sig_bytes = base64.b64decode(sig_val.strip())
                     except Exception:
-                        try:
+                        with contextlib.suppress(Exception):
                             sig_bytes = bytes.fromhex(sig_val.strip())
-                        except Exception:
-                            pass
                     signed_data = content.strip()
                     break
 
@@ -223,8 +208,7 @@ def validate_document_signature(
                 False,
                 f"Missing required digital signature for artifact type '{artifact_type}'.",
             )
-        else:
-            return True, "No signature present (none required)."
+        return True, "No signature present (none required)."
 
     # 4. Handle Mock/Test cases cleanly
     # Allow mock signatures for simple testing paths if requested explicitly in test suite

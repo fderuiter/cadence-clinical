@@ -186,9 +186,7 @@ def is_post_2026_adr(filename: str) -> bool:
     year = int(match.group(1))
     if year < 2026:
         return False
-    if year == 2026 and filename in BASELINE_FILES:
-        return False
-    return True
+    return not (year == 2026 and filename in BASELINE_FILES)
 
 
 def extract_requirement_references(content: str) -> set[str]:

@@ -125,10 +125,10 @@ def convert_unit(value: float, from_unit: str, to_unit: str) -> float:
         # Convert Cel to target
         if norm_to == "Cel":
             return cel_val
-        elif norm_to == "[Fahr]":
+        if norm_to == "[Fahr]":
             return cel_val * 9.0 / 5.0 + 32.0
-        else:  # K
-            return cel_val + 273.15
+        # K
+        return cel_val + 273.15
 
     # Multiplicative conversions
     if norm_from in CONVERSIONS and norm_to in CONVERSIONS:

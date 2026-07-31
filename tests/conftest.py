@@ -252,11 +252,10 @@ class MockDatabaseState:
             new_version.update(new_properties)
             versions.append(new_version)
             return new_version
-        else:
-            new_version = {"id": object_id, "version": 1}
-            new_version.update(new_properties)
-            self.library_objects[object_id] = [new_version]
-            return new_version
+        new_version = {"id": object_id, "version": 1}
+        new_version.update(new_properties)
+        self.library_objects[object_id] = [new_version]
+        return new_version
 
 
 class MockResult:
@@ -294,7 +293,7 @@ class MockTransaction:
             return MockResult([{"id": study_id}])
 
         # Check if it's library lock query
-        elif (
+        if (
             "MATCH (old:LibraryObject {id: $object_id})" in query_str
             and "SET old._lock = true" in query_str
         ):
@@ -312,7 +311,7 @@ class MockTransaction:
             return MockResult([{"id": object_id}])
 
         # Check if it's study properties update
-        elif (
+        if (
             "MATCH (s:Study {id: $study_id})" in query_str
             and "CREATE (a:Action" in query_str
         ):
@@ -328,19 +327,10 @@ class MockTransaction:
             return MockResult([{"action_id": act_id}])
 
         # Check if it's library version update (existing)
-        elif (
+        if (
             "MATCH (old:LibraryObject {id: $object_id})" in query_str
             and "CREATE (new:LibraryObject" in query_str
-        ):
-            object_id = parameters["object_id"]
-            props = parameters["props"]
-            new_props = self.state.create_library_object_version(
-                object_id, props, self.tx_id
-            )
-            return MockResult([{"new_props": new_props}])
-
-        # Check if it's library version creation (new/merge)
-        elif "MERGE (new:LibraryObject {id: $object_id})" in query_str:
+        ) or "MERGE (new:LibraryObject {id: $object_id})" in query_str:
             object_id = parameters["object_id"]
             props = parameters["props"]
             new_props = self.state.create_library_object_version(
@@ -349,13 +339,13 @@ class MockTransaction:
             return MockResult([{"new_props": new_props}])
 
         # Check if it's check library object exists
-        elif "MATCH (n:LibraryObject {id: $object_id}) RETURN n LIMIT 1" in query_str:
+        if "MATCH (n:LibraryObject {id: $object_id}) RETURN n LIMIT 1" in query_str:
             object_id = parameters["object_id"]
             exists = object_id in self.state.library_objects
             return MockResult([{"n": exists}] if exists else [])
 
         # Check if it's create study root
-        elif "MERGE (s:Study {id: $study_id})" in query_str:
+        if "MERGE (s:Study {id: $study_id})" in query_str:
             study_id = parameters["study_id"]
             if study_id not in self.state.studies:
                 self.state.studies[study_id] = {
@@ -365,8 +355,7 @@ class MockTransaction:
                 }
             return MockResult([{"id": study_id}])
 
-        else:
-            return MockResult([])
+        return MockResult([])
 
     async def __aenter__(self):
         return self

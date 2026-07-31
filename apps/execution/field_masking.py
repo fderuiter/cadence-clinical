@@ -60,11 +60,11 @@ def mask_clinical_record(
         lower_field = field_name.lower()
 
         # Blinded treatment fields masking
-        if lower_field in BLINDED_TREATMENT_FIELDS and not can_unblind:
-            masked_record[field_name] = MASKED_REPLACEMENT_TEXT
-
-        # PII/PHI fields masking
-        elif lower_field in PII_PHI_FIELDS:
+        if (
+            lower_field in BLINDED_TREATMENT_FIELDS
+            and not can_unblind
+            or lower_field in PII_PHI_FIELDS
+        ):
             masked_record[field_name] = MASKED_REPLACEMENT_TEXT
 
         # Handle nested dictionary or list items

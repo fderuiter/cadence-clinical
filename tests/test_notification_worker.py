@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -45,10 +46,8 @@ async def setup_test_databases():
     nw._should_run = False
     if nw._worker_task:
         nw._worker_task.cancel()
-        try:
+        with contextlib.suppress(Exception):
             await nw._worker_task
-        except Exception:
-            pass
         nw._worker_task = None
 
     # Clear mock queue
@@ -74,10 +73,8 @@ async def setup_test_databases():
     nw._should_run = False
     if nw._worker_task:
         nw._worker_task.cancel()
-        try:
+        with contextlib.suppress(Exception):
             await nw._worker_task
-        except Exception:
-            pass
         nw._worker_task = None
 
     while not nw._mock_queue.empty():

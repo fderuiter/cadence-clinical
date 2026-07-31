@@ -1,3 +1,4 @@
+import contextlib
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -54,9 +55,9 @@ def get_demographics(subject: Any) -> dict:
             demographics = decrypt_demographics(enc)
     if isinstance(demographics, dict):
         return demographics
-    elif hasattr(demographics, "model_dump"):
+    if hasattr(demographics, "model_dump"):
         return demographics.model_dump()
-    elif hasattr(demographics, "dict"):
+    if hasattr(demographics, "dict"):
         return demographics.dict()
     return {}
 
@@ -813,10 +814,8 @@ def extract_vs(
                 # VSORRES: preserve verbatim numeric result (as int or float if possible)
                 vsorres = val_num if val_num is not None else None
                 if vsorres is None and val_str is not None:
-                    try:
+                    with contextlib.suppress(ValueError):
                         vsorres = float(val_str)
-                    except ValueError:
-                        pass
 
                 vsorresu = get_value(o, "unit")
                 vsstresn = get_value(o, "normalized_value")

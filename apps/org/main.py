@@ -1209,9 +1209,8 @@ async def list_org_audit_logs(
 
     stmt = select(OrgAuditLog).order_by(desc(OrgAuditLog.timestamp))
     res = await session.execute(stmt)
-    logs = res.scalars().all()
+    return res.scalars().all()
 
-    return logs
 
 
 # --- Site Endpoints ---
