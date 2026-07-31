@@ -18,6 +18,8 @@ from apps.execution.database.models import (  # noqa: F401
     DictionaryImportJob,
     FormSubmission,
     LabReferenceRange,
+    LabTestMaster,
+    LabUnitConversion,
     MedDRAHierarchy,
     MedDRATerm,
     PendingPredecessorCheck,
