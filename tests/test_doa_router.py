@@ -9,11 +9,13 @@ import time
 import pytest_asyncio
 from fastapi.testclient import TestClient
 from jose import jwt
+from sqlalchemy import event
 
 import packages  # noqa: F401
 from apps.ctms.database import db_manager
 from apps.ctms.main import app
 from apps.ctms.models import Base
+from apps.execution.database.models import Base as ExecutionModelBase
 from apps.gateway.main import generate_signature
 
 GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode(
@@ -25,7 +27,15 @@ GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").en
 async def setup_db():
     """Setup in-memory CTMS database for unit and integration testing."""
     db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)
+
+    @event.listens_for(db_manager.engine.sync_engine, "connect")
+    def attach_audit_schema(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("ATTACH DATABASE ':memory:' AS audit_schema;")
+        cursor.close()
+
     async with db_manager.engine.begin() as conn:
+        await conn.run_sync(ExecutionModelBase.metadata.create_all)
         await conn.run_sync(Base.metadata.create_all)
     yield
     async with db_manager.engine.begin() as conn:
