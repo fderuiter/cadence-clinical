@@ -24,13 +24,18 @@ from apps.notifications.models import (
 @pytest_asyncio.fixture(autouse=True)
 async def setup_notifications_db():
     """
-    Setup in-memory Notifications database for unit and integration testing.
+    Setup isolated Notifications database for unit and integration testing.
     """
+    import os
+
     from apps.notifications.main import active_deliveries, active_tasks
+
+    worker_id = os.getenv("PYTEST_XDIST_WORKER", "master")
+    db_file = f"test_notifications_{worker_id}.db"
 
     active_deliveries.clear()
     active_tasks.clear()
-    db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)
+    db_manager.init_db(f"sqlite+aiosqlite:///{db_file}", echo=False)
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
@@ -46,6 +51,15 @@ async def setup_notifications_db():
         await conn.run_sync(Base.metadata.drop_all)
     await db_manager.close()
     active_deliveries.clear()
+
+    # Delete the database file and its auxiliary files if they exist
+    for suffix in ("", "-shm", "-wal"):
+        path = f"{db_file}{suffix}"
+        if os.path.exists(path):
+            try:
+                os.remove(path)
+            except Exception:
+                pass
 
 
 def get_auth_headers(

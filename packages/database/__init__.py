@@ -21,10 +21,12 @@ class RelationalDatabaseManager:
 
         @event.listens_for(self.engine.sync_engine, "connect")
         def set_sqlite_pragma(dbapi_connection, connection_record):
-            """Enable SQLite foreign key support on connect event."""
+            """Enable SQLite foreign key support, WAL mode, and busy timeout on connect event."""
             cursor = dbapi_connection.cursor()
             try:
                 cursor.execute("PRAGMA foreign_keys=ON")
+                cursor.execute("PRAGMA journal_mode=WAL")
+                cursor.execute("PRAGMA busy_timeout=30000")
             except Exception:
                 pass
             finally:
