@@ -588,6 +588,9 @@ def is_whitelisted(method: str, path: str) -> bool:
     p_norm = normalize_p(path)
     # Wildcard checks for newly added execution and designer features
     wildcards = [
+        "/subjects",
+        "/api/v1/execution/subjects",
+        "/api/v1/execution/visits",
         "/api/v1/documents",
         "/api/v1/archive",
         "/api/v1/execution/locks",
@@ -610,6 +613,9 @@ def is_whitelisted(method: str, path: str) -> bool:
         return True
     p_clean = normalize_p(p_norm.replace("/api/v1", "").replace("/api/v2", ""))
     for prefix in [
+        "/subjects",
+        "/execution/subjects",
+        "/execution/visits",
         "/synopsis/export",
         "/synopsis/render",
         "/designer/sentinel/evaluate",
