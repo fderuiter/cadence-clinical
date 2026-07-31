@@ -12,6 +12,11 @@ from typing import Any, Dict, List
 import httpx
 import pytest
 import pytest_asyncio
+from execution.safety_models import (
+    CausalityEnum,
+    SAECaseRecord,
+    SeriousnessCriteriaEnum,
+)
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
@@ -21,7 +26,6 @@ from apps.gateway.main import generate_signature
 from apps.safety.database import db_manager
 from apps.safety.main import app
 from apps.safety.models import Base, SafetyAuditLog
-from execution.safety_models import CausalityEnum, SAECaseRecord, SeriousnessCriteriaEnum
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -31,7 +35,7 @@ async def setup_db():
     Also configures GATEWAY_SECRET to prevent signature failures during tests.
     """
     original_secret = os.environ.get("GATEWAY_SECRET")
-    os.environ["GATEWAY_SECRET"] = "internal-gateway-secret-12345"
+    os.environ["GATEWAY_SECRET"] = "internal-gateway-secret-12345"  # pragma: allowlist secret
 
     db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)
     async with db_manager.engine.begin() as conn:
