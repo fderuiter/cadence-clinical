@@ -12,7 +12,7 @@ from apps.execution.database.models import (
 # Registry of active settings to apply once approved
 CURRENT_SETTINGS = {
     "session_timeout_minutes": "30",
-    "password_expiration_days": "90",
+    "password_expiration_days": "90",  # pragma: allowlist secret
     "esignature_timeout_thresholds": "120",
     "site_isolation_rules": "enabled",
     "data_lock_configurations": "strict",
@@ -39,8 +39,8 @@ class ComplianceChangeRequestService:
         risk_map = {
             "site_isolation_rules": "HIGH",
             "data_lock_configurations": "HIGH",
-            "password_expiration_days": "MEDIUM",
-            "password_policies": "MEDIUM",
+            "password_expiration_days": "MEDIUM",  # pragma: allowlist secret
+            "password_policies": "MEDIUM",  # pragma: allowlist secret
             "session_timeout_minutes": "LOW",
             "esignature_timeout_thresholds": "MEDIUM",
         }
