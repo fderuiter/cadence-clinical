@@ -22,11 +22,16 @@
             <h4>Record Details</h4>
             <div class="meta-row">
               <span class="meta-label">DIA Code:</span>
-              <span class="meta-value font-mono">{{ document.artifact_code }}</span>
+              <span class="meta-value font-mono">{{
+                document.artifact_code
+              }}</span>
             </div>
             <div class="meta-row">
               <span class="meta-label">Status:</span>
-              <span class="meta-value font-bold" :class="getStatusClass(document.status)">
+              <span
+                class="meta-value font-bold"
+                :class="getStatusClass(document.status)"
+              >
                 {{ document.status }}
               </span>
             </div>
@@ -36,7 +41,9 @@
             </div>
             <div class="meta-row">
               <span class="meta-label">Uploaded At:</span>
-              <span class="meta-value">{{ formatDate(document.created_at) }}</span>
+              <span class="meta-value">{{
+                formatDate(document.created_at)
+              }}</span>
             </div>
             <div class="meta-row" v-if="document.site_id">
               <span class="meta-label">Site Scope:</span>
@@ -49,7 +56,10 @@
             <div class="change-reason-block">
               <h5>Change Justification:</h5>
               <p class="reason-text">
-                {{ document.reason_for_change || "No change justification provided." }}
+                {{
+                  document.reason_for_change ||
+                  "No change justification provided."
+                }}
               </p>
             </div>
             <div class="checksum-block" v-if="document.content_checksum">
@@ -69,13 +79,19 @@
           <!-- Electronic Signature Manifestation -->
           <div class="meta-section border-top manifestation-section">
             <h4>Digital Signature Manifestation</h4>
-            <div v-if="document.signer && document.signing_timestamp" class="manifest-card signed">
+            <div
+              v-if="document.signer && document.signing_timestamp"
+              class="manifest-card signed"
+            >
               <p class="sign-status">📝 ELECTRONICALLY SIGNED</p>
               <p class="signer-meta">
                 Signer: <strong>{{ document.signer }}</strong>
               </p>
               <p class="signer-meta">
-                Reason: <strong>{{ document.signature_manifestation?.signing_reason || "APPROVED" }}</strong>
+                Reason:
+                <strong>{{
+                  document.signature_manifestation?.signing_reason || "APPROVED"
+                }}</strong>
               </p>
               <p class="signer-meta">
                 Date: <span>{{ formatDate(document.signing_timestamp) }}</span>
@@ -84,7 +100,8 @@
             <div v-else class="manifest-card unsigned">
               <p class="sign-status">⚠️ UNSIGNED RECORD</p>
               <p class="unsigned-warning">
-                This document is a working electronic draft and has not been locked by signature manifestation.
+                This document is a working electronic draft and has not been
+                locked by signature manifestation.
               </p>
             </div>
           </div>
@@ -108,15 +125,26 @@
               </div>
 
               <div class="page-content">
-                <h1 class="doc-title">{{ document.artifact_type || "Clinical Trial Document" }}</h1>
-                <p class="doc-subtitle">DIA TMF Code: {{ document.artifact_code }} | Version Index: {{ document.version_index }}.0</p>
+                <h1 class="doc-title">
+                  {{ document.artifact_type || "Clinical Trial Document" }}
+                </h1>
+                <p class="doc-subtitle">
+                  DIA TMF Code: {{ document.artifact_code }} | Version Index:
+                  {{ document.version_index }}.0
+                </p>
 
                 <hr class="divider" />
 
                 <section class="doc-section-content">
                   <h3>1. REGULATORY INTENT AND AUDIT CLASSIFICATION</h3>
                   <p>
-                    This electronic record has been indexed within the Cadence Clinical Electronic Trial Master File (eTMF) in full alignment with FDA 21 CFR Part 11 and EU Annex 11 digital record keeping standards. Any modifications, status transitions, or sign-off requests execute within a validated transaction boundary and emit to the global cryptographic ledger chain.
+                    This electronic record has been indexed within the Cadence
+                    Clinical Electronic Trial Master File (eTMF) in full
+                    alignment with FDA 21 CFR Part 11 and EU Annex 11 digital
+                    record keeping standards. Any modifications, status
+                    transitions, or sign-off requests execute within a validated
+                    transaction boundary and emit to the global cryptographic
+                    ledger chain.
                   </p>
                 </section>
 
@@ -125,8 +153,10 @@
                   <p>
                     <strong>Parent Study:</strong> {{ document.study_id }}<br />
                     <strong>Record ID:</strong> {{ document.id }}<br />
-                    <strong>Ingestion Filename:</strong> {{ document.filename }}<br />
-                    <strong>MIME Category:</strong> {{ document.mime_type }}<br />
+                    <strong>Ingestion Filename:</strong> {{ document.filename
+                    }}<br />
+                    <strong>MIME Category:</strong> {{ document.mime_type
+                    }}<br />
                     <strong>Author Identity:</strong> {{ document.created_by }}
                   </p>
                 </section>
@@ -134,7 +164,11 @@
                 <section class="doc-section-content">
                   <h3>3. GxP COMPLIANCE AND ENCRYPTION CHECKS</h3>
                   <p>
-                    Verification check completed successfully. System integrity is active. This preview is generated securely with real-time watermark placement rendering the viewing identity and date-timestamp on-the-fly. Do not photocopy or distribute this document without explicit study delegation authority.
+                    Verification check completed successfully. System integrity
+                    is active. This preview is generated securely with real-time
+                    watermark placement rendering the viewing identity and
+                    date-timestamp on-the-fly. Do not photocopy or distribute
+                    this document without explicit study delegation authority.
                   </p>
                 </section>
               </div>
@@ -387,7 +421,9 @@ function formatDate(dateStr) {
   width: 100%;
   max-width: 650px;
   background-color: #ffffff;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
   border-radius: 4px;
   position: relative;
   display: flex;

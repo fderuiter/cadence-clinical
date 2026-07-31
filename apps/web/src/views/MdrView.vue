@@ -509,13 +509,15 @@
             margin-bottom: 16px;
           "
         >
-          <div style="display: flex; gap: 8px; align-items: center;">
-            <span class="card-title" style="margin-right: 12px;">Schedule of Activities (SoA) Matrix</span>
+          <div style="display: flex; gap: 8px; align-items: center">
+            <span class="card-title" style="margin-right: 12px"
+              >Schedule of Activities (SoA) Matrix</span
+            >
             <button
               id="btn-tab-soa"
               class="btn"
               :class="!showCanvas ? 'btn-primary' : 'btn-secondary'"
-              style="font-size: 0.85rem; padding: 6px 12px;"
+              style="font-size: 0.85rem; padding: 6px 12px"
               @click="showCanvas = false"
             >
               SoA Matrix
@@ -524,7 +526,7 @@
               id="btn-tab-canvas"
               class="btn"
               :class="showCanvas ? 'btn-primary' : 'btn-secondary'"
-              style="font-size: 0.85rem; padding: 6px 12px;"
+              style="font-size: 0.85rem; padding: 6px 12px"
               @click="showCanvas = true"
             >
               eCRF Canvas
@@ -590,7 +592,7 @@ const formSchema = computed({
   get: () => designerStore.activeForm,
   set: (val) => {
     designerStore.activeForm = val;
-  }
+  },
 });
 const showCanvas = ref(false);
 
