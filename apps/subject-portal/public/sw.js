@@ -1,3 +1,7 @@
+/**
+ * Progressive Web App (PWA) Service Worker (Phase 19).
+ * Pre-caches core assets and implements a Network-First falling back to Cache strategy.
+ */
 const CACHE_NAME = "cadence-portal-cache-v1";
 const ASSETS = [
   "/subject-portal/",

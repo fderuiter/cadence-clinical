@@ -81,7 +81,7 @@ async def approve_delegation_with_esignature(
     """Approve a pending task delegation with PI 21 CFR Part 11 eSignature."""
     # 1. Re-authenticate PI credentials
     if (
-        password == "wrong_password"  # pragma: allowlist secret
+        password == "wrong_password"
         or "invalid" in password  # pragma: allowlist secret
     ):  # pragma: allowlist secret
         raise ValueError("Invalid credentials")

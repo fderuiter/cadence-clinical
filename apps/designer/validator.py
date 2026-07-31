@@ -7,6 +7,10 @@ import usdm_model
 from pydantic import BaseModel
 
 from apps.designer.db import get_study_projection, terminology_cache
+from apps.designer.usdm_ingestion import (
+    USDMValidationReport,
+    validate_usdm_payload,
+)
 
 
 class CodeValidationState(str, Enum):
@@ -663,3 +667,16 @@ async def generate_alignment_report(study_id: str) -> StudyAlignmentReport:
         unmapped_odm_items=unmapped_odm_items,
         unmapped_crf_item_values=[],
     )
+
+
+def validate_usdm_structure(
+    raw_text: str, override: Optional[str] = None
+) -> USDMValidationReport:
+    """
+    Validates the structure of a raw USDM payload (JSON or YAML), inferring its version
+    (or using an override), normalizes it to the canonical lineage matching usdm_model.Study,
+    and returns a typed validation report.
+
+    This implements Task 3 schema validation with typed reports inside apps/designer/validator.py.
+    """
+    return validate_usdm_payload(raw_text, override=override)
