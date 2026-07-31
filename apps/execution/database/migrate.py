@@ -19,6 +19,7 @@ from apps.execution.database.models import (  # noqa: F401
     FormSubmission,
     LabReferenceRange,
     LabTestMaster,
+    LabTestMasters,
     LabUnitConversion,
     MedDRAHierarchy,
     MedDRATerm,

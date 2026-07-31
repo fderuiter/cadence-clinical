@@ -1046,7 +1046,7 @@ class LabUnitConversion(AuditedModel):
     )
 
 
-class LabTestMaster(AuditedModel):
+class LabTestMasters(AuditedModel):
     """Represents a laboratory test catalog master record, enabling standardized catalog definition.
 
     Attributes:
@@ -1060,7 +1060,7 @@ class LabTestMaster(AuditedModel):
 
     __tablename__ = "lab_test_masters"
     __table_args__ = (
-        Index("idx_lab_test_master_lookup", "study_id", "test_code"),
+        Index("idx_lab_test_masters_lookup", "study_id", "test_code"),
     )
 
     study_id: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
@@ -1069,41 +1069,6 @@ class LabTestMaster(AuditedModel):
     default_unit: Mapped[str] = mapped_column(String(50), nullable=False)
     normalized_unit: Mapped[str] = mapped_column(String(50), nullable=False)
     loinc_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
-
-    # GxP 21 CFR Part 11 Audit fields
-    created_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime, server_default=func.now(), nullable=True
-    )
-    created_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    reason_for_change: Mapped[Optional[str]] = mapped_column(
-        String(1000), nullable=True
-    )
-    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
-
-
-class LabUnitConversion(AuditedModel):
-    """Represents laboratory unit conversion settings, enabling conversion of lab values between units.
-
-    Attributes:
-        study_id (str): The unique identifier of the study.
-        test_code (str): The laboratory test code (e.g. 'HEMOGLOBIN').
-        from_unit (str): The source unit of measurement.
-        to_unit (str): The destination/target unit of measurement.
-        factor (float): The multiplicative conversion factor.
-        offset (float): Optional additive conversion offset.
-    """
-
-    __tablename__ = "lab_unit_conversions"
-    __table_args__ = (
-        Index("idx_lab_unit_conversion_lookup", "study_id", "test_code", "from_unit", "to_unit"),
-    )
-
-    study_id: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
-    test_code: Mapped[str] = mapped_column(String(100), index=True, nullable=False)
-    from_unit: Mapped[str] = mapped_column(String(50), nullable=False)
-    to_unit: Mapped[str] = mapped_column(String(50), nullable=False)
-    factor: Mapped[float] = mapped_column(Float, nullable=False)
-    offset: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
     # GxP 21 CFR Part 11 Audit fields
     created_at: Mapped[Optional[datetime]] = mapped_column(
