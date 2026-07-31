@@ -97,7 +97,7 @@ async def setup_dual_dbs(monkeypatch):
     async with exec_db_manager.engine.begin() as conn:
         await conn.run_sync(ExecBase.metadata.create_all)
 
-    # 3. Monkeypatch httpx.AsyncClient *specifically* in apps.execution.notifications_client to route to notifications_app
+    # 3. Monkeypatch httpx.AsyncClient in packages.security.gateway_client to route to notifications_app
     original_async_client = httpx.AsyncClient
 
     def mock_async_client(*args, **kwargs):
@@ -107,7 +107,7 @@ async def setup_dual_dbs(monkeypatch):
         return original_async_client(*args, **kwargs)
 
     monkeypatch.setattr(
-        "apps.execution.notifications_client.httpx.AsyncClient", mock_async_client
+        "packages.security.gateway_client.httpx.AsyncClient", mock_async_client
     )
 
     yield
