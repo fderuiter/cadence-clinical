@@ -80,8 +80,10 @@ def shift_date_string(date_str: str, shift_days: int = DEFAULT_DATE_SHIFT_DAYS) 
             return shifted_dt.strftime("%m/%d/%Y")
         elif re.match(r"^\d{1,2}-[a-zA-Z]{3}-\d{4}$", date_str, re.IGNORECASE):
             return shifted_dt.strftime("%d-%b-%Y")
-        elif re.match(r"^[a-zA-Z]{3}\s+\d{1,2},?\s+\d{4}$", date_str, re.IGNORECASE):
-            # e.g., "Jan 15, 2026" or "Jan 15 2026"
+        elif re.match(
+            r"^[a-zA-Z]{3}\s+\d{1,2},?\s+\d{4}$", date_str, re.IGNORECASE
+        ):  # deid: ignore
+            # e.g., "Jan 15, 2026" or "Jan 15 2026"  # deid: ignore
             has_comma = "," in date_str
             fmt = "%b %d, %Y" if has_comma else "%b %d %Y"
             return shifted_dt.strftime(fmt)
@@ -97,7 +99,7 @@ def cap_age_string(age_str: str, cap: int = 89) -> str:
     Finds the numeric age value in a string, and if it exceeds the cap, generalizes it.
 
     Args:
-        age_str (str): The age matched string (e.g., "age 95", "92 years old").
+        age_str (str): The age matched string (e.g., "age 95", "92 years old").  # deid: ignore
         cap (int): The maximum age limit. Defaults to 89.
 
     Returns:
@@ -157,7 +159,13 @@ def apply_deid_transforms(
             strategy = default_strategy
 
         # Ensure strategy is valid, otherwise fallback to "mask"
-        if strategy not in ("mask", "full_mask", "pseudonymize", "date_shift", "age_cap"):
+        if strategy not in (
+            "mask",
+            "full_mask",
+            "pseudonymize",
+            "date_shift",
+            "age_cap",
+        ):
             strategy = "mask"
 
         # Handle transformation based on strategy

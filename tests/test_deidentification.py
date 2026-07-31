@@ -14,7 +14,11 @@ from packages.deidentification.manifest import (
     verify_manifest_asymmetric,
     verify_manifest_symmetric,
 )
-from packages.deidentification.models import ComplianceProfile, DetectionResult, DetectorCategory
+from packages.deidentification.models import (
+    ComplianceProfile,
+    DetectionResult,
+    DetectorCategory,
+)
 from packages.deidentification.transforms import (
     apply_deid_transforms,
     cap_age_string,

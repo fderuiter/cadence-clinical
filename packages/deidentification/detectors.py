@@ -26,16 +26,16 @@ SSN_NATIONAL_ID_REGEX = re.compile(
 # Standard clinical date patterns
 DATE_PATTERNS = [
     # YYYY-MM-DD or YYYY/MM/DD
-    re.compile(r"\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b"),
+    re.compile(r"\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b"),  # deid: ignore
     # MM/DD/YYYY or DD/MM/YYYY or MM-DD-YYYY or DD-MM-YYYY or short years (MM/DD/YY)
-    re.compile(r"\b\d{1,2}[-/]\d{1,2}[-/]\d{2,4}\b"),
-    # Textual dates: 15-Jan-2026, 15 Jan 2026, Jan 15 2026
+    re.compile(r"\b\d{1,2}[-/]\d{1,2}[-/]\d{2,4}\b"),  # deid: ignore
+    # Textual dates: 15-Jan-2026, 15 Jan 2026, Jan 15 2026  # deid: ignore
     re.compile(
-        r"\b\d{1,2}[-\s](?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-zA-Z]*[-\s]\d{2,4}\b",
+        r"\b\d{1,2}[-\s](?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-zA-Z]*[-\s]\d{2,4}\b",  # deid: ignore
         re.IGNORECASE,
     ),
     re.compile(
-        r"\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-zA-Z]*\s+\d{1,2}(?:st|nd|rd|th)?[\s,]+\d{2,4}\b",
+        r"\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-zA-Z]*\s+\d{1,2}(?:st|nd|rd|th)?[\s,]+\d{2,4}\b",  # deid: ignore
         re.IGNORECASE,
     ),
 ]
@@ -72,10 +72,10 @@ MEDICAL_RECORD_ACCOUNT_REGEX = re.compile(
     re.IGNORECASE,
 )
 
-# Standard age patterns matching "age: 95", "age 92", "aged 84", "91 years old", "93-year-old", "91yo", "91-yo", etc.
+# Standard age patterns matching "age: 95", "age 92", "aged 84", "91 years old", "93-year-old", "91yo", "91-yo", etc.  # deid: ignore
 AGE_REGEX = re.compile(
-    r"\b(?:age[sd]?|age of)\s*[:\- ]?\s*\d{1,3}\b"
-    r"|\b\d{1,3}\s*(?:years?\s*(?:of\s*age)?\s*old|-years?-old|yo|-yo)\b",
+    r"\b(?:age[sd]?|age of)\s*[:\- ]?\s*\d{1,3}\b"  # deid: ignore
+    r"|\b\d{1,3}\s*(?:years?\s*(?:of\s*age)?\s*old|-years?-old|yo|-yo)\b",  # deid: ignore
     re.IGNORECASE,
 )
 
@@ -270,7 +270,7 @@ class DeidDetector:
         if DetectorCategory.CUSTOM in active_categories and custom_terms:
             valid_terms = [t for t in custom_terms if t and t.strip()]
             if valid_terms:
-                # Sort descending to match longer strings first
+                # Sort descending to match
                 valid_terms.sort(key=len, reverse=True)
                 escaped_terms = [re.escape(term) for term in valid_terms]
                 patterns = []
