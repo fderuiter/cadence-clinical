@@ -168,8 +168,7 @@ def evaluate_tsdv_requirement(
 
 
 def evaluate_bulk_tsdv(
-    config,
-    targets: List[Tuple[str, int, Optional[str]]]
+    config, targets: List[Tuple[str, int, Optional[str]]]
 ) -> List[TSDVTargetEvaluation]:
     """Evaluate a bulk list of target coordinate inputs against a TSDVConfig.
 
@@ -184,8 +183,8 @@ def evaluate_bulk_tsdv(
     """
     results: List[TSDVTargetEvaluation] = []
     for subject_uuid, enrollment_index, domain in targets:
-        required, subject_selected, field_decision, explanation = evaluate_tsdv_requirement(
-            config, subject_uuid, enrollment_index, domain
+        required, subject_selected, field_decision, explanation = (
+            evaluate_tsdv_requirement(config, subject_uuid, enrollment_index, domain)
         )
         results.append(
             TSDVTargetEvaluation(

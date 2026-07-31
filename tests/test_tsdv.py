@@ -634,8 +634,16 @@ def test_evaluate_bulk_tsdv():
 
     targets = [
         ("SUBJ-01", 0, "LB"),  # Selected subject, unconfigured domain -> required: True
-        ("SUBJ-02", 1, "LB"),  # Non-selected subject, unconfigured domain -> required: False
-        ("SUBJ-02", 1, "VS"),  # Non-selected subject, safety/full-SDV domain -> required: True
+        (
+            "SUBJ-02",
+            1,
+            "LB",
+        ),  # Non-selected subject, unconfigured domain -> required: False
+        (
+            "SUBJ-02",
+            1,
+            "VS",
+        ),  # Non-selected subject, safety/full-SDV domain -> required: True
         ("SUBJ-01", 0, "DM"),  # Selected subject, zero-SDV domain -> required: False
     ]
 
@@ -696,7 +704,7 @@ def test_sdv_transport_schemas():
         scope="FIELD",
         target_ids=["OBS-1", "OBS-2"],
         reason_for_change="Initial sign-off of Vital Signs",
-        site_id="SITE-X"
+        site_id="SITE-X",
     )
     assert req_sdv.study_id == "STUDY-01"
     assert req_sdv.target_ids == ["OBS-1", "OBS-2"]
@@ -708,7 +716,7 @@ def test_sdv_transport_schemas():
         skipped_target_ids=[],
         content_digest="abc123sha256",
         timestamp_utc="2026-07-29T12:00:00Z",
-        audit_tx="tx-1001"
+        audit_tx="tx-1001",
     )
     assert res_sdv.signed_count == 2
 
@@ -719,7 +727,7 @@ def test_sdv_transport_schemas():
         domain="VS",
         test_code="SYSBP",
         observation_id="OBS-1",
-        explanation="Systolic BP is out of physiological range (250 mmHg)"
+        explanation="Systolic BP is out of physiological range (250 mmHg)",
     )
 
     req_query = BulkQueryGenerationRequest(
@@ -727,7 +735,7 @@ def test_sdv_transport_schemas():
         site_id="SITE-X",
         subject_id="SUBJ-123",
         targets=[target_desc],
-        reason_for_change="System generated out-of-bounds check"
+        reason_for_change="System generated out-of-bounds check",
     )
     assert len(req_query.targets) == 1
     assert req_query.targets[0].test_code == "SYSBP"
@@ -737,6 +745,6 @@ def test_sdv_transport_schemas():
         generated_count=1,
         generated_query_ids=["QRY-99"],
         skipped_targets=[],
-        timestamp_utc="2026-07-29T12:05:00Z"
+        timestamp_utc="2026-07-29T12:05:00Z",
     )
     assert res_query.generated_count == 1
