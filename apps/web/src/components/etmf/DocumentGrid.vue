@@ -3,23 +3,17 @@
     <div class="grid-header">
       <div class="header-titles">
         <h2>Artifact Documents Registry</h2>
-        <p
-          v-if="selectedArtifactCode"
-          class="active-artifact-subtitle"
-        >
+        <p v-if="selectedArtifactCode" class="active-artifact-subtitle">
           Showing documents for Artifact: <strong>{{ selectedArtifactCode }}</strong>
         </p>
-        <p
-          v-else
-          class="active-artifact-subtitle"
-        >
+        <p v-else class="active-artifact-subtitle">
           Please select an artifact from the binder tree to view documents.
         </p>
       </div>
       <button
         class="btn btn-primary upload-trigger-btn"
-        :disabled="!selectedArtifactCode"
         @click="openUploadModal"
+        :disabled="!selectedArtifactCode"
       >
         <span>📤</span> Upload Regulated Document
       </button>
@@ -36,31 +30,19 @@
             <th>Status</th>
             <th>Uploaded By</th>
             <th>Uploaded At</th>
-            <th class="actions-column">
-              Actions
-            </th>
+            <th class="actions-column">Actions</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="documents.length === 0">
-            <td
-              colspan="7"
-              class="empty-table-cell"
-            >
+            <td colspan="7" class="empty-table-cell">
               No documents have been uploaded for this artifact yet.
             </td>
           </tr>
-          <tr
-            v-for="doc in documents"
-            :key="doc.id"
-            class="document-row"
-          >
+          <tr v-for="doc in documents" :key="doc.id" class="document-row">
             <td class="doc-name-cell">
               <span class="file-icon">📄</span>
-              <span
-                class="filename"
-                :title="doc.filename"
-              >{{ doc.filename }}</span>
+              <span class="filename" :title="doc.filename">{{ doc.filename }}</span>
             </td>
             <td>
               <span class="taxonomy-pill">
@@ -71,10 +53,7 @@
               <span class="version-tag">v{{ doc.version_index }}.0</span>
             </td>
             <td>
-              <span
-                class="status-badge"
-                :class="getStatusClass(doc.status)"
-              >
+              <span class="status-badge" :class="getStatusClass(doc.status)">
                 {{ formatStatus(doc.status) }}
               </span>
             </td>
@@ -89,8 +68,8 @@
             <td class="actions-cell">
               <button
                 class="btn btn-sm btn-outline-primary"
-                title="View Watermarked PDF Preview"
                 @click="$emit('preview', doc)"
+                title="View Watermarked PDF Preview"
               >
                 👁️ Preview
               </button>
@@ -101,19 +80,11 @@
     </div>
 
     <!-- GxP Electronic Record Drag & Drop Upload Modal -->
-    <div
-      v-if="showUploadModal"
-      class="modal-backdrop"
-    >
+    <div v-if="showUploadModal" class="modal-backdrop">
       <div class="modal-card upload-modal">
         <div class="modal-header">
           <h3>FDA 21 CFR Part 11 Compliant Document Ingestion</h3>
-          <button
-            class="close-modal-btn"
-            @click="closeUploadModal"
-          >
-            ×
-          </button>
+          <button class="close-modal-btn" @click="closeUploadModal">×</button>
         </div>
 
         <div class="modal-body">
@@ -133,27 +104,19 @@
             @click="triggerFileSelect"
           >
             <input
-              ref="fileInputRef"
               type="file"
+              ref="fileInputRef"
               class="hidden-file-input"
               accept=".pdf"
               @change="onFileSelected"
-            >
+            />
             <div class="drop-prompt-content">
               <span class="upload-cloud-icon">☁️</span>
-              <p
-                v-if="!selectedFile"
-                class="drop-text"
-              >
+              <p v-if="!selectedFile" class="drop-text">
                 Drag and drop your regulated PDF here, or <span class="highlight">browse</span>
               </p>
-              <div
-                v-else
-                class="selected-file-details"
-              >
-                <p class="file-name-success">
-                  🎉 {{ selectedFile.name }}
-                </p>
+              <div v-else class="selected-file-details">
+                <p class="file-name-success">🎉 {{ selectedFile.name }}</p>
                 <p class="file-size-meta">
                   Size: {{ (selectedFile.size / 1024).toFixed(1) }} KB | Type: {{ selectedFile.type || "application/pdf" }}
                 </p>
@@ -162,28 +125,25 @@
           </div>
 
           <!-- Upload Metadata Form -->
-          <form
-            class="upload-meta-form"
-            @submit.prevent="submitUpload"
-          >
+          <form @submit.prevent="submitUpload" class="upload-meta-form">
             <div class="form-group-row">
               <div class="form-group">
                 <label>Target Study ID</label>
                 <input
-                  v-model="studyId"
                   type="text"
+                  v-model="studyId"
                   class="form-control"
                   readonly
-                >
+                />
               </div>
               <div class="form-group">
                 <label>Site ID (Optional)</label>
                 <input
-                  v-model="siteId"
                   type="text"
+                  v-model="siteId"
                   placeholder="e.g. SITE-01"
                   class="form-control"
-                >
+                />
               </div>
             </div>
 
@@ -191,20 +151,20 @@
               <div class="form-group">
                 <label>DIA TMF Artifact Code</label>
                 <input
-                  v-model="artifactCode"
                   type="text"
+                  v-model="artifactCode"
                   class="form-control"
                   readonly
-                >
+                />
               </div>
               <div class="form-group">
                 <label>Artifact Type (Label)</label>
                 <input
-                  v-model="artifactType"
                   type="text"
+                  v-model="artifactType"
                   class="form-control"
                   readonly
-                >
+                />
               </div>
             </div>
 
@@ -219,13 +179,10 @@
                 placeholder="Specify the regulatory or scientific justification for ingesting this record version (e.g. 'Initial Approved protocol for site initiation', 'Site license renewal')."
                 class="form-control"
                 required
-              />
+              ></textarea>
             </div>
 
-            <div
-              v-if="uploadError"
-              class="upload-error-banner"
-            >
+            <div v-if="uploadError" class="upload-error-banner">
               ❌ {{ uploadError }}
             </div>
 
@@ -233,8 +190,8 @@
               <button
                 type="button"
                 class="btn btn-outline-secondary"
-                :disabled="isSubmitting"
                 @click="closeUploadModal"
+                :disabled="isSubmitting"
               >
                 Cancel
               </button>

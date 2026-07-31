@@ -12,7 +12,7 @@ from etmf.eisf_transport_models import (
     EISFDocumentUploadRequest,
     EISFFolderNode,
 )
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,7 +37,6 @@ async def enforce_site_isolation(
     principal: Principal,
     site_id: str,
     session: AsyncSession,
-    request: Optional[Request] = None,
 ) -> None:
     """Enforces clinical site-scoped isolation based on requesting user's Principal.
 
@@ -56,11 +55,10 @@ async def enforce_site_isolation(
         caller_scope = (
             ",".join(principal.assigned_sites) if principal.assigned_sites else "global"
         )
-        client_ip = request.client.host if request and request.client else "unknown"
 
         details = (
             f"SECURITY ALERT: Access Violation. User '{actor_id}' with roles '{actor_roles}' (scope: '{caller_scope}') "
-            f"attempted to access/mutate resource at site '{site_id}' from IP '{client_ip}' but is not permitted."
+            f"attempted to access/mutate resource at site '{site_id}' but is not permitted."
         )
         reason_for_change = "Security Violation: Cross-site access denied"
 
@@ -123,7 +121,6 @@ async def write_local_audit_log(
 )
 async def get_site_eisf_binder(
     site_id: str,
-    request: Request,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
 ) -> List[EISFFolderNode]:
@@ -131,7 +128,7 @@ async def get_site_eisf_binder(
 
     Requirements: PRD-SYS-001
     """
-    await enforce_site_isolation(principal, site_id, session, request)
+    await enforce_site_isolation(principal, site_id, session)
 
     # Query all filed documents for the site
     stmt = select(ISFDocument).where(ISFDocument.site_id == site_id)
@@ -223,7 +220,6 @@ async def get_site_eisf_binder(
 async def get_site_document_detail(
     site_id: str,
     doc_id: str,
-    request: Request,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
 ) -> EISFDocumentDetail:
@@ -231,7 +227,7 @@ async def get_site_document_detail(
 
     Requirements: PRD-SYS-001
     """
-    await enforce_site_isolation(principal, site_id, session, request)
+    await enforce_site_isolation(principal, site_id, session)
 
     stmt = select(ISFDocument).where(
         ISFDocument.id == doc_id,
@@ -302,7 +298,6 @@ async def get_site_document_detail(
 async def download_site_document(
     site_id: str,
     doc_id: str,
-    request: Request,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
 ):
@@ -310,7 +305,7 @@ async def download_site_document(
 
     Requirements: PRD-SYS-001
     """
-    await enforce_site_isolation(principal, site_id, session, request)
+    await enforce_site_isolation(principal, site_id, session)
 
     stmt = select(ISFDocument).where(
         ISFDocument.id == doc_id,
@@ -375,7 +370,6 @@ async def download_site_document(
 async def upload_site_document(
     site_id: str,
     payload: EISFDocumentUploadRequest,
-    request: Request,
     _not_auditor=Depends(require_permission("eisf_document:create")),
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
@@ -384,7 +378,7 @@ async def upload_site_document(
 
     Requirements: PRD-SYS-001
     """
-    await enforce_site_isolation(principal, site_id, session, request)
+    await enforce_site_isolation(principal, site_id, session)
 
     if not payload.reason_for_change or len(payload.reason_for_change.strip()) < 10:
         raise HTTPException(
