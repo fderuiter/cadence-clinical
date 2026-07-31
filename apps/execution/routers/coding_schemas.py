@@ -4,6 +4,7 @@ from typing import Any, List, Literal, Optional, Union
 
 from pydantic import BaseModel, ValidationInfo, field_validator, model_validator
 
+from apps.execution.database.models import DictionaryType, ImportState
 
 # Enums
 class DictTypeEnum(str, Enum):
