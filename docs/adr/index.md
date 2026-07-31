@@ -33,6 +33,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-19: Global Library Architecture, Lifecycle, and Multi-Tenant Isolation](2026-08-19-global-library-architecture-lifecycle-tenancy.md)
 
 ### 2. API Gateway, Security & Identity
+- [2026-07-31: Decoupling Cross-Service Python Imports and Security RBAC Isolation](2026-07-31-decoupling-cross-service-python-imports-and-security-rbac-isolation.md)
 - [2026-07-30: Signatures and Workflow Automation Phase 1 and 2 Primitives](2026-07-30-signatures-and-workflow-automation-phase-1-and-2-primitives.md)
 
 - [2023-01-04: ADR 2023-01-04: Keycloak Identity Management](2023-01-04-keycloak-identity-management.md)
@@ -128,6 +129,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-18: Document Redaction Architecture, Regulatory Data-Handling, and Compliance Profiles](2026-08-18-document-redaction-architecture.md)
 
 ### 6. Frontend & Design System
+- [2026-07-31: Resolve Vitest Peer Dependency Conflict in Shared UI Package](2026-07-31-resolve-vitest-peer-dependency-conflict-in-shared-ui-package.md)
 - [2026-07-30: Deprecate legacy econsent helper in packages ui](2026-07-30-deprecate-legacy-econsent-helper-in-packages-ui.md)
 - [2026-07-30: eConsent Visual Editor and Subject Consent Portal UI Architecture](2026-07-30-econsent-visual-editor-and-subject-consent-portal-ui-architecture.md)
 
@@ -171,3 +173,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-28: ADR-119: SDV Sign-Off Workflow & Automatic Verification Drop](2026-08-28-sdv-sign-off-workflow-and-automatic-verification-drop.md)
 - [2026-08-28: Centralized RBAC Matrix for Metadata Designer Mutations](2026-08-28-centralized-rbac-matrix-for-metadata-designer-mutations.md)
 - [2026-08-28: Reference Range Data Model & Persistence](2026-08-28-reference-range-data-model-and-persistence.md)
+- [2026-08-28: Extend Centralized Permission Matrix for Clinical Execution](2026-08-28-extend-centralized-permission-matrix-for-execution.md)
+- [2026-08-28: Shared Domain Vocabulary and Authorization Foundation](2026-08-28-shared-domain-vocabulary-and-authorization-foundation.md)
+- [2026-08-28: Shared eSignature Foundations](2026-08-28-shared-esignature-foundations.md)
+- [2026-08-29: SDV and TSDV Endpoint Hardening, RBAC Permission Mapping, and Local Study Scope Enforcement](2026-08-29-sdv-tsdv-endpoint-hardening-rbac-study-scope.md)

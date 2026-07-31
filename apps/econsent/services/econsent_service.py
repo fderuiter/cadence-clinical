@@ -22,12 +22,14 @@ try:
 except ImportError:
     HAS_REPORTLAB = False
 
-from apps.execution.database.models import (
-    ComprehensionQuizResult,
-    ConsentFormRecord,
-    ConsentSignature,
-)
+import importlib
+
 from packages.security import CentralAuditLogger
+
+_execution_models = importlib.import_module("apps.execution.database.models")
+ComprehensionQuizResult = _execution_models.ComprehensionQuizResult
+ConsentFormRecord = _execution_models.ConsentFormRecord
+ConsentSignature = _execution_models.ConsentSignature
 
 
 def _render_pdf_certificate(

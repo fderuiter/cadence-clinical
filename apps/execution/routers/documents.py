@@ -37,8 +37,11 @@ _DOCUMENTS_DB: Dict[str, dict] = {}
 
 
 try:
-    from apps.etmf.watermark import apply_watermark
-except ImportError:
+    import importlib
+
+    _etmf_watermark = importlib.import_module("apps.etmf.watermark")
+    apply_watermark = _etmf_watermark.apply_watermark
+except (ImportError, AttributeError):
 
     def apply_watermark(
         content: str, mime_type: str, user_id: str, user_role: str

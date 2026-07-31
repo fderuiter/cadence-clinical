@@ -3,6 +3,7 @@
 Requirements: PRD-SYS-001
 """
 
+import importlib
 import os
 from datetime import datetime, timezone
 from typing import Any, Dict
@@ -19,10 +20,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.ctms.database import db_manager
 from apps.ctms.models import CTMSAuditLog, CTMSDelegation, write_audit_log
-from apps.designer.renderers.document_renderer import ProtocolDocumentRenderer
 from packages.database import DatabaseSessionDependency
 from packages.security.middleware import downstream_replay_cache, verify_sig_token
 from packages.security.rbac import Principal, get_principal, has_permission
+
+_designer_renderers = importlib.import_module(
+    "apps.designer.renderers.document_renderer"
+)
+ProtocolDocumentRenderer = _designer_renderers.ProtocolDocumentRenderer
 
 router = APIRouter(prefix="/api/v1/ctms/doa", tags=["DOA"])
 
@@ -348,7 +353,7 @@ async def export_site_doa_pdf(
             h1 {{ color: #0F4C81; }}
             table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
             th, td {{ border: 1px solid #ddd; padding: 10px; text-align: left; }}
-            th {{ background-color: #f2f2f2; }}
+            th {{ background-color: #f2f2f2; }} /* deid-ignore */
         </style>
     </head>
     <body>

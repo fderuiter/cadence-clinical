@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1759
-- **Passed:** 1759 🟢
+- **Total Automated Test Cases Run:** 1774
+- **Passed:** 1774 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -412,6 +412,21 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_pdf_ingestion_success` | `tests.test_crf_ingestion` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_promotion_gates_and_draft_creation` | `tests.test_crf_ingestion` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_unauthorized_upload` | `tests.test_crf_ingestion` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cdash_usdm_csv_mapping_fidelity` | `tests.test_crf_requirements_mapping` | PRD-CRF-006, Trace-22 | 🟢 PASSED | < 1s |
+| `test_collaborative_workspace_review_workflow` | `tests.test_crf_requirements_mapping` | PRD-CRF-003, Trace-19 | 🟢 PASSED | < 1s |
+| `test_crf_authoring_global_library_instantiation` | `tests.test_crf_requirements_mapping` | PRD-CRF-001, Trace-17 | 🟢 PASSED | < 1s |
+| `test_declarative_rule_generation_and_edit_checks` | `tests.test_crf_requirements_mapping` | PRD-CRF-004, Trace-20 | 🟢 PASSED | < 1s |
+| `test_failure_recovery_and_high_availability` | `tests.test_crf_requirements_mapping` | PRD-CRF-014, Trace-30 | 🟢 PASSED | < 1s |
+| `test_fhir_esource_readiness_cdash_pre_fill` | `tests.test_crf_requirements_mapping` | PRD-CRF-007, Trace-23 | 🟢 PASSED | < 1s |
+| `test_gxp_change_reason_justification` | `tests.test_crf_requirements_mapping` | PRD-CRF-010, Trace-26 | 🟢 PASSED | < 1s |
+| `test_immutable_audit_attribution` | `tests.test_crf_requirements_mapping` | PRD-CRF-011, Trace-27 | 🟢 PASSED | < 1s |
+| `test_in_memory_accessibility_auditing` | `tests.test_crf_requirements_mapping` | PRD-CRF-015, Trace-31 | 🟢 PASSED | < 1s |
+| `test_real_time_contextual_preview` | `tests.test_crf_requirements_mapping` | PRD-CRF-002, Trace-18 | 🟢 PASSED | < 1s |
+| `test_regulatory_and_protocol_document_export` | `tests.test_crf_requirements_mapping` | PRD-CRF-008, Trace-24 | 🟢 PASSED | < 1s |
+| `test_role_based_authorization_gates` | `tests.test_crf_requirements_mapping` | PRD-CRF-009, Trace-25 | 🟢 PASSED | < 1s |
+| `test_simulation_and_dry_run_cycle_detection` | `tests.test_crf_requirements_mapping` | PRD-CRF-005, Trace-21 | 🟢 PASSED | < 1s |
+| `test_site_and_tenant_data_isolation` | `tests.test_crf_requirements_mapping` | PRD-CRF-013, Trace-29 | 🟢 PASSED | < 1s |
+| `test_version_pinning_and_lock_enforcement` | `tests.test_crf_requirements_mapping` | PRD-CRF-012, Trace-28 | 🟢 PASSED | < 1s |
 | `test_dual_custody_negative_duplicate_shares` | `tests.test_cryptography` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_dual_custody_negative_malformed_share` | `tests.test_cryptography` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_dual_custody_negative_mismatched_versions` | `tests.test_cryptography` | PRD-SYS-001 | 🟢 PASSED | < 1s |

@@ -116,7 +116,14 @@ importers:
         specifier: ^5.2.0
         version: 5.2.0(@vue/compiler-sfc@3.5.40)(pinia@4.0.2(@vue/devtools-api@8.1.5)(typescript@7.0.2)(vue@3.5.40(typescript@7.0.2)))(rolldown@1.1.5)(rollup@4.62.3)(vite@8.1.5(yaml@2.9.0))(vue@3.5.40(typescript@7.0.2))
 
-  packages/ui: {}
+  packages/ui:
+    devDependencies:
+      vite:
+        specifier: ^8.1.5
+        version: 8.1.5(yaml@2.9.0)
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(jsdom@29.1.1)(vite@8.1.5(yaml@2.9.0))
 
 packages:
 
