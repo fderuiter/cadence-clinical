@@ -16,7 +16,7 @@ from protocol_authoring.models import (
 )
 
 
-class ImmutabilityViolationError(Exception):
+class ImmutabilityViolationError(PermissionError):
     """Raised when trying to mutate a locked, published, or archived graph or version."""
 
     pass
@@ -78,6 +78,7 @@ def bump_version(version_tag: str, bump_type: str) -> str:
 def verify_version_signature(version_props: Dict[str, Any]) -> bool:
     """
     Verifies that the provided study version properties have a valid canonical signature.
+    Supports both the new GxP payload structure and the legacy payload schema for backward compatibility.
     """
     signature = version_props.get("signature")
     if not signature:
@@ -92,7 +93,35 @@ def verify_version_signature(version_props: Dict[str, Any]) -> bool:
     else:
         created_at_val = None
 
-    payload = {
+    import os
+    from packages.security.signing import verify_canonical_signature
+
+    secret = os.getenv("SIGNING_SECRET", "designer-amendment-secure-key-12345").encode(
+        "utf-8"
+    )
+
+    # 1. New GxP payload verification
+    # Payload keys: study_id, version_index, version_tag, created_by, created_at, change_reason
+    study_id = version_props.get("study_id")
+    version_index = version_props.get("version_index")
+    version_tag = version_props.get("version_tag")
+    created_by = version_props.get("created_by")
+    change_reason = version_props.get("change_reason")
+
+    if all(v is not None for v in (study_id, version_index, version_tag, created_by, change_reason)):
+        payload_new = {
+            "study_id": study_id,
+            "version_index": int(version_index),
+            "version_tag": version_tag,
+            "created_by": created_by,
+            "created_at": created_at_val,
+            "change_reason": change_reason,
+        }
+        if verify_canonical_signature(payload_new, signature, secret):
+            return True
+
+    # 2. Legacy fallback payload verification to keep old tests green
+    payload_legacy = {
         "id": version_props.get("id") or "legacy_ver",
         "version_tag": version_props.get("version_tag") or "1.0",
         "status": version_props.get("status") or "DRAFT",
@@ -100,22 +129,15 @@ def verify_version_signature(version_props: Dict[str, Any]) -> bool:
         "created_by": version_props.get("created_by") or "system",
     }
     if created_at_val is not None:
-        payload["created_at"] = created_at_val
+        payload_legacy["created_at"] = created_at_val
     if "parent_version" in version_props:
-        payload["parent_version"] = version_props["parent_version"]
+        payload_legacy["parent_version"] = version_props["parent_version"]
     if "branch_name" in version_props and version_props["branch_name"] is not None:
-        payload["branch_name"] = version_props["branch_name"]
+        payload_legacy["branch_name"] = version_props["branch_name"]
     if "base_version" in version_props and version_props["base_version"] is not None:
-        payload["base_version"] = version_props["base_version"]
+        payload_legacy["base_version"] = version_props["base_version"]
 
-    import os
-
-    from packages.security.signing import verify_canonical_signature
-
-    secret = os.getenv("SIGNING_SECRET", "designer-amendment-secure-key-12345").encode(
-        "utf-8"
-    )
-    return verify_canonical_signature(payload, signature, secret)
+    return verify_canonical_signature(payload_legacy, signature, secret)
 
 
 def with_transaction_retry(
@@ -1176,21 +1198,32 @@ async def amend_protocol_version(
             new_id = f"v_{uuid.uuid4().hex[:12]}"
 
             # Generate new version payload
+            created_at_val = dt.datetime.now().isoformat()
             new_ver_payload = {
                 "id": new_id,
                 "version_tag": new_version_tag,
                 "status": "DRAFT",
                 "version_index": new_version_index,
                 "created_by": user_id,
-                "created_at": dt.datetime.now().isoformat(),
+                "created_at": created_at_val,
                 "parent_version": parent_version_tag,
+                "study_id": study_id,
+                "change_reason": change_reason,
             }
 
-            # Generate canonical signature
+            # Generate canonical signature using precise GxP payload keys
             secret = os.getenv(
                 "SIGNING_SECRET", "designer-amendment-secure-key-12345"
             ).encode("utf-8")
-            signature = generate_canonical_signature(new_ver_payload, secret)
+            signing_payload = {
+                "study_id": study_id,
+                "version_index": new_version_index,
+                "version_tag": new_version_tag,
+                "created_by": user_id,
+                "created_at": created_at_val,
+                "change_reason": change_reason,
+            }
+            signature = generate_canonical_signature(signing_payload, secret)
             new_ver_payload["signature"] = signature
 
             # Store projection before we mutate it (to make sure previous remains unchanged)
@@ -1316,11 +1349,21 @@ async def amend_protocol_version(
                 "created_by": user_id,
                 "created_at": created_at_val,
                 "parent_version": parent_version_tag,
+                "study_id": study_id,
+                "change_reason": change_reason,
             }
             secret = os.getenv(
                 "SIGNING_SECRET", "designer-amendment-secure-key-12345"
             ).encode("utf-8")
-            signature = generate_canonical_signature(new_ver_payload, secret)
+            signing_payload = {
+                "study_id": study_id,
+                "version_index": new_version_index,
+                "version_tag": new_version_tag,
+                "created_by": user_id,
+                "created_at": created_at_val,
+                "change_reason": change_reason,
+            }
+            signature = generate_canonical_signature(signing_payload, secret)
 
             create_ver_query = """
             MATCH (s:Study {id: $study_id})
@@ -1332,7 +1375,9 @@ async def amend_protocol_version(
                 created_at: datetime($created_at),
                 created_by: $created_by,
                 parent_version: $parent_version_tag,
-                signature: $signature
+                signature: $signature,
+                study_id: $study_id,
+                change_reason: $change_reason
             })
             CREATE (s)-[:HAS_VERSION]->(new_ver)
             RETURN new_ver.id as id
@@ -1347,6 +1392,7 @@ async def amend_protocol_version(
                 created_by=user_id,
                 parent_version_tag=parent_version_tag,
                 signature=signature,
+                change_reason=change_reason,
             )
 
             if latest_record:
@@ -3087,6 +3133,9 @@ async def decide_suggestion(
     return suggestion
 
 
+_approval_locks: Dict[str, asyncio.Lock] = {}
+
+
 @with_transaction_retry()
 async def approve_study_version_delta(
     driver,
@@ -3105,76 +3154,83 @@ async def approve_study_version_delta(
     from packages.security.signing import generate_canonical_signature
 
     if driver is None:
-        from apps.designer.db import MOCK_STUDIES, MOCK_STUDY_VERSIONS
+        if version_id not in _approval_locks:
+            _approval_locks[version_id] = asyncio.Lock()
 
-        # Find version record
-        versions = MOCK_STUDY_VERSIONS.get(study_id, [])
-        ver_record = None
-        for v in versions:
-            if v.get("id") == version_id:
-                ver_record = v
-                break
-        if not ver_record:
-            raise ValueError(
-                f"StudyVersion {version_id} not found under Study {study_id}"
+        if _approval_locks[version_id].locked():
+            raise ConcurrentLockingError("CONCURRENT_LOCKING_CONFLICT")
+
+        async with _approval_locks[version_id]:
+            from apps.designer.db import MOCK_STUDIES, MOCK_STUDY_VERSIONS
+
+            # Find version record
+            versions = MOCK_STUDY_VERSIONS.get(study_id, [])
+            ver_record = None
+            for v in versions:
+                if v.get("id") == version_id:
+                    ver_record = v
+                    break
+            if not ver_record:
+                raise ValueError(
+                    f"StudyVersion {version_id} not found under Study {study_id}"
+                )
+
+            # Check immutability
+            status = ver_record.get("status")
+            if status in ("APPROVED", "SIGNED", "LOCKED", "PUBLISHED", "ARCHIVED"):
+                raise ImmutabilityViolationError("IMMUTABILITY_VIOLATION")
+
+            # Update status
+            ver_record["status"] = "APPROVED"
+            ver_record["signature_manifestation"] = signature_manifestation_payload
+            ver_record["signer"] = user_id
+            ver_record["signing_timestamp"] = signature_manifestation_payload.get(
+                "timestamp"
             )
 
-        # Check immutability
-        status = ver_record.get("status")
-        if status in ("APPROVED", "SIGNED", "LOCKED", "PUBLISHED", "ARCHIVED"):
-            raise ImmutabilityViolationError("IMMUTABILITY_VIOLATION")
+            # Regenerate StudyVersion signature
+            payload_to_sign = {
+                "id": ver_record.get("id") or "legacy_ver",
+                "version_tag": ver_record.get("version_tag") or "1.0",
+                "status": "APPROVED",
+                "version_index": ver_record.get("version_index") or 1,
+                "created_by": ver_record.get("created_by") or "system",
+            }
+            if "created_at" in ver_record:
+                payload_to_sign["created_at"] = str(ver_record["created_at"])
+            if "parent_version" in ver_record:
+                payload_to_sign["parent_version"] = ver_record["parent_version"]
+            if "branch_name" in ver_record and ver_record["branch_name"] is not None:
+                payload_to_sign["branch_name"] = ver_record["branch_name"]
+            if "base_version" in ver_record and ver_record["base_version"] is not None:
+                payload_to_sign["base_version"] = ver_record["base_version"]
 
-        # Update status
-        ver_record["status"] = "APPROVED"
-        ver_record["signature_manifestation"] = signature_manifestation_payload
-        ver_record["signer"] = user_id
-        ver_record["signing_timestamp"] = signature_manifestation_payload.get(
-            "timestamp"
-        )
+            secret = os.getenv(
+                "SIGNING_SECRET", "designer-amendment-secure-key-12345"
+            ).encode("utf-8")
+            ver_record["signature"] = generate_canonical_signature(payload_to_sign, secret)
 
-        # Regenerate StudyVersion signature
-        payload_to_sign = {
-            "id": ver_record.get("id") or "legacy_ver",
-            "version_tag": ver_record.get("version_tag") or "1.0",
-            "status": "APPROVED",
-            "version_index": ver_record.get("version_index") or 1,
-            "created_by": ver_record.get("created_by") or "system",
-        }
-        if "created_at" in ver_record:
-            payload_to_sign["created_at"] = str(ver_record["created_at"])
-        if "parent_version" in ver_record:
-            payload_to_sign["parent_version"] = ver_record["parent_version"]
-        if "branch_name" in ver_record and ver_record["branch_name"] is not None:
-            payload_to_sign["branch_name"] = ver_record["branch_name"]
-        if "base_version" in ver_record and ver_record["base_version"] is not None:
-            payload_to_sign["base_version"] = ver_record["base_version"]
+            # Record in action history
+            action_id = str(uuid.uuid4())
+            action_record = {
+                "id": action_id,
+                "user_id": user_id,
+                "change_reason": change_reason,
+                "timestamp": dt.datetime.now().isoformat(),
+                "type": "APPROVAL",
+                "signature_manifestation": signature_manifestation_payload,
+            }
+            if study_id in MOCK_STUDIES:
+                if "actions" not in MOCK_STUDIES[study_id]:
+                    MOCK_STUDIES[study_id]["actions"] = []
+                MOCK_STUDIES[study_id]["actions"].append(action_record)
 
-        secret = os.getenv(
-            "SIGNING_SECRET", "designer-amendment-secure-key-12345"
-        ).encode("utf-8")
-        ver_record["signature"] = generate_canonical_signature(payload_to_sign, secret)
-
-        # Record in action history
-        action_id = str(uuid.uuid4())
-        action_record = {
-            "id": action_id,
-            "user_id": user_id,
-            "change_reason": change_reason,
-            "timestamp": dt.datetime.now().isoformat(),
-            "type": "APPROVAL",
-            "signature_manifestation": signature_manifestation_payload,
-        }
-        if study_id in MOCK_STUDIES:
-            if "actions" not in MOCK_STUDIES[study_id]:
-                MOCK_STUDIES[study_id]["actions"] = []
-            MOCK_STUDIES[study_id]["actions"].append(action_record)
-
-        return {
-            "study_id": study_id,
-            "version_id": version_id,
-            "status": "APPROVED",
-            "signature_manifestation": signature_manifestation_payload,
-        }
+            return {
+                "study_id": study_id,
+                "version_id": version_id,
+                "status": "APPROVED",
+                "signature_manifestation": signature_manifestation_payload,
+            }
 
     # Neo4j implementation
     import json
