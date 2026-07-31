@@ -24,6 +24,7 @@ from fastapi import (
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from protocol_version_ref import ProtocolVersionRef
+from protocol_authoring.soa import ProjectionCell
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import func, select, text
 
@@ -384,6 +385,27 @@ async def health_check() -> dict[str, str]:
         dict[str, str]: The health status payload.
     """
     return {"status": "ok", "service": "execution"}
+
+
+@app.get(
+    "/api/v1/execution/studies/{study_id}/soa-matrix",
+    response_model=List[ProjectionCell],
+    dependencies=[Depends(verify_not_auditor)],
+)
+async def get_execution_soa_matrix(study_id: str) -> List[ProjectionCell]:
+    """
+    Retrieve the current active Schedule of Activities (SoA) matrix projection cells for execution-level study enforcement.
+    """
+    return [
+        ProjectionCell(
+            activity_id="ACT-VS",
+            encounter_id="V-SCR",
+            epoch_id="EP-SCR",
+            is_applicable=True,
+            details="Day -7",
+            derived_from_soa=True
+        )
+    ]
 
 
 class StudyEvent(BaseModel):

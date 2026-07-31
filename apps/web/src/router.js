@@ -75,6 +75,15 @@ const routes = [
     },
   },
   {
+    path: "/soa",
+    name: "soa",
+    component: () => import("./views/SoaView.vue"),
+    meta: {
+      requiresAuth: true,
+      requiresRole: ["sponsor_designer", "data_manager", "sponsor_admin"],
+    },
+  },
+  {
     path: "/icf-builder",
     name: "icf-builder",
     component: () => import("./views/ICFBuilderView.vue"),

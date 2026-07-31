@@ -15,6 +15,8 @@ from .models import (
     build_canonical_ich_skeleton,
 )
 
+from . import soa
+
 __all__ = [
     "BlockType",
     "ProtocolBlock",
@@ -26,4 +28,5 @@ __all__ = [
     "ICHSection",
     "CANONICAL_ICH_SKELETON",
     "build_canonical_ich_skeleton",
+    "soa",
 ]
