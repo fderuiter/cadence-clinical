@@ -42,12 +42,18 @@ export function useFocusTrap(targetRef) {
     const lastEl = focusableElements[focusableElements.length - 1];
 
     if (e.shiftKey) {
-      if (document.activeElement === firstEl || !container.contains(document.activeElement)) {
+      if (
+        document.activeElement === firstEl ||
+        !container.contains(document.activeElement)
+      ) {
         e.preventDefault();
         lastEl.focus();
       }
     } else {
-      if (document.activeElement === lastEl || !container.contains(document.activeElement)) {
+      if (
+        document.activeElement === lastEl ||
+        !container.contains(document.activeElement)
+      ) {
         e.preventDefault();
         firstEl.focus();
       }

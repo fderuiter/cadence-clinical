@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-07-31: Lab Master Catalog and Unit Conversion Data Models](2026-07-31-lab-master-catalog-and-unit-conversion-data-models.md)
 - [2026-07-31: On-Demand Consent Status Validation and Audit Hooks](2026-07-31-on-demand-consent-status-validation-and-audit-hooks.md)
 - [2026-07-29: Consolidated eClinical Services and Compliance Enhancements](2026-07-29-consolidated-eclinical-services-and-compliance-enhancements.md)
 - [2026-07-30: Durable and Immutable Subject Enrollment Sequence for TSDV](2026-07-30-durable-and-immutable-subject-enrollment-sequence-for-tsdv.md)
@@ -113,6 +114,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-08: RTSM Supply Domain Persistence Models](2026-08-08-rtsm-supply-domain-persistence.md)
 - [2026-08-09: eISF Browse, RBAC, Downloads, and Completeness](2026-08-09-eisf-maintenance-and-formatting.md)
 - [2026-08-09: eTMF Filterable and Paginated Audit Log API](2026-08-09-etmf-filterable-paginated-audit-log.md)
+- [2026-08-31: Randomization and Trial Supply Management](2026-08-31-randomization-and-trial-supply-management.md)
 
 ### 5. Compliance, Audit & Governance
 - [2026-07-31: GxP 21 CFR Part 11 eConsent Audit Trails](2026-07-31-gxp-21-cfr-part-11-econsent-audit-trails.md)
@@ -136,6 +138,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-30: eConsent Visual Editor and Subject Consent Portal UI Architecture](2026-07-30-econsent-visual-editor-and-subject-consent-portal-ui-architecture.md)
 
 - [2026-07-22: ADR 2026-07-22: Modular pnpm Workspace for Frontend Development](2026-07-22-pnpm-frontend-workspace.md)
+- [2026-08-30: Vue SPA Foundation and Tooling Setup](2026-08-30-vue-spa-foundation-tooling.md)
 - [2026-07-28: Hybrid ESLint and In-Memory Accessibility Auditing](2026-07-28-hybrid-eslint-and-in-memory-accessibility-auditing.md)
 - [2026-08-10: Debounced Clinical Code Lookup UI Primitive](2026-08-10-debounced-clinical-code-lookup-ui-primitive.md)
 - [2026-08-11: Standardize PR Templates and Centralize Shared Hashing & Radio Grid Layouts](2026-08-11-standardize-pr-templates-and-centralize-hashing-grid-layout.md)
