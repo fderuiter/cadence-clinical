@@ -6,7 +6,7 @@ interface. Standard USDM structures have no explicit top-level 'usdmVersion' env
 so version detection must rely on structural heuristics rather than a version literal.
 
 We enforce a bidirectional, lossless-mapping intent between USDM representations and
-internal structures, as specified in ADR 2026-07-22-schema-mapping-design.
+internal structures, as specified in the schema-mapping-design ADR.
 
 Under this contract:
 1. Version detection uses declarative structural heuristics.
