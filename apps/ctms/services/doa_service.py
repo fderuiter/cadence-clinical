@@ -75,14 +75,15 @@ async def approve_delegation_with_esignature(
     session: AsyncSession,
     delegation_id: str,
     pi_user_id: str,
-    password: str,
+    password: str,  # pragma: allowlist secret
     totp_code: Optional[str] = None,
 ) -> DOADelegationRecord:
     """Approve a pending task delegation with PI 21 CFR Part 11 eSignature."""
     # 1. Re-authenticate PI credentials
     if (
-        password == "wrong_password" or "invalid" in password
-    ):  # pragma: allowlist secret
+        password == "wrong_password"  # pragma: allowlist secret
+        or "invalid" in password
+    ):
         raise ValueError("Invalid credentials")
     if totp_code and (
         "invalid" in totp_code or "wrong" in totp_code
