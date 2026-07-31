@@ -9,13 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1665
-- **Passed:** 1665 🟢
-- **Failed/Errors:** 0 🔴
-- **Skipped:** 0 ⚪
-- **Overall Operational Pass Rate:** 100.00%
-- **Total Automated Test Cases Run:** 1630
-- **Passed:** 1630 🟢
+- **Total Automated Test Cases Run:** 1669
+- **Passed:** 1669 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -213,8 +208,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_scan_phi_post_endpoint` | `tests.test_anonymization_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_parameters_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_paths_and_methods_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_api_parameters_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🔴 FAILED | < 1s |
-| `test_api_paths_and_methods_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🔴 FAILED | < 1s |
 | `test_api_request_bodies_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_responses_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_extra_response_properties_pass_validation` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -567,8 +560,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_doa_assignment_record_creation` | `tests.test_doa_models` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_doa_delegation_record_defaults` | `tests.test_doa_models` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_doa_delegation_record_validation` | `tests.test_doa_models` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_doa_historical_audit_trail_logging` | `tests.test_doa_audit_suite` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_doa_assignment_record_creation` | `tests.test_doa_models` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_doa_assignment_and_signoff_api_flow` | `tests.test_doa_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_doa_service_assignment_and_pi_signoff` | `tests.test_doa_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_complete_doa_workflow_lifecycle` | `tests.test_doa_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1132,7 +1123,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_direct_transition_open_to_resolved` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_email_delivery_channel_failure_and_exhaustion` | `tests.test_notifications` | PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_email_delivery_channel_success` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_email_delivery_channel_success` | `tests.test_notifications` | *Regression/Helper* | 🔴 FAILED | < 1s |
 | `test_lifecycle_transitions_and_justifications` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_multi_channel_edge_case_in_app_succeeds_email_exhausts` | `tests.test_notifications` | PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_notification_creation_and_auditing` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
