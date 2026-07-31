@@ -84,12 +84,10 @@ def shift_partial_date(date_str: str, shift_days: int) -> str:
             # Reconstruct the original string, inserting shifted numeric parts
             new_parts = list(parts)
             new_parts[0] = shifted_year
-            if len(parts) >= 3:
-                if parts[2].isdigit():
-                    new_parts[2] = shifted_month
-            if len(parts) >= 5:
-                if parts[4].isdigit():
-                    new_parts[4] = shifted_day
+            if len(parts) >= 3 and parts[2].isdigit():
+                new_parts[2] = shifted_month
+            if len(parts) >= 5 and parts[4].isdigit():
+                new_parts[4] = shifted_day
 
             return "".join(new_parts) + time_part
         except Exception:
@@ -134,8 +132,7 @@ def scrub_free_text_pii(text: str) -> str:
     text = PHONE_PATTERN.sub("[REDACTED_PHONE]", text)
     text = EMAIL_PATTERN.sub("[REDACTED_EMAIL]", text)
     text = ADDRESS_PATTERN.sub("[REDACTED_ADDRESS]", text)
-    text = ZIP_PATTERN.sub("[REDACTED_ZIP]", text)
-    return text
+    return ZIP_PATTERN.sub("[REDACTED_ZIP]", text)
 
 
 def scrub_dataset(

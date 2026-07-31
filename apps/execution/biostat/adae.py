@@ -109,17 +109,11 @@ def derive_adae(
         # 2. ASTDY and AENDY Day Calculations (Relative Day Formula)
         astdy = None
         if astdt is not None and trtsdt is not None:
-            if astdt >= trtsdt:
-                astdy = astdt - trtsdt + 1
-            else:
-                astdy = astdt - trtsdt
+            astdy = astdt - trtsdt + 1 if astdt >= trtsdt else astdt - trtsdt
 
         aendy = None
         if aendt is not None and trtsdt is not None:
-            if aendt >= trtsdt:
-                aendy = aendt - trtsdt + 1
-            else:
-                aendy = aendt - trtsdt
+            aendy = aendt - trtsdt + 1 if aendt >= trtsdt else aendt - trtsdt
 
         # 3. TRTEMFL (Treatment Emergent Adverse Event Flag)
         # Set to "Y" if ASTDT >= TRTSDT and ASTDT <= ADSL.TRTEDT + 30. Otherwise "N".

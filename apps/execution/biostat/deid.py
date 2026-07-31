@@ -82,12 +82,10 @@ def shift_partial_date(date_str: str, shift_days: int) -> str:
             # Reconstruct the original string, inserting shifted numeric parts
             new_parts = list(parts)
             new_parts[0] = shifted_year
-            if len(parts) >= 3:
-                if parts[2].isdigit():
-                    new_parts[2] = shifted_month
-            if len(parts) >= 5:
-                if parts[4].isdigit():
-                    new_parts[4] = shifted_day
+            if len(parts) >= 3 and parts[2].isdigit():
+                new_parts[2] = shifted_month
+            if len(parts) >= 5 and parts[4].isdigit():
+                new_parts[4] = shifted_day
 
             return "".join(new_parts) + time_part
         except Exception:
@@ -168,10 +166,9 @@ def deidentify_export_data(
         for ds_name, records in export_data.items():
             new_bundle[ds_name] = [deidentify_record(r, salt) for r in records]
         return new_bundle
-    elif isinstance(export_data, list):
+    if isinstance(export_data, list):
         return [deidentify_record(r, salt) for r in export_data]
-    else:
-        return export_data
+    return export_data
 
 
 def scrub_error_message(msg: str) -> str:
@@ -189,5 +186,4 @@ def scrub_error_message(msg: str) -> str:
     msg = re.sub(r"\bSTUDY-\w+", "[REDACTED_STUDY]", msg)
     # Redact any single/double quoted strings (which often hold raw values/IDs in errors)
     msg = re.sub(r"'(.*?)'", "'[REDACTED_VALUE]'", msg)
-    msg = re.sub(r"\"(.*?)\"", '"[REDACTED_VALUE]"', msg)
-    return msg
+    return re.sub(r"\"(.*?)\"", '"[REDACTED_VALUE]"', msg)

@@ -147,11 +147,11 @@ def evaluate_ast(
 
             if operator == "+":
                 return l_num + r_num
-            elif operator == "-":
+            if operator == "-":
                 return l_num - r_num
-            elif operator == "*":
+            if operator == "*":
                 return l_num * r_num
-            elif operator == "/":
+            if operator == "/":
                 if r_num == 0.0:
                     return None  # Safe division by zero
                 return l_num / r_num
@@ -179,11 +179,11 @@ def evaluate_ast(
 
             if operator == "<":
                 return l_cmp < r_cmp
-            elif operator == "<=":
+            if operator == "<=":
                 return l_cmp <= r_cmp
-            elif operator == ">":
+            if operator == ">":
                 return l_cmp > r_cmp
-            elif operator == ">=":
+            if operator == ">=":
                 return l_cmp >= r_cmp
 
         return None
@@ -201,9 +201,7 @@ def evaluate_ast(
             child_val = evaluate_ast(operands[0], context, current_indices)
             if child_val is None:
                 return True
-            if isinstance(child_val, str) and child_val.strip() == "":
-                return True
-            return False
+            return bool(isinstance(child_val, str) and child_val.strip() == "")
 
         if func_name == "is_not_empty":
             if len(operands) != 1:
@@ -211,9 +209,7 @@ def evaluate_ast(
             child_val = evaluate_ast(operands[0], context, current_indices)
             if child_val is None:
                 return False
-            if isinstance(child_val, str) and child_val.strip() == "":
-                return False
-            return True
+            return not (isinstance(child_val, str) and child_val.strip() == "")
 
         if func_name == "indexed-repeat":
             if len(operands) != 3:
@@ -252,7 +248,7 @@ def evaluate_ast(
             field_name = target_path.split("/")[-1]
             indexed_path = f"{repeat_group}[{target_index}]/{field_name}"
 
-            return context.get(indexed_path, None)
+            return context.get(indexed_path)
 
         return None
 

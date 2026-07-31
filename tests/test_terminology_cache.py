@@ -88,12 +88,14 @@ def test_terminology_cache_unreachable_db_fallback():
         assert fallback_val == val
 
     # If querying an entry not present in cache, the DB exception should propagate
-    with patch(
-        "apps.designer.db.get_terminology_from_db",
-        side_effect=Exception("Database Connection Timeout"),
+    with (
+        patch(
+            "apps.designer.db.get_terminology_from_db",
+            side_effect=Exception("Database Connection Timeout"),
+        ),
+        pytest.raises(Exception, match="Database Connection Timeout"),
     ):
-        with pytest.raises(Exception, match="Database Connection Timeout"):
-            cache.get("NON_EXISTENT_CONCEPT")
+        cache.get("NON_EXISTENT_CONCEPT")
 
 
 def test_terminology_cache_capacity_eviction():

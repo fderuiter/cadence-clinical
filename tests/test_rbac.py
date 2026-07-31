@@ -56,7 +56,7 @@ def get_auth_headers(
     sig = generate_signature(
         user_id, roles, timestamp, version="2", change_reason=change_reason
     )
-    headers = {
+    return {
         "X-User-Id": user_id,
         "X-User-Roles": roles,
         "X-Gateway-Timestamp": timestamp,
@@ -64,7 +64,6 @@ def get_auth_headers(
         "X-Signature-Version": "2",
         "X-Change-Reason": change_reason,
     }
-    return headers
 
 
 # ==========================================

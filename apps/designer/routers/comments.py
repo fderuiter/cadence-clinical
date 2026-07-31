@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from apps.designer.db import MOCK_DESIGNER_AUDIT_LOGS
 from packages.security.middleware import get_current_user
@@ -24,6 +24,8 @@ class CommentCreatePayload(BaseModel):
 
 
 class FormReviewCommentResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     id: str
     form_id: str
     field_id: str
@@ -33,9 +35,9 @@ class FormReviewCommentResponse(BaseModel):
     created_at: str
 
     # Frontend compatibility fields
-    isResolved: bool
-    authorName: str
-    createdAt: str
+    is_resolved: bool = Field(..., alias="isResolved")
+    author_name: str = Field(..., alias="authorName")
+    created_at_compat: str = Field(..., alias="createdAt")
     text: str
 
 
@@ -61,9 +63,9 @@ async def get_form_comments(
                     comment_text=c["comment_text"],
                     status=c["status"],
                     created_at=c["created_at"],
-                    isResolved=(c["status"] == "Resolved"),
-                    authorName=c["author_id"],
-                    createdAt=c["created_at"],
+                    is_resolved=(c["status"] == "Resolved"),
+                    author_name=c["author_id"],
+                    created_at_compat=c["created_at"],
                     text=c["comment_text"],
                 )
             )
@@ -104,9 +106,9 @@ async def post_form_comment(
         comment_text=payload.comment_text,
         status="Open",
         created_at=created_at_str,
-        isResolved=False,
-        authorName=author_id,
-        createdAt=created_at_str,
+        is_resolved=False,
+        author_name=author_id,
+        created_at_compat=created_at_str,
         text=payload.comment_text,
     )
 
@@ -155,8 +157,8 @@ async def resolve_comment(
         comment_text=found_comment["comment_text"],
         status="Resolved",
         created_at=found_comment["created_at"],
-        isResolved=True,
-        authorName=found_comment["author_id"],
-        createdAt=found_comment["created_at"],
+        is_resolved=True,
+        author_name=found_comment["author_id"],
+        created_at_compat=found_comment["created_at"],
         text=found_comment["comment_text"],
     )

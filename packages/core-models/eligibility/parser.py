@@ -61,7 +61,7 @@ def tokenize(code: str) -> List[Token]:
 
         if kind == "WS":
             continue
-        elif kind == "MISMATCH":
+        if kind == "MISMATCH":
             raise ValueError(
                 f"Syntax error: unexpected character {value!r} at position {pos}"
             )
@@ -208,7 +208,7 @@ class DSLParser:
 
         if tok.type == "BOOL":
             self.consume()
-            val = True if tok.value.lower() == "true" else False
+            val = tok.value.lower() == "true"
             return ExpressionNode(type="constant", value=val)
 
         if tok.type == "NULL":
@@ -217,10 +217,7 @@ class DSLParser:
 
         if tok.type == "NUMBER":
             self.consume()
-            if "." in tok.value:
-                val = float(tok.value)
-            else:
-                val = int(tok.value)
+            val = float(tok.value) if "." in tok.value else int(tok.value)
             return ExpressionNode(type="constant", value=val)
 
         if tok.type == "STRING":

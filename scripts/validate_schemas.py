@@ -83,7 +83,7 @@ def validate_schemas() -> bool:
     schema_sources: Dict[str, List[str]] = {}
     for service_name, spec in raw_schemas.items():
         schemas = spec.get("components", {}).get("schemas", {})
-        for schema_name in schemas.keys():
+        for schema_name in schemas:
             schema_sources.setdefault(schema_name, []).append(service_name)
 
     # Report overlapping model definitions
@@ -107,7 +107,7 @@ def validate_schemas() -> bool:
         prefix = SERVICES_CONFIG[service_name]["prefix"]
         schemas = spec.get("components", {}).get("schemas", {})
 
-        for schema_name in schemas.keys():
+        for schema_name in schemas:
             # Check if name is correctly prefixed
             namespaced_name = f"{prefix}{schema_name}"
 

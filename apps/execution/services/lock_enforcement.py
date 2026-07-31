@@ -10,7 +10,7 @@ from execution.lock_models import DataLockRecord, LockScopeEnum, LockStatusEnum
 import packages  # noqa: F401
 
 
-class FormLockedException(Exception):
+class FormLockedError(Exception):
     """Exception raised when an attempt is made to modify locked or frozen eCRF data.
 
     Requirements: PRD-SYS-001
@@ -39,7 +39,7 @@ class DataLockEnforcer:
             active_locks: List of active DataLockRecord instances for the form.
 
         Raises:
-            FormLockedException: If form or target fields are in LOCKED or FROZEN status.
+            FormLockedError: If form or target fields are in LOCKED or FROZEN status.
         """
         for lock in active_locks:
             if lock.form_id != form_id:
@@ -48,13 +48,16 @@ class DataLockEnforcer:
             if lock.status in (LockStatusEnum.LOCKED, LockStatusEnum.FROZEN):
                 # Form-level lock check
                 if lock.scope == LockScopeEnum.FORM:
-                    raise FormLockedException(
+                    raise FormLockedError(
                         f"eCRF form '{form_id}' is in {lock.status.value} state. Modifications blocked."
                     )
 
                 # Field-level lock check
-                if lock.scope == LockScopeEnum.FIELD and lock.field_name:
-                    if lock.field_name in field_updates:
-                        raise FormLockedException(
-                            f"Field '{lock.field_name}' on form '{form_id}' is in {lock.status.value} state. Modifications blocked."
-                        )
+                if (
+                    lock.scope == LockScopeEnum.FIELD
+                    and lock.field_name
+                    and lock.field_name in field_updates
+                ):
+                    raise FormLockedError(
+                        f"Field '{lock.field_name}' on form '{form_id}' is in {lock.status.value} state. Modifications blocked."
+                    )

@@ -93,7 +93,7 @@ def check_ctms_permission(principal: Principal, action: str) -> bool:
     user_roles = [r.lower() for r in principal.roles]
     if action == "write":
         return any(role in allowed_write_roles for role in user_roles)
-    elif action == "read":
+    if action == "read":
         return any(role in allowed_read_roles for role in user_roles)
     return False
 

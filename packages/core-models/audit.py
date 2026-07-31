@@ -48,4 +48,5 @@ class AuditFields(Part11AuditMixin):
     A reusable Pydantic v2 model/mixin containing standard 21 CFR Part 11
     compliant audit and metadata fields.
     """
+
     pass

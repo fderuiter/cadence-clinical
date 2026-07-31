@@ -190,57 +190,56 @@ async def setup_test_db() -> None:
 @pytest.mark.asyncio
 async def test_meddra_matching_integration():
     # Seed MedDRA terminology
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            # Term 1: LLT Headache
-            session.add(
-                MedDRATerm(
-                    dictionary_version="26.0",
-                    code="10019211",
-                    term_name="Headache",
-                    level="LLT",
-                )
+    async with db_manager.get_session_maker()() as session, session.begin():
+        # Term 1: LLT Headache
+        session.add(
+            MedDRATerm(
+                dictionary_version="26.0",
+                code="10019211",
+                term_name="Headache",
+                level="LLT",
             )
-            # Term 2: PT Headache (same code)
-            session.add(
-                MedDRATerm(
-                    dictionary_version="26.0",
-                    code="10019211",
-                    term_name="Headache",
-                    level="PT",
-                )
+        )
+        # Term 2: PT Headache (same code)
+        session.add(
+            MedDRATerm(
+                dictionary_version="26.0",
+                code="10019211",
+                term_name="Headache",
+                level="PT",
             )
-            # Term 3: Migraine
-            session.add(
-                MedDRATerm(
-                    dictionary_version="26.0",
-                    code="10029300",
-                    term_name="Migraine",
-                    level="LLT",
-                )
+        )
+        # Term 3: Migraine
+        session.add(
+            MedDRATerm(
+                dictionary_version="26.0",
+                code="10029300",
+                term_name="Migraine",
+                level="LLT",
             )
-            # Term 4: Stomach ache
-            session.add(
-                MedDRATerm(
-                    dictionary_version="26.0",
-                    code="10034500",
-                    term_name="Stomach ache",
-                    level="LLT",
-                )
+        )
+        # Term 4: Stomach ache
+        session.add(
+            MedDRATerm(
+                dictionary_version="26.0",
+                code="10034500",
+                term_name="Stomach ache",
+                level="LLT",
             )
+        )
 
-            # Hierarchies
-            session.add(
-                MedDRAHierarchy(
-                    dictionary_version="26.0",
-                    llt_code="10019211",
-                    pt_code="10019211",
-                    hlt_code="10019231",
-                    hlgt_code="10029214",
-                    soc_code="10029205",
-                    primary_soc_flag="Y",
-                )
+        # Hierarchies
+        session.add(
+            MedDRAHierarchy(
+                dictionary_version="26.0",
+                llt_code="10019211",
+                pt_code="10019211",
+                hlt_code="10019231",
+                hlgt_code="10029214",
+                soc_code="10029205",
+                primary_soc_flag="Y",
             )
+        )
 
     async with db_manager.get_session_maker()() as session:
         # Case 1: Exact Match -> Auto-coded with hierarchy
@@ -274,44 +273,43 @@ async def test_meddra_matching_integration():
 @pytest.mark.asyncio
 async def test_whodrug_matching_integration():
     # Seed WHODrug
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            session.add(
-                WHODrugRecord(
-                    dictionary_version="2024-03",
-                    drug_code="00010101001",
-                    preferred_name="ASPIRIN",
-                    drug_name="ASPIRIN TABLET",
-                )
+    async with db_manager.get_session_maker()() as session, session.begin():
+        session.add(
+            WHODrugRecord(
+                dictionary_version="2024-03",
+                drug_code="00010101001",
+                preferred_name="ASPIRIN",
+                drug_name="ASPIRIN TABLET",
             )
-            session.add(
-                WHODrugATC(
-                    dictionary_version="2024-03",
-                    atc_code="N02BA01",
-                    description="acetylsalicylic acid",
-                )
+        )
+        session.add(
+            WHODrugATC(
+                dictionary_version="2024-03",
+                atc_code="N02BA01",
+                description="acetylsalicylic acid",
             )
-            session.add(
-                WHODrugDrugATC(
-                    dictionary_version="2024-03",
-                    drug_code="00010101001",
-                    atc_code="N02BA01",
-                )
+        )
+        session.add(
+            WHODrugDrugATC(
+                dictionary_version="2024-03",
+                drug_code="00010101001",
+                atc_code="N02BA01",
             )
-            session.add(
-                WHODrugIngredient(
-                    dictionary_version="2024-03",
-                    ingredient_code="0000000001",
-                    ingredient_name="ACETYLSALICYLIC ACID",
-                )
+        )
+        session.add(
+            WHODrugIngredient(
+                dictionary_version="2024-03",
+                ingredient_code="0000000001",
+                ingredient_name="ACETYLSALICYLIC ACID",
             )
-            session.add(
-                WHODrugDrugIngredient(
-                    dictionary_version="2024-03",
-                    drug_code="00010101001",
-                    ingredient_code="0000000001",
-                )
+        )
+        session.add(
+            WHODrugDrugIngredient(
+                dictionary_version="2024-03",
+                drug_code="00010101001",
+                ingredient_code="0000000001",
             )
+        )
 
     async with db_manager.get_session_maker()() as session:
         # Match using Preferred Name
@@ -350,16 +348,15 @@ async def test_cache_degradation_and_stale_on_error():
 @pytest.mark.asyncio
 async def test_cache_unavailability_graceful_degradation():
     # If cache get/set raises exceptions, lookup should still complete normally from DB.
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            session.add(
-                MedDRATerm(
-                    dictionary_version="26.0",
-                    code="10019211",
-                    term_name="Headache",
-                    level="LLT",
-                )
+    async with db_manager.get_session_maker()() as session, session.begin():
+        session.add(
+            MedDRATerm(
+                dictionary_version="26.0",
+                code="10019211",
+                term_name="Headache",
+                level="LLT",
             )
+        )
 
     broken_cache = MagicMock()
     broken_cache.get.side_effect = Exception("Cache disconnected")

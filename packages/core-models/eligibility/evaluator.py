@@ -31,7 +31,7 @@ def evaluate_node(node: ExpressionNode, context: Dict[str, Any]) -> NodeEvaluati
             explanation=explanation,
         )
 
-    elif node.type == "field_ref":
+    if node.type == "field_ref":
         ref = node.field_ref
         if ref is None:
             return NodeEvaluation(
@@ -62,7 +62,7 @@ def evaluate_node(node: ExpressionNode, context: Dict[str, Any]) -> NodeEvaluati
             explanation=explanation,
         )
 
-    elif node.type == "logical":
+    if node.type == "logical":
         if not node.operands:
             return NodeEvaluation(
                 node_type="logical",
@@ -95,7 +95,7 @@ def evaluate_node(node: ExpressionNode, context: Dict[str, Any]) -> NodeEvaluati
                 children=op_evals,
             )
 
-        elif node.operator == "and":
+        if node.operator == "and":
             # Kleene logic: if any operand is False, overall result is False (even if others are indeterminate)
             has_indeterminate = False
             for child in op_evals:
@@ -131,7 +131,7 @@ def evaluate_node(node: ExpressionNode, context: Dict[str, Any]) -> NodeEvaluati
                 children=op_evals,
             )
 
-        elif node.operator == "or":
+        if node.operator == "or":
             # Kleene logic: if any operand is True, overall result is True (even if others are indeterminate)
             has_indeterminate = False
             for child in op_evals:

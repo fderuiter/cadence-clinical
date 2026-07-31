@@ -44,11 +44,10 @@ def transactional(session_factory: async_sessionmaker[AsyncSession]):
                             )
                         )
 
-                        result = await func(*args, **kwargs)
+                        return await func(*args, **kwargs)
                         # Explicit commit is not strictly necessary here because
                         # 'async with session.begin()' will commit automatically
                         # upon successful exit of the block, and rollback on exception.
-                        return result
                     finally:
                         current_session.reset(token)
 

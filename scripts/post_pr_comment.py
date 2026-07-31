@@ -109,14 +109,13 @@ def get_status_emoji(outcome: str | None) -> str:
     outcome = outcome.lower()
     if outcome in ("success", "passed", "true", "yes"):
         return "✅ Passed"
-    elif outcome in ("failure", "failed", "false", "no"):
+    if outcome in ("failure", "failed", "false", "no"):
         return "❌ Failed"
-    elif outcome in ("skipped", "skip"):
+    if outcome in ("skipped", "skip"):
         return "⚪ Skipped"
-    elif outcome in ("warning", "warn"):
+    if outcome in ("warning", "warn"):
         return "⚠️ Warning"
-    else:
-        return f"⚪ {outcome.capitalize()}"
+    return f"⚪ {outcome.capitalize()}"
 
 
 def parse_existing_outcomes(comment_body: str) -> dict[str, str]:
@@ -396,7 +395,7 @@ def build_comment_body(
         except Exception as e:
             duplication_table = f"\n\n#### ⚠️ Code Duplication Scanner Warnings\n⚠️ Error reading duplication summary: {e}\n"
 
-    body = f"""<!-- ID: CADENCE_PR_QUALITY_GATE_CHECKLIST -->
+    return f"""<!-- ID: CADENCE_PR_QUALITY_GATE_CHECKLIST -->
 {header_message}
 
 #### 📊 Quality Gate Status Summary
@@ -477,7 +476,6 @@ Before approving a PR or signing off on a merged state, verify completion of thi
 *   [ ] **Conflict-Free:** All Git conflict markers and lockfile discrepancies are fully resolved.
 </details>
 """
-    return body
 
 
 def main() -> None:

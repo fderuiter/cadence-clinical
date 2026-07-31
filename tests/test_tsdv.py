@@ -405,31 +405,30 @@ async def test_api_tsdv_evaluation_integration_and_context_errors():
     - Evaluation returns required/not-required decisions matching pure functions and explanation rationale.
     """
     # 1. Seed database with subjects and config
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            await session.execute(
-                text("SELECT set_config('cadence.app_writing', 'true', 1);")
-            )
-            sub1 = ClinicalSubject(
-                id="SUBJ-UUID-1", subject_id="SUBJ-A1", study_id="STUDY-INTEG"
-            )
-            sub2 = ClinicalSubject(
-                id="SUBJ-UUID-2", subject_id="SUBJ-A2", study_id="STUDY-INTEG"
-            )
-            session.add_all([sub1, sub2])
+    async with db_manager.get_session_maker()() as session, session.begin():
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', 1);")
+        )
+        sub1 = ClinicalSubject(
+            id="SUBJ-UUID-1", subject_id="SUBJ-A1", study_id="STUDY-INTEG"
+        )
+        sub2 = ClinicalSubject(
+            id="SUBJ-UUID-2", subject_id="SUBJ-A2", study_id="STUDY-INTEG"
+        )
+        session.add_all([sub1, sub2])
 
-            cfg = TSDVConfig(
-                id="CFG-INTEG",
-                study_id="STUDY-INTEG",
-                sampling_model="SUBJECT_BASED",
-                initial_full_sdv_subject_count=1,
-                random_sample_percentage=0.0,
-                full_sdv_domains=["VS"],
-                safety_endpoints=["AE"],
-                zero_sdv_domains=["DM"],
-                trial_random_seed=42,
-            )
-            session.add(cfg)
+        cfg = TSDVConfig(
+            id="CFG-INTEG",
+            study_id="STUDY-INTEG",
+            sampling_model="SUBJECT_BASED",
+            initial_full_sdv_subject_count=1,
+            random_sample_percentage=0.0,
+            full_sdv_domains=["VS"],
+            safety_endpoints=["AE"],
+            zero_sdv_domains=["DM"],
+            trial_random_seed=42,
+        )
+        session.add(cfg)
 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"

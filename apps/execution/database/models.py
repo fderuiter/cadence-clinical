@@ -212,15 +212,19 @@ class ClinicalSubject(AuditedModel):
     def validate_strat_factors(self, key, value):
         """Validates that stratification factors are locked and cannot be modified once randomized."""
         curr_status = getattr(self, "status", None)
-        if curr_status in (
-            "RANDOMIZED",
-            "ACTIVE",
-            "COMPLETED",
-            "UNBLINDED",
-            "WITHDRAWN",
+        if (
+            curr_status
+            in (
+                "RANDOMIZED",
+                "ACTIVE",
+                "COMPLETED",
+                "UNBLINDED",
+                "WITHDRAWN",
+            )
+            and self.strat_factors is not None
+            and self.strat_factors != value
         ):
-            if self.strat_factors is not None and self.strat_factors != value:
-                raise LockedFactorMutationError()
+            raise LockedFactorMutationError()
         return value
 
     def randomize(

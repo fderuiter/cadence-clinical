@@ -49,10 +49,7 @@ def load_gitignore_patterns(root_dir: str) -> List[Tuple[bool, str]]:
                 if not line or line.startswith("#"):
                     continue
                 is_negated = line.startswith("!")
-                if is_negated:
-                    pat = line[1:]
-                else:
-                    pat = line
+                pat = line[1:] if is_negated else line
                 patterns.append((is_negated, pat))
     except Exception:
         pass
@@ -91,11 +88,11 @@ def is_locally_ignored(
             if rel_path_str.startswith(pat_str) or f"/{pat_str}" in f"/{rel_path_str}":
                 match = True
         else:
-            if fnmatch.fnmatch(rel_path_str, pat_str) or fnmatch.fnmatch(
-                os.path.basename(rel_path_str), pat_str
+            if (
+                fnmatch.fnmatch(rel_path_str, pat_str)
+                or fnmatch.fnmatch(os.path.basename(rel_path_str), pat_str)
+                or f"/{pat_str}/" in f"/{rel_path_str}/"
             ):
-                match = True
-            elif f"/{pat_str}/" in f"/{rel_path_str}/":
                 match = True
 
         if match:
@@ -313,7 +310,7 @@ def is_excluded_path(path: str, root_dir: str) -> bool:
 
     # Exclude files starting with test_ or ending with .test.js, etc. or specific workspace documents
     name = os.path.basename(path).lower()
-    if (
+    return bool(
         name.startswith("test_")
         or name.endswith(".test.js")
         or name.endswith(".test.ts")
@@ -337,10 +334,7 @@ def is_excluded_path(path: str, root_dir: str) -> bool:
             "architecture.md",
             "eslint.config.mjs",
         }
-    ):
-        return True
-
-    return False
+    )
 
 
 def get_files_to_scan(paths: List[str], root_dir: str) -> List[str]:

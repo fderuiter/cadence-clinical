@@ -13,7 +13,7 @@ from apps.eisf.database import db_manager
 from apps.eisf.main import app as eisf_app
 from apps.eisf.models import Base
 from apps.gateway.main import generate_signature
-from packages.security.audit_logger import audit_logger_engine as CentralAuditLogger
+from packages.security.audit_logger import audit_logger_engine as central_audit_logger
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -22,8 +22,8 @@ async def setup_eisf_db():
     db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    # Clear the global CentralAuditLogger chain for clean testing
-    CentralAuditLogger._chain.clear()
+    # Clear the global central_audit_logger chain for clean testing
+    central_audit_logger._chain.clear()
     yield
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
@@ -46,7 +46,7 @@ def get_site_auth_headers(
         change_reason=change_reason,
         site_id=site_id,
     )
-    headers = {
+    return {
         "X-User-Id": user_id,
         "X-User-Roles": roles,
         "X-Site-Id": site_id,
@@ -55,7 +55,6 @@ def get_site_auth_headers(
         "X-Signature-Version": "2",
         "X-Change-Reason": change_reason,
     }
-    return headers
 
 
 def get_global_auth_headers(
@@ -68,7 +67,7 @@ def get_global_auth_headers(
     sig = generate_signature(
         user_id, roles, timestamp, version="2", change_reason=change_reason
     )
-    headers = {
+    return {
         "X-User-Id": user_id,
         "X-User-Roles": roles,
         "X-Gateway-Timestamp": timestamp,
@@ -76,7 +75,6 @@ def get_global_auth_headers(
         "X-Signature-Version": "2",
         "X-Change-Reason": change_reason,
     }
-    return headers
 
 
 @pytest.mark.asyncio
@@ -184,13 +182,13 @@ async def test_upload_and_get_site_document() -> None:
     sec01_node = next(n for n in binder_data if n["section_code"] == "SEC_01")
     assert sec01_node["document_count"] == 1
 
-    # 5. Verify GxP audit trail via CentralAuditLogger has records of EISF_DOCUMENT_ACCESSED
-    audit_events = [record.action_type for record in CentralAuditLogger._chain]
+    # 5. Verify GxP audit trail via central_audit_logger has records of EISF_DOCUMENT_ACCESSED
+    audit_events = [record.action_type for record in central_audit_logger._chain]
     assert "EISF_DOCUMENT_ACCESSED" in audit_events
     # Check that details are populated correctly
     accessed_event = next(
         record
-        for record in CentralAuditLogger._chain
+        for record in central_audit_logger._chain
         if record.action_type == "EISF_DOCUMENT_ACCESSED"
     )
     assert accessed_event.service_name == "eisf"

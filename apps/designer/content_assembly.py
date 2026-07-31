@@ -31,10 +31,9 @@ def find_object_by_id(obj: Any, target_id: str, target_klass: str = None) -> Any
     with the specified ID and optionally matching class name.
     """
     # Check if the object itself has an 'id' field matching the target
-    if hasattr(obj, "id") and obj.id is not None:
-        if str(obj.id) == str(target_id):
-            if target_klass is None or obj.__class__.__name__ == target_klass:
-                return obj
+    if hasattr(obj, "id") and obj.id is not None and str(obj.id) == str(target_id):
+        if target_klass is None or obj.__class__.__name__ == target_klass:
+            return obj
 
     # If the object is a Pydantic model, traverse its fields
     if isinstance(obj, BaseModel):

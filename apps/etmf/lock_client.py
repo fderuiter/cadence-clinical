@@ -75,11 +75,10 @@ async def verify_trial_lock_status(is_testing: Optional[bool] = None) -> bool:
             if response.status_code == 200:
                 data = response.json()
                 return bool(data.get("trial_locked", False))
-            else:
-                raise HTTPException(
-                    status_code=502,
-                    detail=f"Failed to verify trial lock state: Execution service returned {response.status_code}",
-                )
+            raise HTTPException(
+                status_code=502,
+                detail=f"Failed to verify trial lock state: Execution service returned {response.status_code}",
+            )
     except httpx.RequestError as e:
         raise HTTPException(
             status_code=502,

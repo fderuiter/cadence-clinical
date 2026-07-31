@@ -63,20 +63,19 @@ class MedDRAParser:
         name = os.path.basename(file_name).lower()
         if "llt" in name:
             return "llt"
-        elif "pt" in name:
+        if "pt" in name:
             return "pt"
-        elif "hlt" in name and "hlgt" not in name:
+        if "hlt" in name and "hlgt" not in name:
             return "hlt"
-        elif "hlgt" in name:
+        if "hlgt" in name:
             return "hlgt"
-        elif "soc" in name:
+        if "soc" in name:
             return "soc"
-        elif "mdhier" in name:
+        if "mdhier" in name:
             return "mdhier"
-        else:
-            raise ValueError(
-                f"Cannot auto-detect MedDRA file type from file name: {file_name}"
-            )
+        raise ValueError(
+            f"Cannot auto-detect MedDRA file type from file name: {file_name}"
+        )
 
     def parse(
         self,
@@ -621,9 +620,9 @@ class WHODrugParser:
             or "drug_atc" in base_name
         ):
             return "drug_atc"
-        elif "atc" in base_name:
+        if "atc" in base_name:
             return "atc"
-        elif (
+        if (
             "drug_ing" in base_name
             or "drug_ingredient" in base_name
             or "druging" in base_name
@@ -634,7 +633,7 @@ class WHODrugParser:
             or base_name.endswith("di")
         ):
             return "drug_ingredients"
-        elif (
+        if (
             "drug" in base_name
             or "drugs" in base_name
             or "dd" in tokens
@@ -644,7 +643,7 @@ class WHODrugParser:
             or base_name.endswith("dd")
         ):
             return "drugs"
-        elif (
+        if (
             "ing" in tokens
             or "ingredients" in base_name
             or "active" in base_name
@@ -652,10 +651,9 @@ class WHODrugParser:
             or "active_substance" in base_name
         ):
             return "ingredients"
-        else:
-            raise ValueError(
-                f"Cannot auto-detect WHODrug file type from file name: {file_name}"
-            )
+        raise ValueError(
+            f"Cannot auto-detect WHODrug file type from file name: {file_name}"
+        )
 
     def parse(
         self,
@@ -752,35 +750,34 @@ class WHODrugParser:
                 return ""
             val = line[start:end] if end is not None else line[start:]
             return val.strip()
-        else:
-            if line_fields is None:
-                return ""
-            if isinstance(mapping, int):
-                idx = mapping
-            elif isinstance(mapping, str):
-                if not header_map:
-                    raise WHODrugParseError(
-                        f"Delimiter header map is missing but string field mapping was used: {mapping}",
-                        file_name,
-                        line_num,
-                    )
-                if mapping not in header_map:
-                    raise WHODrugParseError(
-                        f"Field mapping '{mapping}' not found in file headers: {list(header_map.keys())}",
-                        file_name,
-                        line_num,
-                    )
-                idx = header_map[mapping]
-            else:
+        if line_fields is None:
+            return ""
+        if isinstance(mapping, int):
+            idx = mapping
+        elif isinstance(mapping, str):
+            if not header_map:
                 raise WHODrugParseError(
-                    f"Delimited mapping must be an int or a string (header name), got {mapping}",
+                    f"Delimiter header map is missing but string field mapping was used: {mapping}",
                     file_name,
                     line_num,
                 )
+            if mapping not in header_map:
+                raise WHODrugParseError(
+                    f"Field mapping '{mapping}' not found in file headers: {list(header_map.keys())}",
+                    file_name,
+                    line_num,
+                )
+            idx = header_map[mapping]
+        else:
+            raise WHODrugParseError(
+                f"Delimited mapping must be an int or a string (header name), got {mapping}",
+                file_name,
+                line_num,
+            )
 
-            if idx >= len(line_fields):
-                return ""
-            return line_fields[idx].strip()
+        if idx >= len(line_fields):
+            return ""
+        return line_fields[idx].strip()
 
     def _parse_stream(
         self, stream: Iterable[str], file_type: str, file_name: str

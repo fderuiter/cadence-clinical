@@ -58,9 +58,9 @@ def normalize_milestone(milestone: str) -> str:
     norm = milestone.strip().upper()
     if norm in ("INITIATION", "STUDY START"):
         return "INITIATION"
-    elif norm in ("CONDUCT", "DATA COLLECTION"):
+    if norm in ("CONDUCT", "DATA COLLECTION"):
         return "CONDUCT"
-    elif norm in ("CLOSEOUT", "STUDY CLOSED", "LOCK"):
+    if norm in ("CLOSEOUT", "STUDY CLOSED", "LOCK"):
         return "CLOSEOUT"
     return norm
 
@@ -786,10 +786,7 @@ async def write_audit_log(
     """
     Utility function to write to the immutable eTMF audit ledger.
     """
-    if isinstance(user_role, list):
-        user_role_str = ",".join(user_role)
-    else:
-        user_role_str = user_role
+    user_role_str = ",".join(user_role) if isinstance(user_role, list) else user_role
 
     log_entry = TMFAuditLog(
         user_id=user_id,
@@ -3487,10 +3484,7 @@ async def bulk_archive_study_documents(
     # Log overall study-level archival results to audit trail
     overall_status = "success"
     if failed_count > 0:
-        if successful_count > 0:
-            overall_status = "partial_success"
-        else:
-            overall_status = "failed"
+        overall_status = "partial_success" if successful_count > 0 else "failed"
 
     details_msg = (
         f"Bulk study archive completed for study '{study_id}'. "

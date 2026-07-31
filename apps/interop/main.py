@@ -221,7 +221,7 @@ async def resolve_and_save_submission(
     # 1. Setup signature and timestamps for the SyncRecord representation
     incoming_timestamps = payload.offline_sync_markers.timestamps or {}
     timestamps = {}
-    for k in payload.answers.keys():
+    for k in payload.answers:
         t_val = incoming_timestamps.get(k)
         if t_val:
             if isinstance(t_val, str):
@@ -353,7 +353,7 @@ async def resolve_and_save_submission(
         existing_markers = existing.offline_sync_markers or {}
         existing_ts_raw = existing_markers.get("timestamps") or {}
         existing_timestamps = {}
-        for k in existing.answers.keys():
+        for k in existing.answers:
             t_val = existing_ts_raw.get(k)
             if t_val:
                 if isinstance(t_val, str):
@@ -442,7 +442,7 @@ async def resolve_and_save_submission(
             },
         }
 
-    elif status == "UPDATED_CLIENT_WINS":
+    if status == "UPDATED_CLIENT_WINS":
         defeated_sub = EPROSubmissionDefeated(
             subject_id=existing.subject_id,
             diary_id=existing.diary_id,
@@ -496,7 +496,7 @@ async def resolve_and_save_submission(
             },
         }
 
-    elif status == "IGNORED_SERVER_WINS":
+    if status == "IGNORED_SERVER_WINS":
         defeated_sub = EPROSubmissionDefeated(
             subject_id=payload.subject_id,
             diary_id=payload.diary_id,
@@ -555,7 +555,7 @@ async def resolve_and_save_submission(
             },
         }
 
-    elif status == "MERGED":
+    if status == "MERGED":
         defeated_sub = EPROSubmissionDefeated(
             subject_id=existing.subject_id,
             diary_id=existing.diary_id,

@@ -2113,9 +2113,12 @@ async def transition_consent_translation(
     # IN_REVIEW -> APPROVED
     # IN_REVIEW -> DRAFT
     allowed = False
-    if current_status == "DRAFT" and target_status == "IN_REVIEW":
-        allowed = True
-    elif current_status == "IN_REVIEW" and target_status in ("APPROVED", "DRAFT"):
+    if (
+        current_status == "DRAFT"
+        and target_status == "IN_REVIEW"
+        or current_status == "IN_REVIEW"
+        and target_status in ("APPROVED", "DRAFT")
+    ):
         allowed = True
 
     if not allowed:
