@@ -1856,6 +1856,87 @@ async function initializeApp() {
   }
 }
 
+async function syncOfflineBatchDeltas() {
+  const statusTextEl = document.getElementById("sync-queue-status-text");
+  const queued = await getQueuedSubmissions();
+  const online = checkOnline();
+
+  if (!online) {
+    if (statusTextEl) {
+      statusTextEl.textContent = `Offline Mode. ${queued.length} submission(s) queued locally.`;
+    }
+    await renderSyncQueueList();
+    return;
+  }
+
+  if (queued.length === 0) {
+    if (statusTextEl) {
+      statusTextEl.textContent = "Online. All submissions synchronized.";
+    }
+    await renderSyncQueueList();
+    return;
+  }
+
+  if (statusTextEl) {
+    statusTextEl.textContent = `Online. Syncing ${queued.length} delta(s)...`;
+  }
+
+  // Build the OfflineBatchSyncRequest
+  const deltas = queued.map((item) => ({
+    delta_id: item.client_id + "-" + item.sequence_number,
+    entity_type: "clinical_observation",
+    entity_id: item.assignment_id,
+    action: "SUBMIT",
+    payload: item.answers,
+    client_timestamp_utc: item.device_timestamp,
+    reason_for_change: item.change_reason || "ePRO submission",
+  }));
+
+  const payload = {
+    client_batch_id: "batch-" + Date.now(),
+    device_id: queued[0].client_id || "device_subject_001",
+    deltas: deltas,
+  };
+
+  try {
+    const response = await dispatchApi("api/v1/offline/sync-batch", {
+      method: "POST",
+      body: JSON.stringify(payload),
+      change_reason: "Reconcile offline submissions batch deltas",
+    });
+
+    if (response && response.status === "SUCCESS") {
+      for (const item of queued) {
+        await updateSubmissionStatus(item.sequence_number, "CREATED", {
+          resolved_answers: item.answers,
+          resolved_at: new Date().toISOString(),
+        });
+      }
+    } else if (response && response.status === "PARTIAL_SUCCESS") {
+      const conflictIds = new Set((response.conflicts || []).map(c => c.delta_id));
+      for (const item of queued) {
+        const deltaId = item.client_id + "-" + item.sequence_number;
+        const hasConflict = conflictIds.has(deltaId);
+        await updateSubmissionStatus(item.sequence_number, hasConflict ? "IGNORED_SERVER_WINS" : "CREATED", {
+          resolved_answers: item.answers,
+          resolved_at: new Date().toISOString(),
+        });
+      }
+    }
+
+    if (statusTextEl) {
+      statusTextEl.textContent = "Online. Sync complete.";
+    }
+  } catch (err) {
+    console.error("Batch sync failed:", err);
+    if (statusTextEl) {
+      statusTextEl.textContent = `Batch sync failed. ${queued.length} delta(s) still queued.`;
+    }
+  }
+
+  await renderSyncQueueList();
+}
+
 // Auto-run on load in DOM environments
 if (typeof document !== "undefined") {
   document.addEventListener("DOMContentLoaded", initializeApp);
@@ -1872,6 +1953,7 @@ export {
   checkOnline,
   renderSyncQueueList,
   syncOfflineQueue,
+  syncOfflineBatchDeltas,
   clearAllSubmissions,
   dispatchApi,
   fetchAssignments,

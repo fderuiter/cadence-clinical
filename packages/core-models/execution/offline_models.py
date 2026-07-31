@@ -1,9 +1,9 @@
 """Pydantic data models for Offline Sync batch delta ingestion.
 
-Requirements: PRD-SYS-001
+Requirements: PRD-SYS-001 | GxP 21 CFR Part 11 Regulated
 """
 
-from typing import Any, Dict, List, Literal
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -25,6 +25,9 @@ class OfflineDeltaItem(BaseModel):
         ..., description="UTC timestamp of the mutation on client"
     )
     reason_for_change: str = Field(..., description="Reason for the mutation change")
+    created_at: Optional[str] = Field(None, description="ISO-8601 UTC timestamp of creation")
+    created_by: Optional[str] = Field(None, description="Identity of the creator")
+    version_index: Optional[int] = Field(None, description="Chronological version index")
 
 
 class OfflineBatchSyncRequest(BaseModel):

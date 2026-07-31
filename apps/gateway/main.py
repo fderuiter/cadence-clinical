@@ -20,6 +20,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 import packages  # noqa: F401
 from apps.gateway.routers.cdisc import router as cdisc_router
 from apps.gateway.routers.usdm import router as usdm_router
+from apps.gateway.routers.ecoa import router as ecoa_router
 
 
 def validate_environment() -> None:
@@ -66,6 +67,7 @@ app = FastAPI(
 
 app.include_router(cdisc_router, prefix="/api/v1/cdisc", tags=["CDISC Standards"])
 app.include_router(usdm_router, prefix="/api/v1/usdm", tags=["USDM Data Flow"])
+app.include_router(ecoa_router, prefix="", tags=["eCOA / ePRO Sync"])
 
 # CORS configuration
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")

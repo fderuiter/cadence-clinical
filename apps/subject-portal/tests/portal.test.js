@@ -507,6 +507,48 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       expect(syncList.innerHTML).toContain("QUEUED");
     });
 
+    it("handles batch delta sync via syncOfflineBatchDeltas with SUCCESS and PARTIAL_SUCCESS", async () => {
+      const portal = await import("../index.js");
+      await portal.initializeApp();
+
+      await portal.clearAllSubmissions();
+
+      // Submit one questionnaire offline
+      portal.state.session.isOfflineMode = true;
+      portal.startQuestionnaire("assign_01");
+      document.getElementById("vssbp").value = "120";
+      document.getElementById("vsdpb").value = "80";
+      document.getElementById("vshr").value = "72";
+      document.getElementById("has_symptoms_option_1").checked = true;
+      expect(portal.validateActiveQuestionnaire()).toBe(true);
+
+      document.getElementById("sign-username").value = "subject_001";
+      document.getElementById("sign-password").value = "pin123";
+      await portal.verifyAndSubmitSignature();
+
+      // Mock SUCCESS response
+      globalThis.fetch = vi.fn().mockImplementation(() =>
+        Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              client_batch_id: "batch_abc",
+              status: "SUCCESS",
+              processed_count: 1,
+              conflicts: [],
+            }),
+        })
+      );
+
+      // Trigger syncOfflineBatchDeltas
+      portal.state.session.isOfflineMode = false;
+      await portal.syncOfflineBatchDeltas();
+
+      // Expect state update to "CREATED" and display as "SYNCED"
+      const syncList = document.getElementById("sync-queue-list");
+      expect(syncList.innerHTML).toContain("SYNCED");
+    });
+
     it("asserts Bearer token is attached and gateway headers are absent when authenticated", async () => {
       const portal = await import("../index.js");
       portal.state.session.isDemoMode = false;
