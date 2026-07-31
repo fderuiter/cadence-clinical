@@ -12,16 +12,7 @@ export const executionService = {
     return apiClient.post(`/api/v1/execution/subjects`, body, options);
   },
 
-  /**
-   * Submits consent record for a subject.
-   */
-  consentSubject(subjectId, body, options = {}) {
-    return apiClient.post(
-      `/api/v1/execution/subjects/${subjectId}/consent`,
-      body,
-      options
-    );
-  },
+
 
   /**
    * Lists clinical queries matching filters.
