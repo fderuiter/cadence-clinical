@@ -252,6 +252,7 @@ class ConsentClause(Base):
     study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     text: Mapped[str] = mapped_column(String, nullable=False)
+    category: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     # 21 CFR Part 11 Compliance Auditing Metadata
