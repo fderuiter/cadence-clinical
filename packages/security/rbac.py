@@ -400,6 +400,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
     },
     "monitor": {
         "study_design": {"read"},
+        "sdv": {"create", "read", "update", "delete"},
         "system_audit_logs": {"read"},
         "regulatory_form": {"create", "read", "sign"},
         "training_log": {"create", "read", "sign"},

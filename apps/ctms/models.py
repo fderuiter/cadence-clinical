@@ -161,6 +161,9 @@ class MonitoringVisitDefeated(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), nullable=False
     )
+    created_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    reason_for_change: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
 
 class CTMSClinicalQuery(Base):
