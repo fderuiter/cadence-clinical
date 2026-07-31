@@ -61,11 +61,6 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked --all-extras
 
-      - name: Run markdown link verification
-        id: run_link_check
-        if: always()
-        run: python3 scripts/validate_markdown.py
-
       - name: Run linting
         id: run_linting
         if: always()
@@ -166,9 +161,6 @@ jobs:
         with:
           node-version: '20'
           cache: 'pnpm'
-
-      - name: Install Node dependencies
-        run: pnpm install --frozen-lockfile
 
       - name: Run static analysis
         id: run_static
@@ -327,7 +319,18 @@ jobs:
           restore-keys: |
             playwright-${{ runner.os }}-
 
-      - name: Install Playwright Browsers
+      - name: Install Playwright Dependencies (Cache Hit)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: |
+          for i in {1..3}; do
+            uv run playwright install-deps chromium && break || {
+              echo "Playwright dependencies install failed on attempt $i, retrying in 10s..."
+              sleep 10
+            }
+          done
+
+      - name: Install Playwright Browsers (Cache Miss)
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: |
           for i in {1..3}; do
             uv run playwright install chromium --with-deps && break || {

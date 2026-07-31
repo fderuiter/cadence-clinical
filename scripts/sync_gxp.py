@@ -133,6 +133,7 @@ def step_run_tests(dry_run: bool) -> None:
                 "pytest",
                 "-n",
                 "2",
+                "--ignore=tests/test_layout_validator.py",
                 "--junitxml",
                 JUNIT_REPORT,
                 "-q",

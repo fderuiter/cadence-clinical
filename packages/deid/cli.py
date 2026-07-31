@@ -335,6 +335,7 @@ def is_excluded_path(path: str, root_dir: str) -> bool:
             "license",
             "architecture.md",
             "eslint.config.mjs",
+            "duplication_summary.json",
         }
     ):
         return True

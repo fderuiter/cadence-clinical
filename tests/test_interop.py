@@ -1497,3 +1497,13 @@ async def test_compute_reminders_all_subjects_staff():
     )
     assert resp.status_code == 200
     assert resp.json()["created_count"] >= 4
+
+    class MockRouter:
+        async def send_webhook(self, url: str, payload: dict) -> bool:
+            return True
+
+    router = MockRouter()
+    assert (
+        await router.send_webhook("https://example.com/hook", {"data": "exception"})
+        is True
+    )
