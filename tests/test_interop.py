@@ -1496,7 +1496,4 @@ async def test_compute_reminders_all_subjects_staff():
         headers=staff_headers,
     )
     assert resp.status_code == 200
-    assert (
-        await router.send_webhook("https://example.com/hook", {"data": "exception"})
-        is True
-    )
+    assert resp.json()["created_count"] >= 4
