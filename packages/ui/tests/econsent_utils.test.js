@@ -3,7 +3,7 @@ import {
   normalizeApprovedConsent,
   shapeComprehensionAnswers,
   interpretComprehensionResult,
-} from "../index.js";
+} from "../src/index.ts";
 
 describe("eConsent Presentation and Gating Utilities", () => {
   describe("normalizeApprovedConsent", () => {

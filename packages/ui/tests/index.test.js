@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { debounce } from "../index.js";
+import { debounce } from "../src/index.ts";
 
 describe("debounce", () => {
   it("delays execution and bounds rapid invocations to a single call", () => {

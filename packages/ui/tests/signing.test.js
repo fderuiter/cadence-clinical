@@ -7,8 +7,8 @@ import {
   generateGatewaySignature,
   verifyGatewaySignature,
   sha256,
-} from "../index.js";
-import { encryptAESGCM, decryptAESGCM, deriveSessionKey } from "../signing.js";
+} from "../src/index.ts";
+import { encryptAESGCM, decryptAESGCM, deriveSessionKey } from "../src/signing.js";
 
 describe("canonicalSerialize", () => {
   it("serializes primitives identically to Python", () => {

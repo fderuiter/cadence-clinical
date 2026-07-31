@@ -5,9 +5,9 @@
  * @param {number} wait - The delay in milliseconds before executing the function.
  * @returns {Function} The debounced function.
  */
-export function debounce(func, wait) {
-  let timeout;
-  return function (...args) {
+export function debounce(func: Function, wait: number): Function {
+  let timeout: any;
+  return function (this: any, ...args: any[]) {
     const context = this;
     clearTimeout(timeout);
     timeout = setTimeout(() => {
@@ -36,3 +36,11 @@ export {
   shapeComprehensionAnswers,
   interpretComprehensionResult,
 } from "./econsent.js";
+
+export {
+  ClientSyncEngine,
+  IndexedDBManager,
+} from "./syncEngine";
+
+export { default as SignatureCaptureModal } from "./SignatureCaptureModal.vue";
+export type { PendingDelta, SyncEngineOptions } from "./syncEngine";

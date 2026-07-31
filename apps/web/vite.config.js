@@ -11,7 +11,6 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
-      ui: path.resolve(__dirname, "../../packages/ui/index.js"),
       "@": path.resolve(__dirname, "./src"),
     },
   },
