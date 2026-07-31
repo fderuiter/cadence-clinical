@@ -1,4 +1,6 @@
 // Upgraded eCOA Subject Portal Dispatch and Failure-State Rendering Contract
+import { reactive, createApp } from "vue";
+import App from "./App.vue";
 import {
   buildLedgerBlock,
   validateField,
@@ -129,7 +131,7 @@ const MOCK_NOTIFICATIONS = [
 ];
 
 // App State Core
-const state = {
+const state = reactive({
   session: {
     userId: "subject_001",
     roles: "Subject",
@@ -157,7 +159,11 @@ const state = {
   pendingSignableAction: null,
   consentContent: null,
   consentCheck: null,
-};
+  currentView: "view-tasks",
+  unreadCount: 0,
+  modalError: "",
+  previouslyFocusedElement: null,
+});
 
 const MOCK_APPROVED_CONTENT = {
   template_id: "template-icf",
@@ -235,6 +241,8 @@ function isAuthenticatedSession() {
 
 // Simple Router
 function showView(viewId) {
+  state.currentView = viewId;
+
   document.querySelectorAll(".portal-view").forEach((v) => {
     v.classList.remove("active");
   });
@@ -570,6 +578,18 @@ function validateActiveQuestionnaire() {
       container.classList.remove("has-error");
       const oldErr = container.querySelector(".validation-error-msg");
       if (oldErr) oldErr.remove();
+
+      const input = document.getElementById(id);
+      if (input) {
+        input.removeAttribute("aria-describedby");
+        input.removeAttribute("aria-invalid");
+      } else {
+        const radioInputs = container.querySelectorAll(`input[name="${id}"]`);
+        radioInputs.forEach((radio) => {
+          radio.removeAttribute("aria-describedby");
+          radio.removeAttribute("aria-invalid");
+        });
+      }
     }
 
     const fieldMeta = {
@@ -602,18 +622,38 @@ function markFieldInvalid(fieldId, msg) {
     container.classList.add("has-error");
     const errDiv = document.createElement("div");
     errDiv.className = "validation-error-msg";
+    errDiv.id = `${fieldId}-error`;
     errDiv.style.color = "var(--danger)";
     errDiv.style.fontSize = "12px";
     errDiv.style.fontWeight = "600";
     errDiv.style.marginTop = "4px";
     errDiv.textContent = msg;
     container.appendChild(errDiv);
+
+    // Link the input tag to validation message using ARIA attributes
+    const input = document.getElementById(fieldId);
+    if (input) {
+      input.setAttribute("aria-describedby", `${fieldId}-error`);
+      input.setAttribute("aria-invalid", "true");
+    } else {
+      // Handle radio options
+      const radioInputs = container.querySelectorAll(
+        `input[name="${fieldId}"]`
+      );
+      radioInputs.forEach((radio) => {
+        radio.setAttribute("aria-describedby", `${fieldId}-error`);
+        radio.setAttribute("aria-invalid", "true");
+      });
+    }
   }
 }
 
 // Submit with 21 CFR PIN signature validation
 function openSignatureModal(actionType = "epro") {
   state.pendingSignableAction = actionType;
+  if (typeof document !== "undefined") {
+    state.previouslyFocusedElement = document.activeElement;
+  }
   document.getElementById("sign-username").value = state.session.userId;
   document.getElementById("sign-password").value = "";
 
@@ -644,13 +684,32 @@ function openSignatureModal(actionType = "epro") {
   }
 
   document.getElementById("sign-reason-custom").value = "";
-  document.getElementById("portal-sign-modal").style.display = "flex";
+
+  const modal = document.getElementById("portal-sign-modal");
+  if (modal) {
+    modal.style.display = "flex";
+    const usernameInput = document.getElementById("sign-username");
+    if (usernameInput) {
+      usernameInput.focus();
+    }
+  }
 }
 
 function closeSignatureModal() {
   // Credential hygiene: clear PIN / password from DOM immediately on cancel
   document.getElementById("sign-password").value = "";
-  document.getElementById("portal-sign-modal").style.display = "none";
+  const modal = document.getElementById("portal-sign-modal");
+  if (modal) {
+    modal.style.display = "none";
+  }
+
+  // Restore focus to initiating button on close
+  if (
+    state.previouslyFocusedElement &&
+    typeof state.previouslyFocusedElement.focus === "function"
+  ) {
+    state.previouslyFocusedElement.focus();
+  }
 }
 
 async function verifyAndSubmitSignature() {
@@ -778,6 +837,8 @@ async function verifyAndSubmitSignature() {
     const active = state.activeQuestionnaire;
     if (!active) return;
 
+    const rawAnswers = JSON.parse(JSON.stringify(active.answers));
+
     // Queue submission locally inside IndexedDB
     let queuedItem;
     try {
@@ -785,7 +846,7 @@ async function verifyAndSubmitSignature() {
         subject_id: state.session.userId,
         diary_id: active.instrument.id,
         assignment_id: active.assignment.id,
-        answers: active.answers,
+        answers: rawAnswers,
         change_reason: finalReason,
         username: cleanUsername,
       });
@@ -800,7 +861,7 @@ async function verifyAndSubmitSignature() {
       "EPRO_SUBMIT",
       {
         diary_id: active.instrument.id,
-        answers: active.answers,
+        answers: rawAnswers,
         assignment_id: active.assignment.id,
         sequence_number: queuedItem.sequence_number,
       },
@@ -1015,6 +1076,7 @@ function renderInbox() {
   }
 
   const unread = state.notifications.filter((n) => !n.is_read);
+  state.unreadCount = unread.length;
   const badge = document.getElementById("unread-count");
   if (badge) {
     badge.textContent = unread.length;
@@ -1307,6 +1369,18 @@ async function submitConsentAnswers() {
       container.classList.remove("has-error");
       const oldErr = container.querySelector(".validation-error-msg");
       if (oldErr) oldErr.remove();
+
+      const input = document.getElementById(q.id);
+      if (input) {
+        input.removeAttribute("aria-describedby");
+        input.removeAttribute("aria-invalid");
+      } else {
+        const radioInputs = container.querySelectorAll(`input[name="${q.id}"]`);
+        radioInputs.forEach((radio) => {
+          radio.removeAttribute("aria-describedby");
+          radio.removeAttribute("aria-invalid");
+        });
+      }
     }
 
     const fieldMeta = {
@@ -1542,6 +1616,48 @@ async function syncOfflineQueue() {
 
 // Bootstrap Initialization
 async function initializeApp() {
+  // Mount Vue application
+  if (typeof document !== "undefined") {
+    const appEl = document.getElementById("app");
+    if (appEl) {
+      const app = createApp(App);
+      app.mount(appEl);
+    }
+
+    // Set up global focus trapping for the signature modal dialog
+    if (!window.__TAB_LISTENER_REGISTERED__) {
+      window.__TAB_LISTENER_REGISTERED__ = true;
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Tab") {
+          const modal = document.getElementById("portal-sign-modal");
+          if (modal && modal.style.display !== "none") {
+            const focusableSelectors =
+              "input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])";
+            const focusableElements = Array.from(
+              modal.querySelectorAll(focusableSelectors)
+            );
+            if (focusableElements.length === 0) return;
+
+            const first = focusableElements[0];
+            const last = focusableElements[focusableElements.length - 1];
+
+            if (e.shiftKey) {
+              if (document.activeElement === first) {
+                last.focus();
+                e.preventDefault();
+              }
+            } else {
+              if (document.activeElement === last) {
+                first.focus();
+                e.preventDefault();
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+
   // Graceful OIDC Keycloak setup
   if (typeof window !== "undefined" && !window.__MOCK_TEST_ENV__) {
     try {
@@ -1886,6 +2002,8 @@ export {
   loadConsentDetails,
   renderConsentUI,
   submitConsentAnswers,
+  openSignatureModal,
+  closeSignatureModal,
 };
 
 function createClinicalInput(

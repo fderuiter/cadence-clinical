@@ -1,20 +1,20 @@
 /* eCOA Subject Portal failure styles */
 :root {
-  --primary: #0284c7;
-  --primary-dark: #0369a1;
+  --primary: #026593;
+  --primary-dark: #014c6f;
   --primary-light: #e0f2fe;
   --text-main: #0f172a;
   --text-muted: #475569;
   --bg-main: #f8fafc;
   --bg-card: #ffffff;
   --border: #e2e8f0;
-  --success: #16a34a;
+  --success: #15803d;
   --success-bg: #dcfce7;
-  --warning: #ca8a04;
+  --warning: #854d0e;
   --warning-bg: #fef9c3;
-  --danger: #dc2626;
+  --danger: #b91c1c;
   --danger-bg: #fee2e2;
-  --accent: #6366f1;
+  --accent: #4f46e5;
 }
 
 * {

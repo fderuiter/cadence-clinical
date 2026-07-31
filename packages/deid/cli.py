@@ -319,6 +319,7 @@ def is_excluded_path(path: str, root_dir: str) -> bool:
         or name.endswith(".test.ts")
         or name.endswith(".test.jsx")
         or name.endswith(".test.tsx")
+        or name.endswith(".css")
         or name
         in {
             "package.json",

@@ -22,7 +22,10 @@
     <!-- Question List -->
     <div class="questions-list">
       <div v-if="econsentStore.quizQuestions.length === 0" class="no-questions">
-        <p>No comprehension check questions added yet. Click "Add Question" below to draft one.</p>
+        <p>
+          No comprehension check questions added yet. Click "Add Question" below
+          to draft one.
+        </p>
       </div>
 
       <div
@@ -56,7 +59,10 @@
 
         <!-- Choices/Options Builder -->
         <div class="options-builder">
-          <label>Answer Choices (Select the radio button for the correct choice):</label>
+          <label
+            >Answer Choices (Select the radio button for the correct
+            choice):</label
+          >
           <div
             v-for="(opt, optIndex) in q.options"
             :key="optIndex"
@@ -121,20 +127,20 @@
 </template>
 
 <script setup>
-import { useEconsentStore } from '../../stores/econsent.js';
+import { useEconsentStore } from "../../stores/econsent.js";
 
 const econsentStore = useEconsentStore();
 
 const addQuestion = () => {
   const newQuestion = {
     id: `q-${Date.now()}`,
-    text: '',
-    options: ['', ''],
+    text: "",
+    options: ["", ""],
     correctAnswerIndex: 0,
-    hint: '',
+    hint: "",
     translations: {
-      en: { text: '', options: ['', ''], hint: '' }
-    }
+      en: { text: "", options: ["", ""], hint: "" },
+    },
   };
   econsentStore.quizQuestions.push(newQuestion);
 };
@@ -144,7 +150,7 @@ const removeQuestion = (index) => {
 };
 
 const addOption = (qIndex) => {
-  econsentStore.quizQuestions[qIndex].options.push('');
+  econsentStore.quizQuestions[qIndex].options.push("");
   updateTranslation(econsentStore.quizQuestions[qIndex]);
 };
 
@@ -162,14 +168,14 @@ const removeOption = (qIndex, optIndex) => {
 
 const updateTranslation = (q) => {
   // Sync the current active language translation
-  const lang = econsentStore.activeLanguage || 'en';
+  const lang = econsentStore.activeLanguage || "en";
   if (!q.translations) {
     q.translations = {};
   }
   q.translations[lang] = {
     text: q.text,
     options: [...q.options],
-    hint: q.hint
+    hint: q.hint,
   };
 };
 </script>

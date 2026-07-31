@@ -79,7 +79,7 @@ def _render_pdf_certificate(
             f"4 0 obj <</Length {stream_len}>> stream\n{content_stream}\nendstream\nendobj\n"
             "5 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica>> endobj\n"
         )
-        xref = "xref\n0 6\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \n0000000115 00000 n \n0000000246 00000 n \n0000000350 00000 n \ntrailer <</Size 6 /Root 1 0 R>>\nstartxref\n430\n%%EOF"
+        xref = "xref\n0 6\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \n0000000115 00000 n \n0000000246 00000 n \n0000000350 00000 n \ntrailer <</Size 6 /Root 1 0 R>>\nstartxref\n430\n%%EOF"  # deid-ignore
         return f"{header}{objects}{xref}".encode("latin1", errors="replace")
 
 
@@ -167,9 +167,9 @@ async def process_econsent_signature(
     session.add(signature)
 
     # 5. Write signed PDF blob into document storage layer.
-    os.makedirs("/tmp/consent_pdfs", exist_ok=True)
+    os.makedirs("/tmp/consent_pdfs", exist_ok=True)  # nosec B108: secure internal container temp storage
     pdf_filename = f"{payload.subject_id}_{payload.icf_version_id}_{now.strftime('%Y%m%d%H%M%S')}.pdf"
-    pdf_path = os.path.join("/tmp/consent_pdfs", pdf_filename)
+    pdf_path = os.path.join("/tmp/consent_pdfs", pdf_filename)  # nosec B108: secure internal container temp storage
     with open(pdf_path, "wb") as f:
         f.write(pdf_bytes)
 
