@@ -11,6 +11,8 @@ Based on the executed automated verification suite, the platform meets all prede
 ### Validation Result Summary
 - **Total Automated Test Cases Run:** 1853
 - **Passed:** 1853 🟢
+- **Total Automated Test Cases Run:** 1856
+- **Passed:** 1856 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -21,7 +23,7 @@ The Installation Qualification verifies that the software execution environment,
 
 ### 2.1 System Environment Metadata
 - **Operating System / Platform:** linux (containerized target specification)
-- **Python Version:** 3.12.13 (Docker execution environment baseline)
+- **Python Version:** 3.12.12 (Docker execution environment baseline)
 - **Database Provider (Execution Engine):** PostgreSQL / SQLite in-memory fallback
 - **Graph Database Provider (Designer Engine):** Neo4j (mocked in unit suite)
 - **Identity Management Gateway:** Keycloak OIDC Router
@@ -75,15 +77,12 @@ cyclonedx-python-lib     11.11.0
 defusedxml               0.7.1
 detect-secrets           1.5.0
 distlib                  0.4.3
-docraptor                3.1.0
 docxcompose              2.2.0
 docxtpl                  0.20.2
 ecdsa                    0.19.2
 et-xmlfile               2.0.0
 execnet                  2.1.2
 fastapi                  0.139.2
-fhir-core                1.1.9
-fhir-resources           8.3.0
 filelock                 3.32.0
 fonttools                4.63.0
 frozenlist               1.8.0
@@ -108,7 +107,6 @@ msgpack                  1.2.1
 multidict                6.7.1
 neo4j                    6.2.0
 nodeenv                  1.10.0
-numpy                    2.4.6
 numpy                    2.5.1
 openpyxl                 3.1.5
 packageurl-python        0.17.6
@@ -165,7 +163,6 @@ sqlalchemy               2.0.51
 sqlmodel                 0.0.39
 starlette                1.3.1
 stevedore                5.9.0
-stringcase               1.2.0
 text-unidecode           1.3
 tinycss2                 1.5.1
 tinyhtml5                2.1.0
@@ -175,7 +172,6 @@ typing-extensions        4.16.0
 typing-inspection        0.4.2
 tzdata                   2026.3
 urllib3                  2.7.0
-usdm                     0.66.0
 usdm                     0.67.0
 uvicorn                  0.51.0
 uvloop                   0.22.1
@@ -1144,6 +1140,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_lab_reference_range_audit_and_triggers` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_lab_reference_range_crud_and_precision` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_schema_evolution_migration_upgrade` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001, PRD-QRY-005 | 🟢 PASSED | < 1s |
+| `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_scrambled_sequence` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_valid` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ledger_sealing_and_validation` | `tests.test_ledger_and_triggers` | PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_out_of_band_update_triggers_audit_entry` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_prevent_audit_ledger_seals_mutation` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
