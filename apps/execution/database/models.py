@@ -1340,3 +1340,38 @@ class ProcessedOfflineBatch(Base):
     client_batch_id: Mapped[str] = mapped_column(String(255), primary_key=True)
     device_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     synced_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+
+
+class PromptTranslationJob(AuditedModel):
+    """Represents a natural language prompt rule translation job.
+
+    Requirements: PRD-SYS-001
+    """
+
+    __tablename__ = "prompt_translation_jobs"
+
+    prompt: Mapped[str] = mapped_column(String(1000), nullable=False)
+    translated_rule_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    translated_condition: Mapped[dict] = mapped_column(JSON, nullable=False)
+    target_field: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    query_message: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), nullable=False)
+    created_by: Mapped[str] = mapped_column(String(255), default="system", nullable=False)
+    change_reason: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
+
+
+class SyntheticPatientJob(AuditedModel):
+    """Represents a synthetic patient profile generation run.
+
+    Requirements: PRD-SYS-001
+    """
+
+    __tablename__ = "synthetic_patient_jobs"
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    site_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    subject_count: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    generated_subject_ids: Mapped[dict] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), nullable=False)
+    created_by: Mapped[str] = mapped_column(String(255), default="system", nullable=False)
+    change_reason: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
