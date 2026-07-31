@@ -169,6 +169,24 @@
               "title": "Search"
             },
             "description": "Search document content"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by status",
+              "title": "Status"
+            },
+            "description": "Filter by status"
           }
         ],
         "responses": {
@@ -1323,7 +1341,7 @@
     "/api/v1/etmf/studies/{study_id}/binder": {
       "get": {
         "summary": "Export Regulatory Binder",
-        "description": "Generate an inspection-ready ZIP binder for an eTMF study.\nRestricted to authorized auditor roles.",
+        "description": "Generate an inspection-ready ZIP binder for an eTMF study.",
         "operationId": "export_regulatory_binder_api_v1_etmf_studies__study_id__binder_get",
         "parameters": [
           {
@@ -1943,7 +1961,8 @@
           }
         },
         "type": "object",
-        "title": "DocumentExpirationUpdate"
+        "title": "DocumentExpirationUpdate",
+        "description": "Payload for patching the date-range and ownership metadata of an eTMF document.\n\nAll fields are optional; only the supplied fields are applied.  The\n``validate_dates`` validator enforces chronological ordering when both\n``issue_date`` and ``expiration_date`` are provided together."
       },
       "DocumentResponse": {
         "properties": {
@@ -2155,6 +2174,50 @@
               }
             ],
             "title": "Document Owner Id"
+          },
+          "correlation_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correlation Key"
+          },
+          "content_checksum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Checksum"
+          },
+          "source_system": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source System"
+          },
+          "sync_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sync Status"
           }
         },
         "type": "object",
@@ -2492,6 +2555,18 @@
             "title": "Site Id",
             "description": "Optional site identifier"
           },
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idempotency Key",
+            "description": "Optional idempotency key for deduplication"
+          },
           "artifact_type": {
             "type": "string",
             "title": "Artifact Type",
@@ -2621,6 +2696,42 @@
             ],
             "title": "Document Owner Id",
             "description": "Optional document owner ID"
+          },
+          "correlation_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correlation Key",
+            "description": "Optional stable correlation key for synchronized documents"
+          },
+          "content_checksum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Checksum",
+            "description": "Optional deterministic checksum of the content"
+          },
+          "source_system": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source System",
+            "description": "Optional originating source system"
           }
         },
         "type": "object",

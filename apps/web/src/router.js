@@ -124,6 +124,15 @@ const routes = [
     },
   },
   {
+    path: "/auditor",
+    name: "auditor",
+    component: () => import("./views/AuditorView.vue"),
+    meta: {
+      requiresAuth: true,
+      requiresRole: ["auditor", "tmf_auditor", "sponsor_admin"],
+    },
+  },
+  {
     path: "/rules",
     name: "rules",
     component: () => import("./views/RulesView.vue"),

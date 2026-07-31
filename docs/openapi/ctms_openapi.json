@@ -1404,6 +1404,92 @@
           }
         }
       }
+    },
+    "/api/v1/ctms/monitoring-visits/sync": {
+      "post": {
+        "summary": "Sync Monitoring Visit",
+        "description": "Secure sync endpoint for offline monitoring visits completion and findings.",
+        "operationId": "sync_monitoring_visit_api_v1_ctms_monitoring_visits_sync_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MonitoringVisitOfflineSync"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Sync Monitoring Visit Api V1 Ctms Monitoring Visits Sync Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/monitoring-visits/bulk-sync": {
+      "post": {
+        "summary": "Bulk Sync Monitoring Visits",
+        "description": "Secure bulk sync endpoint for offline monitoring visits completion and findings.",
+        "operationId": "bulk_sync_monitoring_visits_api_v1_ctms_monitoring_visits_bulk_sync_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "items": {
+                  "$ref": "#/components/schemas/MonitoringVisitOfflineSync"
+                },
+                "type": "array",
+                "title": "Payloads"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Bulk Sync Monitoring Visits Api V1 Ctms Monitoring Visits Bulk Sync Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1831,6 +1917,16 @@
         ],
         "title": "CTMSStudyResponse"
       },
+      "ConflictStrategy": {
+        "type": "string",
+        "enum": [
+          "CLIENT_WINS",
+          "SERVER_WINS",
+          "MERGE"
+        ],
+        "title": "ConflictStrategy",
+        "description": "Explicit validated conflict resolution strategies."
+      },
       "FindingCreate": {
         "properties": {
           "text": {
@@ -2211,6 +2307,73 @@
         ],
         "title": "MonitoringVisitCreate"
       },
+      "MonitoringVisitOfflineSync": {
+        "properties": {
+          "visit_id": {
+            "type": "string",
+            "title": "Visit Id",
+            "description": "Unique ID of the target MonitoringVisit"
+          },
+          "study_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Study Id",
+            "description": "Optional study ID"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Optional site ID"
+          },
+          "actual_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Actual Date",
+            "description": "Actual date/time when the visit was conducted"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/FindingCreate"
+            },
+            "type": "array",
+            "title": "Findings",
+            "description": "List of recorded findings",
+            "default": []
+          },
+          "device_timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Device Timestamp",
+            "description": "ISO 8601 timestamp when the entry was created on device"
+          },
+          "offline_sync_markers": {
+            "$ref": "#/components/schemas/OfflineSyncMarkers",
+            "description": "The offline sync queue conflict tracking parameters"
+          }
+        },
+        "type": "object",
+        "required": [
+          "visit_id",
+          "actual_date",
+          "device_timestamp",
+          "offline_sync_markers"
+        ],
+        "title": "MonitoringVisitOfflineSync",
+        "description": "Offline synchronization payload for a site monitoring visit completion and findings."
+      },
       "MonitoringVisitResponse": {
         "properties": {
           "id": {
@@ -2285,6 +2448,60 @@
           "version_index"
         ],
         "title": "MonitoringVisitResponse"
+      },
+      "OfflineSyncMarkers": {
+        "properties": {
+          "sequence_number": {
+            "type": "integer",
+            "title": "Sequence Number",
+            "description": "The queue order sequence from device"
+          },
+          "client_id": {
+            "type": "string",
+            "title": "Client Id",
+            "description": "Unique identifier for the mobile device"
+          },
+          "conflict_strategy": {
+            "$ref": "#/components/schemas/ConflictStrategy",
+            "description": "Conflict strategy to resolve duplicate submissions. Supported: CLIENT_WINS, SERVER_WINS, MERGE",
+            "default": "CLIENT_WINS"
+          },
+          "signature": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature",
+            "description": "Optional HMAC-SHA256 signature of the payload for cryptographic integrity"
+          },
+          "timestamps": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timestamps",
+            "description": "Optional per-field UTC timestamps indicating when each field in 'answers' was modified"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sequence_number",
+          "client_id"
+        ],
+        "title": "OfflineSyncMarkers",
+        "description": "Offline queue reconciliation and conflict resolution parameters."
       },
       "PaymentMilestoneCreate": {
         "properties": {

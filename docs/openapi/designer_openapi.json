@@ -5,6 +5,254 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/api/v1/synopsis/export": {
+      "post": {
+        "tags": [
+          "Synopsis"
+        ],
+        "summary": "Export Synopsis Document",
+        "description": "Export authored clinical protocol synopsis into PDF, DOCX, or HTML format.\n\nRequirements: PRD-SYS-001",
+        "operationId": "export_synopsis_document_api_v1_synopsis_export_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SynopsisExportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SynopsisExportResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/synopsis/render/{study_id}": {
+      "get": {
+        "tags": [
+          "Synopsis"
+        ],
+        "summary": "Render Synopsis Download",
+        "description": "Direct file download endpoint for rendered protocol synopsis documents.\n\nRequirements: PRD-SYS-001",
+        "operationId": "render_synopsis_download_api_v1_synopsis_render__study_id__get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Export format: pdf, docx, html",
+              "default": "pdf",
+              "title": "Format"
+            },
+            "description": "Export format: pdf, docx, html"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/designer/sentinel/evaluate": {
+      "post": {
+        "tags": [
+          "QualitySentinel"
+        ],
+        "summary": "Evaluate Protocol Quality Endpoint",
+        "description": "Evaluate authored protocol specification payload against quality and burden rules.\n\nRequirements: PRD-SYS-001",
+        "operationId": "evaluate_protocol_quality_endpoint_api_v1_designer_sentinel_evaluate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "type": "object",
+                "title": "Payload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtocolQualityScore"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/designer/cascade/propagate": {
+      "post": {
+        "tags": [
+          "ArtifactCascade"
+        ],
+        "summary": "Propagate Cascade Endpoint",
+        "description": "Cascade authored USDM protocol specification changes to downstream eCRFs and SoA matrices.\n\nRequirements: PRD-SYS-001",
+        "operationId": "propagate_cascade_endpoint_api_v1_designer_cascade_propagate_post",
+        "parameters": [
+          {
+            "name": "amendment_version",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1,
+              "title": "Amendment Version"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CascadeSummaryReport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/designer/export/m11/{study_id}": {
+      "get": {
+        "tags": [
+          "ProtocolExport"
+        ],
+        "summary": "Export Protocol M11 Endpoint",
+        "description": "Download authored protocol specification in formatted ICH M11 Word (.docx) or USDM JSON format.\n\nRequirements: PRD-SYS-001",
+        "operationId": "export_protocol_m11_endpoint_api_v1_designer_export_m11__study_id__get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Target export format: docx or json",
+              "default": "docx",
+              "title": "Format"
+            },
+            "description": "Target export format: docx or json"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health Check",
@@ -5766,6 +6014,95 @@
         ],
         "title": "CDASHMapping"
       },
+      "CascadeSummaryReport": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target protocol study ID"
+          },
+          "amendment_version": {
+            "type": "integer",
+            "title": "Amendment Version",
+            "description": "Protocol amendment version index",
+            "default": 1
+          },
+          "forms_created": {
+            "type": "integer",
+            "title": "Forms Created",
+            "description": "Number of eCRF form templates generated"
+          },
+          "visits_created": {
+            "type": "integer",
+            "title": "Visits Created",
+            "description": "Number of SoA visits synchronized"
+          },
+          "rules_synced": {
+            "type": "integer",
+            "title": "Rules Synced",
+            "description": "Number of edit check rules generated"
+          },
+          "forms": {
+            "items": {
+              "$ref": "#/components/schemas/CascadedFormTemplate"
+            },
+            "type": "array",
+            "title": "Forms",
+            "description": "Cascaded form templates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "forms_created",
+          "visits_created",
+          "rules_synced"
+        ],
+        "title": "CascadeSummaryReport",
+        "description": "Summary report of downstream eCRF and SoA cascade propagation.\n\nRequirements: PRD-SYS-001"
+      },
+      "CascadedFormTemplate": {
+        "properties": {
+          "form_id": {
+            "type": "string",
+            "title": "Form Id",
+            "description": "Generated eCRF form template ID"
+          },
+          "form_name": {
+            "type": "string",
+            "title": "Form Name",
+            "description": "eCRF form name"
+          },
+          "domain": {
+            "type": "string",
+            "title": "Domain",
+            "description": "Target CDASH/SDTM domain code (e.g. VS, LB, AE)"
+          },
+          "fields": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Fields",
+            "description": "Form field definitions"
+          },
+          "auto_generated": {
+            "type": "boolean",
+            "title": "Auto Generated",
+            "description": "True if cascaded from DDF protocol graph",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "form_id",
+          "form_name",
+          "domain"
+        ],
+        "title": "CascadedFormTemplate",
+        "description": "Auto-generated eCRF form template derived from USDM activities.\n\nRequirements: PRD-SYS-001"
+      },
       "CodeValidationState": {
         "type": "string",
         "enum": [
@@ -7841,6 +8178,92 @@
         "title": "ProtocolAmendRequest",
         "description": "Payload for the Protocol/Designer Amendment endpoint."
       },
+      "ProtocolQualityScore": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target protocol study ID"
+          },
+          "quality_score": {
+            "type": "number",
+            "title": "Quality Score",
+            "description": "Overall protocol quality score (0.0 to 100.0)"
+          },
+          "patient_burden_index": {
+            "type": "number",
+            "title": "Patient Burden Index",
+            "description": "Calculated patient operational burden score"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/QualityRuleFinding"
+            },
+            "type": "array",
+            "title": "Findings",
+            "description": "Quality findings"
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed",
+            "description": "True if no ERROR severity findings exist"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "quality_score",
+          "patient_burden_index",
+          "passed"
+        ],
+        "title": "ProtocolQualityScore",
+        "description": "Protocol Quality Sentinel evaluation summary report.\n\nRequirements: PRD-SYS-001"
+      },
+      "QualityRuleFinding": {
+        "properties": {
+          "rule_id": {
+            "type": "string",
+            "title": "Rule Id",
+            "description": "Unique quality rule ID (e.g. SENTINEL_REQ_01)"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity",
+            "description": "Severity level: ERROR, WARNING, INFO"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category",
+            "description": "Category: Structural, Regulatory, Burden"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Human-readable rule finding message"
+          },
+          "target_node_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Node Id",
+            "description": "Target USDM graph node ID"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rule_id",
+          "severity",
+          "category",
+          "message"
+        ],
+        "title": "QualityRuleFinding",
+        "description": "Specific protocol quality rule finding.\n\nRequirements: PRD-SYS-001"
+      },
       "RenameConceptRequest": {
         "properties": {
           "display_name": {
@@ -8679,6 +9102,86 @@
         ],
         "title": "SuggestionStatus",
         "description": "Statuses for suggestion workflows."
+      },
+      "SynopsisExportRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Unique protocol study identifier"
+          },
+          "format": {
+            "type": "string",
+            "title": "Format",
+            "description": "Target export format: 'pdf', 'docx', or 'html'",
+            "default": "pdf"
+          },
+          "creator": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Creator",
+            "description": "Author or creator username",
+            "default": "Cadence Clinical DDF Engine"
+          },
+          "change_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Reason",
+            "description": "GxP 21 CFR Part 11 change reason",
+            "default": "Initial Baseline"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id"
+        ],
+        "title": "SynopsisExportRequest",
+        "description": "Request payload for exporting a clinical protocol synopsis.\n\nRequirements: PRD-SYS-001"
+      },
+      "SynopsisExportResponse": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Protocol study identifier"
+          },
+          "format": {
+            "type": "string",
+            "title": "Format",
+            "description": "Export format"
+          },
+          "content_base64": {
+            "type": "string",
+            "title": "Content Base64",
+            "description": "Base64 encoded binary document stream"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "Generated export filename"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "format",
+          "content_base64",
+          "filename"
+        ],
+        "title": "SynopsisExportResponse",
+        "description": "Response payload containing base64 encoded document export stream.\n\nRequirements: PRD-SYS-001"
       },
       "TerminologyConcept": {
         "properties": {

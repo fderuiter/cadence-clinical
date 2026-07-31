@@ -5,6 +5,793 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/api/v1/execution/locks/lock": {
+      "post": {
+        "tags": [
+          "DataLock"
+        ],
+        "summary": "Lock Data Endpoint",
+        "description": "Execute form, item-group, or field-level data lock or freeze operation.\n\nRequirements: PRD-SYS-001",
+        "operationId": "lock_data_endpoint_api_v1_execution_locks_lock_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DataLockRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataLockResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/locks/unlock": {
+      "post": {
+        "tags": [
+          "DataLock"
+        ],
+        "summary": "Unlock Data Endpoint",
+        "description": "Execute GxP data unlock override operation.\n\nRequirements: PRD-SYS-001",
+        "operationId": "unlock_data_endpoint_api_v1_execution_locks_unlock_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DataLockRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataLockResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/locks/status/{form_id}": {
+      "get": {
+        "tags": [
+          "DataLock"
+        ],
+        "summary": "Get Form Lock Status Endpoint",
+        "description": "Retrieve active data locks for specified eCRF form submission.\n\nRequirements: PRD-SYS-001",
+        "operationId": "get_form_lock_status_endpoint_api_v1_execution_locks_status__form_id__get",
+        "parameters": [
+          {
+            "name": "form_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Form Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DataLockRecord"
+                  },
+                  "title": "Response Get Form Lock Status Endpoint Api V1 Execution Locks Status  Form Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/signatures/batch-sign-off": {
+      "post": {
+        "tags": [
+          "Signatures"
+        ],
+        "summary": "Batch Signature Sign Off Endpoint",
+        "description": "Execute 21 CFR Part 11 batch electronic signature casebook sign-off.\n\nRequirements: PRD-SYS-001",
+        "operationId": "batch_signature_sign_off_endpoint_api_v1_execution_signatures_batch_sign_off_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchSignatureRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchSignatureResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/amendments/publish": {
+      "post": {
+        "tags": [
+          "Amendments"
+        ],
+        "summary": "Publish Amendment Endpoint",
+        "description": "Publish protocol amendment version and compute structural summary of changes.\n\nRequirements: PRD-SYS-001",
+        "operationId": "publish_amendment_endpoint_api_v1_execution_amendments_publish_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishAmendmentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishAmendmentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/amendments/summary/{study_id}/{version}": {
+      "get": {
+        "tags": [
+          "Amendments"
+        ],
+        "summary": "Get Amendment Summary Endpoint",
+        "description": "Export Summary of Changes report for specified study version.\n\nRequirements: PRD-SYS-001",
+        "operationId": "get_amendment_summary_endpoint_api_v1_execution_amendments_summary__study_id___version__get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Amendment Summary Endpoint Api V1 Execution Amendments Summary  Study Id   Version  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/auditor/token/generate": {
+      "post": {
+        "tags": [
+          "Auditor"
+        ],
+        "summary": "Generate Auditor Token Endpoint",
+        "description": "Generate temporary time-bounded access token for regulatory auditors.\n\nRequirements: PRD-SYS-001",
+        "operationId": "generate_auditor_token_endpoint_api_v1_execution_auditor_token_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateAuditorTokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Generate Auditor Token Endpoint Api V1 Execution Auditor Token Generate Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/auditor/inspect/audit-trail/{study_id}": {
+      "get": {
+        "tags": [
+          "Auditor"
+        ],
+        "summary": "Inspect Study Audit Trail Endpoint",
+        "description": "Expose read-only 21 CFR Part 11 audit trail inspection endpoint for study.\n\nRequirements: PRD-SYS-001",
+        "operationId": "inspect_study_audit_trail_endpoint_api_v1_execution_auditor_inspect_audit_trail__study_id__get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Inspect Study Audit Trail Endpoint Api V1 Execution Auditor Inspect Audit Trail  Study Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/safety/dispatch": {
+      "post": {
+        "tags": [
+          "Safety"
+        ],
+        "summary": "Dispatch Safety Report Endpoint",
+        "description": "Dispatch ICH E2B(R3) safety report to external pharmacovigilance gateway.\n\nRequirements: PRD-SYS-001",
+        "operationId": "dispatch_safety_report_endpoint_api_v1_execution_safety_dispatch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SafetyDispatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafetyDispatchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/safety/reconcile": {
+      "post": {
+        "tags": [
+          "Safety"
+        ],
+        "summary": "Reconcile Sae Cases Endpoint",
+        "description": "Execute automated EDC AE to Safety ICSR case reconciliation.\n\nRequirements: PRD-SYS-001",
+        "operationId": "reconcile_sae_cases_endpoint_api_v1_execution_safety_reconcile_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SAEReconcileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Reconcile Sae Cases Endpoint Api V1 Execution Safety Reconcile Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/eisf/upload": {
+      "post": {
+        "tags": [
+          "eISF"
+        ],
+        "summary": "Upload Eisf Document Endpoint",
+        "description": "Upload eISF regulatory binder document and calculate SHA-256 integrity checksum.\n\nRequirements: PRD-SYS-001",
+        "operationId": "upload_eisf_document_endpoint_api_v1_execution_eisf_upload_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadEISFDocumentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EISFDocumentRecord"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/eisf/binder/{study_id}/{site_id}": {
+      "get": {
+        "tags": [
+          "eISF"
+        ],
+        "summary": "Get Site Regulatory Binder Endpoint",
+        "description": "Retrieve site-isolated regulatory binder documents for specified study and site.\n\nRequirements: PRD-SYS-001",
+        "operationId": "get_site_regulatory_binder_endpoint_api_v1_execution_eisf_binder__study_id___site_id__get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EISFDocumentRecord"
+                  },
+                  "title": "Response Get Site Regulatory Binder Endpoint Api V1 Execution Eisf Binder  Study Id   Site Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/anonymization/scan-phi": {
+      "post": {
+        "tags": [
+          "Anonymization"
+        ],
+        "summary": "Scan Phi Endpoint",
+        "description": "Scan text payload for Protected Health Information (PHI) identifiers.\n\nRequirements: PRD-SYS-001",
+        "operationId": "scan_phi_endpoint_api_v1_execution_anonymization_scan_phi_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PHIScanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Scan Phi Endpoint Api V1 Execution Anonymization Scan Phi Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/anonymization/redact-pdf": {
+      "post": {
+        "tags": [
+          "Anonymization"
+        ],
+        "summary": "Redact Pdf Endpoint",
+        "description": "Apply non-destructive PHI redaction overlays to PDF document.\n\nRequirements: PRD-SYS-001",
+        "operationId": "redact_pdf_endpoint_api_v1_execution_anonymization_redact_pdf_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RedactPDFRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Redact Pdf Endpoint Api V1 Execution Anonymization Redact Pdf Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/doa/assignment": {
+      "post": {
+        "tags": [
+          "DOA"
+        ],
+        "summary": "Add Doa Assignment Endpoint",
+        "description": "Add site personnel task delegation entry to Delegation of Authority log.\n\nRequirements: PRD-SYS-001",
+        "operationId": "add_doa_assignment_endpoint_api_v1_execution_doa_assignment_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddDOAAssignmentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DOAAssignmentRecord"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/doa/sign-off": {
+      "post": {
+        "tags": [
+          "DOA"
+        ],
+        "summary": "Sign Off Doa Assignment Endpoint",
+        "description": "Endorse Delegation of Authority task assignment with Principal Investigator eSignature.\n\nRequirements: PRD-SYS-001",
+        "operationId": "sign_off_doa_assignment_endpoint_api_v1_execution_doa_sign_off_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DOASignOffRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DOAAssignmentRecord"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/doa/log/{study_id}/{site_id}": {
+      "get": {
+        "tags": [
+          "DOA"
+        ],
+        "summary": "Get Site Doa Log Endpoint",
+        "description": "Retrieve site-isolated Delegation of Authority log entries.\n\nRequirements: PRD-SYS-001",
+        "operationId": "get_site_doa_log_endpoint_api_v1_execution_doa_log__study_id___site_id__get",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DOAAssignmentRecord"
+                  },
+                  "title": "Response Get Site Doa Log Endpoint Api V1 Execution Doa Log  Study Id   Site Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health Check",
@@ -284,7 +1071,7 @@
     "/api/v1/execution/subjects/{subject_id}/unblind": {
       "post": {
         "summary": "Unblind Subject",
-        "description": "Execute emergency unblinding for a subject.",
+        "description": "Execute an emergency treatment-allocation unblinding for a randomised subject.\n\nThis endpoint implements the GxP / 21 CFR Part 11 compliant emergency\nunblinding workflow: it validates step-up re-authentication, performs\nShamir dual-custody reconstruction of the encrypted allocation, builds a\ncryptographically signed evidence record, writes an immutable audit-log\nentry, and dispatches a critical-priority dashboard notification \u2014 all\nwithin a single atomic database transaction.\n\nArgs:\n    subject_id: Path parameter identifying the subject to unblind.\n    request: The raw FastAPI request object; used to extract and validate\n        the step-up ``X-Sig-Token`` and change-justification headers.\n    background_tasks: FastAPI background-task registry used to dispatch\n        the post-commit dashboard notification without blocking the response.\n    payload: Validated ``UnblindRequest`` body containing the reason code,\n        clinical justification, and exactly two Shamir custodian shares.\n    principal: The authenticated caller resolved by ``get_principal``.\n    roles: Role enforcement dependency; only the four approved unblinding\n        personas may call this endpoint.\n\nReturns:\n    SubjectUnblindResponse: The subject's updated unblinding status and\n    allocation details, masked according to the caller's access level.\n\nRaises:\n    HTTPException(400): If the justification is too short, the subject has\n        not been randomised, the Shamir reconstruction fails, the decrypted\n        payload does not contain a recognisable allocation field, or the\n        subject is already unblinded.\n    HTTPException(401): If the ``X-Sig-Token`` is absent or invalid\n        (step-up re-authentication required).\n    HTTPException(403): If the caller's role is insufficient.\n    HTTPException(404): If the subject record does not exist.",
         "operationId": "unblind_subject_api_v1_execution_subjects__subject_id__unblind_post",
         "parameters": [
           {
@@ -297,6 +1084,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnblindRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -3593,6 +4390,59 @@
   },
   "components": {
     "schemas": {
+      "AddDOAAssignmentRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target protocol study ID"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Target investigator site ID"
+          },
+          "personnel_name": {
+            "type": "string",
+            "title": "Personnel Name",
+            "description": "Full legal name"
+          },
+          "personnel_email": {
+            "type": "string",
+            "title": "Personnel Email",
+            "description": "Email address"
+          },
+          "role": {
+            "$ref": "#/components/schemas/DOATaskRoleEnum",
+            "description": "Site role"
+          },
+          "delegated_tasks": {
+            "items": {
+              "$ref": "#/components/schemas/DOATaskDelegationEnum"
+            },
+            "type": "array",
+            "title": "Delegated Tasks",
+            "description": "List of delegated tasks"
+          },
+          "start_date": {
+            "type": "string",
+            "title": "Start Date",
+            "description": "Delegation start date (YYYY-MM-DD)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "personnel_name",
+          "personnel_email",
+          "role",
+          "delegated_tasks",
+          "start_date"
+        ],
+        "title": "AddDOAAssignmentRequest",
+        "description": "Request payload to add site personnel task delegation record.\n\nRequirements: PRD-SYS-001"
+      },
       "BatchSignOffRequest": {
         "properties": {
           "study_id": {
@@ -3660,6 +4510,118 @@
           "skipped_targets"
         ],
         "title": "BatchSignOffResponse"
+      },
+      "BatchSignatureRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target protocol study ID"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Target subject ID"
+          },
+          "target_type": {
+            "type": "string",
+            "title": "Target Type",
+            "description": "Target artifact type: FORM, CASEBOOK, DOC",
+            "default": "FORM"
+          },
+          "target_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Target Ids",
+            "description": "List of target artifact IDs"
+          },
+          "target_form_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Target Form Ids",
+            "description": "List of eCRF form IDs to sign"
+          },
+          "signing_reason": {
+            "type": "string",
+            "title": "Signing Reason",
+            "description": "21 CFR Part 11 signature purpose/meaning"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password",
+            "description": "Re-authentication password for identity confirmation"
+          },
+          "printed_name": {
+            "type": "string",
+            "title": "Printed Name",
+            "description": "Printed full name of Principal Investigator"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "subject_id",
+          "signing_reason",
+          "password",
+          "printed_name"
+        ],
+        "title": "BatchSignatureRequest",
+        "description": "Request payload for Principal Investigator batch eSignature casebook sign-off.\n\nRequirements: PRD-SYS-001"
+      },
+      "BatchSignatureResponse": {
+        "properties": {
+          "signature_id": {
+            "type": "string",
+            "title": "Signature Id",
+            "description": "Unique cryptographic signature record ID"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target study ID"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Target subject ID"
+          },
+          "signed_forms_count": {
+            "type": "integer",
+            "title": "Signed Forms Count",
+            "description": "Total number of signed eCRF forms"
+          },
+          "content_digest": {
+            "type": "string",
+            "title": "Content Digest",
+            "description": "SHA-256 digest of signed casebook data"
+          },
+          "timestamp_utc": {
+            "type": "string",
+            "title": "Timestamp Utc",
+            "description": "UTC ISO timestamp of signature execution"
+          },
+          "audit_tx": {
+            "type": "string",
+            "title": "Audit Tx",
+            "description": "Immutable GxP audit ledger transaction ID"
+          }
+        },
+        "type": "object",
+        "required": [
+          "signature_id",
+          "study_id",
+          "subject_id",
+          "signed_forms_count",
+          "content_digest",
+          "timestamp_utc",
+          "audit_tx"
+        ],
+        "title": "BatchSignatureResponse",
+        "description": "Response payload following successful batch eSignature execution.\n\nRequirements: PRD-SYS-001"
       },
       "Body_import_dictionary_api_v1_dictionaries_import_post": {
         "properties": {
@@ -4210,6 +5172,360 @@
         "title": "CriterionLevelResult",
         "description": "Pydantic schema for individual criterion level evaluation result."
       },
+      "CustodianEnum": {
+        "type": "string",
+        "enum": [
+          "Lead Unblinded Statistician",
+          "IDMC"
+        ],
+        "title": "CustodianEnum",
+        "description": "Enumeration of the two permissible dual-custody key holders.\n\nThe Shamir secret-sharing scheme used for emergency unblinding mandates\nthat exactly one share comes from each of these two custodians.  Any\nother custodian identity is rejected with a 422 validation error before\nthe request reaches the cryptographic layer.\n\nAttributes:\n    LEAD_UNBLINDED_STATISTICIAN: The lead unblinded statistician who holds\n        one half of the Shamir key share.\n    IDMC: The Independent Data Monitoring Committee representative who holds\n        the second half of the Shamir key share."
+      },
+      "CustodianShare": {
+        "properties": {
+          "custodian": {
+            "$ref": "#/components/schemas/CustodianEnum"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "x": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "X",
+            "description": "Shamir x-coordinate; must be > 0"
+          },
+          "y": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Y",
+            "description": "Shamir y-coordinate; must be >= 0"
+          }
+        },
+        "type": "object",
+        "required": [
+          "custodian",
+          "version",
+          "x",
+          "y"
+        ],
+        "title": "CustodianShare",
+        "description": "A single custodian's Shamir secret share for dual-custody unblinding.\n\nBoth shares must be present in the request body before the encrypted\nallocation record can be reconstructed.  Field constraints are enforced\nat the schema boundary so malformed shares produce structured 422\nresponses rather than opaque crypto-layer failures.\n\nAttributes:\n    custodian: The identity of the key custodian; must be one of the two\n        approved dual-custody holders defined by ``CustodianEnum``.\n    version: The version of the key material associated with this share;\n        used to select the correct key generation from the database.\n    x: The x-coordinate of the Shamir share point; must be strictly\n        positive (> 0) as required by the polynomial reconstruction.\n    y: The y-coordinate of the Shamir share point; must be non-negative\n        (>= 0) and less than the prime modulus used by the crypto layer."
+      },
+      "DOAAssignmentRecord": {
+        "properties": {
+          "record_id": {
+            "type": "string",
+            "title": "Record Id",
+            "description": "Unique DOA record identifier"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target protocol study ID"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Target investigator site ID"
+          },
+          "personnel_name": {
+            "type": "string",
+            "title": "Personnel Name",
+            "description": "Full legal name of site personnel"
+          },
+          "personnel_email": {
+            "type": "string",
+            "title": "Personnel Email",
+            "description": "Email address of site personnel"
+          },
+          "role": {
+            "$ref": "#/components/schemas/DOATaskRoleEnum",
+            "description": "Site personnel role"
+          },
+          "delegated_tasks": {
+            "items": {
+              "$ref": "#/components/schemas/DOATaskDelegationEnum"
+            },
+            "type": "array",
+            "title": "Delegated Tasks",
+            "description": "List of delegated study tasks"
+          },
+          "start_date": {
+            "type": "string",
+            "title": "Start Date",
+            "description": "Task delegation start date (YYYY-MM-DD)"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date",
+            "description": "Optional task delegation end date"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "description": "True if assignment is active",
+            "default": true
+          },
+          "signed_off": {
+            "type": "boolean",
+            "title": "Signed Off",
+            "description": "True if eSignature endorsed by PI",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "record_id",
+          "study_id",
+          "site_id",
+          "personnel_name",
+          "personnel_email",
+          "role",
+          "delegated_tasks",
+          "start_date"
+        ],
+        "title": "DOAAssignmentRecord",
+        "description": "Delegation of Authority (DOA) site personnel assignment log record.\n\nRequirements: PRD-SYS-001"
+      },
+      "DOASignOffRequest": {
+        "properties": {
+          "record_id": {
+            "type": "string",
+            "title": "Record Id",
+            "description": "Target DOA record ID"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Mandatory GxP 21 CFR Part 11 justification"
+          }
+        },
+        "type": "object",
+        "required": [
+          "record_id",
+          "reason_for_change"
+        ],
+        "title": "DOASignOffRequest",
+        "description": "Request payload for PI eSignature endorsement of DOA record.\n\nRequirements: PRD-SYS-001"
+      },
+      "DOATaskDelegationEnum": {
+        "type": "string",
+        "enum": [
+          "SUBJECT_INFORMED_CONSENT",
+          "PHYSICAL_EXAMINATION",
+          "AE_SAE_REPORTING",
+          "CRF_DATA_ENTRY",
+          "PI_CASEBOOK_SIGNOFF"
+        ],
+        "title": "DOATaskDelegationEnum",
+        "description": "Specific clinical trial study tasks delegated to site personnel.\n\nRequirements: PRD-SYS-001"
+      },
+      "DOATaskRoleEnum": {
+        "type": "string",
+        "enum": [
+          "PRINCIPAL_INVESTIGATOR",
+          "SUB_INVESTIGATOR",
+          "CLINICAL_RESEARCH_COORDINATOR",
+          "STUDY_NURSE",
+          "DATA_MANAGER"
+        ],
+        "title": "DOATaskRoleEnum",
+        "description": "Site personnel roles on Delegation of Authority log.\n\nRequirements: PRD-SYS-001"
+      },
+      "DataLockRecord": {
+        "properties": {
+          "lock_id": {
+            "type": "string",
+            "title": "Lock Id",
+            "description": "Unique data lock record identifier"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target protocol study ID"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Target clinical trial subject ID"
+          },
+          "form_id": {
+            "type": "string",
+            "title": "Form Id",
+            "description": "Target eCRF form submission ID"
+          },
+          "item_group_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Group Id",
+            "description": "Optional target item group code"
+          },
+          "field_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field Name",
+            "description": "Optional target field variable name"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/LockScopeEnum",
+            "description": "Lock scope: FORM, ITEM_GROUP, FIELD"
+          },
+          "status": {
+            "$ref": "#/components/schemas/LockStatusEnum",
+            "description": "Lock status: UNLOCKED, FROZEN, LOCKED",
+            "default": "LOCKED"
+          },
+          "locked_by": {
+            "type": "string",
+            "title": "Locked By",
+            "description": "User ID who executed data lock"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "GxP 21 CFR Part 11 justification reason"
+          },
+          "locked_at": {
+            "type": "string",
+            "title": "Locked At",
+            "description": "UTC ISO timestamp of lock execution"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lock_id",
+          "study_id",
+          "subject_id",
+          "form_id",
+          "scope",
+          "locked_by",
+          "reason_for_change",
+          "locked_at"
+        ],
+        "title": "DataLockRecord",
+        "description": "Data lock state record representing frozen or locked clinical eCRF data.\n\nRequirements: PRD-SYS-001"
+      },
+      "DataLockRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target protocol study ID"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Target subject ID"
+          },
+          "form_id": {
+            "type": "string",
+            "title": "Form Id",
+            "description": "Target eCRF form ID"
+          },
+          "item_group_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Group Id",
+            "description": "Optional target item group code"
+          },
+          "field_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field Name",
+            "description": "Optional target field variable name"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/LockScopeEnum",
+            "description": "Lock scope: FORM, ITEM_GROUP, FIELD",
+            "default": "FORM"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action",
+            "description": "Action to perform: LOCK, FREEZE, UNLOCK",
+            "default": "LOCK"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Mandatory GxP 21 CFR Part 11 justification reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "subject_id",
+          "form_id",
+          "reason_for_change"
+        ],
+        "title": "DataLockRequest",
+        "description": "Request payload to execute form, item group, or field-level data locking.\n\nRequirements: PRD-SYS-001"
+      },
+      "DataLockResponse": {
+        "properties": {
+          "lock_id": {
+            "type": "string",
+            "title": "Lock Id",
+            "description": "Lock record identifier"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Resulting status: LOCKED, FROZEN, UNLOCKED"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Operation result confirmation message"
+          },
+          "record": {
+            "$ref": "#/components/schemas/DataLockRecord",
+            "description": "Updated data lock record"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lock_id",
+          "status",
+          "message",
+          "record"
+        ],
+        "title": "DataLockResponse",
+        "description": "Response payload for data lock/unlock operations.\n\nRequirements: PRD-SYS-001"
+      },
       "Demographics": {
         "properties": {
           "name": {
@@ -4332,6 +5648,113 @@
           "resupply_triggered"
         ],
         "title": "DispenseResponse"
+      },
+      "EISFDocumentRecord": {
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "title": "Document Id",
+            "description": "Unique eISF document identifier"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target protocol study ID"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Target investigator site ID (for site-scoped isolation)"
+          },
+          "category": {
+            "$ref": "#/components/schemas/EISFTaxonomyCategoryEnum",
+            "description": "DIA taxonomy category"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Human-readable document title"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "description": "Document version string",
+            "default": "1.0"
+          },
+          "file_name": {
+            "type": "string",
+            "title": "File Name",
+            "description": "Original uploaded filename"
+          },
+          "file_size_bytes": {
+            "type": "integer",
+            "title": "File Size Bytes",
+            "description": "File size in bytes"
+          },
+          "sha256_hash": {
+            "type": "string",
+            "title": "Sha256 Hash",
+            "description": "SHA-256 integrity checksum hex string"
+          },
+          "uploaded_by": {
+            "type": "string",
+            "title": "Uploaded By",
+            "description": "User ID of uploader"
+          },
+          "uploaded_at": {
+            "type": "string",
+            "title": "Uploaded At",
+            "description": "UTC ISO timestamp of upload"
+          },
+          "expiration_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expiration Date",
+            "description": "Optional document expiration date (YYYY-MM-DD)"
+          },
+          "is_redacted": {
+            "type": "boolean",
+            "title": "Is Redacted",
+            "description": "True if document contains non-destructive PHI redactions",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id",
+          "study_id",
+          "site_id",
+          "category",
+          "title",
+          "file_name",
+          "file_size_bytes",
+          "sha256_hash",
+          "uploaded_by",
+          "uploaded_at"
+        ],
+        "title": "EISFDocumentRecord",
+        "description": "eISF regulatory binder document metadata record.\n\nRequirements: PRD-SYS-001"
+      },
+      "EISFTaxonomyCategoryEnum": {
+        "type": "string",
+        "enum": [
+          "1_INVESTIGATOR_CV",
+          "2_MEDICAL_LICENSE",
+          "3_PROTOCOL_APPROVAL",
+          "4_IRB_IEC_APPROVAL",
+          "5_INFORMED_CONSENT",
+          "6_FINANCIAL_DISCLOSURE",
+          "7_DELEGATION_OF_AUTHORITY",
+          "8_SAFETY_REPORT"
+        ],
+        "title": "EISFTaxonomyCategoryEnum",
+        "description": "DIA eISF / Regulatory Binder document taxonomy categories.\n\nRequirements: PRD-SYS-001"
       },
       "FormSubmissionApprove": {
         "properties": {
@@ -4461,6 +5884,39 @@
           "is_deleted"
         ],
         "title": "FormSubmissionResponse"
+      },
+      "GenerateAuditorTokenRequest": {
+        "properties": {
+          "auditor_email": {
+            "type": "string",
+            "title": "Auditor Email",
+            "description": "Target auditor email address"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target protocol study ID"
+          },
+          "duration_hours": {
+            "type": "integer",
+            "title": "Duration Hours",
+            "description": "Token validity in hours",
+            "default": 24
+          },
+          "reason_for_access": {
+            "type": "string",
+            "title": "Reason For Access",
+            "description": "GxP reason for provisioning auditor access"
+          }
+        },
+        "type": "object",
+        "required": [
+          "auditor_email",
+          "study_id",
+          "reason_for_access"
+        ],
+        "title": "GenerateAuditorTokenRequest",
+        "description": "Request payload to generate a temporary auditor access token.\n\nRequirements: PRD-SYS-001"
       },
       "HTTPValidationError": {
         "properties": {
@@ -5159,6 +6615,26 @@
         "title": "LocalLedgerBlock",
         "description": "Pydantic schema representing a cryptographically chained offline ledger block."
       },
+      "LockScopeEnum": {
+        "type": "string",
+        "enum": [
+          "FORM",
+          "ITEM_GROUP",
+          "FIELD"
+        ],
+        "title": "LockScopeEnum",
+        "description": "Granular lock scope boundaries.\n\nRequirements: PRD-SYS-001"
+      },
+      "LockStatusEnum": {
+        "type": "string",
+        "enum": [
+          "UNLOCKED",
+          "FROZEN",
+          "LOCKED"
+        ],
+        "title": "LockStatusEnum",
+        "description": "Data lock lifecycle status.\n\nRequirements: PRD-SYS-001"
+      },
       "LockStatusResponse": {
         "properties": {
           "locked_sites": {
@@ -5815,6 +7291,21 @@
         "title": "OutlierRecalculateResponse",
         "description": "Pydantic schema returning recalculation status."
       },
+      "PHIScanRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "description": "Document text content to scan for PHI"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "PHIScanRequest",
+        "description": "Request payload to scan text for HIPAA 18 PHI identifiers.\n\nRequirements: PRD-SYS-001"
+      },
       "PrimarySocFlagEnum": {
         "type": "string",
         "enum": [
@@ -5919,6 +7410,98 @@
         ],
         "title": "ProtocolVersionStatus",
         "description": "Controlled vocabulary of statuses for a clinical protocol or study version."
+      },
+      "PublishAmendmentRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target protocol study ID"
+          },
+          "version_number": {
+            "type": "string",
+            "title": "Version Number",
+            "description": "Amended protocol version string (e.g. 2.0)"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Amendment summary description"
+          },
+          "baseline_snapshot": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Baseline Snapshot",
+            "description": "Previous USDM snapshot"
+          },
+          "amended_snapshot": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Amended Snapshot",
+            "description": "New amended USDM snapshot"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "version_number",
+          "description",
+          "baseline_snapshot",
+          "amended_snapshot"
+        ],
+        "title": "PublishAmendmentRequest",
+        "description": "Request payload to publish a new protocol amendment version.\n\nRequirements: PRD-SYS-001"
+      },
+      "PublishAmendmentResponse": {
+        "properties": {
+          "amendment_id": {
+            "type": "string",
+            "title": "Amendment Id",
+            "description": "Unique amendment publication ID"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target study ID"
+          },
+          "version_number": {
+            "type": "string",
+            "title": "Version Number",
+            "description": "Published version string"
+          },
+          "published_at": {
+            "type": "string",
+            "title": "Published At",
+            "description": "UTC ISO publication timestamp"
+          },
+          "summary_of_changes": {
+            "type": "string",
+            "title": "Summary Of Changes",
+            "description": "Human-readable summary of changes"
+          },
+          "added_activities_count": {
+            "type": "integer",
+            "title": "Added Activities Count",
+            "description": "Number of added activities"
+          },
+          "removed_activities_count": {
+            "type": "integer",
+            "title": "Removed Activities Count",
+            "description": "Number of removed activities"
+          }
+        },
+        "type": "object",
+        "required": [
+          "amendment_id",
+          "study_id",
+          "version_number",
+          "published_at",
+          "summary_of_changes",
+          "added_activities_count",
+          "removed_activities_count"
+        ],
+        "title": "PublishAmendmentResponse",
+        "description": "Response payload following protocol amendment publishing.\n\nRequirements: PRD-SYS-001"
       },
       "QueryCancel": {
         "properties": {
@@ -6446,6 +8029,69 @@
         "title": "QueryUpdate",
         "description": "Pydantic schema for general state transitions."
       },
+      "RedactPDFRequest": {
+        "properties": {
+          "pdf_base64": {
+            "type": "string",
+            "title": "Pdf Base64",
+            "description": "Base64 encoded PDF document content"
+          },
+          "target_snippets": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Target Snippets",
+            "description": "Target PHI strings to redact"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pdf_base64"
+        ],
+        "title": "RedactPDFRequest",
+        "description": "Request payload to apply non-destructive redactions to PDF document.\n\nRequirements: PRD-SYS-001"
+      },
+      "SAEReconcileRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target study ID"
+          },
+          "edc_ae_events": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Edc Ae Events",
+            "description": "List of EDC AE form data dicts"
+          },
+          "safety_cases_xml": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Safety Cases Xml",
+            "description": "Optional raw E2B XML reports to parse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "edc_ae_events"
+        ],
+        "title": "SAEReconcileRequest",
+        "description": "Request payload to reconcile EDC AE data against Safety ICSR cases.\n\nRequirements: PRD-SYS-001"
+      },
       "SDVScopeEnum": {
         "type": "string",
         "enum": [
@@ -6589,6 +8235,90 @@
         ],
         "title": "SDVSignOffResponse",
         "description": "Pydantic response schema for SDV sign-off."
+      },
+      "SafetyDispatchRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target protocol study ID"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id",
+            "description": "Target subject ID"
+          },
+          "safety_report_id": {
+            "type": "string",
+            "title": "Safety Report Id",
+            "description": "Unique E2B(R3) Safety Report ID"
+          },
+          "destination_gateway": {
+            "type": "string",
+            "title": "Destination Gateway",
+            "description": "Destination safety gateway: ARGUS, ARISG, EUDRAVIGILANCE",
+            "default": "ARGUS"
+          },
+          "expedited": {
+            "type": "boolean",
+            "title": "Expedited",
+            "description": "True for expedited 7/15-day reporting",
+            "default": true
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Mandatory GxP 21 CFR Part 11 justification reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "subject_id",
+          "safety_report_id",
+          "reason_for_change"
+        ],
+        "title": "SafetyDispatchRequest",
+        "description": "Request payload to dispatch ICH E2B(R3) safety report to external PV gateway.\n\nRequirements: PRD-SYS-001"
+      },
+      "SafetyDispatchResponse": {
+        "properties": {
+          "dispatch_id": {
+            "type": "string",
+            "title": "Dispatch Id",
+            "description": "Unique dispatch transaction ID"
+          },
+          "safety_report_id": {
+            "type": "string",
+            "title": "Safety Report Id",
+            "description": "Target Safety Report ID"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "Dispatch status: DISPATCHED, DELIVERED, ACKNOWLEDGED"
+          },
+          "dispatched_at": {
+            "type": "string",
+            "title": "Dispatched At",
+            "description": "UTC ISO dispatch timestamp"
+          },
+          "ack_status": {
+            "type": "string",
+            "title": "Ack Status",
+            "description": "AS2 / SFTP gateway acknowledgment message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dispatch_id",
+          "safety_report_id",
+          "status",
+          "dispatched_at",
+          "ack_status"
+        ],
+        "title": "SafetyDispatchResponse",
+        "description": "Response payload following E2B safety report gateway dispatch.\n\nRequirements: PRD-SYS-001"
       },
       "SamplingModelEnum": {
         "type": "string",
@@ -7575,6 +9305,46 @@
         ],
         "title": "UCUMUnitValue"
       },
+      "UnblindRequest": {
+        "properties": {
+          "reason_code": {
+            "$ref": "#/components/schemas/UnblindingReasonCode"
+          },
+          "justification": {
+            "type": "string",
+            "minLength": 50,
+            "title": "Justification"
+          },
+          "shares": {
+            "items": {
+              "$ref": "#/components/schemas/CustodianShare"
+            },
+            "type": "array",
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "Shares",
+            "description": "Exactly two custodian shares are required (dual-custody contract)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason_code",
+          "justification",
+          "shares"
+        ],
+        "title": "UnblindRequest",
+        "description": "Request body for an emergency treatment-allocation unblinding operation.\n\nThe dual-custody contract requires exactly two custodian shares \u2014 one from\neach approved custodian.  Requests with fewer or more shares, or with an\ninsufficiently detailed justification, are rejected at the schema layer.\n\nAttributes:\n    reason_code: One of the three regulatory-approved unblinding scenarios\n        from ``UnblindingReasonCode``.\n    justification: A free-text clinical justification of at least\n        ``MIN_JUSTIFICATION_LENGTH`` characters.  Stored only in the\n        immutable audit record; never broadcast in notifications.\n    shares: Exactly two ``CustodianShare`` objects \u2014 one per approved\n        custodian \u2014 supplying the Shamir secret shares needed to\n        reconstruct the blinded allocation key."
+      },
+      "UnblindingReasonCode": {
+        "type": "string",
+        "enum": [
+          "SAE-Life-Threatening-Event",
+          "Accidental-Overdose",
+          "Required-by-Regulatory-Authority"
+        ],
+        "title": "UnblindingReasonCode",
+        "description": "Controlled vocabulary of approved reason codes for emergency unblinding.\n\nOnly these three regulatory-approved scenarios authorise an emergency\ntreatment-allocation disclosure outside of the standard end-of-study\nunblinding process.\n\nAttributes:\n    SAE_LIFE_THREATENING_EVENT: Serious Adverse Event that is immediately\n        life-threatening and requires knowledge of the treatment assignment.\n    ACCIDENTAL_OVERDOSE: Accidental administration of an overdose requiring\n        immediate clinical intervention with knowledge of the treatment arm.\n    REQUIRED_BY_REGULATORY_AUTHORITY: A competent regulatory authority has\n        formally requested disclosure of the blinded assignment."
+      },
       "UnitConversionRequest": {
         "properties": {
           "value": {
@@ -7627,6 +9397,50 @@
         ],
         "title": "UnitConversionResponse",
         "description": "Pydantic schema returning converted values."
+      },
+      "UploadEISFDocumentRequest": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Target protocol study ID"
+          },
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Target investigator site ID"
+          },
+          "category": {
+            "$ref": "#/components/schemas/EISFTaxonomyCategoryEnum",
+            "description": "DIA taxonomy category"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Document title"
+          },
+          "file_name": {
+            "type": "string",
+            "title": "File Name",
+            "description": "Original file name"
+          },
+          "content_base64": {
+            "type": "string",
+            "title": "Content Base64",
+            "description": "Base64 encoded file content string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "site_id",
+          "category",
+          "title",
+          "file_name",
+          "content_base64"
+        ],
+        "title": "UploadEISFDocumentRequest",
+        "description": "Request payload to upload an eISF document.\n\nRequirements: PRD-SYS-001"
       },
       "ValidationError": {
         "properties": {
