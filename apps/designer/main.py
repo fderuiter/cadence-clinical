@@ -116,6 +116,7 @@ from apps.designer.delta import (
     update_visit,
 )
 from apps.designer.evs_client import NCIEVSClient
+from apps.designer.inverse_mapper import map_usdm_to_study
 from apps.designer.library import (
     ALLOWED_LIBRARY_TRANSITIONS,
     CreateLibraryObjectRequest,
@@ -126,8 +127,6 @@ from apps.designer.library import (
     UpdateLibraryObjectRequest,
 )
 from apps.designer.mapper import map_study_to_usdm
-from apps.designer.inverse_mapper import map_usdm_to_study
-from apps.designer.serialization import serialize_usdm, USDMSerializationError
 from apps.designer.rendering import TemplateRenderingError
 from apps.designer.rules import (
     CreateRuleRequest,
@@ -135,6 +134,7 @@ from apps.designer.rules import (
     detect_circular_dependencies,
     detect_unknown_fields,
 )
+from apps.designer.serialization import USDMSerializationError, serialize_usdm
 from apps.designer.usdm_ingestion import (
     normalize_usdm_payload,
     resolve_usdm_version,
@@ -569,7 +569,9 @@ async def get_usdm_study(
 async def import_usdm_study(
     study_id: str,
     request: Request,
-    override: Optional[str] = Query(None, description="Optional explicit version override ('v2' or 'v3')"),
+    override: Optional[str] = Query(
+        None, description="Optional explicit version override ('v2' or 'v3')"
+    ),
 ):
     """Ingests, validates, maps, and persists a USDM JSON/YAML payload for a specific study.
 
@@ -616,14 +618,20 @@ async def import_usdm_study(
 
     # 3. Resolve identity and change reason
     user_id = getattr(request.state, "user_id", "system")
-    change_reason = getattr(request.state, "change_reason", None) or request.headers.get("X-Change-Reason")
+    change_reason = getattr(
+        request.state, "change_reason", None
+    ) or request.headers.get("X-Change-Reason")
     if not change_reason:
         # Check inside parsed payload
         audit_meta = parsed.get("audit_metadata") or parsed.get("AuditFields") or {}
         if isinstance(audit_meta, dict):
-            change_reason = audit_meta.get("reason_for_change") or audit_meta.get("changeReason")
+            change_reason = audit_meta.get("reason_for_change") or audit_meta.get(
+                "changeReason"
+            )
         if not change_reason:
-            change_reason = parsed.get("reason_for_change") or parsed.get("changeReason")
+            change_reason = parsed.get("reason_for_change") or parsed.get(
+                "changeReason"
+            )
 
     if not change_reason or not str(change_reason).strip():
         raise HTTPException(

@@ -462,7 +462,7 @@
     "/api/v2/studies/{study_id}/usdm": {
       "get": {
         "summary": "Get Usdm Study",
-        "description": "Dynamically processes the internal projection and returns a compliant USDM structure.\n\nArgs:\n    study_id (str): The unique identifier of the study.\n\nReturns:\n    Dict[str, Any]: The dynamically mapped USDM study data.\n\nRaises:\n    HTTPException: If the study is not found or validation fails.",
+        "description": "Dynamically processes the internal projection and returns a compliant USDM structure.\n\nArgs:\n    study_id (str): The unique identifier of the study.\n    format (str, optional): Output format.\n\nReturns:\n    Any: Mapped USDM data (as dict or serialized Response).\n\nRaises:\n    HTTPException: If the study is not found or validation fails.",
         "operationId": "get_usdm_study_api_v2_studies__study_id__usdm_get",
         "parameters": [
           {
@@ -473,6 +473,24 @@
               "type": "string",
               "title": "Study Id"
             }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Output format: json or yaml",
+              "title": "Format"
+            },
+            "description": "Output format: json or yaml"
           }
         ],
         "responses": {
@@ -481,10 +499,62 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
                   "title": "Response Get Usdm Study Api V2 Studies  Study Id  Usdm Get"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Import Usdm Study",
+        "description": "Ingests, validates, maps, and persists a USDM JSON/YAML payload for a specific study.\n\nRequirements: Phase 2 Ingestion",
+        "operationId": "import_usdm_study_api_v2_studies__study_id__usdm_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "override",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional explicit version override ('v2' or 'v3')",
+              "title": "Override"
+            },
+            "description": "Optional explicit version override ('v2' or 'v3')"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },

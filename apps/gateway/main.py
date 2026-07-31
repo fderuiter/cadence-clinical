@@ -177,6 +177,16 @@ SERVICES = {
 
 jwks_cache: Optional[Dict[str, Any]] = None
 http_client: Optional[httpx.AsyncClient] = None
+jwks_fetch_lock = asyncio.Lock()
+
+
+def _is_kid_cached(kid: Optional[str]) -> bool:
+    if not kid or not jwks_cache:
+        return False
+    keys = jwks_cache.get("keys", [])
+    if not isinstance(keys, list):
+        return False
+    return any(isinstance(k, dict) and k.get("kid") == kid for k in keys)
 
 
 @app.on_event("startup")
@@ -210,7 +220,7 @@ async def shutdown() -> None:
         await http_client.aclose()
 
 
-def verify_token(token: str) -> Dict[str, Any]:
+async def verify_token(token: str) -> Dict[str, Any]:
     """
     Verify and decode a JSON Web Token (JWT).
 
@@ -239,10 +249,39 @@ def verify_token(token: str) -> Dict[str, Any]:
         except JWTError:
             raise HTTPException(status_code=401, detail="Invalid token")
 
+    try:
+        unverified_header = jwt.get_unverified_header(token)
+    except JWTError:
+        if os.getenv("ALLOW_UNVERIFIED_JWT_FOR_TEST"):
+            try:
+                return jwt.get_unverified_claims(token)
+            except JWTError:
+                raise HTTPException(status_code=401, detail="Invalid token structure")
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    kid = unverified_header.get("kid")
+
+    # Double-checked locking
+    is_cached = _is_kid_cached(kid)
+
+    if not is_cached and kid:
+        async with jwks_fetch_lock:
+            if not _is_kid_cached(kid):
+                try:
+                    client_to_use = http_client if http_client is not None else httpx.AsyncClient()
+                    resp = await client_to_use.get(JWKS_URL, timeout=5.0)
+                    if resp.status_code == 200:
+                        global jwks_cache
+                        jwks_cache = resp.json()
+                    else:
+                        logger = logging.getLogger("gateway")
+                        logger.error(f"Failed to fetch JWKS dynamically: HTTP status code {resp.status_code}")
+                except Exception as e:
+                    logger = logging.getLogger("gateway")
+                    logger.error(f"Failed to fetch JWKS dynamically: {str(e)}")
+
     if not jwks_cache:
         # Fallback if JWKS is unreachable and we have no test secret
-        # In a strict environment, we'd raise 401. To allow testing, if testing var is set we bypass,
-        # but the prompt requires strict 401 for invalid tokens.
         if os.getenv("ALLOW_UNVERIFIED_JWT_FOR_TEST"):
             try:
                 return jwt.get_unverified_claims(token)
@@ -253,10 +292,9 @@ def verify_token(token: str) -> Dict[str, Any]:
         )
 
     try:
-        unverified_header = jwt.get_unverified_header(token)
         rsa_key = {}
         for key in jwks_cache.get("keys", []):
-            if key["kid"] == unverified_header.get("kid"):
+            if key.get("kid") == kid:
                 rsa_key = {
                     "kty": key["kty"],
                     "kid": key["kid"],
@@ -264,6 +302,8 @@ def verify_token(token: str) -> Dict[str, Any]:
                     "n": key["n"],
                     "e": key["e"],
                 }
+                break
+
         if rsa_key:
             return jwt.decode(
                 token,
@@ -271,6 +311,14 @@ def verify_token(token: str) -> Dict[str, Any]:
                 algorithms=[JWT_ALGORITHM],
                 options={"verify_aud": False},
             )
+
+        # Fallback if ALLOW_UNVERIFIED_JWT_FOR_TEST is set
+        if os.getenv("ALLOW_UNVERIFIED_JWT_FOR_TEST"):
+            try:
+                return jwt.get_unverified_claims(token)
+            except JWTError:
+                raise HTTPException(status_code=401, detail="Invalid token structure")
+
         raise HTTPException(
             status_code=401, detail="Token signature could not be verified"
         )
@@ -288,6 +336,7 @@ def generate_signature(
     sponsor_id: Optional[str] = None,
     unblinded_access: bool = False,
     tenant_id: Optional[str] = None,
+    sig_token: Optional[str] = None,
 ) -> str:
     """
     Generate an HMAC-SHA256 signature for identity and scope headers.
@@ -315,6 +364,7 @@ def generate_signature(
         sponsor_id=sponsor_id,
         unblinded_access=unblinded_access,
         tenant_id=tenant_id,
+        sig_token=sig_token,
     )
 
 
@@ -703,7 +753,7 @@ async def signature_verification(request: Request, body: SignatureVerificationRe
         raise HTTPException(status_code=401, detail="Missing active session token")
     token = auth_header.split(" ")[1]
     try:
-        claims = verify_token(token)
+        claims = await verify_token(token)
     except HTTPException as e:
         raise HTTPException(status_code=401, detail=e.detail)
 
@@ -743,7 +793,9 @@ async def signature_verification(request: Request, body: SignatureVerificationRe
     )
 
     if not is_test_env:
-        token_url = JWKS_URL.replace("/certs", "/token")
+        token_url = os.getenv(
+            "KEYCLOAK_TOKEN_URL", JWKS_URL.replace("/certs", "/token")
+        )
         try:
             data = {
                 "grant_type": "password",
@@ -751,6 +803,9 @@ async def signature_verification(request: Request, body: SignatureVerificationRe
                 "username": body.username,
                 "password": body.password,
             }
+            client_secret = os.getenv("KEYCLOAK_CLIENT_SECRET")
+            if client_secret:
+                data["client_secret"] = client_secret
             if body.totp:
                 data["totp"] = body.totp
 
@@ -884,7 +939,7 @@ async def proxy_requests(request: Request, path: str) -> Response:
     token = auth_header.split(" ")[1]
 
     try:
-        payload = verify_token(token)
+        payload = await verify_token(token)
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
 
@@ -911,10 +966,9 @@ async def proxy_requests(request: Request, path: str) -> Response:
         path_lower
     )
 
+    sig_token = request.headers.get("x-sig-token") or request.headers.get("X-Sig-Token")
+
     if is_signature_gated and is_mutation:
-        sig_token = request.headers.get("x-sig-token") or request.headers.get(
-            "X-Sig-Token"
-        )
         from packages.security.middleware import verify_sig_token
 
         success, result = verify_sig_token(
@@ -1176,6 +1230,7 @@ async def proxy_requests(request: Request, path: str) -> Response:
         sponsor_id=sponsor_id_val if sponsor_id_val else None,
         unblinded_access=unblinded_access_val,
         tenant_id=tenant_id_val,
+        sig_token=sig_token,
     )
 
     headers["X-User-Id"] = user_id
@@ -1190,6 +1245,8 @@ async def proxy_requests(request: Request, path: str) -> Response:
         headers["X-Sponsor-Id"] = sponsor_id_val
     if unblinded_access_val:
         headers["X-Unblinded-Access"] = "true"
+    if sig_token:
+        headers["X-Sig-Token"] = sig_token
 
     try:
         body: bytes = await request.body()

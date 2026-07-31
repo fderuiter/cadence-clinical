@@ -1,6 +1,7 @@
 """
 USDM Serialization and Validation Engine for Phase 2.
 """
+
 import json
 from typing import Any, Dict, List
 
