@@ -31,9 +31,43 @@ from apps.execution.database.models import (
 )
 from apps.execution.database.models import (
     ClinicalObservation,
+    SubjectConsent,
 )
 from apps.execution.main import app as exec_app
 from apps.execution.migration_rules import reconcile_observations
+
+
+async def record_subject_consent(
+    subject_id: str,
+    study_id: str,
+    version_tag: str,
+    version_index: int,
+    icf_signed: bool = True,
+    requires_reconsent: bool = False,
+):
+    async with exec_db_manager.get_session_maker()() as session:
+        stmt = select(SubjectConsent).where(
+            SubjectConsent.subject_id == subject_id,
+            SubjectConsent.study_id == study_id,
+            SubjectConsent.version_index == version_index,
+        )
+        existing = (await session.execute(stmt)).scalars().first()
+        if existing:
+            existing.version_tag = version_tag
+            existing.icf_signed = icf_signed
+            existing.requires_reconsent = requires_reconsent
+        else:
+            consent = SubjectConsent(
+                subject_id=subject_id,
+                study_id=study_id,
+                version_tag=version_tag,
+                version_index=version_index,
+                icf_signed=icf_signed,
+                requires_reconsent=requires_reconsent,
+            )
+            session.add(consent)
+        await session.commit()
+
 
 GATEWAY_SECRET = "internal-gateway-secret-12345"  # pragma: allowlist secret
 
@@ -301,40 +335,24 @@ async def test_exact_version_consent_and_reconsent_gating():
         assert res_subj.status_code == 200
 
         # Sign-off initial version 1.0 consent
-        consent_v1_payload = {
-            "protocol_version": {
-                "study_id": "STUDY-GATE",
-                "version_tag": "1.0",
-                "version_index": 1,
-                "status": "PUBLISHED",
-            },
-            "icf_signed": True,
-            "requires_reconsent": False,
-        }
-        res_consent_v1 = await client.post(
-            "/api/v1/execution/subjects/SUBJ-GATE-Y/consent",
-            json=consent_v1_payload,
-            headers=get_exec_auth_headers(),
+        await record_subject_consent(
+            subject_id="SUBJ-GATE-Y",
+            study_id="STUDY-GATE",
+            version_tag="1.0",
+            version_index=1,
+            icf_signed=True,
+            requires_reconsent=False,
         )
-        assert res_consent_v1.status_code == 200
 
         # Record a newer version 2.0 requiring re-consent
-        reconsent_v2_payload = {
-            "protocol_version": {
-                "study_id": "STUDY-GATE",
-                "version_tag": "2.0",
-                "version_index": 2,
-                "status": "PUBLISHED",
-            },
-            "icf_signed": False,
-            "requires_reconsent": True,
-        }
-        res_reconsent_v2 = await client.post(
-            "/api/v1/execution/subjects/SUBJ-GATE-Y/consent",
-            json=reconsent_v2_payload,
-            headers=get_exec_auth_headers(),
+        await record_subject_consent(
+            subject_id="SUBJ-GATE-Y",
+            study_id="STUDY-GATE",
+            version_tag="2.0",
+            version_index=2,
+            icf_signed=False,
+            requires_reconsent=True,
         )
-        assert res_reconsent_v2.status_code == 200
 
         # Attempt to capture a visit (should fail since subject lacks re-consent for v2.0)
         visit_payload = {
@@ -353,22 +371,14 @@ async def test_exact_version_consent_and_reconsent_gating():
         )
 
         # Clear the gate by signing the consent for version 2.0
-        matching_consent_payload = {
-            "protocol_version": {
-                "study_id": "STUDY-GATE",
-                "version_tag": "2.0",
-                "version_index": 2,
-                "status": "PUBLISHED",
-            },
-            "icf_signed": True,
-            "requires_reconsent": False,
-        }
-        res_matching = await client.post(
-            "/api/v1/execution/subjects/SUBJ-GATE-Y/consent",
-            json=matching_consent_payload,
-            headers=get_exec_auth_headers(),
+        await record_subject_consent(
+            subject_id="SUBJ-GATE-Y",
+            study_id="STUDY-GATE",
+            version_tag="2.0",
+            version_index=2,
+            icf_signed=True,
+            requires_reconsent=False,
         )
-        assert res_matching.status_code == 200
 
         # Subsequent writes must now succeed cleanly
         res_visit_unblocked = await client.post(
@@ -415,20 +425,13 @@ async def test_clinical_capture_provenance_and_version_stamping():
         )
 
         # Sign-off protocol version 3.4
-        consent_v34_payload = {
-            "protocol_version": {
-                "study_id": "STUDY-STAMP",
-                "version_tag": "3.4",
-                "version_index": 3,
-                "status": "PUBLISHED",
-            },
-            "icf_signed": True,
-            "requires_reconsent": False,
-        }
-        await client.post(
-            "/api/v1/execution/subjects/SUBJ-STAMP/consent",
-            json=consent_v34_payload,
-            headers=get_exec_auth_headers(),
+        await record_subject_consent(
+            subject_id="SUBJ-STAMP",
+            study_id="STUDY-STAMP",
+            version_tag="3.4",
+            version_index=3,
+            icf_signed=True,
+            requires_reconsent=False,
         )
 
         # Post a visit and verify active stamp is applied
@@ -498,20 +501,13 @@ async def test_non_destructive_reconciliation_and_multi_hop():
         )
 
         # Consent version 1.0
-        consent_v1_payload = {
-            "protocol_version": {
-                "study_id": "STUDY-MIG",
-                "version_tag": "1.0",
-                "version_index": 1,
-                "status": "PUBLISHED",
-            },
-            "icf_signed": True,
-            "requires_reconsent": False,
-        }
-        await client.post(
-            "/api/v1/execution/subjects/SUBJ-MIG/consent",
-            json=consent_v1_payload,
-            headers=get_exec_auth_headers(),
+        await record_subject_consent(
+            subject_id="SUBJ-MIG",
+            study_id="STUDY-MIG",
+            version_tag="1.0",
+            version_index=1,
+            icf_signed=True,
+            requires_reconsent=False,
         )
 
         # Capture visit and clinical observation under 1.0
@@ -576,19 +572,13 @@ async def test_non_destructive_reconciliation_and_multi_hop():
 
         # Consent newer versions 2.0 and 3.0
         for ver in ["2.0", "3.0"]:
-            await client.post(
-                "/api/v1/execution/subjects/SUBJ-MIG/consent",
-                json={
-                    "protocol_version": {
-                        "study_id": "STUDY-MIG",
-                        "version_tag": ver,
-                        "version_index": 2 if ver == "2.0" else 3,
-                        "status": "PUBLISHED",
-                    },
-                    "icf_signed": True,
-                    "requires_reconsent": False,
-                },
-                headers=get_exec_auth_headers(),
+            await record_subject_consent(
+                subject_id="SUBJ-MIG",
+                study_id="STUDY-MIG",
+                version_tag=ver,
+                version_index=2 if ver == "2.0" else 3,
+                icf_signed=True,
+                requires_reconsent=False,
             )
 
         # Execute reconciliation logic and verify outputs

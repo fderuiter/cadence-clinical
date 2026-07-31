@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-07-31: On-Demand Consent Status Validation and Audit Hooks](2026-07-31-on-demand-consent-status-validation-and-audit-hooks.md)
 - [2026-07-29: Consolidated eClinical Services and Compliance Enhancements](2026-07-29-consolidated-eclinical-services-and-compliance-enhancements.md)
 - [2026-07-30: Durable and Immutable Subject Enrollment Sequence for TSDV](2026-07-30-durable-and-immutable-subject-enrollment-sequence-for-tsdv.md)
 - [2026-07-29: Standardize PR Quality Gate Comments and Developer Verification Workflows](2026-07-29-standardize-pr-quality-gate-comments-and-developer-verification-workflows.md)

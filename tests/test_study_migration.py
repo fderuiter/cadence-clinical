@@ -13,9 +13,43 @@ from apps.execution.database.core import db_manager
 from apps.execution.database.models import (
     Base,
     ClinicalObservation,
+    SubjectConsent,
 )
 from apps.execution.main import app
 from apps.execution.migration_rules import reconcile_observations
+
+
+async def record_subject_consent(
+    subject_id: str,
+    study_id: str,
+    version_tag: str,
+    version_index: int,
+    icf_signed: bool = True,
+    requires_reconsent: bool = False,
+):
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(SubjectConsent).where(
+            SubjectConsent.subject_id == subject_id,
+            SubjectConsent.study_id == study_id,
+            SubjectConsent.version_index == version_index,
+        )
+        existing = (await session.execute(stmt)).scalars().first()
+        if existing:
+            existing.version_tag = version_tag
+            existing.icf_signed = icf_signed
+            existing.requires_reconsent = requires_reconsent
+        else:
+            consent = SubjectConsent(
+                subject_id=subject_id,
+                study_id=study_id,
+                version_tag=version_tag,
+                version_index=version_index,
+                icf_signed=icf_signed,
+                requires_reconsent=requires_reconsent,
+            )
+            session.add(consent)
+        await session.commit()
+
 
 GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
 
@@ -89,22 +123,14 @@ async def test_protocol_capture_and_reconciliation_lifecycle() -> None:
         assert res_subj.status_code == 200
 
         # Record initial protocol version 1.0 consent
-        initial_consent_payload = {
-            "protocol_version": {
-                "study_id": "STUDY-M",
-                "version_tag": "1.0",
-                "version_index": 1,
-                "status": "PUBLISHED",
-            },
-            "icf_signed": True,
-            "requires_reconsent": False,
-        }
-        res_consent_1 = await client.post(
-            "/api/v1/execution/subjects/SUBJ-M/consent",
-            json=initial_consent_payload,
-            headers=get_auth_headers(),
+        await record_subject_consent(
+            subject_id="SUBJ-M",
+            study_id="STUDY-M",
+            version_tag="1.0",
+            version_index=1,
+            icf_signed=True,
+            requires_reconsent=False,
         )
-        assert res_consent_1.status_code == 200
 
         # 2. Capture a visit and observation under version 1.0 (should be automatically stamped)
         visit_payload = {
@@ -175,36 +201,22 @@ async def test_protocol_capture_and_reconciliation_lifecycle() -> None:
         assert res_rule_2.status_code == 201
 
         # 4. Sign-off consent for version 2.0 and version 3.0 to establish the study's target version
-        consent_v2_payload = {
-            "protocol_version": {
-                "study_id": "STUDY-M",
-                "version_tag": "2.0",
-                "version_index": 2,
-                "status": "PUBLISHED",
-            },
-            "icf_signed": True,
-            "requires_reconsent": False,
-        }
-        await client.post(
-            "/api/v1/execution/subjects/SUBJ-M/consent",
-            json=consent_v2_payload,
-            headers=get_auth_headers(),
+        await record_subject_consent(
+            subject_id="SUBJ-M",
+            study_id="STUDY-M",
+            version_tag="2.0",
+            version_index=2,
+            icf_signed=True,
+            requires_reconsent=False,
         )
 
-        consent_v3_payload = {
-            "protocol_version": {
-                "study_id": "STUDY-M",
-                "version_tag": "3.0",
-                "version_index": 3,
-                "status": "PUBLISHED",
-            },
-            "icf_signed": True,
-            "requires_reconsent": False,
-        }
-        await client.post(
-            "/api/v1/execution/subjects/SUBJ-M/consent",
-            json=consent_v3_payload,
-            headers=get_auth_headers(),
+        await record_subject_consent(
+            subject_id="SUBJ-M",
+            study_id="STUDY-M",
+            version_tag="3.0",
+            version_index=3,
+            icf_signed=True,
+            requires_reconsent=False,
         )
 
         # 5. Execute reconciliation and verify on-the-fly multi-hop migration without mutating database

@@ -180,7 +180,7 @@ describe("Gateway API Clients and Service Modules Unit Tests", () => {
   });
 
   describe("Execution Service Module", () => {
-    it("routes enrollment, consent, queries, and form submission correctly through gateway contracts", async () => {
+    it("routes enrollment, queries, and form submission correctly through gateway contracts", async () => {
       mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
@@ -190,14 +190,6 @@ describe("Gateway API Clients and Service Modules Unit Tests", () => {
       await executionService.createSubject({ site_id: "SITE-01" });
       expect(mockFetch).toHaveBeenLastCalledWith(
         "http://localhost:8000/api/v1/execution/subjects",
-        expect.objectContaining({ method: "POST" })
-      );
-
-      await executionService.consentSubject("SUB-01", {
-        protocol_version: "1.0",
-      });
-      expect(mockFetch).toHaveBeenLastCalledWith(
-        "http://localhost:8000/api/v1/execution/subjects/SUB-01/consent",
         expect.objectContaining({ method: "POST" })
       );
 

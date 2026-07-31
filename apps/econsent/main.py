@@ -505,6 +505,7 @@ class SubjectConsentStatusResponse(BaseModel):
     protocol_version: str
     signed: bool
     comprehension_passed: bool
+    requires_reconsent: bool = False
 
 
 DATABASE_URL = os.getenv("ECONSENT_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
@@ -1365,6 +1366,20 @@ async def get_subject_consent_status_endpoint(
             detail=f"No signed consent found for subject '{subject_pseudonym}'.",
         )
 
+    requires_reconsent = False
+    from apps.econsent.models import ConsentTemplate
+
+    stmt_tpl = select(ConsentTemplate).where(
+        ConsentTemplate.study_id == sc.study_id,
+        ConsentTemplate.is_published.is_(True),
+        ConsentTemplate.version_index > sc.version_index,
+        ConsentTemplate.requires_reconsent.is_(True),
+    )
+    res_tpl = await session.execute(stmt_tpl)
+    higher_tpl = res_tpl.scalars().first()
+    if higher_tpl:
+        requires_reconsent = True
+
     return SubjectConsentStatusResponse(
         subject_pseudonym=sc.subject_pseudonym,
         study_id=sc.study_id,
@@ -1374,6 +1389,7 @@ async def get_subject_consent_status_endpoint(
         protocol_version=sc.protocol_version,
         signed=True,
         comprehension_passed=True,
+        requires_reconsent=requires_reconsent,
     )
 
 

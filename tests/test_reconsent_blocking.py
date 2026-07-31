@@ -63,188 +63,199 @@ async def test_subject_consent_blocking_and_reconsent_lifecycle() -> None:
 
     Requirements: PRD-SUB-007
     """
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    ) as client:
-        # 1. Create a subject (unblocked)
-        subject_payload = {
-            "subject_id": "SUBJ-X",
-            "study_id": "STUDY-123",
-            "demographics": {
-                "name": "John Doe",
-                "birthdate": "1990-01-01",
-                "gender": "M",
-                "race": "White",
-            },
-        }
-        res_subj = await client.post(
-            "/api/v1/execution/subjects",
-            json=subject_payload,
-            headers=get_auth_headers(),
-        )
-        assert res_subj.status_code == 200
+    from unittest.mock import patch
 
-        # Record initial protocol version 1 consent (unblocked)
-        initial_consent_payload = {
-            "protocol_version": {
+    from fastapi import HTTPException
+
+    mock_response = None
+
+    async def mock_fetch(subject_pseudonym, study_id=None):
+        if mock_response is None:
+            raise HTTPException(status_code=404, detail="No signed consent found")
+        return mock_response
+
+    # Patch the fetch function in audit module
+    with patch(
+        "apps.execution.econsent_client.fetch_subject_consent_status",
+        side_effect=mock_fetch,
+    ):
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            # 1. Create a subject (unblocked because it is initial subject insert)
+            subject_payload = {
+                "subject_id": "SUBJ-X",
                 "study_id": "STUDY-123",
-                "version_tag": "1.0",
+                "demographics": {
+                    "name": "John Doe",
+                    "birthdate": "1990-01-01",
+                    "gender": "M",
+                    "race": "White",
+                },
+            }
+            res_subj = await client.post(
+                "/api/v1/execution/subjects",
+                json=subject_payload,
+                headers=get_auth_headers(),
+            )
+            assert res_subj.status_code == 200
+
+            # Initially, mock_response is None (no consent found). Try to create a visit (should fail)
+            visit_payload = {
+                "subject_id": "SUBJ-X",
+                "visit_name": "Week 4",
+                "study_id": "STUDY-123",
+            }
+            with pytest.raises(PermissionError) as exc_info:
+                await client.post(
+                    "/api/v1/execution/visits",
+                    json=visit_payload,
+                    headers=get_auth_headers(),
+                )
+            assert "Re-Consent Required - Demographics & Visit Forms Locked" in str(
+                exc_info.value
+            )
+
+            # Record initial protocol version 1 consent (unblocked)
+            # We set mock_response to a signed consent for version 1.0
+            mock_response = {
+                "subject_pseudonym": "SUBJ-X",
+                "study_id": "STUDY-123",
                 "version_index": 1,
-                "status": "PUBLISHED",
-            },
-            "icf_signed": True,
-            "requires_reconsent": False,
-        }
-        res_consent_1 = await client.post(
-            "/api/v1/execution/subjects/SUBJ-X/consent",
-            json=initial_consent_payload,
-            headers=get_auth_headers(),
-        )
-        assert res_consent_1.status_code == 200
+                "protocol_version": "1.0",
+                "signed": True,
+                "requires_reconsent": False,
+            }
 
-        # 2. Introduce a new protocol version 2 that requires re-consent
-        # (e.g. by another subject or recorded for the study)
-        # We can record a re-consent required entry for version 2.
-        reconsent_required_payload = {
-            "protocol_version": {
-                "study_id": "STUDY-123",
-                "version_tag": "2.0",
-                "version_index": 2,
-                "status": "PUBLISHED",
-            },
-            "icf_signed": False,
-            "requires_reconsent": True,
-        }
-        res_reconsent_v2 = await client.post(
-            "/api/v1/execution/subjects/SUBJ-X/consent",
-            json=reconsent_required_payload,
-            headers=get_auth_headers(),
-        )
-        assert res_reconsent_v2.status_code == 200
-
-        # Since version 2 has requires_reconsent=True and SUBJ-X has not signed it yet,
-        # SUBJ-X's covered writes should be blocked!
-
-        # Try to create a visit (should fail)
-        visit_payload = {
-            "subject_id": "SUBJ-X",
-            "visit_name": "Week 4",
-            "study_id": "STUDY-123",
-        }
-        with pytest.raises(PermissionError) as exc_info:
-            await client.post(
+            # Now, creating a visit should succeed and locally cache the consent!
+            res_visit_ok = await client.post(
                 "/api/v1/execution/visits",
                 json=visit_payload,
                 headers=get_auth_headers(),
             )
-        assert "Re-Consent Required - Demographics & Visit Forms Locked" in str(
-            exc_info.value
-        )
+            assert res_visit_ok.status_code == 200
+            assert res_visit_ok.json()["visit_name"] == "Week 4"
 
-        # Try to create an observation (should fail)
-        obs_payload = {
-            "subject_id": "SUBJ-X",
-            "domain": "VS",
-            "test_code": "VSSBP",
-            "test_name": "Systolic Blood Pressure",
-            "value": 120.0,
-            "unit": "mmHg",
-        }
-        with pytest.raises(PermissionError) as exc_info_obs:
-            await client.post(
+            # 1b. Update mock_response to a new version tag (to trigger a cached SubjectConsent UPDATE)
+            mock_response = {
+                "subject_pseudonym": "SUBJ-X",
+                "study_id": "STUDY-123",
+                "version_index": 1,
+                "protocol_version": "1.0-amended",
+                "signed": True,
+                "requires_reconsent": False,
+            }
+
+            # Create an observation (this should succeed and trigger the UPDATE)
+            obs_payload_init = {
+                "subject_id": "SUBJ-X",
+                "domain": "VS",
+                "test_code": "VSSBP",
+                "test_name": "Systolic Blood Pressure",
+                "value": 115.0,
+                "unit": "mmHg",
+            }
+            res_obs_init = await client.post(
                 "/api/v1/execution/observations",
-                json=obs_payload,
+                json=obs_payload_init,
                 headers=get_auth_headers(),
             )
-        assert "Re-Consent Required - Demographics & Visit Forms Locked" in str(
-            exc_info_obs.value
-        )
+            assert res_obs_init.status_code == 200
 
-        # Try to create a FormSubmission (should fail)
-        form_payload = {
-            "study_id": "STUDY-123",
-            "site_id": "SITE-1",
-            "subject_id": "SUBJ-X",
-            "visit_id": "VISIT-1",
-            "form_id": "FORM-1",
-        }
-        with pytest.raises(PermissionError) as exc_info_form:
-            await client.post(
-                "/api/v1/execution/form-submissions",
-                json=form_payload,
-                headers=get_auth_headers(),
-            )
-        assert "Re-Consent Required - Demographics & Visit Forms Locked" in str(
-            exc_info_form.value
-        )
-
-        # 3. Try to unblock with an ICF for another version (version 1.5, index 3, but not version 2)
-        # This cannot unblock version 2.
-        other_version_payload = {
-            "protocol_version": {
+            # 2. Introduce a new protocol version 2 that requires re-consent
+            # We set mock_response to show version 1.0 but requiring re-consent
+            mock_response = {
+                "subject_pseudonym": "SUBJ-X",
                 "study_id": "STUDY-123",
-                "version_tag": "1.5",
-                "version_index": 3,
-                "status": "PUBLISHED",
-            },
-            "icf_signed": True,
-            "requires_reconsent": False,
-        }
-        await client.post(
-            "/api/v1/execution/subjects/SUBJ-X/consent",
-            json=other_version_payload,
-            headers=get_auth_headers(),
-        )
+                "version_index": 1,
+                "protocol_version": "1.0",
+                "signed": True,
+                "requires_reconsent": True,
+            }
 
-        # Still blocked because version 2 has requires_reconsent=True and is unsigned by SUBJ-X
-        with pytest.raises(PermissionError) as exc_info_still_blocked:
-            await client.post(
-                "/api/v1/execution/visits",
-                json=visit_payload,
-                headers=get_auth_headers(),
-            )
-        assert "Re-Consent Required - Demographics & Visit Forms Locked" in str(
-            exc_info_still_blocked.value
-        )
-
-        # 4. Record matching consent for version 2 (icf_signed=True)
-        matching_consent_payload = {
-            "protocol_version": {
+            # Try to create a second visit (should fail because requires_reconsent is True!)
+            visit_payload_2 = {
+                "subject_id": "SUBJ-X",
+                "visit_name": "Week 8",
                 "study_id": "STUDY-123",
-                "version_tag": "2.0",
+            }
+            with pytest.raises(PermissionError) as exc_info_v2:
+                await client.post(
+                    "/api/v1/execution/visits",
+                    json=visit_payload_2,
+                    headers=get_auth_headers(),
+                )
+            assert "Re-Consent Required - Demographics & Visit Forms Locked" in str(
+                exc_info_v2.value
+            )
+
+            # Try to create an observation (should fail)
+            obs_payload = {
+                "subject_id": "SUBJ-X",
+                "domain": "VS",
+                "test_code": "VSSBP",
+                "test_name": "Systolic Blood Pressure",
+                "value": 120.0,
+                "unit": "mmHg",
+            }
+            with pytest.raises(PermissionError) as exc_info_obs:
+                await client.post(
+                    "/api/v1/execution/observations",
+                    json=obs_payload,
+                    headers=get_auth_headers(),
+                )
+            assert "Re-Consent Required - Demographics & Visit Forms Locked" in str(
+                exc_info_obs.value
+            )
+
+            # Try to create a FormSubmission (should fail)
+            form_payload = {
+                "study_id": "STUDY-123",
+                "site_id": "SITE-1",
+                "subject_id": "SUBJ-X",
+                "visit_id": "VISIT-1",
+                "form_id": "FORM-1",
+            }
+            with pytest.raises(PermissionError) as exc_info_form:
+                await client.post(
+                    "/api/v1/execution/form-submissions",
+                    json=form_payload,
+                    headers=get_auth_headers(),
+                )
+            assert "Re-Consent Required - Demographics & Visit Forms Locked" in str(
+                exc_info_form.value
+            )
+
+            # 3. Simulate matching consent for version 2 (signed=True, requires_reconsent=False)
+            mock_response = {
+                "subject_pseudonym": "SUBJ-X",
+                "study_id": "STUDY-123",
                 "version_index": 2,
-                "status": "PUBLISHED",
-            },
-            "icf_signed": True,
-            "requires_reconsent": False,
-        }
-        res_matching = await client.post(
-            "/api/v1/execution/subjects/SUBJ-X/consent",
-            json=matching_consent_payload,
-            headers=get_auth_headers(),
-        )
-        assert res_matching.status_code == 200
+                "protocol_version": "2.0",
+                "signed": True,
+                "requires_reconsent": False,
+            }
 
-        # Now, covered writes should be successfully unblocked!
-        res_visit_unblocked = await client.post(
-            "/api/v1/execution/visits",
-            json=visit_payload,
-            headers=get_auth_headers(),
-        )
-        assert res_visit_unblocked.status_code == 200
-        assert res_visit_unblocked.json()["visit_name"] == "Week 4"
-
-        # 5. Verify auditable properties and version index increments on SubjectConsent
-        async with db_manager.get_session_maker()() as session:
-            stmt_audit = (
-                select(AuditLog)
-                .where(AuditLog.table_name == "subject_consents")
-                .order_by(AuditLog.timestamp.asc())
+            # Now, covered writes should be successfully unblocked!
+            res_visit_unblocked = await client.post(
+                "/api/v1/execution/visits",
+                json=visit_payload_2,
+                headers=get_auth_headers(),
             )
-            res_audit = await session.execute(stmt_audit)
-            logs = res_audit.scalars().all()
+            assert res_visit_unblocked.status_code == 200
+            assert res_visit_unblocked.json()["visit_name"] == "Week 8"
 
-            # Ensure SubjectConsent operations were logged to AuditLog
-            actions = [log.action for log in logs]
-            assert "INSERT" in actions
-            assert "UPDATE" in actions
+            # 4. Verify auditable properties and version index increments on SubjectConsent
+            async with db_manager.get_session_maker()() as session:
+                stmt_audit = (
+                    select(AuditLog)
+                    .where(AuditLog.table_name == "subject_consents")
+                    .order_by(AuditLog.timestamp.asc())
+                )
+                res_audit = await session.execute(stmt_audit)
+                logs = res_audit.scalars().all()
+
+                # Ensure SubjectConsent operations were logged to AuditLog
+                actions = [log.action for log in logs]
+                assert "INSERT" in actions
+                assert "UPDATE" in actions
