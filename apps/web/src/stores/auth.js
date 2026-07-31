@@ -17,6 +17,13 @@ export const ROLE_ALIASES = {
   study_designer: ["sponsor_designer"],
 };
 
+/**
+ * Pinia Store managing the OIDC (Keycloak) authentication state.
+ * Employs fallback mechanisms for offline demo mode and maps realm roles to canonical UI roles.
+ *
+ * @see {@link ROLE_ALIASES} for mapping definitions.
+ * @see PRD-SYS-001 (GxP Compliance & 21 CFR Part 11)
+ */
 export const useAuthStore = defineStore("auth", {
   state: () => {
     let saved = {};
@@ -41,6 +48,11 @@ export const useAuthStore = defineStore("auth", {
     };
   },
   getters: {
+    /**
+     * Resolves user identity, falling back to a dummy profile when in demo mode.
+     * @param {Object} state - The Pinia store state object.
+     * @returns {Object|null} The resolved user identity object.
+     */
     identity: (state) => {
       if (state.isDemoMode && !state.isAuthenticated) {
         // Fallback demo identity
@@ -54,7 +66,17 @@ export const useAuthStore = defineStore("auth", {
       }
       return state.user;
     },
+    /**
+     * Getter returning the active JWT access token.
+     * @param {Object} state - The Pinia store state object.
+     * @returns {string|null} The access token string.
+     */
     token: (state) => state.accessToken,
+    /**
+     * Normalizes mixed realm roles into lowercase, snake_case canonical keys.
+     * @param {Object} state - The Pinia store state object.
+     * @returns {string[]} Normalized list of standard UI roles.
+     */
     normalizedRoles: (state) => {
       if (state.isDemoMode && !state.isAuthenticated) {
         // Fallback demo roles normalized
@@ -80,6 +102,9 @@ export const useAuthStore = defineStore("auth", {
     },
   },
   actions: {
+    /**
+     * Persists the authentication store status to local storage for persistence across reloads.
+     */
     persist() {
       if (typeof window !== "undefined" && window.localStorage) {
         window.localStorage.setItem(
@@ -96,6 +121,10 @@ export const useAuthStore = defineStore("auth", {
         );
       }
     },
+    /**
+     * Populates store state using claims and tokens parsed from an authenticated Keycloak instance.
+     * @param {Object|null} keycloak - Keycloak JS SDK instance.
+     */
     setAuth(keycloak) {
       if (keycloak && keycloak.authenticated) {
         this.isAuthenticated = true;
@@ -124,6 +153,10 @@ export const useAuthStore = defineStore("auth", {
       }
       this.persist();
     },
+    /**
+     * Executes standard login flow via Keycloak or offline fallback credentials.
+     * @param {Object} options - Keycloak login parameters.
+     */
     async login(options = {}) {
       if (window.keycloakInstance && !this.isDemoMode) {
         await window.keycloakInstance.login(options);
@@ -145,6 +178,10 @@ export const useAuthStore = defineStore("auth", {
       }
       this.persist();
     },
+    /**
+     * Clears session credentials and executes logout sequence.
+     * @param {Object} options - Keycloak logout options.
+     */
     async logout(options = {}) {
       if (window.keycloakInstance && !this.isDemoMode) {
         await window.keycloakInstance.logout(options);
@@ -158,6 +195,11 @@ export const useAuthStore = defineStore("auth", {
       }
       this.persist();
     },
+    /**
+     * Dispatches token refresh sequence if token validity falls below the minimum threshold.
+     * @param {number} minValidity - Validity threshold in seconds.
+     * @returns {Promise<boolean>} Resolves indicating if token refresh completed.
+     */
     async refresh(minValidity = 30) {
       if (window.keycloakInstance && !this.isDemoMode) {
         try {
