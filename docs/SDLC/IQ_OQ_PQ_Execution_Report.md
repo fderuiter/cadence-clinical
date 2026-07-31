@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1744
-- **Passed:** 1744 🟢
+- **Total Automated Test Cases Run:** 1700
+- **Passed:** 1700 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -390,6 +390,21 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_successful_assembly_and_synopsis` | `tests.test_content_assembly` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_unresolved_reference_invalid_attribute` | `tests.test_content_assembly` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_unresolved_reference_non_existent_id` | `tests.test_content_assembly` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cdash_usdm_csv_mapping_fidelity` | `tests.test_crf_builder_compliance` | PRD-CRF-006, PRD-CRF-007, Trace-22, Trace-23 | 🟢 PASSED | < 1s |
+| `test_collaborative_workspace_review_workflow` | `tests.test_crf_builder_compliance` | PRD-CRF-003, PRD-CRF-004, Trace-19, Trace-20 | 🟢 PASSED | < 1s |
+| `test_crf_authoring_and_global_library_instantiation` | `tests.test_crf_builder_compliance` | PRD-CRF-001, PRD-CRF-002, Trace-17, Trace-18 | 🟢 PASSED | < 1s |
+| `test_declarative_rule_generation_edit_checks` | `tests.test_crf_builder_compliance` | PRD-CRF-004, PRD-CRF-005, Trace-20, Trace-21 | 🟢 PASSED | < 1s |
+| `test_failure_recovery_high_availability` | `tests.test_crf_builder_compliance` | PRD-CRF-014, PRD-CRF-015, Trace-30, Trace-31 | 🟢 PASSED | < 1s |
+| `test_fhir_esource_readiness_prefill` | `tests.test_crf_builder_compliance` | PRD-CRF-007, PRD-CRF-008, Trace-23, Trace-24 | 🟢 PASSED | < 1s |
+| `test_gxp_change_reason_justification` | `tests.test_crf_builder_compliance` | PRD-CRF-010, PRD-CRF-011, Trace-26, Trace-27 | 🟢 PASSED | < 1s |
+| `test_immutable_audit_attribution` | `tests.test_crf_builder_compliance` | PRD-CRF-011, PRD-CRF-012, Trace-27, Trace-28 | 🟢 PASSED | < 1s |
+| `test_in_memory_accessibility_auditing` | `tests.test_crf_builder_compliance` | PRD-CRF-015, Trace-31 | 🟢 PASSED | < 1s |
+| `test_real_time_contextual_preview` | `tests.test_crf_builder_compliance` | PRD-CRF-002, PRD-CRF-003, Trace-18, Trace-19 | 🟢 PASSED | < 1s |
+| `test_regulatory_protocol_document_export` | `tests.test_crf_builder_compliance` | PRD-CRF-008, PRD-CRF-009, Trace-24, Trace-25 | 🟢 PASSED | < 1s |
+| `test_role_based_authorization_gates` | `tests.test_crf_builder_compliance` | PRD-CRF-009, PRD-CRF-010, Trace-25, Trace-26 | 🟢 PASSED | < 1s |
+| `test_simulation_dry_run_cycle_detection` | `tests.test_crf_builder_compliance` | PRD-CRF-005, PRD-CRF-006, Trace-21, Trace-22 | 🟢 PASSED | < 1s |
+| `test_site_tenant_data_isolation` | `tests.test_crf_builder_compliance` | PRD-CRF-013, PRD-CRF-014, Trace-29, Trace-30 | 🟢 PASSED | < 1s |
+| `test_version_pinning_and_lock_enforcement` | `tests.test_crf_builder_compliance` | PRD-CRF-012, PRD-CRF-013, Trace-28, Trace-29 | 🟢 PASSED | < 1s |
 | `test_candidate_item_review_transitions` | `tests.test_crf_ingestion` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_docx_ingestion_success` | `tests.test_crf_ingestion` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_low_confidence_classification` | `tests.test_crf_ingestion` | *Regression/Helper* | 🟢 PASSED | < 1s |
