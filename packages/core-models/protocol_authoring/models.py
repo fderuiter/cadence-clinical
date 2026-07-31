@@ -394,3 +394,80 @@ class SectionReviewTransition(BaseModel):
         default_factory=lambda: datetime.now(timezone.utc),
         description="Transition timestamp.",
     )
+
+
+class SmartToken(AuditFields):
+    """
+    Represents a clinical smart token variable inside study protocol block canvas.
+    """
+
+    token_id: str = Field(
+        ...,
+        description="Unique stable token variable name, e.g. 'drug_potency'.",
+    )
+    token_name: str = Field(
+        ...,
+        description="Display name of the smart token.",
+    )
+    token_value: str = Field(
+        ...,
+        description="Value or expression of the token.",
+    )
+    study_id: str = Field(
+        ...,
+        description="Study scope identifier.",
+    )
+
+
+class SmartTokenCreate(BaseModel):
+    """
+    Payload for creating a custom smart token.
+    """
+
+    token_id: str = Field(
+        ...,
+        pattern=r"^[a-zA-Z0-9_]+$",
+        description="Alphanumeric unique token variable name.",
+    )
+    token_name: str = Field(
+        ...,
+        description="Display name of the smart token.",
+    )
+    token_value: str = Field(
+        ...,
+        description="Value or expression of the token.",
+    )
+    reason_for_change: str = Field(
+        ...,
+        description="Mandatory GxP reason for change justification.",
+    )
+
+
+class SmartTokenEvaluationRequest(BaseModel):
+    """
+    Payload to evaluate a block's text or input string containing smart tokens.
+    """
+
+    text: str = Field(
+        ...,
+        description="The raw text string containing smart tokens to evaluate.",
+    )
+
+
+class SmartTokenEvaluationResponse(BaseModel):
+    """
+    Result of evaluating text containing smart tokens.
+    """
+
+    original_text: str = Field(
+        ...,
+        description="The raw original text prior to token replacement.",
+    )
+    evaluated_text: str = Field(
+        ...,
+        description="The resulting text after executing smart token evaluations.",
+    )
+    duration_ms: float = Field(
+        ...,
+        description="Execution duration in milliseconds.",
+    )

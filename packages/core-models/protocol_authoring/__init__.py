@@ -11,6 +11,10 @@ from .models import (
     ObjectiveBlock,
     ProtocolBlock,
     ProtocolBlockUnion,
+    SmartToken,
+    SmartTokenCreate,
+    SmartTokenEvaluationRequest,
+    SmartTokenEvaluationResponse,
     SoADerivedBlock,
     build_canonical_ich_skeleton,
 )
@@ -26,4 +30,8 @@ __all__ = [
     "ICHSection",
     "CANONICAL_ICH_SKELETON",
     "build_canonical_ich_skeleton",
+    "SmartToken",
+    "SmartTokenCreate",
+    "SmartTokenEvaluationRequest",
+    "SmartTokenEvaluationResponse",
 ]

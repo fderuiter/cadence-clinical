@@ -42,6 +42,9 @@ MOCK_RULES: Dict[str, List[Dict[str, Any]]] = {}
 # In-memory eligibility criteria mock store fallback
 MOCK_ELIGIBILITY_CRITERIA: Dict[str, List[Dict[str, Any]]] = {}
 
+# In-memory custom smart tokens mock store fallback
+MOCK_CUSTOM_TOKENS: Dict[str, List[Dict[str, Any]]] = {}
+
 # --- Mock Study Version Content ---
 MOCK_STUDY_VERSIONS: Dict[str, List[Dict[str, Any]]] = {}
 MOCK_STUDY_PROJECTIONS_BY_VERSION: Dict[str, Dict[str, Any]] = {}
@@ -216,6 +219,38 @@ def delete_mock_rule(study_id: str, rule_id: str) -> bool:
             r["version_index"] += 1
             return True
     return False
+
+
+def create_mock_token(study_id: str, token_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Creates and saves a custom smart token under a study, preserving GxP fields."""
+    import datetime
+
+    token = {
+        "token_id": token_data["token_id"],
+        "token_name": token_data["token_name"],
+        "token_value": token_data["token_value"],
+        "study_id": study_id,
+        "created_at": token_data.get("created_at") or datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "created_by": token_data.get("created_by") or "system",
+        "reason_for_change": token_data.get("reason_for_change") or "Initial setup",
+        "version_index": token_data.get("version_index", 1),
+    }
+    if study_id not in MOCK_CUSTOM_TOKENS:
+        MOCK_CUSTOM_TOKENS[study_id] = []
+
+    # If a token with the same token_id already exists, raise a Conflict error
+    for existing in MOCK_CUSTOM_TOKENS[study_id]:
+        if existing["token_id"] == token["token_id"]:
+            from apps.designer.delta import ConcurrentLockingError
+            raise ConcurrentLockingError(f"Token with ID '{token['token_id']}' already exists.")
+
+    MOCK_CUSTOM_TOKENS[study_id].append(token)
+    return token
+
+
+def get_mock_tokens(study_id: str) -> List[Dict[str, Any]]:
+    """Retrieves all custom smart tokens for a study."""
+    return MOCK_CUSTOM_TOKENS.get(study_id, [])
 
 
 MOCK_DESIGNER_AUDIT_LOGS: List[Dict[str, Any]] = []
