@@ -133,11 +133,8 @@ function toggleCollapse() {
   if (storeSection) {
     storeSection.isCollapsed = !storeSection.isCollapsed;
   } else {
-    const nextCollapsed = !props.section.isCollapsed;
-    emit("update-section", {
-      ...props.section,
-      isCollapsed: nextCollapsed,
-    });
+    const isCollapsed = !props.section.isCollapsed;
+    emit("update-section", { ...props.section, isCollapsed });
   }
 }
 
