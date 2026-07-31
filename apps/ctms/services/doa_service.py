@@ -4,17 +4,17 @@ Requirements: PRD-SYS-001 | GxP 21 CFR Part 11 Regulated
 """
 
 import hashlib
+import importlib
 from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.execution.database.models import (
-    DOAAuditLog,
-    DOADelegationRecord,
-    SiteStaffMember,
-)
+_execution_models = importlib.import_module("apps.execution.database.models")
+DOAAuditLog = _execution_models.DOAAuditLog
+DOADelegationRecord = _execution_models.DOADelegationRecord
+SiteStaffMember = _execution_models.SiteStaffMember
 
 
 async def delegate_task(

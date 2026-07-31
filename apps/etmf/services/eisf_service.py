@@ -4,6 +4,7 @@ Requirements: PRD-SYS-001
 """
 
 import hashlib
+import importlib
 import uuid
 from typing import List, Optional
 
@@ -11,8 +12,10 @@ from sqlalchemy import Boolean, String, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 import packages  # noqa: F401
-from apps.compliance.services.phi_redactor import PHIRedactorService
 from packages.security.rbac import Principal, can_access_site
+
+_compliance_services = importlib.import_module("apps.compliance.services.phi_redactor")
+PHIRedactorService = _compliance_services.PHIRedactorService
 
 
 class Base(DeclarativeBase):

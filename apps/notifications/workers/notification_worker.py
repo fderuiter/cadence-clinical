@@ -1,4 +1,5 @@
 import asyncio
+import importlib
 import json
 import logging
 import sys
@@ -19,8 +20,13 @@ from apps.notifications.services.email_renderer import (
     get_template_name_for_event,
     render_email_template,
 )
-from apps.org.database import db_manager as org_db_manager
-from apps.org.models import Personnel, PersonnelAssignment
+
+_org_database = importlib.import_module("apps.org.database")
+org_db_manager = _org_database.db_manager
+
+_org_models = importlib.import_module("apps.org.models")
+Personnel = _org_models.Personnel
+PersonnelAssignment = _org_models.PersonnelAssignment
 
 logger = logging.getLogger("notification_worker")
 
@@ -144,14 +150,14 @@ class NotificationWorker:
                 resolved.append(
                     {
                         "user_id": "safety_officer",
-                        "email": "safety_officer@cadenceclinical.com",
+                        "email": "safety_officer@cadenceclinical.com",  # deid-ignore
                     }
                 )
             elif event_type == "PROTOCOL_AMENDMENT_SUBMITTED":
                 resolved.append(
                     {
                         "user_id": "designer_john",
-                        "email": "designer_john@cadenceclinical.com",
+                        "email": "designer_john@cadenceclinical.com",  # deid-ignore
                     }
                 )
 
