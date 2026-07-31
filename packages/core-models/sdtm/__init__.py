@@ -50,7 +50,6 @@ from sdtm.terminology import (
     normalize_seriousness,
     normalize_severity,
     normalize_sex,
-    validate_iso8601,
 )
 
 __all__ = [
