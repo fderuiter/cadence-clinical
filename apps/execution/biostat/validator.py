@@ -8,10 +8,10 @@ from typing import Any, Dict, List, Optional, Union
 
 from apps.execution.biostat.models import DatasetJSON, DatasetJSONItemGroup
 from apps.execution.biostat.terminology import (
-    normalize_sex,
     normalize_race,
-    normalize_severity,
     normalize_seriousness,
+    normalize_severity,
+    normalize_sex,
 )
 
 try:

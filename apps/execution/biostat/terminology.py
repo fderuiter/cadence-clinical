@@ -1,12 +1,17 @@
-import re
 from typing import List, Optional, Union
 
-from sdtm.enums import Sex, Race, AESeverity, AESeriousness
+from sdtm.enums import AESeverity, Race, Sex
+from sdtm.terminology import (
+    normalize_race as _normalize_race,
+)
+from sdtm.terminology import (
+    normalize_seriousness as _normalize_seriousness,
+)
+from sdtm.terminology import (
+    normalize_severity as _normalize_severity,
+)
 from sdtm.terminology import (
     normalize_sex as _normalize_sex,
-    normalize_race as _normalize_race,
-    normalize_severity as _normalize_severity,
-    normalize_seriousness as _normalize_seriousness,
 )
 
 # CDISC Controlled Terminology sets mapped to core enums

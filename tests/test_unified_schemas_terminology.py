@@ -1,20 +1,22 @@
-import asyncio
-import json
-import uuid
 import os
+import uuid
+
 import pytest
 import pytest_asyncio
-from typing import Any
 
+from apps.execution.biostat import (
+    DatasetJSONValidationError,
+    serialize_to_dataset_json,
+    validate_dataset_json,
+)
+from apps.execution.biostat.terminology import (
+    normalize_race,
+    normalize_seriousness,
+    normalize_severity,
+    normalize_sex,
+)
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import Base, TranslationJob
-from apps.execution.biostat import validate_dataset_json, serialize_to_dataset_json, DatasetJSONValidationError
-from apps.execution.biostat.terminology import (
-    normalize_sex,
-    normalize_race,
-    normalize_severity,
-    normalize_seriousness,
-)
 from apps.execution.translator import process_translation
 
 
@@ -90,7 +92,7 @@ def test_validator_with_variant_and_boolean_inputs():
                 "AESEQ": 1,
                 "AETERM": "Nausea",
                 "AESER": True,  # Boolean seriousness which maps to 'Y'
-                "AESEV": "1",   # Numeric severity which maps to 'MILD'
+                "AESEV": "1",  # Numeric severity which maps to 'MILD'
             }
         ],
     }
@@ -145,7 +147,7 @@ async def test_translation_fails_early_on_invalid_structure():
                 "instanceType": "StudyVersion",
                 "studyDesigns": [],
             }
-        ]
+        ],
     }
 
     job_id = str(uuid.uuid4())
