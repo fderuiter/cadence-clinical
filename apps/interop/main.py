@@ -15,7 +15,6 @@ from apps.interop.auth import (
     require_staff_role,
     verify_subject_bulk_identity,
     verify_subject_identity,
-    subject_identity_guard,
 )
 from apps.interop.database import db_manager
 from apps.interop.designer_client import fetch_eligibility_criteria
