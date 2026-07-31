@@ -368,6 +368,58 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
                             "message": "Signature token batch binding mismatch.",
                         },
                     )
+            elif "sdv/bulk-sign-off" in path_lower:
+                if not token_batch_id:
+                    return JSONResponse(
+                        status_code=401,
+                        content={
+                            "detail": "REAUTHENTICATION_REQUIRED",
+                            "error": "REAUTHENTICATION_REQUIRED",
+                            "message": "Signature token is not bound to a batch.",
+                        },
+                    )
+
+                req_study_id = body_json.get("study_id")
+                req_scope = body_json.get("scope")
+                req_target_ids = body_json.get("target_ids")
+                req_reason = body_json.get("reason_for_change")
+
+                if (
+                    not req_study_id
+                    or not req_scope
+                    or req_target_ids is None
+                    or not req_target_ids
+                    or not req_reason
+                    or not str(req_reason).strip()
+                ):
+                    return JSONResponse(
+                        status_code=400,
+                        content={
+                            "detail": "REAUTHENTICATION_REQUIRED",
+                            "error": "REAUTHENTICATION_REQUIRED",
+                            "message": "Missing bulk sign-off fields for validation.",
+                        },
+                    )
+
+                norm_study = str(req_study_id).strip()
+                norm_scope = str(req_scope).strip()
+                sorted_ids = sorted([str(tid).strip() for tid in req_target_ids])
+                norm_reason = str(req_reason).strip()
+
+                binding_str = f"{norm_study}:{norm_scope}:{sorted_ids}:{norm_reason}"
+                computed_batch_id = hashlib.sha256(
+                    binding_str.encode("utf-8")
+                ).hexdigest()
+
+                if token_batch_id != computed_batch_id:
+                    return JSONResponse(
+                        status_code=401,
+                        content={
+                            "detail": "REAUTHENTICATION_REQUIRED",
+                            "error": "REAUTHENTICATION_REQUIRED",
+                            "message": "Signature token batch binding mismatch.",
+                        },
+                    )
 
         from packages.security.permissions import (
             get_permissions_for_roles,

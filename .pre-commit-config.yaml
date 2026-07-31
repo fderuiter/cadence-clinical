@@ -69,6 +69,13 @@ repos:
         files: \.(py|js|ts|tsx|jsx|json|md|log|txt)$
         pass_filenames: true
 
+      - id: auto-stage-openapi
+        name: Auto-Stage OpenAPI Schemas
+        entry: python3 scripts/pre_commit_openapi.py
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+
       # -----------------------------------------------------------------------
       # GxP RTM Staleness Check (pre-push only)
       # Validates that docs/SDLC/ is in sync with the committed test suite.
