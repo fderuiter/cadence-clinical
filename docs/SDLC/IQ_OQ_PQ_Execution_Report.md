@@ -13,6 +13,8 @@ Based on the executed automated verification suite, the platform meets all prede
 - **Passed:** 1725 🟢
 - **Total Automated Test Cases Run:** 1565
 - **Passed:** 1565 🟢
+- **Total Automated Test Cases Run:** 10
+- **Passed:** 10 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -199,37 +201,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 ### 3.1 Traceability Mappings Verification
 | Test Case Name | Classname / Suite | Target Req | Status | Duration |
 | :--- | :--- | :--- | :--- | :--- |
-| `test_derive_adae_basic_join` | `tests.test_adae` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_derive_adae_missing_dates_and_ongoing` | `tests.test_adae` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_derive_adae_partial_dates_imputation` | `tests.test_adae` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_derive_adae_relative_day_formula` | `tests.test_adae` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_derive_adae_severity_mappings` | `tests.test_adae` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_derive_adae_treatment_emergent_safety_window` | `tests.test_adae` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_derive_adae_unmatched_subject_skipped` | `tests.test_adae` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_from_sas_date` | `tests.test_adae` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_derive_adsl_additional_branches` | `tests.test_adsl` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_derive_adsl_basic` | `tests.test_adsl` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_derive_adsl_edge_cases` | `tests.test_adsl` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_derive_adsl_observation_based_death_and_actarm` | `tests.test_adsl` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_derive_adsl_partial_dates_and_population_flags` | `tests.test_adsl` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_derive_adsl_various_fallback_branches` | `tests.test_adsl` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_derive_adsl_with_datetime_objects` | `tests.test_adsl` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_impute_partial_date` | `tests.test_adsl` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_parse_partial_date` | `tests.test_adsl` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_to_date_obj` | `tests.test_adsl` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_to_sas_date` | `tests.test_adsl` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_advs_baseline_selection_and_flags` | `tests.test_advs` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_advs_basic_derivation` | `tests.test_advs` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_advs_change_metrics_and_division_by_zero` | `tests.test_advs` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_advs_date_and_visit_fallback` | `tests.test_advs` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_advs_missing_baseline_behavior` | `tests.test_advs` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_advs_no_coercion_of_missing_numeric_values` | `tests.test_advs` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_compare_usdm_snapshots_added_removed_modified` | `tests.test_amendment_diff` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_backward_compatible_form_rehydration_lifecycle` | `tests.test_amendment_rehydration` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_get_amendment_summary_endpoint` | `tests.test_amendment_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_publish_amendment_post_endpoint` | `tests.test_amendment_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_redact_pdf_post_endpoint` | `tests.test_anonymization_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_scan_phi_post_endpoint` | `tests.test_anonymization_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_parameters_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_paths_and_methods_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_request_bodies_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
