@@ -65,12 +65,10 @@ from apps.execution.database.models import (
     FormSubmission,
     ImportState,
     MigrationRule,
-    SDVSignOff,
     StudyAuthoredRule,
     SubjectConsent,
     SubjectRandomization,
     TranslationJob,
-    TSDVConfig,
 )
 from apps.execution.database.models import (
     DictionaryType as DBDictionaryType,

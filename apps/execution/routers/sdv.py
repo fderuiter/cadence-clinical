@@ -11,7 +11,6 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import select, text
 
-import packages  # noqa: F401
 from apps.execution.database.context import current_user_id
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import (
@@ -121,7 +120,7 @@ class SDVSignOffResponse(BaseModel):
     status_code=201,
 )
 async def create_or_update_tsdv_config(
-    request: Request,
+    _request: Request,
     payload: TSDVConfigCreate,
     roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER)),
 ) -> TSDVConfig:
