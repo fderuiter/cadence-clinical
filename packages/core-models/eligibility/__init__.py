@@ -7,10 +7,10 @@ and interop without external database or framework dependencies.
 """
 
 from eligibility.evaluator import (
+    evaluate_criteria_group,
     evaluate_eligibility,
     evaluate_node,
     evaluate_structured_expression,
-    evaluate_criteria_group,
 )
 from eligibility.models import (
     AggregateEligibilityResult,

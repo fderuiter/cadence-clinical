@@ -83,9 +83,7 @@ def is_empty_value(val: Any) -> bool:
     """
     if val is None:
         return True
-    if isinstance(val, (str, list, dict)) and len(val) == 0:
-        return True
-    return False
+    return bool(isinstance(val, (str, list, dict)) and len(val) == 0)
 
 
 def compare_payloads(original: Any, round_tripped: Any) -> Dict[str, Any]:
@@ -215,12 +213,11 @@ def compare_payloads(original: Any, round_tripped: Any) -> Dict[str, Any]:
 
             # ID mapping check (e.g. string ID was converted to UUID but is semantically the same)
             is_id_translated = False
-            if isinstance(val_orig, str) and isinstance(val_rt, str):
-                if (
-                    id_mappings.get(val_rt) == val_orig
-                    or id_mappings.get(val_orig) == val_rt
-                ):
-                    is_id_translated = True
+            if isinstance(val_orig, str) and isinstance(val_rt, str) and (
+                id_mappings.get(val_rt) == val_orig
+                or id_mappings.get(val_orig) == val_rt
+            ):
+                is_id_translated = True
 
             if is_id_translated:
                 continue

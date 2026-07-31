@@ -86,25 +86,24 @@ async def test_lab_range_evaluation_and_recalculation_gxp() -> None:
         assert res_subj.status_code == 200
 
         # 2. Insert LabReferenceRange into database
-        async with db_manager.get_session_maker()() as session:
-            async with session.begin():
-                ref_range = LabReferenceRange(
-                    study_id="STUDY-LAB",
-                    test_code="WBC",
-                    test_name="White Blood Cell Count",
-                    source="CENTRAL",
-                    site_id=None,
-                    unit="10^9/L",
-                    normalized_unit="10^9/L",
-                    sex_applicability="ALL",
-                    age_low=None,
-                    age_high=None,
-                    low_bound=4.0,
-                    high_bound=11.0,
-                    critical_low=2.0,
-                    critical_high=20.0,
-                )
-                session.add(ref_range)
+        async with db_manager.get_session_maker()() as session, session.begin():
+            ref_range = LabReferenceRange(
+                study_id="STUDY-LAB",
+                test_code="WBC",
+                test_name="White Blood Cell Count",
+                source="CENTRAL",
+                site_id=None,
+                unit="10^9/L",
+                normalized_unit="10^9/L",
+                sex_applicability="ALL",
+                age_low=None,
+                age_high=None,
+                low_bound=4.0,
+                high_bound=11.0,
+                critical_low=2.0,
+                critical_high=20.0,
+            )
+            session.add(ref_range)
 
         # 3. Create active observations
         # Observation 1: NORMAL value (5.0)
@@ -180,17 +179,16 @@ async def test_lab_range_evaluation_and_recalculation_gxp() -> None:
         assert obs_3_data["reference_range_high"] == 11.0
 
         # 4. Modify the reference range in database to make LOW value (3.0) NORMAL
-        async with db_manager.get_session_maker()() as session:
-            async with session.begin():
-                stmt = (
-                    update(LabReferenceRange)
-                    .where(
-                        LabReferenceRange.study_id == "STUDY-LAB",
-                        LabReferenceRange.test_code == "WBC",
-                    )
-                    .values(low_bound=2.5)
+        async with db_manager.get_session_maker()() as session, session.begin():
+            stmt = (
+                update(LabReferenceRange)
+                .where(
+                    LabReferenceRange.study_id == "STUDY-LAB",
+                    LabReferenceRange.test_code == "WBC",
                 )
-                await session.execute(stmt)
+                .values(low_bound=2.5)
+            )
+            await session.execute(stmt)
 
         # 5. Invoke batch recalculation on the lab range endpoint using CRA role
         recalc_payload = {

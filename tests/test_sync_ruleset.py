@@ -249,9 +249,9 @@ def test_sync_ruleset_multiple_files_integration():
             path_str = str(file_path)
             if "main.json" in path_str:
                 return mock_open(read_data='{"name": "main-branch-protection"}')()
-            elif "release_branches.json" in path_str:
+            if "release_branches.json" in path_str:
                 return mock_open(read_data='{"name": "release-branches-protection"}')()
-            elif "version_tags.json" in path_str:
+            if "version_tags.json" in path_str:
                 return mock_open(read_data='{"name": "version-tags-protection"}')()
             return mock_open()()
 

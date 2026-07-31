@@ -1,3 +1,4 @@
+import contextlib
 import time
 
 import pytest
@@ -435,10 +436,8 @@ async def test_migration_adds_expiration_columns_idempotently() -> None:
     db_file = "test_migrate.db"
     db_url = f"sqlite+aiosqlite:///{db_file}"
     if os.path.exists(db_file):
-        try:
+        with contextlib.suppress(Exception):
             os.remove(db_file)
-        except Exception:
-            pass
 
     try:
         # 1. Run migrations initially (creates tables with columns)
@@ -483,7 +482,5 @@ async def test_migration_adds_expiration_columns_idempotently() -> None:
         await engine.dispose()
     finally:
         if os.path.exists(db_file):
-            try:
+            with contextlib.suppress(Exception):
                 os.remove(db_file)
-            except Exception:
-                pass

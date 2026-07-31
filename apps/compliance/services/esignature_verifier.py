@@ -155,11 +155,10 @@ class ESignatureVerifier:
             TamperDetectedError: If tampering/byte alteration is detected.
         """
         res = self.verify_signature(pdf_bytes)
-        if not res.is_valid:
-            if res.status == "TAMPERED_INVALID_HASH":
-                raise TamperDetectedError(
-                    f"TAMPER DETECTED: {res.failure_reason}",
-                    is_valid=False,
-                    status="TAMPERED_INVALID_HASH",
-                )
+        if not res.is_valid and res.status == "TAMPERED_INVALID_HASH":
+            raise TamperDetectedError(
+                f"TAMPER DETECTED: {res.failure_reason}",
+                is_valid=False,
+                status="TAMPERED_INVALID_HASH",
+            )
         return res

@@ -99,7 +99,7 @@ async def test_cdisc_library_client_mock_api_key_auth() -> None:
                 200,
                 json={"_links": {"cdash": {"title": "CDASH API", "version": "2.3"}}},
             )
-        elif request.url.path == "/api/mdr/cdashig/2.3/domains/VS":
+        if request.url.path == "/api/mdr/cdashig/2.3/domains/VS":
             return httpx.Response(
                 200,
                 json={

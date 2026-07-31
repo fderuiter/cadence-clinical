@@ -3,6 +3,7 @@ FastAPI application for the Tickets microservice.
 """
 
 import asyncio
+import contextlib
 import logging
 import os
 from datetime import datetime
@@ -414,19 +415,15 @@ def check_optimistic_locking(
             "expected_version"
         )
         if q_val:
-            try:
+            with contextlib.suppress(ValueError):
                 expected_version = int(q_val)
-            except ValueError:
-                pass
     if expected_version is None:
         h_val = request.headers.get("If-Match") or request.headers.get(
             "X-Expected-Version"
         )
         if h_val:
-            try:
+            with contextlib.suppress(ValueError):
                 expected_version = int(h_val)
-            except ValueError:
-                pass
 
     if expected_version is None:
         raise HTTPException(

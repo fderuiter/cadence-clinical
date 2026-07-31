@@ -1,3 +1,4 @@
+import contextlib
 import io
 import os
 import re
@@ -151,10 +152,8 @@ def build_docx_template() -> str:
         os.replace(temp_path, template_path)
     except Exception:
         doc.save(template_path)
-        try:
+        with contextlib.suppress(Exception):
             os.remove(temp_path)
-        except Exception:
-            pass
     return template_path
 
 

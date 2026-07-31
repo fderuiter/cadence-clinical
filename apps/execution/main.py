@@ -4,7 +4,7 @@ import shutil
 import tempfile
 import uuid
 import zipfile
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, AsyncGenerator, List, Optional
@@ -24,7 +24,7 @@ from fastapi import (
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from protocol_version_ref import ProtocolVersionRef
-from pydantic import BaseModel, Field, ValidationError, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 from sqlalchemy import func, select, text
 
 from apps.execution.biostat import (
@@ -1280,11 +1280,12 @@ async def update_subject_state_endpoint(
 ) -> SubjectResponse:
     # Ensure change justification headers are present and valid
     verify_change_justification(request)
-    change_reason = request.headers.get("X-Change-Reason")
 
     target_state = payload.status or payload.state
     if not target_state:
-        raise HTTPException(status_code=400, detail="Either status or state must be provided.")
+        raise HTTPException(
+            status_code=400, detail="Either status or state must be provided."
+        )
 
     async with db_manager.get_session_maker()() as session:
         async with session.begin():
@@ -1334,7 +1335,6 @@ async def update_subject_demographics_endpoint(
 ) -> SubjectResponse:
     # Ensure change justification headers are present and valid
     verify_change_justification(request)
-    change_reason = request.headers.get("X-Change-Reason")
 
     async with db_manager.get_session_maker()() as session:
         async with session.begin():
@@ -1367,10 +1367,10 @@ async def update_subject_demographics_endpoint(
             if payload.demographics is not None:
                 current_demo = {}
                 if subject.encrypted_demographics:
-                    try:
-                        current_demo = decrypt_demographics(subject.encrypted_demographics)
-                    except Exception:
-                        pass
+                    with suppress(Exception):
+                        current_demo = decrypt_demographics(
+                            subject.encrypted_demographics
+                        )
 
                 new_demo = payload.demographics.dict(exclude_none=True)
                 if is_post_rand and current_demo != new_demo:
@@ -1409,7 +1409,6 @@ async def delete_subject_demographics_endpoint(
 ) -> SubjectResponse:
     # Ensure change justification headers are present and valid
     verify_change_justification(request)
-    change_reason = request.headers.get("X-Change-Reason")
 
     async with db_manager.get_session_maker()() as session:
         async with session.begin():
@@ -1431,9 +1430,7 @@ async def delete_subject_demographics_endpoint(
             )
 
             if is_post_rand:
-                raise HTTPException(
-                    status_code=403, detail="SOFT_DELETE_BLOCKED"
-                )
+                raise HTTPException(status_code=403, detail="SOFT_DELETE_BLOCKED")
 
             # Pre-randomization: we can clear demographics/factors
             subject.encrypted_demographics = None
@@ -1539,6 +1536,7 @@ async def get_subject_detail(
 
         # 2. Enforce site isolation (PRD-SYS-004)
         from packages.security import enforce_site_isolation
+
         enforce_site_isolation(request, subject.site_id, principal)
 
         # 3. Retrieve Randomization if available
@@ -1554,6 +1552,7 @@ async def get_subject_detail(
 
         if rand:
             from apps.execution.cryptography import AllocationKeyManager
+
             key_mgr = AllocationKeyManager()
             await key_mgr.load_from_db(session)
             try:
@@ -1577,6 +1576,7 @@ async def get_subject_detail(
 
         # 4. Apply dynamic blinding filter
         from apps.execution.field_masking import apply_rtsm_blinded_filter
+
         roles = getattr(request.state, "roles", None)
         if roles is None:
             roles = principal.roles
@@ -1603,7 +1603,9 @@ async def get_visit_detail(
             raise HTTPException(status_code=404, detail="Visit not found")
 
         # 2. Fetch corresponding Subject
-        stmt_subj = select(ClinicalSubject).where(ClinicalSubject.subject_id == visit.subject_id)
+        stmt_subj = select(ClinicalSubject).where(
+            ClinicalSubject.subject_id == visit.subject_id
+        )
         subj_res = await session.execute(stmt_subj)
         subject = subj_res.scalars().first()
         if not subject:
@@ -1611,6 +1613,7 @@ async def get_visit_detail(
 
         # 3. Enforce site isolation (PRD-SYS-004) using Subject's site_id
         from packages.security import enforce_site_isolation
+
         enforce_site_isolation(request, subject.site_id, principal)
 
         # 4. Retrieve Randomization if available
@@ -1626,6 +1629,7 @@ async def get_visit_detail(
 
         if rand:
             from apps.execution.cryptography import AllocationKeyManager
+
             key_mgr = AllocationKeyManager()
             await key_mgr.load_from_db(session)
             try:
@@ -1650,6 +1654,7 @@ async def get_visit_detail(
 
         # 5. Apply dynamic blinding filter
         from apps.execution.field_masking import apply_rtsm_blinded_filter
+
         roles = getattr(request.state, "roles", None)
         if roles is None:
             roles = principal.roles
@@ -2884,21 +2889,20 @@ async def import_dictionary(
     db_type = DBDictionaryType[dictionary_type.value]
 
     # 3. Create the initial DictionaryImportJob record in PENDING status
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            job = DictionaryImportJob(
-                dictionary_type=db_type,
-                dictionary_version=version,
-                status=ImportState.PENDING,
-                started_at=datetime.utcnow(),
-                progress_percentage=0,
-                records_imported=0,
-                errors_encountered=0,
-            )
-            session.add(job)
-            await session.flush()
-            job_id = job.id
-            started_at = job.started_at
+    async with db_manager.get_session_maker()() as session, session.begin():
+        job = DictionaryImportJob(
+            dictionary_type=db_type,
+            dictionary_version=version,
+            status=ImportState.PENDING,
+            started_at=datetime.utcnow(),
+            progress_percentage=0,
+            records_imported=0,
+            errors_encountered=0,
+        )
+        session.add(job)
+        await session.flush()
+        job_id = job.id
+        started_at = job.started_at
 
     # 4. Schedule the background parsing task
     user_id = current_user_id.get()
@@ -3281,42 +3285,48 @@ class QueryUpdate(BaseModel):
 class SyncBlockQuery(BaseModel):
     """Pydantic schema representing the query details in a local ledger block."""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     status: str
     message: Optional[str] = None
-    createdBy: Optional[str] = None
-    createdAt: Optional[str] = None
+    created_by: Optional[str] = Field(None, alias="createdBy")
+    created_at: Optional[str] = Field(None, alias="createdAt")
     response: Optional[str] = None
-    respondedBy: Optional[str] = None
-    respondedAt: Optional[str] = None
-    closedBy: Optional[str] = None
-    closedAt: Optional[str] = None
+    responded_by: Optional[str] = Field(None, alias="respondedBy")
+    responded_at: Optional[str] = Field(None, alias="respondedAt")
+    closed_by: Optional[str] = Field(None, alias="closedBy")
+    closed_at: Optional[str] = Field(None, alias="closedAt")
 
 
 class SyncBlockDetails(BaseModel):
     """Pydantic schema representing block-specific metadata and clinical coordinates."""
 
-    fieldId: str
-    studyId: Optional[str] = None
-    subjectId: Optional[str] = None
-    visitId: Optional[str] = None
+    model_config = ConfigDict(populate_by_name=True)
+
+    field_id: str = Field(..., alias="fieldId")
+    study_id: Optional[str] = Field(None, alias="studyId")
+    subject_id: Optional[str] = Field(None, alias="subjectId")
+    visit_id: Optional[str] = Field(None, alias="visitId")
     domain: Optional[str] = None
-    testCode: Optional[str] = None
+    test_code: Optional[str] = Field(None, alias="testCode")
     query: Optional[SyncBlockQuery] = None
     label: Optional[str] = None
     cdash: Optional[str] = None
-    oldValue: Optional[str] = None
-    newValue: Optional[str] = None
+    old_value: Optional[str] = Field(None, alias="oldValue")
+    new_value: Optional[str] = Field(None, alias="newValue")
 
 
 class LocalLedgerBlock(BaseModel):
     """Pydantic schema representing a cryptographically chained offline ledger block."""
+
+    model_config = ConfigDict(populate_by_name=True)
 
     index: int
     timestamp: datetime
     action: str
     details: SyncBlockDetails
     reason: str
-    prevHash: str
+    prev_hash: str = Field(..., alias="prevHash")
     hash: str
 
 
@@ -3371,15 +3381,11 @@ async def fetch_history(session: Any, query_id: str) -> List[QueryHistoryItem]:
         old_val = log.old_values
         new_val = log.new_values
         if isinstance(old_val, str):
-            try:
+            with suppress(Exception):
                 old_val = json.loads(old_val)
-            except Exception:
-                pass
         if isinstance(new_val, str):
-            try:
+            with suppress(Exception):
                 new_val = json.loads(new_val)
-            except Exception:
-                pass
         history.append(
             QueryHistoryItem(
                 action=log.action,
@@ -3706,43 +3712,41 @@ async def create_or_update_tsdv_config(
 
     Restricts config writes to CRA/Data Manager roles with GxP change justifications.
     """
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            await session.execute(
-                text("SELECT set_config('cadence.app_writing', 'true', true);")
-            )
-            stmt = select(TSDVConfig).where(TSDVConfig.study_id == payload.study_id)
-            res = await session.execute(stmt)
-            config = res.scalars().first()
+    async with db_manager.get_session_maker()() as session, session.begin():
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', true);")
+        )
+        stmt = select(TSDVConfig).where(TSDVConfig.study_id == payload.study_id)
+        res = await session.execute(stmt)
+        config = res.scalars().first()
 
-            if config:
-                config.sampling_model = payload.sampling_model.value
-                config.initial_full_sdv_subject_count = (
-                    payload.initial_full_sdv_subject_count
-                )
-                config.random_sample_percentage = payload.random_sample_percentage
-                config.full_sdv_domains = payload.full_sdv_domains
-                config.safety_endpoints = payload.safety_endpoints
-                config.zero_sdv_domains = payload.zero_sdv_domains
-                config.trial_random_seed = payload.trial_random_seed
-            else:
-                config = TSDVConfig(
-                    study_id=payload.study_id,
-                    sampling_model=payload.sampling_model.value,
-                    initial_full_sdv_subject_count=payload.initial_full_sdv_subject_count,
-                    random_sample_percentage=payload.random_sample_percentage,
-                    full_sdv_domains=payload.full_sdv_domains,
-                    safety_endpoints=payload.safety_endpoints,
-                    zero_sdv_domains=payload.zero_sdv_domains,
-                    trial_random_seed=payload.trial_random_seed,
-                )
-                session.add(config)
+        if config:
+            config.sampling_model = payload.sampling_model.value
+            config.initial_full_sdv_subject_count = (
+                payload.initial_full_sdv_subject_count
+            )
+            config.random_sample_percentage = payload.random_sample_percentage
+            config.full_sdv_domains = payload.full_sdv_domains
+            config.safety_endpoints = payload.safety_endpoints
+            config.zero_sdv_domains = payload.zero_sdv_domains
+            config.trial_random_seed = payload.trial_random_seed
+        else:
+            config = TSDVConfig(
+                study_id=payload.study_id,
+                sampling_model=payload.sampling_model.value,
+                initial_full_sdv_subject_count=payload.initial_full_sdv_subject_count,
+                random_sample_percentage=payload.random_sample_percentage,
+                full_sdv_domains=payload.full_sdv_domains,
+                safety_endpoints=payload.safety_endpoints,
+                zero_sdv_domains=payload.zero_sdv_domains,
+                trial_random_seed=payload.trial_random_seed,
+            )
+            session.add(config)
 
     async with db_manager.get_session_maker()() as session:
         stmt = select(TSDVConfig).where(TSDVConfig.study_id == payload.study_id)
         res = await session.execute(stmt)
-        config = res.scalars().one()
-        return config
+        return res.scalars().one()
 
 
 @app.get(
@@ -5238,24 +5242,23 @@ async def sync_queries(
                         status_code=403,
                         detail=f"User role is not authorized for {action} action.",
                     )
-            elif action == "QUERY_RESPOND":
-                if not has_inv_role:
-                    raise HTTPException(
-                        status_code=403,
-                        detail=f"User role is not authorized for {action} action.",
-                    )
+            elif action == "QUERY_RESPOND" and not has_inv_role:
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"User role is not authorized for {action} action.",
+                )
 
             # Extract/determine query coordinates
-            study_id = details.studyId or "STUDY-USDM-001"
-            subject_id = details.subjectId or "SUBJ-001"
-            visit_id = details.visitId or "Screening"
+            study_id = details.study_id or "STUDY-USDM-001"
+            subject_id = details.subject_id or "SUBJ-001"
+            visit_id = details.visit_id or "Screening"
 
-            # Map domain & test_code from fieldId
+            # Map domain & test_code from field_id
             mapped_domain, mapped_test = field_map.get(
-                details.fieldId.lower(), ("VS", details.fieldId.upper())
+                details.field_id.lower(), ("VS", details.field_id.upper())
             )
             domain = details.domain or mapped_domain
-            test_code = details.testCode or mapped_test
+            test_code = details.test_code or mapped_test
 
             # Find existing active query
             stmt = select(ClinicalQuery).where(
@@ -5316,19 +5319,18 @@ async def sync_queries(
                     except StateTransitionError:
                         pass
 
-            elif action == "QUERY_REOPEN":
-                if q:
-                    try:
-                        QueryService.validate_transition(
-                            q.status, "REOPENED", has_reason=True
-                        )
-                        q.status = "REOPENED"
-                        q.resolver = None
-                        q.resolved_at = None
-                        session.add(q)
-                        processed_count += 1
-                    except StateTransitionError:
-                        pass
+            elif action == "QUERY_REOPEN" and q:
+                try:
+                    QueryService.validate_transition(
+                        q.status, "REOPENED", has_reason=True
+                    )
+                    q.status = "REOPENED"
+                    q.resolver = None
+                    q.resolved_at = None
+                    session.add(q)
+                    processed_count += 1
+                except StateTransitionError:
+                    pass
 
         await session.commit()
 
@@ -5508,26 +5510,25 @@ async def post_impact_analysis(
     """Manually triggers up-versioning impact analysis on existing coded assignments."""
     from apps.execution.coding import trigger_impact_analysis
 
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            metrics_dict = await trigger_impact_analysis(
-                session=session,
-                dictionary_type=payload.dictionary_type,
-                new_version=payload.new_version,
-                actor=current_user_id.get() or "system",
-            )
-            metrics = ImpactMetrics(
-                unchanged=metrics_dict.get("unchanged", 0),
-                reclassified=metrics_dict.get("reclassified", 0),
-                deprecated=metrics_dict.get("deprecated", 0),
-                skipped=metrics_dict.get("skipped", 0),
-            )
-            return ImpactAnalysisResponse(
-                status="success",
-                dictionary_type=payload.dictionary_type,
-                new_version=payload.new_version,
-                metrics=metrics,
-            )
+    async with db_manager.get_session_maker()() as session, session.begin():
+        metrics_dict = await trigger_impact_analysis(
+            session=session,
+            dictionary_type=payload.dictionary_type,
+            new_version=payload.new_version,
+            actor=current_user_id.get() or "system",
+        )
+        metrics = ImpactMetrics(
+            unchanged=metrics_dict.get("unchanged", 0),
+            reclassified=metrics_dict.get("reclassified", 0),
+            deprecated=metrics_dict.get("deprecated", 0),
+            skipped=metrics_dict.get("skipped", 0),
+        )
+        return ImpactAnalysisResponse(
+            status="success",
+            dictionary_type=payload.dictionary_type,
+            new_version=payload.new_version,
+            metrics=metrics,
+        )
 
 
 @app.get(
@@ -5767,7 +5768,7 @@ async def run_adam_derivation(session, study_id: str, dataset: str) -> List[dict
     ds_upper = dataset.strip().upper()
     if ds_upper == "ADSL":
         return derive_adsl(subjects, observations)
-    elif ds_upper == "ADAE":
+    if ds_upper == "ADAE":
         adsl_recs = derive_adsl(subjects, observations)
         ae_recs, _ = extract_ae(subjects, observations)
         records = derive_adae(adsl_recs, ae_recs)
@@ -5775,12 +5776,11 @@ async def run_adam_derivation(session, study_id: str, dataset: str) -> List[dict
             if "AEDECOD" not in r or r["AEDECOD"] is None:
                 r["AEDECOD"] = r.get("AETERM", "")
         return records
-    elif ds_upper == "ADVS":
+    if ds_upper == "ADVS":
         adsl_recs = derive_adsl(subjects, observations)
         vs_recs, _ = extract_vs(subjects, observations)
         return derive_advs(adsl_recs, vs_recs)
-    else:
-        raise ValueError(f"Unsupported ADaM dataset: {dataset}")
+    raise ValueError(f"Unsupported ADaM dataset: {dataset}")
 
 
 @app.get("/api/v1/execution/biostat/sdtm/{domain}")

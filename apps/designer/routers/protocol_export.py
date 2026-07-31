@@ -59,12 +59,12 @@ async def export_protocol_m11_endpoint(
                 "Content-Disposition": f"attachment; filename=protocol_{study_id}_usdm.json"
             },
         )
-    else:  # docx
-        docx_bytes = exporter.export_ich_m11_docx(study_payload)
-        return Response(
-            content=docx_bytes,
-            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            headers={
-                "Content-Disposition": f"attachment; filename=protocol_{study_id}_m11.docx"
-            },
-        )
+    # docx
+    docx_bytes = exporter.export_ich_m11_docx(study_payload)
+    return Response(
+        content=docx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={
+            "Content-Disposition": f"attachment; filename=protocol_{study_id}_m11.docx"
+        },
+    )

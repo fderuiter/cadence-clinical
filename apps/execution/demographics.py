@@ -70,7 +70,7 @@ def normalize_gender(gender_str: Optional[str]) -> str:
     # Normalize common variations of male and female
     if normalized in ("M", "MALE", "BOY", "MAN"):
         return "M"
-    elif normalized in ("F", "FEMALE", "GIRL", "WOMAN"):
+    if normalized in ("F", "FEMALE", "GIRL", "WOMAN"):
         return "F"
 
     # Default to "U" (CDISC Unknown) for unmapped/absent/unknown values
@@ -164,8 +164,7 @@ def calculate_age(
 
         # Completed age calculation taking leap years and exact calendar day into account
         # ((o_dt.month, o_dt.day) < (b_dt.month, b_dt.day)) is True (1) if birthday has not yet occurred in the observation year
-        age = o_dt.year - b_dt.year - ((o_dt.month, o_dt.day) < (b_dt.month, b_dt.day))
-        return age
+        return o_dt.year - b_dt.year - ((o_dt.month, o_dt.day) < (b_dt.month, b_dt.day))
 
     except Exception:
         # Log generic error strictly without exposing sensitive birthdate inputs
