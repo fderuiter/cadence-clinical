@@ -29,20 +29,20 @@ Boundary Inclusion Policy:
 
 import json
 import logging
-from typing import Any, Dict, Iterable, Optional, Tuple, Union
+from typing import Any, Iterable, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
 
-def _get_val(obj: Union[object, Dict[str, Any]], key: str, default: Any = None) -> Any:
-    """Helper to fetch an attribute or dict key gracefully."""
+def _get_val(obj: Any, key: str, default: Any = None) -> Any:
+    """Helper to safely retrieve a value from an object or a dictionary."""
     if isinstance(obj, dict):
         return obj.get(key, default)
     return getattr(obj, key, default)
 
 
 def select_reference_range(
-    ranges: Iterable[Union[object, Dict[str, Any]]],
+    ranges: Iterable[Any],
     study_id: str,
     test_code: str,
     normalized_unit: str,
@@ -50,7 +50,7 @@ def select_reference_range(
     sex: Optional[str],
     age: Optional[float],
     site_id: Optional[str] = None,
-) -> Optional[Union[object, Dict[str, Any]]]:
+) -> Any:
     """Selects an active LabReferenceRange based on study, test code, normalized unit,
     lab source, site, sex, and age, following a stable multi-dimensional specificity
     and tie-breaking policy.
@@ -222,7 +222,7 @@ def select_reference_range(
 
 def evaluate_lab_value(
     value: Optional[float],
-    reference_range: Optional[Union[object, Dict[str, Any]]],
+    reference_range: Any,
 ) -> Tuple[Optional[str], bool, Optional[str]]:
     """Evaluates a normalized numeric laboratory value against a matched reference range,
     incorporating normal and critical bounds.

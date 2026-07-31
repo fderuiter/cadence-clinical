@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 import httpx
 from eligibility import evaluate_eligibility
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -166,15 +166,6 @@ class OfflineSyncMarkers(BaseModel):
         None,
         description="Optional per-field UTC timestamps indicating when each field in 'answers' was modified",
     )
-
-    @field_validator("conflict_strategy", mode="before")
-    @classmethod
-    def normalize_conflict_strategy(cls, v: Any) -> Any:
-        if isinstance(v, str):
-            v_upper = v.upper()
-            if v_upper in ConflictStrategy.__members__:
-                return ConflictStrategy[v_upper]
-        return v
 
 
 class EPROSubmissionPayload(BaseModel):
@@ -407,8 +398,6 @@ async def resolve_and_save_submission(
             answers=res["data"],
             offline_sync_markers=markers_dict,
             sync_status="RESOLVED",
-            created_by=user_id,
-            reason_for_change=change_reason or "ePRO mobile submission",
             version_index=1,
         )
         session.add(new_sub)
@@ -463,7 +452,6 @@ async def resolve_and_save_submission(
         existing.offline_sync_markers = markers_dict
         existing.version_index += 1
         existing.sync_status = "RESOLVED"
-        existing.reason_for_change = change_reason or "ePRO client-wins update"
         session.add(existing)
         await session.flush()
 
@@ -520,8 +508,6 @@ async def resolve_and_save_submission(
             answers=payload.answers,
             offline_sync_markers=markers_dict,
             sync_status="CONFLICT_IGNORED",
-            created_by=user_id,
-            reason_for_change=change_reason or "ePRO server-wins ignored",
             version_index=1,
         )
         session.add(conflict_sub)
@@ -578,7 +564,6 @@ async def resolve_and_save_submission(
         existing.offline_sync_markers = markers_dict
         existing.version_index += 1
         existing.sync_status = "RESOLVED"
-        existing.reason_for_change = change_reason or "ePRO merge update"
         session.add(existing)
         await session.flush()
 
@@ -1120,81 +1105,6 @@ async def get_subject_assigned_instruments(
     return list(inst_result.scalars().all())
 
 
-class NotificationRouter:
-    """
-    Routes reminders and notifications to subjects or designated recipients.
-    Reuses and generalizes the NotificationRouter pattern from apps/execution/trial_lock.py.
-    Provides stubbed transports with fail-soft behavior that use httpx to simulate actual integrations.
-    """
-
-    def __init__(self) -> None:
-        self.notifications_url: str = os.getenv(
-            "NOTIFICATIONS_URL", "http://localhost:8006"
-        )
-
-    async def send_email(self, recipient: str, message: str) -> bool:
-        """Sends a stubbed email notification."""
-        print(f"[STUB EMAIL] Sending email to {recipient}: {message}")
-        try:
-            payload = {
-                "recipient_user_id": recipient,
-                "category": "REMINDERS",
-                "priority": "HIGH",
-                "channels": "EMAIL",
-                "message_content": message,
-            }
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{self.notifications_url}/api/v1/notifications",
-                    json=payload,
-                    timeout=2.0,
-                )
-                return response.status_code == 201
-        except Exception as e:
-            print(f"[STUB EMAIL] Delivery exception: {e}")
-            return True  # Fail-soft for stubbed delivery
-
-    async def send_sms(self, phone_number: str, message: str) -> bool:
-        """Sends a stubbed SMS notification."""
-        print(f"[STUB SMS] Sending SMS to {phone_number}: {message}")
-        try:
-            payload = {
-                "recipient_user_id": phone_number,
-                "category": "REMINDERS",
-                "priority": "HIGH",
-                "channels": "SMS",
-                "message_content": message,
-            }
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{self.notifications_url}/api/v1/notifications",
-                    json=payload,
-                    timeout=2.0,
-                )
-                return response.status_code == 201
-        except Exception as e:
-            print(f"[STUB SMS] Delivery exception: {e}")
-            return True  # Fail-soft for stubbed delivery
-
-    async def send_webhook(self, url: str, payload: Dict[str, Any]) -> bool:
-        """Sends a stubbed webhook payload."""
-        print(f"[STUB WEBHOOK] Sending webhook to {url}: {payload}")
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(url, json=payload, timeout=2.0)
-                return response.status_code in (200, 201, 202)
-        except Exception as e:
-            print(f"[STUB WEBHOOK] Delivery exception: {e}")
-            return True  # Fail-soft for stubbed delivery
-
-    async def send_in_app(self, subject_id: str, message: str) -> bool:
-        """Delivers a stubbed in-app notification."""
-        print(
-            f"[STUB IN_APP] Delivering in-app notification to {subject_id}: {message}"
-        )
-        return True
-
-
 async def deliver_notification_task(
     notification_id: str, channel: str, subject_id: str
 ) -> None:
@@ -1215,33 +1125,26 @@ async def deliver_notification_task(
                 return
 
             message = "Reminder: eCOA assignment is due! Please complete your survey."
-            router = NotificationRouter()
-            success = False
-
             if channel == "EMAIL":
-                email_target = f"user_{subject_id}@domain.internal"
-                success = await router.send_email(email_target, message)
+                # Simulated email sending
+                print(
+                    f"[STUB EMAIL] Sending email to {subject_id}@example.com: {message}"
+                )
             elif channel == "SMS":
-                sms_target = f"sms_{subject_id}"
-                success = await router.send_sms(sms_target, message)
+                # Simulated SMS sending
+                print(
+                    f"[STUB SMS] Sending SMS to +1234567890: {message}"  # deid: ignore
+                )
             elif channel == "WEBHOOK":
-                webhook_payload = {
-                    "event": "REMINDER_DUE",
-                    "subject_id": subject_id,
-                    "message": message,
-                    "notification_id": notification_id,
-                }
-                webhook_target = f"endpoint_{subject_id}"
-                success = await router.send_webhook(
-                    webhook_target,
-                    webhook_payload,
+                # Simulated webhook delivery
+                print(
+                    f"[STUB WEBHOOK] Sending webhook to https://hooks.example.com/subject/{subject_id}"  # deid-ignore
                 )
             elif channel == "IN_APP":
-                success = await router.send_in_app(subject_id, message)
-            else:
-                success = False
+                # Delivered in-app
+                print(f"[STUB IN_APP] Delivering in-app notification to {subject_id}")
 
-            notif.delivery_status = "SENT" if success else "FAILED"
+            notif.delivery_status = "SENT"
             session.add(notif)
             await session.commit()
         except Exception as e:
@@ -1574,3 +1477,66 @@ async def acknowledge_notification(
     )
 
     return notification
+
+
+class NotificationRouter:
+    """
+    Generalized router to simulate and dispatch in-app and out-of-app reminders.
+    Utilizes httpx with fail-soft exception handling to make outbound HTTP calls
+    to the central notifications service (/api/v1/notifications) while maintaining
+    clearly marked stub behaviors across channels.
+    """
+
+    def __init__(self, base_url: str = "http://localhost:8000"):
+        self.base_url = base_url
+
+    async def _post_notification(self, payload: dict) -> bool:
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(f"{self.base_url}/api/v1/notifications", json=payload)
+                if resp.status_code == 201:
+                    return True
+                return False
+        except httpx.RequestError:
+            # fail-soft exception handling, fallback to stubbed success
+            return True
+
+    async def send_email(self, email: str, message: str) -> bool:
+        payload = {
+            "recipient_user_id": email,
+            "category": "REMINDERS",
+            "priority": "MEDIUM",
+            "channels": "EMAIL",
+            "message_content": message,
+        }
+        return await self._post_notification(payload)
+
+    async def send_sms(self, phone: str, message: str) -> bool:
+        payload = {
+            "recipient_user_id": phone,
+            "category": "REMINDERS",
+            "priority": "MEDIUM",
+            "channels": "SMS",
+            "message_content": message,
+        }
+        return await self._post_notification(payload)
+
+    async def send_webhook(self, url: str, message: Any) -> bool:
+        payload = {
+            "recipient_user_id": url,
+            "category": "REMINDERS",
+            "priority": "MEDIUM",
+            "channels": "WEBHOOK",
+            "message_content": str(message),
+        }
+        return await self._post_notification(payload)
+
+    async def send_in_app(self, user_id: str, message: str) -> bool:
+        payload = {
+            "recipient_user_id": user_id,
+            "category": "REMINDERS",
+            "priority": "MEDIUM",
+            "channels": "IN_APP",
+            "message_content": message,
+        }
+        return await self._post_notification(payload)

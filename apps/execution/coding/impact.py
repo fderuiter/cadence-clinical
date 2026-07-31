@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -131,7 +131,7 @@ async def run_impact_analysis(
                 new_coded_term=term,
                 recoding_reason=f"Code {code} is deprecated/missing in new dictionary version {new_version}.",
                 decision_by=actor,
-                decision_at=datetime.now(timezone.utc),
+                decision_at=datetime.utcnow(),
                 old_hierarchy=old_hierarchy,
                 new_hierarchy={},
                 recoding_status=RecodingState.PENDING,
@@ -226,7 +226,7 @@ async def run_impact_analysis(
                     new_coded_term=term,
                     recoding_reason=f"Auto-promoted unchanged code {code} to dictionary version {new_version}.",
                     decision_by=actor,
-                    decision_at=datetime.now(timezone.utc),
+                    decision_at=datetime.utcnow(),
                     old_hierarchy=old_hierarchy,
                     new_hierarchy=new_hierarchy,
                     recoding_status=RecodingState.NONE,
@@ -255,7 +255,7 @@ async def run_impact_analysis(
                     new_coded_term=term,
                     recoding_reason=f"Hierarchy of code {code} changed in dictionary version {new_version}.",
                     decision_by=actor,
-                    decision_at=datetime.now(timezone.utc),
+                    decision_at=datetime.utcnow(),
                     old_hierarchy=old_hierarchy,
                     new_hierarchy=new_hierarchy,
                     recoding_status=RecodingState.PENDING,

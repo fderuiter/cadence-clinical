@@ -22,7 +22,6 @@ from sqlalchemy.orm import (
     mapped_column,
     validates,
     relationship,
-    synonym,
 )
 
 from sqlalchemy import event, inspect
@@ -440,15 +439,11 @@ class ClinicalObservation(AuditedModel):
     normalized_value: Mapped[float] = mapped_column(Float, nullable=True)
     normalized_unit: Mapped[str] = mapped_column(String(50), nullable=True)
     is_outlier: Mapped[bool] = mapped_column(Boolean, default=False)
-    # Phase 11: field-level SDV verification state column (Boolean, default False)
     is_sdv_verified: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False
     )
-    # Phase 11: verifying CRA UUID (nullable)
     sdv_verified_by: Mapped[str] = mapped_column(String(255), nullable=True)
-    # Phase 11: timestamp of verification (nullable)
     sdv_verified_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
-    # Phase 11: nullable string page/CRF grouping key
     page_id: Mapped[str] = mapped_column(String(255), nullable=True)
 
     # Lab reference range snapshot fields
@@ -457,25 +452,12 @@ class ClinicalObservation(AuditedModel):
     lab_indicator: Mapped[str] = mapped_column(String(50), nullable=True)
     lab_out_of_range: Mapped[bool] = mapped_column(Boolean, nullable=True)
     matched_normal_bounds: Mapped[str] = mapped_column(String(255), nullable=True)
-
-    # Added outcome columns for range evaluation
-    range_indicator: Mapped[str] = mapped_column(String(50), nullable=True)
-    is_out_of_range: Mapped[bool] = mapped_column(Boolean, nullable=True)
-    reference_range_low: Mapped[float] = mapped_column(Float, nullable=True)
-    reference_range_high: Mapped[float] = mapped_column(Float, nullable=True)
-
     protocol_version_tag: Mapped[Optional[str]] = mapped_column(
         String(50), nullable=True
     )
     protocol_version_index: Mapped[Optional[int]] = mapped_column(
         Integer, nullable=True
     )
-
-    # New range evaluation fields (Task 2)
-    range_indicator: Mapped[str] = mapped_column(String(50), nullable=True)
-    is_out_of_range: Mapped[bool] = mapped_column(Boolean, nullable=True)
-    reference_range_low: Mapped[float] = mapped_column(Float, nullable=True)
-    reference_range_high: Mapped[float] = mapped_column(Float, nullable=True)
 
 
 class ClinicalQuery(AuditedModel):
@@ -545,7 +527,6 @@ class ClinicalQuery(AuditedModel):
     action_required: Mapped[str] = mapped_column(String(255), nullable=True)
 
 
-# Phase 11: Level-agnostic SDV sign-off record for page and visit levels
 class SDVSignOff(AuditedModel):
     """Represents an aggregate sign-off record for SDV/TSDV verification.
 
@@ -582,7 +563,6 @@ class SDVSignOff(AuditedModel):
     dropped_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
 
-# Phase 11: TSDV configuration model for RBQM rules
 class TSDVConfig(AuditedModel):
     """Represents the Targeted SDV (TSDV) sampling configuration for a study.
 
@@ -622,7 +602,6 @@ class MedDRATerm(AuditedModel):
     """Represents a term in the MedDRA dictionary.
 
     Models five levels: LLT, PT, HLT, HLGT, and SOC.
-    Satisfies Epic #109 / Issue #1122 / Phase 16: Dictionary Ingestion & Persistence.
     """
 
     __tablename__ = "meddra_terms"
@@ -678,10 +657,7 @@ class MedDRAHierarchy(AuditedModel):
 
 
 class WHODrugRecord(AuditedModel):
-    """Represents a drug record in WHODrug.
-
-    Satisfies Epic #109 / Issue #1122 / Phase 16: Dictionary Ingestion & Persistence.
-    """
+    """Represents a drug record in WHODrug."""
 
     __tablename__ = "whodrug_records"
     __table_args__ = (
@@ -772,10 +748,7 @@ class WHODrugDrugIngredient(AuditedModel):
 
 
 class DictionaryImportJob(AuditedModel):
-    """Tracks dictionary import execution, status, and summary metrics.
-
-    Satisfies Epic #109 / Issue #1122 / Phase 16: Dictionary Ingestion & Persistence.
-    """
+    """Tracks dictionary import execution, status, and summary metrics."""
 
     __tablename__ = "dictionary_import_jobs"
 
@@ -842,10 +815,7 @@ class ClinicalCodingAssignment(AuditedModel):
 
 
 class ClinicalCodingLedger(AuditedModel):
-    """Maintains historical record of coding/recoding decisions and audit events.
-
-    Satisfies Epic #109 / Issue #1122 / Phase 16: Dictionary Ingestion & Persistence.
-    """
+    """Maintains historical record of coding/recoding decisions and audit events."""
 
     __tablename__ = "clinical_coding_ledger"
     __table_args__ = (
@@ -882,46 +852,40 @@ class LabReferenceRange(AuditedModel):
         study_id (str): The unique identifier of the study.
         test_code (str): The laboratory test code (e.g. 'HEMOGLOBIN').
         test_name (str): The name/description of the test parameter.
-        lab_source (str): Source type, either 'CENTRAL' or 'LOCAL'.
+        source (str): Source type, either 'CENTRAL' or 'LOCAL'.
         site_id (str): Optional site identifier for local range applicability.
         unit (str): Original unit of measurement.
         normalized_unit (str): Normalized unit of measurement.
-        sex (str): Sex applicability (e.g. 'M', 'F', 'ALL').
+        sex_applicability (str): Sex applicability (e.g. 'M', 'F', 'ALL').
         age_low (float): Nullable lower bound for age applicability.
         age_high (float): Nullable upper bound for age applicability.
-        range_low (float): Nullable lower limit of normal range.
-        range_high (float): Nullable upper limit of normal range.
+        low_bound (float): Nullable lower limit of normal range.
+        high_bound (float): Nullable upper limit of normal range.
         critical_low (float): Nullable lower limit for critical alert range.
         critical_high (float): Nullable upper limit for critical alert range.
     """
 
     __tablename__ = "lab_reference_ranges"
     __table_args__ = (
-        Index("idx_lab_range_lookup", "study_id", "test_code", "lab_source", "site_id"),
+        Index("idx_lab_range_lookup", "study_id", "test_code", "source", "site_id"),
     )
 
     study_id: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
     test_code: Mapped[str] = mapped_column(String(100), index=True, nullable=False)
     test_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    lab_source: Mapped[str] = mapped_column(
+    source: Mapped[str] = mapped_column(
         String(50), nullable=False
     )  # "CENTRAL" or "LOCAL"
     site_id: Mapped[str] = mapped_column(String(255), nullable=True)
     unit: Mapped[str] = mapped_column(String(50), nullable=True)
     normalized_unit: Mapped[str] = mapped_column(String(50), nullable=True)
-    sex: Mapped[str] = mapped_column(String(50), nullable=True)
+    sex_applicability: Mapped[str] = mapped_column(String(50), nullable=True)
     age_low: Mapped[float] = mapped_column(Float, nullable=True)
     age_high: Mapped[float] = mapped_column(Float, nullable=True)
-    range_low: Mapped[float] = mapped_column(Float, nullable=True)
-    range_high: Mapped[float] = mapped_column(Float, nullable=True)
+    low_bound: Mapped[float] = mapped_column(Float, nullable=True)
+    high_bound: Mapped[float] = mapped_column(Float, nullable=True)
     critical_low: Mapped[float] = mapped_column(Float, nullable=True)
     critical_high: Mapped[float] = mapped_column(Float, nullable=True)
-
-    # Synonyms for backward compatibility
-    source = synonym("lab_source")
-    sex_applicability = synonym("sex")
-    low_bound = synonym("range_low")
-    high_bound = synonym("range_high")
 
 
 class FormSubmission(AuditedModel):

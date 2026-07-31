@@ -126,10 +126,6 @@ async def test_lab_range_evaluation_and_recalculation_gxp() -> None:
         obs_1_data = res_obs_1.json()
         assert obs_1_data["lab_indicator"] == "NORMAL"
         assert obs_1_data["lab_out_of_range"] is False
-        assert obs_1_data["range_indicator"] == "NORMAL"
-        assert obs_1_data["is_out_of_range"] is False
-        assert obs_1_data["reference_range_low"] == 4.0
-        assert obs_1_data["reference_range_high"] == 11.0
 
         # Observation 2: LOW value (3.0)
         obs_2_payload = {
@@ -150,10 +146,6 @@ async def test_lab_range_evaluation_and_recalculation_gxp() -> None:
         obs_2_data = res_obs_2.json()
         assert obs_2_data["lab_indicator"] == "LOW"
         assert obs_2_data["lab_out_of_range"] is True
-        assert obs_2_data["range_indicator"] == "LOW"
-        assert obs_2_data["is_out_of_range"] is True
-        assert obs_2_data["reference_range_low"] == 4.0
-        assert obs_2_data["reference_range_high"] == 11.0
 
         # Observation 3: CRITICAL LOW value (1.0)
         obs_3_payload = {
@@ -174,10 +166,6 @@ async def test_lab_range_evaluation_and_recalculation_gxp() -> None:
         obs_3_data = res_obs_3.json()
         assert obs_3_data["lab_indicator"] == "LOW LOW"
         assert obs_3_data["lab_out_of_range"] is True
-        assert obs_3_data["range_indicator"] == "LOW LOW"
-        assert obs_3_data["is_out_of_range"] is True
-        assert obs_3_data["reference_range_low"] == 4.0
-        assert obs_3_data["reference_range_high"] == 11.0
 
         # 4. Modify the reference range in database to make LOW value (3.0) NORMAL
         async with db_manager.get_session_maker()() as session:

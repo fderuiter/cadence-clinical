@@ -332,7 +332,7 @@ def receive_before_flush(session: Session, flush_context, instances):
                             f"Subject {sub_id} is unblinded. Subsequent non-safety clinical write operations are blocked."
                         )
 
-    # GxP compliance: Centralized automatic verification drop (PRD-QRY-006)
+    # GxP compliance: Centralized automatic verification drop
     user_id = current_user_id.get()
     reason = current_change_reason.get()
     timestamp = current_timestamp.get()
@@ -481,7 +481,16 @@ def receive_before_flush(session: Session, flush_context, instances):
                 new_val = history.added[0] if history.added else getattr(obj, attr.key)
 
                 # Verify that it actually changed
-                if old_val != new_val:
+                is_changed = False
+                if isinstance(old_val, datetime) and isinstance(new_val, datetime):
+                    is_changed = old_val.replace(tzinfo=None) != new_val.replace(tzinfo=None)
+                else:
+                    try:
+                        is_changed = old_val != new_val
+                    except TypeError:
+                        is_changed = True
+
+                if is_changed:
                     if isinstance(old_val, datetime):
                         old_val = old_val.isoformat()
                     if isinstance(new_val, datetime):

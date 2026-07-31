@@ -12,10 +12,7 @@ from apps.execution.coding.parsers import (
 
 
 def test_meddra_parser_init_validation() -> None:
-    """Verify that MedDRAParser initialization fails if dictionary_version is empty.
-
-    Requirements: PRD-SYS-045
-    """
+    """Verify that MedDRAParser initialization fails if dictionary_version is empty."""
     with pytest.raises(
         ValueError, match="dictionary_version must be a non-empty string."
     ):
@@ -23,10 +20,7 @@ def test_meddra_parser_init_validation() -> None:
 
 
 def test_detect_file_type() -> None:
-    """Verify that file type detection correctly identifies each of the six file types.
-
-    Requirements: PRD-SYS-045
-    """
+    """Verify that file type detection correctly identifies each of the six file types."""
     parser = MedDRAParser(dictionary_version="26.0")
 
     assert parser.detect_file_type("llt.asc") == "llt"
@@ -42,10 +36,7 @@ def test_detect_file_type() -> None:
 
 
 def test_parse_llt_valid() -> None:
-    """Verify parsing a valid llt.asc stream, including trailing $ handling.
-
-    Requirements: PRD-SYS-045
-    """
+    """Verify parsing a valid llt.asc stream, including trailing $ handling."""
     lines = [
         "10019211$Headache$10019211$$$$$Y$\n",
         "10019212$Migraine$10019211$$$$$Y$\n",
@@ -79,10 +70,7 @@ def test_parse_llt_valid() -> None:
 
 
 def test_parse_llt_invalid_code() -> None:
-    """Verify that a non-8-digit llt_code raises a descriptive MedDRAParseError with line context.
-
-    Requirements: PRD-SYS-045
-    """
+    """Verify that a non-8-digit llt_code raises a descriptive MedDRAParseError with line context."""
     lines = [
         "10019211$Headache$10019211$$$$$Y$\n",
         "123$Migraine$10019211$$$$$Y$\n",
@@ -100,10 +88,7 @@ def test_parse_llt_invalid_code() -> None:
 
 
 def test_parse_llt_invalid_pt_code() -> None:
-    """Verify that a non-8-digit pt_code in llt.asc raises a descriptive MedDRAParseError.
-
-    Requirements: PRD-SYS-045
-    """
+    """Verify that a non-8-digit pt_code in llt.asc raises a descriptive MedDRAParseError."""
     lines = [
         "10019211$Headache$ABC$\n",
     ]
@@ -117,10 +102,7 @@ def test_parse_llt_invalid_pt_code() -> None:
 
 
 def test_parse_pt_valid() -> None:
-    """Verify parsing a valid pt.asc stream.
-
-    Requirements: PRD-SYS-045
-    """
+    """Verify parsing a valid pt.asc stream."""
     lines = [
         "10019211$Headache$10019211$$$$$\n",
     ]
@@ -138,10 +120,7 @@ def test_parse_pt_valid() -> None:
 
 
 def test_parse_hlt_valid() -> None:
-    """Verify parsing a valid hlt.asc stream.
-
-    Requirements: PRD-SYS-045
-    """
+    """Verify parsing a valid hlt.asc stream."""
     lines = [
         "10019231$Headaches$10019231$$$$$\n",
     ]
@@ -159,10 +138,7 @@ def test_parse_hlt_valid() -> None:
 
 
 def test_parse_hlgt_valid() -> None:
-    """Verify parsing a valid hlgt.asc stream.
-
-    Requirements: PRD-SYS-045
-    """
+    """Verify parsing a valid hlgt.asc stream."""
     lines = [
         "10029214$Neurological disorders NEC$10029214$$$$$\n",
     ]
@@ -180,10 +156,7 @@ def test_parse_hlgt_valid() -> None:
 
 
 def test_parse_soc_valid() -> None:
-    """Verify parsing a valid soc.asc stream.
-
-    Requirements: PRD-SYS-045
-    """
+    """Verify parsing a valid soc.asc stream."""
     lines = [
         "10029205$Nervous system disorders$ND$$$$$\n",
     ]
@@ -201,10 +174,7 @@ def test_parse_soc_valid() -> None:
 
 
 def test_parse_mdhier_valid() -> None:
-    """Verify parsing a valid mdhier.asc stream.
-
-    Requirements: PRD-SYS-045
-    """
+    """Verify parsing a valid mdhier.asc stream."""
     lines = [
         "10019211$10019231$10029214$10029205$Nervous system disorders$Neurological disorders NEC$Headaches$Headache$Y$\n",
     ]
