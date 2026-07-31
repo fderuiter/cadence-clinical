@@ -4,6 +4,7 @@ from enum import Enum
 from typing import Optional
 
 from sqlalchemy import Boolean, DateTime, Integer, String, func
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -55,6 +56,14 @@ class Notification(Base):
     related_entity_type: Mapped[Optional[str]] = mapped_column(
         String(255), nullable=True
     )
+
+    # Optional related entity reference columns
+    subject: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    subject_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    visit_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    query_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    site_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+
     status: Mapped[NotificationStatus] = mapped_column(
         String(50), default=NotificationStatus.OPEN, nullable=False
     )
@@ -109,3 +118,23 @@ class NotificationDelivery(Base):
     next_retry_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     retry_eligible: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+
+async def write_audit_log(
+    session: AsyncSession,
+    user_id: str,
+    user_role: str,
+    action: str,
+    details: str,
+) -> None:
+    """
+    Utility helper to write to the append-only NotificationAuditLog.
+    """
+    log_entry = NotificationAuditLog(
+        user_id=user_id,
+        user_role=user_role,
+        action=action,
+        details=details,
+    )
+    session.add(log_entry)
+    await session.flush()
