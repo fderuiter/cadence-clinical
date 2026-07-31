@@ -5,6 +5,133 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/api/v1/archive/studies/{study_id}/export": {
+      "post": {
+        "tags": [
+          "Archive"
+        ],
+        "summary": "Initiate Study Archival",
+        "description": "Initiate background ZIP packaging task.\n\nRequirements: PRD-SYS-001",
+        "operationId": "initiate_study_archival_api_v1_archive_studies__study_id__export_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchiveJobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/archive/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "Archive"
+        ],
+        "summary": "Get Archive Job Status",
+        "description": "Check archive package build status.\n\nRequirements: PRD-SYS-001",
+        "operationId": "get_archive_job_status_api_v1_archive_jobs__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchiveJobResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/archive/download/{job_id}": {
+      "get": {
+        "tags": [
+          "Archive"
+        ],
+        "summary": "Download Archive Package",
+        "description": "Download the generated study archival ZIP package.\n\nRequirements: PRD-SYS-001",
+        "operationId": "download_archive_package_api_v1_archive_download__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health Check",
@@ -1485,6 +1612,47 @@
   },
   "components": {
     "schemas": {
+      "ArchiveJobResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "PROCESSING",
+              "COMPLETED",
+              "FAILED"
+            ],
+            "title": "Status"
+          },
+          "download_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Download Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "study_id",
+          "status"
+        ],
+        "title": "ArchiveJobResponse",
+        "description": "Schema representing study archival job details and status.\n\nRequirements: PRD-SYS-001"
+      },
       "ArtifactDetail": {
         "properties": {
           "artifact_type": {
