@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1777
-- **Passed:** 1777 🟢
+- **Total Automated Test Cases Run:** 1779
+- **Passed:** 1779 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1011,10 +1011,12 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_trial_lock_and_unlock_lifecycle` | `tests.test_granular_locks_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_visit_lock_and_unlock_lifecycle` | `tests.test_granular_locks_api` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_bulk_offline_sync` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_case_insensitive_conflict_strategy_validation` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_compute_reminders_all_subjects_staff` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_compute_reminders_by_subject_and_end_date_branch` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_deliver_notification_task_exception` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_epro_submission_and_conflict_resolution` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_epro_submission_part11_fields_retention` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_fhir_prefill_bundle_pipeline` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_foreign_key_and_cascade_lifecycle_integrity` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_instrument_and_assignment_endpoints_and_auditing` | `tests.test_interop` | *Regression/Helper* | 🟢 PASSED | < 1s |
