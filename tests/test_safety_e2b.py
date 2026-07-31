@@ -8,8 +8,8 @@ from sae_icsr import (
     IndividualCaseSafetyReport,
 )
 
-from apps.safety.renderer import render_icsr_to_xml, generate_e2b_xml
-from apps.safety.validator import validate_icsr_xml, validate_e2b_xml_structure
+from apps.safety.renderer import generate_e2b_xml, render_icsr_to_xml
+from apps.safety.validator import validate_e2b_xml_structure, validate_icsr_xml
 
 
 def get_valid_icsr() -> IndividualCaseSafetyReport:

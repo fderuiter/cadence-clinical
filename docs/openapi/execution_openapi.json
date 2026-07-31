@@ -1209,6 +1209,48 @@
         }
       }
     },
+    "/api/v1/execution/sdv/bulk-sign-off": {
+      "post": {
+        "tags": [
+          "SDV/TSDV"
+        ],
+        "summary": "Bulk Sdv Signoff",
+        "description": "CRA/monitor-gated bulk SDV sign-off endpoint for Field, Page, or Visit scopes.",
+        "operationId": "bulk_sdv_signoff_api_v1_execution_sdv_bulk_sign_off_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkSdvSignOffRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkSdvSignOffResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health Check",
@@ -4858,29 +4900,110 @@
         ],
         "title": "Body_upload_document_api_v1_documents_upload_post"
       },
-      "Body_upload_document_api_v1_documents_upload_post": {
+      "BulkSdvSignOffRequest": {
         "properties": {
-          "file": {
+          "study_id": {
             "type": "string",
-            "contentMediaType": "application/octet-stream",
-            "title": "File"
+            "title": "Study Id",
+            "description": "Target protocol study ID"
           },
-          "dia_tmf_code": {
+          "subject_id": {
             "type": "string",
-            "title": "Dia Tmf Code"
+            "title": "Subject Id",
+            "description": "Target subject ID"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope",
+            "description": "SDV scope boundary: FIELD, PAGE, or VISIT"
+          },
+          "target_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Target Ids",
+            "description": "List of target database or artifact IDs corresponding to the scope"
           },
           "reason_for_change": {
             "type": "string",
-            "title": "Reason For Change"
+            "title": "Reason For Change",
+            "description": "Mandatory GxP 21 CFR Part 11 justification reason"
+          },
+          "site_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Id",
+            "description": "Optional site identifier for the targets"
           }
         },
         "type": "object",
         "required": [
-          "file",
-          "dia_tmf_code",
+          "study_id",
+          "subject_id",
+          "scope",
+          "target_ids",
           "reason_for_change"
         ],
-        "title": "Body_upload_document_api_v1_documents_upload_post"
+        "title": "BulkSdvSignOffRequest",
+        "description": "Request payload to execute bulk SDV sign-offs.\n\nRequirements: PRD-SYS-001"
+      },
+      "BulkSdvSignOffResponse": {
+        "properties": {
+          "signed_count": {
+            "type": "integer",
+            "title": "Signed Count",
+            "description": "Total number of successfully signed SDV items"
+          },
+          "signed_target_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Signed Target Ids",
+            "description": "List of target IDs that were successfully signed"
+          },
+          "skipped_target_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Skipped Target Ids",
+            "description": "List of target IDs that were skipped or already signed"
+          },
+          "content_digest": {
+            "type": "string",
+            "title": "Content Digest",
+            "description": "SHA-256 digest of bulk signed data"
+          },
+          "timestamp_utc": {
+            "type": "string",
+            "title": "Timestamp Utc",
+            "description": "UTC ISO timestamp of signature execution"
+          },
+          "audit_tx": {
+            "type": "string",
+            "title": "Audit Tx",
+            "description": "Immutable GxP audit ledger transaction ID"
+          }
+        },
+        "type": "object",
+        "required": [
+          "signed_count",
+          "signed_target_ids",
+          "skipped_target_ids",
+          "content_digest",
+          "timestamp_utc",
+          "audit_tx"
+        ],
+        "title": "BulkSdvSignOffResponse",
+        "description": "Response payload following bulk SDV sign-off execution.\n\nRequirements: PRD-SYS-001"
       },
       "ClinicalQueryResponse": {
         "properties": {
@@ -6172,8 +6295,7 @@
             "title": "Form Id"
           },
           "status": {
-            "type": "string",
-            "title": "Status"
+            "$ref": "#/components/schemas/FormSubmissionStatusEnum"
           },
           "version": {
             "type": "integer",
@@ -6208,6 +6330,15 @@
           "is_deleted"
         ],
         "title": "FormSubmissionResponse"
+      },
+      "FormSubmissionStatusEnum": {
+        "type": "string",
+        "enum": [
+          "DRAFT",
+          "COMPLETED",
+          "APPROVED"
+        ],
+        "title": "FormSubmissionStatusEnum"
       },
       "GenerateAuditorTokenRequest": {
         "properties": {
@@ -7760,175 +7891,6 @@
             "title": "Entity Id",
             "description": "Unique ID of mutated entity"
           },
-          "range_indicator": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Range Indicator"
-          },
-          "is_out_of_range": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Is Out Of Range"
-          },
-          "reference_range_low": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Reference Range Low"
-          },
-          "reference_range_high": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Reference Range High"
-          },
-          "protocol_version_tag": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Protocol Version Tag"
-          },
-          "protocol_version_index": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Protocol Version Index"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "subject_id",
-          "study_id",
-          "domain",
-          "observation_date",
-          "test_code",
-          "test_name",
-          "is_outlier"
-        ],
-        "title": "ObservationResponse",
-        "description": "Pydantic schema returning observation details."
-      },
-      "OfflineBatchSyncRequest": {
-        "properties": {
-          "client_batch_id": {
-            "type": "string",
-            "title": "Client Batch Id",
-            "description": "Unique client-supplied batch identifier for idempotency"
-          },
-          "device_id": {
-            "type": "string",
-            "title": "Device Id",
-            "description": "Identifier of the device performing the sync"
-          },
-          "deltas": {
-            "items": {
-              "$ref": "#/components/schemas/OfflineDeltaItem"
-            },
-            "type": "array",
-            "title": "Deltas",
-            "description": "List of sync deltas to process"
-          }
-        },
-        "type": "object",
-        "required": [
-          "client_batch_id",
-          "device_id",
-          "deltas"
-        ],
-        "title": "OfflineBatchSyncRequest",
-        "description": "Request schema for offline batch delta sync.\n\nRequirements: PRD-SYS-001"
-      },
-      "OfflineBatchSyncResponse": {
-        "properties": {
-          "client_batch_id": {
-            "type": "string",
-            "title": "Client Batch Id",
-            "description": "Unique client-supplied batch identifier"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "SUCCESS",
-              "PARTIAL_SUCCESS",
-              "ALREADY_PROCESSED"
-            ],
-            "title": "Status",
-            "description": "Processing status of the batch"
-          },
-          "processed_count": {
-            "type": "integer",
-            "title": "Processed Count",
-            "description": "Number of successfully processed deltas"
-          },
-          "conflicts": {
-            "items": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "type": "array",
-            "title": "Conflicts",
-            "description": "List of conflicts encountered during processing"
-          }
-        },
-        "type": "object",
-        "required": [
-          "client_batch_id",
-          "status",
-          "processed_count"
-        ],
-        "title": "OfflineBatchSyncResponse",
-        "description": "Response schema for offline batch delta sync.\n\nRequirements: PRD-SYS-001"
-      },
-      "OfflineDeltaItem": {
-        "properties": {
-          "delta_id": {
-            "type": "string",
-            "title": "Delta Id",
-            "description": "Unique delta identifier"
-          },
-          "entity_type": {
-            "type": "string",
-            "title": "Entity Type",
-            "description": "Type of mutated entity"
-          },
-          "entity_id": {
-            "type": "string",
-            "title": "Entity Id",
-            "description": "Unique ID of mutated entity"
-          },
           "action": {
             "type": "string",
             "enum": [
@@ -8915,141 +8877,6 @@
           "is_verified"
         ],
         "title": "SDVSignOffResponse",
-        "description": "Pydantic response schema for SDV sign-off."
-      },
-      "SDVSignoffCreate": {
-        "properties": {
-          "scope": {
-            "$ref": "#/components/schemas/SDVScopeEnum"
-          },
-          "target_id": {
-            "type": "string",
-            "title": "Target Id"
-          },
-          "subject_id": {
-            "type": "string",
-            "title": "Subject Id"
-          },
-          "study_id": {
-            "type": "string",
-            "title": "Study Id"
-          },
-          "site_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Site Id"
-          }
-        },
-        "type": "object",
-        "required": [
-          "scope",
-          "target_id",
-          "subject_id",
-          "study_id"
-        ],
-        "title": "SDVSignoffCreate",
-        "description": "Pydantic request schema for SDV sign-off."
-      },
-      "SDVSignoffResponse": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "scope": {
-            "type": "string",
-            "title": "Scope"
-          },
-          "target_id": {
-            "type": "string",
-            "title": "Target Id"
-          },
-          "subject_id": {
-            "type": "string",
-            "title": "Subject Id"
-          },
-          "study_id": {
-            "type": "string",
-            "title": "Study Id"
-          },
-          "site_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Site Id"
-          },
-          "is_verified": {
-            "type": "boolean",
-            "title": "Is Verified"
-          },
-          "verified_by": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Verified By"
-          },
-          "verified_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Verified At"
-          },
-          "dropped_reason": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Dropped Reason"
-          },
-          "dropped_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Dropped At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "scope",
-          "target_id",
-          "subject_id",
-          "study_id",
-          "is_verified"
-        ],
-        "title": "SDVSignoffResponse",
         "description": "Pydantic response schema for SDV sign-off."
       },
       "SDVSignoffCreate": {
@@ -10556,45 +10383,6 @@
         "type": "object",
         "title": "WHODrugIngredientItem"
       },
-      "WHODrugCodeLookupResponse": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "title": "Status"
-          },
-          "matches": {
-            "items": {
-              "$ref": "#/components/schemas/WHODrugMatch"
-            },
-            "type": "array",
-            "title": "Matches"
-          }
-        },
-        "type": "object",
-        "required": [
-          "status",
-          "matches"
-        ],
-        "title": "WHODrugCodeLookupResponse"
-      },
-      "WHODrugIngredientItem": {
-        "properties": {
-          "ingredient_code": {
-            "type": "string",
-            "title": "Ingredient Code"
-          },
-          "ingredient_name": {
-            "type": "string",
-            "title": "Ingredient Name"
-          }
-        },
-        "type": "object",
-        "required": [
-          "ingredient_code",
-          "ingredient_name"
-        ],
-        "title": "WHODrugIngredientItem"
-      },
       "WHODrugMatch": {
         "properties": {
           "code": {
@@ -10683,8 +10471,6 @@
         },
         "type": "object",
         "required": [
-          "drug_code",
-          "preferred_name",
           "score"
         ],
         "title": "WHODrugMatch"

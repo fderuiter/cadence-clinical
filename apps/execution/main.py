@@ -2385,8 +2385,8 @@ async def get_cdisc_export_dictionary(study_id: str) -> Response:
 from apps.execution.routers.coding_schemas import (  # noqa: E402
     CoderActionRequest,
     CodingAssignmentResponse,
-    DictTypeEnum,
     DictionaryImportRequest,
+    DictTypeEnum,
     ImpactAnalysisRequest,
     ImpactAnalysisResponse,
     ImpactMetrics,
@@ -2487,7 +2487,7 @@ async def import_dictionary(
     except ValidationError as e:
         error_msg = e.errors()[0]["msg"] if e.errors() else str(e)
         if error_msg.startswith("Value error, "):
-            error_msg = error_msg[len("Value error, "):]
+            error_msg = error_msg[len("Value error, ") :]
         raise HTTPException(
             status_code=400,
             detail=error_msg,

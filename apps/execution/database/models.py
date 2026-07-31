@@ -966,7 +966,10 @@ class FormSubmission(AuditedModel):
     form_id: Mapped[str] = mapped_column(String(255), nullable=False)
     form_key = synonym("form_id")
     status: Mapped[str] = mapped_column(
-        String(50), default="DRAFT", nullable=False, comment="DRAFT, COMPLETED, APPROVED"
+        String(50),
+        default="DRAFT",
+        nullable=False,
+        comment="DRAFT, COMPLETED, APPROVED",
     )  # DRAFT, COMPLETED, APPROVED
     signature_manifest: Mapped[dict] = mapped_column(JSON, nullable=True)
 
