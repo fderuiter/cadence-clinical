@@ -53,7 +53,11 @@ class DataLockEnforcer:
                     )
 
                 # Field-level lock check
-                if lock.scope == LockScopeEnum.FIELD and lock.field_name and lock.field_name in field_updates:
+                if (
+                    lock.scope == LockScopeEnum.FIELD
+                    and lock.field_name
+                    and lock.field_name in field_updates
+                ):
                     raise FormLockedError(
                         f"Field '{lock.field_name}' on form '{form_id}' is in {lock.status.value} state. Modifications blocked."
                     )

@@ -398,7 +398,6 @@ def base_study():
     )
 
 
-
 def test_successful_assembly_and_synopsis(base_study):
     """
     Test that the complete Study object can be assembled into RenderedProtocolDocument,

@@ -93,7 +93,14 @@ def is_architectural_file(filepath: str) -> bool:
         return True
 
     # 4. Storage model changes or migrations under execution
-    return bool((filepath.startswith("apps/execution/database/") or "migrations" in filepath or "models" in filepath) and filepath.startswith("apps/execution/"))
+    return bool(
+        (
+            filepath.startswith("apps/execution/database/")
+            or "migrations" in filepath
+            or "models" in filepath
+        )
+        and filepath.startswith("apps/execution/")
+    )
 
 
 def get_closest_local_branch_point() -> str:

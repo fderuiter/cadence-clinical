@@ -20,7 +20,7 @@ from apps.eisf.database import db_manager
 from apps.eisf.models import ISFAuditLog, ISFDocument
 from packages.database import DatabaseSessionDependency
 from packages.security.audit_logger import AuditLogPayload
-from packages.security.audit_logger import audit_logger_engine as CentralAuditLogger
+from packages.security.audit_logger import audit_logger_engine as central_audit_logger
 from packages.security.rbac import (
     Principal,
     can_access_site,
@@ -275,7 +275,7 @@ async def get_site_document_detail(
             "version": str(doc.version_index),
         },
     )
-    CentralAuditLogger.log_event(audit_payload)
+    central_audit_logger.log_event(audit_payload)
 
     return EISFDocumentDetail(
         id=doc.id,
@@ -353,7 +353,7 @@ async def download_site_document(
             "version": str(doc.version_index),
         },
     )
-    CentralAuditLogger.log_event(audit_payload)
+    central_audit_logger.log_event(audit_payload)
 
     return Response(
         content=doc.content,
@@ -461,7 +461,7 @@ async def upload_site_document(
             "version": str(new_version_index),
         },
     )
-    CentralAuditLogger.log_event(audit_payload)
+    central_audit_logger.log_event(audit_payload)
 
     return EISFDocumentDetail(
         id=doc.id,

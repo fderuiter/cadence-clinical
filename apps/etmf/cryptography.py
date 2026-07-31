@@ -30,7 +30,14 @@ def requires_signature(
         return True
 
     # Check for mandatory in-scope regulatory document types
-    return norm in ("fda form 1572", "financial disclosure", "protocol sign-off", "form_1572", "financial_disclosure", "protocol_signoff")
+    return norm in (
+        "fda form 1572",
+        "financial disclosure",
+        "protocol sign-off",
+        "form_1572",
+        "financial_disclosure",
+        "protocol_signoff",
+    )
 
 
 def extract_signature_from_content(

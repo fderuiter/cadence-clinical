@@ -397,10 +397,11 @@ async def process_translation(
                             if "documentedBy" in payload["study"]:
                                 if isinstance(payload["study"]["documentedBy"], list):
                                     docs.extend(payload["study"]["documentedBy"])
-                        if "protocol" in payload and isinstance(
-                            payload["protocol"], dict
-                        ) and "documentedBy" in payload["protocol"] and isinstance(
-                            payload["protocol"]["documentedBy"], list
+                        if (
+                            "protocol" in payload
+                            and isinstance(payload["protocol"], dict)
+                            and "documentedBy" in payload["protocol"]
+                            and isinstance(payload["protocol"]["documentedBy"], list)
                         ):
                             docs.extend(payload["protocol"]["documentedBy"])
 
@@ -515,7 +516,20 @@ async def process_translation(
                                     nc_name = nc.get("name")
                                     # Match on ID, name, or variations
                                     if (
-                                        nc_name in (orig_id, item_id) or nc_id in (orig_id, item_id) or nc_id and orig_id and nc_id.lower() == orig_id.lower() or nc_name and orig_id and nc_name.lower() == orig_id.lower() or nc_id == f"nc_{orig_id}" or nc_name == f"nc_{orig_id}" or nc_id and nc_id.lower() == item_id.lower() or nc_name and nc_name.lower() == item_id.lower()
+                                        nc_name in (orig_id, item_id)
+                                        or nc_id in (orig_id, item_id)
+                                        or nc_id
+                                        and orig_id
+                                        and nc_id.lower() == orig_id.lower()
+                                        or nc_name
+                                        and orig_id
+                                        and nc_name.lower() == orig_id.lower()
+                                        or nc_id == f"nc_{orig_id}"
+                                        or nc_name == f"nc_{orig_id}"
+                                        or nc_id
+                                        and nc_id.lower() == item_id.lower()
+                                        or nc_name
+                                        and nc_name.lower() == item_id.lower()
                                     ):
                                         associated_ncs.append(nc)
 
@@ -532,22 +546,24 @@ async def process_translation(
                                     if (
                                         "hint" in nc_id.lower()
                                         or "hint" in nc_name.lower()
-                                    ) and ((
-                                        orig_id and orig_id.lower() in nc_id.lower()
-                                    ) or (
-                                        orig_id
-                                        and orig_id.lower() in nc_name.lower()
-                                    )):
+                                    ) and (
+                                        (orig_id and orig_id.lower() in nc_id.lower())
+                                        or (
+                                            orig_id
+                                            and orig_id.lower() in nc_name.lower()
+                                        )
+                                    ):
                                         hint_ncs.append(nc)
                                     if (
                                         "desc" in nc_id.lower()
                                         or "desc" in nc_name.lower()
-                                    ) and ((
-                                        orig_id and orig_id.lower() in nc_id.lower()
-                                    ) or (
-                                        orig_id
-                                        and orig_id.lower() in nc_name.lower()
-                                    )):
+                                    ) and (
+                                        (orig_id and orig_id.lower() in nc_id.lower())
+                                        or (
+                                            orig_id
+                                            and orig_id.lower() in nc_name.lower()
+                                        )
+                                    ):
                                         desc_ncs.append(nc)
 
                                 # Process matching associated_ncs

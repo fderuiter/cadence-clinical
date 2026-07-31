@@ -13,7 +13,7 @@ from apps.eisf.database import db_manager
 from apps.eisf.main import app as eisf_app
 from apps.eisf.models import Base
 from apps.gateway.main import generate_signature
-from packages.security.audit_logger import audit_logger_engine as CentralAuditLogger
+from packages.security.audit_logger import audit_logger_engine as central_audit_logger
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -22,8 +22,8 @@ async def setup_eisf_db():
     db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    # Clear the global CentralAuditLogger chain for clean testing
-    CentralAuditLogger._chain.clear()
+    # Clear the global central_audit_logger chain for clean testing
+    central_audit_logger._chain.clear()
     yield
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
@@ -182,13 +182,13 @@ async def test_upload_and_get_site_document() -> None:
     sec01_node = next(n for n in binder_data if n["section_code"] == "SEC_01")
     assert sec01_node["document_count"] == 1
 
-    # 5. Verify GxP audit trail via CentralAuditLogger has records of EISF_DOCUMENT_ACCESSED
-    audit_events = [record.action_type for record in CentralAuditLogger._chain]
+    # 5. Verify GxP audit trail via central_audit_logger has records of EISF_DOCUMENT_ACCESSED
+    audit_events = [record.action_type for record in central_audit_logger._chain]
     assert "EISF_DOCUMENT_ACCESSED" in audit_events
     # Check that details are populated correctly
     accessed_event = next(
         record
-        for record in CentralAuditLogger._chain
+        for record in central_audit_logger._chain
         if record.action_type == "EISF_DOCUMENT_ACCESSED"
     )
     assert accessed_event.service_name == "eisf"

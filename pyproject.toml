@@ -18,7 +18,10 @@ select = [
     "RET",
 ]
 ignore = [
-    "E501",  # line-length — handled by formatter
+    "E501",   # line-length — handled by formatter
+    "SIM117",  # nested with statements in test mocks
+    "SIM102",  # nested if statements
+    "N817",    # CamelCase acronym imports
 ]
 
 [tool.ruff.lint.per-file-ignores]
