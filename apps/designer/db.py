@@ -218,6 +218,16 @@ def delete_mock_rule(study_id: str, rule_id: str) -> bool:
     return False
 
 
+def import_mapped_usdm_study(study_id: str, study_projection: Dict[str, Any]) -> None:
+    """Persists the reconstructed study projection in the mock database.
+
+    Ensures the study is stored in MOCK_STUDIES dictionary.
+    """
+    if not study_id:
+        raise ValueError("study_id must not be empty.")
+    MOCK_STUDIES[study_id] = study_projection
+
+
 MOCK_DESIGNER_AUDIT_LOGS: List[Dict[str, Any]] = []
 
 
