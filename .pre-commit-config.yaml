@@ -28,38 +28,52 @@ repos:
 
   - repo: local
     hooks:
+      - id: eslint
+        name: ESLint
+        entry: npx eslint --fix
+        language: system
+        files: \.(js|vue)$
+        pass_filenames: true
+
+      - id: prettier
+        name: Prettier
+        entry: npx prettier --write
+        language: system
+        files: \.(js|vue|css)$
+        pass_filenames: true
+
       - id: clean-secrets-baseline
         name: Clean Secrets Baseline
-        entry: python3 scripts/clean_secrets_baseline.py
-        language: system
+        entry: python scripts/clean_secrets_baseline.py
+        language: python
         files: \.secrets\.baseline$
         pass_filenames: false
 
       - id: check-markdown-links
         name: Check Markdown Links
-        entry: python3 scripts/validate_markdown.py
-        language: system
+        entry: python scripts/validate_markdown.py
+        language: python
         files: \.md$
         pass_filenames: false
 
       - id: detect-code-duplication
         name: Detect Code Duplication
-        entry: python3 scripts/detect_duplication.py
-        language: system
+        entry: python scripts/detect_duplication.py
+        language: python
         files: \.(py|js|vue|css)$
         pass_filenames: true
 
       - id: validate-adrs
         name: Validate ADRs
-        entry: python3 scripts/validate_adrs.py
-        language: system
+        entry: python scripts/validate_adrs.py
+        language: python
         files: ^(docs/adr/|apps/gateway/|packages/security/|packages/ui/|apps/execution/database/|pyproject.toml$|package.json$|apps/execution/.*(models|migrations))
         pass_filenames: true
 
       - id: validate-markdown
         name: Validate Custom Markdown
-        entry: python3 scripts/validate_markdown.py
-        language: system
+        entry: python scripts/validate_markdown.py
+        language: python
         files: \.md$
 
       - id: deid-compliance-scan

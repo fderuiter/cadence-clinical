@@ -92,6 +92,18 @@ def scan_file_for_lines(
     return valid_lines
 
 
+def get_file_hash(file_path: str) -> str:
+    """Computes the SHA256 hash of a file's content."""
+    try:
+        hasher = hashlib.sha256()
+        with open(file_path, "rb") as f:
+            while chunk := f.read(8192):
+                hasher.update(chunk)
+        return hasher.hexdigest()
+    except Exception:
+        return ""
+
+
 def main() -> None:
     """Main execution entry point."""
     print("--- Running Cadence Code Duplication Scanner ---")
@@ -134,10 +146,13 @@ def main() -> None:
     for directory in scan_dirs:
         if not os.path.exists(directory):
             continue
-        for root, _, files in os.walk(directory):
-            if any(
-                p in root
-                for p in [
+        for root, dirs, files in os.walk(directory):
+            # Optimize walking: modify dirs in-place to skip walking ignored directories entirely
+            dirs[:] = [
+                d
+                for d in dirs
+                if d
+                not in [
                     ".venv",
                     "node_modules",
                     "tests",
@@ -146,18 +161,44 @@ def main() -> None:
                     "dist",
                     "build",
                 ]
-            ):
-                continue
+            ]
             for file in files:
                 if file.endswith((".py", ".js", ".vue", ".css")):
                     all_files.append(os.path.join(root, file))
 
-    # 2. Extract blocks from all files to index them
+    # Load persistent cache
+    cache_path = "/app/.jules/cache/duplication_cache.json"
+    cache = {}
+    if os.path.exists(cache_path):
+        try:
+            with open(cache_path, "r", encoding="utf-8") as f:
+                cache = json.load(f)
+        except Exception:
+            cache = {}
+
+    # 2. Extract blocks from all files to index them, utilizing local cache
     # seen_blocks mapping: block_hash -> list of locations (file_path, start_line, end_line, preview_text)
     seen_blocks: Dict[str, List[Tuple[str, int, int, str]]] = {}
+    new_cache = {}
 
     for file_path in all_files:
-        lines_meta = scan_file_for_lines(file_path)
+        current_hash = get_file_hash(file_path)
+
+        # Check for cache hit to bypass reading and scanning/parsing the file.
+        # If there's no hash (e.g., file mocked in unit tests), fall back to scan_file_for_lines.
+        if not current_hash:
+            lines_meta = scan_file_for_lines(file_path)
+        elif file_path in cache and cache[file_path].get("hash") == current_hash:
+            lines_meta = [tuple(item) for item in cache[file_path]["lines"]]
+        else:
+            lines_meta = scan_file_for_lines(file_path)
+
+        if current_hash:
+            new_cache[file_path] = {
+                "hash": current_hash,
+                "lines": lines_meta
+            }
+
         if len(lines_meta) < window_size:
             continue
 
@@ -175,6 +216,14 @@ def main() -> None:
             if block_hash not in seen_blocks:
                 seen_blocks[block_hash] = []
             seen_blocks[block_hash].append((file_path, start_line, end_line, preview))
+
+    # Persist the updated cache
+    try:
+        os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+        with open(cache_path, "w", encoding="utf-8") as f:
+            json.dump(new_cache, f, indent=2)
+    except Exception as e:
+        print(f"Error writing duplication cache: {e}")
 
     # 3. Find duplications
     duplicates_found = []

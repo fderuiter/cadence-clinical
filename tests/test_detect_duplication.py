@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import mock_open, patch
 
 import pytest
 
@@ -234,3 +234,41 @@ def test_main_url_logic_preservation(mock_exit, mock_scan, mock_walk, mock_exist
     # Since actionA and actionB are different, the normalization preserves them
     # and they should NOT be detected as duplicates.
     mock_exit.assert_called_once_with(0)
+
+
+@patch("sys.argv", ["scripts/detect_duplication.py"])
+@patch("os.path.exists")
+@patch("os.walk")
+@patch("scripts.detect_duplication.get_file_hash")
+@patch("scripts.detect_duplication.scan_file_for_lines")
+@patch("sys.exit")
+def test_main_cache_hit(mock_exit, mock_scan, mock_hash, mock_walk, mock_exists):
+    mock_exit.side_effect = SystemExit
+
+    # Mock directory structure and cache existing
+    mock_exists.side_effect = lambda path: True
+    mock_walk.side_effect = [
+        [("/app/apps/serviceA", [], ["cached_file.js"])],
+        [],
+    ]
+
+    # Pre-populate cache by patching builtins.open
+    mock_hash.return_value = "12345"
+
+    import json
+    cached_data = {
+        "/app/apps/serviceA/cached_file.js": {
+            "hash": "12345",
+            "lines": [["norm_line", 1, "orig_line"]]
+        }
+    }
+    
+    with patch("builtins.open", mock_open(read_data=json.dumps(cached_data))):
+        with pytest.raises(SystemExit):
+            from scripts.detect_duplication import main
+            main()
+
+    # scan_file_for_lines should NOT have been called because hash matches
+    mock_scan.assert_not_called()
+    mock_exit.assert_called_once_with(0)
+
