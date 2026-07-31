@@ -336,7 +336,7 @@ describe("CrfAuthoringCanvas.vue & Drag-and-Drop Authoring Component Suite", () 
               type: "text",
               gridSpan: 12,
               required: false,
-            }
+            },
           ],
         },
       ],
@@ -388,7 +388,9 @@ describe("CrfAuthoringCanvas.vue & Drag-and-Drop Authoring Component Suite", () 
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find(".warning-count").text()).toBe("1");
-      expect(wrapper.find(".warnings-section").text()).toContain("Label may clip/overlap: column width is 80px (< 150px)");
+      expect(wrapper.find(".warnings-section").text()).toContain(
+        "Label may clip/overlap: column width is 80px (< 150px)"
+      );
     });
 
     it("syncs properties inspector adjustments with the designer store state", async () => {
@@ -402,10 +404,12 @@ describe("CrfAuthoringCanvas.vue & Drag-and-Drop Authoring Component Suite", () 
       // Properties Inspector should display field-narrow attributes
       const labelInput = wrapper.find("#inspect-field-label");
       expect(labelInput.exists()).toBe(true);
-      
+
       // Update the label
       await labelInput.setValue("Updated Label Name");
-      expect(store.activeForm.sections[0].items[0].label).toBe("Updated Label Name");
+      expect(store.activeForm.sections[0].items[0].label).toBe(
+        "Updated Label Name"
+      );
 
       // Update gridSpan
       const spanSelect = wrapper.find("#inspect-field-span");
@@ -431,7 +435,7 @@ describe("CrfAuthoringCanvas.vue & Drag-and-Drop Authoring Component Suite", () 
 
       const compileBtn = wrapper.find(".btn-compile");
       expect(compileBtn.exists()).toBe(true);
-      
+
       // Attempt compilation
       await compileBtn.trigger("click");
       expect(wrapper.find(".compilation-error").exists()).toBe(true);
