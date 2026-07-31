@@ -224,6 +224,14 @@ def loaded_specs():
 
 
 WHITELISTED_ROUTES = {
+    ("patch", "/subjects/{id}/state"),
+    ("patch", "/api/v1/execution/subjects/{id}/state"),
+    ("put", "/subjects/{id}/demographics"),
+    ("put", "/api/v1/execution/subjects/{id}/demographics"),
+    ("delete", "/subjects/{id}/demographics"),
+    ("delete", "/api/v1/execution/subjects/{id}/demographics"),
+    ("get", "/api/v1/execution/subjects/{subject_id}"),
+    ("get", "/api/v1/execution/visits/{visit_id}"),
     ("post", "/api/v1/documents/upload"),
     ("get", "/api/v1/documents/{doc_id}"),
     ("get", "/api/v1/documents/{doc_id}/versions"),
