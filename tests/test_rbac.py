@@ -1249,3 +1249,77 @@ def test_principal_agreement_with_middleware_coercion() -> None:
     assert data_free["assigned_sites"] == []
     assert data_free["sponsor_id"] is None
     assert data_free["unblinded_access"] is False
+
+
+def test_is_auditor_helper() -> None:
+    """Test is_auditor helper identifies auditor personas correctly."""
+    from packages.security.rbac import is_auditor
+
+    class MockRequest:
+        def __init__(self, roles_str: str):
+            class State:
+                pass
+
+            self.state = State()
+            self.state.roles = roles_str
+            self.headers = {}
+
+    assert is_auditor(MockRequest("auditor")) is True
+    assert is_auditor(MockRequest("inspector")) is True
+    assert is_auditor(MockRequest("regulatory_inspector")) is True
+    assert is_auditor(MockRequest("cra")) is False
+    assert is_auditor(MockRequest("admin")) is False
+
+
+def test_require_role_dependency() -> None:
+    """Test require_role dependency factory enforces a single role."""
+    from packages.security.rbac import require_role
+
+    class MockRequest:
+        def __init__(self, roles_str: str):
+            class State:
+                pass
+
+            self.state = State()
+            self.state.roles = roles_str
+            self.headers = {}
+
+    req_cra = require_role("CRA")
+
+    # 1. Allowed
+    res = req_cra(MockRequest("cra"))
+    assert "cra" in res
+
+    # 2. Denied
+    with pytest.raises(HTTPException) as exc_info:
+        req_cra(MockRequest("admin"))
+    assert exc_info.value.status_code == 403
+
+
+def test_require_any_role_dependency() -> None:
+    """Test require_any_role dependency factory enforces any of specified roles."""
+    from packages.security.rbac import require_any_role
+
+    class MockRequest:
+        def __init__(self, roles_str: str):
+            class State:
+                pass
+
+            self.state = State()
+            self.state.roles = roles_str
+            self.headers = {}
+
+    req_roles = require_any_role("CRA", "Data Manager")
+
+    # 1. Allowed CRA
+    res = req_roles(MockRequest("cra"))
+    assert "cra" in res
+
+    # 2. Allowed DM
+    res = req_roles(MockRequest("data manager"))
+    assert "data_manager" in res or "sponsor_dm" in res or "data manager" in res
+
+    # 3. Denied
+    with pytest.raises(HTTPException) as exc_info:
+        req_roles(MockRequest("auditor"))
+    assert exc_info.value.status_code == 403

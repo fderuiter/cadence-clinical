@@ -2,7 +2,10 @@
   <div class="language-translation-tabs-container card">
     <div class="tabs-header">
       <span class="tabs-label">🌍 Localized Consent Translations:</span>
-      <div class="tabs-list" role="tablist">
+      <div
+        class="tabs-list"
+        role="tablist"
+      >
         <button
           v-for="lang in availableLanguages"
           :key="lang.code"
