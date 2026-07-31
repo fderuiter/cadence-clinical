@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1737
-- **Passed:** 1737 🟢
+- **Total Automated Test Cases Run:** 1738
+- **Passed:** 1738 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1195,6 +1195,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_lifecycle_transitions_and_justifications` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_multi_channel_edge_case_in_app_succeeds_email_exhausts` | `tests.test_notifications` | PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_notification_creation_and_auditing` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_notification_creation_with_new_columns` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_notification_detail_visibility` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_notification_list_visibility_and_filtering` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_notifications_database_schema_creation` | `tests.test_notifications` | *Regression/Helper* | 🟢 PASSED | < 1s |
