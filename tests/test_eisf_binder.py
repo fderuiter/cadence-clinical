@@ -18,6 +18,7 @@ from apps.eisf.main import app as eisf_app
 from apps.eisf.models import Base as EisfModelBase
 from apps.etmf.services.eisf_service import Base as ServiceBase
 from apps.etmf.services.eisf_service import EISFBinderService
+from apps.execution.database.models import Base as ExecutionModelBase
 from apps.gateway.main import generate_signature
 from packages.security.rbac import Principal
 
@@ -34,7 +35,23 @@ async def db_session() -> AsyncGenerator:
         connect_args={"check_same_thread": False},
         echo=False,
     )
+    from sqlalchemy import event as sa_event
+    from sqlalchemy import text
+
+    @sa_event.listens_for(engine.sync_engine, "connect")
+    def attach_audit_schema(dbapi_conn, record):
+        cursor = dbapi_conn.cursor()
+        try:
+            cursor.execute("ATTACH DATABASE ':memory:' AS audit_schema;")
+        except Exception:
+            pass
+        finally:
+            cursor.close()
+
     async with engine.begin() as conn:
+        if engine.dialect.name == "postgresql":
+            await conn.execute(text("CREATE SCHEMA IF NOT EXISTS audit_schema;"))
+        await conn.run_sync(ExecutionModelBase.metadata.create_all)
         await conn.run_sync(ServiceBase.metadata.create_all)
 
     session_maker = async_sessionmaker(engine, expire_on_commit=False)
@@ -56,7 +73,23 @@ async def setup_eisf_db() -> AsyncGenerator:
         connect_args={"check_same_thread": False},
         echo=False,
     )
+    from sqlalchemy import event as sa_event
+    from sqlalchemy import text
+
+    @sa_event.listens_for(db_manager.engine.sync_engine, "connect")
+    def attach_audit_schema(dbapi_conn, record):
+        cursor = dbapi_conn.cursor()
+        try:
+            cursor.execute("ATTACH DATABASE ':memory:' AS audit_schema;")
+        except Exception:
+            pass
+        finally:
+            cursor.close()
+
     async with db_manager.engine.begin() as conn:
+        if db_manager.engine.dialect.name == "postgresql":
+            await conn.execute(text("CREATE SCHEMA IF NOT EXISTS audit_schema;"))
+        await conn.run_sync(ExecutionModelBase.metadata.create_all)
         await conn.run_sync(EisfModelBase.metadata.create_all)
     yield
 
