@@ -57,6 +57,7 @@ from apps.designer.db import (
     get_mock_rule_by_id,
     get_mock_rules,
     get_study_projection,
+    import_mapped_usdm_study,
     is_concept_referenced_by_active_recruiting_study,
     terminology_cache,
     update_mock_rule,
@@ -132,6 +133,7 @@ from apps.designer.rules import (
     detect_circular_dependencies,
     detect_unknown_fields,
 )
+from apps.designer.serialization import USDMSerializationError, serialize_usdm
 from apps.designer.usdm_ingestion import (
     validate_usdm_payload,
 )
@@ -492,17 +494,19 @@ async def get_legacy_study(study_id: str) -> Dict[str, Any]:
 
 
 @app.get("/api/v2/studies/{study_id}/usdm")
-async def get_usdm_study(study_id: str) -> Dict[str, Any]:
+async def get_usdm_study(
+    study_id: str,
+    format: Optional[str] = Query(
+        None, description="Output serialization format ('json' or 'yaml')"
+    ),
+    style: str = Query(
+        "canonical", description="Layout style ('canonical', 'legacy', or 'both')"
+    ),
+    validate: bool = Query(True, description="Run through validation checks"),
+) -> Any:
     """Dynamically processes the internal projection and returns a compliant USDM structure.
-
-    Args:
-        study_id (str): The unique identifier of the study.
-
-    Returns:
-        Dict[str, Any]: The dynamically mapped USDM study data.
-
-    Raises:
-        HTTPException: If the study is not found or validation fails.
+    If 'format' is specified, serializes to JSON or YAML on request and runs it through validation.
+    If 'format' is None, returns raw dictionary mapping for backward compatibility.
     """
     start_time = time.perf_counter()
     study_data = get_study_projection(study_id)
@@ -516,12 +520,153 @@ async def get_usdm_study(study_id: str) -> Dict[str, Any]:
             status_code=422, detail=f"Validation Error mapping USDM: {str(e)}"
         )
 
+    if format:
+        fmt = format.strip().lower()
+        if fmt not in ("json", "yaml", "yml"):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported format '{format}'. Supported formats: 'json', 'yaml'.",
+            )
+        try:
+            serialized_content = serialize_usdm(
+                usdm_study, format_type=fmt, style=style, validate=validate
+            )
+        except USDMSerializationError as e:
+            raise HTTPException(
+                status_code=422,
+                detail=f"USDM Export Validation Failed: {e.message}. Errors: {e.errors}",
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=400, detail=f"Serialization failed: {str(e)}"
+            )
+
+        media_type = "application/json" if fmt == "json" else "application/x-yaml"
+        return Response(content=serialized_content, media_type=media_type)
+
     duration = (time.perf_counter() - start_time) * 1000
     # Simulate processing overhead check - we want this under 200ms
     if duration > 200:
         pass  # In a real app we might log a warning
 
     return usdm_study
+
+
+@app.post(
+    "/api/v2/studies/{study_id}/usdm",
+    status_code=status.HTTP_200_OK,
+    dependencies=[
+        Depends(require_permission("study_design:update")),
+        Depends(require_study_scope()),
+    ],
+)
+async def import_usdm_study_endpoint(
+    study_id: str,
+    request: Request,
+    override: Optional[str] = Query(
+        None, description="Optional explicit version override ('v2' or 'v3')"
+    ),
+) -> Any:
+    """Ingests a USDM payload (JSON or YAML), validates it, converts it to internal, and persists it."""
+    body_bytes = await request.body()
+    body_text = body_bytes.decode("utf-8")
+
+    # 1. Perform schema and circular rule validation using validate_usdm_payload
+    report = validate_usdm_payload(body_text, override=override)
+    if not report.validity:
+        invalid_params = []
+        for err in report.errors:
+            invalid_params.append(
+                InvalidParam(
+                    field=err.field or "payload", reason=err.reason, value=err.value
+                )
+            )
+        problem = ProblemDetails(
+            type="https://api.cadence-clinical.com/errors/usdm-validation-failed",
+            title="USDM Ingestion Validation Failed",
+            status=422,
+            detail=f"The provided {report.format} payload failed USDM {report.version} validation.",
+            instance=request.url.path,
+            code="USDM_VALIDATION_ERROR",
+            invalid_params=invalid_params,
+        )
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content=problem.model_dump(exclude_none=True),
+        )
+
+    # Parse and normalize
+    from apps.designer.inverse_mapper import map_usdm_to_study
+    from apps.designer.mapper import to_uuid
+    from apps.designer.usdm_ingestion import normalize_usdm_payload, safe_parse_payload
+    from packages.security import audit_context
+
+    try:
+        parsed_dict, format_type = safe_parse_payload(body_text)
+        normalized_dict = normalize_usdm_payload(parsed_dict, report.version)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"USDM payload parsing or normalization failed: {str(e)}",
+        )
+
+    # 2. Extract identity & change reason from request headers/state
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = getattr(request.state, "change_reason", None)
+    if not change_reason:
+        change_reason = request.headers.get("X-Change-Reason") or request.headers.get(
+            "x-change-reason"
+        )
+    if not change_reason:
+        # Check if audit_metadata or similar is in the payload to use as change reason
+        audit_meta = normalized_dict.get("audit_metadata") or {}
+        if isinstance(audit_meta, dict):
+            change_reason = audit_meta.get("reason_for_change") or audit_meta.get(
+                "changeReason"
+            )
+    if not change_reason:
+        change_reason = normalized_dict.get("reason_for_change") or normalized_dict.get(
+            "changeReason"
+        )
+    if not change_reason or not change_reason.strip():
+        change_reason = "USDM Import via API"
+
+    # Enforce path study_id matches payload study ID
+    payload_id = normalized_dict.get("_original_id") or normalized_dict.get("id")
+    if payload_id:
+        if study_id != payload_id and to_uuid(study_id, "study") != payload_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Path study_id '{study_id}' does not match payload study ID '{payload_id}'",
+            )
+
+    # 3. Perform inverse mapping under active audit_context
+    with audit_context(user_id=user_id, change_reason=change_reason):
+        try:
+            internal_study = map_usdm_to_study(normalized_dict)
+        except ValueError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"USDM to Internal inverse-mapping validation failed: {str(e)}",
+            )
+
+        # Inject user and change reason
+        internal_study["created_by"] = user_id
+        internal_study["change_reason"] = change_reason
+
+        # Persist using import_mapped_usdm_study
+        try:
+            import_mapped_usdm_study(study_id, internal_study)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Database persistence of imported USDM failed: {str(e)}",
+            )
+
+    return {
+        "status": "success",
+        "message": f"Study '{study_id}' successfully imported from USDM.",
+    }
 
 
 @app.post(

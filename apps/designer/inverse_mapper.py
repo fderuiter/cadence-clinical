@@ -1,3 +1,9 @@
+"""USDM to Internal Study design inverse mapper module.
+
+# @Req:PRD-MDR-007
+# @req:PRD-MDR-007
+"""
+
 from typing import Any, Dict, Optional
 
 from apps.designer.db import MOCK_TERMINOLOGY

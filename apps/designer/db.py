@@ -433,3 +433,60 @@ async def is_concept_referenced_by_active_recruiting_study(
             pass
 
     return False
+
+
+def import_mapped_usdm_study(study_id: str, study_projection: Dict[str, Any]) -> None:
+    """Persists a reconstructed internal study projection to the mock database.
+    Separates arms, rules, blocks, eligibility criteria to match original db expectations.
+    """
+    import copy
+
+    proj = copy.deepcopy(study_projection)
+
+    MOCK_STUDIES[study_id] = {
+        "study_id": study_id,
+        "title": proj.get("title"),
+        "current_version": proj.get("current_version", "1.0"),
+        "desc": proj.get("desc"),
+        "arms": proj.get("arms", []),
+    }
+
+    MOCK_RULES[study_id] = proj.get("rules", [])
+    MOCK_ELIGIBILITY_CRITERIA[study_id] = proj.get("eligibility_criteria", [])
+
+    if study_id not in MOCK_STUDY_VERSIONS:
+        MOCK_STUDY_VERSIONS[study_id] = []
+
+    version_tag = proj.get("current_version", "1.0")
+    version_exists = any(
+        v.get("version_tag") == version_tag for v in MOCK_STUDY_VERSIONS[study_id]
+    )
+    if not version_exists:
+        import os
+        from packages.security.signing import generate_canonical_signature
+
+        version_data = {
+            "id": f"ver_{study_id}_{version_tag.replace('.', '_')}",
+            "version_tag": version_tag,
+            "status": "DRAFT",
+            "version_index": len(MOCK_STUDY_VERSIONS[study_id]) + 1,
+            "created_by": proj.get("created_by", "system"),
+            "created_at": "2026-01-01T00:00:00Z",
+        }
+        secret = os.getenv(
+            "SIGNING_SECRET", "designer-amendment-secure-key-12345"
+        ).encode("utf-8")
+        version_data["signature"] = generate_canonical_signature(version_data, secret)
+        MOCK_STUDY_VERSIONS[study_id].append(version_data)
+
+    from apps.designer.delta import MOCK_SOA_DATA, _init_mock_soa
+
+    latest_ver = MOCK_STUDY_VERSIONS[study_id][-1]
+    version_id = latest_ver.get("id")
+    _init_mock_soa(version_id)
+
+    blocks_dict = {}
+    for block in proj.get("blocks", []):
+        block_id = block["block_id"]
+        blocks_dict[block_id] = block
+    MOCK_SOA_DATA[version_id]["blocks"] = blocks_dict
