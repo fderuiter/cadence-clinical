@@ -258,7 +258,7 @@ def test_part11_manifestation_mapping_and_validation(crypto_material):
         signing_reason_text="PI approval of monitoring report",
         network_ip_address="192.168.10.12",
         device_user_agent="Safari 15.0",
-        signature_hash_sha256="abcde1234567890f" * 4,
+        signature_hash_sha256="abcde1234567890f" * 4,  # pragma: allowlist secret
     )
 
     # Check Part 11 fields
@@ -286,7 +286,7 @@ def test_part11_manifestation_mapping_and_validation(crypto_material):
         signing_reason=SigningReason.REVIEW,
         ip_address="10.0.0.5",
         user_agent="Firefox 90.0",
-        sha256_hash="12345abcde" * 6 + "1234",
+        sha256_hash="12345abcde" * 6 + "1234",  # pragma: allowlist secret
     )
 
     # Check legacy fields
@@ -319,7 +319,7 @@ def test_part11_signing_verification_primitives(crypto_material, monkeypatch):
         signing_reason_text="PI approval of monitoring report",
         network_ip_address="192.168.10.12",
         device_user_agent="Safari 15.0",
-        signature_hash_sha256="abcde1234567890f" * 4,
+        signature_hash_sha256="abcde1234567890f" * 4,  # pragma: allowlist secret
     )
 
     # 1. Test canonical serialization
@@ -378,7 +378,7 @@ def test_signature_manifestation_contextvar_propagation():
         signing_reason_code=SigningReasonCode.PI_APPROVAL,
         signing_reason_text="PI approval",
         network_ip_address="192.168.10.12",
-        signature_hash_sha256="abcde1234567890f" * 4,
+        signature_hash_sha256="abcde1234567890f" * 4,  # pragma: allowlist secret
     )
 
     assert current_signature_manifestation.get() is None
@@ -402,7 +402,7 @@ async def test_async_signature_manifestation_context_decorator():
         signing_reason_code=SigningReasonCode.PI_APPROVAL,
         signing_reason_text="PI approval",
         network_ip_address="192.168.10.12",
-        signature_hash_sha256="abcde1234567890f" * 4,
+        signature_hash_sha256="abcde1234567890f" * 4,  # pragma: allowlist secret
     )
 
     def get_manifest(*args, **kwargs):
