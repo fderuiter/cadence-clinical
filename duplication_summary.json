@@ -1,0 +1,1083 @@
+{
+  "duplicates": [
+    {
+      "loc1": {
+        "file": "apps/web/src/components/SignatureCaptureModal.vue",
+        "start": 5,
+        "end": 19
+      },
+      "loc2": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 5,
+        "end": 19
+      },
+      "preview": "    class=\"modal-overlay\"\n    style=\"\n      display: flex;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/SignatureCaptureModal.vue",
+        "start": 6,
+        "end": 20
+      },
+      "loc2": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 6,
+        "end": 20
+      },
+      "preview": "    style=\"\n      display: flex;\n      position: fixed;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/SignatureCaptureModal.vue",
+        "start": 7,
+        "end": 21
+      },
+      "loc2": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 7,
+        "end": 21
+      },
+      "preview": "      display: flex;\n      position: fixed;\n      top: 0;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/SignatureCaptureModal.vue",
+        "start": 8,
+        "end": 22
+      },
+      "loc2": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 8,
+        "end": 22
+      },
+      "preview": "      position: fixed;\n      top: 0;\n      left: 0;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/SignatureCaptureModal.vue",
+        "start": 9,
+        "end": 23
+      },
+      "loc2": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 9,
+        "end": 23
+      },
+      "preview": "      top: 0;\n      left: 0;\n      right: 0;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/SignatureCaptureModal.vue",
+        "start": 10,
+        "end": 24
+      },
+      "loc2": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 10,
+        "end": 24
+      },
+      "preview": "      left: 0;\n      right: 0;\n      bottom: 0;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/SignatureCaptureModal.vue",
+        "start": 26,
+        "end": 40
+      },
+      "loc2": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 26,
+        "end": 40
+      },
+      "preview": "        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);\n        overflow: hidden;\n        color: #333;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/SignatureCaptureModal.vue",
+        "start": 182,
+        "end": 196
+      },
+      "loc2": {
+        "file": "apps/web/src/components/crf/ApprovalHandoffModal.vue",
+        "start": 111,
+        "end": 125
+      },
+      "preview": "          {{ error }}\n        </div>\n      </div>\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/RulesView.vue",
+        "start": 15,
+        "end": 29
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ConsentAuthoringView.vue",
+        "start": 16,
+        "end": 30
+      },
+      "preview": "      style=\"\n        border-left: 4px solid var(--error);\n        background-color: var(--error-bg);\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/RulesView.vue",
+        "start": 16,
+        "end": 30
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ConsentAuthoringView.vue",
+        "start": 17,
+        "end": 31
+      },
+      "preview": "        border-left: 4px solid var(--error);\n        background-color: var(--error-bg);\n        padding: 24px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/RulesView.vue",
+        "start": 17,
+        "end": 31
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ConsentAuthoringView.vue",
+        "start": 18,
+        "end": 32
+      },
+      "preview": "        background-color: var(--error-bg);\n        padding: 24px;\n      \"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/RulesView.vue",
+        "start": 18,
+        "end": 32
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ConsentAuthoringView.vue",
+        "start": 19,
+        "end": 33
+      },
+      "preview": "        padding: 24px;\n      \"\n    >\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/RulesView.vue",
+        "start": 19,
+        "end": 33
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ConsentAuthoringView.vue",
+        "start": 20,
+        "end": 34
+      },
+      "preview": "      \"\n    >\n      <div style=\"display: flex; gap: 16px; align-items: flex-start\">\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/RulesView.vue",
+        "start": 20,
+        "end": 34
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ConsentAuthoringView.vue",
+        "start": 21,
+        "end": 35
+      },
+      "preview": "    >\n      <div style=\"display: flex; gap: 16px; align-items: flex-start\">\n        <span style=\"font-size: 2rem\">\ud83d\udeab</span>\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/RulesView.vue",
+        "start": 21,
+        "end": 35
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ConsentAuthoringView.vue",
+        "start": 22,
+        "end": 36
+      },
+      "preview": "      <div style=\"display: flex; gap: 16px; align-items: flex-start\">\n        <span style=\"font-size: 2rem\">\ud83d\udeab</span>\n        <div>\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/RulesView.vue",
+        "start": 115,
+        "end": 129
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ConsentAuthoringView.vue",
+        "start": 120,
+        "end": 134
+      },
+      "preview": "              style=\"\n                border: 1px solid var(--border);\n                border-radius: 8px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/RulesView.vue",
+        "start": 116,
+        "end": 130
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ConsentAuthoringView.vue",
+        "start": 121,
+        "end": 135
+      },
+      "preview": "                border: 1px solid var(--border);\n                border-radius: 8px;\n                padding: 16px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/views/RulesView.vue",
+        "start": 117,
+        "end": 131
+      },
+      "loc2": {
+        "file": "apps/web/src/views/ConsentAuthoringView.vue",
+        "start": 122,
+        "end": 136
+      },
+      "preview": "                border-radius: 8px;\n                padding: 16px;\n                margin-bottom: 12px;\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/etmf/lock_client.py",
+        "start": 52,
+        "end": 68
+      },
+      "loc2": {
+        "file": "apps/execution/designer_client.py",
+        "start": 57,
+        "end": 74
+      },
+      "preview": "    timestamp = str(time.time())\n    signature = generate_gateway_signature(\n        user_id=user_id,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/etmf/lock_client.py",
+        "start": 52,
+        "end": 68
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 60,
+        "end": 77
+      },
+      "preview": "    timestamp = str(time.time())\n    signature = generate_gateway_signature(\n        user_id=user_id,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/etmf/lock_client.py",
+        "start": 52,
+        "end": 68
+      },
+      "loc2": {
+        "file": "apps/interop/designer_client.py",
+        "start": 90,
+        "end": 106
+      },
+      "preview": "    timestamp = str(time.time())\n    signature = generate_gateway_signature(\n        user_id=user_id,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 57,
+        "end": 74
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 60,
+        "end": 77
+      },
+      "preview": "        timestamp = str(time.time())\n        signature = generate_gateway_signature(\n            user_id=user_id,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 57,
+        "end": 74
+      },
+      "loc2": {
+        "file": "apps/interop/designer_client.py",
+        "start": 90,
+        "end": 106
+      },
+      "preview": "        timestamp = str(time.time())\n        signature = generate_gateway_signature(\n            user_id=user_id,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 60,
+        "end": 77
+      },
+      "loc2": {
+        "file": "apps/interop/designer_client.py",
+        "start": 90,
+        "end": 106
+      },
+      "preview": "        timestamp = str(time.time())\n        signature = generate_gateway_signature(\n            user_id=user_id,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 45,
+        "end": 62
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 48,
+        "end": 65
+      },
+      "preview": "        \"\"\"\n        gateway_secret_env = os.getenv(\n            \"GATEWAY_SECRET\", \"internal-gateway-secret-12345\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 46,
+        "end": 63
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 49,
+        "end": 66
+      },
+      "preview": "        gateway_secret_env = os.getenv(\n            \"GATEWAY_SECRET\", \"internal-gateway-secret-12345\"\n        )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 47,
+        "end": 64
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 50,
+        "end": 67
+      },
+      "preview": "            \"GATEWAY_SECRET\", \"internal-gateway-secret-12345\"\n        )\n        gateway_secret = (\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 48,
+        "end": 65
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 51,
+        "end": 68
+      },
+      "preview": "        )\n        gateway_secret = (\n            gateway_secret_env.encode(\"utf-8\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 49,
+        "end": 66
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 52,
+        "end": 69
+      },
+      "preview": "        gateway_secret = (\n            gateway_secret_env.encode(\"utf-8\")\n            if isinstance(gateway_secret_env, str)\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 50,
+        "end": 68
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 53,
+        "end": 71
+      },
+      "preview": "            gateway_secret_env.encode(\"utf-8\")\n            if isinstance(gateway_secret_env, str)\n            else gateway_secret_env\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 51,
+        "end": 69
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 54,
+        "end": 72
+      },
+      "preview": "            if isinstance(gateway_secret_env, str)\n            else gateway_secret_env\n        )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 52,
+        "end": 70
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 55,
+        "end": 73
+      },
+      "preview": "            else gateway_secret_env\n        )\n        user_id = \"execution-service\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 53,
+        "end": 71
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 56,
+        "end": 74
+      },
+      "preview": "        )\n        user_id = \"execution-service\"\n        roles = \"system\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 55,
+        "end": 72
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 58,
+        "end": 75
+      },
+      "preview": "        user_id = \"execution-service\"\n        roles = \"system\"\n        timestamp = str(time.time())\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 56,
+        "end": 73
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 59,
+        "end": 76
+      },
+      "preview": "        roles = \"system\"\n        timestamp = str(time.time())\n        signature = generate_gateway_signature(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/notifications_client.py",
+        "start": 30,
+        "end": 45
+      },
+      "loc2": {
+        "file": "apps/tickets/notifications_client.py",
+        "start": 30,
+        "end": 45
+      },
+      "preview": "        roles = \"admin\"\n        response = await client.request(\n            method=\"POST\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/notifications_client.py",
+        "start": 32,
+        "end": 46
+      },
+      "loc2": {
+        "file": "apps/tickets/notifications_client.py",
+        "start": 32,
+        "end": 46
+      },
+      "preview": "        response = await client.request(\n            method=\"POST\",\n            path=\"/api/v1/notifications\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/notifications_client.py",
+        "start": 33,
+        "end": 47
+      },
+      "loc2": {
+        "file": "apps/tickets/notifications_client.py",
+        "start": 33,
+        "end": 47
+      },
+      "preview": "            method=\"POST\",\n            path=\"/api/v1/notifications\",\n            user_id=user_id,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/notifications_client.py",
+        "start": 34,
+        "end": 48
+      },
+      "loc2": {
+        "file": "apps/tickets/notifications_client.py",
+        "start": 34,
+        "end": 48
+      },
+      "preview": "            path=\"/api/v1/notifications\",\n            user_id=user_id,\n            roles=roles,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/notifications_client.py",
+        "start": 35,
+        "end": 49
+      },
+      "loc2": {
+        "file": "apps/tickets/notifications_client.py",
+        "start": 35,
+        "end": 49
+      },
+      "preview": "            user_id=user_id,\n            roles=roles,\n            change_reason=change_reason,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/notifications_client.py",
+        "start": 36,
+        "end": 50
+      },
+      "loc2": {
+        "file": "apps/tickets/notifications_client.py",
+        "start": 36,
+        "end": 50
+      },
+      "preview": "            roles=roles,\n            change_reason=change_reason,\n            json=payload,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/notifications_client.py",
+        "start": 37,
+        "end": 51
+      },
+      "loc2": {
+        "file": "apps/tickets/notifications_client.py",
+        "start": 37,
+        "end": 51
+      },
+      "preview": "            change_reason=change_reason,\n            json=payload,\n        )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/notifications_client.py",
+        "start": 38,
+        "end": 52
+      },
+      "loc2": {
+        "file": "apps/tickets/notifications_client.py",
+        "start": 38,
+        "end": 52
+      },
+      "preview": "            json=payload,\n        )\n        if response.status_code != 201:\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/notifications_client.py",
+        "start": 39,
+        "end": 53
+      },
+      "loc2": {
+        "file": "apps/tickets/notifications_client.py",
+        "start": 39,
+        "end": 53
+      },
+      "preview": "        )\n        if response.status_code != 201:\n            logger.error(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/notifications_client.py",
+        "start": 40,
+        "end": 54
+      },
+      "loc2": {
+        "file": "apps/tickets/notifications_client.py",
+        "start": 40,
+        "end": 54
+      },
+      "preview": "        if response.status_code != 201:\n            logger.error(\n                \"Failed to publish notification, status code: %s, response: %s\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 47,
+        "end": 69
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 45,
+        "end": 67
+      },
+      "preview": "    \"\"\"\n    if not date_str:\n        return date_str\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 48,
+        "end": 70
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 46,
+        "end": 68
+      },
+      "preview": "    if not date_str:\n        return date_str\n    original_str = date_str.strip()\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 49,
+        "end": 71
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 47,
+        "end": 69
+      },
+      "preview": "        return date_str\n    original_str = date_str.strip()\n    if not original_str:\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 51,
+        "end": 72
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 49,
+        "end": 70
+      },
+      "preview": "    original_str = date_str.strip()\n    if not original_str:\n        return date_str\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 52,
+        "end": 75
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 50,
+        "end": 73
+      },
+      "preview": "    if not original_str:\n        return date_str\n    t_split = original_str.split(\"T\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 53,
+        "end": 76
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 51,
+        "end": 74
+      },
+      "preview": "        return date_str\n    t_split = original_str.split(\"T\")\n    date_part = t_split[0]\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 56,
+        "end": 77
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 54,
+        "end": 75
+      },
+      "preview": "    t_split = original_str.split(\"T\")\n    date_part = t_split[0]\n    time_part = \"T\" + t_split[1] if len(t_split) > 1 else \"\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 57,
+        "end": 78
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 55,
+        "end": 76
+      },
+      "preview": "    date_part = t_split[0]\n    time_part = \"T\" + t_split[1] if len(t_split) > 1 else \"\"\n    parts = re.split(r\"([- /])\", date_part)\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 58,
+        "end": 80
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 56,
+        "end": 78
+      },
+      "preview": "    time_part = \"T\" + t_split[1] if len(t_split) > 1 else \"\"\n    parts = re.split(r\"([- /])\", date_part)\n    if len(parts) >= 1 and parts[0].isdigit() and len(parts[0]) == 4:\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 61,
+        "end": 81
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 59,
+        "end": 79
+      },
+      "preview": "    parts = re.split(r\"([- /])\", date_part)\n    if len(parts) >= 1 and parts[0].isdigit() and len(parts[0]) == 4:\n        year_str = parts[0]\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 64,
+        "end": 82
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 62,
+        "end": 80
+      },
+      "preview": "    if len(parts) >= 1 and parts[0].isdigit() and len(parts[0]) == 4:\n        year_str = parts[0]\n        month_str = \"06\"  # Default mid-year for partial/missing month\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 65,
+        "end": 85
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 63,
+        "end": 83
+      },
+      "preview": "        year_str = parts[0]\n        month_str = \"06\"  # Default mid-year for partial/missing month\n        day_str = \"15\"  # Default mid-month for partial/missing day\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 66,
+        "end": 86
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 64,
+        "end": 84
+      },
+      "preview": "        month_str = \"06\"  # Default mid-year for partial/missing month\n        day_str = \"15\"  # Default mid-month for partial/missing day\n        if len(parts) >= 3 and parts[2].isdigit():\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 67,
+        "end": 87
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 65,
+        "end": 85
+      },
+      "preview": "        day_str = \"15\"  # Default mid-month for partial/missing day\n        if len(parts) >= 3 and parts[2].isdigit():\n            month_str = parts[2]\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 69,
+        "end": 88
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 67,
+        "end": 86
+      },
+      "preview": "        if len(parts) >= 3 and parts[2].isdigit():\n            month_str = parts[2]\n        if len(parts) >= 5 and parts[4].isdigit():\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 70,
+        "end": 89
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 68,
+        "end": 87
+      },
+      "preview": "            month_str = parts[2]\n        if len(parts) >= 5 and parts[4].isdigit():\n            day_str = parts[4]\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 71,
+        "end": 90
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 69,
+        "end": 88
+      },
+      "preview": "        if len(parts) >= 5 and parts[4].isdigit():\n            day_str = parts[4]\n        dummy_date_str = f\"{year_str}-{month_str}-{day_str}\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 72,
+        "end": 91
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 70,
+        "end": 89
+      },
+      "preview": "            day_str = parts[4]\n        dummy_date_str = f\"{year_str}-{month_str}-{day_str}\"\n        try:\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 75,
+        "end": 92
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 73,
+        "end": 90
+      },
+      "preview": "        dummy_date_str = f\"{year_str}-{month_str}-{day_str}\"\n        try:\n            dt = date_parser.parse(dummy_date_str)\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 76,
+        "end": 94
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 74,
+        "end": 92
+      },
+      "preview": "        try:\n            dt = date_parser.parse(dummy_date_str)\n            shifted_dt = dt + timedelta(days=shift_days)\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 77,
+        "end": 95
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 75,
+        "end": 93
+      },
+      "preview": "            dt = date_parser.parse(dummy_date_str)\n            shifted_dt = dt + timedelta(days=shift_days)\n            shifted_year = f\"{shifted_dt.year:04d}\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 78,
+        "end": 96
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 76,
+        "end": 94
+      },
+      "preview": "            shifted_dt = dt + timedelta(days=shift_days)\n            shifted_year = f\"{shifted_dt.year:04d}\"\n            shifted_month = f\"{shifted_dt.month:02d}\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/core-models/sdtm/sdtm_models.py",
+        "start": 98,
+        "end": 113
+      },
+      "loc2": {
+        "file": "packages/core-models/sdtm/models.py",
+        "start": 230,
+        "end": 245
+      },
+      "preview": "    \"\"\"\n    STUDYID: str = Field(..., description=\"Study Identifier (Required)\")\n    DOMAIN: str = Field(\"VS\", description=\"Domain Abbreviation (Required)\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/core-models/sdtm/sdtm_models.py",
+        "start": 100,
+        "end": 114
+      },
+      "loc2": {
+        "file": "packages/core-models/sdtm/models.py",
+        "start": 232,
+        "end": 246
+      },
+      "preview": "    STUDYID: str = Field(..., description=\"Study Identifier (Required)\")\n    DOMAIN: str = Field(\"VS\", description=\"Domain Abbreviation (Required)\")\n    USUBJID: str = Field(..., description=\"Unique Subject Identifier (Required)\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/core-models/sdtm/sdtm_models.py",
+        "start": 101,
+        "end": 115
+      },
+      "loc2": {
+        "file": "packages/core-models/sdtm/models.py",
+        "start": 233,
+        "end": 247
+      },
+      "preview": "    DOMAIN: str = Field(\"VS\", description=\"Domain Abbreviation (Required)\")\n    USUBJID: str = Field(..., description=\"Unique Subject Identifier (Required)\")\n    VSSEQ: int = Field(..., description=\"Sequence Number (Required)\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/core-models/sdtm/sdtm_models.py",
+        "start": 102,
+        "end": 116
+      },
+      "loc2": {
+        "file": "packages/core-models/sdtm/models.py",
+        "start": 234,
+        "end": 248
+      },
+      "preview": "    USUBJID: str = Field(..., description=\"Unique Subject Identifier (Required)\")\n    VSSEQ: int = Field(..., description=\"Sequence Number (Required)\")\n    VSTESTCD: str = Field(..., description=\"Vital Signs Test Short Code (Required)\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/core-models/sdtm/sdtm_models.py",
+        "start": 103,
+        "end": 117
+      },
+      "loc2": {
+        "file": "packages/core-models/sdtm/models.py",
+        "start": 235,
+        "end": 249
+      },
+      "preview": "    VSSEQ: int = Field(..., description=\"Sequence Number (Required)\")\n    VSTESTCD: str = Field(..., description=\"Vital Signs Test Short Code (Required)\")\n    VSTEST: str = Field(..., description=\"Vital Signs Test Name (Required)\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/core-models/sdtm/sdtm_models.py",
+        "start": 104,
+        "end": 118
+      },
+      "loc2": {
+        "file": "packages/core-models/sdtm/models.py",
+        "start": 236,
+        "end": 250
+      },
+      "preview": "    VSTESTCD: str = Field(..., description=\"Vital Signs Test Short Code (Required)\")\n    VSTEST: str = Field(..., description=\"Vital Signs Test Name (Required)\")\n    VSORRES: Optional[Union[int, float]] = Field(\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/core-models/sdtm/sdtm_models.py",
+        "start": 126,
+        "end": 142
+      },
+      "loc2": {
+        "file": "packages/core-models/sdtm/models.py",
+        "start": 257,
+        "end": 273
+      },
+      "preview": "    @field_validator(\"STUDYID\", \"DOMAIN\", \"USUBJID\", \"VSTESTCD\", \"VSTEST\")\n    @classmethod\n    def validate_non_empty_strings(cls, v: str) -> str:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/core-models/sdtm/sdtm_models.py",
+        "start": 127,
+        "end": 143
+      },
+      "loc2": {
+        "file": "packages/core-models/sdtm/models.py",
+        "start": 258,
+        "end": 274
+      },
+      "preview": "    @classmethod\n    def validate_non_empty_strings(cls, v: str) -> str:\n        if not isinstance(v, str) or not v.strip():\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/core-models/sdtm/sdtm_models.py",
+        "start": 149,
+        "end": 164
+      },
+      "loc2": {
+        "file": "packages/core-models/sdtm/models.py",
+        "start": 280,
+        "end": 295
+      },
+      "preview": "    \"\"\"\n    STUDYID: str = Field(..., description=\"Study Identifier (Required)\")\n    DOMAIN: str = Field(\"LB\", description=\"Domain Abbreviation (Required)\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/core-models/sdtm/sdtm_models.py",
+        "start": 151,
+        "end": 165
+      },
+      "loc2": {
+        "file": "packages/core-models/sdtm/models.py",
+        "start": 282,
+        "end": 296
+      },
+      "preview": "    STUDYID: str = Field(..., description=\"Study Identifier (Required)\")\n    DOMAIN: str = Field(\"LB\", description=\"Domain Abbreviation (Required)\")\n    USUBJID: str = Field(..., description=\"Unique Subject Identifier (Required)\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/core-models/sdtm/sdtm_models.py",
+        "start": 152,
+        "end": 166
+      },
+      "loc2": {
+        "file": "packages/core-models/sdtm/models.py",
+        "start": 283,
+        "end": 297
+      },
+      "preview": "    DOMAIN: str = Field(\"LB\", description=\"Domain Abbreviation (Required)\")\n    USUBJID: str = Field(..., description=\"Unique Subject Identifier (Required)\")\n    LBSEQ: int = Field(..., description=\"Sequence Number (Required)\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/core-models/sdtm/sdtm_models.py",
+        "start": 153,
+        "end": 167
+      },
+      "loc2": {
+        "file": "packages/core-models/sdtm/models.py",
+        "start": 284,
+        "end": 298
+      },
+      "preview": "    USUBJID: str = Field(..., description=\"Unique Subject Identifier (Required)\")\n    LBSEQ: int = Field(..., description=\"Sequence Number (Required)\")\n    LBTESTCD: str = Field(..., description=\"Lab Test Short Code (Required)\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/core-models/sdtm/sdtm_models.py",
+        "start": 173,
+        "end": 189
+      },
+      "loc2": {
+        "file": "packages/core-models/sdtm/models.py",
+        "start": 307,
+        "end": 323
+      },
+      "preview": "    @field_validator(\"STUDYID\", \"DOMAIN\", \"USUBJID\", \"LBTESTCD\", \"LBTEST\")\n    @classmethod\n    def validate_non_empty_strings(cls, v: str) -> str:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/core-models/sdtm/sdtm_models.py",
+        "start": 174,
+        "end": 190
+      },
+      "loc2": {
+        "file": "packages/core-models/sdtm/models.py",
+        "start": 308,
+        "end": 324
+      },
+      "preview": "    @classmethod\n    def validate_non_empty_strings(cls, v: str) -> str:\n        if not isinstance(v, str) or not v.strip():\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/core-models/sdtm/sdtm_models.py",
+        "start": 245,
+        "end": 261
+      },
+      "loc2": {
+        "file": "packages/core-models/sdtm/models.py",
+        "start": 356,
+        "end": 372
+      },
+      "preview": "    @field_validator(\"STUDYID\", \"DOMAIN\", \"USUBJID\", \"CMTRT\")\n    @classmethod\n    def validate_non_empty_strings(cls, v: str) -> str:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/core-models/sdtm/sdtm_models.py",
+        "start": 246,
+        "end": 262
+      },
+      "loc2": {
+        "file": "packages/core-models/sdtm/models.py",
+        "start": 357,
+        "end": 373
+      },
+      "preview": "    @classmethod\n    def validate_non_empty_strings(cls, v: str) -> str:\n        if not isinstance(v, str) or not v.strip():\n..."
+    }
+  ]
+}
