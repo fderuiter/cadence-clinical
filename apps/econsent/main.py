@@ -1233,6 +1233,8 @@ async def capture_subject_consent(
         )
 
     # 4. Generate canonical payload and compute canonical HMAC signature
+    from datetime import timezone
+
     from packages.security.signing import (
         canonical_serialize,
         compute_sha256_hash,
