@@ -11,6 +11,8 @@ Based on the executed automated verification suite, the platform meets all prede
 ### Validation Result Summary
 - **Total Automated Test Cases Run:** 1765
 - **Passed:** 1765 🟢
+- **Total Automated Test Cases Run:** 1763
+- **Passed:** 1763 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -504,6 +506,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_overlap_resolution_comprehensive` | `tests.test_deidentification` | PRD-MDR-006, PRD-TMF-005 | 🟢 PASSED | < 1s |
 | `test_source_documents_remain_unchanged` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
 | `test_transforms_all_strategies` | `tests.test_deidentification` | PRD-MDR-006, PRD-TMF-005 | 🟢 PASSED | < 1s |
+| `test_check_delegation_authority_success` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_delegation_allowed_non_pi_when_not_enforced` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_delegation_denied_site_mismatch` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_delegation_denied_sponsor_mismatch` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -516,6 +519,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_external_monitor_delegation_exclusion` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_normalize_and_validate_staff_role_invalid` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_normalize_and_validate_staff_role_valid` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_require_staff_role_forbidden` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_require_staff_role_success` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validate_request_staff_roles_empty` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_concurrent_library_version_increments` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_concurrent_study_saves_serialization` | `tests.test_delta` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1233,8 +1238,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_audit_fields_change_reason_validation[]` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_fields_instantiation` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_fields_reusability` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_audit_mixin` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_clinical_staff_role_values` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_organization_type_values` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_staff_role_values` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_trial_duty_values` | `tests.test_organization_domain` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_certificate_revocation_verification` | `tests.test_part11_esignatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_esignature_tamper_detection_e2e` | `tests.test_part11_esignatures` | *Regression/Helper* | 🟢 PASSED | < 1s |
