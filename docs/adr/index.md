@@ -60,6 +60,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-24: Role Authorization for Granular Data-Lock Actions and Trust Boundary Verification](2026-08-24-role-authorization-for-granular-data-lock-actions.md)
 
 ### 3. Clinical Data Interoperability & Standards
+- [2026-08-28: SAE Reconciliation & Safety Gateway (E2B)](2026-08-28-sae-reconciliation-safety-gateway-e2b.md)
 - [2026-08-26: SAE Reconciliation Architecture](2026-08-26-sae-reconciliation-architecture.md)
 
 - [2026-06-06: ADR 2026-06-06: USDM Pydantic Models](2026-06-06-usdm-pydantic-models.md)

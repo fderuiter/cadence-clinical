@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1737
-- **Passed:** 1737 🟢
+- **Total Automated Test Cases Run:** 1757
+- **Passed:** 1757 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -622,6 +622,24 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_document_upload_success` | `tests.test_document_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_document_versions_lineage` | `tests.test_document_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_study_archival_job_flow` | `tests.test_document_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_empty_drug_name_fails_validation` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_empty_reaction_term_fails_validation` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_empty_reactions_fails_validation` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_empty_suspect_drugs_fails_validation` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_icsr_version_and_reason_for_change_rendering_structure` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_invalid_namespace_fails_validation` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_invalid_root_tag_fails_validation` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_malformed_xml_fails_validation` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_header_fails_validation` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_header_fields_fail_validation` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_patient_fails_validation` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_patient_fields_fail_validation` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_reactions_block_fails_validation` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_safety_report_fails_validation` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_suspect_drugs_block_fails_validation` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_worldwide_unique_case_id_fails_validation` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_valid_icsr_rendering_and_validation_structure` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_e2b_xml_generation_and_parser_roundtrip` | `tests.test_e2b_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_parse_e2b_xml_valid_payload` | `tests.test_e2b_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_assignment_compliance_states_and_recalculations` | `tests.test_ecoa_coverage` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_instrument_retrieval_and_assignment_boundaries` | `tests.test_ecoa_coverage` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1488,7 +1506,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_missing_safety_report_fails` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_missing_worldwide_unique_case_id_fails` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_valid_icsr_rendering_and_validation` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_e2b_xml_generation_and_parser_roundtrip` | `tests.test_safety_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gateway_signature_negative_paths` | `tests.test_safety_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_mutation_missing_change_reason_fails` | `tests.test_safety_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_reconciliation_background_job_polling_and_audit` | `tests.test_safety_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_dispatch_safety_report_post_endpoint` | `tests.test_safety_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reconcile_sae_cases_post_endpoint` | `tests.test_safety_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_database_manager_uninitialized_raises_exception` | `tests.test_safety_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
