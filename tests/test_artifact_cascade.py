@@ -72,3 +72,62 @@ def test_artifact_cascade_router_endpoint() -> None:
     assert data["study_id"] == "study_cascade_102"
     assert data["amendment_version"] == 2
     assert data["forms_created"] >= 2
+
+
+def test_artifact_cascade_router_endpoint_dependency_override() -> None:
+    """Validate POST /api/v1/designer/cascade/propagate with dependency overrides.
+
+    Requirements: PRD-SYS-001
+    """
+    import time
+    from unittest.mock import patch
+
+    from apps.designer.dependencies import get_cascade_engine
+    from packages.security.middleware import get_current_user
+
+    class MockCascadeEngine:
+        def cascade_protocol_to_downstream(self, study_payload, amendment_version):
+            from cdisc.cascade_models import CascadeSummaryReport
+
+            return CascadeSummaryReport(
+                study_id="mocked_study_123",
+                amendment_version=99,
+                forms_created=42,
+                visits_created=7,
+                rules_synced=0,
+                forms=[],
+            )
+
+    # Register dependency overrides
+    app.dependency_overrides[get_cascade_engine] = lambda: MockCascadeEngine()
+    app.dependency_overrides[get_current_user] = lambda: {"user_id": "test_designer"}
+
+    try:
+        # Patch verify_gateway_signature to return True, bypassing cryptographic signature validation
+        with patch(
+            "packages.security.signing.verify_gateway_signature", return_value=True
+        ):
+            # Perform request with dummy gateway headers (no real cryptographic signing needed)
+            response = client.post(
+                "/api/v1/designer/cascade/propagate?amendment_version=99",
+                json={
+                    "id": "study_cascade_override",
+                },
+                headers={
+                    "X-User-Id": "test_designer",
+                    "X-User-Roles": "STUDY_DESIGNER",
+                    "X-Gateway-Timestamp": str(time.time()),
+                    "X-Gateway-Signature": "dummy_signature",
+                    "X-Signature-Version": "2",
+                    "X-Change-Reason": "Testing dependency override",
+                },
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["study_id"] == "mocked_study_123"
+            assert data["amendment_version"] == 99
+            assert data["forms_created"] == 42
+    finally:
+        # Clean up dependency overrides
+        app.dependency_overrides.clear()
