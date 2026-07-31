@@ -464,6 +464,7 @@ WHITELISTED_ROUTES = {
     ),
     ("post", "/api/v1/compliance/change-requests/analyze-diff"),
     ("post", "/api/v1/synopsis/export"),
+    ("get", "/api/v1/eisf/binders/{site_id}"),
     ("get", "/api/v1/synopsis/render/{study_id}"),
     ("post", "/api/v1/designer/sentinel/evaluate"),
     ("post", "/api/v1/designer/cascade/propagate"),

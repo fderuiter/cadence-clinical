@@ -331,6 +331,23 @@ async def health_check() -> dict[str, str]:
     return {"status": "ok", "service": "eisf"}
 
 
+@app.get("/api/v1/eisf/binders/{site_id}", response_model=List[DocumentResponse])
+async def get_site_binder_endpoint(
+    site_id: str,
+    session: AsyncSession = Depends(get_db_session),
+    principal: Principal = Depends(get_principal),
+):
+    """
+    Retrieve site-isolated regulatory binder documents for specified site.
+    Enforces site isolation strictly.
+    """
+    await enforce_document_site_visibility(principal, site_id, session)
+
+    stmt = select(ISFDocument).where(ISFDocument.site_id == site_id)
+    result = await session.execute(stmt)
+    return result.scalars().all()
+
+
 @app.get("/api/v1/eisf/documents", response_model=List[DocumentResponse])
 async def list_documents(
     request: Request,
