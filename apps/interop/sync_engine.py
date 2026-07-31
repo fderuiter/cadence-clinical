@@ -110,7 +110,11 @@ def reconcile_records(
     """
     # Normalize incoming_record if it is passed as a generic dict payload shape: {data, metadata: {timestamps, modified_by}}
     if isinstance(incoming_record, dict):
-        dedup_key = incoming_record.get("deduplication_key") or incoming_record.get("dedup_key") or "default_dedup_key"
+        dedup_key = (
+            incoming_record.get("deduplication_key")
+            or incoming_record.get("dedup_key")
+            or "default_dedup_key"
+        )
         data = incoming_record.get("data", {})
         metadata_dict = incoming_record.get("metadata", {})
 
