@@ -7,12 +7,76 @@ from typing import Optional
 import httpx
 from fastapi import HTTPException
 
-from packages.security.signing import generate_gateway_signature
+from packages.security.gateway_client import GatewayBaseClient
 
 logger = logging.getLogger("etmf-lock-client")
 
 # For testing override
 trial_lock_override: Optional[bool] = None
+
+
+class LockClient(GatewayBaseClient):
+    """
+    Client for interacting with the central execution service locks API, inheriting from GatewayBaseClient.
+    """
+
+    def __init__(self, base_url: Optional[str] = None, timeout: float = 5.0) -> None:
+        url = (
+            base_url or os.getenv("EXECUTION_URL") or "http://localhost:8002"
+        ).rstrip("/")
+        super().__init__(base_url=url, timeout=timeout)
+
+    async def verify_trial_lock(
+        self, client: Optional[httpx.AsyncClient] = None
+    ) -> bool:
+        """
+        Queries the central execution service synchronously to check if the trial is locked.
+        """
+        response = await self.request(
+            method="GET",
+            path="/api/v1/execution/locks",
+            user_id="etmf-service",
+            roles="Data Manager",
+            change_reason="",
+            client=client,
+            timeout=self.timeout,
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+            return bool(data.get("trial_locked", False))
+        else:
+            raise HTTPException(
+                status_code=502,
+                detail=f"Failed to verify trial lock state: Execution service returned {response.status_code}",
+            )
+
+    async def trigger_trial_lock(
+        self, reason: str, client: Optional[httpx.AsyncClient] = None
+    ) -> None:
+        """
+        Instantly triggers a global trial lock by posting to the central execution service.
+        """
+        logger.warning("Triggering global trial lock due to: %s", reason)
+        response = await self.request(
+            method="POST",
+            path="/api/v1/execution/locks/trial/lock",
+            user_id="etmf-service",
+            roles="Data Manager",
+            change_reason=reason,
+            client=client,
+            timeout=self.timeout,
+        )
+
+        if response.status_code != 200:
+            logger.error(
+                "Failed to set global trial lock, status code: %s",
+                response.status_code,
+            )
+            raise HTTPException(
+                status_code=502,
+                detail=f"Failed to set global trial lock: Execution service returned {response.status_code}",
+            )
 
 
 async def verify_trial_lock_status(is_testing: Optional[bool] = None) -> bool:
@@ -38,48 +102,9 @@ async def verify_trial_lock_status(is_testing: Optional[bool] = None) -> bool:
             pass
         return False
 
-    # Live API-driven check
-    execution_url = os.getenv("EXECUTION_URL", "http://localhost:8002")
-    gateway_secret_env = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
-    gateway_secret = (
-        gateway_secret_env.encode("utf-8")
-        if isinstance(gateway_secret_env, str)
-        else gateway_secret_env
-    )
-
-    user_id = "etmf-service"
-    roles = "Data Manager"
-    timestamp = str(time.time())
-
-    signature = generate_gateway_signature(
-        user_id=user_id,
-        roles=roles,
-        timestamp=timestamp,
-        secret=gateway_secret,
-        change_reason="",
-    )
-
-    headers = {
-        "X-User-Id": user_id,
-        "X-User-Roles": roles,
-        "X-Gateway-Timestamp": timestamp,
-        "X-Gateway-Signature": signature,
-        "X-Signature-Version": "2",
-        "X-Change-Reason": "",
-    }
-
-    url = f"{execution_url.rstrip('/')}/api/v1/execution/locks"
+    lock_client = LockClient()
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            response = await client.get(url, headers=headers)
-            if response.status_code == 200:
-                data = response.json()
-                return bool(data.get("trial_locked", False))
-            else:
-                raise HTTPException(
-                    status_code=502,
-                    detail=f"Failed to verify trial lock state: Execution service returned {response.status_code}",
-                )
+        return await lock_client.verify_trial_lock()
     except httpx.RequestError as e:
         raise HTTPException(
             status_code=502,
@@ -93,8 +118,6 @@ async def trigger_global_trial_lock(
     """
     Instantly triggers a global trial lock by posting to the central execution service.
     """
-    logger.warning("Triggering global trial lock due to: %s", reason)
-
     # In testing environment, update the local TrialLockManager if present
     if is_testing is None:
         is_testing = "pytest" in sys.modules or "PYTEST_CURRENT_TEST" in os.environ
@@ -107,48 +130,9 @@ async def trigger_global_trial_lock(
         except Exception:
             pass
 
-    execution_url = os.getenv("EXECUTION_URL", "http://localhost:8002")
-    gateway_secret_env = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
-    gateway_secret = (
-        gateway_secret_env.encode("utf-8")
-        if isinstance(gateway_secret_env, str)
-        else gateway_secret_env
-    )
-
-    user_id = "etmf-service"
-    roles = "Data Manager"
-    timestamp = str(time.time())
-
-    signature = generate_gateway_signature(
-        user_id=user_id,
-        roles=roles,
-        timestamp=timestamp,
-        secret=gateway_secret,
-        change_reason=reason,
-    )
-
-    headers = {
-        "X-User-Id": user_id,
-        "X-User-Roles": roles,
-        "X-Gateway-Timestamp": timestamp,
-        "X-Gateway-Signature": signature,
-        "X-Signature-Version": "2",
-        "X-Change-Reason": reason,
-    }
-
-    url = f"{execution_url.rstrip('/')}/api/v1/execution/locks/trial/lock"
+    lock_client = LockClient()
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            response = await client.post(url, headers=headers)
-            if response.status_code != 200:
-                logger.error(
-                    "Failed to set global trial lock, status code: %s",
-                    response.status_code,
-                )
-                raise HTTPException(
-                    status_code=502,
-                    detail=f"Failed to set global trial lock: Execution service returned {response.status_code}",
-                )
+        await lock_client.trigger_trial_lock(reason=reason)
     except httpx.RequestError as e:
         logger.error(
             "Failed to connect to execution service to trigger global trial lock: %s", e

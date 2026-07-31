@@ -1,13 +1,14 @@
+import datetime
 import logging
 import os
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import httpx
 from eligibility import EligibilityCriterion, ExpressionNode, parse_dsl
 from fastapi import HTTPException
 
-from packages.security.signing import generate_gateway_signature
+from packages.security.gateway_client import GatewayBaseClient
 
 logger = logging.getLogger("interop-designer-client")
 
@@ -34,8 +35,6 @@ def map_db_to_criterion(db_crit: Dict[str, Any]) -> EligibilityCriterion:
         raise ValueError(
             "Criterion must provide a structured condition or a valid dsl_source."
         )
-
-    import datetime
 
     created_at = db_crit.get("created_at")
     if not created_at:
@@ -72,44 +71,34 @@ def map_db_to_criterion(db_crit: Dict[str, Any]) -> EligibilityCriterion:
     )
 
 
-async def fetch_eligibility_criteria(study_id: str) -> List[EligibilityCriterion]:
+class DesignerClient(GatewayBaseClient):
     """
-    Queries the central Designer service to fetch active eligibility criteria for a study.
-    Uses Gateway signature for secure inter-service authorization.
+    Client for interacting with the Designer service, inheriting from GatewayBaseClient.
     """
-    designer_url = os.getenv("DESIGNER_URL", "http://localhost:8001")
-    gateway_secret_env = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
-    gateway_secret = (
-        gateway_secret_env.encode("utf-8")
-        if isinstance(gateway_secret_env, str)
-        else gateway_secret_env
-    )
 
-    user_id = "interop-service"
-    roles = "sponsor_dm"
-    timestamp = str(time.time())
+    def __init__(self, base_url: Optional[str] = None, timeout: float = 5.0) -> None:
+        url = (
+            base_url or os.getenv("DESIGNER_URL") or "http://localhost:8001"
+        ).rstrip("/")
+        super().__init__(base_url=url, timeout=timeout)
 
-    signature = generate_gateway_signature(
-        user_id=user_id,
-        roles=roles,
-        timestamp=timestamp,
-        secret=gateway_secret,
-        change_reason="",
-    )
+    async def fetch_eligibility_criteria_from_service(
+        self, study_id: str, client: Optional[httpx.AsyncClient] = None
+    ) -> List[EligibilityCriterion]:
+        """
+        Queries the central Designer service to fetch active eligibility criteria for a study.
+        """
+        try:
+            response = await self.request(
+                method="GET",
+                path=f"/api/v1/studies/{study_id}/eligibility-criteria",
+                user_id="interop-service",
+                roles="sponsor_dm",
+                change_reason="",
+                client=client,
+                timeout=self.timeout,
+            )
 
-    headers = {
-        "X-User-Id": user_id,
-        "X-User-Roles": roles,
-        "X-Gateway-Timestamp": timestamp,
-        "X-Gateway-Signature": signature,
-        "X-Signature-Version": "2",
-        "X-Change-Reason": "",
-    }
-
-    url = f"{designer_url.rstrip('/')}/api/v1/studies/{study_id}/eligibility-criteria"
-    try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            response = await client.get(url, headers=headers)
             if response.status_code == 200:
                 raw_list = response.json()
                 return [map_db_to_criterion(item) for item in raw_list]
@@ -123,8 +112,17 @@ async def fetch_eligibility_criteria(study_id: str) -> List[EligibilityCriterion
                     status_code=502,
                     detail=f"Failed to fetch eligibility criteria: Designer service returned {response.status_code}",
                 )
-    except httpx.RequestError as e:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Failed to connect to Designer service for eligibility criteria validation: {str(e)}",
-        )
+        except httpx.RequestError as e:
+            raise HTTPException(
+                status_code=502,
+                detail=f"Failed to connect to Designer service for eligibility criteria validation: {str(e)}",
+            )
+
+
+async def fetch_eligibility_criteria(study_id: str) -> List[EligibilityCriterion]:
+    """
+    Queries the central Designer service to fetch active eligibility criteria for a study.
+    Uses Gateway signature for secure inter-service authorization.
+    """
+    client = DesignerClient()
+    return await client.fetch_eligibility_criteria_from_service(study_id)

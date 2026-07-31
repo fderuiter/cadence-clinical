@@ -6,7 +6,7 @@ from typing import Optional
 import httpx
 from fastapi import HTTPException
 
-from packages.security.signing import generate_gateway_signature
+from packages.security.gateway_client import GatewayBaseClient
 
 logger = logging.getLogger("execution-econsent-client")
 
@@ -17,7 +17,7 @@ class EConsentClientError(Exception):
     pass
 
 
-class EConsentClient:
+class EConsentClient(GatewayBaseClient):
     """Asynchronous client to retrieve subject consent status from the eConsent service."""
 
     def __init__(
@@ -25,10 +25,10 @@ class EConsentClient:
         base_url: Optional[str] = None,
         timeout: float = 10.0,
     ) -> None:
-        self.base_url = (
+        url = (
             base_url or os.getenv("ECONSENT_URL") or "http://localhost:8011"
         ).rstrip("/")
-        self.timeout = timeout
+        super().__init__(base_url=url, timeout=timeout)
 
     async def get_subject_consent_status(
         self,
@@ -46,50 +46,22 @@ class EConsentClient:
         Returns:
             dict: The JSON response containing subject consent status.
         """
-        gateway_secret_env = os.getenv(
-            "GATEWAY_SECRET", "internal-gateway-secret-12345"
-        )
-        gateway_secret = (
-            gateway_secret_env.encode("utf-8")
-            if isinstance(gateway_secret_env, str)
-            else gateway_secret_env
-        )
-
-        user_id = "execution-service"
-        roles = "system"
-        timestamp = str(time.time())
-
-        # Generate gateway signature v2
-        signature = generate_gateway_signature(
-            user_id=user_id,
-            roles=roles,
-            timestamp=timestamp,
-            secret=gateway_secret,
-            change_reason="",
-        )
-
-        headers = {
-            "X-User-Id": user_id,
-            "X-User-Roles": roles,
-            "X-Gateway-Timestamp": timestamp,
-            "X-Gateway-Signature": signature,
-            "X-Signature-Version": "2",
-            "X-Change-Reason": "",
-        }
-
-        url = f"{self.base_url}/api/v1/econsent/subjects/{subject_pseudonym}/consent-status"
+        path = f"/api/v1/econsent/subjects/{subject_pseudonym}/consent-status"
         params = {}
         if study_id:
             params["study_id"] = study_id
 
         try:
-            if client is not None:
-                response = await client.get(
-                    url, headers=headers, params=params, timeout=self.timeout
-                )
-            else:
-                async with httpx.AsyncClient(timeout=self.timeout) as cli:
-                    response = await cli.get(url, headers=headers, params=params)
+            # We call self.request to use the centralized GatewayBaseClient request logic
+            response = await self.request(
+                method="GET",
+                path=path,
+                user_id="execution-service",
+                roles="system",
+                change_reason="",
+                params=params,
+                timeout=self.timeout,
+            )
 
             if response.status_code != 200:
                 raise HTTPException(
