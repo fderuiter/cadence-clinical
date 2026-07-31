@@ -3,7 +3,7 @@ from typing import Tuple
 import defusedxml.ElementTree as ET
 
 
-def validate_icsr_xml(xml_content: str) -> Tuple[bool, str]:
+def validate_e2b_xml_structure(xml_content: str) -> Tuple[bool, str]:
     """Validate structural correctness of the generated E2B(R3) ICSR XML export.
 
     Ensures that the XML is well-formed, complies with the urn:hl7-org:v3 namespace,
@@ -111,3 +111,15 @@ def validate_icsr_xml(xml_content: str) -> Tuple[bool, str]:
             )
 
     return True, "Structure matches official E2B(R3) ICSR specifications successfully."
+
+
+def validate_icsr_xml(xml_content: str) -> Tuple[bool, str]:
+    """Validate structural correctness of the generated E2B(R3) ICSR XML export.
+
+    Args:
+        xml_content (str): The XML payload to validate.
+
+    Returns:
+        Tuple[bool, str]: A tuple of (is_valid, message).
+    """
+    return validate_e2b_xml_structure(xml_content)

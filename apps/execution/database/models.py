@@ -72,6 +72,12 @@ class RecodingState(str, enum.Enum):
     CANCELLED = "CANCELLED"
 
 
+class FormSubmissionStatus(str, enum.Enum):
+    DRAFT = "DRAFT"
+    COMPLETED = "COMPLETED"
+    APPROVED = "APPROVED"
+
+
 class Base(DeclarativeBase):
     pass
 
@@ -968,7 +974,13 @@ class FormSubmission(AuditedModel):
     subject_id: Mapped[str] = mapped_column(String(255), nullable=False)
     visit_id: Mapped[str] = mapped_column(String(255), nullable=True)
     form_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    status: Mapped[str] = mapped_column(String(50), default="DRAFT", nullable=False)
+    form_key = synonym("form_id")
+    status: Mapped[str] = mapped_column(
+        String(50),
+        default="DRAFT",
+        nullable=False,
+        comment="DRAFT, COMPLETED, APPROVED",
+    )  # DRAFT, COMPLETED, APPROVED
     signature_manifest: Mapped[dict] = mapped_column(JSON, nullable=True)
 
 
