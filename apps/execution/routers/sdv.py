@@ -3,14 +3,15 @@
 Requirements: PRD-QRY-005, PRD-QRY-006, PRD-QRY-007
 """
 
-from datetime import datetime, timezone
+from datetime import datetime
 from enum import Enum
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import select, text
 
+import packages  # noqa: F401
 from apps.execution.database.context import current_user_id
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import (
@@ -21,72 +22,9 @@ from apps.execution.database.models import (
     TSDVConfig,
 )
 from apps.execution.tsdv import evaluate_tsdv_requirement
-from packages.security.rbac import (
-    ROLE_CRA,
-    ROLE_DATA_MANAGER,
-    Principal,
-    can_access_study,
-    get_principal,
-    require_permission,
-    require_roles,
-)
+from packages.security import ROLE_CRA, ROLE_DATA_MANAGER, get_normalized_roles, require_roles
 
 router = APIRouter(prefix="/api/v1/execution", tags=["SDV/TSDV"])
-
-
-# ==========================================
-# Study Scope Guard
-# ==========================================
-
-
-class StudyScopeChecker:
-    async def __call__(
-        self, request: Request, principal: Principal = Depends(get_principal)
-    ) -> Principal:
-        study_id = (
-            request.path_params.get("study_id")
-            or request.query_params.get("study_id")
-            or request.headers.get("X-Study-Id")
-            or request.headers.get("x-study-id")
-        )
-        if not study_id:
-            try:
-                content_type = request.headers.get("content-type", "")
-                if "application/json" in content_type:
-                    body_bytes = await request.body()
-                    if body_bytes:
-                        import json
-
-                        body = json.loads(body_bytes)
-                        if isinstance(body, dict):
-                            study_id = body.get("study_id") or body.get("id")
-
-                        async def receive():
-                            return {
-                                "type": "http.request",
-                                "body": body_bytes,
-                                "more_body": False,
-                            }
-
-                        request._receive = receive
-            except Exception:
-                pass
-
-        if study_id:
-            study_id = str(study_id).strip()
-
-        if study_id:
-            if not can_access_study(principal, study_id):
-                raise HTTPException(
-                    status_code=403,
-                    detail="Forbidden: Insufficient scope access for this study.",
-                )
-
-        return principal
-
-
-def require_study_scope() -> StudyScopeChecker:
-    return StudyScopeChecker()
 
 
 # ==========================================
@@ -105,9 +43,9 @@ class TSDVConfigCreate(BaseModel):
     sampling_model: SamplingModelEnum
     initial_full_sdv_subject_count: int = Field(default=0, ge=0)
     random_sample_percentage: float = Field(default=0.0, ge=0.0, le=100.0)
-    full_sdv_domains: Optional[List[str]] = None
-    safety_endpoints: Optional[List[str]] = None
-    zero_sdv_domains: Optional[List[str]] = None
+    full_sdv_domains: Optional[list[str]] = None
+    safety_endpoints: Optional[list[str]] = None
+    zero_sdv_domains: Optional[list[str]] = None
     trial_random_seed: Optional[int] = Field(default=None, ge=0)
 
     @model_validator(mode="after")
@@ -125,9 +63,9 @@ class TSDVConfigResponse(BaseModel):
     sampling_model: str
     initial_full_sdv_subject_count: int
     random_sample_percentage: float
-    full_sdv_domains: Optional[List[str]] = None
-    safety_endpoints: Optional[List[str]] = None
-    zero_sdv_domains: Optional[List[str]] = None
+    full_sdv_domains: Optional[list[str]] = None
+    safety_endpoints: Optional[list[str]] = None
+    zero_sdv_domains: Optional[list[str]] = None
     trial_random_seed: Optional[int] = None
     version: int
 
@@ -191,7 +129,6 @@ async def create_or_update_tsdv_config(
     request: Request,
     payload: TSDVConfigCreate,
     roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER)),
-    _study_scope: Principal = Depends(require_study_scope()),
 ) -> TSDVConfig:
     """Create or update Targeted SDV (TSDV) configuration for a study.
 
@@ -242,10 +179,9 @@ async def create_or_update_tsdv_config(
 )
 async def get_tsdv_config(
     study_id: str,
-    principal: Principal = Depends(require_permission("sdv:read")),
-    _study_scope: Principal = Depends(require_study_scope()),
+    roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER)),
 ) -> TSDVConfig:
-    """Retrieve existing TSDV configuration for a study."""
+    """Retrieve Targeted SDV (TSDV) configuration for a study."""
     async with db_manager.get_session_maker()() as session:
         stmt = select(TSDVConfig).where(TSDVConfig.study_id == study_id)
         res = await session.execute(stmt)
@@ -267,8 +203,7 @@ async def evaluate_tsdv_rule(
     subject_id: str,
     domain: Optional[str] = None,
     enrollment_index: Optional[int] = None,
-    principal: Principal = Depends(require_permission("sdv:read")),
-    _study_scope: Principal = Depends(require_study_scope()),
+    roles: list[str] = Depends(get_normalized_roles),
 ) -> TSDVEvaluationResponse:
     """Evaluate Targeted SDV (TSDV) requirement for a given context.
 
@@ -355,10 +290,18 @@ async def evaluate_tsdv_rule(
 )
 async def sdv_signoff(
     payload: SDVSignOffRequest,
-    principal: Principal = Depends(require_permission("sdv:create")),
-    _study_scope: Principal = Depends(require_study_scope()),
+    request: Request,
 ) -> SDVSignOffResponse:
     """CRA/monitor-gated SDV sign-off endpoint for Field, Page, or Visit scopes."""
+    state_roles = getattr(request.state, "roles", [])
+    if not isinstance(state_roles, list):
+        state_roles = [state_roles]
+    normalized_state_roles = [str(r).strip().lower() for r in state_roles]
+    if not any(role in ["cra", "monitor"] for role in normalized_state_roles):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: SDV sign-off is restricted to CRA or monitor roles.",
+        )
     async with db_manager.get_session_maker()() as session:
         # 1. Validate Subject exists and is consistent with Study
         stmt_subj = select(ClinicalSubject).where(
@@ -416,7 +359,7 @@ async def sdv_signoff(
 
         # 3. Apply sign-off behavior
         verifier_id = current_user_id.get() or "system"
-        verified_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        verified_at = datetime.utcnow()
 
         # Update or create the matching SDVSignOff record
         stmt_signoff = select(SDVSignOff).where(
