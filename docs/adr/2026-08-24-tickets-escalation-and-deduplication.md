@@ -37,7 +37,7 @@ We must implement a programmatic background escalation worker that:
 ## 4. Decision Outcome
 We adopted **Option 2**. We implemented the overdue escalation system as follows:
 
-1. **State Persistence:** Added `last_escalated_at`, `last_escalation_notified_at`, and `escalation_count` to the `Ticket` model in `apps/tickets/models.py`.
+1. **State Persistence:** Added `last_escalated_at`, `last_escalation_notified_at`, and `escalation_count` to the `Ticket` model in `apps/tickets/models/__init__.py`.
 2. **Pessimistic Concurrency Locking:** The background poller locks each ticket under `.with_for_update()` before re-verifying constraints, mirroring the pattern in `apps/notifications/main.py`.
 3. **Post-Commit Delivery Order:**
    * **Commit 1:** Priority advanced, `last_escalated_at` set to `now`, version index incremented, and `TICKET_ESCALATE` audit log written.
@@ -57,7 +57,7 @@ We evaluated event-driven brokers but preferred a lightweight direct poller to k
   * Short polling cycles consume database connections, which is mitigated by tunable environmental interval options.
 
 ## 6. Implementation & Verification
-* **Affected Files:** `apps/tickets/models.py`, `apps/tickets/escalation.py`, `apps/tickets/main.py`
+* **Affected Files:** `apps/tickets/models/__init__.py`, `apps/tickets/escalation.py`, `apps/tickets/main.py`
 * **Verification Plan:**
   * Automated unit and integration tests written in `tests/test_tickets_escalation.py`.
   * Verified eligibility, stepwise priority cap, cooldown gating, idempotency, and gap-retry resilience.
