@@ -15,6 +15,7 @@ class SemanticAction(str, Enum):
     EXEC_SUBJECT_UNBLIND = "execution.subject.unblind"
     EXEC_SUBJECT_RANDOMIZE = "execution.subject.randomize"
     EXEC_QUERIES_SYNC = "execution.queries.sync"
+    EXEC_SDV_BULK_SIGNOFF = "execution.sdv.bulk_signoff"
     GENERIC_CLOSE = "generic.close"
 
 
@@ -115,6 +116,12 @@ DETECTION_RULES: List[DetectionRule] = [
         action=SemanticAction.EXEC_QUERIES_SYNC,
         methods=["POST", "PUT", "PATCH", "DELETE"],
         path_pattern="queries/sync",
+        is_regex=False,
+    ),
+    DetectionRule(
+        action=SemanticAction.EXEC_SDV_BULK_SIGNOFF,
+        methods=["POST"],
+        path_pattern="sdv/bulk-sign-off",
         is_regex=False,
     ),
     DetectionRule(

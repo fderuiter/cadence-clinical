@@ -64,6 +64,11 @@ async def form_approve_endpoint(submission_id: str):
     return {"status": "success", "message": "Form Approved"}
 
 
+@test_app.post("/api/v1/execution/sdv/bulk-sign-off")
+async def bulk_sdv_sign_off_endpoint(request: Request):
+    return {"status": "success", "message": "Bulk SDV Sign-Off Completed"}
+
+
 def test_middleware_health_bypass() -> None:
     """
     Test that health check endpoints bypass security middleware checks.
@@ -1762,3 +1767,211 @@ def test_middleware_scope_header_mutation_and_injection_rejection() -> None:
     headers_injected_unblinded["X-Unblinded-Access"] = "true"
     res = client.get("/verify-context-scope", headers=headers_injected_unblinded)
     assert res.status_code in (401, 403)
+
+
+def test_bulk_sdv_sign_off_valid_token() -> None:
+    """
+    Test that a valid bulk-sign-off request with properly matching batch binding token is allowed.
+    """
+    import hashlib
+    client = TestClient(test_app)
+    timestamp = str(time.time())
+    user_id = "test_cra_user"
+    roles = "CRA"
+    change_reason = "Bulk SDV sign off"
+
+    # Gateway signature V2
+    sig = generate_signature(
+        user_id, roles, timestamp, version="2", change_reason=change_reason
+    )
+
+    body = {
+        "study_id": "STUDY_001",
+        "scope": "FIELD",
+        "target_ids": ["OBS-1", "OBS-2"],
+        "reason_for_change": "Regular source data verification",
+    }
+
+    # Compute expected batch binding hash
+    binding_str = "STUDY_001:FIELD:OBS-1,OBS-2:Regular source data verification"
+    batch_id = hashlib.sha256(binding_str.encode("utf-8")).hexdigest()
+
+    # Generate sig token with matching batch_id
+    payload = {
+        "sub": user_id,
+        "username": "test_cra_user",
+        "action": "/api/v1/execution/sdv/bulk-sign-off",
+        "roles": [roles],
+        "iat": time.time(),
+        "exp": time.time() + 60.0,
+        "batch_id": batch_id,
+    }
+    sig_token = jwt.encode(payload, "internal-gateway-secret-12345", algorithm="HS256")
+
+    headers = {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": sig,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": change_reason,
+        "X-Sig-Token": sig_token,
+    }
+
+    response = client.post(
+        "/api/v1/execution/sdv/bulk-sign-off", json=body, headers=headers
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "success"
+
+
+def test_bulk_sdv_sign_off_missing_batch_id() -> None:
+    """
+    Test that bulk-sign-off request rejects a signature token that is not bound to any batch (missing batch_id claim).
+    """
+    client = TestClient(test_app)
+    timestamp = str(time.time())
+    user_id = "test_cra_user"
+    roles = "CRA"
+    change_reason = "Bulk SDV sign off"
+
+    sig = generate_signature(
+        user_id, roles, timestamp, version="2", change_reason=change_reason
+    )
+
+    body = {
+        "study_id": "STUDY_001",
+        "scope": "FIELD",
+        "target_ids": ["OBS-1", "OBS-2"],
+        "reason_for_change": "Regular source data verification",
+    }
+
+    # Generate sig token WITHOUT batch_id claim
+    payload = {
+        "sub": user_id,
+        "username": "test_cra_user",
+        "action": "/api/v1/execution/sdv/bulk-sign-off",
+        "roles": [roles],
+        "iat": time.time(),
+        "exp": time.time() + 60.0,
+    }
+    sig_token = jwt.encode(payload, "internal-gateway-secret-12345", algorithm="HS256")
+
+    headers = {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": sig,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": change_reason,
+        "X-Sig-Token": sig_token,
+    }
+
+    response = client.post(
+        "/api/v1/execution/sdv/bulk-sign-off", json=body, headers=headers
+    )
+    assert response.status_code == 401
+    assert "not bound to a batch" in response.json()["message"]
+
+
+def test_bulk_sdv_sign_off_missing_body_fields() -> None:
+    """
+    Test that bulk-sign-off request returns 400 when required fields are missing from request body.
+    """
+    client = TestClient(test_app)
+    timestamp = str(time.time())
+    user_id = "test_cra_user"
+    roles = "CRA"
+    change_reason = "Bulk SDV sign off"
+
+    sig = generate_signature(
+        user_id, roles, timestamp, version="2", change_reason=change_reason
+    )
+
+    # Missing target_ids and reason_for_change
+    body = {
+        "study_id": "STUDY_001",
+        "scope": "FIELD",
+    }
+
+    # Generate sig token with some dummy batch_id
+    payload = {
+        "sub": user_id,
+        "username": "test_cra_user",
+        "action": "/api/v1/execution/sdv/bulk-sign-off",
+        "roles": [roles],
+        "iat": time.time(),
+        "exp": time.time() + 60.0,
+        "batch_id": "dummy_batch_id",
+    }
+    sig_token = jwt.encode(payload, "internal-gateway-secret-12345", algorithm="HS256")
+
+    headers = {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": sig,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": change_reason,
+        "X-Sig-Token": sig_token,
+    }
+
+    response = client.post(
+        "/api/v1/execution/sdv/bulk-sign-off", json=body, headers=headers
+    )
+    assert response.status_code == 400
+    assert "Missing bulk SDV sign-off fields" in response.json()["message"]
+
+
+def test_bulk_sdv_sign_off_binding_mismatch() -> None:
+    """
+    Test that bulk-sign-off request rejects signature token when computed batch binding hash differs.
+    """
+    import hashlib
+    client = TestClient(test_app)
+    timestamp = str(time.time())
+    user_id = "test_cra_user"
+    roles = "CRA"
+    change_reason = "Bulk SDV sign off"
+
+    sig = generate_signature(
+        user_id, roles, timestamp, version="2", change_reason=change_reason
+    )
+
+    body = {
+        "study_id": "STUDY_001",
+        "scope": "FIELD",
+        "target_ids": ["OBS-1", "OBS-2"],
+        "reason_for_change": "Regular source data verification",
+    }
+
+    # Compute different binding string (different target_ids)
+    binding_str = "STUDY_001:FIELD:OBS-different:Regular source data verification"
+    batch_id = hashlib.sha256(binding_str.encode("utf-8")).hexdigest()
+
+    payload = {
+        "sub": user_id,
+        "username": "test_cra_user",
+        "action": "/api/v1/execution/sdv/bulk-sign-off",
+        "roles": [roles],
+        "iat": time.time(),
+        "exp": time.time() + 60.0,
+        "batch_id": batch_id,
+    }
+    sig_token = jwt.encode(payload, "internal-gateway-secret-12345", algorithm="HS256")
+
+    headers = {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": sig,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": change_reason,
+        "X-Sig-Token": sig_token,
+    }
+
+    response = client.post(
+        "/api/v1/execution/sdv/bulk-sign-off", json=body, headers=headers
+    )
+    assert response.status_code == 401
+    assert "mismatch" in response.json()["message"]
