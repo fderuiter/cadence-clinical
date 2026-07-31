@@ -2,12 +2,22 @@
 <template>
   <div class="document-manager-layout">
     <aside class="sidebar-binder-tree">
-      <TmfBinderTree :tree="etmfStore.binderTree" @select-artifact="handleArtifactSelect" />
+      <TmfBinderTree
+        :tree="etmfStore.binderTree"
+        @select-artifact="handleArtifactSelect"
+      />
     </aside>
     <main class="document-content-area">
-      <DocumentGrid :documents="etmfStore.documents" @preview="handlePreviewDocument" />
+      <DocumentGrid
+        :documents="etmfStore.documents"
+        @preview="handlePreviewDocument"
+      />
     </main>
-    <PdfPreviewModal v-if="selectedDoc" :document="selectedDoc" @close="selectedDoc = null" />
+    <PdfPreviewModal
+      v-if="selectedDoc"
+      :document="selectedDoc"
+      @close="selectedDoc = null"
+    />
   </div>
 </template>
 
