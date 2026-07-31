@@ -1,4 +1,3 @@
-import logging
 import os
 from datetime import datetime, timezone
 from enum import Enum
@@ -41,51 +40,6 @@ from packages.database import DatabaseSessionDependency, get_relational_db_lifes
 from packages.security.middleware import GatewayAuthMiddleware
 
 DATABASE_URL = os.getenv("INTEROP_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
-
-logger = logging.getLogger("NotificationRouter")
-
-
-class NotificationRouter:
-    """Routes reminders (EMAIL, SMS, WEBHOOK, IN_APP) with fail-soft outbound HTTP delivery to the central notification service."""
-
-    def __init__(self) -> None:
-        self.notifications_url = os.getenv("NOTIFICATIONS_URL", "http://localhost:8006")
-
-    async def send_email(self, recipient: str, message: str) -> bool:
-        return await self._dispatch("EMAIL", recipient, message)
-
-    async def send_sms(self, recipient: str, message: str) -> bool:
-        return await self._dispatch("SMS", recipient, message)
-
-    async def send_webhook(self, url: str, payload: dict) -> bool:
-        import json
-
-        return await self._dispatch("WEBHOOK", url, json.dumps(payload))
-
-    async def send_in_app(self, subject_id: str, message: str) -> bool:
-        return await self._dispatch("IN_APP", subject_id, message)
-
-    async def _dispatch(self, channel: str, target: str, content: str) -> bool:
-        url = f"{self.notifications_url}/api/v1/notifications"
-        payload = {
-            "recipient_user_id": target,
-            "category": "REMINDERS",
-            "priority": "MEDIUM",
-            "channels": channel,
-            "message_content": content,
-        }
-        try:
-            async with httpx.AsyncClient() as client:
-                resp = await client.post(url, json=payload, timeout=5.0)
-                if resp.status_code == 201:
-                    return True
-                else:
-                    return False
-        except Exception as e:
-            logger.warning(
-                f"Fail-soft notification delivery fallback triggered: {str(e)}"
-            )
-            return True
 
 
 app = FastAPI(
@@ -1265,9 +1219,11 @@ async def deliver_notification_task(
             success = False
 
             if channel == "EMAIL":
-                success = await router.send_email(f"{subject_id}@example.com", message)
+                email_target = f"user_{subject_id}@domain.internal"
+                success = await router.send_email(email_target, message)
             elif channel == "SMS":
-                success = await router.send_sms("+1234567890", message)
+                sms_target = f"sms_{subject_id}"
+                success = await router.send_sms(sms_target, message)
             elif channel == "WEBHOOK":
                 webhook_payload = {
                     "event": "REMINDER_DUE",
@@ -1275,8 +1231,9 @@ async def deliver_notification_task(
                     "message": message,
                     "notification_id": notification_id,
                 }
+                webhook_target = f"endpoint_{subject_id}"
                 success = await router.send_webhook(
-                    f"https://hooks.example.com/subject/{subject_id}",
+                    webhook_target,
                     webhook_payload,
                 )
             elif channel == "IN_APP":
