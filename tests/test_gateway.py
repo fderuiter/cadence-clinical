@@ -2121,38 +2121,34 @@ def test_gateway_startup_production_no_bypass_configs() -> None:
 
 
 def generate_test_rsa_jwks_and_token(kid: str = "new-kid-123") -> tuple[dict, str]:
-    from cryptography.hazmat.primitives.asymmetric import rsa
-    from cryptography.hazmat.primitives import serialization
-    from jose import jwt
     import base64
+
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from jose import jwt
 
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     pem = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.TraditionalOpenSSL,
-        encryption_algorithm=serialization.NoEncryption()
+        encryption_algorithm=serialization.NoEncryption(),
     )
-    token = jwt.encode({"sub": "user_123", "preferred_username": "user_123"}, pem, algorithm="RS256", headers={"kid": kid})
+    token = jwt.encode(
+        {"sub": "user_123", "preferred_username": "user_123"},
+        pem,
+        algorithm="RS256",
+        headers={"kid": kid},
+    )
 
     def int_to_base64url(val: int) -> str:
-        val_bytes = val.to_bytes((val.bit_length() + 7) // 8, byteorder='big')
-        return base64.urlsafe_b64encode(val_bytes).decode('utf-8').rstrip('=')
+        val_bytes = val.to_bytes((val.bit_length() + 7) // 8, byteorder="big")
+        return base64.urlsafe_b64encode(val_bytes).decode("utf-8").rstrip("=")
 
     numbers = private_key.public_key().public_numbers()
     n = int_to_base64url(numbers.n)
     e = int_to_base64url(numbers.e)
 
-    jwks = {
-        "keys": [
-            {
-                "kty": "RSA",
-                "kid": kid,
-                "use": "sig",
-                "n": n,
-                "e": e
-            }
-        ]
-    }
+    jwks = {"keys": [{"kty": "RSA", "kid": kid, "use": "sig", "n": n, "e": e}]}
     return jwks, token
 
 
@@ -2163,15 +2159,16 @@ async def test_verify_token_on_demand_success(monkeypatch: pytest.MonkeyPatch) -
     and succeeds once the key is updated in the cache.
     """
     from apps.gateway import main as gateway_main
-    
+
     monkeypatch.setattr(gateway_main, "jwks_cache", {"keys": []})
-    
+
     jwks, token = generate_test_rsa_jwks_and_token("new-kid-123")
-    
+
     fetch_count = 0
-    
+
     class MockResponse:
         status_code = 200
+
         def json(self):
             return jwks
 
@@ -2191,13 +2188,16 @@ async def test_verify_token_on_demand_success(monkeypatch: pytest.MonkeyPatch) -
 
 
 @pytest.mark.asyncio
-async def test_verify_token_stampede_protection(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_verify_token_stampede_protection(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """
     Test that concurrent verification requests for an unknown kid
     trigger exactly one network call to the identity provider.
     """
-    from apps.gateway import main as gateway_main
     import asyncio
+
+    from apps.gateway import main as gateway_main
 
     monkeypatch.setattr(gateway_main, "jwks_cache", {"keys": []})
 
@@ -2208,6 +2208,7 @@ async def test_verify_token_stampede_protection(monkeypatch: pytest.MonkeyPatch)
 
     class MockResponse:
         status_code = 200
+
         def json(self):
             return jwks
 
@@ -2232,7 +2233,9 @@ async def test_verify_token_stampede_protection(monkeypatch: pytest.MonkeyPatch)
 
 
 @pytest.mark.asyncio
-async def test_verify_token_fetch_failure_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_verify_token_fetch_failure_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """
     Test that if an on-demand key fetch fails, the gateway falls back
     to the existing cached key set and does not overwrite it.
@@ -2263,7 +2266,9 @@ async def test_verify_token_fetch_failure_fallback(monkeypatch: pytest.MonkeyPat
 
 
 @pytest.mark.asyncio
-async def test_gateway_startup_offline_idp_recovery(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_gateway_startup_offline_idp_recovery(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """
     Test that the gateway successfully starts up even if the identity provider is offline,
     and subsequent incoming requests can fetch keys on-demand once the IDP comes online.
@@ -2286,6 +2291,7 @@ async def test_gateway_startup_offline_idp_recovery(monkeypatch: pytest.MonkeyPa
 
     class MockOnlineResponse:
         status_code = 200
+
         def json(self):
             return jwks
 

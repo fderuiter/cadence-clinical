@@ -94,6 +94,7 @@ def verify_version_signature(version_props: Dict[str, Any]) -> bool:
         created_at_val = None
 
     import os
+
     from packages.security.signing import verify_canonical_signature
 
     secret = os.getenv("SIGNING_SECRET", "designer-amendment-secure-key-12345").encode(
@@ -108,7 +109,10 @@ def verify_version_signature(version_props: Dict[str, Any]) -> bool:
     created_by = version_props.get("created_by")
     change_reason = version_props.get("change_reason")
 
-    if all(v is not None for v in (study_id, version_index, version_tag, created_by, change_reason)):
+    if all(
+        v is not None
+        for v in (study_id, version_index, version_tag, created_by, change_reason)
+    ):
         payload_new = {
             "study_id": study_id,
             "version_index": int(version_index),
@@ -3208,7 +3212,9 @@ async def approve_study_version_delta(
             secret = os.getenv(
                 "SIGNING_SECRET", "designer-amendment-secure-key-12345"
             ).encode("utf-8")
-            ver_record["signature"] = generate_canonical_signature(payload_to_sign, secret)
+            ver_record["signature"] = generate_canonical_signature(
+                payload_to_sign, secret
+            )
 
             # Record in action history
             action_id = str(uuid.uuid4())

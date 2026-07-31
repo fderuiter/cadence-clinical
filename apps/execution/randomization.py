@@ -7,6 +7,7 @@ implementations for permuted-block, stratified-block, and Pocock-Simon dynamic m
 import abc
 import random
 from typing import Any, Dict, List, Optional, Tuple, Union
+
 from pydantic import BaseModel, Field, model_validator
 
 
@@ -302,12 +303,15 @@ class PocockSimonMinimizationStrategy(RandomizationStrategy):
                         baseline_counts[prev_arm] += 1
 
                 # 2. Add the hypothetical assignment to candidate_arm
-                hypothetical_counts = {arm: count for arm, count in baseline_counts.items()}
+                hypothetical_counts = {
+                    arm: count for arm, count in baseline_counts.items()
+                }
                 hypothetical_counts[candidate_arm] += 1
 
                 # 3. Normalize counts by ratios to handle uneven allocation ratios
                 normalized_counts = [
-                    hypothetical_counts[arm] / self.config.arms_ratios[arm] for arm in arms
+                    hypothetical_counts[arm] / self.config.arms_ratios[arm]
+                    for arm in arms
                 ]
 
                 # 4. Calculate imbalance range
@@ -323,8 +327,12 @@ class PocockSimonMinimizationStrategy(RandomizationStrategy):
         min_score = min(imbalance_scores.values())
 
         # Identify best arms (with the minimum score) and other arms
-        best_arms = [arm for arm, score in imbalance_scores.items() if score == min_score]
-        other_arms = [arm for arm, score in imbalance_scores.items() if score > min_score]
+        best_arms = [
+            arm for arm, score in imbalance_scores.items() if score == min_score
+        ]
+        other_arms = [
+            arm for arm, score in imbalance_scores.items() if score > min_score
+        ]
 
         M = len(best_arms)
         num_other = len(other_arms)

@@ -568,6 +568,16 @@ WHITELISTED_ROUTES = {
     ("post", "/api/v1/execution/doa/assignment"),
     ("post", "/api/v1/execution/doa/sign-off"),
     ("get", "/api/v1/execution/doa/log/{study_id}/{site_id}"),
+    ("patch", "/api/v1/execution/subjects/{id}/state"),
+    ("patch", "/subjects/{id}/state"),
+    ("put", "/api/v1/execution/subjects/{id}/demographics"),
+    ("put", "/subjects/{id}/demographics"),
+    ("delete", "/api/v1/execution/subjects/{id}/demographics"),
+    ("delete", "/subjects/{id}/demographics"),
+    ("get", "/api/v1/execution/subjects/{subject_id}"),
+    ("get", "/subjects/{subject_id}"),
+    ("get", "/api/v1/execution/visits/{visit_id}"),
+    ("get", "/visits/{visit_id}"),
 }
 
 

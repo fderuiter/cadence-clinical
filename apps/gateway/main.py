@@ -268,14 +268,18 @@ async def verify_token(token: str) -> Dict[str, Any]:
         async with jwks_fetch_lock:
             if not _is_kid_cached(kid):
                 try:
-                    client_to_use = http_client if http_client is not None else httpx.AsyncClient()
+                    client_to_use = (
+                        http_client if http_client is not None else httpx.AsyncClient()
+                    )
                     resp = await client_to_use.get(JWKS_URL, timeout=5.0)
                     if resp.status_code == 200:
                         global jwks_cache
                         jwks_cache = resp.json()
                     else:
                         logger = logging.getLogger("gateway")
-                        logger.error(f"Failed to fetch JWKS dynamically: HTTP status code {resp.status_code}")
+                        logger.error(
+                            f"Failed to fetch JWKS dynamically: HTTP status code {resp.status_code}"
+                        )
                 except Exception as e:
                     logger = logging.getLogger("gateway")
                     logger.error(f"Failed to fetch JWKS dynamically: {str(e)}")

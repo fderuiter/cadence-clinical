@@ -6695,6 +6695,19 @@
         ],
         "title": "CommentThreadCreate"
       },
+      "ComparisonOperator": {
+        "type": "string",
+        "enum": [
+          "==",
+          "!=",
+          "<",
+          "<=",
+          ">",
+          ">="
+        ],
+        "title": "ComparisonOperator",
+        "description": "Allowed binary comparison operators for criteria evaluations."
+      },
       "ConceptDetail": {
         "properties": {
           "id": {
@@ -7586,7 +7599,7 @@
           "created_by": {
             "type": "string",
             "title": "Created By",
-            "description": "Unique identifier (e.g. username/OIDC user_id) of the user who created the record."
+            "description": "Unique identifier of the user who created the record."
           },
           "reason_for_change": {
             "type": "string",
@@ -7596,13 +7609,14 @@
           "version_index": {
             "type": "integer",
             "title": "Version Index",
-            "description": "Optimistic locking or row version counter, initialized to 1.",
+            "description": "Row version counter or index.",
             "default": 1
           },
-          "criterion_id": {
+          "id": {
             "type": "string",
-            "title": "Criterion Id",
-            "description": "Unique identifier of this eligibility criterion, e.g., 'INC_01'."
+            "title": "Id",
+            "description": "Unique identifier of this eligibility criterion, e.g., 'INC_01'.",
+            "default": ""
           },
           "criterion_type": {
             "type": "string",
@@ -7613,17 +7627,25 @@
             "title": "Criterion Type",
             "description": "Whether this is an inclusion or exclusion criterion."
           },
-          "description": {
+          "identifier": {
             "type": "string",
-            "title": "Description",
-            "description": "Human-readable text description of the criterion."
+            "title": "Identifier",
+            "description": "Business identifier of this criterion, e.g., 'INC-001'.",
+            "default": ""
           },
-          "dsl_source": {
+          "human_readable_text": {
             "type": "string",
-            "title": "Dsl Source",
-            "description": "The raw DSL statement source, e.g., 'eCRF.DM.AGE >= 18'."
+            "title": "Human Readable Text",
+            "description": "Human-readable text description of the criterion.",
+            "default": ""
           },
-          "condition": {
+          "dsl_expression_string": {
+            "type": "string",
+            "title": "Dsl Expression String",
+            "description": "The raw DSL statement source, e.g., 'eCRF.DM.AGE >= 18'.",
+            "default": ""
+          },
+          "structured_expression_tree": {
             "$ref": "#/components/schemas/ExpressionNode-Output",
             "description": "The parsed structured AST of this criterion."
           },
@@ -7632,17 +7654,35 @@
             "title": "Expected Outcome",
             "description": "Expected Boolean outcome of evaluating the condition node. Typically True for inclusions and False for exclusions.",
             "default": true
+          },
+          "criterion_id": {
+            "type": "string",
+            "title": "Criterion Id",
+            "description": "Backward compatible criterion_id field.",
+            "default": ""
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Backward compatible description field.",
+            "default": ""
+          },
+          "dsl_source": {
+            "type": "string",
+            "title": "Dsl Source",
+            "description": "Backward compatible dsl_source field.",
+            "default": ""
+          },
+          "condition": {
+            "$ref": "#/components/schemas/ExpressionNode-Output",
+            "description": "Backward compatible condition field."
           }
         },
         "type": "object",
         "required": [
           "created_by",
           "reason_for_change",
-          "criterion_id",
-          "criterion_type",
-          "description",
-          "dsl_source",
-          "condition"
+          "criterion_type"
         ],
         "title": "EligibilityCriterion",
         "description": "Represents a single inclusion or exclusion criterion with full GxP audit metadata."
@@ -7769,6 +7809,12 @@
           },
           "operator": {
             "anyOf": [
+              {
+                "$ref": "#/components/schemas/ComparisonOperator"
+              },
+              {
+                "$ref": "#/components/schemas/LogicalOperator"
+              },
               {
                 "type": "string"
               },
@@ -8563,6 +8609,16 @@
           "procedure_id"
         ],
         "title": "LinkVisitProcedureRequest"
+      },
+      "LogicalOperator": {
+        "type": "string",
+        "enum": [
+          "and",
+          "or",
+          "not"
+        ],
+        "title": "LogicalOperator",
+        "description": "Allowed logical connectors for composite criteria expressions."
       },
       "ObjectType": {
         "type": "string",
