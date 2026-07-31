@@ -2,8 +2,8 @@
 
 * **Status:** Accepted
 * **Date:** 2026-07-31
-* **Authors:** @fderuiter, @jules
-* **Deciders:** @fderuiter, @jules
+* **Authors:** @fderuiter
+* **Deciders:** @fderuiter
 
 ---
 

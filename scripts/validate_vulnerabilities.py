@@ -10,6 +10,7 @@ verifies that RPN scores are within safety limits (< 20), and outputs validation
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from typing import Any, Dict, List, Tuple
@@ -217,9 +218,12 @@ def execute_pnpm_audit() -> Tuple[str, str, int]:
     Returns:
         A tuple of (stdout, stderr, return_code).
     """
+    cmd = ["pnpm", "audit", "--json"]
+    if not shutil.which("pnpm"):
+        cmd = ["npx", "-y", "pnpm", "audit", "--json"]
     try:
         res = subprocess.run(
-            ["pnpm", "audit", "--json"],
+            cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,

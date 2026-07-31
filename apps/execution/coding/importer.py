@@ -1,10 +1,11 @@
 import logging
 import os
 import zipfile
-from datetime import datetime
-from typing import Any
+from datetime import datetime, timezone
+from typing import Callable
 
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.execution.coding.parsers import MedDRAParser, WHODrugParser
 from apps.execution.database.context import audit_context, current_session
@@ -30,7 +31,7 @@ async def update_job_progress(
     records_count: int,
     errors_encountered: int,
     error_details: str | None,
-    session_maker: Any,
+    session_maker: Callable[[], AsyncSession],
 ) -> None:
     """Updates the import job progress/status in a separate transactional session."""
     async with session_maker() as session:
@@ -46,7 +47,7 @@ async def update_job_progress(
                 if error_details is not None:
                     job.error_details = error_details[:1000]
                 if status in (ImportState.COMPLETED, ImportState.FAILED):
-                    job.completed_at = datetime.utcnow()
+                    job.completed_at = datetime.now(timezone.utc)
 
 
 async def process_dictionary_import(
@@ -54,7 +55,7 @@ async def process_dictionary_import(
     dictionary_type: str,
     version: str,
     temp_zip_path: str,
-    session_maker: Any,
+    session_maker: Callable[[], AsyncSession],
     user_id: str | None = None,
     change_reason: str | None = None,
 ) -> None:

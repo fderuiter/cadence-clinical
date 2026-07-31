@@ -6,7 +6,7 @@ records in accordance with FDA 21 CFR Part 11 and GxP standards.
 """
 
 import os
-from typing import Any, Dict, Iterable, Iterator, List
+from typing import IO, Any, Dict, Iterable, Iterator, List, Union
 
 
 class MedDRAParseError(ValueError):
@@ -30,6 +30,7 @@ class MedDRAParser:
 
     Yields versioned five-level terminology (LLT, PT, HLT, HLGT, SOC)
     and hierarchy records.
+    Satisfies Epic #109 / Issue #1122 / Phase 16: Dictionary Ingestion & Persistence.
     """
 
     def __init__(self, dictionary_version: str, encoding: str = "utf-8"):
@@ -79,7 +80,7 @@ class MedDRAParser:
 
     def parse(
         self,
-        file_input: Any,
+        file_input: Union[str, bytes, os.PathLike, Iterable[str], IO[str], IO[bytes]],
         file_type: str = None,
         file_name: str = None,
     ) -> Iterator[Dict[str, Any]]:
@@ -117,7 +118,7 @@ class MedDRAParser:
 
     def parse_in_batches(
         self,
-        file_input: Any,
+        file_input: Union[str, bytes, os.PathLike, Iterable[str], IO[str], IO[bytes]],
         file_type: str = None,
         file_name: str = None,
         batch_size: int = 1000,
@@ -447,7 +448,7 @@ class MedDRAParser:
 
 
 def parse_meddra_file(
-    file_input: Any,
+    file_input: Union[str, bytes, os.PathLike, Iterable[str], IO[str], IO[bytes]],
     dictionary_version: str,
     file_type: str = None,
     file_name: str = None,
@@ -491,6 +492,7 @@ class WHODrugParser:
 
     Produces versioned drug, ingredient, and ATC classification records.
     Supports fixed-width and delimited text file formats with configurable mappings.
+    Satisfies Epic #109 / Issue #1122 / Phase 16: Dictionary Ingestion & Persistence.
     """
 
     DEFAULT_CONFIGS = {
@@ -613,7 +615,7 @@ class WHODrugParser:
 
         if (
             "dada" in base_name
-            or "dda" in tokens
+            or "dda" in base_name
             or "drugatc" in base_name
             or "drug_at_c" in base_name
             or "drug_atc" in base_name
@@ -657,7 +659,7 @@ class WHODrugParser:
 
     def parse(
         self,
-        file_input: Any,
+        file_input: Union[str, bytes, os.PathLike, Iterable[str], IO[str], IO[bytes]],
         file_type: str = None,
         file_name: str = None,
     ) -> Iterator[Dict[str, Any]]:
@@ -695,7 +697,7 @@ class WHODrugParser:
 
     def parse_in_batches(
         self,
-        file_input: Any,
+        file_input: Union[str, bytes, os.PathLike, Iterable[str], IO[str], IO[bytes]],
         file_type: str = None,
         file_name: str = None,
         batch_size: int = 1000,
@@ -1164,7 +1166,7 @@ class WHODrugParser:
 
 
 def parse_whodrug_file(
-    file_input: Any,
+    file_input: Union[str, bytes, os.PathLike, Iterable[str], IO[str], IO[bytes]],
     dictionary_version: str,
     file_type: str = None,
     file_name: str = None,

@@ -82,7 +82,6 @@ class ConsentClauseCreate(AuditFields):
     study_id: str = Field(..., description="Unique clinical study identifier")
     title: str = Field(..., max_length=255, description="Title of the clause")
     text: str = Field(..., description="Content of the clause")
-    category: Optional[str] = Field(None, description="Category of the clause")
 
 
 class ConsentClauseResponse(AuditFields):
@@ -97,7 +96,6 @@ class ConsentClauseResponse(AuditFields):
     study_id: str = Field(..., description="Unique clinical study identifier")
     title: str = Field(..., description="Title of the clause")
     text: str = Field(..., description="Content of the clause")
-    category: Optional[str] = Field(None, description="Category of the clause")
 
 
 class ConsentClauseUpdate(AuditFields):
@@ -108,7 +106,6 @@ class ConsentClauseUpdate(AuditFields):
     study_id: str = Field(..., description="Unique clinical study identifier")
     title: str = Field(..., max_length=255, description="Title of the clause")
     text: str = Field(..., description="Content of the clause")
-    category: Optional[str] = Field(None, description="Category of the clause")
 
 
 # Pydantic Schemas for ConsentTemplate
@@ -191,7 +188,6 @@ class ComposedClauseResponse(BaseModel):
     clause_id: str
     title: str
     text: str
-    category: Optional[str] = None
     version_index: int
 
 
@@ -838,7 +834,6 @@ async def create_consent_clause(
         study_id=payload.study_id,
         title=payload.title,
         text=payload.text,
-        category=payload.category,
         version_index=1,
         created_by=user_id,
         reason_for_change=change_reason,
@@ -903,7 +898,6 @@ async def update_consent_clause(
         study_id=payload.study_id,
         title=payload.title,
         text=payload.text,
-        category=payload.category,
         version_index=next_version,
         created_by=user_id,
         reason_for_change=change_reason,
@@ -1700,7 +1694,6 @@ async def sign_consent_template_endpoint(
                         "clause_id": clause.clause_id,
                         "title": clause.title,
                         "text": clause.text,
-                        "category": clause.category,
                         "version_index": clause.version_index,
                     }
                 )
@@ -2241,7 +2234,6 @@ async def fetch_composed_translation_from_db(
                 "clause_id": clause.clause_id,
                 "title": clause_translation.translated_title,
                 "text": clause_translation.translated_text,
-                "category": clause.category,
                 "version_index": clause.version_index,
             }
         )
@@ -2565,7 +2557,6 @@ async def compose_consent_template(
                 clause_id=clause.clause_id,
                 title=clause.title,
                 text=clause.text,
-                category=clause.category,
                 version_index=clause.version_index,
             )
         )
