@@ -727,7 +727,7 @@ async function submitUpload() {
   border: 1px solid #cbd5e1;
   border-radius: 6px;
   font-size: 0.9rem;
-  outline: none;
+  outline: 2px solid transparent;
   transition: border-color 0.2s;
   background-color: #ffffff;
 }
