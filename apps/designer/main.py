@@ -2459,7 +2459,7 @@ def map_db_to_criterion(db_crit: Dict[str, Any]) -> EligibilityCriterion:
         except Exception:
             created_at = datetime.datetime.now(datetime.timezone.utc)
 
-    if hasattr(created_at, "tzinfo") and created_at.tzinfo is None:
+    if isinstance(created_at, datetime.datetime) and created_at.tzinfo is None:
         created_at = created_at.replace(tzinfo=datetime.timezone.utc)
 
     return EligibilityCriterion(

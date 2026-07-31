@@ -2,21 +2,37 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import JSON, Boolean, Float, Integer, String, func
-from sqlalchemy import DateTime as SADateTime
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    DateTime,
+    Float,
+    Integer,
+    String,
+    TypeDecorator,
+    func,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy.types import TypeDecorator
 
 
-class UTCDateTime(TypeDecorator):
-    impl = SADateTime
+class AwareDateTime(TypeDecorator):
+    """
+    SQLAlchemy type that ensures all datetimes are timezone-aware and stored/retrieved in UTC.
+    """
+
+    impl = DateTime(timezone=True)
     cache_ok = True
 
     def process_bind_param(self, value, dialect):
         if value is not None:
-            if value.tzinfo is None:
-                return value.replace(tzinfo=timezone.utc)
-            return value.astimezone(timezone.utc)
+            if isinstance(value, str):
+                from dateutil.parser import parse
+
+                value = parse(value)
+            if isinstance(value, datetime):
+                if value.tzinfo is None:
+                    return value.replace(tzinfo=timezone.utc)
+                return value.astimezone(timezone.utc)
         return value
 
     def process_result_value(self, value, dialect):
@@ -25,9 +41,6 @@ class UTCDateTime(TypeDecorator):
                 return value.replace(tzinfo=timezone.utc)
             return value.astimezone(timezone.utc)
         return value
-
-
-DateTime = UTCDateTime
 
 
 class Base(DeclarativeBase):
@@ -53,7 +66,7 @@ class ConsentDocument(Base):
 
     # 21 CFR Part 11 Compliance Auditing Metadata
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
+        AwareDateTime, default=func.now(), nullable=False
     )
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
@@ -73,8 +86,12 @@ class EtmfArchivalDelivery(Base):
     status: Mapped[str] = mapped_column(String(50), default="PENDING", nullable=False)
     attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     last_error: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    next_retry_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    next_retry_at: Mapped[Optional[datetime]] = mapped_column(
+        AwareDateTime, nullable=True
+    )
+    completed_at: Mapped[Optional[datetime]] = mapped_column(
+        AwareDateTime, nullable=True
+    )
     retry_eligible: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     correlation_id: Mapped[str] = mapped_column(
         String(255), unique=True, index=True, nullable=False
@@ -91,7 +108,7 @@ class EtmfArchivalDelivery(Base):
 
     # 21 CFR Part 11 Compliance Auditing Metadata
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
+        AwareDateTime, default=func.now(), nullable=False
     )
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
@@ -118,16 +135,16 @@ class SubjectConsent(Base):
     protocol_version: Mapped[str] = mapped_column(String(255), nullable=False)
     source_content_identity: Mapped[str] = mapped_column(String, nullable=False)
     server_timestamp: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
+        AwareDateTime, default=func.now(), nullable=False
     )
     device_timestamp: Mapped[Optional[datetime]] = mapped_column(
-        DateTime, nullable=True
+        AwareDateTime, nullable=True
     )
     signature_manifest: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
 
     # 21 CFR Part 11 Compliance Auditing Metadata
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
+        AwareDateTime, default=func.now(), nullable=False
     )
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
@@ -153,7 +170,7 @@ class ComprehensionCheck(Base):
 
     # 21 CFR Part 11 Compliance Auditing Metadata
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
+        AwareDateTime, default=func.now(), nullable=False
     )
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
@@ -188,7 +205,7 @@ class ComprehensionResult(Base):
 
     # 21 CFR Part 11 Compliance Auditing Metadata
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
+        AwareDateTime, default=func.now(), nullable=False
     )
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
@@ -212,7 +229,7 @@ class ConsentSignature(Base):
     )
     signature_data: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     signed_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
+        AwareDateTime, default=func.now(), nullable=False
     )
 
     # 21 CFR Part 11 Compliance Auditing Metadata
@@ -239,7 +256,7 @@ class ConsentClause(Base):
 
     # 21 CFR Part 11 Compliance Auditing Metadata
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
+        AwareDateTime, default=func.now(), nullable=False
     )
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
@@ -274,7 +291,7 @@ class ConsentTemplate(Base):
 
     # 21 CFR Part 11 Compliance Auditing Metadata
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
+        AwareDateTime, default=func.now(), nullable=False
     )
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
@@ -292,7 +309,7 @@ class ConsentAuditLog(Base):
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
     timestamp: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False, index=True
+        AwareDateTime, default=func.now(), nullable=False, index=True
     )
     actor_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     actor_role: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -337,7 +354,7 @@ class ConsentTranslation(Base):
 
     # 21 CFR Part 11 Compliance Auditing Metadata
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
+        AwareDateTime, default=func.now(), nullable=False
     )
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
