@@ -957,3 +957,93 @@ def test_safety_reads_negative_signatures():
         res_tampered = client.get(url, headers=headers_tampered)
         assert res_tampered.status_code == 401
         assert "invalid gateway signature" in res_tampered.json()["detail"].lower()
+
+
+def test_terminology_cache_functionality():
+    """Verify that TerminologyCache correctly caches resolutions, respects TTL, and handles stale-on-error fallback."""
+    from apps.safety.reconciliation import TerminologyCache
+
+    cache = TerminologyCache(max_size=3, ttl=0.1)
+
+    # 1. Miss (returns None)
+    assert cache.get("HEADACHE", "26.0") is None
+
+    # 2. Hit after Set
+    data = {"status": "AUTO-CODED", "matches": [{"llt_code": "10019211"}]}
+    cache.set("HEADACHE", "26.0", data)
+    assert cache.get("HEADACHE", "26.0") == data
+
+    # 3. Eviction on max_size
+    cache.set("FEVER", "26.0", {"f": 1})
+    cache.set("NAUSEA", "26.0", {"n": 1})
+    cache.set("VOMITING", "26.0", {"v": 1})  # Triggers eviction of oldest (HEADACHE)
+    assert cache.get("HEADACHE", "26.0") is None
+    assert cache.get_status()["size"] <= 3
+
+    # 4. TTL Expiry
+    cache.clear()
+    cache.set("HEADACHE", "26.0", data)
+    assert cache.get("HEADACHE", "26.0") == data
+    time.sleep(0.15)
+    assert cache.get("HEADACHE", "26.0") is None
+
+    # 5. Stale-on-error fallback simulation
+    # Cache has expired HEADACHE entry.
+    # We query terminology_cache singleton in apps/safety/reconciliation.py
+    from apps.safety.reconciliation import terminology_cache
+    terminology_cache.clear()
+    # Mocking execution client resolving
+    class MockFailClient:
+        async def resolve_meddra_code(self, term, version, client=None):
+            raise RuntimeError("Temporary dictionary service outage")
+
+    # Set expired value manually
+    terminology_cache.set("HEADACHE", "26.0", data)
+    terminology_cache._cache[("HEADACHE", "26.0")] = (data, time.time() - 3600.0) # Expired 1 hour ago
+
+    # Run query with a failing client to trigger stale-on-error fallback
+    import asyncio
+    async def run_fallback_test():
+        from apps.safety.execution_client import ExecutionClient
+        from apps.safety.reconciliation import run_reconciliation
+        from unittest.mock import AsyncMock, MagicMock
+
+        mock_session = MagicMock()
+        mock_session.begin_nested = MagicMock()
+        mock_session.flush = AsyncMock()
+
+        mock_result = MagicMock()
+        mock_result.scalar.return_value = 0
+        mock_session.execute = AsyncMock(return_value=mock_result)
+
+        # We need exec_client to raise exception on resolve_meddra_code
+        fail_client = MockFailClient()
+
+        # Mocking ExecutionClient.fetch_ae_data and resolve_meddra_code calls
+        orig_fetch = ExecutionClient.fetch_ae_data
+        orig_resolve = ExecutionClient.resolve_meddra_code
+        try:
+            async def mock_fetch(self, study_id, client=None):
+                return {"AE": [{"AETERM": "HEADACHE", "USUBJID": "SUBJ-001"}]}
+            ExecutionClient.fetch_ae_data = mock_fetch
+            # This is called internally in run_reconciliation:
+            # We want it to raise so the fallback is triggered
+            async def mock_resolve_fail(self, term, version, client=None):
+                raise RuntimeError("Service down")
+            ExecutionClient.resolve_meddra_code = mock_resolve_fail
+
+            res = await run_reconciliation(
+                study_id="S-001",
+                session=mock_session,
+                created_by="test",
+                reason_for_change="Test fallback",
+            )
+            # Should have fallen back and resolved to the expired code
+            # Since safety cases are empty, we expect exactly 1 event_presence discrepancy
+            assert len(res["discrepancies"]) == 1
+            assert res["discrepancies"][0].field_name == "event_presence"
+        finally:
+            ExecutionClient.fetch_ae_data = orig_fetch
+            ExecutionClient.resolve_meddra_code = orig_resolve
+
+    asyncio.run(run_fallback_test())

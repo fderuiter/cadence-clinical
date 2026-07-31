@@ -70,42 +70,6 @@ async def resolve_personnel_assignments(keycloak_user_id: str) -> Dict[str, Any]
             "assigned_studies": [],
         }
 
-
-async def is_sponsor_known_to_org_directory(sponsor_id: str) -> bool:
-    """
-    Checks if a sponsor_id is registered as an Organization in the Organization Directory.
-    Fails safely / returns True if the Org directory database is not initialized or accessible.
-    """
-    import sys
-    try:
-        from apps.org.database import db_manager
-        from apps.org.models import Organization
-        from sqlalchemy import select
-
-        if db_manager.engine is not None:
-            session_maker = db_manager.get_session_maker()
-            async with session_maker() as session:
-                stmt = select(Organization).where(Organization.id == sponsor_id)
-                res = await session.execute(stmt)
-                org = res.scalars().first()
-                return org is not None
-    except Exception:
-        pass
-
-    MOCK_VALID_SPONSORS = {
-        "spon_pharma",
-        "spon_active",
-        "spon_other",
-        "spon_cardiology",
-        "spon_abc",
-        "spon_real",
-        "spon_fake",
-        "spon_clinic",
-    }
-    if sponsor_id in MOCK_VALID_SPONSORS:
-        return True
-    return False
-
     org_service_url = os.getenv("ORG_SERVICE_URL", "http://localhost:8001")
     user_id = "security-service"
     roles = "admin"
@@ -147,3 +111,37 @@ async def is_sponsor_known_to_org_directory(sponsor_id: str) -> bool:
             "assigned_sites": [],
             "assigned_studies": [],
         }
+
+
+async def is_sponsor_known_to_org_directory(sponsor_id: str) -> bool:
+    """
+    Checks if a sponsor_id is registered as an Organization in the Organization Directory.
+    Fails safely / returns True if the Org directory database is not initialized or accessible.
+    """
+    try:
+        from sqlalchemy import select
+
+        from apps.org.database import db_manager
+        from apps.org.models import Organization
+
+        if db_manager.engine is not None:
+            session_maker = db_manager.get_session_maker()
+            async with session_maker() as session:
+                stmt = select(Organization).where(Organization.id == sponsor_id)
+                res = await session.execute(stmt)
+                org = res.scalars().first()
+                return org is not None
+    except Exception:
+        pass
+
+    mock_valid_sponsors = {
+        "spon_pharma",
+        "spon_active",
+        "spon_other",
+        "spon_cardiology",
+        "spon_abc",
+        "spon_real",
+        "spon_fake",
+        "spon_clinic",
+    }
+    return sponsor_id in mock_valid_sponsors

@@ -14,8 +14,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 import packages  # noqa: F401
 from packages.security.middleware import get_current_user
-from packages.security.signature_builder import CryptographicSignatureBuilder
 from packages.security.sig_token_verifier import verify_and_consume_sig_token
+from packages.security.signature_builder import CryptographicSignatureBuilder
 
 router = APIRouter(prefix="/api/v1/execution/signatures", tags=["Signatures"])
 
