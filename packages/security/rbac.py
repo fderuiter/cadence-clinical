@@ -1368,11 +1368,14 @@ def require_roles(*allowed_roles: str, detail: Optional[str] = None):
     return dependency
 
 
-def require_role(required_role: str, detail: Optional[str] = None) -> Callable[[Request], list[str]]:
+def require_role(
+    required_role: str, detail: Optional[str] = None
+) -> Callable[[Request], list[str]]:
     """
     FastAPI dependency factory to enforce that the caller has the required role.
     Reads request.state.roles, normalizes the comma-separated string, and raises 403 when the required role is absent.
     """
+
     def dependency(request: Request) -> list[str]:
         roles = get_normalized_roles(request)
         norm_required = normalize_role(required_role.strip().lower())
@@ -1386,13 +1389,17 @@ def require_role(required_role: str, detail: Optional[str] = None) -> Callable[[
         if not any(r in expanded_allowed for r in normalized_req_roles):
             raise HTTPException(
                 status_code=403,
-                detail=detail or f"User role is not authorized for this action. Required: {required_role}.",
+                detail=detail
+                or f"User role is not authorized for this action. Required: {required_role}.",
             )
         return roles
+
     return dependency
 
 
-def require_any_role(*allowed_roles: str, detail: Optional[str] = None) -> Callable[[Request], list[str]]:
+def require_any_role(
+    *allowed_roles: str, detail: Optional[str] = None
+) -> Callable[[Request], list[str]]:
     """
     FastAPI dependency factory to enforce that the caller has at least one of the allowed roles.
     Reads request.state.roles, normalizes the comma-separated string, and raises 403 when required roles are absent.

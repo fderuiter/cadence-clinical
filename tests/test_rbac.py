@@ -1259,6 +1259,7 @@ def test_is_auditor_helper() -> None:
         def __init__(self, roles_str: str):
             class State:
                 pass
+
             self.state = State()
             self.state.roles = roles_str
             self.headers = {}
@@ -1278,6 +1279,7 @@ def test_require_role_dependency() -> None:
         def __init__(self, roles_str: str):
             class State:
                 pass
+
             self.state = State()
             self.state.roles = roles_str
             self.headers = {}
@@ -1302,6 +1304,7 @@ def test_require_any_role_dependency() -> None:
         def __init__(self, roles_str: str):
             class State:
                 pass
+
             self.state = State()
             self.state.roles = roles_str
             self.headers = {}

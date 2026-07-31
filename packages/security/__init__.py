@@ -70,14 +70,14 @@ from packages.security.rbac import (
     get_normalized_roles,
     get_principal,
     has_permission,
+    is_auditor,
     mask_payload,
+    require_any_role,
     require_permission,
+    require_role,
     require_roles,
     verify_is_auditor,
     verify_not_auditor,
-    require_role,
-    require_any_role,
-    is_auditor,
 )
 from packages.security.signing import (
     asymmetric_sign,
