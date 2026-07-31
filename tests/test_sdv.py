@@ -588,49 +588,48 @@ async def test_bulk_sdv_signoff_happy_path():
     Verify that a valid bulk sign-off request upserts the expected records and creates audit logs.
     """
     # 1. Populate DB with test subject, visit, and observations
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            await session.execute(
-                text("SELECT set_config('cadence.app_writing', 'true', 1);")
-            )
-            subj = ClinicalSubject(
-                subject_id="SUBJ-BULK-1",
-                study_id="STUDY-BULK-TEST",
-                site_id="SITE-BULK-1",
-            )
-            session.add(subj)
+    async with db_manager.get_session_maker()() as session, session.begin():
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', 1);")
+        )
+        subj = ClinicalSubject(
+            subject_id="SUBJ-BULK-1",
+            study_id="STUDY-BULK-TEST",
+            site_id="SITE-BULK-1",
+        )
+        session.add(subj)
 
-            visit = ClinicalVisit(
-                id="VISIT-BULK-1",
-                subject_id="SUBJ-BULK-1",
-                study_id="STUDY-BULK-TEST",
-                visit_name="Baseline",
-            )
-            session.add(visit)
+        visit = ClinicalVisit(
+            id="VISIT-BULK-1",
+            subject_id="SUBJ-BULK-1",
+            study_id="STUDY-BULK-TEST",
+            visit_name="Baseline",
+        )
+        session.add(visit)
 
-            obs1 = ClinicalObservation(
-                id="OBS-BULK-1",
-                subject_id="SUBJ-BULK-1",
-                study_id="STUDY-BULK-TEST",
-                visit_id="VISIT-BULK-1",
-                page_id="PAGE-BULK-1",
-                domain="VS",
-                test_code="SYSBP",
-                test_name="Systolic Blood Pressure",
-                value=120.0,
-            )
-            obs2 = ClinicalObservation(
-                id="OBS-BULK-2",
-                subject_id="SUBJ-BULK-1",
-                study_id="STUDY-BULK-TEST",
-                visit_id="VISIT-BULK-1",
-                page_id="PAGE-BULK-1",
-                domain="VS",
-                test_code="DIABP",
-                test_name="Diastolic Blood Pressure",
-                value=80.0,
-            )
-            session.add_all([obs1, obs2])
+        obs1 = ClinicalObservation(
+            id="OBS-BULK-1",
+            subject_id="SUBJ-BULK-1",
+            study_id="STUDY-BULK-TEST",
+            visit_id="VISIT-BULK-1",
+            page_id="PAGE-BULK-1",
+            domain="VS",
+            test_code="SYSBP",
+            test_name="Systolic Blood Pressure",
+            value=120.0,
+        )
+        obs2 = ClinicalObservation(
+            id="OBS-BULK-2",
+            subject_id="SUBJ-BULK-1",
+            study_id="STUDY-BULK-TEST",
+            visit_id="VISIT-BULK-1",
+            page_id="PAGE-BULK-1",
+            domain="VS",
+            test_code="DIABP",
+            test_name="Diastolic Blood Pressure",
+            value=80.0,
+        )
+        session.add_all([obs1, obs2])
 
     payload = {
         "study_id": "STUDY-BULK-TEST",
@@ -712,74 +711,73 @@ async def test_bulk_sdv_signoff_rbac_and_idempotency():
     Verify role gating and safe re-submission.
     """
     # Populate DB with test subject and multiple observations for isolation
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            await session.execute(
-                text("SELECT set_config('cadence.app_writing', 'true', 1);")
-            )
-            subj = ClinicalSubject(
-                subject_id="SUBJ-RBAC-1",
-                study_id="STUDY-RBAC-TEST",
-                site_id="SITE-RBAC-1",
-            )
-            session.add(subj)
+    async with db_manager.get_session_maker()() as session, session.begin():
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', 1);")
+        )
+        subj = ClinicalSubject(
+            subject_id="SUBJ-RBAC-1",
+            study_id="STUDY-RBAC-TEST",
+            site_id="SITE-RBAC-1",
+        )
+        session.add(subj)
 
-            obs_cra = ClinicalObservation(
-                id="OBS-RBAC-CRA",
-                subject_id="SUBJ-RBAC-1",
-                study_id="STUDY-RBAC-TEST",
-                visit_id="VISIT-RBAC-1",
-                page_id="PAGE-RBAC-1",
-                domain="VS",
-                test_code="SYSBP",
-                test_name="Systolic Blood Pressure",
-                value=120.0,
-            )
-            obs_mon = ClinicalObservation(
-                id="OBS-RBAC-MON",
-                subject_id="SUBJ-RBAC-1",
-                study_id="STUDY-RBAC-TEST",
-                visit_id="VISIT-RBAC-1",
-                page_id="PAGE-RBAC-1",
-                domain="VS",
-                test_code="SYSBP",
-                test_name="Systolic Blood Pressure",
-                value=120.0,
-            )
-            obs_pi = ClinicalObservation(
-                id="OBS-RBAC-PI",
-                subject_id="SUBJ-RBAC-1",
-                study_id="STUDY-RBAC-TEST",
-                visit_id="VISIT-RBAC-1",
-                page_id="PAGE-RBAC-1",
-                domain="VS",
-                test_code="SYSBP",
-                test_name="Systolic Blood Pressure",
-                value=120.0,
-            )
-            obs_dm = ClinicalObservation(
-                id="OBS-RBAC-DM",
-                subject_id="SUBJ-RBAC-1",
-                study_id="STUDY-RBAC-TEST",
-                visit_id="VISIT-RBAC-1",
-                page_id="PAGE-RBAC-1",
-                domain="VS",
-                test_code="SYSBP",
-                test_name="Systolic Blood Pressure",
-                value=120.0,
-            )
-            obs_idem = ClinicalObservation(
-                id="OBS-RBAC-IDEM",
-                subject_id="SUBJ-RBAC-1",
-                study_id="STUDY-RBAC-TEST",
-                visit_id="VISIT-RBAC-1",
-                page_id="PAGE-RBAC-1",
-                domain="VS",
-                test_code="SYSBP",
-                test_name="Systolic Blood Pressure",
-                value=120.0,
-            )
-            session.add_all([obs_cra, obs_mon, obs_pi, obs_dm, obs_idem])
+        obs_cra = ClinicalObservation(
+            id="OBS-RBAC-CRA",
+            subject_id="SUBJ-RBAC-1",
+            study_id="STUDY-RBAC-TEST",
+            visit_id="VISIT-RBAC-1",
+            page_id="PAGE-RBAC-1",
+            domain="VS",
+            test_code="SYSBP",
+            test_name="Systolic Blood Pressure",
+            value=120.0,
+        )
+        obs_mon = ClinicalObservation(
+            id="OBS-RBAC-MON",
+            subject_id="SUBJ-RBAC-1",
+            study_id="STUDY-RBAC-TEST",
+            visit_id="VISIT-RBAC-1",
+            page_id="PAGE-RBAC-1",
+            domain="VS",
+            test_code="SYSBP",
+            test_name="Systolic Blood Pressure",
+            value=120.0,
+        )
+        obs_pi = ClinicalObservation(
+            id="OBS-RBAC-PI",
+            subject_id="SUBJ-RBAC-1",
+            study_id="STUDY-RBAC-TEST",
+            visit_id="VISIT-RBAC-1",
+            page_id="PAGE-RBAC-1",
+            domain="VS",
+            test_code="SYSBP",
+            test_name="Systolic Blood Pressure",
+            value=120.0,
+        )
+        obs_dm = ClinicalObservation(
+            id="OBS-RBAC-DM",
+            subject_id="SUBJ-RBAC-1",
+            study_id="STUDY-RBAC-TEST",
+            visit_id="VISIT-RBAC-1",
+            page_id="PAGE-RBAC-1",
+            domain="VS",
+            test_code="SYSBP",
+            test_name="Systolic Blood Pressure",
+            value=120.0,
+        )
+        obs_idem = ClinicalObservation(
+            id="OBS-RBAC-IDEM",
+            subject_id="SUBJ-RBAC-1",
+            study_id="STUDY-RBAC-TEST",
+            visit_id="VISIT-RBAC-1",
+            page_id="PAGE-RBAC-1",
+            domain="VS",
+            test_code="SYSBP",
+            test_name="Systolic Blood Pressure",
+            value=120.0,
+        )
+        session.add_all([obs_cra, obs_mon, obs_pi, obs_dm, obs_idem])
 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
@@ -910,28 +908,27 @@ async def test_bulk_sdv_signoff_batch_binding_mismatch():
     Verify that a mismatched or missing token blocks the request and mutates nothing.
     """
     # Populate DB with test subject and observation
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            await session.execute(
-                text("SELECT set_config('cadence.app_writing', 'true', 1);")
-            )
-            subj = ClinicalSubject(
-                subject_id="SUBJ-MIS-1", study_id="STUDY-MIS-TEST", site_id="SITE-MIS-1"
-            )
-            session.add(subj)
+    async with db_manager.get_session_maker()() as session, session.begin():
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', 1);")
+        )
+        subj = ClinicalSubject(
+            subject_id="SUBJ-MIS-1", study_id="STUDY-MIS-TEST", site_id="SITE-MIS-1"
+        )
+        session.add(subj)
 
-            obs = ClinicalObservation(
-                id="OBS-MIS-1",
-                subject_id="SUBJ-MIS-1",
-                study_id="STUDY-MIS-TEST",
-                visit_id="VISIT-MIS-1",
-                page_id="PAGE-MIS-1",
-                domain="VS",
-                test_code="SYSBP",
-                test_name="Systolic Blood Pressure",
-                value=120.0,
-            )
-            session.add(obs)
+        obs = ClinicalObservation(
+            id="OBS-MIS-1",
+            subject_id="SUBJ-MIS-1",
+            study_id="STUDY-MIS-TEST",
+            visit_id="VISIT-MIS-1",
+            page_id="PAGE-MIS-1",
+            domain="VS",
+            test_code="SYSBP",
+            test_name="Systolic Blood Pressure",
+            value=120.0,
+        )
+        session.add(obs)
 
     correct_payload = {
         "study_id": "STUDY-MIS-TEST",
@@ -1014,15 +1011,14 @@ async def test_bulk_sdv_signoff_input_validation():
     Verify request-body validation for reason and target list.
     """
     # Populate DB with test subject
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            await session.execute(
-                text("SELECT set_config('cadence.app_writing', 'true', 1);")
-            )
-            subj = ClinicalSubject(
-                subject_id="SUBJ-VAL-1", study_id="STUDY-VAL-TEST", site_id="SITE-VAL-1"
-            )
-            session.add(subj)
+    async with db_manager.get_session_maker()() as session, session.begin():
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', 1);")
+        )
+        subj = ClinicalSubject(
+            subject_id="SUBJ-VAL-1", study_id="STUDY-VAL-TEST", site_id="SITE-VAL-1"
+        )
+        session.add(subj)
 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"

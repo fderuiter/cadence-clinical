@@ -1120,13 +1120,9 @@ async def proxy_requests(request: Request, path: str) -> Response:
         target_url = f"{SERVICES['designer']}/{path}"
     elif path.startswith("terminology/"):
         target_url = f"{SERVICES['designer']}/{path[len('terminology/') :]}"
-    elif path.startswith("api/v1/studies"):
+    elif path.startswith("api/v1/studies") or path.startswith("api/v2/studies"):
         target_url = f"{SERVICES['designer']}/{path}"
-    elif path.startswith("api/v2/studies"):
-        target_url = f"{SERVICES['designer']}/{path}"
-    elif path.startswith("api/v1/execution"):
-        target_url = f"{SERVICES['execution']}/{path}"
-    elif path.startswith("dictionary/"):
+    elif path.startswith("api/v1/execution") or path.startswith("dictionary/"):
         target_url = f"{SERVICES['execution']}/{path}"
     elif path.startswith("econsent/"):
         target_url = f"{SERVICES['econsent']}/{path[len('econsent/') :]}"

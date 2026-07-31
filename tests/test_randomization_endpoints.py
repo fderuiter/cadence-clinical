@@ -163,17 +163,16 @@ async def test_subject_demographics_mutation_and_deletion_endpoints() -> None:
         assert state_res.status_code == 200
 
         # Force subject state to RANDOMIZED in DB
-        async with db_manager.get_session_maker()() as session:
-            async with session.begin():
-                stmt = select(ClinicalSubject).where(
-                    ClinicalSubject.subject_id == "SUBJ-902"
-                )
-                res = await session.execute(stmt)
-                subj = res.scalars().one()
-                # Bypass validators by changing underlying status and setting random ID
-                subj.randomization_id = "RAND-ASSIGN-902"
-                subj.status = "RANDOMIZED"
-                session.add(subj)
+        async with db_manager.get_session_maker()() as session, session.begin():
+            stmt = select(ClinicalSubject).where(
+                ClinicalSubject.subject_id == "SUBJ-902"
+            )
+            res = await session.execute(stmt)
+            subj = res.scalars().one()
+            # Bypass validators by changing underlying status and setting random ID
+            subj.randomization_id = "RAND-ASSIGN-902"
+            subj.status = "RANDOMIZED"
+            session.add(subj)
 
         # 3. Test idempotent PUT (setting identical strat_factors and demographics) -> Allowed
         headers_put = get_auth_headers(

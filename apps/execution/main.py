@@ -1367,12 +1367,10 @@ async def update_subject_demographics_endpoint(
             if payload.demographics is not None:
                 current_demo = {}
                 if subject.encrypted_demographics:
-                    try:
+                    with suppress(Exception):
                         current_demo = decrypt_demographics(
                             subject.encrypted_demographics
                         )
-                    except Exception:
-                        pass
 
                 new_demo = payload.demographics.dict(exclude_none=True)
                 if is_post_rand and current_demo != new_demo:

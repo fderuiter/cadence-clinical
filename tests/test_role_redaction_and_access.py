@@ -149,35 +149,34 @@ async def test_get_subject_api_blinding_and_isolation():
     client = TestClient(exec_app)
 
     # 1. Seed database with subject and randomization
-    async with exec_db_manager.get_session_maker()() as session:
-        async with session.begin():
-            subj = ClinicalSubject(
-                subject_id="SUBJ_BOSTON", study_id="study_001", site_id="site_boston"
-            )
-            session.add(subj)
-            await session.flush()
+    async with exec_db_manager.get_session_maker()() as session, session.begin():
+        subj = ClinicalSubject(
+            subject_id="SUBJ_BOSTON", study_id="study_001", site_id="site_boston"
+        )
+        session.add(subj)
+        await session.flush()
 
-            # Transition to ENROLLED then to RANDOMIZED
-            subj.status = "ENROLLED"
-            subj.status = "RANDOMIZED"
+        # Transition to ENROLLED then to RANDOMIZED
+        subj.status = "ENROLLED"
+        subj.status = "RANDOMIZED"
 
-            # Seed a randomized treatment assignment
-            # Encrypted allocation block (reusing standard crypt format)
-            # From apps/execution/cryptography.py: encrypt returns hex-encoded payload
-            from apps.execution.cryptography import AllocationKeyManager
+        # Seed a randomized treatment assignment
+        # Encrypted allocation block (reusing standard crypt format)
+        # From apps/execution/cryptography.py: encrypt returns hex-encoded payload
+        from apps.execution.cryptography import AllocationKeyManager
 
-            key_mgr = AllocationKeyManager()
-            await key_mgr.load_from_db(session)
-            encrypted = key_mgr.encrypt({"allocation": "Active Treatment Arm"})
+        key_mgr = AllocationKeyManager()
+        await key_mgr.load_from_db(session)
+        encrypted = key_mgr.encrypt({"allocation": "Active Treatment Arm"})
 
-            rand = SubjectRandomization(
-                study_id="study_001",
-                site_id="site_boston",
-                subject_id="SUBJ_BOSTON",
-                encrypted_allocation=encrypted,
-                kit_reference="IP-KIT-999",
-            )
-            session.add(rand)
+        rand = SubjectRandomization(
+            study_id="study_001",
+            site_id="site_boston",
+            subject_id="SUBJ_BOSTON",
+            encrypted_allocation=encrypted,
+            kit_reference="IP-KIT-999",
+        )
+        session.add(rand)
 
     # 2. Query subject as Admin (unblinded, globally authorized)
     headers_admin = get_auth_headers(roles="admin")
@@ -220,40 +219,39 @@ async def test_get_visit_api_blinding_and_isolation():
     visit_id = "visit_999"
 
     # 1. Seed database with subject, visit and randomization
-    async with exec_db_manager.get_session_maker()() as session:
-        async with session.begin():
-            subj = ClinicalSubject(
-                subject_id="SUBJ_BOSTON", study_id="study_001", site_id="site_boston"
-            )
-            session.add(subj)
-            await session.flush()
+    async with exec_db_manager.get_session_maker()() as session, session.begin():
+        subj = ClinicalSubject(
+            subject_id="SUBJ_BOSTON", study_id="study_001", site_id="site_boston"
+        )
+        session.add(subj)
+        await session.flush()
 
-            # Transition to ENROLLED then to RANDOMIZED
-            subj.status = "ENROLLED"
-            subj.status = "RANDOMIZED"
+        # Transition to ENROLLED then to RANDOMIZED
+        subj.status = "ENROLLED"
+        subj.status = "RANDOMIZED"
 
-            from apps.execution.cryptography import AllocationKeyManager
+        from apps.execution.cryptography import AllocationKeyManager
 
-            key_mgr = AllocationKeyManager()
-            await key_mgr.load_from_db(session)
-            encrypted = key_mgr.encrypt({"allocation": "Active Treatment Arm"})
+        key_mgr = AllocationKeyManager()
+        await key_mgr.load_from_db(session)
+        encrypted = key_mgr.encrypt({"allocation": "Active Treatment Arm"})
 
-            rand = SubjectRandomization(
-                study_id="study_001",
-                site_id="site_boston",
-                subject_id="SUBJ_BOSTON",
-                encrypted_allocation=encrypted,
-                kit_reference="IP-KIT-999",
-            )
-            session.add(rand)
+        rand = SubjectRandomization(
+            study_id="study_001",
+            site_id="site_boston",
+            subject_id="SUBJ_BOSTON",
+            encrypted_allocation=encrypted,
+            kit_reference="IP-KIT-999",
+        )
+        session.add(rand)
 
-            visit = ClinicalVisit(
-                id=visit_id,
-                subject_id="SUBJ_BOSTON",
-                visit_name="Week 4 Follow-up",
-                study_id="study_001",
-            )
-            session.add(visit)
+        visit = ClinicalVisit(
+            id=visit_id,
+            subject_id="SUBJ_BOSTON",
+            visit_name="Week 4 Follow-up",
+            study_id="study_001",
+        )
+        session.add(visit)
 
     # 2. Query visit as Admin (unblinded, globally authorized)
     headers_admin = get_auth_headers(roles="admin")

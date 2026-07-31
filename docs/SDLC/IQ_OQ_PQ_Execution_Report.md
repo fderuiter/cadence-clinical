@@ -9,10 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1819
-- **Passed:** 1819 🟢
-- **Total Automated Test Cases Run:** 1770
-- **Passed:** 1770 🟢
+- **Total Automated Test Cases Run:** 1814
+- **Passed:** 1814 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
