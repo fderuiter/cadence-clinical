@@ -136,20 +136,32 @@ ROLE_ALIASES = {
 # Declarative action vocabulary and role-to-permission matrix matching §2.2
 # Key format: ROLE -> RESOURCE -> SET OF ACTIONS
 # Actions: "create", "read", "update", "delete"
+# Phase 1: Expanded centralized RBAC matrix with designer resource keys and actions
 ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
     ROLE_SYSADMIN: {
         "study_design": {"create", "read", "update", "delete", "approve", "reorder"},
         "global_library": {
-            "create",
-            "update",
-            "amend",
-            "transition",
-            "instantiate",
-            "read",
+            "create",  # Phase 1: create global library object
+            "update",  # Phase 1: update global library object
+            "amend",  # Phase 1: amend global library object
+            "transition",  # Phase 1: transition global library object status
+            "instantiate",  # Phase 1: instantiate global library object in study
+            "read",  # Phase 1: read global library object
         },
-        "mdr_concept": {"create", "update", "rename", "delete", "read"},
-        "protocol_export": {"generate", "read"},
-        "designer_cache": {"admin"},
+        "mdr_concept": {
+            "create",  # Phase 1: create MDR biomedical concept
+            "update",  # Phase 1: update MDR biomedical concept
+            "rename",  # Phase 1: rename MDR biomedical concept
+            "delete",  # Phase 1: delete MDR biomedical concept
+            "read",  # Phase 1: read MDR biomedical concept
+        },
+        "protocol_export": {
+            "generate",  # Phase 1: generate protocol document export
+            "read",  # Phase 1: read protocol document export
+        },
+        "designer_cache": {
+            "admin",  # Phase 1: clear/administer designer cache
+        },
         "system_audit_logs": {"read"},
         "export_masked": {"read"},
         "protocol_ingestion": {"upload", "read", "review", "promote"},
@@ -194,35 +206,37 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "quality_audit_logs": {"read"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
-        # Execution Core Resources
-        "tsdv_config": {"create", "read", "update", "delete"},
-        "form_submission": {"create", "read", "update", "delete"},
-        "pi_signoff": {"create", "read", "update", "delete"},
-        "medical_coding": {"create", "read", "update", "delete"},
-        "trial_lock": {"create", "read", "update", "delete"},
-        "export_unmasked": {"create", "read", "update", "delete"},
-        "sdv": {"create", "read", "update", "delete"},
     },
     ROLE_SPONSOR_DESIGNER: {
         "study_design": {"create", "read", "update", "delete", "approve", "reorder"},
         "global_library": {
-            "create",
-            "update",
-            "amend",
-            "transition",
-            "instantiate",
-            "read",
+            "create",  # Phase 1: create global library object
+            "update",  # Phase 1: update global library object
+            "amend",  # Phase 1: amend global library object
+            "transition",  # Phase 1: transition global library status
+            "instantiate",  # Phase 1: instantiate global library object in study
+            "read",  # Phase 1: read global library object
         },
-        "mdr_concept": {"create", "update", "rename", "delete", "read"},
-        "protocol_export": {"generate", "read"},
-        "designer_cache": {"admin"},
+        "mdr_concept": {
+            "create",  # Phase 1: create MDR biomedical concept
+            "update",  # Phase 1: update MDR biomedical concept
+            "rename",  # Phase 1: rename MDR biomedical concept
+            "delete",  # Phase 1: delete MDR biomedical concept
+            "read",  # Phase 1: read MDR biomedical concept
+        },
+        "protocol_export": {
+            "generate",  # Phase 1: generate protocol document export
+            "read",  # Phase 1: read protocol document export
+        },
+        "designer_cache": {
+            "admin",  # Phase 1: clear/administer designer cache
+        },
         "system_audit_logs": {"read"},
         "protocol_ingestion": {"upload", "read", "review", "promote"},
         "protocol_version": {"sign", "transition_approved"},
         "protocol_section": {"lock", "unlock", "approve", "review", "read"},
         "regulatory_form": {"read"},
         "training_log": {"read"},
-        "trial_lock": {"read"},
     },
     ROLE_REVIEWER: {
         "study_design": {"read"},
@@ -231,9 +245,17 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
     },
     ROLE_SPONSOR_DM: {
         "study_design": {"read", "approve"},
-        "global_library": {"transition", "read"},
-        "mdr_concept": {"read"},
-        "protocol_export": {"generate", "read"},
+        "global_library": {
+            "transition",  # Phase 1: transition global library object status
+            "read",  # Phase 1: read global library object
+        },
+        "mdr_concept": {
+            "read",  # Phase 1: read MDR biomedical concept
+        },
+        "protocol_export": {
+            "generate",  # Phase 1: generate protocol document export
+            "read",  # Phase 1: read protocol document export
+        },
         "subject_enrollment": {"read"},
         "ecrf_data_entry": {"read"},
         "query_lifecycle": {"create", "read", "update", "delete"},
@@ -277,13 +299,6 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "quality_audit_logs": {"read"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
-        # Execution Core Resources
-        "tsdv_config": {"read"},
-        "form_submission": {"read"},
-        "pi_signoff": {"read"},
-        "medical_coding": {"create", "read", "update", "delete"},
-        "trial_lock": {"create", "read", "update", "delete"},
-        "sdv": {"read", "update"},
     },
     ROLE_SPONSOR_MM: {
         "study_design": {"read"},
@@ -295,11 +310,6 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "eisf_document": {"read"},
         "regulatory_form": {"read"},
         "training_log": {"read"},
-        # Execution Core Resources
-        "form_submission": {"read"},
-        "pi_signoff": {"read"},
-        "medical_coding": {"read"},
-        "trial_lock": {"read"},
     },
     ROLE_SPONSOR_STATISTICIAN: {
         "study_design": {"read"},
@@ -308,9 +318,6 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "eisf_document": {"read"},
         "regulatory_form": {"read"},
         "training_log": {"read"},
-        # Execution Core Resources
-        "export_unmasked": {"create", "read", "update"},
-        "trial_lock": {"read"},
     },
     ROLE_INVESTIGATOR: {
         "study_design": {"read"},
@@ -338,11 +345,6 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "quality_event": {"read"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
-        # Execution Core Resources
-        "tsdv_config": {"read"},
-        "form_submission": {"create", "read", "update"},
-        "pi_signoff": {"create", "read", "update"},
-        "trial_lock": {"read"},
     },
     ROLE_CRC: {
         "study_design": {"read"},
@@ -369,10 +371,6 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "quality_event": {"read"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
-        # Execution Core Resources
-        "form_submission": {"create", "read", "update"},
-        "pi_signoff": {"read"},
-        "trial_lock": {"read"},
     },
     ROLE_CRA_CANONICAL: {
         "study_design": {"read"},
@@ -399,14 +397,10 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "quality_event": {"create", "read", "update"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
-        # Execution Core Resources
-        "tsdv_config": {"create", "read", "update", "delete"},
-        "form_submission": {"read"},
-        "pi_signoff": {"read"},
-        "trial_lock": {"read"},
     },
     "monitor": {
         "study_design": {"read"},
+        "sdv": {"create", "read", "update", "delete"},
         "system_audit_logs": {"read"},
         "regulatory_form": {"create", "read", "sign"},
         "training_log": {"create", "read", "sign"},
@@ -425,17 +419,9 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "quality_event": {"create", "read", "update"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
-        # Execution Core Resources
-        "tsdv_config": {"create", "read", "update", "delete"},
-        "form_submission": {"read"},
-        "pi_signoff": {"read"},
-        "trial_lock": {"read"},
-        "sdv": {"create", "read", "update", "delete"},
     },
     ROLE_SUBJECT: {
         "ecrf_data_entry": {"create", "update"},  # 'Diary' maps to create/update
-        # Execution Core Resources
-        "form_submission": {"create", "update"},
     },
     ROLE_AUDITOR_CANONICAL: {
         "system_audit_logs": {"read"},
@@ -463,12 +449,6 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "quality_audit_logs": {"read"},
         # eISF
         "eisf_document": {"read"},
-        # Execution Core Resources
-        "tsdv_config": {"read"},
-        "form_submission": {"read"},
-        "pi_signoff": {"read"},
-        "medical_coding": {"read"},
-        "trial_lock": {"read"},
     },
     ROLE_EXTERNAL_MONITOR: {
         "etmf_document": {"read"},
@@ -477,11 +457,6 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "eisf_document": {"read"},
         "regulatory_form": {"read"},
         "training_log": {"read"},
-        # Execution Core Resources
-        "tsdv_config": {"read"},
-        "form_submission": {"read"},
-        "pi_signoff": {"read"},
-        "trial_lock": {"read"},
     },
     "grants manager": {
         "ctms_study": {"create", "read"},
@@ -518,9 +493,17 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
     },
     "admin": {
         "study_design": {"create", "read", "update", "delete", "approve", "reorder"},
-        "global_library": {"transition", "read"},
-        "mdr_concept": {"read"},
-        "protocol_export": {"generate", "read"},
+        "global_library": {
+            "transition",  # Phase 1: transition global library object status
+            "read",  # Phase 1: read global library object
+        },
+        "mdr_concept": {
+            "read",  # Phase 1: read MDR biomedical concept
+        },
+        "protocol_export": {
+            "generate",  # Phase 1: generate protocol document export
+            "read",  # Phase 1: read protocol document export
+        },
         "subject_enrollment": {"read"},
         "ecrf_data_entry": {"read"},
         "query_lifecycle": {"create", "read", "update", "delete"},
@@ -565,14 +548,6 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "quality_audit_logs": {"read"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
-        # Execution Core Resources
-        "tsdv_config": {"create", "read", "update", "delete"},
-        "form_submission": {"create", "read", "update", "delete"},
-        "pi_signoff": {"create", "read", "update", "delete"},
-        "medical_coding": {"create", "read", "update", "delete"},
-        "trial_lock": {"create", "read", "update", "delete"},
-        "export_unmasked": {"create", "read", "update", "delete"},
-        "sdv": {"create", "read", "update", "delete"},
     },
     "quality_manager": {
         "quality_event": {"create", "read", "update", "delete", "investigate"},
@@ -617,14 +592,6 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "training_log": {"create", "read", "sign"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
-        # Execution Core Resources
-        "tsdv_config": {"create", "read", "update", "delete"},
-        "form_submission": {"create", "read", "update", "delete"},
-        "pi_signoff": {"create", "read", "update", "delete"},
-        "medical_coding": {"create", "read", "update", "delete"},
-        "trial_lock": {"create", "read", "update", "delete"},
-        "export_unmasked": {"create", "read", "update", "delete"},
-        "sdv": {"create", "read", "update", "delete"},
     },
     "anonymous": {
         "ctms_study": {"read"},
@@ -643,8 +610,6 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
     ROLE_UNBLINDED_STATISTICIAN: {
         "rtsm_randomization": {"read"},
         "rtsm_allocation": {"read"},
-        # Execution Core Resources
-        "export_unmasked": {"create", "read", "update"},
     },
     ROLE_IDMC: {
         "rtsm_randomization": {"read"},
@@ -1441,50 +1406,3 @@ def require_roles(*allowed_roles: str, detail: Optional[str] = None):
         return roles
 
     return dependency
-
-
-def require_role(
-    required_role: str, detail: Optional[str] = None
-) -> Callable[[Request], list[str]]:
-    """
-    FastAPI dependency factory to enforce that the caller has the required role.
-    Reads request.state.roles, normalizes the comma-separated string, and raises 403 when the required role is absent.
-    """
-
-    def dependency(request: Request) -> list[str]:
-        roles = get_normalized_roles(request)
-        norm_required = normalize_role(required_role.strip().lower())
-
-        expanded_allowed = {norm_required}
-        if norm_required in ROLE_EXPANSIONS:
-            expanded_allowed.update(ROLE_EXPANSIONS[norm_required])
-
-        normalized_req_roles = [normalize_role(r) for r in roles]
-
-        if not any(r in expanded_allowed for r in normalized_req_roles):
-            raise HTTPException(
-                status_code=403,
-                detail=detail
-                or f"User role is not authorized for this action. Required: {required_role}.",
-            )
-        return roles
-
-    return dependency
-
-
-def require_any_role(
-    *allowed_roles: str, detail: Optional[str] = None
-) -> Callable[[Request], list[str]]:
-    """
-    FastAPI dependency factory to enforce that the caller has at least one of the allowed roles.
-    Reads request.state.roles, normalizes the comma-separated string, and raises 403 when required roles are absent.
-    """
-    return require_roles(*allowed_roles, detail=detail)
-
-
-def is_auditor(request: Request) -> bool:
-    """
-    Read-only helper to check if the request is associated with any read-only auditor persona.
-    """
-    roles = get_normalized_roles(request)
-    return any(role in AUDITOR_ROLES for role in roles)

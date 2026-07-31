@@ -4,8 +4,6 @@ Protocol document rendering models package.
 
 from .models import (
     ExportMetadata,
-    NarrativeContent,
-    NarrativeContentItem,
     NarrativeItemView,
     NarrativeSectionView,
     RenderedProtocolDocument,
@@ -30,6 +28,4 @@ __all__ = [
     "SoARowView",
     "SoAMatrixView",
     "RenderedProtocolDocument",
-    "NarrativeContent",
-    "NarrativeContentItem",
 ]

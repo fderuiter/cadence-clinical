@@ -216,8 +216,12 @@ class CodingCache:
         if ttl is not None:
             self.ttl = float(ttl)
         else:
-            # Check environment variables: CODING_CACHE_TTL or CACHE_TTL or fallback to 3600.0
-            env_ttl = os.getenv("CODING_CACHE_TTL") or os.getenv("CACHE_TTL")
+            # Check environment variables: TERMINOLOGY_CACHE_TTL or CODING_CACHE_TTL or CACHE_TTL or fallback to 3600.0
+            env_ttl = (
+                os.getenv("TERMINOLOGY_CACHE_TTL")
+                or os.getenv("CODING_CACHE_TTL")
+                or os.getenv("CACHE_TTL")
+            )
             if env_ttl is not None:
                 try:
                     self.ttl = float(env_ttl)

@@ -1,4 +1,4 @@
-# Data Lifecycle Specification: eTMF Quality Control (QC) Review Lifecycle
+# Data Lifecycle Specification
 
 ## 1. Overview
 The electronic Trial Master File (eTMF) Quality Control (QC) Review Lifecycle is a critical, multi-stage data review workflow implemented to guarantee data integrity, completeness, and regulatory compliance under FDA 21 CFR Part 11, GAMP 5, and EU Annex 11.
@@ -62,6 +62,34 @@ Every transition executes under strict electronic signature and auditing control
    - Timestamp.
 2. **Immutable Audit Trail (`TMFAuditLog`)**: The system automatically registers a parallel record in the global eTMF audit log.
 
+## EDC-to-SDTM Data Lifecycle
+
+### Overview
+This section defines the operational lifecycle for extracting clinical trial data captured in the EDC runtime into CDISC SDTM and ADaM Dataset-JSON standards for biostatistical analysis and regulatory submission.
+
+### Lifecycle Pipeline Flow
+1. **Live Data Entry**: Subject clinical data captured via eCRF screens with real-time CDASH edit checks (`edit_checks.py`).
+2. **SDTM Extraction**: Clinical data extracted and mapped into core SDTM domains (`DM`, `AE`, `VS`, `LB`, `MH`) using `biostat/extractors.py`.
+3. **ADaM Derivation**: Analysis datasets (`ADSL`, `ADAE`, `ADVS`) derived using `biostat/adsl.py`, `adae.py`, and `advs.py`.
+4. **Dataset-JSON Serialization**: Datasets serialized into CDISC Dataset-JSON 1.0.0 format (`biostat/serializer.py`).
+5. **Structural & Referential Validation**: Pre-export validation gates executed via `biostat/validator.py`.
+6. **Audited Export**: Authorized export execution recorded in `BiostatExport` audit logs.
+
+```text
+[ EDC Data Capture ] ──► [ CDASH Edit Checks ] ──► [ SDTM/ADaM Extraction ]
+                                                            │
+                                                            ▼
+[ BiostatExport Audit Log ] ◄── [ Validation Gate ] ◄── [ Dataset-JSON Serializer ]
+
+### Access Control (RBAC)
+Exports are protected by `GatewayAuthMiddleware` and `require_roles`. Authorized roles include:
+* `Data Manager`
+* `CRA`
+* `Sponsor Statistician`
+* `Statistician`
+
+### Privacy & PII Boundary
+Raw patient demographics are encrypted at rest (`ClinicalSubject.encrypted_demographics`). Subject identifiers in exports are pseudonymous (`subject_id`/`USUBJID`). Standard CDISC variables (such as `BRTHDTC`) are included in accordance with CDISC domain specifications.
 ---
 
 # Data Lifecycle Specification: Medical Coding Lifecycle

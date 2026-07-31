@@ -391,6 +391,10 @@ async def seed_test_dictionaries():
 
 @pytest.mark.asyncio
 async def test_impact_analysis_meddra_and_whodrug_lifecycle():
+    """Verify medical coding up-versioning impact analysis lifecycle.
+
+    Requirements: PRD-SYS-045
+    """
     await seed_test_dictionaries()
 
     async with httpx.AsyncClient(
