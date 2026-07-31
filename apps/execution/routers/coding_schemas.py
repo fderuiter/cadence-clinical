@@ -1,7 +1,9 @@
 from datetime import datetime
 from enum import Enum
 from typing import Any, List, Optional, Union
+
 from pydantic import BaseModel, model_validator
+
 
 # Enums
 class DictTypeEnum(str, Enum):
@@ -10,21 +12,25 @@ class DictTypeEnum(str, Enum):
     LOINC = "LOINC"
     SNOMED = "SNOMED"
 
+
 class JobStatusEnum(str, Enum):
     PENDING = "PENDING"
     PROCESSING = "PROCESSING"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
 
+
 class PrimarySocFlagEnum(str, Enum):
     Y = "Y"
     N = "N"
+
 
 # Request Models
 class DictionaryImportRequest(BaseModel):
     dictionary_type: DictTypeEnum
     version: str
     parse_multilingual: bool = True
+
 
 class CoderActionRequest(BaseModel):
     action: str  # "ACCEPT" or "OVERRIDE" or "QUERY"
@@ -38,16 +44,20 @@ class CoderActionRequest(BaseModel):
         action_upper = (self.action or "").upper()
         if action_upper == "OVERRIDE":
             if not self.reason_for_change or not self.reason_for_change.strip():
-                raise ValueError("reason_for_change is required for OVERRIDE action and cannot be empty.")
+                raise ValueError(
+                    "reason_for_change is required for OVERRIDE action and cannot be empty."
+                )
             if not self.code or not self.code.strip():
                 raise ValueError("code is required for OVERRIDE action.")
             if not self.term or not self.term.strip():
                 raise ValueError("term is required for OVERRIDE action.")
         return self
 
+
 class ImpactAnalysisRequest(BaseModel):
     dictionary_type: str
     new_version: str
+
 
 # Response Models
 class JobStatusResponse(BaseModel):
@@ -60,6 +70,7 @@ class JobStatusResponse(BaseModel):
     progress_percentage: Optional[int] = None
     records_imported: Optional[int] = None
     errors_encountered: Optional[int] = None
+
 
 class MedDRAMatch(BaseModel):
     llt_code: str
@@ -75,21 +86,26 @@ class MedDRAMatch(BaseModel):
     primary_soc_flag: Optional[PrimarySocFlagEnum] = None
     score: float
 
+
 class MedDRACodeLookupResponse(BaseModel):
     status: str
     matches: List[MedDRAMatch]
+
 
 # For backward compatibility
 MedDRACodeMatch = MedDRAMatch
 MedDRACodingResult = MedDRACodeLookupResponse
 
+
 class WHODrugATCContext(BaseModel):
     atc_code: str
     description: str
 
+
 class WHODrugIngredientItem(BaseModel):
     ingredient_code: str
     ingredient_name: str
+
 
 class WHODrugMatch(BaseModel):
     drug_code: str
@@ -99,13 +115,16 @@ class WHODrugMatch(BaseModel):
     atc_context: List[WHODrugATCContext] = []
     ingredients: List[WHODrugIngredientItem] = []
 
+
 class WHODrugCodeLookupResponse(BaseModel):
     status: str
     matches: List[WHODrugMatch]
 
+
 # For backward compatibility
 WHODrugCodeMatch = WHODrugMatch
 WHODrugCodingResult = WHODrugCodeLookupResponse
+
 
 class ImpactMetrics(BaseModel):
     unchanged: int
@@ -113,11 +132,13 @@ class ImpactMetrics(BaseModel):
     deprecated: int
     skipped: int
 
+
 class ImpactAnalysisResponse(BaseModel):
     status: str
     dictionary_type: str
     new_version: str
     metrics: ImpactMetrics
+
 
 class CodingAssignmentResponse(BaseModel):
     id: str
