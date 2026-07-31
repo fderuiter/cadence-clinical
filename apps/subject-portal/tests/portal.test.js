@@ -1001,5 +1001,46 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
         "block"
       );
     });
+
+    it("traps keyboard focus inside the signature modal and restores focus on close", async () => {
+      const portal = await import("../index.js");
+      await portal.initializeApp();
+
+      // Create a mock trigger button and focus it
+      const mockTrigger = document.createElement("button");
+      mockTrigger.id = "mock-trigger";
+      document.body.appendChild(mockTrigger);
+      mockTrigger.focus();
+      expect(document.activeElement).toBe(mockTrigger);
+
+      // Open the modal
+      portal.openSignatureModal("epro");
+
+      // Focus should be directed inside the modal on open (username field)
+      const usernameInput = document.getElementById("sign-username");
+      expect(document.activeElement).toBe(usernameInput);
+
+      // Emulate Tab key trapping on the last focusable element
+      const modalSignBtn = document.getElementById("btn-modal-sign");
+      modalSignBtn.focus();
+      expect(document.activeElement).toBe(modalSignBtn);
+
+      // Trigger Tab key press on document
+      const tabEvent = new KeyboardEvent("keydown", { key: "Tab" });
+      document.dispatchEvent(tabEvent);
+
+      // Focus should wrap around to the first focusable element inside the modal (the reason select)
+      const firstFocusable = document.getElementById("sign-reason");
+      expect(document.activeElement).toBe(firstFocusable);
+
+      // Close the modal
+      portal.closeSignatureModal();
+
+      // Focus should be restored to the initiating button
+      expect(document.activeElement).toBe(mockTrigger);
+
+      // Clean up mock elements
+      mockTrigger.remove();
+    });
   });
 });
