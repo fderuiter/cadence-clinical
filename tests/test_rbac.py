@@ -856,10 +856,10 @@ def test_rtsm_role_permissions() -> None:
 def test_medical_coding_rbac_permissions() -> None:
     """Verify that medical_coding resource permissions are correctly configured in ROLE_PERMISSIONS."""
     from packages.security.rbac import (
+        ROLE_SYSADMIN,
+        ROLE_SPONSOR_DM,
         ROLE_CRA_CANONICAL,
         ROLE_INVESTIGATOR,
-        ROLE_SPONSOR_DM,
-        ROLE_SYSADMIN,
         Principal,
         has_permission,
     )
