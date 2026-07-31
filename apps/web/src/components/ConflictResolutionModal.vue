@@ -8,11 +8,21 @@
     aria-modal="true"
     aria-labelledby="conflict-modal-title"
   >
-    <div class="modal" style="max-width: 800px; width: 90%;">
-      <div id="conflict-modal-title" class="modal-header" style="background-color: #f59e0b; color: white;">
+    <div
+      class="modal"
+      style="max-width: 800px; width: 90%;"
+    >
+      <div
+        id="conflict-modal-title"
+        class="modal-header"
+        style="background-color: #f59e0b; color: white;"
+      >
         ⚠️ Conflict Detected during Synchronization
       </div>
-      <div class="modal-body" style="padding: 20px;">
+      <div
+        class="modal-body"
+        style="padding: 20px;"
+      >
         <p style="margin-bottom: 16px; font-weight: 500;">
           The system detected a conflict while synchronizing your offline changes for entity
           <strong style="color: #d97706;">{{ conflict?.conflictItem?.entityType || 'Form Item' }} (ID: {{ conflict?.conflictItem?.entityId || 'N/A' }})</strong>.
@@ -20,7 +30,10 @@
         </p>
 
         <!-- Side-by-side Diff Section -->
-        <div class="diff-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+        <div
+          class="diff-container"
+          style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;"
+        >
           <!-- Client Offline Edit -->
           <div style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px; background-color: #eff6ff;">
             <h4 style="margin: 0 0 8px 0; color: #1d4ed8; border-bottom: 1px solid #bfdbfe; padding-bottom: 4px;">
@@ -39,17 +52,20 @@
         </div>
 
         <!-- Strategy Options Selection -->
-        <div class="form-group" style="margin-bottom: 16px;">
+        <div
+          class="form-group"
+          style="margin-bottom: 16px;"
+        >
           <label style="font-weight: 600; display: block; margin-bottom: 8px;">Select Resolution Strategy:</label>
           <div style="display: flex; flex-direction: column; gap: 8px;">
             <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; padding: 8px; border: 1px solid #e2e8f0; border-radius: 4px; background-color: #f8fafc;">
               <input
+                v-model="selectedStrategy"
                 type="radio"
                 name="strategy"
                 value="SERVER_WIN"
-                v-model="selectedStrategy"
                 style="margin-top: 4px;"
-              />
+              >
               <div>
                 <strong>SERVER_WIN (Default / Overwrite Local)</strong>
                 <span style="display: block; font-size: 12px; color: #64748b;">
@@ -60,12 +76,12 @@
 
             <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; padding: 8px; border: 1px solid #e2e8f0; border-radius: 4px; background-color: #f8fafc;">
               <input
+                v-model="selectedStrategy"
                 type="radio"
                 name="strategy"
                 value="CLIENT_WIN"
-                v-model="selectedStrategy"
                 style="margin-top: 4px;"
-              />
+              >
               <div>
                 <strong>CLIENT_WIN (Force Client Overwrite)</strong>
                 <span style="display: block; font-size: 12px; color: #64748b;">
@@ -76,12 +92,12 @@
 
             <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; padding: 8px; border: 1px solid #e2e8f0; border-radius: 4px; background-color: #f8fafc;">
               <input
+                v-model="selectedStrategy"
                 type="radio"
                 name="strategy"
                 value="MANUAL_REVIEW"
-                v-model="selectedStrategy"
                 style="margin-top: 4px;"
-              />
+              >
               <div>
                 <strong>MANUAL_REVIEW (Freeze & Query)</strong>
                 <span style="display: block; font-size: 12px; color: #64748b;">
@@ -93,8 +109,14 @@
         </div>
 
         <!-- Part 11 Reason for Change Input -->
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label for="conflict-reason-text" style="font-weight: 600; display: block; margin-bottom: 6px;">
+        <div
+          class="form-group"
+          style="margin-bottom: 12px;"
+        >
+          <label
+            for="conflict-reason-text"
+            style="font-weight: 600; display: block; margin-bottom: 6px;"
+          >
             Reason for Resolution (21 CFR Part 11 Compliant):
           </label>
           <textarea
@@ -119,13 +141,16 @@
         </div>
       </div>
 
-      <div class="modal-footer" style="padding: 16px 20px; display: flex; justify-content: flex-end; gap: 12px;">
+      <div
+        class="modal-footer"
+        style="padding: 16px 20px; display: flex; justify-content: flex-end; gap: 12px;"
+      >
         <button
           id="btn-cancel-conflict"
           class="btn"
           type="button"
-          @click="onCancel"
           style="background-color: #e2e8f0; color: #334155;"
+          @click="onCancel"
         >
           Cancel
         </button>
@@ -133,8 +158,8 @@
           id="btn-confirm-conflict"
           class="btn btn-primary"
           type="button"
-          @click="onConfirm"
           style="background-color: #f59e0b; border-color: #d97706; color: white;"
+          @click="onConfirm"
         >
           Save Resolution
         </button>
