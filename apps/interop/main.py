@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 import httpx
 from eligibility import evaluate_eligibility
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -166,6 +166,15 @@ class OfflineSyncMarkers(BaseModel):
         None,
         description="Optional per-field UTC timestamps indicating when each field in 'answers' was modified",
     )
+
+    @field_validator("conflict_strategy", mode="before")
+    @classmethod
+    def normalize_conflict_strategy(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            v_upper = v.upper()
+            if v_upper in ConflictStrategy.__members__:
+                return ConflictStrategy[v_upper]
+        return v
 
 
 class EPROSubmissionPayload(BaseModel):
@@ -398,6 +407,8 @@ async def resolve_and_save_submission(
             answers=res["data"],
             offline_sync_markers=markers_dict,
             sync_status="RESOLVED",
+            created_by=user_id,
+            reason_for_change=change_reason or "ePRO mobile submission",
             version_index=1,
         )
         session.add(new_sub)
@@ -452,6 +463,7 @@ async def resolve_and_save_submission(
         existing.offline_sync_markers = markers_dict
         existing.version_index += 1
         existing.sync_status = "RESOLVED"
+        existing.reason_for_change = change_reason or "ePRO client-wins update"
         session.add(existing)
         await session.flush()
 
@@ -508,6 +520,8 @@ async def resolve_and_save_submission(
             answers=payload.answers,
             offline_sync_markers=markers_dict,
             sync_status="CONFLICT_IGNORED",
+            created_by=user_id,
+            reason_for_change=change_reason or "ePRO server-wins ignored",
             version_index=1,
         )
         session.add(conflict_sub)
@@ -564,6 +578,7 @@ async def resolve_and_save_submission(
         existing.offline_sync_markers = markers_dict
         existing.version_index += 1
         existing.sync_status = "RESOLVED"
+        existing.reason_for_change = change_reason or "ePRO merge update"
         session.add(existing)
         await session.flush()
 
