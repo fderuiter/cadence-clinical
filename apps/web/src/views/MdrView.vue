@@ -496,7 +496,7 @@
         </div>
       </div>
 
-      <!-- Schedule of Activities table -->
+      <!-- Schedule of Activities / eCRF Canvas -->
       <div class="card">
         <div
           class="card-header"
@@ -504,17 +504,50 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-b: 1px solid var(--border);
+            padding-bottom: 12px;
+            margin-bottom: 16px;
           "
         >
-          <div class="card-title">Schedule of Activities (SoA) Matrix</div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <span class="card-title" style="margin-right: 12px;">Schedule of Activities (SoA) Matrix</span>
+            <button
+              id="btn-tab-soa"
+              class="btn"
+              :class="!showCanvas ? 'btn-primary' : 'btn-secondary'"
+              style="font-size: 0.85rem; padding: 6px 12px;"
+              @click="showCanvas = false"
+            >
+              SoA Matrix
+            </button>
+            <button
+              id="btn-tab-canvas"
+              class="btn"
+              :class="showCanvas ? 'btn-primary' : 'btn-secondary'"
+              style="font-size: 0.85rem; padding: 6px 12px;"
+              @click="showCanvas = true"
+            >
+              eCRF Canvas
+            </button>
+          </div>
           <span
             v-if="store.soaLoading"
             style="font-size: 0.8rem; font-weight: normal; color: #64748b"
             >(Syncing...)</span
           >
         </div>
-        <div id="soa-matrix-container">
+
+        <div v-if="!showCanvas" id="soa-matrix-container">
           <ClinicalSoAMatrix :soa-data="soaData" />
+        </div>
+
+        <div v-else id="crf-canvas-container">
+          <CrfAuthoringCanvas
+            :form-schema="formSchema"
+            :selected-field-id="selectedFieldId"
+            @select-field="onSelectField"
+            @update-schema="onUpdateSchema"
+          />
         </div>
       </div>
     </div>
@@ -539,6 +572,8 @@ import ClinicalSoAMatrix from "../components/clinical/ClinicalSoAMatrix.vue";
 import { terminologyClient } from "../api/terminologyClient.js";
 import { debounce } from "ui";
 import ReasonModal from "../components/ReasonModal.vue";
+import CrfAuthoringCanvas from "../components/crf/CrfAuthoringCanvas.vue";
+import { useDesignerStore } from "../stores/designer.js";
 
 const mdrReasonOptions = [
   { value: "Initial Entry", text: "Initial Study Configuration" },
@@ -548,6 +583,24 @@ const mdrReasonOptions = [
 ];
 
 const store = useClinicalStore();
+const designerStore = useDesignerStore();
+
+const selectedFieldId = computed(() => designerStore.selectedFieldId);
+const formSchema = computed({
+  get: () => designerStore.activeForm,
+  set: (val) => {
+    designerStore.activeForm = val;
+  }
+});
+const showCanvas = ref(false);
+
+function onSelectField(fieldId) {
+  designerStore.setSelectedFieldId(fieldId);
+}
+
+function onUpdateSchema(newSchema) {
+  designerStore.activeForm = newSchema;
+}
 
 const armSuggestions = ref([]);
 const encSuggestions = ref([]);

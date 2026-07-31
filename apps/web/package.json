@@ -16,7 +16,8 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
-    "ui": "workspace:*"
+    "ui": "workspace:*",
+    "vuedraggable": "4.1.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.0",
