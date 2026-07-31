@@ -1,8 +1,11 @@
-from enum import Enum
 from datetime import datetime
-from typing import Optional, List, Union, Any
-from pydantic import BaseModel, model_validator, field_validator
+from enum import Enum
+from typing import Any, List, Optional, Union
+
+from pydantic import BaseModel, field_validator, model_validator
+
 from apps.execution.database.models import DictionaryType, ImportState
+
 
 class DictTypeEnum(str, Enum):
     MEDDRA = DictionaryType.MEDDRA.value
@@ -10,15 +13,18 @@ class DictTypeEnum(str, Enum):
     LOINC = DictionaryType.LOINC.value
     SNOMED = DictionaryType.SNOMED.value
 
+
 class JobStatusEnum(str, Enum):
     PENDING = ImportState.PENDING.value
     PROCESSING = ImportState.PROCESSING.value
     COMPLETED = ImportState.COMPLETED.value
     FAILED = ImportState.FAILED.value
 
+
 class PrimarySocFlagEnum(str, Enum):
     Y = "Y"
     N = "N"
+
 
 class JobStatusResponse(BaseModel):
     job_id: str
@@ -31,13 +37,16 @@ class JobStatusResponse(BaseModel):
     records_imported: Optional[int] = None
     errors_encountered: Optional[int] = None
 
+
 class WHODrugATCContext(BaseModel):
     atc_code: str
     description: str
 
+
 class WHODrugIngredientItem(BaseModel):
     ingredient_code: str
     ingredient_name: str
+
 
 class ImpactAnalysisRequest(BaseModel):
     dictionary_type: str
@@ -48,11 +57,13 @@ class ImpactAnalysisRequest(BaseModel):
     def check_new_version(cls, v: str) -> str:
         return validate_non_blank_version(v)
 
+
 class ImpactAnalysisResponse(BaseModel):
     status: str
     dictionary_type: str
     new_version: str
     metrics: dict[str, int]
+
 
 class CodingAssignmentResponse(BaseModel):
     id: str
@@ -74,6 +85,7 @@ class CodingAssignmentResponse(BaseModel):
     version: int
     is_deleted: bool
 
+
 class CoderActionRequest(BaseModel):
     action: str  # "ACCEPT" or "OVERRIDE" or "QUERY"
     code: Optional[str] = None  # required for OVERRIDE
@@ -86,17 +98,25 @@ class CoderActionRequest(BaseModel):
         action_upper = self.action.upper() if self.action else ""
         if action_upper == "OVERRIDE":
             if not self.code or not self.code.strip():
-                raise ValueError("code is required and cannot be blank for OVERRIDE action")
+                raise ValueError(
+                    "code is required and cannot be blank for OVERRIDE action"
+                )
             if not self.term or not self.term.strip():
-                raise ValueError("term is required and cannot be blank for OVERRIDE action")
+                raise ValueError(
+                    "term is required and cannot be blank for OVERRIDE action"
+                )
             if not self.reason_for_change or not self.reason_for_change.strip():
-                raise ValueError("reason_for_change is required and cannot be blank for OVERRIDE action")
+                raise ValueError(
+                    "reason_for_change is required and cannot be blank for OVERRIDE action"
+                )
         return self
+
 
 def validate_non_blank_version(v: str) -> str:
     if not v or not v.strip():
         raise ValueError("Version must be a non-empty string.")
     return v
+
 
 class DictionaryImportRequest(BaseModel):
     dictionary_type: DictTypeEnum
@@ -107,6 +127,7 @@ class DictionaryImportRequest(BaseModel):
     @classmethod
     def check_version(cls, v: str) -> str:
         return validate_non_blank_version(v)
+
 
 class MedDRAMatch(BaseModel):
     llt_code: str
@@ -122,9 +143,11 @@ class MedDRAMatch(BaseModel):
     primary_soc_flag: Optional[PrimarySocFlagEnum] = None
     score: float
 
+
 class MedDRACodeLookupResponse(BaseModel):
     status: str
     matches: List[MedDRAMatch]
+
 
 class WHODrugMatch(BaseModel):
     drug_code: str
@@ -134,9 +157,11 @@ class WHODrugMatch(BaseModel):
     atc_context: List[WHODrugATCContext] = []
     ingredients: List[WHODrugIngredientItem] = []
 
+
 class WHODrugCodeLookupResponse(BaseModel):
     status: str
     matches: List[WHODrugMatch]
+
 
 # Backward compatibility aliases
 MedDRACodeMatch = MedDRAMatch

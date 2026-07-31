@@ -7,7 +7,7 @@ import zipfile
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, AsyncGenerator, List, Optional, Union
+from typing import Any, AsyncGenerator, List, Optional
 
 from fastapi import (
     BackgroundTasks,
@@ -93,6 +93,22 @@ from apps.execution.query_service import QueryService, StateTransitionError
 from apps.execution.routers.amendments import router as amendments_router
 from apps.execution.routers.anonymization import router as anonymization_router
 from apps.execution.routers.auditor import router as auditor_router
+from apps.execution.routers.coding_schemas import (
+    CoderActionRequest,
+    CodingAssignmentResponse,
+    DictTypeEnum,
+    ImpactAnalysisRequest,
+    ImpactAnalysisResponse,
+    JobStatusEnum,
+    JobStatusResponse,
+    MedDRACodeLookupResponse,
+    MedDRAMatch,
+    WHODrugATCContext,
+    WHODrugCodeLookupResponse,
+    WHODrugIngredientItem,
+    WHODrugMatch,
+    validate_non_blank_version,
+)
 from apps.execution.routers.doa import router as doa_router
 from apps.execution.routers.documents import router as documents_router
 from apps.execution.routers.eisf import router as eisf_router
@@ -2489,24 +2505,6 @@ async def get_cdisc_export_dictionary(study_id: str) -> Response:
 # ==========================================
 # Medical Dictionary & UCUM Standardization API Contracts
 # ==========================================
-
-from apps.execution.routers.coding_schemas import (
-    DictTypeEnum,
-    JobStatusEnum,
-    JobStatusResponse,
-    PrimarySocFlagEnum,
-    WHODrugATCContext,
-    WHODrugIngredientItem,
-    MedDRAMatch,
-    MedDRACodeLookupResponse,
-    WHODrugMatch,
-    WHODrugCodeLookupResponse,
-    MedDRACodeMatch,
-    MedDRACodingResult,
-    WHODrugCodeMatch,
-    WHODrugCodingResult,
-    validate_non_blank_version,
-)
 
 
 class UCUMConvertRequest(BaseModel):
@@ -5249,14 +5247,6 @@ async def unlock_trial_endpoint(
 # ==========================================
 # Coder Action and Coding Assignment API
 # ==========================================
-
-
-from apps.execution.routers.coding_schemas import (
-    ImpactAnalysisRequest,
-    ImpactAnalysisResponse,
-    CodingAssignmentResponse,
-    CoderActionRequest,
-)
 
 
 @app.post(
