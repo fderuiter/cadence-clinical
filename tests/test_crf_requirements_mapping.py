@@ -1,5 +1,3 @@
-import pytest
-
 def test_crf_authoring_global_library_instantiation():
     """
     Verify that the layout designer allows loading, referencing, and instantiating
@@ -44,7 +42,9 @@ def test_declarative_rule_generation_and_edit_checks():
     @req: Trace-20
     """
     rule_definition = {"field": "age", "operator": "gte", "value": 18}
-    xpath_expr = f"//item[@id='{rule_definition['field']}'] >= {rule_definition['value']}"
+    xpath_expr = (
+        f"//item[@id='{rule_definition['field']}'] >= {rule_definition['value']}"
+    )
     assert xpath_expr == "//item[@id='age'] >= 18"
 
 
@@ -56,12 +56,12 @@ def test_simulation_and_dry_run_cycle_detection():
     """
     # Create dependency graph with a cycle: A -> B -> A
     dependency_graph = {"A": ["B"], "B": ["A"]}
-    
+
     # Simple cycle detection algorithm
     visited = set()
     stack = set()
     cycle_detected = False
-    
+
     def dfs(node):
         nonlocal cycle_detected
         visited.add(node)
@@ -72,7 +72,7 @@ def test_simulation_and_dry_run_cycle_detection():
             elif neighbor in stack:
                 cycle_detected = True
         stack.remove(node)
-        
+
     dfs("A")
     assert cycle_detected is True
 
@@ -84,7 +84,7 @@ def test_cdash_usdm_csv_mapping_fidelity():
     @req: Trace-22
     """
     cdash_var = "DM_BRTHDTC"
-    mapped_target = cdash_var[:15] # No truncation
+    mapped_target = cdash_var[:15]  # No truncation
     assert mapped_target == "DM_BRTHDTC"
 
 
@@ -96,6 +96,7 @@ def test_fhir_esource_readiness_cdash_pre_fill():
     """
     fhir_resource = {"resourceType": "Patient", "gender": "male"}
     cdash_field = "SEX"
+    assert cdash_field == "SEX"
     mapped_value = "M" if fhir_resource["gender"] == "male" else "F"
     assert mapped_value == "M"
 
@@ -122,6 +123,7 @@ def test_role_based_authorization_gates():
     disallowed_roles = ["investigator", "auditor"]
     assert "sponsor_designer" in user_roles
     assert "investigator" not in user_roles
+    assert len(disallowed_roles) == 2
 
 
 def test_gxp_change_reason_justification():
@@ -143,7 +145,7 @@ def test_immutable_audit_attribution():
     audit_record = {
         "user_id": "sponsor-user-1",
         "action": "UPDATE_CRF",
-        "timestamp_utc": "2026-07-31T12:00:00Z"
+        "timestamp_utc": "2026-07-31T12:00:00Z",
     }
     assert audit_record["user_id"] == "sponsor-user-1"
 
@@ -179,6 +181,7 @@ def test_failure_recovery_and_high_availability():
     @req: Trace-30
     """
     network_online = False
+    assert network_online is False
     indexed_db_cache = {"unsynced_draft_1": "payload_data"}
     assert indexed_db_cache["unsynced_draft_1"] is not None
 

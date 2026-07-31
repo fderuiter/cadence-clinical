@@ -645,7 +645,6 @@ function markFieldInvalid(fieldId, msg) {
     const errDiv = document.createElement("div");
     errDiv.id = `error-msg-${fieldId}`;
     errDiv.className = "validation-error-msg";
-    errDiv.id = `${fieldId}-error`;
     errDiv.style.color = "var(--danger)";
     errDiv.style.fontSize = "12px";
     errDiv.style.fontWeight = "600";

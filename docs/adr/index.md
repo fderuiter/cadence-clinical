@@ -173,3 +173,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-28: ADR-119: SDV Sign-Off Workflow & Automatic Verification Drop](2026-08-28-sdv-sign-off-workflow-and-automatic-verification-drop.md)
 - [2026-08-28: Centralized RBAC Matrix for Metadata Designer Mutations](2026-08-28-centralized-rbac-matrix-for-metadata-designer-mutations.md)
 - [2026-08-28: Reference Range Data Model & Persistence](2026-08-28-reference-range-data-model-and-persistence.md)
+- [2026-08-28: Extend Centralized Permission Matrix for Clinical Execution](2026-08-28-extend-centralized-permission-matrix-for-execution.md)
+- [2026-08-28: Shared Domain Vocabulary and Authorization Foundation](2026-08-28-shared-domain-vocabulary-and-authorization-foundation.md)
+- [2026-08-28: Shared eSignature Foundations](2026-08-28-shared-esignature-foundations.md)
+- [2026-08-29: SDV and TSDV Endpoint Hardening, RBAC Permission Mapping, and Local Study Scope Enforcement](2026-08-29-sdv-tsdv-endpoint-hardening-rbac-study-scope.md)

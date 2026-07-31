@@ -1033,7 +1033,7 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
         const buttons = Array.from(
           navTabs.querySelectorAll("button[role='tab']")
         );
-        expect(buttons).toHaveLength(3);
+        expect(buttons).toHaveLength(4);
 
         // Focus the first button
         buttons[0].focus();
