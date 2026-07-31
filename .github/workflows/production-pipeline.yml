@@ -6,7 +6,68 @@ on:
   workflow_dispatch:
 
 jobs:
+  performance-tests:
+    name: Performance Qualification (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12']
+        
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgrespassword
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install UV Package Manager
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install Dependencies
+        run: |
+          uv sync --locked --all-extras
+          echo ".venv/bin" >> $GITHUB_PATH
+
+      - name: Execute Performance Qualification Suite
+        env:
+          DATABASE_URL: "postgresql+asyncpg://postgres:postgrespassword@localhost:5432/postgres"
+          GATEWAY_SECRET: "internal-gateway-secret-12345"
+          TERMINOLOGY_OFFLINE: "true"
+        run: |
+          uv run python scripts/run_performance_tests.py
+
+      - name: Upload Performance Report Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-perf-report-python-${{ matrix.python-version }}
+          path: perf_reports/
+          retention-days: 14
+
   release-and-archive:
+    name: Production Release and Archival
+    needs: performance-tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
