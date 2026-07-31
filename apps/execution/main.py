@@ -7,7 +7,7 @@ import zipfile
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, AsyncGenerator, List, Optional
+from typing import Any, AsyncGenerator, List, Optional, Union
 
 from fastapi import (
     BackgroundTasks,
@@ -99,6 +99,7 @@ from apps.execution.routers.eisf import router as eisf_router
 from apps.execution.routers.locks import router as locks_router
 from apps.execution.routers.offline import router as offline_router
 from apps.execution.routers.safety import router as safety_router
+from apps.execution.routers.sdv import router as sdv_router
 from apps.execution.routers.signatures import router as signatures_router
 from apps.execution.rtsm_authz import redact_response, verify_site_access
 from apps.execution.rtsm_supply import (
@@ -301,6 +302,7 @@ app.include_router(anonymization_router)
 app.include_router(doa_router)
 app.include_router(offline_router)
 app.include_router(documents_router)
+app.include_router(sdv_router)
 
 
 @app.exception_handler(RequestValidationError)
@@ -677,12 +679,34 @@ class ObservationResponse(BaseModel):
     lab_indicator: Optional[str] = None
     lab_out_of_range: Optional[bool] = None
     matched_normal_bounds: Optional[str] = None
+    range_indicator: Optional[str] = None
+    is_out_of_range: Optional[bool] = None
+    reference_range_low: Optional[float] = None
+    reference_range_high: Optional[float] = None
     protocol_version_tag: Optional[str] = None
     protocol_version_index: Optional[int] = None
     range_indicator: Optional[str] = None
     is_out_of_range: Optional[bool] = None
     reference_range_low: Optional[float] = None
     reference_range_high: Optional[float] = None
+
+    @model_validator(mode="after")
+    def populate_range_fields(self) -> "ObservationResponse":
+        if self.range_indicator is None and self.lab_indicator is not None:
+            self.range_indicator = self.lab_indicator
+        if self.is_out_of_range is None and self.lab_out_of_range is not None:
+            self.is_out_of_range = self.lab_out_of_range
+        if self.reference_range_low is None or self.reference_range_high is None:
+            if self.matched_normal_bounds:
+                try:
+                    bounds = json.loads(self.matched_normal_bounds)
+                    if self.reference_range_low is None:
+                        self.reference_range_low = bounds.get("low")
+                    if self.reference_range_high is None:
+                        self.reference_range_high = bounds.get("high")
+                except Exception:
+                    pass
+        return self
 
 
 class MigrationRuleCreate(BaseModel):
@@ -1706,12 +1730,12 @@ async def create_observation(
             lab_indicator=obs_db.lab_indicator,
             lab_out_of_range=obs_db.lab_out_of_range,
             matched_normal_bounds=obs_db.matched_normal_bounds,
-            protocol_version_tag=obs_db.protocol_version_tag,
-            protocol_version_index=obs_db.protocol_version_index,
             range_indicator=obs_db.lab_indicator,
             is_out_of_range=obs_db.lab_out_of_range,
             reference_range_low=ref_low,
             reference_range_high=ref_high,
+            protocol_version_tag=obs_db.protocol_version_tag,
+            protocol_version_index=obs_db.protocol_version_index,
         )
 
 
@@ -2066,6 +2090,7 @@ def validate_lab_range_payload(data: dict) -> None:
 async def create_lab_range(
     payload: LabReferenceRangeCreate,
     roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER)),
+    _justification: None = Depends(verify_change_justification),
 ) -> LabReferenceRangeResponse:
     """Create a new lab reference range, validating all range invariants."""
     from apps.execution.database.models import LabReferenceRange
@@ -2092,31 +2117,26 @@ async def create_lab_range(
                 critical_high=data.get("critical_high"),
             )
             session.add(lab_range)
-
-        # Retrieve the latest committed state
-        async with session.begin():
-            stmt = select(LabReferenceRange).where(LabReferenceRange.id == lab_range.id)
-            res = await session.execute(stmt)
-            saved_range = res.scalar_one()
+            await session.flush()
 
         return LabReferenceRangeResponse(
-            id=saved_range.id,
-            study_id=saved_range.study_id,
-            test_code=saved_range.test_code,
-            test_name=saved_range.test_name,
-            source=saved_range.source,
-            site_id=saved_range.site_id,
-            unit=saved_range.unit,
-            normalized_unit=saved_range.normalized_unit,
-            sex_applicability=saved_range.sex_applicability,
-            age_low=saved_range.age_low,
-            age_high=saved_range.age_high,
-            low_bound=saved_range.low_bound,
-            high_bound=saved_range.high_bound,
-            critical_low=saved_range.critical_low,
-            critical_high=saved_range.critical_high,
-            version=saved_range.version,
-            is_deleted=saved_range.is_deleted,
+            id=lab_range.id,
+            study_id=lab_range.study_id,
+            test_code=lab_range.test_code,
+            test_name=lab_range.test_name,
+            source=lab_range.source,
+            site_id=lab_range.site_id,
+            unit=lab_range.unit,
+            normalized_unit=lab_range.normalized_unit,
+            sex_applicability=lab_range.sex_applicability,
+            age_low=lab_range.age_low,
+            age_high=lab_range.age_high,
+            low_bound=lab_range.low_bound,
+            high_bound=lab_range.high_bound,
+            critical_low=lab_range.critical_low,
+            critical_high=lab_range.critical_high,
+            version=lab_range.version,
+            is_deleted=lab_range.is_deleted,
         )
 
 
@@ -2128,6 +2148,7 @@ async def list_lab_ranges(
     study_id: Optional[str] = None,
     test_code: Optional[str] = None,
     source: Optional[str] = None,
+    lab_source: Optional[str] = None,
     include_deleted: bool = False,
     roles: list[str] = Depends(get_normalized_roles),
 ) -> List[LabReferenceRangeResponse]:
@@ -2145,6 +2166,8 @@ async def list_lab_ranges(
             stmt = stmt.where(LabReferenceRange.test_code == test_code)
         if source:
             stmt = stmt.where(LabReferenceRange.source == source)
+        if lab_source:
+            stmt = stmt.where(LabReferenceRange.source == lab_source)
 
         res = await session.execute(stmt)
         ranges = res.scalars().all()
@@ -2220,6 +2243,7 @@ async def update_lab_range(
     range_id: str,
     payload: LabReferenceRangeUpdate,
     roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER)),
+    _justification: None = Depends(verify_change_justification),
 ) -> LabReferenceRangeResponse:
     """Update an existing lab reference range, validating all range invariants on the merged state."""
     from apps.execution.database.models import LabReferenceRange
@@ -2270,30 +2294,26 @@ async def update_lab_range(
             r.high_bound = merged_data["high_bound"]
             r.critical_low = merged_data["critical_low"]
             r.critical_high = merged_data["critical_high"]
-
-        async with session.begin():
-            stmt = select(LabReferenceRange).where(LabReferenceRange.id == range_id)
-            res = await session.execute(stmt)
-            updated_range = res.scalar_one()
+            await session.flush()
 
         return LabReferenceRangeResponse(
-            id=updated_range.id,
-            study_id=updated_range.study_id,
-            test_code=updated_range.test_code,
-            test_name=updated_range.test_name,
-            source=updated_range.source,
-            site_id=updated_range.site_id,
-            unit=updated_range.unit,
-            normalized_unit=updated_range.normalized_unit,
-            sex_applicability=updated_range.sex_applicability,
-            age_low=updated_range.age_low,
-            age_high=updated_range.age_high,
-            low_bound=updated_range.low_bound,
-            high_bound=updated_range.high_bound,
-            critical_low=updated_range.critical_low,
-            critical_high=updated_range.critical_high,
-            version=updated_range.version,
-            is_deleted=updated_range.is_deleted,
+            id=r.id,
+            study_id=r.study_id,
+            test_code=r.test_code,
+            test_name=r.test_name,
+            source=r.source,
+            site_id=r.site_id,
+            unit=r.unit,
+            normalized_unit=r.normalized_unit,
+            sex_applicability=r.sex_applicability,
+            age_low=r.age_low,
+            age_high=r.age_high,
+            low_bound=r.low_bound,
+            high_bound=r.high_bound,
+            critical_low=r.critical_low,
+            critical_high=r.critical_high,
+            version=r.version,
+            is_deleted=r.is_deleted,
         )
 
 
@@ -2304,6 +2324,7 @@ async def update_lab_range(
 async def delete_lab_range(
     range_id: str,
     roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER)),
+    _justification: None = Depends(verify_change_justification),
 ) -> LabReferenceRangeResponse:
     """Soft-delete a lab reference range by setting is_deleted = True."""
     from apps.execution.database.models import LabReferenceRange
@@ -2319,30 +2340,26 @@ async def delete_lab_range(
                 )
 
             r.is_deleted = True
-
-        async with session.begin():
-            stmt = select(LabReferenceRange).where(LabReferenceRange.id == range_id)
-            res = await session.execute(stmt)
-            deleted_range = res.scalar_one()
+            await session.flush()
 
         return LabReferenceRangeResponse(
-            id=deleted_range.id,
-            study_id=deleted_range.study_id,
-            test_code=deleted_range.test_code,
-            test_name=deleted_range.test_name,
-            source=deleted_range.source,
-            site_id=deleted_range.site_id,
-            unit=deleted_range.unit,
-            normalized_unit=deleted_range.normalized_unit,
-            sex_applicability=deleted_range.sex_applicability,
-            age_low=deleted_range.age_low,
-            age_high=deleted_range.age_high,
-            low_bound=deleted_range.low_bound,
-            high_bound=deleted_range.high_bound,
-            critical_low=deleted_range.critical_low,
-            critical_high=deleted_range.critical_high,
-            version=deleted_range.version,
-            is_deleted=deleted_range.is_deleted,
+            id=r.id,
+            study_id=r.study_id,
+            test_code=r.test_code,
+            test_name=r.test_name,
+            source=r.source,
+            site_id=r.site_id,
+            unit=r.unit,
+            normalized_unit=r.normalized_unit,
+            sex_applicability=r.sex_applicability,
+            age_low=r.age_low,
+            age_high=r.age_high,
+            low_bound=r.low_bound,
+            high_bound=r.high_bound,
+            critical_low=r.critical_low,
+            critical_high=r.critical_high,
+            version=r.version,
+            is_deleted=r.is_deleted,
         )
 
 
@@ -2639,7 +2656,10 @@ async def import_dictionary(
     parse_multilingual: bool = Form(True),
     roles: list[str] = Depends(require_roles("TERMINOLOGY_MANAGER", "SYSTEM_ADMIN")),
 ) -> JobStatusResponse:
-    """Imports raw dictionary files and schedules a background parsing task."""
+    """Imports raw dictionary files and schedules a background parsing task.
+
+    Satisfies Epic #109 / Issue #1122 / Phase 16: Dictionary Ingestion & Persistence.
+    """
     if dictionary_type not in (DictTypeEnum.MEDDRA, DictTypeEnum.WHODRUG):
         raise HTTPException(
             status_code=400,
@@ -2726,6 +2746,7 @@ async def import_dictionary(
 @app.get("/api/v1/dictionaries/jobs/{job_id}", response_model=JobStatusResponse)
 async def get_dictionary_import_job(
     job_id: str,
+    roles: list[str] = Depends(require_roles("TERMINOLOGY_MANAGER", "SYSTEM_ADMIN")),
 ) -> JobStatusResponse:
     """Query the execution status, progress, and import counts of a dictionary import job by ID."""
     async with db_manager.get_session_maker()() as session:
@@ -3473,6 +3494,7 @@ async def open_query(
 # ==========================================
 
 
+# Phase 11: Shared Sampling Model enums for the API layer
 class SamplingModelEnum(str, Enum):
     SUBJECT_BASED = "SUBJECT_BASED"
     FIELD_BASED = "FIELD_BASED"
@@ -3688,13 +3710,19 @@ async def evaluate_tsdv_rule(
         )
 
 
+# Phase 11: Shared SDV scope enums for the API layer
 class SDVScopeEnum(str, Enum):
     FIELD = "FIELD"
     PAGE = "PAGE"
     VISIT = "VISIT"
 
 
-class SDVSignOffRequest(BaseModel):
+# ==============================================================================
+# SDV (Source Data Verification) Sign-off Section
+# ==============================================================================
+
+
+class SDVSignoffCreate(BaseModel):
     """Pydantic request schema for SDV sign-off."""
 
     scope: SDVScopeEnum
@@ -3704,7 +3732,7 @@ class SDVSignOffRequest(BaseModel):
     site_id: Optional[str] = None
 
 
-class SDVSignOffResponse(BaseModel):
+class SDVSignoffResponse(BaseModel):
     """Pydantic response schema for SDV sign-off."""
 
     id: str
@@ -3720,12 +3748,26 @@ class SDVSignOffResponse(BaseModel):
     dropped_at: Optional[datetime] = None
 
 
-@app.post("/api/v1/execution/sdv/signoff", response_model=SDVSignOffResponse)
+# Keep the old names as aliases for backward compatibility or testing
+SDVSignOffRequest = SDVSignoffCreate
+SDVSignOffResponse = SDVSignoffResponse
+
+
+@app.post("/api/v1/execution/sdv/signoff", response_model=SDVSignoffResponse)
 async def sdv_signoff(
-    payload: SDVSignOffRequest,
-    roles: list[str] = Depends(require_roles(ROLE_CRA, "monitor")),
-) -> SDVSignOffResponse:
+    payload: SDVSignoffCreate,
+    request: Request,
+) -> SDVSignoffResponse:
     """CRA/monitor-gated SDV sign-off endpoint for Field, Page, or Visit scopes."""
+    state_roles = getattr(request.state, "roles", [])
+    if not isinstance(state_roles, list):
+        state_roles = [state_roles]
+    normalized_state_roles = [str(r).strip().lower() for r in state_roles]
+    if not any(role in ["cra", "monitor"] for role in normalized_state_roles):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: SDV sign-off is restricted to CRA or monitor roles.",
+        )
     async with db_manager.get_session_maker()() as session:
         # 1. Validate Subject exists and is consistent with Study
         stmt_subj = select(ClinicalSubject).where(
@@ -3832,7 +3874,7 @@ async def sdv_signoff(
         res_re = await session.execute(stmt_re)
         re_signoff = res_re.scalar_one()
 
-        return SDVSignOffResponse(
+        return SDVSignoffResponse(
             id=re_signoff.id,
             scope=re_signoff.scope,
             target_id=re_signoff.target_id,
@@ -5290,7 +5332,7 @@ class ImpactAnalysisResponse(BaseModel):
     status: str
     dictionary_type: str
     new_version: str
-    metrics: dict
+    metrics: dict[str, int]
 
 
 @app.post(
@@ -5339,8 +5381,8 @@ class CodingAssignmentResponse(BaseModel):
     assigned_by: Optional[str] = None
     assigned_at: datetime
     score: Optional[float] = None
-    hierarchy: Optional[Any] = None
-    suggestions: Optional[Any] = None
+    hierarchy: Optional[Union[dict[str, Any], list[Any]]] = None
+    suggestions: Optional[Union[list[Any], dict[str, Any]]] = None
     domain: Optional[str] = None
     version: int
     is_deleted: bool

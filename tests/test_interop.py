@@ -1501,6 +1501,167 @@ async def test_compute_reminders_all_subjects_staff():
 
 
 @pytest.mark.asyncio
+async def test_epro_submission_part11_fields_retention():
+    """
+    Validate that EPROSubmission correctly captures and persists 21 CFR Part 11
+    audit fields (created_by, reason_for_change) upon submission and update.
+
+    Requirements: PRD-ECOA-001, Trace-8
+    """
+    # Setup instrument and assignment
+    async_session = db_manager.get_session_maker()
+    async with async_session() as session:
+        inst = Instrument(
+            id="part11_diary",
+            name="Part 11 Diary",
+            items={},
+            response_types={},
+            scoring_metadata={},
+            created_by="admin",
+            reason_for_change="Setup",
+            version_index=1,
+        )
+        session.add(inst)
+
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        assign = SubjectAssignment(
+            subject_id="subj_part11",
+            instrument_id="part11_diary",
+            start_date=now - timedelta(days=1),
+            end_date=now + timedelta(days=1),
+            created_by="admin",
+            reason_for_change="Assign",
+            version_index=1,
+        )
+        session.add(assign)
+        await session.commit()
+
+    client = TestClient(app)
+    headers = get_auth_headers(
+        roles="Subject",
+        change_reason="Initial ePRO submission by Subject",
+        user_id="subj_part11",
+    )
+
+    # 1. Initial submission
+    sub_payload = {
+        "subject_id": "subj_part11",
+        "diary_id": "part11_diary",
+        "device_timestamp": "2026-07-22T20:00:00Z",
+        "answers": {"value": 10},
+        "offline_sync_markers": {
+            "sequence_number": 1,
+            "client_id": "dev_part11",
+            "conflict_strategy": "CLIENT_WINS",
+        },
+    }
+
+    resp = client.post("/api/v1/interop/epro/submit", json=sub_payload, headers=headers)
+    assert resp.status_code == 201
+
+    # Verify database values
+    async with async_session() as session:
+        stmt = select(EPROSubmission).where(EPROSubmission.subject_id == "subj_part11")
+        res = await session.execute(stmt)
+        submission = res.scalars().first()
+        assert submission is not None
+        assert submission.created_by == "subj_part11"
+        assert submission.reason_for_change == "Initial ePRO submission by Subject"
+
+    # 2. Update with CLIENT_WINS and different change reason
+    update_headers = get_auth_headers(
+        roles="Subject",
+        change_reason="Corrected value after correction",
+        user_id="subj_part11",
+    )
+    sub_payload["answers"]["value"] = 15
+    sub_payload["offline_sync_markers"]["sequence_number"] = 2
+
+    resp2 = client.post(
+        "/api/v1/interop/epro/submit", json=sub_payload, headers=update_headers
+    )
+    assert resp2.status_code == 201
+
+    # Verify updated database values
+    async with async_session() as session:
+        stmt = select(EPROSubmission).where(EPROSubmission.subject_id == "subj_part11")
+        res = await session.execute(stmt)
+        submission = res.scalars().first()
+        assert submission is not None
+        assert submission.version_index == 2
+        assert submission.reason_for_change == "Corrected value after correction"
+
+
+@pytest.mark.asyncio
+async def test_case_insensitive_conflict_strategy_validation():
+    """
+    Verify that conflict_strategy parameter in OfflineSyncMarkers is case-insensitive,
+    meaning passing lowercase "client_wins" or "Server_Wins" resolves cleanly and normalizes
+    to the correct uppercase enum strategy.
+
+    Requirements: PRD-ECOA-001
+    """
+    async_session = db_manager.get_session_maker()
+    async with async_session() as session:
+        inst = Instrument(
+            id="strategy_diary",
+            name="Strategy Diary",
+            items={},
+            response_types={},
+            scoring_metadata={},
+            created_by="admin",
+            reason_for_change="Setup",
+            version_index=1,
+        )
+        session.add(inst)
+
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        assign = SubjectAssignment(
+            subject_id="subj_strat",
+            instrument_id="strategy_diary",
+            start_date=now - timedelta(days=1),
+            end_date=now + timedelta(days=1),
+            created_by="admin",
+            reason_for_change="Assign",
+            version_index=1,
+        )
+        session.add(assign)
+        await session.commit()
+
+    client = TestClient(app)
+    headers = get_auth_headers(
+        roles="Subject", change_reason="Case-insensitive test", user_id="subj_strat"
+    )
+
+    # 1. Initial creation with lowercase "client_wins"
+    payload = {
+        "subject_id": "subj_strat",
+        "diary_id": "strategy_diary",
+        "device_timestamp": "2026-07-22T20:00:00Z",
+        "answers": {"value": 1},
+        "offline_sync_markers": {
+            "sequence_number": 1,
+            "client_id": "dev_strat",
+            "conflict_strategy": "client_wins",  # Lowercase
+        },
+    }
+
+    resp = client.post("/api/v1/interop/epro/submit", json=payload, headers=headers)
+    assert resp.status_code == 201
+    assert resp.json()["status"] == "CREATED"
+
+    # 2. Update with Mixedcase "Server_Wins" -> should result in IGNORED_SERVER_WINS
+    payload["answers"]["value"] = 10
+    payload["offline_sync_markers"]["sequence_number"] = 2
+    payload["offline_sync_markers"]["conflict_strategy"] = "Server_Wins"  # Mixedcase
+
+    resp2 = client.post("/api/v1/interop/epro/submit", json=payload, headers=headers)
+    assert resp2.status_code == 201
+    assert resp2.json()["status"] == "IGNORED_SERVER_WINS"
+    assert resp2.json()["answers"]["value"] == 1  # Kept server value
+
+
+@pytest.mark.asyncio
 async def test_notification_router_transports(monkeypatch):
     """
     Verify that NotificationRouter correctly routes emails, SMS, webhooks, and in-app reminders.
