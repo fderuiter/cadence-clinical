@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1737
-- **Passed:** 1737 🟢
+- **Total Automated Test Cases Run:** 1738
+- **Passed:** 1738 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -630,6 +630,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_structural_conflict_on_missing_or_deleted_targets` | `tests.test_ecoa_coverage` | PRD-EDC-008 | 🟢 PASSED | < 1s |
 | `test_subject_only_authorization_and_cross_subject_rejection` | `tests.test_ecoa_coverage` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_authoring_mutations_rejected_for_auditors` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_clause_category_persists_and_maps` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_clause_lifecycle_and_versioning_audit` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_database_url_override_and_init` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_econsent_database_schema_creation` | `tests.test_econsent` | *Regression/Helper* | 🟢 PASSED | < 1s |
