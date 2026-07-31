@@ -95,6 +95,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-27: Quality & CAPA Foundation and Domain Models](2026-07-27-quality-capa-scaffold.md)
 - [2026-07-28: SDV/TSDV Persistence Foundation and Migration Support](2026-07-28-sdv-tsdv-persistence-foundation.md)
 - [2026-07-30: Lab Reference Range Management](2026-07-30-lab-reference-range-management.md)
+- [2026-08-28: Reference Range Data Model & Persistence](2026-08-28-reference-range-data-model-and-persistence.md)
 - [2026-08-02: eConsent Scaffold and Shared Part 11 Audit Schemas](2026-08-02-econsent-scaffold-and-part11-audit.md)
 - [2026-08-02: Standalone Notifications Service Foundation](2026-08-02-notifications-service-foundation.md)
 - [2026-08-02: RTSM Architecture and Randomization Persistence](2026-08-02-rtsm-architecture-and-randomization-persistence.md)
