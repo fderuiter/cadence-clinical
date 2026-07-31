@@ -19,6 +19,7 @@ from apps.safety.models import (
     SafetyAuditLog,
     SafetyCaseICSR,
     SafetyExportJob,
+    write_audit_log,
 )
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
@@ -184,16 +185,15 @@ async def write_safety_audit_log(
     """
     Utility function to write to the immutable Safety audit ledger.
     """
-    log_entry = SafetyAuditLog(
-        created_by=user_id,
+    await write_audit_log(
+        session=session,
+        user_id=user_id,
         action=action,
         details=details,
         record_id=record_id,
-        reason_for_change=change_reason,
+        change_reason=change_reason,
         version_index=version_index,
     )
-    session.add(log_entry)
-    await session.flush()
 
 
 @app.get("/health")
@@ -610,37 +610,32 @@ async def export_safety_case(
     await session.flush()
 
     # 3. Pseudonymize and remove direct patient PII following the HMAC approach
-    from packages.deid.transforms import pseudonymize_value
+    from apps.safety.safety_adapter import prepare_and_deidentify_icsr, OutboundTransmissionAdapter
 
     salt = os.getenv("SAFETY_SALT", "internal-safety-salt-12345")
-    icsr_copy = copy.deepcopy(payload.icsr)
-
-    raw_patient_id = icsr_copy.patient.patient_id
-    pseudonymized_patient_id = pseudonymize_value(raw_patient_id, salt)
-
-    icsr_copy.patient.patient_id = pseudonymized_patient_id
-    icsr_copy.patient.birth_date = None  # Remove direct DOB
+    icsr_copy = prepare_and_deidentify_icsr(payload.icsr, salt=salt)
+    pseudonymized_patient_id = icsr_copy.patient.patient_id
 
     # Render pseudonymized XML
     pseudonymized_xml = render_icsr_to_xml(icsr_copy)
 
-    # 4. Transmit the pseudonymized XML payload using the SafetyDatabaseAdapter
-    from apps.safety.adapter import SafetyDatabaseAdapter
-
-    # Allow custom client state injection for testing
+    # 4. Transmit the pseudonymized XML payload using the OutboundTransmissionAdapter
     client = getattr(request.app.state, "test_httpx_client", None)
-    adapter = SafetyDatabaseAdapter(client=client)
+    adapter = OutboundTransmissionAdapter(client=client)
 
     try:
         response = await adapter.transmit(pseudonymized_xml)
         if 200 <= response.status_code < 300:
             job.status = "COMPLETED"
+            job.output = pseudonymized_xml
         else:
             job.status = "FAILED"
             job.error_message = f"Transmission failed with status {response.status_code}: {response.text}"
+            job.error = job.error_message
     except Exception as e:
         job.status = "FAILED"
         job.error_message = f"Transmission exception: {str(e)}"
+        job.error = job.error_message
 
     await session.flush()
 

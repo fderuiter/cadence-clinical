@@ -1,3 +1,8 @@
 from packages.database import RelationalDatabaseManager
 
-db_manager = RelationalDatabaseManager(service_name="Safety")
+
+class SafetyDatabaseManager(RelationalDatabaseManager):
+    pass
+
+
+db_manager = SafetyDatabaseManager(service_name="Safety")

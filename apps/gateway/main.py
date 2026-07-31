@@ -168,6 +168,7 @@ SERVICES = {
     "ctms": os.getenv("CTMS_URL", "http://localhost:8005"),
     "notifications": os.getenv("NOTIFICATIONS_URL", "http://localhost:8006"),
     "quality": os.getenv("QUALITY_URL", "http://localhost:8005"),
+    # Phase 6 — Safety Gateway Microservice Scaffold & Gateway Integration
     "safety": os.getenv("SAFETY_URL", "http://localhost:8008"),
     "tickets": os.getenv("TICKETS_URL", "http://localhost:8009"),
     "org": os.getenv("ORG_URL", "http://localhost:8012"),
@@ -1057,6 +1058,7 @@ async def proxy_requests(request: Request, path: str) -> Response:
         target_url = f"{SERVICES['notifications']}/{path[len('notifications/') :]}"
     elif path.startswith("quality/"):
         target_url = f"{SERVICES['quality']}/{path[len('quality/') :]}"
+    # Phase 6 — Safety service routing proxy branch
     elif path.startswith("safety/"):
         target_url = f"{SERVICES['safety']}/{path[len('safety/') :]}"
     elif path.startswith("tickets/"):

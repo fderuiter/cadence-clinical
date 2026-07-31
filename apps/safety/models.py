@@ -51,6 +51,8 @@ class SafetyExportJob(Base):
         String(50), default="PENDING", nullable=False
     )  # PENDING, COMPLETED, FAILED
     error_message: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    output: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    error: Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
     # 21 CFR Part 11 Compliance Auditing Metadata
     created_at: Mapped[datetime] = mapped_column(
@@ -59,6 +61,10 @@ class SafetyExportJob(Base):
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
+ExportJob = SafetyExportJob
+SafetyCase = SafetyCaseICSR
 
 
 class SAEReconciliationRun(Base):
@@ -197,3 +203,27 @@ def prevent_audit_log_modification(session: Session, flush_context, instances) -
             raise ValueError(
                 "Deletions from SafetyAuditLog are strictly forbidden to comply with 21 CFR Part 11."
             )
+
+
+async def write_audit_log(
+    session: Any,
+    user_id: str,
+    action: str,
+    details: str,
+    record_id: Optional[str] = None,
+    change_reason: Optional[str] = None,
+    version_index: int = 1,
+) -> None:
+    """
+    Utility function to write to the immutable Safety audit ledger.
+    """
+    log_entry = SafetyAuditLog(
+        created_by=user_id,
+        action=action,
+        details=details,
+        record_id=record_id,
+        reason_for_change=change_reason,
+        version_index=version_index,
+    )
+    session.add(log_entry)
+    await session.flush()
