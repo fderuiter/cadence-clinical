@@ -62,6 +62,10 @@ def handle_permission_error(stderr_msg):
         "unauthorized",
         "forbidden",
         "permission",
+        "rate limit",
+        "rate-limit",
+        "rate_limit",
+        "limit exceeded",
     ]
     if any(p in combined for p in patterns):
         print(
