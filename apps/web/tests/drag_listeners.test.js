@@ -59,7 +59,7 @@ describe('Transient Drag-Scoped Window Listeners', () => {
     });
 
     vi.useFakeTimers();
-    const wrapper = mount(TestComponent);
+    mount(TestComponent);
 
     // Wait for setTimeout in initPanZoom
     vi.advanceTimersByTime(300);
@@ -120,7 +120,7 @@ describe('Transient Drag-Scoped Window Listeners', () => {
     });
 
     vi.useFakeTimers();
-    const wrapper = mount(TestComponent);
+    mount(TestComponent);
 
     vi.advanceTimersByTime(300);
     vi.useRealTimers();

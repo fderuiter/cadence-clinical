@@ -1,3 +1,4 @@
+import pytest
 from sae_icsr import (
     ICSRHeader,
     ICSRPatient,
@@ -7,8 +8,8 @@ from sae_icsr import (
     IndividualCaseSafetyReport,
 )
 
-from apps.safety.renderer import render_icsr_to_xml
-from apps.safety.validator import validate_icsr_xml
+from apps.safety.renderer import generate_e2b_xml, render_icsr_to_xml
+from apps.safety.validator import validate_e2b_xml_structure, validate_icsr_xml
 
 
 def get_valid_icsr() -> IndividualCaseSafetyReport:
@@ -401,3 +402,44 @@ def test_missing_drugs_or_drug_fields_fails():
         "Missing or empty mandatory attribute 'drug_role' in suspect_drug element at index 0"
         in msg
     )
+
+
+def test_validate_e2b_xml_structure_direct():
+    """Verify validate_e2b_xml_structure directly validates correct structures."""
+    icsr = get_valid_icsr()
+    xml_content = render_icsr_to_xml(icsr)
+
+    is_valid, msg = validate_e2b_xml_structure(xml_content)
+    assert is_valid is True
+    assert "Structure matches official" in msg
+
+
+def test_generate_e2b_xml_happy_path():
+    """Verify that generate_e2b_xml returns a valid XML string when model is fully valid."""
+    icsr = get_valid_icsr()
+    xml_content = generate_e2b_xml(icsr)
+
+    assert "<?xml" in xml_content
+    assert 'xmlns="urn:hl7-org:v3"' in xml_content
+    is_valid, msg = validate_e2b_xml_structure(xml_content)
+    assert is_valid is True
+
+
+def test_generate_e2b_xml_invalid_raises_value_error():
+    """Verify that generate_e2b_xml raises ValueError if validation fails."""
+    icsr = get_valid_icsr()
+    # Bypass Pydantic field validation but break XML constraint by setting a value that produces invalid XML format
+    # For instance, we can't easily break pydantic validation with empty fields since they are mandatory and validate in pydantic,
+    # but we can check if generate_e2b_xml validates the rendered XML against structural rules.
+    # If we render with a custom or manual ICSR or by setting an attribute directly if possible, or we can mock render_icsr_to_xml.
+    # Let's mock render_icsr_to_xml temporarily or pass something that renders invalidly.
+    # Wait, we can construct an ICSR that has empty reactions or empty suspect drugs!
+    # Wait, in IndividualCaseSafetyReport, `reactions` defaults to an empty list. Is an empty list allowed by pydantic?
+    # Yes, reactions: List[ICSRReactionEvent] = Field(default_factory=list).
+    # If reactions is empty, the rendered XML won't contain any <reaction> block, which is invalid structurally!
+    icsr.reactions = []
+
+    with pytest.raises(ValueError) as exc:
+        generate_e2b_xml(icsr)
+    assert "Generated E2B XML failed structural schema checks" in str(exc.value)
+    assert "at least one reaction is required" in str(exc.value)
