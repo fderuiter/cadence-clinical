@@ -20,7 +20,7 @@ This matrix details the distribution of core compliance and tracking features ac
 | **Medical Coding: AE Coverage**   | N/A | Automated MedDRA dictionary coding and system query generation for Adverse Events (AETERM) | v1.5.0 | Supported |
 | **Medical Coding: MH Coverage**   | N/A | Automated MedDRA dictionary coding and system query generation for Medical History (MHTERM) | v1.5.0 | Supported |
 | **Medical Coding: CM Coverage**   | N/A | Automated WHODrug dictionary coding and system query generation for Concomitant Medications (CMTRT) | v1.5.0 | Supported |
-| **SDTM/ADaM CDISC Export**        | N/A | Secured Dataset-JSON 1.0.0 format exports (DM, AE, VS, LB, MH, ADSL, ADAE, ADVS) with audit trails | v1.7.0 | Supported |
+| **SDTM/ADaM CDISC Export**        | N/A | Secured Dataset-JSON 1.0.0 format exports (DM, AE, VS, LB, MH, CM, ADSL, ADAE, ADVS) with audit trails | v1.7.0 | Supported |
 | **Global Library Templates**      | Multi-versioned Forms, Data Elements, Arms, and Visits | N/A (Referenced downstream on instantiation) | v1.8.0 | Supported |
 | **Multi-Tenant Scoping**          | Metadata partitioned by validated sponsor IDs, blank context blocked | N/A | v1.8.0 | Supported |
 | **Governance & State Machine**    | Allowed transition validations and role gates (DRAFT to ARCHIVED) | N/A | v1.8.0 | Supported |

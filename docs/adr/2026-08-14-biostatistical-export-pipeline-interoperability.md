@@ -59,10 +59,13 @@ This decision implements requirements under Trace-8.
   * Zero-dependency build footprint.
   * Robust, strict schema validation.
   * Accurate historical audit logging of statistical exports for FDA inspections.
+  * **Unified Lifecycle & API Contract Integration**: Technical mappings and extraction flows are completely aligned with the new **SDTM/ADaM Export Lifecycle** and API specifications documented in `docs/DATA_LIFECYCLE.md`.
+  * **Explicit Privacy Alignment**: Technical boundaries are integrated with the deterministic privacy rules governed by **ADR-108** (such as per-subject date-shifting and age capping).
 * **Negative Impact / Technical Debt:**
   * Complex statistical procedures must be explicitly programmed in Python rather than written in SQL or loaded through Pandas dataframes.
 * **Mitigation Strategy:**
   * Maintain comprehensive regression test coverage (as built in `tests/test_biostat_export.py`) to verify complex derivations and edge-cases deterministically.
+  * Ensure full coverage of the Concomitant Medications (CM) domain and supplemental propagation boundaries (e.g. #719, #402, and #405).
 
 ---
 
@@ -72,4 +75,5 @@ This decision implements requirements under Trace-8.
   * `apps/execution/`
 * **Verification Plan:**
   * Automated regression tests in `tests/test_biostat_export.py` covering SDTM AGE computation, sequence assignment, supplemental qualifiers (`SUPP--` structures), partial-date imputation, ADAE TRTEMFL logic, and ADVS CHG/PCHG derivations.
-  * Integration tests with SQLite/PostgreSQL in-memory verification, checking Dataset-JSON schema outputs, audit trails, and unauthorized requests.
+  * Integration tests with SQLite/PostgreSQL in-memory verification, checking Dataset-JSON schema outputs, audit trails, and unauthorized requests (as implemented in `tests/test_biostat_exports.py`).
+  * Conformance with the lifecycle and API contracts detailed under the **SDTM/ADaM Export Lifecycle** in `docs/DATA_LIFECYCLE.md`.

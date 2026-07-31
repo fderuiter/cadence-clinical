@@ -515,18 +515,165 @@ The Part 11 eSignature workflow is fully realized and integrated across the foll
 
 ---
 
-# Data Lifecycle Specification: SDTM/ADaM Export Privacy & De-identification
+# Data Lifecycle Specification: SDTM/ADaM Export Lifecycle & Privacy Policy
 
-## 1. Overview
-Structured biostatistical exports (CDISC SDTM and ADaM formats) must undergo an automated privacy and de-identification pass before external distribution or regulatory submission. This workflow ensures deterministic pseudonymization of subject identifiers, stable per-subject date-shifting, and age capping under the authoritative policy [ADR-108](./adr/2026-08-26-sdtm-adam-export-privacy.md).
+## 1. Overview & Objectives
+To support regulatory clinical trial submissions (such as FDA or EMA), clinical data captured in downstream EDC/execution transaction databases must be transformed, validated, and serialized into CDISC-compliant formats. Specifically, the system extracts **SDTM** (Study Data Tabulation Model) domains, derives **ADaM** (Analysis Data Model) datasets, and bundles them into the standardized **CDISC Dataset-JSON 1.0.0** schema format.
 
-## 2. Privacy Transformation Mechanics
-The de-identification transform operates on assembled datasets immediately before serialization into CDISC Dataset-JSON format:
-1. **Deterministic Pseudonymization**: Subject identifiers (`USUBJID`, `SUBJID`) and site identifiers (`SITEID`) are hashed deterministically using HMAC-SHA256 and the secure `BIOSTAT_EXPORT_SALT` token. This guarantees referential integrity across separate datasets, domains, and exports.
-2. **Stable Per-Subject Date Shifting**: A stable numeric offset in the range `[-365, 365]` days is derived deterministically from the subject's original `USUBJID` before pseudonymization. All dates associated with that subject are shifted by this exact offset:
-   - **SDTM string dates** (e.g. `AESTDTC`, `RFSTDTC` etc.) are shifted preserving partial dates and null-flavor placeholders.
-   - **ADaM numeric dates** (e.g. `TRTSDT`, `ASTDT` etc.) are shifted by adding the offset directly to the SAS day integer value.
-3. **Age Generalization**: Any subject age value exceeding 89 is capped at `89`.
+The primary objective of the SDTM/ADaM Export Pipeline is to deliver clean, de-identified, submission-ready datasets synchronously while enforcing strict regulatory compliance, patient privacy preservation (via deterministic transformations), and robust GxP audit tracking (under **FDA 21 CFR Part 11**, **ADR-094**, and **ADR-108**).
+
+---
+
+## 2. End-to-End Export Lifecycle & Pipeline Flow
+
+The export pipeline processes transactional clinical databases into CDISC Dataset-JSON payloads through the following six distinct lifecycle stages:
+
+```
+[ Downstream Transaction DB ]
+             │
+             ▼ (Stage 1: Extraction & Re-Consent/Protocol Reconciliation)
+[ Filtered Subjects/Observations ]
+             │
+             ▼ (Stage 2: Mappings & Concomitant Medications (CM) Mapping)
+[ Declarative Mapping & Sequencing ] ──► (Stage 3: ADaM Derivation Engine)
+             │                                       │
+             ▼                                       ▼
+[ Assembled SDTM Records (with SUPP--) ]   [ Assembled ADaM Records ]
+             │                                       │
+             └───────────────────┬───────────────────┘
+                                 │
+                                 ▼ (Stage 4: Deterministic Privacy Transforms)
+                       [ De-identified Data ]
+                                 │
+                                 ▼ (Stage 5: CDISC Dataset-JSON Serialization)
+                     [ Raw DatasetJSON Object ]
+                                 │
+                                 ▼ (Stage 6: Schema Validation Gate)
+                     [ Schema Validation (HTTP 422 on Fail) ]
+                                 │
+                                 ▼ (Stage 7: Synchronous Delivery & Audit Logging)
+              [ Synchronous JSON Payload + BiostatExport Audit Row ]
+```
+
+### Stage 1: Extraction & Protocol Reconciliation
+- **Data Sourcing**: The pipeline queries active, non-deleted clinical subjects (`ClinicalSubject`) and observations (`ClinicalObservation`) scoped to a specific `study_id`.
+- **Protocol Reconciliation**: The system executes dynamic, non-destructive reconciliation (`reconcile_observations`) based on the subject's latest approved protocol version or consent tag to map historical observations to current structure standards before feeding the extractor.
+
+### Stage 2: Mappings & Concomitant Medications (CM) Mapping
+- **Declarative Mapping**: Extracted fields are mapped to standard variables using a declarative pipeline defined in `SDTM_MAPPINGS` (in `apps/execution/biostat/mappings.py`).
+- **Concomitant Medications (CM) Mapping**: The pipeline provides comprehensive extraction and mapping coverage for the Concomitant Medications (`CM`) domain. Verbatim medication names entered by investigators are mapped and sequenced alongside crucial variables:
+  - `CMSEQ`: Monotonically increasing sequence integer per subject, sorted by medication start date (`CMSTDTC`).
+  - `CMTRT`: Reported verbatim name of the medication.
+  - `CMDECOD`: Standardized medication name (WHODrug Preferred Name) enriched via export-time terminology lookup.
+  - `CMCLAS`: Medication Class (WHODrug Drug Class).
+  - `CMDOSE` / `CMDOSEU` / `CMDOSFRQ` / `CMROUTE`: Medication dose, units, frequency, and route of administration.
+  - `CMSTDTC` / `CMENDTC`: Start and end dates in ISO 8601 format.
+
+### Stage 3: ADaM Derivation Engine
+- **ADaM Datasets**: Utilizing extracted SDTM domains, the derivation engine dynamically computes Subject-Level Analysis (`ADSL`), Adverse Events Analysis (`ADAE`), and Vital Signs Analysis (`ADVS`) datasets.
+- **Complex Derivations**: ADaM-specific algorithms derive complex parameters such as treatment emergence (`TRTEMFL`), change from baseline (`CHG`, `PCHG`), relative analysis days (`ASTDY`, `AENDY`), and analysis visit numbers (`AVISITN`).
+
+### Stage 4: Deterministic Privacy Transformations
+- Assembled SDTM/ADaM records are run through a secure, deterministic de-identification pass (`deidentify_export_data`) immediately prior to serialization. This ensures raw patient identifiers (PII/PHI) and true chronological dates are redacted, preserving privacy while maintaining complete referential and longitudinal consistency (see **Section 5** below for detail).
+
+### Stage 5: CDISC Dataset-JSON Serialization
+- Extracted domain/dataset records are dynamically mapped to Pydantic v2 CDISC Dataset-JSON domain models (`apps/execution/biostat/models.py`), structuring metadata, variable attributes (types, labels, formats), and record data matrices according to the **CDISC Dataset-JSON 1.0.0** specification.
+
+### Stage 6: Schema Validation Gate
+- Every generated `DatasetJSON` instance is fed to `validate_dataset_json()`. If any records violate schema parameters (e.g. missing keys, empty `STUDYID`, incorrect value types, or broken structural variables), a `DatasetJSONValidationError` is raised, triggering an automatic transactional rollback. The API aborts the request and returns an **HTTP 422 Unprocessable Entity** error.
+
+### Stage 7: Synchronous Delivery & Audit Logging
+- **Synchronous Responses**: Verified Dataset-JSON payloads are returned immediately in the HTTP response body with media type `application/json`.
+- **Immutable Audit Logging**: Every export attempt (success or failure) is logged synchronously inside the same database transaction to the immutable `BiostatExport` table.
+  - **Success Row**: Records the study identifier, export type (`SDTM`, `ADaM`, or `BUNDLE`), target dataset/domain name, and `status = "SUCCESS"`.
+  - **Failure Row**: Records the metadata, `status = "FAILED"`, and the detailed, GxP-scrubbed exception message in the `error_message` column to ensure robust inspection-ready audit trails without leaking PHI.
+
+---
+
+## 3. Exact API Contract Specification
+
+The biostatistical export pipeline is exposed through three secure, authenticated endpoints under the central API Gateway:
+
+### 1. Export SDTM Domain
+- **Endpoint**: `GET /api/v1/execution/biostat/sdtm/{domain}`
+- **Path Parameter**: `domain` - One of `DM`, `AE`, `VS`, `LB`, `MH`, `CM`.
+- **Query Parameter**: `study_id` (string, Required) - The unique study identifier.
+- **Supplemental Contract**: If matching supplemental qualifier records exist for the requested domain (e.g., custom attributes not mapped to standard SDTM variables), a parallel **`SUPP<domain>`** dataset (e.g. `SUPPAE`, `SUPPVS`, `SUPPLB`, `SUPPMH`, `SUPPCM`) is dynamically generated and appended alongside the parent dataset within the same Dataset-JSON response.
+
+### 2. Export ADaM Dataset
+- **Endpoint**: `GET /api/v1/execution/biostat/adam/{dataset}`
+- **Path Parameter**: `dataset` - One of `ADSL`, `ADAE`, `ADVS`.
+- **Query Parameter**: `study_id` (string, Required) - The unique study identifier.
+
+### 3. Export Biostatistical Bundle
+- **Endpoint**: `GET /api/v1/execution/biostat/bundle`
+- **Query Parameter**: `study_id` (string, Required) - The unique study identifier.
+- **Bundle Aggregation Behavior**: Compiles all supported SDTM domains (`DM`, `AE`, `VS`, `LB`, `MH`, `CM`), their respective supplemental qualifier datasets (`SUPPDM`, `SUPPAE`, `SUPPVS`, `SUPPLB`, `SUPPMH`, `SUPPCM`), and all derived ADaM datasets (`ADSL`, `ADAE`, `ADVS`) in a single consolidated CDISC Dataset-JSON 1.0.0 payload. Returns HTTP 404 if no records are found for the study.
+
+### Authorization Roles (RBAC Gates)
+All export endpoints are protected by the `GatewayAuthMiddleware` and require the caller to hold one of the following authorized clinical or administrative roles:
+- `ROLE_CRA` (Clinical Research Associate)
+- `ROLE_DATA_MANAGER` (Data Manager / Sponsor Data Manager)
+- `sponsor_statistician` / `statistician` (Clinical Statisticians)
+
+### HTTP Error Mapping Contract
+The pipeline enforces standard GxP exception handling and HTTP response codes:
+
+| HTTP Status Code | Reason Code / Error Detail | Description |
+| :--- | :--- | :--- |
+| **400 Bad Request** | `Unsupported SDTM domain` / `Unsupported ADaM dataset` | Raised when the requested domain or dataset is not supported. |
+| **401 Unauthorized**| `Missing gateway authentication headers` | Raised when gateway-signed headers or credentials are absent. |
+| **403 Forbidden**   | `Role check failure` / `Insufficient permissions` | Raised when the caller does not hold an authorized biostatistical role. |
+| **404 Not Found**   | `No biostat records found for the given study.` | Returned by the bundle endpoint when no data is captured for the study. |
+| **422 Unprocessable**| `Dataset-JSON validation failed: <message>` | Raised when the generated payload violates Dataset-JSON schemas or study contracts. |
+| **500 Internal Error**| `Export execution failed: <message>` | Catch-all for downstream execution errors. Logs a FAILED audit row. |
+
+---
+
+## 4. Response-Data-Quality Boundary & Reference Issues
+
+The biostatistical pipeline defines a strict data-quality and propagation boundary to isolate development responsibility and guarantee submission purity:
+
+- **Supplemental Qualifiers Propagation (#719)**: The propagation of existing, extractor-produced supplemental qualifiers (`SUPPAE`, `SUPPVS`, `SUPPLB`, `SUPPMH`, `SUPPCM` records) is owned strictly under **#719**. This guarantees that all custom form entries, unmapped eCRF observations, and parent-identifying structures are correctly structured into parallel `SUPP--` itemGroupData blocks alongside their standard parent records.
+- **Null-Flavor Emission & Coding-Assignment Enrichment (#402)**: The emission of CDISC-compliant null-flavor placeholders (e.g. indicating missing data reasons such as `MSNG`, `NA`, or `UNK`) and the export-time enrichment of coding assignments (resolving verbatim strings dynamically to `CMDECOD`, `AEDECOD`, and `MHDECOD` using dictionary terms mapped in active `ClinicalCodingLedger` entries) is owned strictly under **#402**. This prevents the emission of raw database nulls or coerced zeroes, guaranteeing submission data completeness and scientific accuracy.
+
+---
+
+## 5. SDTM/ADaM-Specific Privacy Policy (ADR-108)
+
+Unlike generic, document-level redaction rules (which default to flat 365-day shifts or random ±30-day narrative text deltas, potentially breaking cross-document patterns), the biostatistical pipeline enforces a highly specialized, **deterministic SDTM/ADaM Privacy Policy** governed by **ADR-108**. This policy ensures absolute longitudinal and referential consistency across separate domains, datasets, and successive export calls.
+
+### 1. Deterministic Pseudonymization
+- **Mechanism**: Subject identifiers (`USUBJID`, `SUBJID`) and site identifiers (`SITEID`) are pseudonymized using **HMAC-SHA256** over the verbatim values.
+- **Keying**: The hash is keyed by a secure, study-specific runtime secret: `BIOSTAT_EXPORT_SALT`.
+- **Outcome**: A stable 64-character hexadecimal string is outputted. Because the hashing is deterministic, subject identifiers match perfectly across different datasets (e.g. DM, AE, ADSL) and subsequent export runs, preserving relational integrity (`RDOMAIN` / `IDVARVAL` joins) while fully isolating patient identity.
+
+### 2. Stable Per-Subject Date Shifting
+- **Offset Derivation**: A stable, numeric integer offset in the range `[-365, 365]` days is derived deterministically for each subject from their original `USUBJID` via HMAC-SHA256 keyed by the export salt:
+  $$\text{Offset} = (\text{int}(\text{HMAC}(\text{original\_usubjid}, \text{salt}), 16) \pmod{731}) - 365$$
+- **SDTM Precision-Preserving Date Shifting**: SDTM string dates (e.g. `AESTDTC`, `RFSTDTC`, `CMSTDTC`, `LBDTC`) are shifted using a precision-preserving algorithm. If a date is partial (e.g., `2026-08` or `2026-08-UN`), numeric components are shifted while leaving imprecise placeholders untouched. This guarantees that relative chronological ordering (e.g., `AEENDTC >= AESTDTC`) remains fully intact.
+- **ADaM Numeric Date Shifting**: ADaM numeric SAS-integer dates (e.g. `TRTSDT`, `ASTDT`, `AENDT`) are shifted by adding the calculated subject-specific integer offset directly to the SAS day integer value.
+
+### 3. Age Generalization
+- **Mechanism**: Subject age values (both SDTM numeric `AGE` and derived variables) are capped. Any age exceeding 89 is automatically generalized and set to `89`.
+
+### 4. Cryptographic Key Ownership
+- **Sponsor Key Ownership**: The study sponsor holds exclusive ownership of the `BIOSTAT_EXPORT_SALT` cryptographic key. Keys are managed securely via runtime environment variables and must be rotated periodically in accordance with security standard operating procedures. The salt is never logged, exposed, or written to exception reports.
+
+---
+
+## 6. Traceability and Cross-Reference Log
+
+To preserve platform compliance and verify requirements across the biostatistical export pipeline, the following table lists active traceability mapping references:
+
+| Requirement / Issue ID | Description | Target Module / Verification Pathway | Status |
+| :--- | :--- | :--- | :--- |
+| **#402** | SDTM export data quality: null flavors and coding-assignment integration. | `apps/execution/biostat/terminology.py` & `extractors.py` | Supported |
+| **#403** (ADR-108) | SDTM/ADaM export privacy: deterministic pseudonymization and date de-identification. | `apps/execution/biostat/deid.py` & `tests/test_biostat_deidentification.py` | Supported |
+| **#405** | Expose authenticated SDTM/ADaM Dataset-JSON export endpoints. | `apps/execution/main.py` & `tests/test_biostat_exports.py` | Supported |
+| **#407** | SDTM foundation models (Dataset-JSON structure and Pydantic v2 schemas). | `apps/execution/biostat/models.py` & `tests/test_biostat_export.py` | Supported |
+| **#719** | Propagate generated SDTM SUPP-- datasets through Dataset-JSON exports. | `apps/execution/biostat/serializer.py` & `extractors.py` | Supported |
+| **ADR-094** | Pure-Python Declarative Mapping Table & Pipeline architecture. | `apps/execution/biostat/mappings.py` & `tests/test_biostat_export.py` | Supported |
 
 ---
 
