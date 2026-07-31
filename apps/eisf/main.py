@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.eisf.database import db_manager
 from apps.eisf.models import Base, ISFAuditLog, ISFDocument
+from apps.eisf.routers.eisf import router as eisf_router
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.rbac import (
@@ -239,6 +240,8 @@ app = FastAPI(
 
 # Mount the shared GatewayAuthMiddleware
 app.add_middleware(GatewayAuthMiddleware)
+
+app.include_router(eisf_router)
 
 
 get_db_session = DatabaseSessionDependency(db_manager)
