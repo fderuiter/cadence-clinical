@@ -291,7 +291,7 @@ def test_reconcile_records_with_generic_dictionary_payload():
                 "cough": "2026-08-01T10:15:00+00:00",
             },
             "modified_by": "subject_mobile_app",
-        }
+        },
     }
 
     # Verify when no existing record exists

@@ -3,7 +3,6 @@ Unit tests for the USDM Version Adapter module.
 Examines heuristics, overrides, normalization, evidence tracking, and defaults.
 """
 
-import pytest
 from apps.designer.version_adapter import (
     infer_usdm_version,
     normalize_payload_to_canonical,
@@ -163,5 +162,10 @@ def test_normalize_payload_to_canonical_v3():
     }
     normalized = normalize_payload_to_canonical(v3_payload, "v3")
 
-    assert normalized["versions"][0]["studyDesigns"][0]["arms"][0]["name"] == "Treatment Arm"
-    assert normalized["versions"][0]["studyDesigns"][0]["population"]["name"] == "Adults"
+    assert (
+        normalized["versions"][0]["studyDesigns"][0]["arms"][0]["name"]
+        == "Treatment Arm"
+    )
+    assert (
+        normalized["versions"][0]["studyDesigns"][0]["population"]["name"] == "Adults"
+    )

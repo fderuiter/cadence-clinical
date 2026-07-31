@@ -9,7 +9,6 @@ from pydantic import BaseModel
 from apps.designer.db import get_study_projection, terminology_cache
 from apps.designer.usdm_ingestion import (
     USDMValidationReport,
-    ValidationIssue,
     validate_usdm_payload,
 )
 

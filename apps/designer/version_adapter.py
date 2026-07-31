@@ -223,8 +223,13 @@ def normalize_payload_to_canonical(
                         design["objectives"] = design.pop("studyObjectives")
 
                     # Normalize studyInterventions -> studyInterventionIds
-                    if "studyInterventions" in design and "studyInterventionIds" not in design:
-                        design["studyInterventionIds"] = design.pop("studyInterventions")
+                    if (
+                        "studyInterventions" in design
+                        and "studyInterventionIds" not in design
+                    ):
+                        design["studyInterventionIds"] = design.pop(
+                            "studyInterventions"
+                        )
 
                     # Recurse on nested elements (e.g. arms, epochs, activities, encounters)
                     # to make sure their instance types are set
@@ -237,11 +242,17 @@ def normalize_payload_to_canonical(
                             epoch["instanceType"] = "StudyEpoch"
 
                     for encounter in design.get("encounters", []):
-                        if isinstance(encounter, dict) and "instanceType" not in encounter:
+                        if (
+                            isinstance(encounter, dict)
+                            and "instanceType" not in encounter
+                        ):
                             encounter["instanceType"] = "Encounter"
 
                     for activity in design.get("activities", []):
-                        if isinstance(activity, dict) and "instanceType" not in activity:
+                        if (
+                            isinstance(activity, dict)
+                            and "instanceType" not in activity
+                        ):
                             activity["instanceType"] = "Activity"
 
     return normalized

@@ -266,7 +266,7 @@ async def resolve_and_save_submission(
     res_assign = await session.execute(stmt_assign)
     assign = res_assign.scalars().first()
 
-    target_exists = (inst is not None and assign is not None)
+    target_exists = inst is not None and assign is not None
 
     # 3. Normal / Conflict flow: Check for existing EPROSubmission
     stmt = (
