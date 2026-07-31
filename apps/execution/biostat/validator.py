@@ -7,6 +7,12 @@ Provides conformance and referential validation for CDISC Dataset-JSON exports.
 from typing import Any, Dict, List, Optional, Union
 
 from apps.execution.biostat.models import DatasetJSON, DatasetJSONItemGroup
+from apps.execution.biostat.terminology import (
+    normalize_sex,
+    normalize_race,
+    normalize_severity,
+    normalize_seriousness,
+)
 
 try:
     from sdtm.enums import (
@@ -286,10 +292,6 @@ def validate_dataset_json(
                     seen_seqs.add(pair)
 
         # --- Check 4: Controlled Terminology Validation ---
-        valid_sex = {Sex.M.value, Sex.F.value, Sex.U.value}
-        valid_race = {r.value for r in Race}
-        valid_aesev = {s.value for s in AESeverity}
-        valid_aeser = {s.value for s in AESeriousness}
         valid_aerel = {r.value for r in AERelationship}
         valid_aeout = {o.value for o in AEOutcome}
 
@@ -298,7 +300,9 @@ def validate_dataset_json(
             if "SEX" in row:
                 sex_val = row["SEX"]
                 if sex_val is not None and str(sex_val).strip() != "":
-                    if str(sex_val).strip().upper() not in valid_sex:
+                    try:
+                        normalize_sex(sex_val)
+                    except ValueError:
                         errors.append(
                             f"[{CONTROLLED_TERMINOLOGY_VIOLATION}] [{ds_name_upper}] Row {i}: SEX value '{sex_val}' is not a valid CDISC controlled terminology."
                         )
@@ -306,7 +310,9 @@ def validate_dataset_json(
             if "RACE" in row:
                 race_val = row["RACE"]
                 if race_val is not None and str(race_val).strip() != "":
-                    if str(race_val).strip().upper() not in valid_race:
+                    try:
+                        normalize_race(race_val)
+                    except ValueError:
                         errors.append(
                             f"[{CONTROLLED_TERMINOLOGY_VIOLATION}] [{ds_name_upper}] Row {i}: RACE value '{race_val}' is not a valid CDISC controlled terminology."
                         )
@@ -314,7 +320,9 @@ def validate_dataset_json(
             if "AESEV" in row:
                 aesev_val = row["AESEV"]
                 if aesev_val is not None and str(aesev_val).strip() != "":
-                    if str(aesev_val).strip().upper() not in valid_aesev:
+                    try:
+                        normalize_severity(aesev_val)
+                    except ValueError:
                         errors.append(
                             f"[{CONTROLLED_TERMINOLOGY_VIOLATION}] [{ds_name_upper}] Row {i}: AESEV value '{aesev_val}' is not a valid CDISC controlled terminology."
                         )
@@ -322,7 +330,9 @@ def validate_dataset_json(
             if "AESER" in row:
                 aeser_val = row["AESER"]
                 if aeser_val is not None and str(aeser_val).strip() != "":
-                    if str(aeser_val).strip().upper() not in valid_aeser:
+                    try:
+                        normalize_seriousness(aeser_val)
+                    except ValueError:
                         errors.append(
                             f"[{CONTROLLED_TERMINOLOGY_VIOLATION}] [{ds_name_upper}] Row {i}: AESER value '{aeser_val}' is not a valid CDISC controlled terminology."
                         )
