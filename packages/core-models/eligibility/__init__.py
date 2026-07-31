@@ -6,13 +6,20 @@ Kleene 3-valued logic evaluation functions. Usable across designer, execution,
 and interop without external database or framework dependencies.
 """
 
-from eligibility.evaluator import evaluate_eligibility, evaluate_node
+from eligibility.evaluator import (
+    evaluate_eligibility,
+    evaluate_node,
+    evaluate_structured_expression,
+    evaluate_criteria_group,
+)
 from eligibility.models import (
     AggregateEligibilityResult,
+    ComparisonOperator,
     CriterionEvaluation,
     EligibilityCriterion,
     ExpressionNode,
     FieldReference,
+    LogicalOperator,
     NodeEvaluation,
 )
 from eligibility.parser import parse_dsl
@@ -27,4 +34,8 @@ __all__ = [
     "parse_dsl",
     "evaluate_node",
     "evaluate_eligibility",
+    "evaluate_structured_expression",
+    "evaluate_criteria_group",
+    "ComparisonOperator",
+    "LogicalOperator",
 ]

@@ -11,6 +11,10 @@ from eligibility import (
     evaluate_eligibility,
     evaluate_node,
     parse_dsl,
+    ComparisonOperator,
+    LogicalOperator,
+    evaluate_structured_expression,
+    evaluate_criteria_group,
 )
 
 
@@ -306,3 +310,118 @@ def test_aggregate_eligibility_evaluation():
     assert res_fail_and_ind.eligible is False
     assert "INC01" in res_fail_and_ind.failed_criteria
     assert "INC02" in res_fail_and_ind.indeterminate_criteria
+
+
+# @req:PRD-ELIGIBILITY-008
+def test_eligibility_criterion_compatibility_and_enums():
+    """Verify that both old and new field sets function correctly and the enums are respected."""
+    # Enums verification
+    assert ComparisonOperator.EQ == "=="
+    assert LogicalOperator.AND == "and"
+
+    # Instantiate with new fields
+    crit_new = EligibilityCriterion(
+        id="INC-001",
+        criterion_type="inclusion",
+        identifier="INC-001",
+        human_readable_text="Subject must be adult.",
+        dsl_expression_string="eCRF.DM.AGE >= 18",
+        structured_expression_tree=parse_dsl("eCRF.DM.AGE >= 18"),
+        expected_outcome=True,
+        created_by="test_user",
+        reason_for_change="Authoring test.",
+    )
+    assert crit_new.id == "INC-001"
+    assert crit_new.criterion_id == "INC-001"
+    assert crit_new.description == "Subject must be adult."
+    assert crit_new.dsl_source == "eCRF.DM.AGE >= 18"
+    assert crit_new.condition is not None
+
+    # Instantiate with old fields
+    crit_old = EligibilityCriterion(
+        criterion_id="INC-002",
+        criterion_type="inclusion",
+        description="Subject must be female.",
+        dsl_source="eCRF.DM.SEX == 'F'",
+        condition=parse_dsl("eCRF.DM.SEX == 'F'"),
+        expected_outcome=True,
+        created_by="test_user",
+        reason_for_change="Authoring test old fields.",
+    )
+    assert crit_old.id == "INC-002"
+    assert crit_old.identifier == "INC-002"
+    assert crit_old.human_readable_text == "Subject must be female."
+    assert crit_old.dsl_expression_string == "eCRF.DM.SEX == 'F'"
+    assert crit_old.structured_expression_tree is not None
+
+
+# @req:PRD-ELIGIBILITY-009
+def test_evaluate_structured_expression_helper():
+    """Verify that evaluate_structured_expression works with positive, negative, and missing data."""
+    tree = parse_dsl("eCRF.DM.AGE >= 18")
+
+    # Positive context
+    res, exp = evaluate_structured_expression(tree, {"eCRF.DM.AGE": 21})
+    assert res is True
+    assert "evaluated to True" in exp
+
+    # Negative context
+    res, exp = evaluate_structured_expression(tree, {"eCRF.DM.AGE": 15})
+    assert res is False
+    assert "evaluated to False" in exp
+    assert "Failed comparisons" in exp
+
+    # Indeterminate context
+    res, exp = evaluate_structured_expression(tree, {"eCRF.DM.AGE": None})
+    assert res is None
+    assert "cannot determine" in exp
+
+
+# @req:PRD-ELIGIBILITY-010
+def test_evaluate_criteria_group_helper():
+    """Verify that evaluate_criteria_group returns failing business identifiers correctly."""
+    criteria = [
+        EligibilityCriterion(
+            id="INC-001",
+            criterion_type="inclusion",
+            identifier="INC-001",
+            human_readable_text="Subject must be adult.",
+            dsl_expression_string="eCRF.DM.AGE >= 18",
+            structured_expression_tree=parse_dsl("eCRF.DM.AGE >= 18"),
+            expected_outcome=True,
+            created_by="test_user",
+            reason_for_change="Init",
+        ),
+        EligibilityCriterion(
+            id="EXC-001",
+            criterion_type="exclusion",
+            identifier="EXC-001",
+            human_readable_text="Subject must not have diabetes.",
+            dsl_expression_string="eCRF.MH.DIABETES == True",
+            structured_expression_tree=parse_dsl("eCRF.MH.DIABETES == True"),
+            expected_outcome=False,
+            created_by="test_user",
+            reason_for_change="Init",
+        ),
+    ]
+
+    # Overall Pass
+    res, fails = evaluate_criteria_group(criteria, {"eCRF.DM.AGE": 25, "eCRF.MH.DIABETES": False})
+    assert res is True
+    assert len(fails) == 0
+
+    # Inclusion Fail
+    res, fails = evaluate_criteria_group(criteria, {"eCRF.DM.AGE": 16, "eCRF.MH.DIABETES": False})
+    assert res is False
+    assert fails == ["INC-001"]
+
+    # Exclusion Fail
+    res, fails = evaluate_criteria_group(criteria, {"eCRF.DM.AGE": 25, "eCRF.MH.DIABETES": True})
+    assert res is False
+    assert fails == ["EXC-001"]
+
+    # Both Fail
+    res, fails = evaluate_criteria_group(criteria, {"eCRF.DM.AGE": 16, "eCRF.MH.DIABETES": True})
+    assert res is False
+    # Both fail, let's verify both are returned
+    assert set(fails) == {"INC-001", "EXC-001"}
