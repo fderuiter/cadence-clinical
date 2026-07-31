@@ -2490,80 +2490,23 @@ async def get_cdisc_export_dictionary(study_id: str) -> Response:
 # Medical Dictionary & UCUM Standardization API Contracts
 # ==========================================
 
-
-class DictTypeEnum(str, Enum):
-    MEDDRA = "MEDDRA"
-    WHODRUG = "WHODRUG"
-    LOINC = "LOINC"
-    SNOMED = "SNOMED"
-
-
-class JobStatusEnum(str, Enum):
-    PENDING = "PENDING"
-    PROCESSING = "PROCESSING"
-    COMPLETED = "COMPLETED"
-    FAILED = "FAILED"
-
-
-class JobStatusResponse(BaseModel):
-    job_id: str
-    dictionary_type: str
-    version: str
-    status: JobStatusEnum
-    started_at: datetime
-    completed_at: Optional[datetime] = None
-    progress_percentage: Optional[int] = None
-    records_imported: Optional[int] = None
-    errors_encountered: Optional[int] = None
-
-
-class PrimarySocFlagEnum(str, Enum):
-    Y = "Y"
-    N = "N"
-
-
-class MedDRACodeMatch(BaseModel):
-    llt_code: str
-    llt_name: str
-    pt_code: str
-    pt_name: str
-    hlt_code: str
-    hlt_name: str
-    hlgt_code: str
-    hlgt_name: str
-    soc_code: str
-    soc_name: str
-    primary_soc_flag: Optional[PrimarySocFlagEnum] = None
-    score: float
-
-
-class MedDRACodingResult(BaseModel):
-    status: str  # e.g., "AUTO-CODED", "SUGGESTIONS", "UNCODABLE"
-    matches: List[MedDRACodeMatch]
-
-
-class WHODrugATCContext(BaseModel):
-    atc_code: str
-    description: str
-
-
-class WHODrugIngredientItem(BaseModel):
-    ingredient_code: str
-    ingredient_name: str
-
-
-class WHODrugCodeMatch(BaseModel):
-    drug_code: str
-    preferred_name: str
-    drug_name: Optional[str] = None
-    score: float
-    atc_context: List[WHODrugATCContext] = []
-    ingredients: List[WHODrugIngredientItem] = []
-
-
-class WHODrugCodingResult(BaseModel):
-    status: str  # e.g., "AUTO-CODED", "SUGGESTIONS", "UNCODABLE"
-    matches: List[WHODrugCodeMatch]
+from apps.execution.routers.coding_schemas import (
+    DictTypeEnum,
+    JobStatusEnum,
+    JobStatusResponse,
+    PrimarySocFlagEnum,
+    WHODrugATCContext,
+    WHODrugIngredientItem,
+    MedDRAMatch,
+    MedDRACodeLookupResponse,
+    WHODrugMatch,
+    WHODrugCodeLookupResponse,
+    MedDRACodeMatch,
+    MedDRACodingResult,
+    WHODrugCodeMatch,
+    WHODrugCodingResult,
+    validate_non_blank_version,
+)
 
 
 class UCUMConvertRequest(BaseModel):
@@ -2649,10 +2592,12 @@ async def import_dictionary(
             detail=f"Import not supported for dictionary type: {dictionary_type.value}",
         )
 
-    if not version or not version.strip():
+    try:
+        validate_non_blank_version(version)
+    except ValueError as e:
         raise HTTPException(
             status_code=400,
-            detail="Version must be a non-empty string.",
+            detail=str(e),
         )
 
     # 1. Persist the uploaded file to secure temporary storage
@@ -2759,13 +2704,13 @@ class MedDRATargetLevelEnum(str, Enum):
     PT = "PT"
 
 
-@app.get("/api/v1/dictionaries/meddra/code", response_model=MedDRACodingResult)
+@app.get("/api/v1/dictionaries/meddra/code", response_model=MedDRACodeLookupResponse)
 async def get_meddra_code(
     term: str,
     version: Optional[str] = Query("26.0"),
     target_level: Optional[MedDRATargetLevelEnum] = Query(MedDRATargetLevelEnum.LLT),
     roles: list[str] = Depends(get_normalized_roles),
-) -> MedDRACodingResult:
+) -> MedDRACodeLookupResponse:
     """Performs coding or interactive auto-complete lookup on adverse events using version-aware matcher."""
     if not term or not term.strip():
         raise HTTPException(
@@ -2799,7 +2744,7 @@ async def get_meddra_code(
             if parent_match.get("hierarchies"):
                 for h in parent_match.get("hierarchies", []):
                     matches.append(
-                        MedDRACodeMatch(
+                        MedDRAMatch(
                             llt_code=h.get("llt_code") or "",
                             llt_name=h.get("llt_name") or "",
                             pt_code=h.get("pt_code") or "",
@@ -2817,7 +2762,7 @@ async def get_meddra_code(
             else:
                 is_llt = parent_match.get("level") == "LLT"
                 matches.append(
-                    MedDRACodeMatch(
+                    MedDRAMatch(
                         llt_code=parent_match.get("code") if is_llt else "",
                         llt_name=parent_match.get("term_name") if is_llt else "",
                         pt_code=parent_match.get("code") if not is_llt else "",
@@ -2838,7 +2783,7 @@ async def get_meddra_code(
                 if sug.get("hierarchies"):
                     for h in sug.get("hierarchies", []):
                         matches.append(
-                            MedDRACodeMatch(
+                            MedDRAMatch(
                                 llt_code=h.get("llt_code") or "",
                                 llt_name=h.get("llt_name") or "",
                                 pt_code=h.get("pt_code") or "",
@@ -2856,7 +2801,7 @@ async def get_meddra_code(
                 else:
                     is_llt = sug.get("level") == "LLT"
                     matches.append(
-                        MedDRACodeMatch(
+                        MedDRAMatch(
                             llt_code=sug.get("code") if is_llt else "",
                             llt_name=sug.get("term_name") if is_llt else "",
                             pt_code=sug.get("code") if not is_llt else "",
@@ -2872,18 +2817,18 @@ async def get_meddra_code(
                         )
                     )
 
-        return MedDRACodingResult(
+        return MedDRACodeLookupResponse(
             status=res.get("status", "UNCODABLE"),
             matches=matches,
         )
 
 
-@app.get("/api/v1/dictionaries/whodrug/code", response_model=WHODrugCodingResult)
+@app.get("/api/v1/dictionaries/whodrug/code", response_model=WHODrugCodeLookupResponse)
 async def get_whodrug_code(
     term: str,
     version: str,
     roles: list[str] = Depends(get_normalized_roles),
-) -> WHODrugCodingResult:
+) -> WHODrugCodeLookupResponse:
     """Performs coding or interactive lookup on WHODrug database using version-aware matcher."""
     if not term or not term.strip():
         raise HTTPException(
@@ -2913,7 +2858,7 @@ async def get_whodrug_code(
         if res.get("match"):
             m = res["match"]
             matches.append(
-                WHODrugCodeMatch(
+                WHODrugMatch(
                     drug_code=m.get("drug_code") or "",
                     preferred_name=m.get("preferred_name") or "",
                     drug_name=m.get("drug_name"),
@@ -2937,7 +2882,7 @@ async def get_whodrug_code(
         elif res.get("suggestions"):
             for sug in res["suggestions"]:
                 matches.append(
-                    WHODrugCodeMatch(
+                    WHODrugMatch(
                         drug_code=sug.get("drug_code") or "",
                         preferred_name=sug.get("preferred_name") or "",
                         drug_name=sug.get("drug_name"),
@@ -2959,7 +2904,7 @@ async def get_whodrug_code(
                     )
                 )
 
-        return WHODrugCodingResult(
+        return WHODrugCodeLookupResponse(
             status=res.get("status", "UNCODABLE"),
             matches=matches,
         )
@@ -5306,16 +5251,12 @@ async def unlock_trial_endpoint(
 # ==========================================
 
 
-class ImpactAnalysisRequest(BaseModel):
-    dictionary_type: str
-    new_version: str
-
-
-class ImpactAnalysisResponse(BaseModel):
-    status: str
-    dictionary_type: str
-    new_version: str
-    metrics: dict[str, int]
+from apps.execution.routers.coding_schemas import (
+    ImpactAnalysisRequest,
+    ImpactAnalysisResponse,
+    CodingAssignmentResponse,
+    CoderActionRequest,
+)
 
 
 @app.post(
@@ -5351,35 +5292,6 @@ async def post_impact_analysis(
                 new_version=payload.new_version,
                 metrics=metrics,
             )
-
-
-class CodingAssignmentResponse(BaseModel):
-    id: str
-    verbatim_text: str
-    source_field: Optional[str] = None
-    observation_id: Optional[str] = None
-    dictionary_type: str
-    dictionary_version: str
-    coded_code: Optional[str] = None
-    coded_term: Optional[str] = None
-    status: str
-    recoding_status: str
-    assigned_by: Optional[str] = None
-    assigned_at: datetime
-    score: Optional[float] = None
-    hierarchy: Optional[Union[dict[str, Any], list[Any]]] = None
-    suggestions: Optional[Union[list[Any], dict[str, Any]]] = None
-    domain: Optional[str] = None
-    version: int
-    is_deleted: bool
-
-
-class CoderActionRequest(BaseModel):
-    action: str  # "ACCEPT" or "OVERRIDE" or "QUERY"
-    code: Optional[str] = None  # required for OVERRIDE
-    term: Optional[str] = None  # required for OVERRIDE
-    suggestion_index: Optional[int] = None  # optional for ACCEPT
-    reason_for_change: Optional[str] = None  # required for OVERRIDE
 
 
 @app.get(
