@@ -1130,6 +1130,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_parser_incremental_batched_consumption` | `tests.test_meddra_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_public_entry_point_file_path` | `tests.test_meddra_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_trigger_logging_on_coding_workflow` | `tests.test_medical_coding` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_coding_schemas_validation` | `tests.test_medical_coding` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_dictionary_import_job_lifecycle` | `tests.test_medical_coding` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_import_failure_rollback_and_failed_state` | `tests.test_medical_coding` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_import_invalid_layout_rejected` | `tests.test_medical_coding` | *Regression/Helper* | 🟢 PASSED | < 1s |
