@@ -1,9 +1,9 @@
 import os
-import httpx
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+import httpx
 from eligibility import evaluate_eligibility
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -13,7 +13,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from apps.interop.auth import (
     has_subject_role,
     require_staff_role,
-    subject_identity_guard,
     verify_subject_bulk_identity,
     verify_subject_identity,
 )
