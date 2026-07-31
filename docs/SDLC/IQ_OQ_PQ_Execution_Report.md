@@ -1635,6 +1635,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_mutability_guard_rejects_locked_versions` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_neo4j_driver_operations` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_procedure_neo4j` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_soa_domain_models_schema_alignment` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_timing_window_neo4j` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_update_study_arm_neo4j` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_visit_neo4j` | `tests.test_soa_persistence` | *Regression/Helper* | 🟢 PASSED | < 1s |

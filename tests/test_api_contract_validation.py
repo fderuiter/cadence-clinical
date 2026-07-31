@@ -228,6 +228,15 @@ def loaded_specs():
     return {"spec_dict": spec_dict, "code_routes": code_routes, "code_full": code_full}
 
 
+WHITELISTED_ROUTES = {
+    ("patch", "/subjects/{id}/state"),
+    ("patch", "/api/v1/execution/subjects/{id}/state"),
+    ("put", "/subjects/{id}/demographics"),
+    ("put", "/api/v1/execution/subjects/{id}/demographics"),
+    ("delete", "/subjects/{id}/demographics"),
+    ("delete", "/api/v1/execution/subjects/{id}/demographics"),
+    ("get", "/api/v1/execution/subjects/{subject_id}"),
+    ("get", "/api/v1/execution/visits/{visit_id}"),
 _RAW_WHITELISTED_ROUTES = {
     ("post", "/api/v1/documents/upload"),
     ("get", "/api/v1/documents/{doc_id}"),

@@ -181,6 +181,149 @@ async def test_mock_soa_entity_lifecycle():
     assert row["cells"][0]["details"] == "timing_w1"
 
 
+def test_soa_domain_models_schema_alignment():
+    """
+    Verifies that the new, aligned Pydantic v2 domain models for SoA structures
+    properly validate and synchronize synonyms, carry 21 CFR Part 11 audit fields,
+    and express arm-applicability and entity relationships.
+    """
+    from datetime import datetime, timezone
+    from apps.designer.soa_models import (
+        StudyArm,
+        Epoch,
+        Visit,
+        Procedure,
+        TimingWindow,
+        SoAMatrixProjectionResponse,
+    )
+
+    now = datetime.now(timezone.utc)
+
+    # 1. Test StudyArm
+    arm = StudyArm(
+        id="arm_1",
+        study_version_id="sv_123",
+        name="Experimental Arm",
+        arm_type="Active",
+        created_by="designer_user",
+        created_at=now,
+        reason_for_change="Initial arm definition",
+    )
+    assert arm.id == "arm_1"
+    assert arm.arm_type == "Active"
+    assert arm.created_by == "designer_user"
+    assert arm.reason_for_change == "Initial arm definition"
+
+    # Test synonym matching during before model validator
+    arm_synonym = StudyArm(
+        id="arm_2",
+        study_version_id="sv_123",
+        name="Placebo Arm",
+        type="Placebo",  # maps to arm_type
+        created_by="designer_user",
+    )
+    assert arm_synonym.arm_type == "Placebo"
+
+    # 2. Test Epoch
+    epoch = Epoch(
+        id="epoch_1",
+        study_version_id="sv_123",
+        name="Screening",
+        sequence_order=1,
+        created_by="designer_user",
+    )
+    assert epoch.name == "Screening"
+    assert epoch.sequence_order == 1
+
+    epoch_synonym = Epoch(
+        id="epoch_2",
+        study_version_id="sv_123",
+        epoch_name="Treatment",  # maps to name
+        sequence=2,  # maps to sequence_order
+        created_by="designer_user",
+    )
+    assert epoch_synonym.name == "Treatment"
+    assert epoch_synonym.sequence_order == 2
+
+    # 3. Test Visit
+    visit = Visit(
+        id="visit_1",
+        study_version_id="sv_123",
+        name="Week 1 Visit",
+        epoch_id="epoch_2",
+        sequence=1,
+        visit_window_days=7,
+        arm_ids=["arm_1", "arm_2"],
+        created_by="designer_user",
+    )
+    assert visit.name == "Week 1 Visit"
+    assert visit.epoch_id == "epoch_2"
+    assert visit.arm_ids == ["arm_1", "arm_2"]
+
+    # 4. Test Procedure
+    proc = Procedure(
+        id="proc_1",
+        study_version_id="sv_123",
+        name="Lab Blood Draw",
+        description="Fasting blood sample collection",
+        visit_ids=["visit_1"],
+        arm_ids=["arm_1"],
+        created_by="designer_user",
+    )
+    assert proc.name == "Lab Blood Draw"
+    assert proc.visit_ids == ["visit_1"]
+    assert proc.arm_ids == ["arm_1"]
+
+    # 5. Test TimingWindow (with validation rules)
+    tw_valid = TimingWindow(
+        id="tw_1",
+        study_version_id="sv_123",
+        name="Standard Visit Window",
+        anchor_reference="Visit 1",
+        target_day=7,
+        min_offset=-2,
+        max_offset=2,
+        conditional=True,
+        reason="Required only for sub-cohort A",
+        created_by="designer_user",
+    )
+    assert tw_valid.conditional is True
+    assert tw_valid.reason == "Required only for sub-cohort A"
+
+    # Test failure when conditional is True but reason is empty/missing
+    import pytest
+    with pytest.raises(ValueError, match="A non-empty 'reason' must be provided"):
+        TimingWindow(
+            id="tw_invalid",
+            study_version_id="sv_123",
+            name="Invalid conditional timing",
+            conditional=True,
+            created_by="designer_user",
+        )
+
+    # 6. Test Matrix Projection Response Response Envelope
+    projection = SoAMatrixProjectionResponse(
+        epochs=[{"epoch_id": "epoch_1", "epoch_name": "Screening", "sequence": 1}],
+        encounters=[{"encounter_id": "visit_1", "encounter_name": "Week 1 Visit", "epoch_id": "epoch_1", "sequence": 1}],
+        rows=[{
+            "activity_id": "proc_1",
+            "activity_name": "Lab Blood Draw",
+            "cells": [{
+                "activity_id": "proc_1",
+                "encounter_id": "visit_1",
+                "epoch_id": "epoch_1",
+                "is_applicable": True,
+                "details": "tw_1"
+            }]
+        }],
+        arms=[{"arm_id": "arm_1", "arm_name": "Experimental Arm", "sequence": 1}]
+    )
+    assert len(projection.epochs) == 1
+    assert len(projection.encounters) == 1
+    assert len(projection.rows) == 1
+    assert len(projection.arms) == 1
+
+
 @pytest.mark.asyncio
 async def test_mutability_guard_rejects_locked_versions():
     """
