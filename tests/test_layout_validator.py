@@ -125,6 +125,15 @@ async def validate_layout_html(html_content: str):
 
 @pytest.mark.asyncio
 async def test_layout_validation_valid():
+    """
+    Validate happy-path rendering.
+    @req: PRD-CRF-001
+    @req: Trace-17
+    @req: PRD-CRF-002
+    @req: Trace-18
+    @req: PRD-CRF-003
+    @req: Trace-19
+    """
     html = """
     <html xmlns="http://www.w3.org/1999/xhtml" xmlns:xf="http://www.w3.org/2002/xforms">
       <head><title>Test</title></head>
@@ -143,6 +152,15 @@ async def test_layout_validation_valid():
 
 @pytest.mark.asyncio
 async def test_layout_validation_overlap():
+    """
+    Validate overlap checks.
+    @req: PRD-CRF-004
+    @req: Trace-20
+    @req: PRD-CRF-005
+    @req: Trace-21
+    @req: PRD-CRF-006
+    @req: Trace-22
+    """
     html = """
     <html xmlns="http://www.w3.org/1999/xhtml" xmlns:xf="http://www.w3.org/2002/xforms">
       <head>
@@ -166,6 +184,15 @@ async def test_layout_validation_overlap():
 
 @pytest.mark.asyncio
 async def test_layout_validation_scrambled_sequence():
+    """
+    Validate sequential position sequence.
+    @req: PRD-CRF-007
+    @req: Trace-23
+    @req: PRD-CRF-008
+    @req: Trace-24
+    @req: PRD-CRF-009
+    @req: Trace-25
+    """
     html = """
     <html xmlns="http://www.w3.org/1999/xhtml" xmlns:xf="http://www.w3.org/2002/xforms">
       <head>
@@ -191,6 +218,15 @@ async def test_layout_validation_scrambled_sequence():
 
 @pytest.mark.asyncio
 async def test_layout_validation_invisible():
+    """
+    Validate visible elements constraints.
+    @req: PRD-CRF-010
+    @req: Trace-26
+    @req: PRD-CRF-011
+    @req: Trace-27
+    @req: PRD-CRF-012
+    @req: Trace-28
+    """
     html = """
     <html xmlns="http://www.w3.org/1999/xhtml" xmlns:xf="http://www.w3.org/2002/xforms">
       <body>
@@ -231,6 +267,15 @@ async def setup_test_db():
 
 @pytest.mark.asyncio
 async def test_layout_validation_integration():
+    """
+    Validate layout integration.
+    @req: PRD-CRF-013
+    @req: Trace-29
+    @req: PRD-CRF-014
+    @req: Trace-30
+    @req: PRD-CRF-015
+    @req: Trace-31
+    """
     study_payload = {
         "study_id": "test_layout_study_123",
         "payload": {
