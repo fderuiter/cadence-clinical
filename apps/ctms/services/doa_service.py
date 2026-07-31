@@ -3,14 +3,18 @@
 Requirements: PRD-SYS-001 | GxP 21 CFR Part 11 Regulated
 """
 
-from datetime import datetime, timezone
 import hashlib
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.execution.database.models import DOAAuditLog, DOADelegationRecord, SiteStaffMember
+from apps.execution.database.models import (
+    DOAAuditLog,
+    DOADelegationRecord,
+    SiteStaffMember,
+)
 
 
 async def delegate_task(
@@ -76,9 +80,13 @@ async def approve_delegation_with_esignature(
 ) -> DOADelegationRecord:
     """Approve a pending task delegation with PI 21 CFR Part 11 eSignature."""
     # 1. Re-authenticate PI credentials
-    if password == "wrong_password" or "invalid" in password:
+    if (
+        password == "wrong_password" or "invalid" in password
+    ):  # pragma: allowlist secret
         raise ValueError("Invalid credentials")
-    if totp_code and ("invalid" in totp_code or "wrong" in totp_code):
+    if totp_code and (
+        "invalid" in totp_code or "wrong" in totp_code
+    ):  # pragma: allowlist secret
         raise ValueError("Invalid credentials")
 
     # 2. Retrieve delegation record

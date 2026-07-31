@@ -1286,7 +1286,9 @@ class SiteStaffMember(AuditedModel):
     staff_user_id: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     email: Mapped[str] = mapped_column(String(255), nullable=False)
-    has_gcp_training: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    has_gcp_training: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
 
 
 class DOADelegationRecord(AuditedModel):
@@ -1300,7 +1302,9 @@ class DOADelegationRecord(AuditedModel):
     site_id: Mapped[str] = mapped_column(String(255), nullable=False)
     staff_user_id: Mapped[str] = mapped_column(String(255), nullable=False)
     task_code: Mapped[str] = mapped_column(String(50), nullable=False)
-    status: Mapped[str] = mapped_column(String(50), default="PENDING_PI_APPROVAL", nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(50), default="PENDING_PI_APPROVAL", nullable=False
+    )
     pi_user_id: Mapped[str] = mapped_column(String(255), nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
     pi_approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)

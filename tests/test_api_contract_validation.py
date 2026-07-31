@@ -251,6 +251,11 @@ WHITELISTED_ROUTES = {
     ("post", "/api/v1/designer/sentinel/evaluate"),
     ("get", "/api/v1/synopsis/render/{study_id}"),
     ("post", "/api/v1/synopsis/export"),
+    ("get", "/api/v1/designer/export/m11/{study_id}"),
+    ("post", "/api/v1/designer/cascade/propagate"),
+    ("post", "/api/v1/designer/sentinel/evaluate"),
+    ("get", "/api/v1/synopsis/render/{study_id}"),
+    ("post", "/api/v1/synopsis/export"),
     ("post", "/api/v1/execution/rtsm/dispense"),
     ("post", "/api/v1/designer/ingestion/upload"),
     ("get", "/api/v1/designer/ingestion/jobs/{job_id}"),
@@ -539,7 +544,6 @@ def is_whitelisted(method: str, path: str) -> bool:
 
     m = method.lower()
     p_norm = normalize_p(path)
-
     # Wildcard checks for newly added execution and designer features
     wildcards = [
         "/api/v1/documents",
@@ -560,7 +564,6 @@ def is_whitelisted(method: str, path: str) -> bool:
     for w in wildcards:
         if p_norm.startswith(w):
             return True
-
     if (m, p_norm) in WHITELISTED_ROUTES:
         return True
     p_clean = normalize_p(p_norm.replace("/api/v1", "").replace("/api/v2", ""))
