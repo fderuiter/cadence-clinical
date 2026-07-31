@@ -685,10 +685,6 @@ class ObservationResponse(BaseModel):
     reference_range_high: Optional[float] = None
     protocol_version_tag: Optional[str] = None
     protocol_version_index: Optional[int] = None
-    range_indicator: Optional[str] = None
-    is_out_of_range: Optional[bool] = None
-    reference_range_low: Optional[float] = None
-    reference_range_high: Optional[float] = None
 
     @model_validator(mode="after")
     def populate_range_fields(self) -> "ObservationResponse":
@@ -785,7 +781,6 @@ async def evaluate_and_transition_screening(
         require_roles(ROLE_SITE_INVESTIGATOR, ROLE_DATA_MANAGER, "investigator")
     ),
     _justification=Depends(verify_change_justification),
-    _not_auditor: list[str] = Depends(verify_not_auditor),
 ) -> SubjectScreeningResponse:
     """Evaluate subject's eligibility criteria and execute the guarded screening lifecycle transition."""
     change_reason = request.headers.get("X-Change-Reason", "")
@@ -1033,7 +1028,6 @@ async def unblind_subject(
             detail="ROLE_INSUFFICIENT",
         )
     ),
-    _not_auditor: list[str] = Depends(verify_not_auditor),
 ) -> SubjectUnblindResponse:
     """Execute an emergency treatment-allocation unblinding for a randomised subject.
 
@@ -1310,7 +1304,6 @@ async def randomize_subject_endpoint(
             ROLE_SITE_INVESTIGATOR, ROLE_INVESTIGATOR, ROLE_CRC, "investigator"
         )
     ),
-    _not_auditor: list[str] = Depends(verify_not_auditor),
 ) -> SubjectRandomizationResponse:
     """Execute GxP compliant subject randomization allocation and block-index advancement."""
     # Ensure change justification headers are present and valid
@@ -1699,16 +1692,6 @@ async def create_observation(
             user_id=user_id,
             change_reason=change_reason,
         )
-
-        ref_low = None
-        ref_high = None
-        if obs_db.matched_normal_bounds:
-            try:
-                bounds = json.loads(obs_db.matched_normal_bounds)
-                ref_low = bounds.get("low")
-                ref_high = bounds.get("high")
-            except Exception:
-                pass
 
         return ObservationResponse(
             id=obs_db.id,
@@ -5353,12 +5336,15 @@ async def post_impact_analysis(
 
     async with db_manager.get_session_maker()() as session:
         async with session.begin():
-            metrics = await run_impact_analysis(
-                session=session,
-                dictionary_type=payload.dictionary_type,
-                new_version=payload.new_version,
-                actor=current_user_id.get() or "system",
-            )
+            try:
+                metrics = await run_impact_analysis(
+                    session=session,
+                    dictionary_type=payload.dictionary_type,
+                    new_version=payload.new_version,
+                    actor=current_user_id.get() or "system",
+                )
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
             return ImpactAnalysisResponse(
                 status="success",
                 dictionary_type=payload.dictionary_type,
@@ -5719,7 +5705,7 @@ async def process_coding_action(
         assignment.score = score
         assignment.hierarchy = hierarchy
         assignment.assigned_by = actor
-        assignment.assigned_at = datetime.utcnow()
+        assignment.assigned_at = datetime.now(timezone.utc)
 
         # 3. Create a ledger record for ACCEPT or OVERRIDE
         if action_upper in ("ACCEPT", "OVERRIDE"):
@@ -5737,7 +5723,7 @@ async def process_coding_action(
                 recoding_reason=payload.reason_for_change
                 or f"Manual decision: {action_upper}",
                 decision_by=actor,
-                decision_at=datetime.utcnow(),
+                decision_at=datetime.now(timezone.utc),
             )
             session.add(ledger)
 
@@ -5753,7 +5739,7 @@ async def process_coding_action(
             for active_q in active_queries:
                 active_q.status = "CLOSED"
                 active_q.resolver = actor
-                active_q.resolved_at = datetime.utcnow()
+                active_q.resolved_at = datetime.now(timezone.utc)
                 active_q.response = f"Resolved via manual coding action: {action_upper} on code {coded_code}."
                 session.add(active_q)
 
