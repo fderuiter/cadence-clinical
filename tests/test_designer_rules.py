@@ -700,3 +700,254 @@ def test_python_evaluator_indexed_repeat_and_arity_mismatch():
         ],
     }
     assert evaluate_ast(invalid_empty, context) is None
+
+
+# =====================================================================
+# 8. RULE MODEL SERIALIZATION & DESERIALIZATION TESTS
+# =====================================================================
+
+
+def test_rule_models_serialization_deserialization():
+    from apps.designer.rules import ConstraintRule, CrossFormCheckRule, SkipLogicRule
+
+    condition_node = {
+        "type": "comparison",
+        "operator": "==",
+        "operands": [
+            {"type": "field_ref", "field_ref": {"field_id": "VSPERF"}},
+            {"type": "constant", "value": "N"},
+        ],
+    }
+
+    # 1. Skip Logic
+    skip_payload = {
+        "id": "rule_skip",
+        "study_id": "study_1",
+        "type": "skip_logic",
+        "condition": condition_node,
+        "action": "hide",
+        "target_field": "VSSBP",
+        "version_index": 1,
+    }
+    skip_rule = SkipLogicRule(**skip_payload)
+    assert skip_rule.id == "rule_skip"
+    assert skip_rule.target_field == "VSSBP"
+    assert skip_rule.model_dump()["action"] == "hide"
+
+    # 2. Constraint
+    constraint_payload = {
+        "id": "rule_constraint",
+        "study_id": "study_1",
+        "type": "constraint",
+        "condition": condition_node,
+        "target_field": "VSSBP",
+        "query_message": "Value is not allowed",
+        "version_index": 1,
+    }
+    constraint_rule = ConstraintRule(**constraint_payload)
+    assert constraint_rule.id == "rule_constraint"
+    assert constraint_rule.query_message == "Value is not allowed"
+
+    # 3. Cross-Form Check
+    cross_form_payload = {
+        "id": "rule_cross_form",
+        "study_id": "study_1",
+        "type": "cross_form_check",
+        "condition": condition_node,
+        "query_message": "Cross form error",
+        "version_index": 1,
+    }
+    cross_form_rule = CrossFormCheckRule(**cross_form_payload)
+    assert cross_form_rule.id == "rule_cross_form"
+    assert cross_form_rule.query_message == "Cross form error"
+
+
+def test_malformed_rule_rejection():
+    from pydantic import ValidationError
+
+    from apps.designer.rules import ConstraintRule, CrossFormCheckRule
+
+    # Missing query_message for ConstraintRule
+    with pytest.raises(ValidationError):
+        ConstraintRule(
+            id="rule_constraint",
+            study_id="study_1",
+            type="constraint",
+            condition={"type": "constant", "value": True},
+            target_field="VSSBP",
+            query_message="",  # Empty string rejected by validator
+        )
+
+    # Missing query_message for CrossFormCheckRule
+    with pytest.raises(ValidationError):
+        CrossFormCheckRule(
+            id="rule_cross",
+            study_id="study_1",
+            type="cross_form_check",
+            condition={"type": "constant", "value": True},
+            query_message="",
+        )
+
+
+# =====================================================================
+# 9. VALIDATE API ENDPOINT & MISSING HEADER REJECTION TESTS
+# =====================================================================
+
+
+@pytest.mark.asyncio
+async def test_validate_endpoint():
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # 1. Valid compile
+        payload = {
+            "type": "skip_logic",
+            "condition": {
+                "type": "comparison",
+                "operator": "==",
+                "operands": [
+                    {"type": "field_ref", "field_ref": {"field_id": "act_1"}},
+                    {"type": "constant", "value": "N"},
+                ],
+            },
+            "action": "hide",
+            "target_field": "act_2",
+        }
+        res = await client.post(
+            "/api/v1/studies/study_1/rules/validate",
+            json=payload,
+            headers=get_auth_headers(),
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert "xpath" in data
+        assert "failures" in data
+        assert "circular_cycles" in data
+        assert len(data["failures"]) == 0
+        assert len(data["circular_cycles"]) == 0
+
+        # 2. Unknown field failure
+        unknown_payload = {
+            "type": "skip_logic",
+            "condition": {
+                "type": "comparison",
+                "operator": "==",
+                "operands": [
+                    {"type": "field_ref", "field_ref": {"field_id": "unknown_field"}},
+                    {"type": "constant", "value": "N"},
+                ],
+            },
+            "action": "hide",
+            "target_field": "act_2",
+        }
+        res_unknown = await client.post(
+            "/api/v1/studies/study_1/rules/validate",
+            json=unknown_payload,
+            headers=get_auth_headers(),
+        )
+        assert res_unknown.status_code == 200
+        data_unknown = res_unknown.json()
+        assert len(data_unknown["failures"]) > 0
+        assert "Unknown field reference: 'unknown_field'" in data_unknown["failures"][0]
+
+        # 3. Circular-dependency detection
+        circular_payload = {
+            "type": "skip_logic",
+            "condition": {
+                "type": "comparison",
+                "operator": "==",
+                "operands": [
+                    {"type": "field_ref", "field_ref": {"field_id": "act_1"}},
+                    {"type": "constant", "value": "N"},
+                ],
+            },
+            "action": "hide",
+            "target_field": "act_1",  # Self-loop causing cycle
+        }
+        res_circular = await client.post(
+            "/api/v1/studies/study_1/rules/validate",
+            json=circular_payload,
+            headers=get_auth_headers(),
+        )
+        assert res_circular.status_code == 200
+        data_circular = res_circular.json()
+        assert len(data_circular["circular_cycles"]) > 0
+
+
+@pytest.mark.asyncio
+async def test_mutations_missing_change_reason_rejected():
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # Create a rule payload
+        payload = {
+            "type": "skip_logic",
+            "condition": {
+                "type": "comparison",
+                "operator": "==",
+                "operands": [
+                    {"type": "field_ref", "field_ref": {"field_id": "act_1"}},
+                    {"type": "constant", "value": "N"},
+                ],
+            },
+            "action": "hide",
+            "target_field": "act_2",
+        }
+
+        # 1. POST with blank change reason
+        headers_blank = get_auth_headers(change_reason="")
+        res_post_blank = await client.post(
+            "/api/v1/studies/study_1/rules",
+            json=payload,
+            headers=headers_blank,
+        )
+        assert res_post_blank.status_code in (400, 403)
+
+        # 2. POST without X-Change-Reason header (signature mismatch or missing header)
+        headers_missing = get_auth_headers()
+        headers_missing.pop("X-Change-Reason", None)
+        res_post_missing = await client.post(
+            "/api/v1/studies/study_1/rules",
+            json=payload,
+            headers=headers_missing,
+        )
+        assert res_post_missing.status_code in (400, 403)
+
+        # Create a rule first with headers to get a rule ID for PUT/DELETE
+        res_create = await client.post(
+            "/api/v1/studies/study_1/rules",
+            json=payload,
+            headers=get_auth_headers(),
+        )
+        assert res_create.status_code == 201
+        rule_id = res_create.json()["id"]
+
+        # 3. PUT with blank change reason
+        res_put_blank = await client.put(
+            f"/api/v1/studies/study_1/rules/{rule_id}",
+            json=payload,
+            headers=headers_blank,
+        )
+        assert res_put_blank.status_code in (400, 403)
+
+        # 4. PUT without X-Change-Reason header
+        res_put_missing = await client.put(
+            f"/api/v1/studies/study_1/rules/{rule_id}",
+            json=payload,
+            headers=headers_missing,
+        )
+        assert res_put_missing.status_code in (400, 403)
+
+        # 5. DELETE with blank change reason
+        res_delete_blank = await client.delete(
+            f"/api/v1/studies/study_1/rules/{rule_id}",
+            headers=headers_blank,
+        )
+        assert res_delete_blank.status_code in (400, 403)
+
+        # 6. DELETE without X-Change-Reason header
+        res_delete_missing = await client.delete(
+            f"/api/v1/studies/study_1/rules/{rule_id}",
+            headers=headers_missing,
+        )
+        assert res_delete_missing.status_code in (400, 403)

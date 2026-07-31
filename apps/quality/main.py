@@ -1,6 +1,5 @@
 import os
 from datetime import datetime
-from typing import List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
@@ -32,7 +31,7 @@ from packages.security.rbac import (
 # Pydantic Schemas for Request/Response Validation
 class DeviationCreate(BaseModel):
     study_id: str = Field(..., description="Unique identifier of the clinical study")
-    site_id: Optional[str] = Field(None, description="Optional clinical site ID")
+    site_id: str | None = Field(None, description="Optional clinical site ID")
     title: str = Field(
         ..., max_length=255, description="A short summary of the deviation"
     )
@@ -53,7 +52,7 @@ class DeviationResponse(BaseModel):
 
     id: str
     study_id: str
-    site_id: Optional[str] = None
+    site_id: str | None = None
     title: str
     description: str
     severity: DeviationSeverity
@@ -76,7 +75,7 @@ class RCACreateOrUpdate(BaseModel):
     root_cause_summary: str = Field(
         ..., description="Summary of the determined root cause"
     )
-    version_index: Optional[int] = Field(
+    version_index: int | None = Field(
         None, description="Current expected version index for optimistic locking"
     )
 
@@ -90,7 +89,7 @@ class RCAResponse(BaseModel):
     investigation_details: str
     root_cause_summary: str
     study_id: str
-    site_id: Optional[str] = None
+    site_id: str | None = None
     created_at: str
     created_by: str
     version_index: int
@@ -99,17 +98,17 @@ class RCAResponse(BaseModel):
 
 class CAPACreate(BaseModel):
     deviation_id: str = Field(..., description="Reference to the parent deviation ID")
-    rca_id: Optional[str] = Field(
+    rca_id: str | None = Field(
         None, description="Optional reference to the Root Cause Analysis ID"
     )
     capa_type: str = Field(..., description="Type of CAPA: CORRECTIVE or PREVENTIVE")
     action_plan: str = Field(
         ..., description="The planned corrective/preventive action steps"
     )
-    preventive_measures: Optional[str] = Field(
+    preventive_measures: str | None = Field(
         None, description="Specific measures to prevent recurrence"
     )
-    target_completion_date: Optional[datetime] = Field(
+    target_completion_date: datetime | None = Field(
         None, description="Optional expected completion timestamp"
     )
 
@@ -118,22 +117,22 @@ class CAPATransitionRequest(BaseModel):
     to_status: CAPAStatus = Field(
         ..., description="Target CAPA Status to transition to"
     )
-    version_index: Optional[int] = Field(
+    version_index: int | None = Field(
         None, description="Expected version index for optimistic locking"
     )
 
 
 class CAPAUpdate(BaseModel):
-    action_plan: Optional[str] = Field(
+    action_plan: str | None = Field(
         None, description="The planned corrective/preventive action steps"
     )
-    preventive_measures: Optional[str] = Field(
+    preventive_measures: str | None = Field(
         None, description="Specific measures to prevent recurrence"
     )
-    target_completion_date: Optional[datetime] = Field(
+    target_completion_date: datetime | None = Field(
         None, description="Optional expected completion timestamp"
     )
-    version_index: Optional[int] = Field(
+    version_index: int | None = Field(
         None, description="Current expected version index for optimistic locking"
     )
 
@@ -143,14 +142,14 @@ class CAPAResponse(BaseModel):
 
     id: str
     deviation_id: str
-    rca_id: Optional[str] = None
+    rca_id: str | None = None
     capa_type: str
     action_plan: str
     status: CAPAStatus
-    preventive_measures: Optional[str] = None
-    target_completion_date: Optional[str] = None
+    preventive_measures: str | None = None
+    target_completion_date: str | None = None
     study_id: str
-    site_id: Optional[str] = None
+    site_id: str | None = None
     created_at: str
     created_by: str
     version_index: int
@@ -184,8 +183,8 @@ async def write_audit_log(
     user_role: str,
     action: str,
     details: str,
-    record_id: Optional[str] = None,
-    change_reason: Optional[str] = None,
+    record_id: str | None = None,
+    change_reason: str | None = None,
 ) -> None:
     """
     Utility helper to write to the append-only QualityAuditLog.
@@ -355,12 +354,12 @@ async def create_deviation(
     return map_deviation_to_response(dev)
 
 
-@app.get("/api/v1/quality/deviations", response_model=List[DeviationResponse])
+@app.get("/api/v1/quality/deviations", response_model=list[DeviationResponse])
 async def list_deviations(
     request: Request,
-    study_id: Optional[str] = Query(None, description="Filter by study ID"),
-    site_id: Optional[str] = Query(None, description="Filter by site ID"),
-    status: Optional[DeviationStatus] = Query(None, description="Filter by status"),
+    study_id: str | None = Query(None, description="Filter by study ID"),
+    site_id: str | None = Query(None, description="Filter by site ID"),
+    status: DeviationStatus | None = Query(None, description="Filter by status"),
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
 ):
@@ -832,11 +831,11 @@ class AuditLogResponse(BaseModel):
     user_role: str
     action: str
     details: str
-    record_id: Optional[str] = None
-    change_reason: Optional[str] = None
+    record_id: str | None = None
+    change_reason: str | None = None
 
 
-@app.get("/api/v1/quality/audit-logs", response_model=List[AuditLogResponse])
+@app.get("/api/v1/quality/audit-logs", response_model=list[AuditLogResponse])
 async def list_audit_logs(
     request: Request,
     session: AsyncSession = Depends(get_db_session),

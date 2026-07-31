@@ -1,6 +1,6 @@
 import os
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 import pytest_asyncio
@@ -126,7 +126,7 @@ def test_shared_audit_fields_validation():
     assert isinstance(audit.created_at, datetime)
 
     # Check timezone is UTC
-    assert abs((datetime.now(timezone.utc) - audit.created_at).total_seconds()) < 5
+    assert abs((datetime.now(UTC) - audit.created_at).total_seconds()) < 5
 
     # Validation: empty/blank reason
     with pytest.raises(ValidationError) as excinfo:

@@ -3,8 +3,6 @@
 Requirements: PRD-SYS-001
 """
 
-from typing import Optional
-
 from pydantic import BaseModel, Field
 
 
@@ -18,10 +16,10 @@ class SynopsisExportRequest(BaseModel):
     format: str = Field(
         "pdf", description="Target export format: 'pdf', 'docx', or 'html'"
     )
-    creator: Optional[str] = Field(
+    creator: str | None = Field(
         "Cadence Clinical DDF Engine", description="Author or creator username"
     )
-    change_reason: Optional[str] = Field(
+    change_reason: str | None = Field(
         "Initial Baseline", description="GxP 21 CFR Part 11 change reason"
     )
 

@@ -6,18 +6,17 @@ hierarchical section skeletons, and GxP compliant optimistic locking, audits, an
 selective lineage metadata tracking.
 """
 
-from datetime import datetime, timezone
-from enum import Enum
-from typing import Any, Dict, List, Literal, Optional, Union
+from datetime import UTC, datetime
+from enum import StrEnum
+from typing import Annotated, Any, Literal
 
 # Import shared Part 11 audit fields from sibling module
 from audit import AuditFields
 from datetime_helpers import AwareDatetime
 from pydantic import BaseModel, Field
-from typing_extensions import Annotated
 
 
-class BlockType(str, Enum):
+class BlockType(StrEnum):
     """
     Discriminator enum for supported protocol block variants.
     """
@@ -46,19 +45,19 @@ class ProtocolBlock(AuditFields):
         ...,
         description="Sequential order value used to determine display and compilation hierarchy.",
     )
-    parent_id: Optional[str] = Field(
+    parent_id: str | None = Field(
         None,
         description="Optional parent block identifier to support hierarchical nested block structures.",
     )
-    provenance_metadata: Optional[Dict[str, Any]] = Field(
+    provenance_metadata: dict[str, Any] | None = Field(
         None,
         description="Optional metadata tracking structural or ingestion lineage.",
     )
-    locked_by: Optional[str] = Field(
+    locked_by: str | None = Field(
         None,
         description="Unique identifier of the user currently holding a lock on this block.",
     )
-    lock_token: Optional[str] = Field(
+    lock_token: str | None = Field(
         None,
         description="Transient lock token value for optimistic concurrency controls.",
     )
@@ -66,7 +65,7 @@ class ProtocolBlock(AuditFields):
         default=False,
         description="Flag indicating if this block is dynamically derived from Schedule of Activities (SoA) mutations.",
     )
-    section_id: Optional[str] = Field(
+    section_id: str | None = Field(
         None,
         description="Optional section identifier representing which ICH M11 section this block belongs to.",
     )
@@ -78,7 +77,7 @@ class NarrativeBlock(ProtocolBlock):
     """
 
     block_type: Literal[BlockType.NARRATIVE] = BlockType.NARRATIVE
-    title: Optional[str] = Field(
+    title: str | None = Field(
         None,
         description="Optional title or heading of the narrative block.",
     )
@@ -150,7 +149,7 @@ class SoADerivedBlock(ProtocolBlock):
 
 # Annotated Union representing API-friendly discriminated block structures
 ProtocolBlockUnion = Annotated[
-    Union[NarrativeBlock, ObjectiveBlock, EligibilityBlock, SoADerivedBlock],
+    NarrativeBlock | ObjectiveBlock | EligibilityBlock | SoADerivedBlock,
     Field(discriminator="block_type"),
 ]
 
@@ -172,7 +171,7 @@ class ICHSection(BaseModel):
         ...,
         description="Sequential ordering rank of the section within its hierarchy level.",
     )
-    children: List["ICHSection"] = Field(
+    children: list["ICHSection"] = Field(
         default_factory=list,
         description="Nested child subsections belonging to this section.",
     )
@@ -182,7 +181,7 @@ class ICHSection(BaseModel):
 ICHSection.model_rebuild()
 
 
-def build_canonical_ich_skeleton() -> List[ICHSection]:
+def build_canonical_ich_skeleton() -> list[ICHSection]:
     """
     Factory function producing the canonical, sequence-ordered tree skeleton
     for ICH M11 compliant clinical trial protocols.
@@ -254,10 +253,10 @@ def build_canonical_ich_skeleton() -> List[ICHSection]:
 
 
 # Global constant holding the canonical schema sequence tree
-CANONICAL_ICH_SKELETON: List[ICHSection] = build_canonical_ich_skeleton()
+CANONICAL_ICH_SKELETON: list[ICHSection] = build_canonical_ich_skeleton()
 
 
-class SectionReviewStatus(str, Enum):
+class SectionReviewStatus(StrEnum):
     """
     Standard review statuses representing the lifecycle of an ICH section.
     """
@@ -278,10 +277,10 @@ class Comment(BaseModel):
     text: str = Field(..., description="Comment text body.")
     created_by: str = Field(..., description="Author user ID.")
     created_at: AwareDatetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="Creation timestamp.",
     )
-    updated_at: Optional[AwareDatetime] = Field(
+    updated_at: AwareDatetime | None = Field(
         None,
         description="Optional modification timestamp.",
     )
@@ -306,20 +305,20 @@ class CommentThread(BaseModel):
     )
     created_by: str = Field(..., description="Thread creator user ID.")
     created_at: AwareDatetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="Creation timestamp.",
     )
     block_version_index: int = Field(
         ...,
         description="The block's version_index at the time of thread creation.",
     )
-    comments: List[Comment] = Field(
+    comments: list[Comment] = Field(
         default_factory=list,
         description="Ordered list of comments.",
     )
 
 
-class SuggestionStatus(str, Enum):
+class SuggestionStatus(StrEnum):
     """
     Statuses for suggestion workflows.
     """
@@ -345,16 +344,16 @@ class Suggestion(BaseModel):
     )
     created_by: str = Field(..., description="Proposer user ID.")
     created_at: AwareDatetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="Creation timestamp.",
     )
     reason: str = Field(..., description="Rationale for the suggestion.")
-    decision_reason: Optional[str] = Field(
+    decision_reason: str | None = Field(
         None,
         description="Rationale for acceptance or rejection.",
     )
-    decided_by: Optional[str] = Field(None, description="User ID of decider.")
-    decided_at: Optional[AwareDatetime] = Field(
+    decided_by: str | None = Field(None, description="User ID of decider.")
+    decided_at: AwareDatetime | None = Field(
         None,
         description="Timestamp of decision.",
     )
@@ -391,6 +390,6 @@ class SectionReviewTransition(BaseModel):
         description="Part 11 change reason justification.",
     )
     timestamp: AwareDatetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
+        default_factory=lambda: datetime.now(UTC),
         description="Transition timestamp.",
     )

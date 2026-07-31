@@ -29,6 +29,7 @@ This matrix details the distribution of core compliance and tracking features ac
 | **Native Part 11 eSignatures**    | Certificate-bound protocol-approval signing & graph version locking | Certificate-bound document-signing with 60s gateway step-up token, replay prevention & immutability locking | v1.9.0 | Supported |
 | **Tickets & Query Escalation**    | N/A | Secured query/ticket tracking including comments, status transitions, optimistic locking, and background SLA escalation with GxP audit logs | v1.9.0 | Supported |
 | **CRF Builder**                    | Interactive graphical canvas layout design, Global Library template instantiation, peer reviews, cycle simulations, and XML/PDF exports | Local sync recovery database, FHIR pre-fill, and multi-channel reminders | v1.10.0 | In Progress |
+| **Controlled Terminology (CDISC CT)** | Stateless real-time CDISC CT / NCI Thesaurus search, live concept code verification, and terminology caching (referencing ADR-058, ADR-065, and ADR-067) | N/A (Stateless read-only queries with signed headers) | v1.11.0 | Supported |
 
 ---
 
@@ -53,6 +54,7 @@ The table below specifies how individual clinical domain entities are processed,
 | **ePRO Submissions** | Interop Service | SQLite/PostgreSQL | Immutable database-level submission logging and conflict strategy reconciliation |
 | **Patient Notifications**| Interop Service | SQLite/PostgreSQL | Append-only delivery logs and read acknowledgment timestamp auditing |
 | **Clinical Coding Assignments**| Execution | SQLite/PostgreSQL | Automated event-driven coding assignments, manual review overrides, system coding query triggers, and version up-versioning ledgers |
+| **Terminology Concept Codes**  | Designer  | Neo4j / In-Memory Cache | Stateless search, code verification, and design-time metadata validation (NCI Thesaurus/CDISC CT) with signed headers |
 | **Biostatistical Exports** | Execution | SQLite/PostgreSQL | Audit-logged `BiostatExport` transactions with Dataset-JSON validation |
 | **Global Library Objects** | Designer | Neo4j/Mock DB | Graph node versioning via `PREVIOUS_VERSION` chains and metadata JSON serialization |
 | **Study Library Instances** | Designer | Neo4j/Mock DB | Copy-on-instantiation clones linked via `INSTANTIATED_FROM` with local overrides |

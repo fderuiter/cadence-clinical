@@ -6,7 +6,6 @@ Requirements: PRD-SYS-001
 import hashlib
 import importlib
 import uuid
-from typing import List, Optional
 
 from sqlalchemy import Boolean, String, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -44,7 +43,7 @@ class EISFBinderDocument(Base):
     sha256_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     uploaded_by: Mapped[str] = mapped_column(String(255), nullable=False)
     is_redacted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    parent_document_id: Mapped[Optional[str]] = mapped_column(
+    parent_document_id: Mapped[str | None] = mapped_column(
         String(36), nullable=True, index=True
     )
 
@@ -82,7 +81,7 @@ class EISFBinderService:
 
     async def get_site_binder(
         self, site_id: str, requesting_user: Principal
-    ) -> List[EISFBinderDocument]:
+    ) -> list[EISFBinderDocument]:
         """Query site-scoped documents for a site if the user is authorized.
 
         Args:
@@ -149,7 +148,7 @@ class EISFBinderService:
     async def create_redacted_copy(
         self,
         document_id: str,
-        phi_terms: List[str],
+        phi_terms: list[str],
     ) -> EISFBinderDocument:
         """Create a redacted copy of a document while preserving the original.
 

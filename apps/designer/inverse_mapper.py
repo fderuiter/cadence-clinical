@@ -2,13 +2,13 @@
 Inverse USDM mapper for Phase 2 - Bidirectional Import & Export Mapping.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 from apps.designer.db import MOCK_TERMINOLOGY
 from apps.designer.rules import ExpressionNode, detect_circular_dependencies
 
 
-def resolve_concept_id(concept_dict: Optional[Dict[str, Any]]) -> Optional[str]:
+def resolve_concept_id(concept_dict: dict[str, Any] | None) -> str | None:
     """Resolves a terminology concept ID (key) given a concept dict with a 'code'.
     Searches first within the terminology cache, falling back to MOCK_TERMINOLOGY,
     and then defaulting to the code itself.
@@ -31,7 +31,7 @@ def resolve_concept_id(concept_dict: Optional[Dict[str, Any]]) -> Optional[str]:
     return str(code)
 
 
-def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
+def map_usdm_to_study(usdm_data: dict[str, Any]) -> dict[str, Any]:
     """Inverse mapper that reconstructs the internal study projection dictionary
     from a validated, normalized USDM representation.
 
@@ -155,7 +155,7 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
 
     # 3. Reconstruct arms, visits, and activities
     arms_projection = []
-    preservation_metadata: Dict[str, Any] = {"unmapped_fields": {}}
+    preservation_metadata: dict[str, Any] = {"unmapped_fields": {}}
 
     # Standard fields for study
     known_study_keys = {
@@ -335,7 +335,7 @@ def map_usdm_to_study(usdm_data: Dict[str, Any]) -> Dict[str, Any]:
         arms_projection.append(arm_projection)
 
     # 4. Reconstruct Rules with strict AST schema checks and circular dependency detection
-    rules_dict: Dict[str, Dict[str, Any]] = {}
+    rules_dict: dict[str, dict[str, Any]] = {}
 
     # Process top-level rules first
     for r in data.get("rules", []):

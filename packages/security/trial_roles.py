@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import StrEnum
 
 from fastapi import HTTPException, Request
 
@@ -10,7 +10,7 @@ from packages.security.rbac import (
 )
 
 
-class TrialRole(str, Enum):
+class TrialRole(StrEnum):
     SITE_PI = "principal_investigator"
     CRA_MONITOR = "cra"
     DATA_MANAGER = "sponsor_dm"

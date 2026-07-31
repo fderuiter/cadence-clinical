@@ -10,7 +10,9 @@ export default [
       "**/node_modules/**",
       "**/.venv/**",
       "**/venv/**",
-      "**/.pytest_cache/**"
+      "**/.pytest_cache/**",
+      "**/playwright-report/**",
+      "**/test-results/**"
     ],
   },
   js.configs.recommended,

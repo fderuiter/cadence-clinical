@@ -1734,6 +1734,7 @@ async function initializeApp() {
     }
   } else {
     // If window.__MOCK_TEST_ENV__ is true, we keep state.session.isDemoMode as-is (e.g. tests can override or drive it)
+    state.session.isOfflineMode = false;
   }
 
   // Set participant visual name

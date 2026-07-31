@@ -1,13 +1,13 @@
 """ADAE derivation module for SDTM AE and ADSL datasets."""
 
 from datetime import date, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from apps.execution.biostat.dates import impute_partial_date, to_sas_date
 from apps.execution.biostat.terminology import normalize_severity
 
 
-def from_sas_date(sas_date: Optional[int]) -> Optional[str]:
+def from_sas_date(sas_date: int | None) -> str | None:
     """Converts a SAS numeric date (days since 1960-01-01) back to 'YYYY-MM-DD' ISO format.
 
     Args:
@@ -24,9 +24,9 @@ def from_sas_date(sas_date: Optional[int]) -> Optional[str]:
 
 
 def derive_adae(
-    adsl_records: List[Dict[str, Any]],
-    ae_records: List[Dict[str, Any]],
-) -> List[Dict[str, Any]]:
+    adsl_records: list[dict[str, Any]],
+    ae_records: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
     """Derives the Occurrence-Structured Adverse Events Analysis Dataset (ADAE).
 
     Each AE record is matched and joined to its ADSL subject based on USUBJID.

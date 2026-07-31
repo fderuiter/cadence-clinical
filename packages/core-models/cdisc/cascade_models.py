@@ -3,7 +3,7 @@
 Requirements: PRD-SYS-001
 """
 
-from typing import Any, Dict, List
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -19,7 +19,7 @@ class CascadedFormTemplate(BaseModel):
     domain: str = Field(
         ..., description="Target CDASH/SDTM domain code (e.g. VS, LB, AE)"
     )
-    fields: List[Dict[str, Any]] = Field(
+    fields: list[dict[str, Any]] = Field(
         default_factory=list, description="Form field definitions"
     )
     auto_generated: bool = Field(
@@ -40,6 +40,6 @@ class CascadeSummaryReport(BaseModel):
     )
     visits_created: int = Field(..., description="Number of SoA visits synchronized")
     rules_synced: int = Field(..., description="Number of edit check rules generated")
-    forms: List[CascadedFormTemplate] = Field(
+    forms: list[CascadedFormTemplate] = Field(
         default_factory=list, description="Cascaded form templates"
     )

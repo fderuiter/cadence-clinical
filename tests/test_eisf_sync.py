@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 import pytest_asyncio
@@ -387,9 +387,7 @@ async def test_eisf_sync_conflict_merge_lww_incoming_wins(
         created_at_dt = doc.created_at
 
     # Build incoming with a much newer timestamp
-    future_time = (
-        (created_at_dt + timedelta(hours=2)).replace(tzinfo=timezone.utc).isoformat()
-    )
+    future_time = (created_at_dt + timedelta(hours=2)).replace(tzinfo=UTC).isoformat()
 
     payload_sync = {
         "submissions": [
@@ -476,9 +474,7 @@ async def test_eisf_sync_conflict_merge_lww_existing_wins(
         created_at_dt = doc.created_at
 
     # Build incoming with a much older timestamp
-    past_time = (
-        (created_at_dt - timedelta(hours=2)).replace(tzinfo=timezone.utc).isoformat()
-    )
+    past_time = (created_at_dt - timedelta(hours=2)).replace(tzinfo=UTC).isoformat()
 
     payload_sync = {
         "submissions": [
@@ -542,7 +538,7 @@ async def test_eisf_sync_conflict_merge_lexicographic_tiebreaker(
     )
 
     # Pre-populate existing document with timestamp and modified_by = "alpha"
-    timestamp_iso = datetime.utcnow().replace(tzinfo=timezone.utc).isoformat()
+    timestamp_iso = datetime.utcnow().replace(tzinfo=UTC).isoformat()
     payload_init = {
         "study_id": "study-100",
         "site_id": "site-boston-01",
@@ -654,10 +650,10 @@ async def test_eisf_sync_per_field_metadata_lww(mock_etmf_propagation) -> None:
             "approver": "Sponsor Exist",
             "timestamps": {
                 "reviewer": (t_base + timedelta(hours=1))
-                .replace(tzinfo=timezone.utc)
+                .replace(tzinfo=UTC)
                 .isoformat(),
                 "approver": (t_base - timedelta(hours=1))
-                .replace(tzinfo=timezone.utc)
+                .replace(tzinfo=UTC)
                 .isoformat(),
             },
         },
@@ -682,11 +678,11 @@ async def test_eisf_sync_per_field_metadata_lww(mock_etmf_propagation) -> None:
                     "timestamps": {
                         # Incoming reviewer timestamp is OLDER than existing -> will lose
                         "reviewer": (t_base - timedelta(hours=2))
-                        .replace(tzinfo=timezone.utc)
+                        .replace(tzinfo=UTC)
                         .isoformat(),
                         # Incoming approver timestamp is NEWER than existing -> will win
                         "approver": (t_base + timedelta(hours=2))
-                        .replace(tzinfo=timezone.utc)
+                        .replace(tzinfo=UTC)
                         .isoformat(),
                     },
                 },

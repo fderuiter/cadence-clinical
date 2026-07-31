@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Optional
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func
@@ -11,7 +11,7 @@ class Base(DeclarativeBase):
     pass
 
 
-class DeviationStatus(str, Enum):
+class DeviationStatus(StrEnum):
     REPORTED = "REPORTED"
     UNDER_INVESTIGATION = "UNDER_INVESTIGATION"
     RCA_COMPLETE = "RCA_COMPLETE"
@@ -20,7 +20,7 @@ class DeviationStatus(str, Enum):
     CLOSED = "CLOSED"
 
 
-class CAPAStatus(str, Enum):
+class CAPAStatus(StrEnum):
     INITIATED = "INITIATED"
     UNDER_REVIEW = "UNDER_REVIEW"
     IMPLEMENTATION = "IMPLEMENTATION"
@@ -29,13 +29,13 @@ class CAPAStatus(str, Enum):
     CANCELLED = "CANCELLED"
 
 
-class DeviationSeverity(str, Enum):
+class DeviationSeverity(StrEnum):
     MINOR = "MINOR"
     MAJOR = "MAJOR"
     CRITICAL = "CRITICAL"
 
 
-class DeviationType(str, Enum):
+class DeviationType(StrEnum):
     INFORMED_CONSENT = "INFORMED_CONSENT"
     ELIGIBILITY = "ELIGIBILITY"
     PROTOCOL_PROCEDURE = "PROTOCOL_PROCEDURE"
@@ -56,9 +56,7 @@ class Deviation(Base):
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
     study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    site_id: Mapped[Optional[str]] = mapped_column(
-        String(255), nullable=True, index=True
-    )
+    site_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(String, nullable=False)
     severity: Mapped[DeviationSeverity] = mapped_column(String(50), nullable=False)
@@ -110,9 +108,7 @@ class RootCauseAnalysis(Base):
 
     # Traceability & Mutable-Record Audit Fields
     study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    site_id: Mapped[Optional[str]] = mapped_column(
-        String(255), nullable=True, index=True
-    )
+    site_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), nullable=False
     )
@@ -143,7 +139,7 @@ class CAPARecord(Base):
         nullable=False,
         index=True,
     )
-    rca_id: Mapped[Optional[str]] = mapped_column(
+    rca_id: Mapped[str | None] = mapped_column(
         String(36),
         ForeignKey("quality_root_cause_analyses.id", ondelete="SET NULL"),
         nullable=True,
@@ -156,16 +152,14 @@ class CAPARecord(Base):
     status: Mapped[CAPAStatus] = mapped_column(
         String(50), default=CAPAStatus.INITIATED, nullable=False
     )
-    preventive_measures: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    target_completion_date: Mapped[Optional[datetime]] = mapped_column(
+    preventive_measures: Mapped[str | None] = mapped_column(String, nullable=True)
+    target_completion_date: Mapped[datetime | None] = mapped_column(
         DateTime, nullable=True
     )
 
     # Traceability & Mutable-Record Audit Fields
     study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    site_id: Mapped[Optional[str]] = mapped_column(
-        String(255), nullable=True, index=True
-    )
+    site_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), nullable=False
     )
@@ -197,5 +191,5 @@ class QualityAuditLog(Base):
     user_role: Mapped[str] = mapped_column(String(255), nullable=False)
     action: Mapped[str] = mapped_column(String(50), nullable=False)
     details: Mapped[str] = mapped_column(String(1000), nullable=False)
-    record_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    change_reason: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
+    record_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    change_reason: Mapped[str | None] = mapped_column(String(1000), nullable=True)

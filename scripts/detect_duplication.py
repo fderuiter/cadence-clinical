@@ -10,7 +10,6 @@ import json
 import os
 import re
 import sys
-from typing import Dict, List, Tuple
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -73,7 +72,7 @@ def normalize_line(line: str) -> str:
 
 def scan_file_for_lines(
     file_path: str,
-) -> List[Tuple[str, int, str]]:
+) -> list[tuple[str, int, str]]:
     """Reads a file and returns a list of its normalized non-empty lines with metadata.
 
     Args:
@@ -84,7 +83,7 @@ def scan_file_for_lines(
     """
     valid_lines = []
     try:
-        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+        with open(file_path, encoding="utf-8", errors="ignore") as f:
             for idx, line in enumerate(f, start=1):
                 norm = normalize_line(line)
                 if norm:
@@ -156,7 +155,7 @@ def main() -> None:
 
     # 2. Extract blocks from all files to index them
     # seen_blocks mapping: block_hash -> list of locations (file_path, start_line, end_line, preview_text)
-    seen_blocks: Dict[str, List[Tuple[str, int, int, str]]] = {}
+    seen_blocks: dict[str, list[tuple[str, int, int, str]]] = {}
 
     for file_path in all_files:
         lines_meta = scan_file_for_lines(file_path)

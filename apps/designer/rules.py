@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Literal
 
 from pydantic import BaseModel, model_validator
 
@@ -11,9 +11,9 @@ class FieldReference(BaseModel):
     """
 
     field_id: str
-    form_id: Optional[str] = None
-    visit_id: Optional[str] = None
-    visit_relative: Optional[str] = None  # e.g., "previous", "next"
+    form_id: str | None = None
+    visit_id: str | None = None
+    visit_relative: str | None = None  # e.g., "previous", "next"
 
 
 class ExpressionNode(BaseModel):
@@ -22,10 +22,10 @@ class ExpressionNode(BaseModel):
     """
 
     type: Literal["logical", "comparison", "function", "field_ref", "constant"]
-    operator: Optional[str] = None
-    operands: Optional[List[ExpressionNode]] = None
-    value: Optional[Any] = None
-    field_ref: Optional[FieldReference] = None
+    operator: str | None = None
+    operands: list[ExpressionNode] | None = None
+    value: Any | None = None
+    field_ref: FieldReference | None = None
 
     @model_validator(mode="after")
     def validate_node(self) -> ExpressionNode:
@@ -89,8 +89,8 @@ class SkipLogicRule(BaseModel):
     condition: ExpressionNode
     action: Literal["show", "hide"]
     target_field: str
-    target_form: Optional[str] = None
-    target_group: Optional[str] = None
+    target_form: str | None = None
+    target_group: str | None = None
     version_index: int = 1
     is_deleted: bool = False
 
@@ -105,7 +105,7 @@ class ConstraintRule(BaseModel):
     type: Literal["constraint"] = "constraint"
     condition: ExpressionNode
     target_field: str
-    target_form: Optional[str] = None
+    target_form: str | None = None
     query_message: str
     version_index: int = 1
     is_deleted: bool = False
@@ -144,11 +144,11 @@ class CreateRuleRequest(BaseModel):
 
     type: Literal["skip_logic", "constraint", "cross_form_check"]
     condition: ExpressionNode
-    action: Optional[Literal["show", "hide"]] = None
-    target_field: Optional[str] = None
-    target_form: Optional[str] = None
-    target_group: Optional[str] = None
-    query_message: Optional[str] = None
+    action: Literal["show", "hide"] | None = None
+    target_field: str | None = None
+    target_form: str | None = None
+    target_group: str | None = None
+    query_message: str | None = None
 
     @model_validator(mode="after")
     def validate_payload(self) -> CreateRuleRequest:
@@ -237,7 +237,7 @@ def compile_to_xpath(node: ExpressionNode) -> str:
     return ""
 
 
-def extract_field_references(node: ExpressionNode) -> List[FieldReference]:
+def extract_field_references(node: ExpressionNode) -> list[FieldReference]:
     """
     Traverses the ExpressionNode tree to collect all FieldReferences.
     """
@@ -251,8 +251,8 @@ def extract_field_references(node: ExpressionNode) -> List[FieldReference]:
 
 
 def detect_unknown_fields(
-    node: ExpressionNode, study_projection: Dict[str, Any]
-) -> List[str]:
+    node: ExpressionNode, study_projection: dict[str, Any]
+) -> list[str]:
     """
     Checks if referenced fields, forms, or visits do not exist in the study projection.
     Returns a list of validation failure messages.
@@ -282,7 +282,7 @@ def detect_unknown_fields(
     return failures
 
 
-def detect_circular_dependencies(rules: List[Dict[str, Any]]) -> List[str]:
+def detect_circular_dependencies(rules: list[dict[str, Any]]) -> list[str]:
     """
     Analyzes skip-logic rules to detect circular visibility dependencies.
     Returns a list of circular dependency path description strings.

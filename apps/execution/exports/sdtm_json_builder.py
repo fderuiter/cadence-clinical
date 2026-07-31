@@ -3,7 +3,7 @@
 Requirements: PRD-SYS-001
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from sdtm.scrubber_models import DeidentConfig
 
@@ -25,9 +25,9 @@ class SDTMJSONBuilder:
         self,
         study_id: str,
         domain: str,
-        records: List[Dict[str, Any]],
-        supp_records: Optional[List[Dict[str, Any]]] = None,
-    ) -> Dict[str, Any]:
+        records: list[dict[str, Any]],
+        supp_records: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
         """Scrubs clinical records and serializes them to CDISC Dataset-JSON format.
 
         Requirements: PRD-SYS-001

@@ -1,6 +1,4 @@
-from typing import Dict, Optional, Tuple
-
-UNIT_ALIASES: Dict[str, str] = {
+UNIT_ALIASES: dict[str, str] = {
     # Temperature
     "cel": "Cel",
     "c": "Cel",
@@ -56,7 +54,7 @@ UNIT_ALIASES: Dict[str, str] = {
 }
 
 # Mapping of standard UCUM units to their base unit and multiplication factor to base unit
-CONVERSIONS: Dict[str, Tuple[str, float]] = {
+CONVERSIONS: dict[str, tuple[str, float]] = {
     # Mass (Base: kg)
     "kg": ("kg", 1.0),
     "[lb_av]": ("kg", 0.45359237),
@@ -151,8 +149,8 @@ def convert_unit(value: float, from_unit: str, to_unit: str) -> float:
 
 
 def get_normalized_representation(
-    value: Optional[float], unit: Optional[str]
-) -> Tuple[Optional[float], Optional[str]]:
+    value: float | None, unit: str | None
+) -> tuple[float | None, str | None]:
     """Normalize a clinical measurement to its standard reference base UCUM unit.
 
     Standard references used:

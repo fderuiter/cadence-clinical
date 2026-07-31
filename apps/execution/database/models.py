@@ -200,6 +200,13 @@ class ClinicalSubject(AuditedModel):
     kit_reference: Mapped[str] = mapped_column(String(255), nullable=True)
     enrollment_index: Mapped[int] = mapped_column(Integer, nullable=True)
 
+    # RTSM / Randomization fields
+    treatment_group: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    randomization_seed: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    investigational_product_id: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True
+    )
+
     @validates("status")
     def validate_status(self, key, value):
         """Validates that transitions of status obey the allowed-transition guard."""
@@ -937,11 +944,141 @@ class LabReferenceRange(AuditedModel):
     critical_low: Mapped[float] = mapped_column(Float, nullable=True)
     critical_high: Mapped[float] = mapped_column(Float, nullable=True)
 
+    # GxP 21 CFR Part 11 Audit fields
+    created_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, server_default=func.now(), nullable=True
+    )
+    created_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    reason_for_change: Mapped[Optional[str]] = mapped_column(
+        String(1000), nullable=True
+    )
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
     # Synonyms for backward compatibility
     source = synonym("lab_source")
     sex_applicability = synonym("sex")
     low_bound = synonym("range_low")
     high_bound = synonym("range_high")
+
+    created_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, server_default=func.now(), nullable=True
+    )
+    created_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    reason_for_change: Mapped[Optional[str]] = mapped_column(
+        String(1000), nullable=True
+    )
+    version_index: Mapped[Optional[int]] = mapped_column(
+        Integer, default=1, nullable=True
+    )
+
+
+class LabTestMasterLegacy(AuditedModel):
+    """Represents the legacy lab test master catalog.
+
+    Attributes:
+        study_id (str): Unique clinical trial study identifier.
+        test_code (str): The laboratory test code.
+        test_name (str): Full descriptive name of the test parameter.
+        default_unit (str): Default unit of measurement.
+        normalized_unit (str): Normalized unit of measurement.
+        loinc_code (str): Logical Observation Identifiers Names and Codes identifier.
+    """
+
+    __tablename__ = "lab_test_master"
+    __table_args__ = (Index("idx_lab_master_legacy_lookup", "study_id", "test_code"),)
+
+    study_id: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
+    test_code: Mapped[str] = mapped_column(String(100), index=True, nullable=False)
+    test_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    default_unit: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    normalized_unit: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    loinc_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+
+    created_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, server_default=func.now(), nullable=True
+    )
+    created_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    reason_for_change: Mapped[Optional[str]] = mapped_column(
+        String(1000), nullable=True
+    )
+    version_index: Mapped[Optional[int]] = mapped_column(
+        Integer, default=1, nullable=True
+    )
+
+
+class LabUnitConversion(AuditedModel):
+    """Represents a unit conversion formula for laboratory values.
+
+    Attributes:
+        study_id (str): Unique clinical trial study identifier.
+        test_code (str): The laboratory test code.
+        from_unit (str): Original unit.
+        to_unit (str): Target unit.
+        factor (float): Multiplicative conversion factor.
+        offset (float): Additive offset for the conversion formula.
+    """
+
+    __tablename__ = "lab_unit_conversions"
+    __table_args__ = (
+        Index(
+            "idx_lab_unit_conversion_lookup",
+            "study_id",
+            "test_code",
+            "from_unit",
+            "to_unit",
+        ),
+    )
+
+    study_id: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
+    test_code: Mapped[str] = mapped_column(String(100), index=True, nullable=False)
+    from_unit: Mapped[str] = mapped_column(String(50), nullable=False)
+    to_unit: Mapped[str] = mapped_column(String(50), nullable=False)
+    factor: Mapped[float] = mapped_column(Float, nullable=False)
+    offset: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+
+    created_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, server_default=func.now(), nullable=True
+    )
+    created_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    reason_for_change: Mapped[Optional[str]] = mapped_column(
+        String(1000), nullable=True
+    )
+    version_index: Mapped[Optional[int]] = mapped_column(
+        Integer, default=1, nullable=True
+    )
+
+
+class LabTestMaster(AuditedModel):
+    """Represents a laboratory test catalog master record, enabling standardized catalog definition.
+
+    Attributes:
+        study_id (str): The unique identifier of the study.
+        test_code (str): The laboratory test code (e.g. 'HEMOGLOBIN').
+        test_name (str): The name/description of the test parameter.
+        default_unit (str): The default unit of measurement for this test.
+        normalized_unit (str): The standardized normalized unit of measurement.
+        loinc_code (str): Optional LOINC code for standardized medical coding.
+    """
+
+    __tablename__ = "lab_test_masters"
+    __table_args__ = (Index("idx_lab_test_master_lookup", "study_id", "test_code"),)
+
+    study_id: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
+    test_code: Mapped[str] = mapped_column(String(100), index=True, nullable=False)
+    test_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    default_unit: Mapped[str] = mapped_column(String(50), nullable=False)
+    normalized_unit: Mapped[str] = mapped_column(String(50), nullable=False)
+    loinc_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+
+    # GxP 21 CFR Part 11 Audit fields
+    created_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, server_default=func.now(), nullable=True
+    )
+    created_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    reason_for_change: Mapped[Optional[str]] = mapped_column(
+        String(1000), nullable=True
+    )
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
 
 class FormSubmission(AuditedModel):

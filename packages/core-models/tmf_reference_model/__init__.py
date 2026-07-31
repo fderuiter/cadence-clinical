@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from tmf_reference_model.models import Artifact, Section, TaxonomyCatalog, Zone
 
@@ -362,7 +362,7 @@ CADENCE_EXTENSIONS_RAW = {
 def build_catalog(
     version: str,
     raw_data: dict,
-    extensions: Optional[Dict[str, Tuple[str, str, int]]] = None,
+    extensions: dict[str, tuple[str, str, int]] | None = None,
 ) -> TaxonomyCatalog:
     """
     Build a TaxonomyCatalog from structured raw dictionary data and optional extensions.
@@ -415,8 +415,8 @@ class TaxonomyRegistry:
     """
 
     def __init__(self):
-        self._catalogs: Dict[str, TaxonomyCatalog] = {}
-        self._active_version: Optional[str] = None
+        self._catalogs: dict[str, TaxonomyCatalog] = {}
+        self._active_version: str | None = None
 
     def register_catalog(self, catalog: TaxonomyCatalog) -> None:
         """
@@ -454,7 +454,7 @@ class TaxonomyRegistry:
             raise RuntimeError("No active taxonomy catalog version is set.")
         return self._catalogs[self._active_version]
 
-    def get_registered_versions(self) -> List[str]:
+    def get_registered_versions(self) -> list[str]:
         """
         Get all registered catalog versions.
         """
@@ -511,7 +511,7 @@ def set_active_version(version: str) -> None:
     _registry.set_active_version(version)
 
 
-def get_registered_versions() -> List[str]:
+def get_registered_versions() -> list[str]:
     """
     List all currently registered catalog versions.
     """
@@ -538,8 +538,8 @@ MILESTONE_MANDATORY_ARTIFACTS = {
 
 
 def resolve_artifact(
-    version: str, code: Optional[str] = None, name: Optional[str] = None
-) -> Dict[str, Any]:
+    version: str, code: str | None = None, name: str | None = None
+) -> dict[str, Any]:
     """
     Resolves an artifact by canonical code, display name, or both in the requested version.
 
@@ -669,7 +669,7 @@ def validate_hierarchy(
         )
 
 
-def get_mandatory_artifacts(milestone: str, version: str) -> List[Artifact]:
+def get_mandatory_artifacts(milestone: str, version: str) -> list[Artifact]:
     """
     Returns the mandatory artifact set for the supported milestones (INITIATION, CONDUCT, and CLOSEOUT)
     in the requested catalog version.

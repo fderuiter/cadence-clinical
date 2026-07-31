@@ -1,4 +1,5 @@
-from typing import Any, Callable, Dict, List, Optional, Set
+from collections.abc import Callable
+from typing import Any
 
 import pydantic
 from fastapi import Depends, HTTPException, Request, status
@@ -137,7 +138,7 @@ ROLE_ALIASES = {
 # Key format: ROLE -> RESOURCE -> SET OF ACTIONS
 # Actions: "create", "read", "update", "delete"
 # Phase 1: Expanded centralized RBAC matrix with designer resource keys and actions
-ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
+ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
     ROLE_SYSADMIN: {
         "study_design": {"create", "read", "update", "delete", "approve", "reorder"},
         "global_library": {
@@ -208,6 +209,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "eisf_document": {"create", "read", "update", "delete", "sync"},
         # Medical Coding
         "medical_coding": {"create", "read", "update"},
+        "lab_range": {"create", "read", "update", "delete"},
     },
     ROLE_SPONSOR_DESIGNER: {
         "study_design": {"create", "read", "update", "delete", "approve", "reorder"},
@@ -303,6 +305,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "eisf_document": {"create", "read", "update", "delete", "sync"},
         # Medical Coding
         "medical_coding": {"create", "read", "update"},
+        "lab_range": {"create", "read", "update", "delete"},
     },
     ROLE_SPONSOR_MM: {
         "study_design": {"read"},
@@ -333,6 +336,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
             "update",
         },  # 'Ans' (Answer query) maps to update/read
         "sdv": {"read"},
+        "lab_range": {"read"},
         "system_audit_logs": {"read"},
         "regulatory_form": {"create", "read", "sign"},
         "training_log": {"create", "read", "sign"},
@@ -359,6 +363,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
             "update",
         },  # 'C/R/U (Draft)' maps to create/read/update
         "query_lifecycle": {"read", "update"},  # 'Ans' maps to update/read
+        "lab_range": {"read"},
         "system_audit_logs": {"read"},
         "regulatory_form": {"create", "read", "sign"},
         "training_log": {"create", "read", "sign"},
@@ -403,6 +408,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "eisf_document": {"create", "read", "update", "delete", "sync"},
         # Medical Coding
         "medical_coding": {"read"},
+        "lab_range": {"create", "read", "update", "delete"},
     },
     "monitor": {
         "study_design": {"read"},
@@ -425,6 +431,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "quality_event": {"create", "read", "update"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
+        "lab_range": {"create", "read", "update", "delete"},
     },
     ROLE_SUBJECT: {
         "ecrf_data_entry": {"create", "update"},  # 'Diary' maps to create/update
@@ -554,6 +561,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "quality_audit_logs": {"read"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
+        "lab_range": {"create", "read", "update", "delete"},
     },
     "quality_manager": {
         "quality_event": {"create", "read", "update", "delete", "investigate"},
@@ -648,7 +656,7 @@ ROLE_PERMISSIONS[ROLE_LEAD_INVESTIGATOR] = _PI_BASE_PERMISSIONS.copy()
 
 # Field-level blinding/masking rules from §2.3
 # These are applied to sensitive fields for blinded users.
-MASKING_RULES: Dict[str, Callable[[Any], Any]] = {
+MASKING_RULES: dict[str, Callable[[Any], Any]] = {
     "initials": lambda val: "**" if val else val,
     "ssn": lambda val: "***-**-****" if val else val,
     "dob": lambda val: "MASKED" if val else val,
@@ -667,7 +675,7 @@ MASKING_RULES: Dict[str, Callable[[Any], Any]] = {
 }
 
 # Canonical set of site-scoped trial personas
-SITE_SCOPED_ROLES: Set[str] = {
+SITE_SCOPED_ROLES: set[str] = {
     ROLE_INVESTIGATOR,
     ROLE_CRC,
     ROLE_CRA_CANONICAL,
@@ -678,7 +686,7 @@ SITE_SCOPED_ROLES: Set[str] = {
     ROLE_LEAD_INVESTIGATOR,
 }
 
-UNMASKED_ALLOCATION_FIELDS: Set[str] = {
+UNMASKED_ALLOCATION_FIELDS: set[str] = {
     "treatment_arm",
     "treatment_arm_id",
     "randomization_seed",
@@ -689,7 +697,7 @@ UNMASKED_ALLOCATION_FIELDS: Set[str] = {
     "encrypted_sequence",
 }
 
-UNMASKED_SUPPLY_FIELDS: Set[str] = {
+UNMASKED_SUPPLY_FIELDS: set[str] = {
     "drug_code",
     "administered_drug_code",
     "kit_reference",
@@ -701,7 +709,7 @@ UNMASKED_SUPPLY_FIELDS: Set[str] = {
 # field visibility for those roles is conferred only via the controlled emergency-
 # unblinding endpoint, which returns the decrypted value directly in its response
 # without persisting wide-open field visibility in the session principal.
-ROLE_UNMASKED_FIELDS: Dict[str, Set[str]] = {
+ROLE_UNMASKED_FIELDS: dict[str, set[str]] = {
     ROLE_UNBLINDED_STATISTICIAN: UNMASKED_ALLOCATION_FIELDS,
     ROLE_IDMC: UNMASKED_ALLOCATION_FIELDS,
     ROLE_PHARMACIST: UNMASKED_SUPPLY_FIELDS,
@@ -712,13 +720,13 @@ ROLE_UNMASKED_FIELDS: Dict[str, Set[str]] = {
 # Traceability Note: Principal now captures sponsor scope (sponsor_id) as a contract change per ADR-86.
 class Principal(BaseModel):
     user_id: str
-    roles: List[str]  # Normalized canonical roles
-    assigned_sites: List[str] = Field(default_factory=list)
-    assigned_studies: List[str] = Field(default_factory=list)
+    roles: list[str]  # Normalized canonical roles
+    assigned_sites: list[str] = Field(default_factory=list)
+    assigned_studies: list[str] = Field(default_factory=list)
     unblinded_access: bool = False
-    sponsor_id: Optional[str] = None
-    change_reason: Optional[str] = None
-    raw_roles: List[str] = Field(default_factory=list)
+    sponsor_id: str | None = None
+    change_reason: str | None = None
+    raw_roles: list[str] = Field(default_factory=list)
 
 
 def normalize_role(role: str) -> str:
@@ -1112,7 +1120,7 @@ async def get_principal(request: Request) -> Principal:
                 if body:
                     body_json = json.loads(body)
 
-                    def find_reason_in_dict(d: dict) -> Optional[str]:
+                    def find_reason_in_dict(d: dict) -> str | None:
                         for key in ("reason_for_change", "change_reason", "reason"):
                             if key in d and isinstance(d[key], str) and d[key].strip():
                                 return d[key].strip()
@@ -1208,7 +1216,7 @@ def mask_payload(payload: Any, principal: Principal) -> Any:
     rtsm_roles = [r for r in principal.roles if r in ROLE_UNMASKED_FIELDS]
     if rtsm_roles:
         # Union of all unmasked fields for their active RTSM roles
-        unmasked_fields: Set[str] = set()
+        unmasked_fields: set[str] = set()
         for r in rtsm_roles:
             unmasked_fields.update(ROLE_UNMASKED_FIELDS[r])
         return _recursive_mask(payload, unmasked_fields=unmasked_fields)
@@ -1216,7 +1224,7 @@ def mask_payload(payload: Any, principal: Principal) -> Any:
     return _recursive_mask(payload)
 
 
-def _recursive_mask(data: Any, unmasked_fields: Optional[Set[str]] = None) -> Any:
+def _recursive_mask(data: Any, unmasked_fields: set[str] | None = None) -> Any:
     if data is None:
         return None
 
@@ -1377,7 +1385,7 @@ ROLE_EXPANSIONS = {
 }
 
 
-def require_roles(*allowed_roles: str, detail: Optional[str] = None):
+def require_roles(*allowed_roles: str, detail: str | None = None):
     """
     FastAPI dependency factory to enforce that the caller has at least one of the allowed roles.
     Allows case-insensitive, whitespace-insensitive matches and role synonym expansion.

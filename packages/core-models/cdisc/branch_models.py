@@ -3,8 +3,6 @@
 Requirements: PRD-SYS-001
 """
 
-from typing import List, Optional
-
 from pydantic import BaseModel, Field
 
 
@@ -39,10 +37,10 @@ class BlockDiff(BaseModel):
     change_type: str = Field(
         ..., description="Diff status: ADDED, MODIFIED, DELETED, UNCHANGED"
     )
-    old_content: Optional[str] = Field(
+    old_content: str | None = Field(
         None, description="Previous content string in baseline"
     )
-    new_content: Optional[str] = Field(
+    new_content: str | None = Field(
         None, description="Updated content string in amendment draft"
     )
 
@@ -56,7 +54,7 @@ class AmendmentComparisonResponse(BaseModel):
     study_id: str = Field(..., description="Protocol study ID")
     source_branch: str = Field(..., description="Source baseline branch")
     target_branch: str = Field(..., description="Target amendment branch")
-    diffs: List[BlockDiff] = Field(
+    diffs: list[BlockDiff] = Field(
         default_factory=list, description="List of block-level diffs"
     )
     total_changes: int = Field(

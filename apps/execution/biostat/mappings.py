@@ -1,5 +1,3 @@
-from typing import Dict, List
-
 from pydantic import BaseModel, Field
 
 
@@ -24,7 +22,7 @@ class VariableMapping(BaseModel):
 
 
 # The canonical collection of SDTM variable mappings for DM, AE, VS, LB, and MH domains.
-SDTM_MAPPINGS: List[VariableMapping] = [
+SDTM_MAPPINGS: list[VariableMapping] = [
     # --- DM (Demographics) ---
     VariableMapping(
         domain="DM",
@@ -497,14 +495,14 @@ SDTM_MAPPINGS: List[VariableMapping] = [
 ]
 
 
-def get_mappings_for_domain(domain: str) -> List[VariableMapping]:
+def get_mappings_for_domain(domain: str) -> list[VariableMapping]:
     """Retrieves all variable mappings for a specific SDTM domain."""
     return [m for m in SDTM_MAPPINGS if m.domain.upper() == domain.upper()]
 
 
-def get_mappings_by_domain() -> Dict[str, List[VariableMapping]]:
+def get_mappings_by_domain() -> dict[str, list[VariableMapping]]:
     """Groups all mappings by their target SDTM domain."""
-    grouped: Dict[str, List[VariableMapping]] = {}
+    grouped: dict[str, list[VariableMapping]] = {}
     for m in SDTM_MAPPINGS:
         grouped.setdefault(m.domain, []).append(m)
     return grouped

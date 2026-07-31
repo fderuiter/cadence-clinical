@@ -76,8 +76,7 @@ def run_command(args: list[str], check: bool = True) -> tuple[str, str]:
     try:
         res = subprocess.run(
             args,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             text=True,
             check=check,
             timeout=30,
@@ -326,7 +325,7 @@ def build_comment_body(
     v_summary_path = "/tmp/vulnerability_summary.json"  # nosec B108
     if os.path.exists(v_summary_path):
         try:
-            with open(v_summary_path, "r", encoding="utf-8") as f:
+            with open(v_summary_path, encoding="utf-8") as f:
                 v_summary = json.load(f)
             vulns = v_summary.get("vulnerabilities", [])
             inline_violations = v_summary.get("inline_violations", [])
@@ -376,7 +375,7 @@ def build_comment_body(
     dup_summary_path = "duplication_summary.json"
     if os.path.exists(dup_summary_path):
         try:
-            with open(dup_summary_path, "r", encoding="utf-8") as f:
+            with open(dup_summary_path, encoding="utf-8") as f:
                 dup_summary = json.load(f)
             duplicates = dup_summary.get("duplicates", [])
             if duplicates:

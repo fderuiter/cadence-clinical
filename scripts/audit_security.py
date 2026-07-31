@@ -10,10 +10,9 @@ Requirements: PRD-SYS-001, 21 CFR Part 11
 import os
 import re
 import sys
-from typing import List, Tuple
 
 # Regex patterns matching potential hardcoded credentials, API keys, or private keys
-SECRET_PATTERNS: List[Tuple[str, str]] = [
+SECRET_PATTERNS: list[tuple[str, str]] = [
     ("AWS Secret Key", r"(?i)aws_secret_access_key\s*=\s*['\"][A-Za-z0-9/+=]{40}['\"]"),
     ("Generic Private Key", r"-----BEGIN (RSA|EC|OPENSSH|PRIVATE) KEY-----"),
     (
@@ -34,7 +33,7 @@ EXCLUDED_PATHS = {
 }
 
 
-def scan_file_for_secrets(filepath: str) -> List[str]:
+def scan_file_for_secrets(filepath: str) -> list[str]:
     """Scan a single source file for potential hardcoded secret patterns.
 
     Args:
@@ -43,7 +42,7 @@ def scan_file_for_secrets(filepath: str) -> List[str]:
     Returns:
         List of warning string messages for detected potential secrets.
     """
-    findings: List[str] = []
+    findings: list[str] = []
 
     # Skip binary files or excluded file extensions
     if any(
@@ -53,7 +52,7 @@ def scan_file_for_secrets(filepath: str) -> List[str]:
         return findings
 
     try:
-        with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+        with open(filepath, encoding="utf-8", errors="ignore") as f:
             lines = f.readlines()
 
         for idx, line in enumerate(lines, start=1):
@@ -90,7 +89,7 @@ def run_security_audit(root_dir: str = ".") -> bool:
     print("Cadence Clinical — Automated Security & Secret Scanner")
     print("=" * 60)
 
-    total_findings: List[str] = []
+    total_findings: list[str] = []
 
     for root, dirs, files in os.walk(root_dir):
         # Filter out excluded directories in-place

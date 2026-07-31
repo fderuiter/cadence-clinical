@@ -1,5 +1,5 @@
 import copy
-from typing import Any, Dict, List
+from typing import Any
 
 from apps.designer.comparison import compare_payloads, flatten_dict
 from apps.designer.inverse_mapper import map_usdm_to_study
@@ -7,7 +7,7 @@ from apps.designer.mapper import map_study_to_usdm
 from apps.designer.rules import detect_circular_dependencies
 
 
-def detect_payload_format(payload: Dict[str, Any]) -> str:
+def detect_payload_format(payload: dict[str, Any]) -> str:
     """
     Detects if the source payload is standard CDISC USDM format or Cadence Internal study projection.
     """
@@ -16,7 +16,7 @@ def detect_payload_format(payload: Dict[str, Any]) -> str:
     return "internal"
 
 
-def detect_usdm_version(payload: Dict[str, Any]) -> str:
+def detect_usdm_version(payload: dict[str, Any]) -> str:
     """
     Attempts to detect the USDM version (v2, v3, or v4) from the payload structure or versions.
     """
@@ -33,7 +33,7 @@ def detect_usdm_version(payload: Dict[str, Any]) -> str:
     return "v2/v3"
 
 
-def execute_round_trip(source_payload: Dict[str, Any]) -> Dict[str, Any]:
+def execute_round_trip(source_payload: dict[str, Any]) -> dict[str, Any]:
     """
     Executes a complete, lossless vs lossy round-trip orchestration.
     Automatically detects direction and runs USDM->internal->USDM or internal->USDM->internal.
@@ -47,9 +47,9 @@ def execute_round_trip(source_payload: Dict[str, Any]) -> Dict[str, Any]:
     round_tripped = None
     intermediate = None
 
-    errors: List[str] = []
-    warnings: List[str] = []
-    unsupported_constructs: List[str] = []
+    errors: list[str] = []
+    warnings: list[str] = []
+    unsupported_constructs: list[str] = []
 
     if source_format == "USDM":
         direction = "USDM_to_internal_to_USDM"

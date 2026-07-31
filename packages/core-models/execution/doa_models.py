@@ -3,13 +3,12 @@
 Requirements: PRD-SYS-001
 """
 
-from enum import Enum
-from typing import List, Optional
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class DOATaskRoleEnum(str, Enum):
+class DOATaskRoleEnum(StrEnum):
     """Site personnel roles on Delegation of Authority log.
 
     Requirements: PRD-SYS-001
@@ -22,7 +21,7 @@ class DOATaskRoleEnum(str, Enum):
     DATA_MANAGER = "DATA_MANAGER"
 
 
-class DOATaskDelegationEnum(str, Enum):
+class DOATaskDelegationEnum(StrEnum):
     """Specific clinical trial study tasks delegated to site personnel.
 
     Requirements: PRD-SYS-001
@@ -47,12 +46,10 @@ class DOAAssignmentRecord(BaseModel):
     personnel_name: str = Field(..., description="Full legal name of site personnel")
     personnel_email: str = Field(..., description="Email address of site personnel")
     role: DOATaskRoleEnum = Field(..., description="Site personnel role")
-    delegated_tasks: List[DOATaskDelegationEnum] = Field(
+    delegated_tasks: list[DOATaskDelegationEnum] = Field(
         ..., description="List of delegated study tasks"
     )
     start_date: str = Field(..., description="Task delegation start date (YYYY-MM-DD)")
-    end_date: Optional[str] = Field(
-        None, description="Optional task delegation end date"
-    )
+    end_date: str | None = Field(None, description="Optional task delegation end date")
     is_active: bool = Field(True, description="True if assignment is active")
     signed_off: bool = Field(False, description="True if eSignature endorsed by PI")

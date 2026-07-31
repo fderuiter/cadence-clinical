@@ -25,9 +25,9 @@ the top-level structure of the delivered JSON payload includes:
 
 import os
 import time
-from datetime import datetime
-from enum import Enum
-from typing import Any, Dict, List, Literal, Optional, Tuple
+from datetime import UTC, datetime
+from enum import StrEnum
+from typing import Any, Literal
 
 import httpx
 from eligibility import EligibilityCriterion, ExpressionNode, parse_dsl
@@ -154,6 +154,7 @@ from apps.designer.xml_mapping import validate_mapping_csv
 from packages.security import ROLE_ALIASES, get_normalized_roles
 from packages.security.context import audit_context
 from packages.security.middleware import GatewayAuthMiddleware
+from packages.security.org_client import is_sponsor_known_to_org_directory
 from packages.security.rbac import (
     Principal,
     can_access_study,
@@ -181,9 +182,9 @@ class TerminologySearchResponse(BaseModel):
 
     query: str
     state: CodeValidationState
-    results: List[TerminologyConcept]
+    results: list[TerminologyConcept]
     total_results: int
-    error_message: Optional[str] = None
+    error_message: str | None = None
 
 
 class DifferenceResult(BaseModel):
@@ -201,9 +202,9 @@ class DifferenceResult(BaseModel):
 
 
 class VersionDiffResponse(BaseModel):
-    added_nodes: List[DifferenceResult]
-    modified_nodes: List[DifferenceResult]
-    deleted_nodes: List[DifferenceResult]
+    added_nodes: list[DifferenceResult]
+    modified_nodes: list[DifferenceResult]
+    deleted_nodes: list[DifferenceResult]
 
 
 from apps.designer.soa_models import (
@@ -240,9 +241,9 @@ class ConceptLockedError(Exception):
 
 
 class InvalidParam(BaseModel):
-    field: Optional[str] = None
-    reason: Optional[str] = None
-    value: Optional[str] = None
+    field: str | None = None
+    reason: str | None = None
+    value: str | None = None
 
 
 class ProblemDetails(BaseModel):
@@ -252,7 +253,7 @@ class ProblemDetails(BaseModel):
     detail: str
     instance: str
     code: str
-    invalid_params: Optional[List[InvalidParam]] = None
+    invalid_params: list[InvalidParam] | None = None
 
 
 app = FastAPI(title="Cadence Clinical - Designer (MDR/SDR)", version="0.1.0")
@@ -472,7 +473,7 @@ async def shutdown() -> None:
 
 
 @app.get("/health")
-async def health_check() -> Dict[str, str]:
+async def health_check() -> dict[str, str]:
     """
     Service health check endpoint.
 
@@ -485,7 +486,7 @@ async def health_check() -> Dict[str, str]:
 
 
 @app.get("/api/v1/studies/{study_id}")
-async def get_legacy_study(study_id: str) -> Dict[str, Any]:
+async def get_legacy_study(study_id: str) -> dict[str, Any]:
     """Returns the legacy internal projection with no USDM formatting.
 
     Args:
@@ -500,7 +501,7 @@ async def get_legacy_study(study_id: str) -> Dict[str, Any]:
 @app.get("/api/v2/studies/{study_id}/usdm")
 async def get_usdm_study(
     study_id: str,
-    format: Optional[str] = Query(None, description="Output format: json or yaml"),
+    format: str | None = Query(None, description="Output format: json or yaml"),
 ) -> Any:
     """Dynamically processes the internal projection and returns a compliant USDM structure.
 
@@ -568,7 +569,7 @@ async def get_usdm_study(
 async def import_usdm_study(
     study_id: str,
     request: Request,
-    override: Optional[str] = Query(
+    override: str | None = Query(
         None, description="Optional explicit version override ('v2' or 'v3')"
     ),
 ):
@@ -666,7 +667,7 @@ async def import_usdm_study(
     status_code=status.HTTP_200_OK,
     dependencies=[Depends(require_permission("designer_cache:admin"))],
 )
-async def clear_cache() -> Dict[str, str]:
+async def clear_cache() -> dict[str, str]:
     """Flushes the controlled terminology cache.
 
     Returns:
@@ -677,7 +678,7 @@ async def clear_cache() -> Dict[str, str]:
 
 
 @app.get("/api/admin/cache/status")
-async def cache_status() -> Dict[str, int]:
+async def cache_status() -> dict[str, int]:
     """Returns the current size and status of the terminology cache.
 
     Returns:
@@ -794,8 +795,8 @@ async def validate_single_code(
 )
 async def search_terminology(
     term: str = Query(...),
-    from_record: Optional[int] = Query(None),
-    page_size: Optional[int] = Query(None),
+    from_record: int | None = Query(None),
+    page_size: int | None = Query(None),
 ) -> TerminologySearchResponse:
     """
     Search or autocomplete terminology concepts by text query.
@@ -846,11 +847,11 @@ async def search_terminology(
 
 
 @app.get(
-    "/api/v1/studies/{study_id}/differences", response_model=List[DifferenceResult]
+    "/api/v1/studies/{study_id}/differences", response_model=list[DifferenceResult]
 )
 async def study_differences(
     study_id: str, action_id1: str, action_id2: str
-) -> List[DifferenceResult]:
+) -> list[DifferenceResult]:
     """
     Get human-readable field-level differences between two version actions of a study.
 
@@ -908,7 +909,7 @@ async def study_differences(
             detail=f"Target version {action_id2} is missing from the registry",
         )
 
-    def flatten_dict(d: Any, parent_key: str = "", sep: str = ".") -> Dict[str, Any]:
+    def flatten_dict(d: Any, parent_key: str = "", sep: str = ".") -> dict[str, Any]:
         """
         Recursively flatten a nested dictionary or list into a flat dictionary.
 
@@ -923,7 +924,7 @@ async def study_differences(
         Returns:
             Dict[str, Any]: A flattened dictionary mapping paths to values.
         """
-        items: List[Tuple[str, Any]] = []
+        items: list[tuple[str, Any]] = []
         if isinstance(d, dict):
             for k, v in d.items():
                 new_key = f"{parent_key}{sep}{k}" if parent_key else k
@@ -981,9 +982,9 @@ from apps.designer.delta import (
 class SectionTransitionRequest(BaseModel):
     to_status: SectionReviewStatus
     reason_for_change: str
-    username: Optional[str] = None
-    password: Optional[str] = None
-    signing_reason: Optional[SigningReason] = None
+    username: str | None = None
+    password: str | None = None
+    signing_reason: SigningReason | None = None
 
 
 @app.post(
@@ -1028,11 +1029,11 @@ async def transition_section(
     signature_manifestation = None
     if target_status == SectionReviewStatus.APPROVED:
         signer_id = principal.user_id
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         signature_manifestation = {
             "signer_id": signer_id,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "signing_reason": payload.signing_reason.value
             if payload.signing_reason
             else "Section Approval",
@@ -1125,7 +1126,7 @@ async def create_thread_endpoint(
 
 @app.get(
     "/api/v1/studies/{study_id}/sections/{section_id}/threads",
-    response_model=List[CommentThread],
+    response_model=list[CommentThread],
     status_code=200,
 )
 async def get_threads_endpoint(
@@ -1133,7 +1134,7 @@ async def get_threads_endpoint(
     section_id: str,
     request: Request,
     principal: Principal = Depends(get_principal),
-) -> List[CommentThread]:
+) -> list[CommentThread]:
     if not has_permission(principal, "protocol_section:read"):
         raise HTTPException(status_code=403, detail="Forbidden")
 
@@ -1241,7 +1242,7 @@ async def create_suggestion_endpoint(
 
 @app.get(
     "/api/v1/studies/{study_id}/blocks/{block_id}/suggestions",
-    response_model=List[Suggestion],
+    response_model=list[Suggestion],
     status_code=200,
 )
 async def get_suggestions_endpoint(
@@ -1249,7 +1250,7 @@ async def get_suggestions_endpoint(
     block_id: str,
     request: Request,
     principal: Principal = Depends(get_principal),
-) -> List[Suggestion]:
+) -> list[Suggestion]:
     if not has_permission(principal, "protocol_section:read"):
         raise HTTPException(status_code=403, detail="Forbidden")
 
@@ -1294,7 +1295,7 @@ async def decide_suggestion_endpoint(
 # Protocol Ingestion / CRF Builder Endpoints (Phase 2 Ingestion)
 # =====================================================================
 
-MOCK_PROTOCOL_INGESTIONS: Dict[str, Dict[str, Any]] = {}
+MOCK_PROTOCOL_INGESTIONS: dict[str, dict[str, Any]] = {}
 
 
 class PromoteRequest(BaseModel):
@@ -1304,9 +1305,9 @@ class PromoteRequest(BaseModel):
 class TransitionItemRequest(BaseModel):
     status: str
     reason: str
-    name: Optional[str] = None
-    label: Optional[str] = None
-    value: Optional[str] = None
+    name: str | None = None
+    label: str | None = None
+    value: str | None = None
 
 
 @app.post(
@@ -1502,7 +1503,6 @@ async def transition_ingestion_item(
     payload: TransitionItemRequest,
     request: Request,
 ):
-    from datetime import timezone
 
     if candidate_id not in MOCK_PROTOCOL_INGESTIONS:
         raise HTTPException(status_code=404, detail="Candidate not found")
@@ -1536,7 +1536,7 @@ async def transition_ingestion_item(
             item["metadata"]["value"] = payload.value
 
     transition_entry = {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "actor": getattr(request.state, "user_id", "system"),
         "item_id": item_id,
         "type": item["type"],
@@ -1559,7 +1559,6 @@ async def promote_ingestion_candidate(
     request: Request,
 ):
     import uuid
-    from datetime import timezone
 
     from apps.designer.db import MOCK_STUDY_VERSIONS, create_mock_study_version
 
@@ -1605,7 +1604,7 @@ async def promote_ingestion_candidate(
         "status": "DRAFT",
         "version_index": next_index,
         "created_by": user_id,
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(UTC).isoformat(),
         "change_reason": payload.change_reason,
         "promoted_items": {
             "visits": promoted_visits,
@@ -2079,12 +2078,11 @@ async def export_protocol(
 
     # 4. Record Part 11 compliant immutable generation audit event
     import uuid
-    from datetime import timezone
 
     audit_event = {
         "id": str(uuid.uuid4()),
         "actor": user_id,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "change_reason": change_reason,
         "study_id": study_id,
         "version": version_index,
@@ -2204,7 +2202,7 @@ async def archive_approved_protocol_background_task(
     user_id: str,
     roles: str,
     change_reason: str,
-    signature_manifestation_payload: Dict[str, Any],
+    signature_manifestation_payload: dict[str, Any],
 ):
     import os
 
@@ -2315,7 +2313,7 @@ async def approve_study_version_endpoint(
     payload: ApproveProtocolRequest,
     request: Request,
     background_tasks: BackgroundTasks,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Approve and cryptographically sign a Metadata Designer clinical protocol version, producing
     a 21 CFR Part 11 compliant persisted signature manifestation, recording immutable Action history,
@@ -2381,7 +2379,7 @@ async def approve_study_version_endpoint(
                 )
 
     # 4. Compute content hash from canonically serialized projection
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
 
     from cryptography import x509
     from cryptography.hazmat.primitives import hashes, serialization
@@ -2410,7 +2408,7 @@ async def approve_study_version_endpoint(
             client_ip = client_ip.split(",")[0].strip()
 
     user_agent = request.headers.get("user-agent") or "Metadata Designer Service"
-    now_utc = datetime.now(timezone.utc)
+    now_utc = datetime.now(UTC)
 
     # 6. Build SignatureManifestation
     manifest = SignatureManifestation(
@@ -2550,7 +2548,7 @@ class UpdateEligibilityCriterionRequest(BaseModel):
     change_reason: str = Field(..., description="Reason for updating this criterion.")
 
 
-def map_db_to_criterion(db_crit: Dict[str, Any]) -> EligibilityCriterion:
+def map_db_to_criterion(db_crit: dict[str, Any]) -> EligibilityCriterion:
     reason = (
         db_crit.get("reason_for_change")
         or db_crit.get("change_reason")
@@ -2564,7 +2562,7 @@ def map_db_to_criterion(db_crit: Dict[str, Any]) -> EligibilityCriterion:
 
     created_at = db_crit.get("created_at")
     if not created_at:
-        created_at = datetime.datetime.now(datetime.timezone.utc)
+        created_at = datetime.datetime.now(datetime.UTC)
     elif isinstance(created_at, str):
         try:
             val = created_at
@@ -2572,7 +2570,7 @@ def map_db_to_criterion(db_crit: Dict[str, Any]) -> EligibilityCriterion:
                 val += "+00:00"
             created_at = datetime.datetime.fromisoformat(val.replace("Z", "+00:00"))
         except Exception:
-            created_at = datetime.datetime.now(datetime.timezone.utc)
+            created_at = datetime.datetime.now(datetime.UTC)
     else:
         try:
             if hasattr(created_at, "isoformat"):
@@ -2581,12 +2579,12 @@ def map_db_to_criterion(db_crit: Dict[str, Any]) -> EligibilityCriterion:
                     val += "+00:00"
                 created_at = datetime.datetime.fromisoformat(val.replace("Z", "+00:00"))
             else:
-                created_at = datetime.datetime.now(datetime.timezone.utc)
+                created_at = datetime.datetime.now(datetime.UTC)
         except Exception:
-            created_at = datetime.datetime.now(datetime.timezone.utc)
+            created_at = datetime.datetime.now(datetime.UTC)
 
     if isinstance(created_at, datetime.datetime) and created_at.tzinfo is None:
-        created_at = created_at.replace(tzinfo=datetime.timezone.utc)
+        created_at = created_at.replace(tzinfo=datetime.UTC)
 
     return EligibilityCriterion(
         criterion_id=db_crit["id"] if "id" in db_crit else db_crit["criterion_id"],
@@ -2604,7 +2602,7 @@ def map_db_to_criterion(db_crit: Dict[str, Any]) -> EligibilityCriterion:
 
 @app.get(
     "/api/v1/studies/{study_id}/eligibility-criteria",
-    response_model=List[EligibilityCriterion],
+    response_model=list[EligibilityCriterion],
     status_code=status.HTTP_200_OK,
 )
 async def list_eligibility_criteria(study_id: str, request: Request):
@@ -2831,7 +2829,7 @@ async def upload_mapping_csv(file: UploadFile = File(...)):
 )
 async def validate_usdm_endpoint(
     request: Request,
-    override: Optional[str] = Query(
+    override: str | None = Query(
         None, description="Optional explicit version override ('v2' or 'v3')"
     ),
 ):
@@ -2875,7 +2873,7 @@ async def validate_usdm_endpoint(
     dependencies=[Depends(require_permission("protocol_ingestion:review"))],
 )
 async def run_round_trip_endpoint(
-    payload: Dict[str, Any],
+    payload: dict[str, Any],
     request: Request,
 ):
     """
@@ -2892,7 +2890,7 @@ async def run_round_trip_endpoint(
 # ==========================================
 
 
-class TerminologyEnum(str, Enum):
+class TerminologyEnum(StrEnum):
     SNOMED_CT = "SNOMED-CT"
     LOINC = "LOINC"
     MedDRA = "MedDRA"
@@ -2918,22 +2916,22 @@ class ConceptDetail(BaseModel):
     terminology: str
     display_name: str
     definition: str
-    cdash_mapping: Optional[CDASHMapping] = None
-    allowable_units: Optional[List[AllowableUnit]] = None
+    cdash_mapping: CDASHMapping | None = None
+    allowable_units: list[AllowableUnit] | None = None
     version: str
     status: str
     created_at: datetime
     created_by: str
-    updated_at: Optional[datetime] = None
-    updated_by: Optional[str] = None
-    reason_for_change: Optional[str] = None
+    updated_at: datetime | None = None
+    updated_by: str | None = None
+    reason_for_change: str | None = None
 
 
 class ConceptListResponse(BaseModel):
     object: str
-    data: List[ConceptDetail]
+    data: list[ConceptDetail]
     has_more: bool
-    next_cursor: Optional[str] = None
+    next_cursor: str | None = None
 
 
 class LibraryObjectListResponse(BaseModel):
@@ -2943,12 +2941,12 @@ class LibraryObjectListResponse(BaseModel):
     """
 
     object: str = "list"
-    data: List[LibraryObjectDetail]
+    data: list[LibraryObjectDetail]
     has_more: bool
-    next_cursor: Optional[str] = None
+    next_cursor: str | None = None
 
 
-def map_db_to_library_detail(record: Dict[str, Any]) -> LibraryObjectDetail:
+def map_db_to_library_detail(record: dict[str, Any]) -> LibraryObjectDetail:
     """
     Maps a raw database record / dict to the appropriate typed LibraryObjectDetail model.
     Handles semantic version conversion and datetime parsing.
@@ -2963,7 +2961,7 @@ def map_db_to_library_detail(record: Dict[str, Any]) -> LibraryObjectDetail:
         version_str = "1.0.0"
 
     # 2. Parse ISO datetimes
-    def parse_dt(val: Any) -> Optional[datetime]:
+    def parse_dt(val: Any) -> datetime | None:
         if not val:
             return None
         if isinstance(val, datetime):
@@ -3006,16 +3004,16 @@ class CreateConceptRequest(BaseModel):
     terminology: str
     display_name: str
     definition: str
-    cdash_mapping: Optional[CDASHMapping] = None
-    allowable_units: Optional[List[AllowableUnit]] = None
+    cdash_mapping: CDASHMapping | None = None
+    allowable_units: list[AllowableUnit] | None = None
     change_reason: str
 
 
 class UpdateConceptRequest(BaseModel):
     display_name: str
     definition: str
-    cdash_mapping: Optional[CDASHMapping] = None
-    allowable_units: Optional[List[AllowableUnit]] = None
+    cdash_mapping: CDASHMapping | None = None
+    allowable_units: list[AllowableUnit] | None = None
     reason_for_change: str
 
 
@@ -3026,10 +3024,10 @@ class RenameConceptRequest(BaseModel):
 
 @app.get("/api/v1/mdr/concepts", response_model=ConceptListResponse)
 async def get_concepts(
-    terminology: Optional[TerminologyEnum] = None,
-    domain: Optional[str] = None,
+    terminology: TerminologyEnum | None = None,
+    domain: str | None = None,
     limit: int = Query(50, le=250),
-    starting_after: Optional[str] = None,
+    starting_after: str | None = None,
 ) -> ConceptListResponse:
     """Fetches a paginated list of Biomedical Concepts."""
     # This is a static contract endpoint
@@ -3149,7 +3147,7 @@ async def rename_concept(
     status_code=status.HTTP_200_OK,
     dependencies=[Depends(require_permission("mdr_concept:delete"))],
 )
-async def delete_concept(id: str, request: Request) -> Dict[str, str]:
+async def delete_concept(id: str, request: Request) -> dict[str, str]:
     """Deletes an existing Biomedical Concept if it is not referenced by an Active-Recruiting study."""
     driver = await get_neo4j_driver(request)
     if await is_concept_referenced_by_active_recruiting_study(id, driver):
@@ -3202,12 +3200,22 @@ async def create_library_object_endpoint(
         )
     sponsor_id = sponsor_id.strip()
 
-    tenant_id = getattr(request.state, "tenant_id", None) or request.headers.get(
-        "X-Tenant-Id", "tenant_default"
-    )
+    if not await is_sponsor_known_to_org_directory(sponsor_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Forbidden: Sponsor scope '{sponsor_id}' is unknown to the Organization Directory.",
+        )
+
+    tenant_id = (
+        getattr(request.state, "tenant_id", None)
+        or request.headers.get("X-Tenant-Id", "tenant_default")
+        or "tenant_default"
+    ).strip()
 
     # 2. Prevent duplicate ID within same sponsor scope
-    latest = await get_latest_library_object(driver, payload.id, sponsor_id)
+    latest = await get_latest_library_object(
+        driver, payload.id, sponsor_id, tenant_id=tenant_id
+    )
     if latest:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -3251,9 +3259,9 @@ async def create_library_object_endpoint(
 )
 async def list_library_objects_endpoint(
     request: Request,
-    object_type: Optional[ObjectType] = None,
+    object_type: ObjectType | None = None,
     limit: int = Query(50, le=250),
-    starting_after: Optional[str] = None,
+    starting_after: str | None = None,
 ) -> LibraryObjectListResponse:
     """
     Lists latest global library objects under the authenticated sponsor.
@@ -3271,6 +3279,18 @@ async def list_library_objects_endpoint(
         )
     sponsor_id = sponsor_id.strip()
 
+    if not await is_sponsor_known_to_org_directory(sponsor_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Forbidden: Sponsor scope '{sponsor_id}' is unknown to the Organization Directory.",
+        )
+
+    tenant_id = (
+        getattr(request.state, "tenant_id", None)
+        or request.headers.get("X-Tenant-Id", "tenant_default")
+        or "tenant_default"
+    ).strip()
+
     # Fetch limit + 1 to detect has_more
     records = await list_library_objects(
         driver,
@@ -3278,6 +3298,7 @@ async def list_library_objects_endpoint(
         object_type=object_type.value if object_type else None,
         limit=limit + 1,
         starting_after=starting_after,
+        tenant_id=tenant_id,
     )
 
     has_more = len(records) > limit
@@ -3303,7 +3324,7 @@ async def list_library_objects_endpoint(
 async def get_library_object_endpoint(
     id: str,
     request: Request,
-    version: Optional[int] = Query(None),
+    version: int | None = Query(None),
 ) -> LibraryObjectDetail:
     """
     Retrieves the latest version or a specific version of a global library object.
@@ -3320,10 +3341,26 @@ async def get_library_object_endpoint(
         )
     sponsor_id = sponsor_id.strip()
 
+    if not await is_sponsor_known_to_org_directory(sponsor_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Forbidden: Sponsor scope '{sponsor_id}' is unknown to the Organization Directory.",
+        )
+
+    tenant_id = (
+        getattr(request.state, "tenant_id", None)
+        or request.headers.get("X-Tenant-Id", "tenant_default")
+        or "tenant_default"
+    ).strip()
+
     if version is not None:
-        record = await get_library_object_by_version(driver, id, sponsor_id, version)
+        record = await get_library_object_by_version(
+            driver, id, sponsor_id, version, tenant_id=tenant_id
+        )
     else:
-        record = await get_latest_library_object(driver, id, sponsor_id)
+        record = await get_latest_library_object(
+            driver, id, sponsor_id, tenant_id=tenant_id
+        )
 
     if not record:
         raise HTTPException(
@@ -3372,8 +3409,22 @@ async def update_library_object_endpoint(
         )
     sponsor_id = sponsor_id.strip()
 
-    # 1. Verify object exists and is owned by the sponsor
-    latest = await get_latest_library_object(driver, id, sponsor_id)
+    if not await is_sponsor_known_to_org_directory(sponsor_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Forbidden: Sponsor scope '{sponsor_id}' is unknown to the Organization Directory.",
+        )
+
+    tenant_id = (
+        getattr(request.state, "tenant_id", None)
+        or request.headers.get("X-Tenant-Id", "tenant_default")
+        or "tenant_default"
+    ).strip()
+
+    # 1. Verify object exists and is owned by the sponsor and tenant
+    latest = await get_latest_library_object(
+        driver, id, sponsor_id, tenant_id=tenant_id
+    )
     if not latest:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -3426,7 +3477,7 @@ class LibraryObjectAmendRequest(BaseModel):
     reason_for_change: str = Field(
         ..., description="Mandatory reason for initiating the amendment."
     )
-    payload: Optional[Dict[str, Any]] = Field(
+    payload: dict[str, Any] | None = Field(
         None,
         description="Optional updated payload for the amended version. If not provided, the latest payload is cloned.",
     )
@@ -3470,8 +3521,22 @@ async def amend_library_object_endpoint(
         )
     sponsor_id = sponsor_id.strip()
 
-    # 1. Verify object exists and is owned by the sponsor
-    latest = await get_latest_library_object(driver, id, sponsor_id)
+    if not await is_sponsor_known_to_org_directory(sponsor_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Forbidden: Sponsor scope '{sponsor_id}' is unknown to the Organization Directory.",
+        )
+
+    tenant_id = (
+        getattr(request.state, "tenant_id", None)
+        or request.headers.get("X-Tenant-Id", "tenant_default")
+        or "tenant_default"
+    ).strip()
+
+    # 1. Verify object exists and is owned by the sponsor and tenant
+    latest = await get_latest_library_object(
+        driver, id, sponsor_id, tenant_id=tenant_id
+    )
     if not latest:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -3516,12 +3581,12 @@ async def amend_library_object_endpoint(
 
 @app.get(
     "/api/v1/mdr/library/{id}/history",
-    response_model=List[LibraryObjectDetail],
+    response_model=list[LibraryObjectDetail],
 )
 async def get_library_object_history_endpoint(
     id: str,
     request: Request,
-) -> List[LibraryObjectDetail]:
+) -> list[LibraryObjectDetail]:
     """
     Retrieves the complete version history of a global library object.
     """
@@ -3537,7 +3602,21 @@ async def get_library_object_history_endpoint(
         )
     sponsor_id = sponsor_id.strip()
 
-    records = await get_library_object_history(driver, id, sponsor_id)
+    if not await is_sponsor_known_to_org_directory(sponsor_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Forbidden: Sponsor scope '{sponsor_id}' is unknown to the Organization Directory.",
+        )
+
+    tenant_id = (
+        getattr(request.state, "tenant_id", None)
+        or request.headers.get("X-Tenant-Id", "tenant_default")
+        or "tenant_default"
+    ).strip()
+
+    records = await get_library_object_history(
+        driver, id, sponsor_id, tenant_id=tenant_id
+    )
     if not records:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -3586,8 +3665,22 @@ async def transition_library_object_endpoint(
         )
     sponsor_id = sponsor_id.strip()
 
-    # 2. Verify object exists and is owned by the sponsor
-    latest = await get_latest_library_object(driver, id, sponsor_id)
+    if not await is_sponsor_known_to_org_directory(sponsor_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Forbidden: Sponsor scope '{sponsor_id}' is unknown to the Organization Directory.",
+        )
+
+    tenant_id = (
+        getattr(request.state, "tenant_id", None)
+        or request.headers.get("X-Tenant-Id", "tenant_default")
+        or "tenant_default"
+    ).strip()
+
+    # 2. Verify object exists and is owned by the sponsor and tenant
+    latest = await get_latest_library_object(
+        driver, id, sponsor_id, tenant_id=tenant_id
+    )
     if not latest:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -3691,8 +3784,8 @@ class RulePreviewResponse(BaseModel):
     """
 
     xpath: str
-    failures: List[str]
-    circular_cycles: List[str]
+    failures: list[str]
+    circular_cycles: list[str]
 
 
 class CreateStudyVersionRequest(BaseModel):
@@ -3716,7 +3809,7 @@ class CreateStudyVersionRequest(BaseModel):
 )
 async def post_study_version(
     study_id: str, payload: CreateStudyVersionRequest, request: Request
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Establishes a new StudyVersion node under a clinical study.
     Enforces that concurrent creation with duplicate index or tag fails with 409 Conflict.
@@ -3754,7 +3847,7 @@ async def post_study_version(
 
 
 @app.get("/api/v1/studies/{study_id}/rules", status_code=status.HTTP_200_OK)
-async def get_study_rules(study_id: str, request: Request) -> List[Dict[str, Any]]:
+async def get_study_rules(study_id: str, request: Request) -> list[dict[str, Any]]:
     """
     Retrieves all non-soft-deleted active rules for a specific clinical study.
     """
@@ -3778,7 +3871,7 @@ async def get_study_rules(study_id: str, request: Request) -> List[Dict[str, Any
 )
 async def create_study_rule(
     study_id: str, payload: CreateRuleRequest, request: Request
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Creates a new rule for a clinical study, enforcing auth and X-Change-Reason.
     """
@@ -3787,7 +3880,7 @@ async def create_study_rule(
         raise HTTPException(status_code=404, detail="Study not found")
 
     user_id = getattr(request.state, "user_id", "system")
-    change_reason = getattr(request.state, "change_reason", "system_operation")
+    change_reason = resolve_change_reason(request, None)
     rule_dict = payload.model_dump()
 
     driver = getattr(request.app.state, "driver", None)
@@ -3815,7 +3908,7 @@ async def create_study_rule(
 @app.get("/api/v1/studies/{study_id}/rules/{rule_id}", status_code=status.HTTP_200_OK)
 async def get_study_rule_by_id(
     study_id: str, rule_id: str, request: Request
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Retrieves a specific rule by ID.
     """
@@ -3846,7 +3939,7 @@ async def get_study_rule_by_id(
 )
 async def update_study_rule_by_id(
     study_id: str, rule_id: str, payload: CreateRuleRequest, request: Request
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Updates a rule's parameters, incrementing version index.
     """
@@ -3855,7 +3948,7 @@ async def update_study_rule_by_id(
         raise HTTPException(status_code=404, detail="Study not found")
 
     user_id = getattr(request.state, "user_id", "system")
-    change_reason = getattr(request.state, "change_reason", "system_operation")
+    change_reason = resolve_change_reason(request, None)
 
     driver = getattr(request.app.state, "driver", None)
     if driver is not None:
@@ -3894,7 +3987,7 @@ async def update_study_rule_by_id(
 )
 async def delete_study_rule_by_id(
     study_id: str, rule_id: str, request: Request
-) -> Dict[str, str]:
+) -> dict[str, str]:
     """
     Soft-deletes a rule, retaining its historical properties in audit.
     """
@@ -3903,7 +3996,7 @@ async def delete_study_rule_by_id(
         raise HTTPException(status_code=404, detail="Study not found")
 
     user_id = getattr(request.state, "user_id", "system")
-    change_reason = getattr(request.state, "change_reason", "system_operation")
+    change_reason = resolve_change_reason(request, None)
 
     driver = getattr(request.app.state, "driver", None)
     if driver is not None:
@@ -3965,13 +4058,56 @@ async def compile_preview_rule(
     )
 
 
+@app.post(
+    "/api/v1/studies/{study_id}/rules/validate",
+    response_model=RulePreviewResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def compile_validate_rule(
+    study_id: str, payload: CreateRuleRequest, request: Request
+) -> RulePreviewResponse:
+    """
+    Read-only compile and validation preview route.
+    Detects unknown field references and circular skip-logic dependencies.
+    """
+    study_data = get_study_projection(study_id)
+    if not study_data:
+        raise HTTPException(status_code=404, detail="Study not found")
+
+    xpath = compile_to_xpath(payload.condition)
+    failures = detect_unknown_fields(payload.condition, study_data)
+
+    driver = getattr(request.app.state, "driver", None)
+    if driver is not None:
+        existing_rules = await get_rules_from_graph(driver, study_id)
+    else:
+        existing_rules = get_mock_rules(study_id)
+
+    temp_rules = [dict(r) for r in existing_rules]
+    temp_rules.append(
+        {
+            "id": "proposed_rule",
+            "type": payload.type,
+            "condition": payload.condition.model_dump(),
+            "target_field": payload.target_field,
+        }
+    )
+    circular_cycles = detect_circular_dependencies(temp_rules)
+
+    return RulePreviewResponse(
+        xpath=xpath,
+        failures=failures,
+        circular_cycles=circular_cycles,
+    )
+
+
 class ProtocolAmendRequest(BaseModel):
     """
     Payload for the Protocol/Designer Amendment endpoint.
     """
 
-    amendment_type: Optional[str] = "minor"
-    type: Optional[str] = None
+    amendment_type: str | None = "minor"
+    type: str | None = None
 
 
 @app.post(
@@ -3982,7 +4118,7 @@ async def amend_protocol(
     id: str,
     payload: ProtocolAmendRequest,
     request: Request,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Exposes POST /api/designer/protocols/{id}/amend with 201, new_version, status, and parent_version.
     Creates a transaction-safe DRAFT successor with incremented version index.
@@ -4035,7 +4171,7 @@ async def get_soa_entity(
     study_version_id: str,
     entity_id: str,
     entity_type: str,  # "arms", "epochs", "visits", "procedures", "timing_windows"
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     if driver is None:
         _init_mock_soa(study_version_id)
         return MOCK_SOA_DATA[study_version_id][entity_type].get(entity_id)
@@ -4067,7 +4203,7 @@ async def list_soa_entities(
     driver,
     study_version_id: str,
     entity_type: str,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     if driver is None:
         _init_mock_soa(study_version_id)
         return list(MOCK_SOA_DATA[study_version_id][entity_type].values())
@@ -4093,7 +4229,7 @@ async def list_soa_entities(
 # --- Block Helpers & Permissions ---
 
 
-def resolve_change_reason(request: Request, body_reason: Optional[str] = None) -> str:
+def resolve_change_reason(request: Request, body_reason: str | None = None) -> str:
     reason = getattr(request.state, "change_reason", None)
     if not reason:
         reason = request.headers.get("X-Change-Reason")
@@ -4110,18 +4246,18 @@ class CreateBlockRequest(BaseModel):
     id: str
     block_type: str
     order: int
-    properties: Dict[str, Any]
-    change_reason: Optional[str] = None
+    properties: dict[str, Any]
+    change_reason: str | None = None
 
 
 class UpdateBlockRequest(BaseModel):
-    properties: Dict[str, Any]
-    change_reason: Optional[str] = None
+    properties: dict[str, Any]
+    change_reason: str | None = None
 
 
 class ReorderBlocksRequest(BaseModel):
-    block_ids: List[str]
-    change_reason: Optional[str] = None
+    block_ids: list[str]
+    change_reason: str | None = None
 
 
 class BlockCreatedResponse(BaseModel):
@@ -4259,14 +4395,14 @@ async def get_block_endpoint(
 
 @app.get(
     "/api/v1/studies/{study_id}/versions/{version_id}/blocks",
-    response_model=List[BlockDetailResponse],
+    response_model=list[BlockDetailResponse],
     dependencies=[Depends(require_permission("study_design:read"))],
 )
 async def list_blocks_endpoint(
     study_id: str,
     version_id: str,
     request: Request,
-) -> List[BlockDetailResponse]:
+) -> list[BlockDetailResponse]:
     driver = await get_neo4j_driver(request)
     blocks = await list_blocks(driver, version_id)
     return [BlockDetailResponse(**b) for b in blocks]
@@ -4354,13 +4490,13 @@ async def get_arm_endpoint(
 
 @app.get(
     "/api/v1/studies/{study_id}/versions/{version_id}/arms",
-    response_model=List[SoAEntityDetail],
+    response_model=list[SoAEntityDetail],
 )
 async def list_arms_endpoint(
     study_id: str,
     version_id: str,
     request: Request,
-) -> List[SoAEntityDetail]:
+) -> list[SoAEntityDetail]:
     driver = await get_neo4j_driver(request)
     entities = await list_soa_entities(driver, version_id, "arms")
     return [SoAEntityDetail(**e) for e in entities]
@@ -4451,13 +4587,13 @@ async def get_epoch_endpoint(
 
 @app.get(
     "/api/v1/studies/{study_id}/versions/{version_id}/epochs",
-    response_model=List[SoAEntityDetail],
+    response_model=list[SoAEntityDetail],
 )
 async def list_epochs_endpoint(
     study_id: str,
     version_id: str,
     request: Request,
-) -> List[SoAEntityDetail]:
+) -> list[SoAEntityDetail]:
     driver = await get_neo4j_driver(request)
     entities = await list_soa_entities(driver, version_id, "epochs")
     return [SoAEntityDetail(**e) for e in entities]
@@ -4548,13 +4684,13 @@ async def get_visit_endpoint(
 
 @app.get(
     "/api/v1/studies/{study_id}/versions/{version_id}/visits",
-    response_model=List[SoAEntityDetail],
+    response_model=list[SoAEntityDetail],
 )
 async def list_visits_endpoint(
     study_id: str,
     version_id: str,
     request: Request,
-) -> List[SoAEntityDetail]:
+) -> list[SoAEntityDetail]:
     driver = await get_neo4j_driver(request)
     entities = await list_soa_entities(driver, version_id, "visits")
     return [SoAEntityDetail(**e) for e in entities]
@@ -4645,13 +4781,13 @@ async def get_procedure_endpoint(
 
 @app.get(
     "/api/v1/studies/{study_id}/versions/{version_id}/procedures",
-    response_model=List[SoAEntityDetail],
+    response_model=list[SoAEntityDetail],
 )
 async def list_procedures_endpoint(
     study_id: str,
     version_id: str,
     request: Request,
-) -> List[SoAEntityDetail]:
+) -> list[SoAEntityDetail]:
     driver = await get_neo4j_driver(request)
     entities = await list_soa_entities(driver, version_id, "procedures")
     return [SoAEntityDetail(**e) for e in entities]
@@ -4742,13 +4878,13 @@ async def get_timing_window_endpoint(
 
 @app.get(
     "/api/v1/studies/{study_id}/versions/{version_id}/timing-windows",
-    response_model=List[SoAEntityDetail],
+    response_model=list[SoAEntityDetail],
 )
 async def list_timing_windows_endpoint(
     study_id: str,
     version_id: str,
     request: Request,
-) -> List[SoAEntityDetail]:
+) -> list[SoAEntityDetail]:
     driver = await get_neo4j_driver(request)
     entities = await list_soa_entities(driver, version_id, "timing_windows")
     return [SoAEntityDetail(**e) for e in entities]
@@ -5006,7 +5142,7 @@ class InstantiateLibraryObjectRequest(BaseModel):
     library_object_id: str = Field(
         ..., description="Stable, unique global library ID to instantiate."
     )
-    version: Optional[int] = Field(
+    version: int | None = Field(
         None,
         description="The specific version of the library object to instantiate. Defaults to latest if not specified.",
     )
@@ -5022,7 +5158,7 @@ class LibraryInstanceResponse(BaseModel):
     id: str
     study_id: str
     object_type: str
-    payload: Dict[str, Any]
+    payload: dict[str, Any]
     created_at: str
     created_by: str
     instantiated_from: InstantiatedFromDetail
@@ -5059,6 +5195,17 @@ async def instantiate_library_object_endpoint(
         )
     sponsor_id = sponsor_id.strip()
 
+    if not await is_sponsor_known_to_org_directory(sponsor_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Forbidden: Sponsor scope '{sponsor_id}' is unknown to the Organization Directory.",
+        )
+
+    tenant_id = (
+        getattr(request.state, "tenant_id", None)
+        or request.headers.get("X-Tenant-Id", "tenant_default")
+        or "tenant_default"
+    ).strip()
     user_id = getattr(request.state, "user_id", "system")
 
     # 2. Call the delta manager to run checks and instantiation
@@ -5070,6 +5217,7 @@ async def instantiate_library_object_endpoint(
             version=payload.version,
             sponsor_id=sponsor_id,
             user_id=user_id,
+            tenant_id=tenant_id,
         )
         return LibraryInstanceResponse(**instance)
     except PermissionError as e:
@@ -5092,7 +5240,7 @@ async def instantiate_library_object_endpoint(
 
 
 class UpdateLibraryInstanceRequest(BaseModel):
-    payload: Dict[str, Any] = Field(
+    payload: dict[str, Any] = Field(
         ..., description="The complete updated payload of the library instance."
     )
 
@@ -5157,14 +5305,14 @@ async def update_library_instance_endpoint(
 
 @app.get(
     "/api/v1/studies/{study_id}/library-instances/{instance_id}/diff",
-    response_model=List[DifferenceResult],
+    response_model=list[DifferenceResult],
     status_code=status.HTTP_200_OK,
 )
 async def get_library_instance_diff_endpoint(
     study_id: str,
     instance_id: str,
     request: Request,
-) -> List[DifferenceResult]:
+) -> list[DifferenceResult]:
     """
     Returns field-level dot-notated differences between the library instance payload and its linked source version.
     """
@@ -5178,7 +5326,11 @@ async def get_library_instance_diff_endpoint(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Forbidden: Missing authenticated sponsor scope",
         )
-    sponsor_id = sponsor_id.strip()
+    tenant_id = (
+        getattr(request.state, "tenant_id", None)
+        or request.headers.get("X-Tenant-Id", "tenant_default")
+        or "tenant_default"
+    ).strip()
 
     try:
         instance = await get_library_instance_in_study(
@@ -5186,6 +5338,7 @@ async def get_library_instance_diff_endpoint(
             study_id=study_id,
             instance_id=instance_id,
             sponsor_id=sponsor_id,
+            tenant_id=tenant_id,
         )
     except PermissionError as e:
         raise HTTPException(
@@ -5214,6 +5367,7 @@ async def get_library_instance_diff_endpoint(
         object_id=source_obj_id,
         sponsor_id=source_sponsor_id,
         version=source_version,
+        tenant_id=tenant_id,
     )
     if not source_obj:
         raise HTTPException(
@@ -5224,11 +5378,11 @@ async def get_library_instance_diff_endpoint(
     source_payload = source_obj.get("payload") or {}
     instance_payload = instance.get("payload") or {}
 
-    def flatten_dict(d: Any, parent_key: str = "", sep: str = ".") -> Dict[str, Any]:
+    def flatten_dict(d: Any, parent_key: str = "", sep: str = ".") -> dict[str, Any]:
         """
         Recursively flatten a nested dictionary or list into a flat dictionary.
         """
-        items: List[Tuple[str, Any]] = []
+        items: list[tuple[str, Any]] = []
         if isinstance(d, dict):
             for k, v in d.items():
                 new_key = f"{parent_key}{sep}{k}" if parent_key else k

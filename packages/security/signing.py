@@ -2,7 +2,7 @@ import base64
 import hashlib
 import hmac
 import json
-from typing import Any, Dict, Optional
+from typing import Any
 
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes
@@ -17,7 +17,7 @@ def normalize_scope_values(
     site_id_input: Any,
     sponsor_id_input: Any,
     unblinded_access_input: Any,
-) -> tuple[Optional[str], Optional[str], bool]:
+) -> tuple[str | None, str | None, bool]:
     """Normalizes site_id, sponsor_id, and unblinded_access inputs into their canonical types
 
     expected by generate_gateway_signature and verify_gateway_signature.
@@ -63,12 +63,12 @@ def generate_gateway_signature(
     roles: str,
     timestamp: str,
     secret: bytes,
-    change_reason: Optional[str] = None,
-    site_id: Optional[str] = None,
-    sponsor_id: Optional[str] = None,
+    change_reason: str | None = None,
+    site_id: str | None = None,
+    sponsor_id: str | None = None,
     unblinded_access: bool = False,
-    tenant_id: Optional[str] = None,
-    sig_token: Optional[str] = None,
+    tenant_id: str | None = None,
+    sig_token: str | None = None,
 ) -> str:
     """Generates an HMAC-SHA256 signature for API Gateway identity and scope headers."""
     payload = {
@@ -93,12 +93,12 @@ def verify_gateway_signature(
     timestamp: str,
     signature: str,
     secret: bytes,
-    change_reason: Optional[str] = None,
-    site_id: Optional[str] = None,
-    sponsor_id: Optional[str] = None,
+    change_reason: str | None = None,
+    site_id: str | None = None,
+    sponsor_id: str | None = None,
     unblinded_access: bool = False,
-    tenant_id: Optional[str] = None,
-    sig_token: Optional[str] = None,
+    tenant_id: str | None = None,
+    sig_token: str | None = None,
 ) -> bool:
     """Verifies an HMAC-SHA256 signature for API Gateway identity and scope headers.
 
@@ -206,12 +206,12 @@ def verify_gateway_signature(
     return False
 
 
-def canonical_serialize(payload: Dict[str, Any]) -> bytes:
+def canonical_serialize(payload: dict[str, Any]) -> bytes:
     """Serializes a dictionary into a key-sorted, whitespace-stripped UTF-8 JSON byte string."""
     return json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
 
-def generate_canonical_signature(payload: Dict[str, Any], secret: bytes) -> str:
+def generate_canonical_signature(payload: dict[str, Any], secret: bytes) -> str:
     """Generates an HMAC-SHA256 signature of a canonically serialized JSON payload.
 
     Used to guarantee cryptographic integrity for study versions and protocol locks
@@ -222,7 +222,7 @@ def generate_canonical_signature(payload: Dict[str, Any], secret: bytes) -> str:
 
 
 def verify_canonical_signature(
-    payload: Dict[str, Any], signature: str, secret: bytes
+    payload: dict[str, Any], signature: str, secret: bytes
 ) -> bool:
     """Verifies that the provided HMAC-SHA256 signature matches the canonically serialized JSON payload.
 
@@ -241,7 +241,7 @@ def compute_sha256_hash(data: bytes | str) -> str:
 
 
 def asymmetric_sign(
-    data: bytes, private_key_pem: str, password: Optional[bytes] = None
+    data: bytes, private_key_pem: str, password: bytes | None = None
 ) -> str:
     """Signs data using a PEM-encoded private key (RSA or Elliptic Curve) and returns a Base64-encoded signature.
 
@@ -289,7 +289,7 @@ def asymmetric_verify(
         return False
 
 
-def capture_certificate_identifiers(cert_pem: str) -> Dict[str, str]:
+def capture_certificate_identifiers(cert_pem: str) -> dict[str, str]:
     """Captures key and certificate identifiers (serial_number, sha256_fingerprint, subject_key_identifier)
 
     from a PEM-encoded X.509 certificate.
@@ -369,7 +369,7 @@ def verify_inbound_email_signature(
     timestamp: str,
     token: str,
     signature: str,
-    message_id: Optional[str] = None,
+    message_id: str | None = None,
 ) -> bool:
     """Verifies that the inbound email HMAC signature is correct, fresh, and not replayed."""
     import os
@@ -398,7 +398,7 @@ def verify_inbound_email_signature(
     # 3. Signature Verification
     expected_sig = hmac.new(
         secret.encode("utf-8") if isinstance(secret, str) else secret,
-        f"{timestamp}{token}".encode("utf-8"),
+        f"{timestamp}{token}".encode(),
         hashlib.sha256,
     ).hexdigest()
 

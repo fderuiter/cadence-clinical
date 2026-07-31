@@ -5,7 +5,7 @@ Requirements: PRD-SYS-001
 
 import io
 import json
-from typing import Any, Dict
+from typing import Any
 
 import docx
 from docx.shared import RGBColor
@@ -17,7 +17,7 @@ class M11ProtocolExporter:
     Requirements: PRD-SYS-001
     """
 
-    def export_ich_m11_docx(self, study_payload: Dict[str, Any]) -> bytes:
+    def export_ich_m11_docx(self, study_payload: dict[str, Any]) -> bytes:
         """Export USDM protocol graph payload into formatted ICH M11 Word document (.docx).
 
         Args:
@@ -93,7 +93,7 @@ class M11ProtocolExporter:
         doc.save(stream)
         return stream.getvalue()
 
-    def export_usdm_json(self, study_payload: Dict[str, Any]) -> str:
+    def export_usdm_json(self, study_payload: dict[str, Any]) -> str:
         """Export study payload as a validated canonical USDM v3.0 JSON string.
 
         Args:

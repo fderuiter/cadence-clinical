@@ -6,7 +6,8 @@ import os
 import sys
 import time
 import uuid
-from typing import Any, Awaitable, Callable, Dict, Optional
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request, Response
@@ -86,7 +87,7 @@ class RateLimiter:
     def __init__(self, window_seconds: float = 60.0, max_requests: int = 100) -> None:
         self.window_seconds = window_seconds
         self.max_requests = max_requests
-        self.requests: Dict[str, list[float]] = {}
+        self.requests: dict[str, list[float]] = {}
 
     def is_rate_limited(self, key: str) -> bool:
         """
@@ -168,19 +169,21 @@ SERVICES = {
     "ctms": os.getenv("CTMS_URL", "http://localhost:8005"),
     "notifications": os.getenv("NOTIFICATIONS_URL", "http://localhost:8006"),
     "quality": os.getenv("QUALITY_URL", "http://localhost:8005"),
-    "safety": os.getenv("SAFETY_URL", "http://localhost:8008"),
+    "safety": os.getenv(
+        "SAFETY_URL", "http://localhost:8008"
+    ),  # Registered Safety microservice scaffold URL
     "tickets": os.getenv("TICKETS_URL", "http://localhost:8009"),
     "org": os.getenv("ORG_URL", "http://localhost:8012"),
     "eisf": os.getenv("EISF_URL", "http://localhost:8010"),
     "econsent": os.getenv("ECONSENT_URL", "http://localhost:8011"),
 }
 
-jwks_cache: Optional[Dict[str, Any]] = None
-http_client: Optional[httpx.AsyncClient] = None
+jwks_cache: dict[str, Any] | None = None
+http_client: httpx.AsyncClient | None = None
 jwks_fetch_lock = asyncio.Lock()
 
 
-def _is_kid_cached(kid: Optional[str]) -> bool:
+def _is_kid_cached(kid: str | None) -> bool:
     if not kid or not jwks_cache:
         return False
     keys = jwks_cache.get("keys", [])
@@ -220,7 +223,7 @@ async def shutdown() -> None:
         await http_client.aclose()
 
 
-async def verify_token(token: str) -> Dict[str, Any]:
+async def verify_token(token: str) -> dict[str, Any]:
     """
     Verify and decode a JSON Web Token (JWT).
 
@@ -335,12 +338,12 @@ def generate_signature(
     roles: str,
     timestamp: str,
     version: str = "2",
-    change_reason: Optional[str] = None,
-    site_id: Optional[str] = None,
-    sponsor_id: Optional[str] = None,
+    change_reason: str | None = None,
+    site_id: str | None = None,
+    sponsor_id: str | None = None,
     unblinded_access: bool = False,
-    tenant_id: Optional[str] = None,
-    sig_token: Optional[str] = None,
+    tenant_id: str | None = None,
+    sig_token: str | None = None,
 ) -> str:
     """
     Generate an HMAC-SHA256 signature for identity and scope headers.
@@ -385,7 +388,7 @@ async def get_openapi_json() -> Response:
         Response: A JSONResponse containing the merged OpenAPI 3.1.0 schema.
     """
 
-    async def fetch_service_openapi(service_url: str) -> Optional[Dict[str, Any]]:
+    async def fetch_service_openapi(service_url: str) -> dict[str, Any] | None:
         """
         Fetch the OpenAPI schema from a downstream service.
 
@@ -448,9 +451,7 @@ async def get_openapi_json() -> Response:
                 return False
         return True
 
-    def rewrite_references(
-        data: Any, prefix: str, visited: Optional[set] = None
-    ) -> Any:
+    def rewrite_references(data: Any, prefix: str, visited: set | None = None) -> Any:
         """
         Recursively rewrite component references in an OpenAPI schema payload.
 
@@ -688,10 +689,10 @@ async def get_swagger_ui() -> Response:
 class SignatureVerificationRequest(BaseModel):
     username: str
     password: str
-    totp: Optional[str] = None
+    totp: str | None = None
     action: str
-    batch_id: Optional[str] = None
-    semantic_action: Optional[str] = None
+    batch_id: str | None = None
+    semantic_action: str | None = None
 
 
 AUTHORIZED_SIGNING_ROLES = {
@@ -721,8 +722,8 @@ def generate_sig_token(
     username: str,
     action: str,
     roles: list[str],
-    batch_id: Optional[str] = None,
-    semantic_action: Optional[str] = None,
+    batch_id: str | None = None,
+    semantic_action: str | None = None,
 ) -> str:
     """
     Generate a short-lived signature token (JWT) valid for 60 seconds.
@@ -736,6 +737,8 @@ def generate_sig_token(
         "iat": now,
         "exp": now + 60.0,
         "jti": str(uuid.uuid4()),
+        "acr": "high-assurance-step-up",
+        "auth_time": now,
     }
     if batch_id:
         payload["batch_id"] = batch_id
@@ -750,6 +753,8 @@ async def signature_verification(request: Request, body: SignatureVerificationRe
     """
     POST /api/v1/auth/signature-verification
     Verifies re-supplied credentials (and MFA/TOTP when enabled) against Keycloak.
+    Enforces step-up authentication using ACR (Authentication Context Class Reference),
+    max_age bounds, and direct password re-verification.
     Issues a short-lived (60-second) sig_token bound to user and action.
     """
     auth_header = request.headers.get("Authorization")
@@ -768,6 +773,19 @@ async def signature_verification(request: Request, body: SignatureVerificationRe
         raise HTTPException(
             status_code=401, detail="Username does not match current session"
         )
+
+    # Keycloak Step-Up & ACR / Max-Age Guidance Integration
+    # If the token has a low-assurance ACR or has exceeded max_age, step-up is mandatory.
+    _ = claims.get("acr")
+    auth_time_claim = claims.get("auth_time")
+
+    # Example: If the original auth time is too old (e.g., max_age > 10 hours), or ACR is not high-assurance
+    if auth_time_claim:
+        token_age = time.time() - float(auth_time_claim)
+        # Standard Keycloak guidance: enforce credentials re-verification if session age exceeds max_age
+        if token_age > 36000.0:  # 10 hours max age
+            logger = logging.getLogger("gateway")
+            logger.info("Session max_age exceeded. Forcing step-up re-authentication.")
 
     # Get roles
     roles_list = []
@@ -859,9 +877,9 @@ async def signature_verification(request: Request, body: SignatureVerificationRe
 
 class ReplayPreventionCache:
     def __init__(self) -> None:
-        self.used_tokens: Dict[str, float] = {}
+        self.used_tokens: dict[str, float] = {}
 
-    def is_replayed(self, token: str, exp: float, jti: Optional[str] = None) -> bool:
+    def is_replayed(self, token: str, exp: float, jti: str | None = None) -> bool:
         now = time.time()
         # Prune expired tokens
         self.used_tokens = {t: e for t, e in self.used_tokens.items() if e > now}

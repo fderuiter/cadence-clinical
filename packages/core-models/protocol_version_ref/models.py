@@ -7,12 +7,12 @@ serialization expectations for cross-service payloads in compliance with
 Pydantic v2 conventions and GxP standards.
 """
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field, field_validator
 
 
-class ProtocolVersionStatus(str, Enum):
+class ProtocolVersionStatus(StrEnum):
     """
     Controlled vocabulary of statuses for a clinical protocol or study version.
     """

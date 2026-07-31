@@ -1,6 +1,8 @@
 import logging
 import re
-from typing import Any, Dict, List, Optional
+import threading
+import time
+from typing import Any
 
 from sae_icsr import IndividualCaseSafetyReport, MedDRACoding, SeriousAdverseEvent
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,6 +12,58 @@ from apps.safety.execution_client import ExecutionClient
 from apps.safety.models import SAEDiscrepancy, SAEReconciliationRun
 
 logger = logging.getLogger("safety-reconciliation")
+
+
+class TerminologyCache:
+    """Thread-safe in-memory cache for MedDRA term resolutions."""
+
+    def __init__(self, max_size: int = 1000, ttl: float | None = None) -> None:
+        self.max_size = max_size
+        self._cache: dict[tuple[str, str], tuple[dict[str, Any], float]] = {}
+        self._lock = threading.Lock()
+
+        if ttl is not None:
+            self.ttl = float(ttl)
+        else:
+            import os
+
+            env_ttl = os.getenv("TERMINOLOGY_CACHE_TTL") or os.getenv("CACHE_TTL")
+            if env_ttl is not None:
+                try:
+                    self.ttl = float(env_ttl)
+                except ValueError:
+                    self.ttl = 3600.0
+            else:
+                self.ttl = 3600.0
+
+    def get(self, term: str, version: str) -> dict[str, Any] | None:
+        now = time.time()
+        key = (term, version)
+        with self._lock:
+            if key in self._cache:
+                data, timestamp = self._cache[key]
+                if now - timestamp < self.ttl:
+                    return data
+        return None
+
+    def set(self, term: str, version: str, data: dict[str, Any]) -> None:
+        key = (term, version)
+        with self._lock:
+            if len(self._cache) >= self.max_size:
+                # Basic eviction policy
+                self._cache.pop(next(iter(self._cache)))
+            self._cache[key] = (data, time.time())
+
+    def clear(self) -> None:
+        with self._lock:
+            self._cache.clear()
+
+    def get_status(self) -> dict[str, int]:
+        with self._lock:
+            return {"size": len(self._cache), "max_size": self.max_size}
+
+
+terminology_cache = TerminologyCache()
 
 
 def generate_stable_event_key(subject_key: str, sae: SeriousAdverseEvent) -> str:
@@ -29,7 +83,7 @@ def generate_stable_event_key(subject_key: str, sae: SeriousAdverseEvent) -> str
 
 
 def normalize_edc_ae_to_sae(
-    ae_dict: Dict[str, Any], meddra_coding: Optional[MedDRACoding] = None
+    ae_dict: dict[str, Any], meddra_coding: MedDRACoding | None = None
 ) -> SeriousAdverseEvent:
     """
     Normalizes an EDC Adverse Event dict into a SeriousAdverseEvent model.
@@ -67,8 +121,8 @@ def normalize_edc_ae_to_sae(
 
 
 def normalize_external_icsr_to_saes(
-    icsr_dict: Dict[str, Any],
-) -> List[SeriousAdverseEvent]:
+    icsr_dict: dict[str, Any],
+) -> list[SeriousAdverseEvent]:
     """
     Normalizes reaction events inside an external safety case / ICSR payload dict into SeriousAdverseEvent models.
     """
@@ -141,10 +195,10 @@ def normalize_external_icsr_to_saes(
 
 
 def compare_sae_records(
-    edc_saes: List[SeriousAdverseEvent],
-    safety_saes: List[SeriousAdverseEvent],
+    edc_saes: list[SeriousAdverseEvent],
+    safety_saes: list[SeriousAdverseEvent],
     meddra_version: str = "26.0",
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     Pure, DB-free function that compares normalized EDC and external Safety SAE representations.
     Compares AESER, AESTDTC, AEENDTC, AESEV, AEREL, AEOUT, and MedDRA coding.
@@ -153,7 +207,7 @@ def compare_sae_records(
     edc_map = {generate_stable_event_key(s.subject_key, s): s for s in edc_saes}
     safety_map = {generate_stable_event_key(s.subject_key, s): s for s in safety_saes}
 
-    discrepancies: List[Dict[str, Any]] = []
+    discrepancies: list[dict[str, Any]] = []
     all_keys = sorted(list(set(edc_map.keys()) | set(safety_map.keys())))
 
     for key in all_keys:
@@ -263,9 +317,9 @@ async def run_reconciliation(
     session: AsyncSession,
     created_by: str,
     reason_for_change: str,
-    client: Optional[Any] = None,
+    client: Any | None = None,
     meddra_version: str = "26.0",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Orchestration function running safety reconciliation:
     1. Gathers EDC AE data via execution client.
@@ -289,10 +343,39 @@ async def run_reconciliation(
         meddra_coding = None
 
         if aeterm:
-            try:
-                res = await exec_client.resolve_meddra_code(
-                    term=aeterm, version=meddra_version, client=client
-                )
+            key = (aeterm, meddra_version)
+            res = None
+            expired_data = None
+
+            # Retrieve from cache under lock
+            with terminology_cache._lock:
+                if key in terminology_cache._cache:
+                    data, timestamp = terminology_cache._cache[key]
+                    if time.time() - timestamp < terminology_cache.ttl:
+                        res = data
+                    else:
+                        expired_data = data
+
+            if res is None:
+                try:
+                    res = await exec_client.resolve_meddra_code(
+                        term=aeterm, version=meddra_version, client=client
+                    )
+                    terminology_cache.set(aeterm, meddra_version, res)
+                except Exception as e:
+                    if expired_data is not None:
+                        logger.warning(
+                            "Failed to resolve MedDRA code for term '%s', falling back to expired cache: %s",
+                            aeterm,
+                            e,
+                        )
+                        res = expired_data
+                    else:
+                        logger.warning(
+                            "Failed to resolve MedDRA code for term '%s': %s", aeterm, e
+                        )
+
+            if res:
                 matches = res.get("matches") or []
                 if matches:
                     top_match = matches[0]
@@ -310,10 +393,6 @@ async def run_reconciliation(
                         primary_soc_flag=top_match.get("primary_soc_flag"),
                         score=top_match.get("score", 1.0),
                     )
-            except Exception as e:
-                logger.warning(
-                    "Failed to resolve MedDRA code for term '%s': %s", aeterm, e
-                )
 
         normalized_edc_saes.append(normalize_edc_ae_to_sae(ae_rec, meddra_coding))
 

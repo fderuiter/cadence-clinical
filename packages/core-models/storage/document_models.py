@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -41,4 +41,4 @@ class ArchiveJobResponse(BaseModel):
     job_id: str
     study_id: str
     status: Literal["PENDING", "PROCESSING", "COMPLETED", "FAILED"]
-    download_url: Optional[str] = None
+    download_url: str | None = None

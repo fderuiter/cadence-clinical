@@ -1,5 +1,5 @@
 import uuid
-from typing import Any, Optional
+from typing import Any
 
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -17,7 +17,7 @@ class DatabaseSessionManager:
     def __init__(self) -> None:
         """Initialize the DatabaseSessionManager with empty state."""
         self.engine: Any = None
-        self.session_maker: Optional[async_sessionmaker[AsyncSession]] = None
+        self.session_maker: async_sessionmaker[AsyncSession] | None = None
 
     def init_db(self, database_url: str, **kwargs: Any) -> None:
         """

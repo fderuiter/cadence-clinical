@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-from typing import Any, Dict, List, Union
+from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
@@ -13,7 +13,7 @@ env = Environment(
 )
 
 
-def _format_date(val: Union[datetime, str, None]) -> str:
+def _format_date(val: datetime | str | None) -> str:
     if isinstance(val, datetime):
         return val.isoformat()
     return str(val or "")
@@ -24,8 +24,8 @@ def render_confirmation_letter(
     site_id: str,
     cra_id: str,
     visit_type: str,
-    scheduled_date: Union[datetime, str],
-    created_at: Union[datetime, str],
+    scheduled_date: datetime | str,
+    created_at: datetime | str,
 ) -> str:
     """Renders the confirmation letter using Jinja2 template."""
     template = env.get_template("confirmation_letter.j2")
@@ -44,9 +44,9 @@ def render_follow_up_letter(
     site_id: str,
     cra_id: str,
     visit_type: str,
-    actual_date: Union[datetime, str],
-    findings: List[Dict[str, Any]],
-    created_at: Union[datetime, str],
+    actual_date: datetime | str,
+    findings: list[dict[str, Any]],
+    created_at: datetime | str,
 ) -> str:
     """Renders the follow-up letter using Jinja2 template."""
     template = env.get_template("follow_up_letter.j2")

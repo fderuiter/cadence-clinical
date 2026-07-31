@@ -1,5 +1,5 @@
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 import pytest_asyncio
@@ -86,7 +86,7 @@ async def test_defeated_record_persistence_on_conflicts():
         )
         session.add(inst)
 
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        now = datetime.now(UTC).replace(tzinfo=None)
         assign = SubjectAssignment(
             subject_id="subject_conflict",
             instrument_id="diary_1",
@@ -108,7 +108,7 @@ async def test_defeated_record_persistence_on_conflicts():
     payload_init = {
         "subject_id": "subject_conflict",
         "diary_id": "diary_1",
-        "device_timestamp": datetime.now(timezone.utc).isoformat(),
+        "device_timestamp": datetime.now(UTC).isoformat(),
         "answers": {"pain": 1, "nausea": "none"},
         "offline_sync_markers": {
             "sequence_number": 1,
@@ -132,7 +132,7 @@ async def test_defeated_record_persistence_on_conflicts():
     payload_client = {
         "subject_id": "subject_conflict",
         "diary_id": "diary_1",
-        "device_timestamp": datetime.now(timezone.utc).isoformat(),
+        "device_timestamp": datetime.now(UTC).isoformat(),
         "answers": {"pain": 5, "nausea": "severe"},
         "offline_sync_markers": {
             "sequence_number": 2,
@@ -180,7 +180,7 @@ async def test_defeated_record_persistence_on_conflicts():
     payload_server = {
         "subject_id": "subject_conflict",
         "diary_id": "diary_1",
-        "device_timestamp": datetime.now(timezone.utc).isoformat(),
+        "device_timestamp": datetime.now(UTC).isoformat(),
         "answers": {"pain": 9, "nausea": "extreme"},
         "offline_sync_markers": {
             "sequence_number": 3,
@@ -242,7 +242,7 @@ async def test_structural_conflict_on_missing_target():
     payload = {
         "subject_id": "subject_ghost",
         "diary_id": "diary_non_existent",
-        "device_timestamp": datetime.now(timezone.utc).isoformat(),
+        "device_timestamp": datetime.now(UTC).isoformat(),
         "answers": {"pain": 10},
         "offline_sync_markers": {
             "sequence_number": 1,
@@ -322,7 +322,7 @@ async def test_submit_with_valid_signature():
         )
         session.add(inst)
 
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        now = datetime.now(UTC).replace(tzinfo=None)
         assign = SubjectAssignment(
             subject_id="subject_signed",
             instrument_id="diary_signed",
@@ -340,7 +340,7 @@ async def test_submit_with_valid_signature():
     diary_id = "diary_signed"
     client_id = "dev_secure"
     answers = {"pain": 3}
-    device_timestamp = datetime.now(timezone.utc)
+    device_timestamp = datetime.now(UTC)
 
     # In main.py, timestamps default to device_timestamp for each key
     timestamps = {"pain": device_timestamp}
@@ -406,7 +406,7 @@ async def test_submit_with_invalid_signature_fails():
         )
         session.add(inst)
 
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        now = datetime.now(UTC).replace(tzinfo=None)
         assign = SubjectAssignment(
             subject_id="subject_signed_err",
             instrument_id="diary_signed_err",
@@ -429,7 +429,7 @@ async def test_submit_with_invalid_signature_fails():
     payload = {
         "subject_id": "subject_signed_err",
         "diary_id": "diary_signed_err",
-        "device_timestamp": datetime.now(timezone.utc).isoformat(),
+        "device_timestamp": datetime.now(UTC).isoformat(),
         "answers": {"pain": 3},
         "offline_sync_markers": {
             "sequence_number": 1,
@@ -467,7 +467,7 @@ async def test_bulk_sync_with_valid_signatures_and_tallies():
         )
         session.add(inst)
 
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        now = datetime.now(UTC).replace(tzinfo=None)
         # Assignment exists for subject_bulk_1 but NOT subject_bulk_ghost
         assign = SubjectAssignment(
             subject_id="subject_bulk_1",
@@ -487,7 +487,7 @@ async def test_bulk_sync_with_valid_signatures_and_tallies():
     # 3. subject_bulk_1: bulk_diary - valid signature (UPDATED_CLIENT_WINS)
 
     secret_bytes = b"internal-gateway-secret-12345"
-    device_timestamp = datetime.now(timezone.utc)
+    device_timestamp = datetime.now(UTC)
 
     # Entry 1
     incoming_1 = SyncRecord(

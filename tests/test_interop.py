@@ -4,7 +4,7 @@
 # database schema integrity, foreign-key constraints, cascading delete logic, and authorization boundaries.
 
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 import pytest_asyncio
@@ -409,7 +409,7 @@ async def test_epro_submission_and_conflict_resolution():
         )
         session.add(inst)
 
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        now = datetime.now(UTC).replace(tzinfo=None)
         assign = SubjectAssignment(
             subject_id="subj_abc",
             instrument_id="daily_pain_scale",
@@ -531,7 +531,7 @@ async def test_bulk_offline_sync():
         )
         session.add(inst)
 
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        now = datetime.now(UTC).replace(tzinfo=None)
         assign1 = SubjectAssignment(
             subject_id="subj_1",
             instrument_id="q_pain",
@@ -641,7 +641,7 @@ async def test_subject_role_authorization_and_identity_binding():
         )
         session.add(inst)
 
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        now = datetime.now(UTC).replace(tzinfo=None)
         assign1 = SubjectAssignment(
             subject_id="patient_alice",
             instrument_id="daily_pain_scale",
@@ -793,7 +793,7 @@ async def test_instrument_and_assignment_orm_persistence():
         await session.flush()
 
         # Create an Assignment
-        now_utc = datetime.now(timezone.utc)
+        now_utc = datetime.now(UTC)
         assign = SubjectAssignment(
             subject_id="subj_001",
             instrument_id=inst.id,
@@ -843,7 +843,7 @@ async def test_foreign_key_and_cascade_lifecycle_integrity():
 
     # 1. Foreign Key constraint check
     async with async_session() as session:
-        now_utc = datetime.now(timezone.utc)
+        now_utc = datetime.now(UTC)
         invalid_assign = SubjectAssignment(
             subject_id="subj_err",
             instrument_id="non_existent_id_12345",  # Invalid ID
@@ -875,8 +875,8 @@ async def test_foreign_key_and_cascade_lifecycle_integrity():
         assign = SubjectAssignment(
             subject_id="subj_temp",
             instrument_id=inst.id,
-            start_date=datetime.now(timezone.utc),
-            end_date=datetime.now(timezone.utc) + timedelta(days=1),
+            start_date=datetime.now(UTC),
+            end_date=datetime.now(UTC) + timedelta(days=1),
             created_by="admin",
             reason_for_change="Temp assign",
             version_index=1,
@@ -949,8 +949,8 @@ async def test_instrument_and_assignment_endpoints_and_auditing():
     assign_payload = {
         "subject_id": "patient_charlie",
         "instrument_id": inst_id,
-        "start_date": datetime.now(timezone.utc).isoformat(),
-        "end_date": (datetime.now(timezone.utc) + timedelta(days=14)).isoformat(),
+        "start_date": datetime.now(UTC).isoformat(),
+        "end_date": (datetime.now(UTC) + timedelta(days=14)).isoformat(),
         "recurrence_pattern": "WEEKLY",
         "reason_for_change": "Assigning EORTC questionnaire for chemotherapy cycle 1",
     }
@@ -966,10 +966,10 @@ async def test_instrument_and_assignment_endpoints_and_auditing():
     # 4. Assignment validation errors (invalid start/end dates)
     invalid_assign_payload = assign_payload.copy()
     invalid_assign_payload["start_date"] = (
-        datetime.now(timezone.utc) + timedelta(days=5)
+        datetime.now(UTC) + timedelta(days=5)
     ).isoformat()
     invalid_assign_payload["end_date"] = datetime.now(
-        timezone.utc
+        UTC
     ).isoformat()  # End before start
     resp = client.post(
         "/api/v1/interop/assignments",
@@ -1055,7 +1055,7 @@ async def test_subject_content_submission_and_compliance_apis():
     inst_id = resp.json()["id"]
 
     # 2. Assign to alice
-    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    now_utc = datetime.now(UTC).replace(tzinfo=None)
     assign_payload = {
         "subject_id": "alice_subject",
         "instrument_id": inst_id,
@@ -1222,7 +1222,7 @@ async def test_notifications_and_reminders_lifecycle():
     inst_id = resp.json()["id"]
 
     # 2. Assign to David - make it due (due_at in the past)
-    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    now_utc = datetime.now(UTC).replace(tzinfo=None)
     assign_payload = {
         "subject_id": "david_subject",
         "instrument_id": inst_id,
@@ -1365,7 +1365,7 @@ async def test_compute_reminders_by_subject_and_end_date_branch():
     inst_id = resp.json()["id"]
 
     # 2. Assign to Eva with no due_at, but end_date in the past (overdue/due)
-    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    now_utc = datetime.now(UTC).replace(tzinfo=None)
     assign_payload = {
         "subject_id": "eva_subject",
         "instrument_id": inst_id,
@@ -1475,7 +1475,7 @@ async def test_compute_reminders_all_subjects_staff():
     assert resp.status_code == 201
     inst_id = resp.json()["id"]
 
-    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    now_utc = datetime.now(UTC).replace(tzinfo=None)
     client.post(
         "/api/v1/interop/assignments",
         json={

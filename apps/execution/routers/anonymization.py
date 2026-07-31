@@ -4,7 +4,7 @@ Requirements: PRD-SYS-001
 """
 
 import base64
-from typing import Any, Dict, List
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -36,7 +36,7 @@ class RedactPDFRequest(BaseModel):
     """
 
     pdf_base64: str = Field(..., description="Base64 encoded PDF document content")
-    target_snippets: List[str] = Field(
+    target_snippets: list[str] = Field(
         default_factory=list, description="Target PHI strings to redact"
     )
 
@@ -45,7 +45,7 @@ class RedactPDFRequest(BaseModel):
 async def scan_phi_endpoint(
     payload: PHIScanRequest,
     current_user: dict = Depends(get_current_user),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Scan text payload for Protected Health Information (PHI) identifiers.
 
     Requirements: PRD-SYS-001
@@ -62,7 +62,7 @@ async def scan_phi_endpoint(
 async def redact_pdf_endpoint(
     payload: RedactPDFRequest,
     current_user: dict = Depends(get_current_user),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Apply non-destructive PHI redaction overlays to PDF document.
 
     Requirements: PRD-SYS-001

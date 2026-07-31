@@ -76,6 +76,11 @@ from packages.security.rbac import (
     verify_is_auditor,
     verify_not_auditor,
 )
+from packages.security.sig_token_verifier import (
+    TokenConsumptionCache,
+    token_consumption_cache,
+    verify_and_consume_sig_token,
+)
 from packages.security.signing import (
     asymmetric_sign,
     asymmetric_verify,
@@ -92,6 +97,9 @@ from packages.security.trial_roles import (
 )
 
 __all__ = [
+    "TokenConsumptionCache",
+    "token_consumption_cache",
+    "verify_and_consume_sig_token",
     "TrialRole",
     "check_trial_role",
     "enforce_site_isolation",

@@ -1,0 +1,118 @@
+import os
+import threading
+import time
+
+from fastapi import HTTPException
+from jose import JWTError, jwt
+
+
+class TokenConsumptionCache:
+    """Thread-safe cache to prevent 21 CFR Part 11 signature token replay attacks.
+
+    Stores consumed token keys (JTI or raw token) mapped to their expiration timestamps,
+    and automatically prunes expired keys to bound memory footprint.
+    """
+
+    def __init__(self) -> None:
+        self._consumed: dict[str, float] = {}
+        self._lock = threading.Lock()
+
+    def consume(self, token: str, jti: str | None, exp: float) -> bool:
+        """Atomically verify and consume a token.
+
+        Args:
+            token: The raw JWT token string.
+            jti: The unique token JTI UUID claim.
+            exp: The token expiration timestamp.
+
+        Returns:
+            bool: True if the token is successfully consumed (first time),
+                  or False if it has already been consumed (replay blocked).
+        """
+        now = time.time()
+        key = jti if jti else token
+        with self._lock:
+            # Clean up expired tokens
+            self._consumed = {k: e for k, e in self._consumed.items() if e > now}
+            if key in self._consumed:
+                return False
+            self._consumed[key] = exp
+            return True
+
+    def reset(self) -> None:
+        """Clear the cache.
+
+        Useful for maintaining clean/isolated test state.
+        """
+        with self._lock:
+            self._consumed.clear()
+
+
+token_consumption_cache = TokenConsumptionCache()
+
+
+def verify_and_consume_sig_token(
+    sig_token: str | None,
+    expected_user_id: str,
+    secret: bytes | None = None,
+) -> dict:
+    """Centralized 21 CFR Part 11 signature token verifier and single-use consumer.
+
+    Decrypts and validates the signature token against active re-authentication,
+    expiration bounds, user identity binding, and single-use constraints.
+
+    Args:
+        sig_token: The raw JWT signature token received from headers.
+        expected_user_id: The authenticated user ID of the current request session.
+        secret: Optional custom HMAC signing secret. Defaults to GATEWAY_SECRET env.
+
+    Returns:
+        dict: The decoded signature token JWT payload.
+
+    Raises:
+        HTTPException(401): On any signature, expiration, user binding, or replay violation.
+    """
+    if not sig_token:
+        raise HTTPException(
+            status_code=401,
+            detail="REAUTHENTICATION_REQUIRED",
+        )
+
+    if secret is None:
+        secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode(
+            "utf-8"
+        )
+
+    try:
+        payload = jwt.decode(sig_token, secret, algorithms=["HS256"])
+    except JWTError:
+        raise HTTPException(
+            status_code=401,
+            detail="REAUTHENTICATION_REQUIRED",
+        )
+
+    # 1. Temporal Validity
+    now = time.time()
+    if payload.get("exp", 0) < now:
+        raise HTTPException(
+            status_code=401,
+            detail="REAUTHENTICATION_REQUIRED",
+        )
+
+    # 2. Signer Identity Binding
+    if payload.get("sub") != expected_user_id:
+        raise HTTPException(
+            status_code=401,
+            detail="REAUTHENTICATION_REQUIRED",
+        )
+
+    # 3. Single-use Consumption (Replay Prevention)
+    jti = payload.get("jti")
+    exp = payload.get("exp", 0)
+    if not token_consumption_cache.consume(sig_token, jti, exp):
+        raise HTTPException(
+            status_code=401,
+            detail="REAUTHENTICATION_REQUIRED",
+        )
+
+    return payload

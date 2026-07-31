@@ -76,6 +76,8 @@
             <CanvasFieldWidget
               :field="field"
               :selected-field-id="selectedFieldId"
+              :has-warning="fieldHasWarning(field)"
+              :warning-message="getFieldWarningMessage(field)"
               @select-field="onSelectField"
               @delete-field="onDeleteField"
               @duplicate-field="onDuplicateField"
@@ -108,6 +110,27 @@ const emit = defineEmits(["select-field", "update-section"]);
 
 const designerStore = useDesignerStore();
 const isDragging = ref(false);
+
+const viewportWidth = computed(() => {
+  const vp = designerStore.viewport || "desktop";
+  if (vp === "mobile") return 480;
+  if (vp === "tablet") return 768;
+  return 1200;
+});
+
+function getFieldWarningMessage(field) {
+  const w = viewportWidth.value;
+  const span = parseInt(field.gridSpan) || 12;
+  const simWidth = (w / 12) * span;
+  if (simWidth < 150) {
+    return `Label may clip or overlap on narrow viewport (${Math.round(simWidth)}px < 150px)`;
+  }
+  return "";
+}
+
+function fieldHasWarning(field) {
+  return !!getFieldWarningMessage(field);
+}
 
 const items = computed({
   get: () => props.section.items || [],

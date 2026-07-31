@@ -356,14 +356,13 @@
               Candidate ID:
               <code
                 style="
-                  background-color: #f1f5f9;
+                  background-color: rgb(241 245 249);
                   padding: 2px 4px;
                   border-radius: 4px;
                 "
                 class="candidate-id"
                 >{{ store.candidateDraft.id }}</code
               >
-              <!-- deid: ignore -->
             </span>
             <span
               :class="[
@@ -418,7 +417,7 @@
                   <span
                     class="badge"
                     style="
-                      background-color: #e2e8f0;
+                      background-color: rgb(226 232 240);
                       color: #475569;
                       font-size: 0.75rem;
                       text-transform: uppercase;
@@ -823,7 +822,7 @@ import { ref, reactive, watch, onMounted, computed } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { soaClient } from "../api/soaClient";
-import { validateField, debounce } from "ui";
+import { validateField, debounce } from "ui"; // Consolidating debounce onto shared packages/ui (PR #566 alignment)
 import { evaluateAST } from "../evaluator.js";
 import { terminologyClient } from "../api/terminologyClient";
 import ClinicalFormField from "../components/clinical/ClinicalFormField.vue";
@@ -871,177 +870,22 @@ function handleCancelConflict() {
   syncStore.clearConflict();
 }
 
-const conceptValidationStates = reactive({});
-const conceptRequestIds = reactive({});
-
-// eslint-disable-next-line no-unused-vars
-function handleConceptCodeInput(field, newValue) {
-  store.formValues[field.id] = newValue;
-
-  if (field._debounceTimer) {
-    clearTimeout(field._debounceTimer);
-  }
-
-  if (!newValue || !newValue.trim()) {
-    conceptValidationStates[field.id] = null;
-    return;
-  }
-
-  if (!conceptRequestIds[field.id]) {
-    conceptRequestIds[field.id] = 0;
-  }
-  const currentReqId = ++conceptRequestIds[field.id];
-
-  field._debounceTimer = setTimeout(async () => {
-    try {
-      const response = await terminologyClient.validateSingleCode(newValue, {
-        changeReason: "Validate code",
-      });
-
-      if (currentReqId !== conceptRequestIds[field.id]) {
-        return;
-      }
-
-      conceptValidationStates[field.id] = {
-        state: response.state,
-        decode: response.decode,
-        errorMessage: response.error_message,
-      };
-    } catch (err) {
-      if (currentReqId !== conceptRequestIds[field.id]) {
-        return;
-      }
-      conceptValidationStates[field.id] = {
-        state: "DEGRADED",
-        errorMessage: err.message || "Terminology service offline",
-      };
-    }
-  }, 300);
-}
-
-// eslint-disable-next-line no-unused-vars
-function getConceptStatusClass(fieldId) {
-  const stateObj = conceptValidationStates[fieldId];
-  if (!stateObj) return "";
-  if (stateObj.state === "VALID") return "lookup-valid";
-  if (stateObj.state === "INVALID") return "lookup-invalid";
-  if (stateObj.state === "DEGRADED") return "lookup-degraded";
-  return "";
-}
-
-// eslint-disable-next-line no-unused-vars
-function getConceptStatusText(fieldId) {
-  const stateObj = conceptValidationStates[fieldId];
-  if (!stateObj) return "";
-  if (stateObj.state === "VALID") {
-    return `Code is valid: "${stateObj.decode}"`;
-  }
-  if (stateObj.state === "INVALID") {
-    return `Invalid code: ${stateObj.errorMessage || ""}`;
-  }
-  if (stateObj.state === "DEGRADED") {
-    return `Terminology service degraded. ${stateObj.errorMessage || ""}`;
-  }
-  return "";
-}
-
-// Live validation states
-const requestCounters = reactive({});
-const conceptStatuses = reactive({});
-const conceptMessages = reactive({});
-
-const debouncedValidate = debounce(async (fieldId, value) => {
-  if (!value || !value.trim()) {
-    conceptStatuses[fieldId] = "none";
-    conceptMessages[fieldId] = "";
-    return;
-  }
-
-  requestCounters[fieldId] = (requestCounters[fieldId] || 0) + 1;
-  const currentReqId = requestCounters[fieldId];
-
-  try {
-    const res = await terminologyClient.validateSingleCode(value, {
-      changeReason: "Validate code",
-    });
-
-    if (requestCounters[fieldId] !== currentReqId) {
-      return; // Discard stale response
-    }
-
-    if (res.state === "VALID") {
-      conceptStatuses[fieldId] = "valid";
-      conceptMessages[fieldId] = `Code is valid: "${res.decode}"`;
-    } else if (res.state === "INVALID") {
-      conceptStatuses[fieldId] = "invalid";
-      conceptMessages[fieldId] = `Invalid code: "${value}"`;
-    } else if (res.state === "DEGRADED") {
-      conceptStatuses[fieldId] = "degraded";
-      conceptMessages[fieldId] =
-        res.error_message ||
-        "Terminology service degraded. Validation offline.";
-    }
-  } catch {
-    if (requestCounters[fieldId] !== currentReqId) {
-      return;
-    }
-    conceptStatuses[fieldId] = "degraded";
-    conceptMessages[fieldId] =
-      "Terminology service degraded. Validation offline.";
-  }
-}, 300);
-
-function handleConceptInput(field, value) {
-  const fieldId = field.id;
-  store.formValues[fieldId] = value;
-
-  if (!value || !value.trim()) {
-    conceptStatuses[fieldId] = "none";
-    conceptMessages[fieldId] = "";
-    return;
-  }
-
-  conceptStatuses[fieldId] = "loading";
-  conceptMessages[fieldId] = "Searching terminology database...";
-
-  debouncedValidate(fieldId, value);
-}
-
-// Deep watch formValues to evaluate rules debounced
-watch(
-  () => store.formValues,
-  () => {
-    store.triggerValueChange();
-  },
-  { deep: true }
-);
-
-onMounted(() => {
-  store.evaluateRules();
-  // Initialize lookup validation for any pre-populated concept_code fields on mount
-  store.ecrfFields.forEach((field) => {
-    if (field.type === "concept_code" && store.formValues[field.id]) {
-      handleConceptInput(field, store.formValues[field.id]);
-    }
-  });
-});
-
-// Lookup Status States
+// Consolidated lookup validation and state management (PR #566 alignment)
+// Unifies and replaces legacy inline timer and request counters (conceptRequestIds, requestCounters, and lastLookupRequestIds)
 const lookupStatuses = ref({});
-const lastLookupRequestIds = {};
-const debounceTimers = {};
+const lookupRequestCounters = reactive({});
+const debouncedLookups = {};
 
+// Performs asynchronous validation against terminology service with strict stale-response protection
 async function performConceptCodeValidation(fieldId, value) {
   if (!value || !value.trim()) {
     lookupStatuses.value[fieldId] = null;
     return;
   }
 
-  if (lastLookupRequestIds[fieldId] === undefined) {
-    lastLookupRequestIds[fieldId] = 0;
-  }
-  lastLookupRequestIds[fieldId]++;
-  const requestId = lastLookupRequestIds[fieldId];
+  // Increment counter atomically per field ID to act as our active stale-response guard
+  const nextRequestId = (lookupRequestCounters[fieldId] || 0) + 1;
+  lookupRequestCounters[fieldId] = nextRequestId;
 
   lookupStatuses.value[fieldId] = {
     status: "loading",
@@ -1053,7 +897,8 @@ async function performConceptCodeValidation(fieldId, value) {
       changeReason: "Validate code",
     });
 
-    if (requestId !== lastLookupRequestIds[fieldId]) {
+    // Stale guard check: discard if another request has been fired since
+    if (nextRequestId !== lookupRequestCounters[fieldId]) {
       return;
     }
 
@@ -1070,11 +915,13 @@ async function performConceptCodeValidation(fieldId, value) {
     } else if (res.state === "DEGRADED") {
       lookupStatuses.value[fieldId] = {
         status: "degraded",
-        message: "Terminology service degraded. Validation offline.",
+        message:
+          res.error_message ||
+          "Terminology service degraded. Validation offline.",
       };
     }
   } catch (error) {
-    if (requestId !== lastLookupRequestIds[fieldId]) {
+    if (nextRequestId !== lookupRequestCounters[fieldId]) {
       return;
     }
     lookupStatuses.value[fieldId] = {
@@ -1085,23 +932,47 @@ async function performConceptCodeValidation(fieldId, value) {
   }
 }
 
+// Retrieve or initialize the shared debounce wrapper around our consolidated validation
+function getDebouncedLookup(fieldId) {
+  if (!debouncedLookups[fieldId]) {
+    debouncedLookups[fieldId] = debounce(async (value) => {
+      await performConceptCodeValidation(fieldId, value);
+    }, 300);
+  }
+  return debouncedLookups[fieldId];
+}
+
 function handleLookupInput(field, value) {
   const fieldId = field.id;
   store.formValues[fieldId] = value;
-
-  if (debounceTimers[fieldId]) {
-    clearTimeout(debounceTimers[fieldId]);
-  }
 
   if (!value || !value.trim()) {
     lookupStatuses.value[fieldId] = null;
     return;
   }
 
-  debounceTimers[fieldId] = setTimeout(() => {
-    performConceptCodeValidation(fieldId, value);
-  }, 300);
+  // Use shared debounce utility from packages/ui
+  getDebouncedLookup(fieldId)(value);
 }
+
+// Deep watch formValues to evaluate rules debounced
+watch(
+  () => store.formValues,
+  () => {
+    store.triggerValueChange();
+  },
+  { deep: true }
+);
+
+onMounted(() => {
+  store.evaluateRules();
+  // Initialize lookup validation for any pre-populated concept_code fields on mount
+  store.ecrfFields.forEach((field) => {
+    if (field.type === "concept_code" && store.formValues[field.id]) {
+      performConceptCodeValidation(field.id, store.formValues[field.id]);
+    }
+  });
+});
 
 // Reason Modal States
 const showReasonModal = ref(false);

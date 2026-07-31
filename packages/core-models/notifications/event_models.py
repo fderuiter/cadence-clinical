@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -19,7 +19,7 @@ class SystemDomainEvent(BaseModel):
         ..., description="The microservice emitting the event (e.g., edc, etmf)."
     )
     study_id: str = Field(..., description="The associated clinical study/trial ID.")
-    payload: Dict[str, Any] = Field(
+    payload: dict[str, Any] = Field(
         default_factory=dict,
         description="Event-specific metadata or structured payload details.",
     )
@@ -36,13 +36,13 @@ class NotificationDispatchJob(BaseModel):
     job_id: str = Field(
         ..., description="Unique UUID for tracking the notification delivery job."
     )
-    recipient_user_ids: List[str] = Field(
+    recipient_user_ids: list[str] = Field(
         ..., description="List of resolved target keycloak user IDs."
     )
-    notification_payload: Dict[str, Any] = Field(
+    notification_payload: dict[str, Any] = Field(
         ..., description="Structured content and fields for the notification."
     )
-    channels: List[Literal["WEBSOCKET", "EMAIL", "SMS"]] = Field(
+    channels: list[Literal["WEBSOCKET", "EMAIL", "SMS"]] = Field(
         default_factory=lambda: ["WEBSOCKET", "EMAIL"],
         description="Target distribution channels for this job.",
     )

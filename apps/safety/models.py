@@ -1,8 +1,9 @@
 import uuid
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, event, func
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship
 
 
@@ -25,7 +26,7 @@ class SafetyCaseICSR(Base):
         String(255), nullable=False, index=True
     )
     patient_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    case_data: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
+    case_data: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
 
     # 21 CFR Part 11 Compliance Auditing Metadata
     created_at: Mapped[datetime] = mapped_column(
@@ -36,9 +37,14 @@ class SafetyCaseICSR(Base):
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
 
-class SafetyExportJob(Base):
+# Aliases for SafetyCase / ICSR
+SafetyCase = SafetyCaseICSR
+ICSR = SafetyCaseICSR
+
+
+class ExportJob(Base):
     """
-    Represents a persisted export job record for ICSR XML exports.
+    Represents a persisted export job record for ICSR XML exports, mirroring TranslationJob.
     """
 
     __tablename__ = "safety_export_jobs"
@@ -50,7 +56,10 @@ class SafetyExportJob(Base):
     status: Mapped[str] = mapped_column(
         String(50), default="PENDING", nullable=False
     )  # PENDING, COMPLETED, FAILED
-    error_message: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    output: Mapped[str | None] = mapped_column(
+        String, nullable=True
+    )  # xml payload output
+    error: Mapped[str | None] = mapped_column(String, nullable=True)  # error message
 
     # 21 CFR Part 11 Compliance Auditing Metadata
     created_at: Mapped[datetime] = mapped_column(
@@ -59,6 +68,18 @@ class SafetyExportJob(Base):
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    @property
+    def error_message(self) -> str | None:
+        return self.error
+
+    @error_message.setter
+    def error_message(self, val: str | None) -> None:
+        self.error = val
+
+
+# Alias for SafetyExportJob
+SafetyExportJob = ExportJob
 
 
 class SAEReconciliationRun(Base):
@@ -108,9 +129,9 @@ class SAEDiscrepancy(Base):
     )  # EDC, SAFETY, or RECONCILIATION
     case_event_key: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     field_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    expected_value: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
-    actual_value: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
-    meddra_version: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    expected_value: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    actual_value: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    meddra_version: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     # 21 CFR Part 11 Compliance Auditing Metadata
     created_at: Mapped[datetime] = mapped_column(
@@ -139,10 +160,10 @@ class SAEReconciliationJob(Base):
     status: Mapped[str] = mapped_column(
         String(50), default="PENDING", nullable=False
     )  # PENDING, PROCESSING, COMPLETED, FAILED
-    error_message: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
-    run_id: Mapped[Optional[str]] = mapped_column(
+    run_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("sae_reconciliation_runs.id"), nullable=True, index=True
     )
+    error: Mapped[str | None] = mapped_column(String, nullable=True)
 
     # 21 CFR Part 11 Compliance Auditing Metadata
     created_at: Mapped[datetime] = mapped_column(
@@ -153,6 +174,14 @@ class SAEReconciliationJob(Base):
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     run: Mapped[Optional["SAEReconciliationRun"]] = relationship("SAEReconciliationRun")
+
+    @property
+    def error_message(self) -> str | None:
+        return self.error
+
+    @error_message.setter
+    def error_message(self, val: str | None) -> None:
+        self.error = val
 
 
 class SafetyAuditLog(Base):
@@ -169,14 +198,12 @@ class SafetyAuditLog(Base):
         DateTime, default=func.now(), nullable=False, index=True
     )
     created_by: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    reason_for_change: Mapped[Optional[str]] = mapped_column(
-        String(1000), nullable=True
-    )
+    reason_for_change: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     action: Mapped[str] = mapped_column(String(100), nullable=False)
     details: Mapped[str] = mapped_column(String(1000), nullable=False)
-    record_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    record_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
 
 @event.listens_for(Session, "before_flush")
@@ -197,3 +224,27 @@ def prevent_audit_log_modification(session: Session, flush_context, instances) -
             raise ValueError(
                 "Deletions from SafetyAuditLog are strictly forbidden to comply with 21 CFR Part 11."
             )
+
+
+async def write_audit_log(
+    session: AsyncSession,
+    created_by: str,
+    action: str,
+    details: str,
+    reason_for_change: str | None = None,
+    version_index: int = 1,
+    record_id: str | None = None,
+) -> None:
+    """
+    Utility function to write to the immutable Safety audit ledger.
+    """
+    log_entry = SafetyAuditLog(
+        created_by=created_by,
+        action=action,
+        details=details,
+        record_id=record_id,
+        reason_for_change=reason_for_change,
+        version_index=version_index,
+    )
+    session.add(log_entry)
+    await session.flush()

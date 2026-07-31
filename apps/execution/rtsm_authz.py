@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import HTTPException, status
 
@@ -15,9 +15,9 @@ from packages.security.rbac import (
 
 def dispatch_access_violation_alert(
     principal: Principal,
-    site_id: Optional[str],
-    study_id: Optional[str] = None,
-    subject_id: Optional[str] = None,
+    site_id: str | None,
+    study_id: str | None = None,
+    subject_id: str | None = None,
 ) -> None:
     """Construct and non-blockingly dispatch security access violation alerts to critical roles.
 
@@ -57,9 +57,9 @@ def dispatch_access_violation_alert(
 
 def verify_site_access(
     principal: Principal,
-    site_id: Optional[str],
-    study_id: Optional[str] = None,
-    subject_id: Optional[str] = None,
+    site_id: str | None,
+    study_id: str | None = None,
+    subject_id: str | None = None,
 ) -> None:
     """Enforce site and study isolation for site-scoped or restricted resources.
 

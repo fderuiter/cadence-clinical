@@ -6,7 +6,8 @@ records in accordance with FDA 21 CFR Part 11 and GxP standards.
 """
 
 import os
-from typing import IO, Any, Dict, Iterable, Iterator, List, Union
+from collections.abc import Iterable, Iterator
+from typing import IO, Any
 
 
 class MedDRAParseError(ValueError):
@@ -79,10 +80,10 @@ class MedDRAParser:
 
     def parse(
         self,
-        file_input: Union[str, bytes, os.PathLike, Iterable[str], IO[str], IO[bytes]],
+        file_input: str | bytes | os.PathLike | Iterable[str] | IO[str] | IO[bytes],
         file_type: str = None,
         file_name: str = None,
-    ) -> Iterator[Dict[str, Any]]:
+    ) -> Iterator[dict[str, Any]]:
         """Parses a MedDRA ASCII file streamingly and yields parsed records.
 
         Args:
@@ -105,7 +106,7 @@ class MedDRAParser:
             if not file_type:
                 file_type = self.detect_file_type(parsed_file_name)
 
-            with open(file_input, mode="r", encoding=self.encoding) as f:
+            with open(file_input, encoding=self.encoding) as f:
                 yield from self._parse_stream(f, file_type, parsed_file_name)
         else:
             if not parsed_file_name:
@@ -117,11 +118,11 @@ class MedDRAParser:
 
     def parse_in_batches(
         self,
-        file_input: Union[str, bytes, os.PathLike, Iterable[str], IO[str], IO[bytes]],
+        file_input: str | bytes | os.PathLike | Iterable[str] | IO[str] | IO[bytes],
         file_type: str = None,
         file_name: str = None,
         batch_size: int = 1000,
-    ) -> Iterator[List[Dict[str, Any]]]:
+    ) -> Iterator[list[dict[str, Any]]]:
         """Parses the input file streamingly and yields records in batches.
 
         Args:
@@ -150,7 +151,7 @@ class MedDRAParser:
 
     def _parse_stream(
         self, stream: Iterable[str], file_type: str, file_name: str
-    ) -> Iterator[Dict[str, Any]]:
+    ) -> Iterator[dict[str, Any]]:
         """Internal helper to parse lines from a stream."""
         file_type = file_type.lower()
         allowed_types = {"llt", "pt", "hlt", "hlgt", "soc", "mdhier"}
@@ -447,12 +448,12 @@ class MedDRAParser:
 
 
 def parse_meddra_file(
-    file_input: Union[str, bytes, os.PathLike, Iterable[str], IO[str], IO[bytes]],
+    file_input: str | bytes | os.PathLike | Iterable[str] | IO[str] | IO[bytes],
     dictionary_version: str,
     file_type: str = None,
     file_name: str = None,
     encoding: str = "utf-8",
-) -> Iterator[Dict[str, Any]]:
+) -> Iterator[dict[str, Any]]:
     """Stable public entry point to parse a MedDRA ASCII file streamingly.
 
     Args:
@@ -548,7 +549,7 @@ class WHODrugParser:
         dictionary_version: str,
         encoding: str = "utf-8",
         strict_referential_validation: bool = False,
-        custom_configs: Dict[str, Any] = None,
+        custom_configs: dict[str, Any] = None,
     ):
         """Initializes the WHODrugParser.
 
@@ -657,10 +658,10 @@ class WHODrugParser:
 
     def parse(
         self,
-        file_input: Union[str, bytes, os.PathLike, Iterable[str], IO[str], IO[bytes]],
+        file_input: str | bytes | os.PathLike | Iterable[str] | IO[str] | IO[bytes],
         file_type: str = None,
         file_name: str = None,
-    ) -> Iterator[Dict[str, Any]]:
+    ) -> Iterator[dict[str, Any]]:
         """Parses a WHODrug file streamingly and yields parsed records.
 
         Args:
@@ -683,7 +684,7 @@ class WHODrugParser:
             if not file_type:
                 file_type = self.detect_file_type(parsed_file_name)
 
-            with open(file_input, mode="r", encoding=self.encoding) as f:
+            with open(file_input, encoding=self.encoding) as f:
                 yield from self._parse_stream(f, file_type, parsed_file_name)
         else:
             if not parsed_file_name:
@@ -695,11 +696,11 @@ class WHODrugParser:
 
     def parse_in_batches(
         self,
-        file_input: Union[str, bytes, os.PathLike, Iterable[str], IO[str], IO[bytes]],
+        file_input: str | bytes | os.PathLike | Iterable[str] | IO[str] | IO[bytes],
         file_type: str = None,
         file_name: str = None,
         batch_size: int = 1000,
-    ) -> Iterator[List[Dict[str, Any]]]:
+    ) -> Iterator[list[dict[str, Any]]]:
         """Parses the input file streamingly and yields records in batches.
 
         Args:
@@ -732,8 +733,8 @@ class WHODrugParser:
         mapping: Any,
         file_format: str,
         delimiter: str | None,
-        header_map: Dict[str, int] | None,
-        line_fields: List[str] | None,
+        header_map: dict[str, int] | None,
+        line_fields: list[str] | None,
         file_name: str,
         line_num: int,
     ) -> str:
@@ -781,7 +782,7 @@ class WHODrugParser:
 
     def _parse_stream(
         self, stream: Iterable[str], file_type: str, file_name: str
-    ) -> Iterator[Dict[str, Any]]:
+    ) -> Iterator[dict[str, Any]]:
         """Internal helper to parse lines from a stream."""
         file_type = file_type.lower()
         if file_type not in self.configs:
@@ -1163,15 +1164,15 @@ class WHODrugParser:
 
 
 def parse_whodrug_file(
-    file_input: Union[str, bytes, os.PathLike, Iterable[str], IO[str], IO[bytes]],
+    file_input: str | bytes | os.PathLike | Iterable[str] | IO[str] | IO[bytes],
     dictionary_version: str,
     file_type: str = None,
     file_name: str = None,
     encoding: str = "utf-8",
     strict_referential_validation: bool = False,
-    custom_configs: Dict[str, Any] = None,
+    custom_configs: dict[str, Any] = None,
     parser: WHODrugParser = None,
-) -> Iterator[Dict[str, Any]]:
+) -> Iterator[dict[str, Any]]:
     """Stable public entry point to parse a WHODrug ASCII or delimited file streamingly.
 
     Args:
