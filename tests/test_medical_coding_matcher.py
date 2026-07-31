@@ -108,6 +108,13 @@ def test_cache_ttl_configuration():
         cache = CodingCache()
         assert cache.ttl == 10.0
 
+    # Test TERMINOLOGY_CACHE_TTL priority
+    with patch.dict(
+        os.environ, {"TERMINOLOGY_CACHE_TTL": "20", "CODING_CACHE_TTL": "10"}
+    ):
+        cache = CodingCache()
+        assert cache.ttl == 20.0
+
     # Direct override
     cache = CodingCache(ttl=5.0)
     assert cache.ttl == 5.0
