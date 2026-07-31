@@ -69,10 +69,10 @@ This section defines the operational lifecycle for extracting clinical trial dat
 
 ### Lifecycle Pipeline Flow
 1. **Live Data Entry**: Subject clinical data captured via eCRF screens with real-time CDASH edit checks (`edit_checks.py`).
-2. **SDTM Extraction**: Clinical data extracted and mapped into core SDTM domains (`DM`, `AE`, `VS`, `LB`, `MH`) using `biostat/extractors.py`.
-3. **ADaM Derivation**: Analysis datasets (`ADSL`, `ADAE`, `ADVS`) derived using `biostat/adsl.py`, `adae.py`, and `advs.py`.
-4. **Dataset-JSON Serialization**: Datasets serialized into CDISC Dataset-JSON 1.0.0 format (`biostat/serializer.py`).
-5. **Structural & Referential Validation**: Pre-export validation gates executed via `biostat/validator.py`.
+2. **SDTM Extraction**: Clinical data extracted and mapped into core SDTM domains (`DM`, `AE`, `VS`, `LB`, `MH`) using `apps/execution/biostat/extractors.py`.
+3. **ADaM Derivation**: Analysis datasets (`ADSL`, `ADAE`, `ADVS`) derived using `apps/execution/biostat/adsl.py`, `adae.py`, and `advs.py`.
+4. **Dataset-JSON Serialization**: Datasets serialized into CDISC Dataset-JSON 1.0.0 format (`apps/execution/biostat/serializer.py`).
+5. **Structural & Referential Validation**: Pre-export validation gates executed via `apps/execution/biostat/validator.py`.
 6. **Audited Export**: Authorized export execution recorded in `BiostatExport` audit logs.
 
 ```text
