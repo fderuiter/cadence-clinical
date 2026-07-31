@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1737
-- **Passed:** 1737 🟢
+- **Total Automated Test Cases Run:** 1748
+- **Passed:** 1748 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1824,6 +1824,17 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_translation_fails_early_on_invalid_structure` | `tests.test_unified_schemas_terminology` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validator_with_invalid_gender` | `tests.test_unified_schemas_terminology` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validator_with_variant_and_boolean_inputs` | `tests.test_unified_schemas_terminology` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_resolve_usdm_version_heuristics_default` | `tests.test_usdm_adapter_and_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_resolve_usdm_version_heuristics_v2_designs` | `tests.test_usdm_adapter_and_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_resolve_usdm_version_heuristics_v2_study_arms` | `tests.test_usdm_adapter_and_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_resolve_usdm_version_heuristics_v2_study_epochs` | `tests.test_usdm_adapter_and_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_resolve_usdm_version_heuristics_v3_arms` | `tests.test_usdm_adapter_and_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_resolve_usdm_version_invalid_override_ignored` | `tests.test_usdm_adapter_and_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_safe_parse_payload_empty_error` | `tests.test_usdm_adapter_and_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_safe_parse_payload_invalid_yaml_and_json` | `tests.test_usdm_adapter_and_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_safe_parse_payload_not_dict_json` | `tests.test_usdm_adapter_and_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_safe_parse_payload_not_dict_yaml` | `tests.test_usdm_adapter_and_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_validate_usdm_payload_custom_extensible_elements` | `tests.test_usdm_adapter_and_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_usdm_importer_invalid_payload_raises` | `tests.test_usdm_importer` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_usdm_importer_valid_dict` | `tests.test_usdm_importer` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_usdm_importer_valid_model` | `tests.test_usdm_importer` | *Regression/Helper* | 🟢 PASSED | < 1s |
