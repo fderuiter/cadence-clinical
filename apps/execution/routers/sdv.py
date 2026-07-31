@@ -3,29 +3,29 @@
 Requirements: PRD-QRY-005, PRD-QRY-006, PRD-QRY-007
 """
 
-from enum import Enum
-from typing import Optional, List
 from datetime import datetime
+from enum import Enum
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import select, text
 
-from apps.execution.database.models import (
-    SDVSignOff,
-    TSDVConfig,
-    ClinicalSubject,
-    ClinicalObservation,
-    ClinicalVisit,
-)
-from apps.execution.tsdv import evaluate_tsdv_requirement
 from apps.execution.database.context import current_user_id
 from apps.execution.database.core import db_manager
+from apps.execution.database.models import (
+    ClinicalObservation,
+    ClinicalSubject,
+    ClinicalVisit,
+    SDVSignOff,
+    TSDVConfig,
+)
+from apps.execution.tsdv import evaluate_tsdv_requirement
 from packages.security.rbac import (
     Principal,
-    require_permission,
-    get_principal,
     can_access_study,
+    get_principal,
+    require_permission,
 )
 
 router = APIRouter(prefix="/api/v1/execution", tags=["SDV/TSDV"])
@@ -34,6 +34,7 @@ router = APIRouter(prefix="/api/v1/execution", tags=["SDV/TSDV"])
 # ==========================================
 # Study Scope Guard
 # ==========================================
+
 
 class StudyScopeChecker:
     async def __call__(
@@ -52,6 +53,7 @@ class StudyScopeChecker:
                     body_bytes = await request.body()
                     if body_bytes:
                         import json
+
                         body = json.loads(body_bytes)
                         if isinstance(body, dict):
                             study_id = body.get("study_id") or body.get("id")
@@ -87,6 +89,7 @@ def require_study_scope() -> StudyScopeChecker:
 # ==========================================
 # Pydantic Schemas
 # ==========================================
+
 
 class SamplingModelEnum(str, Enum):
     SUBJECT_BASED = "SUBJECT_BASED"
@@ -175,6 +178,7 @@ class SDVSignOffResponse(BaseModel):
 # SDV/TSDV Endpoints
 # ==========================================
 
+
 @router.post(
     "/tsdv/config",
     response_model=TSDVConfigResponse,
@@ -183,7 +187,7 @@ class SDVSignOffResponse(BaseModel):
 async def create_or_update_tsdv_config(
     request: Request,
     payload: TSDVConfigCreate,
-    principal: Principal = Depends(require_permission("sdv:create")),
+    principal: Principal = Depends(require_permission("sdv:update")),
     _study_scope: Principal = Depends(require_study_scope()),
 ) -> TSDVConfig:
     """Create or update Targeted SDV (TSDV) configuration for a study.
@@ -348,7 +352,7 @@ async def evaluate_tsdv_rule(
 )
 async def sdv_signoff(
     payload: SDVSignOffRequest,
-    principal: Principal = Depends(require_permission("sdv:update")),
+    principal: Principal = Depends(require_permission("sdv:create")),
     _study_scope: Principal = Depends(require_study_scope()),
 ) -> SDVSignOffResponse:
     """CRA/monitor-gated SDV sign-off endpoint for Field, Page, or Visit scopes."""

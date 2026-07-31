@@ -65,12 +65,10 @@ from apps.execution.database.models import (
     FormSubmission,
     ImportState,
     MigrationRule,
-    SDVSignOff,
     StudyAuthoredRule,
     SubjectConsent,
     SubjectRandomization,
     TranslationJob,
-    TSDVConfig,
 )
 from apps.execution.database.models import (
     DictionaryType as DBDictionaryType,
@@ -110,7 +108,6 @@ from apps.execution.rtsm_supply import (
 from apps.execution.subject_lifecycle import InvalidStateTransitionError
 from apps.execution.translator import process_translation
 from apps.execution.trial_lock import TrialLockManager
-from apps.execution.tsdv import evaluate_tsdv_requirement
 from apps.execution.ucum import convert_unit, get_normalized_representation
 from packages.security import (
     ROLE_AUTHORIZED_ER_PHYSICIAN,

@@ -283,7 +283,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "pi_signoff": {"read"},
         "medical_coding": {"create", "read", "update", "delete"},
         "trial_lock": {"create", "read", "update", "delete"},
-        "sdv": {"create", "read"},
+        "sdv": {"read", "update"},
     },
     ROLE_SPONSOR_MM: {
         "study_design": {"read"},
