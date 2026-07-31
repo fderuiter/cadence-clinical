@@ -14,18 +14,21 @@ class BulkSdvSignOffRequest(BaseModel):
     Requirements: PRD-SYS-001
     """
 
-    study_id: str = Field(..., description="Target protocol study ID")
-    subject_id: str = Field(..., description="Target subject ID")
     scope: str = Field(..., description="SDV scope boundary: FIELD, PAGE, or VISIT")
     target_ids: List[str] = Field(
         ...,
         description="List of target database or artifact IDs corresponding to the scope",
     )
+    subject_id: str = Field(..., description="Target subject ID")
+    study_id: str = Field(..., description="Target protocol study ID")
+    site_id: Optional[str] = Field(
+        None, description="Optional site identifier for the targets"
+    )
     reason_for_change: str = Field(
         ..., description="Mandatory GxP 21 CFR Part 11 justification reason"
     )
-    site_id: Optional[str] = Field(
-        None, description="Optional site identifier for the targets"
+    signing_reason: str = Field(
+        ..., description="21 CFR Part 11 signature purpose/meaning"
     )
 
 
@@ -35,20 +38,21 @@ class BulkSdvSignOffResponse(BaseModel):
     Requirements: PRD-SYS-001
     """
 
-    signed_count: int = Field(
-        ..., description="Total number of successfully signed SDV items"
-    )
-    signed_target_ids: List[str] = Field(
-        ..., description="List of target IDs that were successfully signed"
-    )
-    skipped_target_ids: List[str] = Field(
-        ..., description="List of target IDs that were skipped or already signed"
-    )
+    bulk_id: str = Field(..., description="Unique bulk SDV signature identifier")
     content_digest: str = Field(..., description="SHA-256 digest of bulk signed data")
     timestamp_utc: str = Field(
         ..., description="UTC ISO timestamp of signature execution"
     )
     audit_tx: str = Field(..., description="Immutable GxP audit ledger transaction ID")
+    verified_count: int = Field(
+        ..., description="Total number of successfully verified SDV items"
+    )
+    verified_target_ids: List[str] = Field(
+        ..., description="List of target IDs that were successfully signed"
+    )
+    skipped_targets: List[dict] = Field(
+        ..., description="List of target IDs that were skipped along with reasons"
+    )
 
 
 class QueryTargetDescriptor(BaseModel):
@@ -57,15 +61,18 @@ class QueryTargetDescriptor(BaseModel):
     Requirements: PRD-SYS-001
     """
 
+    study_id: str = Field(..., description="Target protocol study ID")
     subject_id: str = Field(..., description="Target clinical trial subject ID")
     visit_id: str = Field(..., description="Target visit identifier")
     domain: str = Field(..., description="Target SDTM domain code")
     test_code: str = Field(..., description="Target clinical test code")
-    observation_id: str = Field(
-        ..., description="Target unique clinical observation ID"
+    observation_id: Optional[str] = Field(
+        None, description="Optional target unique clinical observation ID"
     )
-    explanation: str = Field(
-        ...,
+    form_id: Optional[str] = Field(None, description="Optional target form ID")
+    field_id: Optional[str] = Field(None, description="Optional target field ID")
+    explanation: Optional[str] = Field(
+        None,
         description="Contextual explanation/issue description triggering query generation",
     )
 
@@ -76,11 +83,6 @@ class BulkQueryGenerationRequest(BaseModel):
     Requirements: PRD-SYS-001
     """
 
-    study_id: str = Field(..., description="Target protocol study ID")
-    site_id: Optional[str] = Field(None, description="Optional target site identifier")
-    subject_id: Optional[str] = Field(
-        None, description="Optional target subject identifier"
-    )
     targets: List[QueryTargetDescriptor] = Field(
         ..., description="List of query target coordinate fields and explanations"
     )
@@ -95,14 +97,12 @@ class BulkQueryGenerationResponse(BaseModel):
     Requirements: PRD-SYS-001
     """
 
-    generated_count: int = Field(..., description="Total number of generated queries")
+    batch_id: str = Field(..., description="Unique batch clinical query identifier")
+    audit_tx: str = Field(..., description="Immutable GxP audit ledger transaction ID")
     generated_query_ids: List[str] = Field(
         ..., description="List of generated unique query IDs"
     )
-    skipped_targets: List[QueryTargetDescriptor] = Field(
+    skipped_targets: List[dict] = Field(
         ...,
-        description="List of target descriptors that were skipped due to already having an active query",
-    )
-    timestamp_utc: str = Field(
-        ..., description="UTC ISO timestamp of query generation execution"
+        description="List of target descriptors that were skipped along with reasons",
     )

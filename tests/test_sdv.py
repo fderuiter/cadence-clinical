@@ -542,3 +542,148 @@ async def test_sdv_automatic_verification_drop_compliance():
             select(ClinicalObservation).where(ClinicalObservation.id == "OBS-DROP-1")
         )
         assert res_obs.scalar_one().is_sdv_verified is False
+
+
+@pytest.mark.asyncio
+async def test_validate_and_upsert_sdv_target_helper():
+    """Verify that the shared helper validate_and_upsert_sdv_target correctly validates targets and performs upserts."""
+    from apps.execution.sdv_helper import validate_and_upsert_sdv_target
+
+    # 1. Setup DB
+    async with db_manager.get_session_maker()() as session:
+        async with session.begin():
+            await session.execute(
+                text("SELECT set_config('cadence.app_writing', 'true', 1);")
+            )
+            subj = ClinicalSubject(
+                subject_id="SUBJ-H-1", study_id="STUDY-H-TEST", site_id="SITE-H-1"
+            )
+            session.add(subj)
+
+            visit = ClinicalVisit(
+                id="VISIT-H-1",
+                subject_id="SUBJ-H-1",
+                study_id="STUDY-H-TEST",
+                visit_name="Baseline",
+            )
+            session.add(visit)
+
+            obs = ClinicalObservation(
+                id="OBS-H-1",
+                subject_id="SUBJ-H-1",
+                study_id="STUDY-H-TEST",
+                visit_id="VISIT-H-1",
+                page_id="PAGE-H-1",
+                domain="LB",
+                test_code="WBC",
+                test_name="White Blood Cells",
+                value=5.0,
+            )
+            session.add(obs)
+
+    # 2. Test Success Paths
+    async with db_manager.get_session_maker()() as session:
+        # FIELD scope
+        signoff, err = await validate_and_upsert_sdv_target(
+            session=session,
+            scope="FIELD",
+            target_id="OBS-H-1",
+            subject_id="SUBJ-H-1",
+            study_id="STUDY-H-TEST",
+            site_id=None,
+            verifier_id="CRA-HERO",
+        )
+        assert err is None
+        assert signoff is not None
+        assert signoff.is_verified is True
+        assert signoff.verified_by == "CRA-HERO"
+
+        # VISIT scope
+        signoff_v, err_v = await validate_and_upsert_sdv_target(
+            session=session,
+            scope="VISIT",
+            target_id="VISIT-H-1",
+            subject_id="SUBJ-H-1",
+            study_id="STUDY-H-TEST",
+            site_id="SITE-H-1",
+            verifier_id="CRA-HERO",
+        )
+        assert err_v is None
+        assert signoff_v is not None
+        assert signoff_v.scope == "VISIT"
+
+        # PAGE scope
+        signoff_p, err_p = await validate_and_upsert_sdv_target(
+            session=session,
+            scope="PAGE",
+            target_id="PAGE-H-1",
+            subject_id="SUBJ-H-1",
+            study_id="STUDY-H-TEST",
+            site_id=None,
+            verifier_id="CRA-HERO",
+        )
+        assert err_p is None
+        assert signoff_p is not None
+        assert signoff_p.scope == "PAGE"
+
+    # 3. Test Validation Errors
+    async with db_manager.get_session_maker()() as session:
+        # Invalid scope
+        _, err = await validate_and_upsert_sdv_target(
+            session=session,
+            scope="INVALID_SCOPE",
+            target_id="OBS-H-1",
+            subject_id="SUBJ-H-1",
+            study_id="STUDY-H-TEST",
+            site_id=None,
+            verifier_id="CRA-HERO",
+        )
+        assert "Invalid scope" in err
+
+        # Missing subject
+        _, err = await validate_and_upsert_sdv_target(
+            session=session,
+            scope="FIELD",
+            target_id="OBS-H-1",
+            subject_id="SUBJ-MISSING",
+            study_id="STUDY-H-TEST",
+            site_id=None,
+            verifier_id="CRA-HERO",
+        )
+        assert "Subject not found" in err
+
+        # Missing observation ID for FIELD scope
+        _, err = await validate_and_upsert_sdv_target(
+            session=session,
+            scope="FIELD",
+            target_id="OBS-MISSING",
+            subject_id="SUBJ-H-1",
+            study_id="STUDY-H-TEST",
+            site_id=None,
+            verifier_id="CRA-HERO",
+        )
+        assert "Clinical observation not found" in err
+
+        # Missing visit ID for VISIT scope
+        _, err = await validate_and_upsert_sdv_target(
+            session=session,
+            scope="VISIT",
+            target_id="VISIT-MISSING",
+            subject_id="SUBJ-H-1",
+            study_id="STUDY-H-TEST",
+            site_id=None,
+            verifier_id="CRA-HERO",
+        )
+        assert "Clinical visit not found" in err
+
+        # Missing page ID for PAGE scope
+        _, err = await validate_and_upsert_sdv_target(
+            session=session,
+            scope="PAGE",
+            target_id="PAGE-MISSING",
+            subject_id="SUBJ-H-1",
+            study_id="STUDY-H-TEST",
+            site_id=None,
+            verifier_id="CRA-HERO",
+        )
+        assert "Page ID not found" in err
