@@ -29,16 +29,22 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { computed } from "vue";
 import draggable from "vuedraggable";
 import FormSectionContainer from "./FormSectionContainer.vue";
 import { useDesignerStore } from "../../stores/designer.js";
 
-const props = defineProps<{
-  formSchema: any;
-  selectedFieldId: string | null;
-}>();
+const props = defineProps({
+  formSchema: {
+    type: Object,
+    required: true
+  },
+  selectedFieldId: {
+    type: String,
+    default: null
+  }
+});
 
 const emit = defineEmits(["update-schema", "select-field"]);
 
@@ -54,17 +60,17 @@ const sections = computed({
   }
 });
 
-const handleSectionReorder = (evt: any) => {
+const handleSectionReorder = (evt) => {
   // GxP / Part 11 Audit Trail Hook for reordering events
   console.log("Section reordered:", evt);
 };
 
-function onSelectField(fieldId: string) {
+function onSelectField(fieldId) {
   emit("select-field", fieldId);
   designerStore.setSelectedFieldId(fieldId);
 }
 
-function onUpdateSection(updatedSection: any) {
+function onUpdateSection(updatedSection) {
   const currentSections = [...sections.value];
   const idx = currentSections.findIndex((s) => s.id === updatedSection.id);
   if (idx !== -1) {

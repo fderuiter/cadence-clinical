@@ -162,29 +162,19 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { computed } from "vue";
 
-interface Option {
-  value: string;
-  label: string;
-}
-
-interface Field {
-  id: string;
-  label: string;
-  type: string;
-  cdash?: string;
-  sdtm?: string;
-  gridSpan?: number;
-  required?: boolean;
-  options?: Option[];
-}
-
-const props = defineProps<{
-  field: Field;
-  selectedFieldId: string | null;
-}>();
+const props = defineProps({
+  field: {
+    type: Object,
+    required: true
+  },
+  selectedFieldId: {
+    type: String,
+    default: null
+  }
+});
 
 const emit = defineEmits(["select-field", "duplicate-field", "delete-field"]);
 

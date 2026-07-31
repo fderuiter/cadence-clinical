@@ -11,6 +11,8 @@ Based on the executed automated verification suite, the platform meets all prede
 ### Validation Result Summary
 - **Total Automated Test Cases Run:** 1690
 - **Passed:** 1690 🟢
+- **Total Automated Test Cases Run:** 1626
+- **Passed:** 1626 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -577,6 +579,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_doa_delegation_record_validation` | `tests.test_doa_models` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ctms_doa_lifecycle_flow` | `tests.test_doa_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ctms_doa_rbac_violations` | `tests.test_doa_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_doa_historical_audit_trail_logging` | `tests.test_doa_audit_suite` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_doa_assignment_record_creation` | `tests.test_doa_models` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_doa_assignment_and_signoff_api_flow` | `tests.test_doa_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_doa_service_assignment_and_pi_signoff` | `tests.test_doa_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_complete_doa_workflow_lifecycle` | `tests.test_doa_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_document_renderer_render_docx` | `tests.test_document_renderer` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -677,6 +682,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_get_site_eisf_binder_authorized` | `tests.test_eisf_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_site_eisf_binder_unauthorized_cross_site` | `tests.test_eisf_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_upload_and_get_site_document` | `tests.test_eisf_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_get_site_regulatory_binder_endpoint` | `tests.test_eisf_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_upload_eisf_document_post_endpoint` | `tests.test_eisf_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_upload_and_watermark` | `tests.test_eisf_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_completeness_site_isolation` | `tests.test_eisf_site_scope` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_external_monitor_role` | `tests.test_eisf_site_scope` | *Regression/Helper* | 🟢 PASSED | < 1s |

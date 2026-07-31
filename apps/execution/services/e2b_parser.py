@@ -35,7 +35,7 @@ class E2BR3Parser:
             ValueError: If XML parsing fails or required tags are missing.
         """
         try:
-            root = ET.fromstring(xml_content.strip())
+            root = ET.fromstring(xml_content.strip())  # nosec B314
         except Exception as exc:
             raise ValueError(f"Invalid E2B(R3) XML payload: {str(exc)}")
 

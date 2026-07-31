@@ -81,33 +81,22 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, computed } from "vue";
 import draggable from "vuedraggable";
 import CanvasFieldWidget from "./CanvasFieldWidget.vue";
 import { useDesignerStore } from "../../stores/designer.js";
 
-interface Field {
-  id: string;
-  label: string;
-  type: string;
-  cdash?: string;
-  sdtm?: string;
-  gridSpan?: number;
-  required?: boolean;
-}
-
-interface Section {
-  id: string;
-  name: string;
-  isCollapsed?: boolean;
-  items?: Field[];
-}
-
-const props = defineProps<{
-  section: Section;
-  selectedFieldId: string | null;
-}>();
+const props = defineProps({
+  section: {
+    type: Object,
+    required: true
+  },
+  selectedFieldId: {
+    type: String,
+    default: null
+  }
+});
 
 const emit = defineEmits(["select-field", "update-section"]);
 
@@ -122,7 +111,7 @@ const items = computed({
 
     if (designerStore.activeForm?.sections) {
       const idx = designerStore.activeForm.sections.findIndex(
-        (s: any) => s.id === props.section.id
+        (s) => s.id === props.section.id
       );
       if (idx !== -1) {
         designerStore.activeForm.sections[idx].items = val;
@@ -132,11 +121,18 @@ const items = computed({
 });
 
 function toggleCollapse() {
-  props.section.isCollapsed = !props.section.isCollapsed;
+  const storeSection = designerStore.activeForm?.sections?.find(
+    (s) => s.id === props.section.id
+  );
+  if (storeSection) {
+    storeSection.isCollapsed = !storeSection.isCollapsed;
+  } else {
+    emit("update-section", { ...props.section, isCollapsed: !props.section.isCollapsed });
+  }
 }
 
 function addNewItem() {
-  const newField: Field = {
+  const newField = {
     id: `field-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
     label: "New Field Entry",
     type: "text",
@@ -145,52 +141,46 @@ function addNewItem() {
   };
 
   const storeSection = designerStore.activeForm?.sections?.find(
-    (s: any) => s.id === props.section.id
+    (s) => s.id === props.section.id
   );
 
   if (storeSection) {
     designerStore.addFieldToSection(props.section.id, newField);
   } else {
-    if (!props.section.items) {
-      props.section.items = [];
-    }
-    props.section.items.push(newField);
+    const updatedItems = [...(props.section.items || []), newField];
+    emit("update-section", { ...props.section, items: updatedItems });
   }
 
   designerStore.setSelectedFieldId(newField.id);
   emit("select-field", newField.id);
 }
 
-function gridSpanClass(span: any) {
+function gridSpanClass(span) {
   const s = parseInt(span) || 12;
   return `col-span-${s}`;
 }
 
-function onSelectField(fieldId: string) {
+function onSelectField(fieldId) {
   designerStore.setSelectedFieldId(fieldId);
   emit("select-field", fieldId);
 }
 
-function onDeleteField(fieldId: string) {
+function onDeleteField(fieldId) {
   const storeSection = designerStore.activeForm?.sections?.find(
-    (s: any) => s.id === props.section.id
+    (s) => s.id === props.section.id
   );
 
   if (storeSection) {
     designerStore.deleteField(fieldId);
   } else {
-    if (props.section.items) {
-      const idx = props.section.items.findIndex((item) => item.id === fieldId);
-      if (idx !== -1) {
-        props.section.items.splice(idx, 1);
-      }
-    }
+    const updatedItems = (props.section.items || []).filter((item) => item.id !== fieldId);
+    emit("update-section", { ...props.section, items: updatedItems });
   }
 }
 
-function onDuplicateField(fieldId: string) {
+function onDuplicateField(fieldId) {
   const storeSection = designerStore.activeForm?.sections?.find(
-    (s: any) => s.id === props.section.id
+    (s) => s.id === props.section.id
   );
 
   if (storeSection) {
@@ -199,20 +189,21 @@ function onDuplicateField(fieldId: string) {
       emit("select-field", designerStore.selectedFieldId);
     }
   } else {
-    if (props.section.items) {
-      const idx = props.section.items.findIndex((item) => item.id === fieldId);
-      if (idx !== -1) {
-        const original = props.section.items[idx];
-        const newId = `field-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-        const copy: Field = {
-          ...original,
-          id: newId,
-          label: `${original.label} (Copy)`
-        };
-        props.section.items.splice(idx + 1, 0, copy);
-        designerStore.setSelectedFieldId(newId);
-        emit("select-field", newId);
-      }
+    const currentItems = props.section.items || [];
+    const idx = currentItems.findIndex((item) => item.id === fieldId);
+    if (idx !== -1) {
+      const original = currentItems[idx];
+      const newId = `field-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+      const copy = {
+        ...original,
+        id: newId,
+        label: `${original.label} (Copy)`
+      };
+      const updatedItems = [...currentItems];
+      updatedItems.splice(idx + 1, 0, copy);
+      emit("update-section", { ...props.section, items: updatedItems });
+      designerStore.setSelectedFieldId(newId);
+      emit("select-field", newId);
     }
   }
 }
