@@ -12,7 +12,7 @@ from execution.offline_models import (
     OfflineBatchSyncResponse,
     OfflineDeltaItem,
 )
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select, text
 
 from apps.execution.database.core import db_manager
@@ -23,9 +23,10 @@ from apps.execution.database.models import (
     FormSubmission,
     SyncedBatchIdempotencyKey,
 )
+from apps.execution.services.offline_sync import OfflineSyncEngine as ServiceOfflineSyncEngine
 from packages.security.middleware import get_current_user
 
-router = APIRouter(prefix="/api/v1/offline", tags=["Offline"])
+router = APIRouter(prefix="/api/v1/execution/offline", tags=["Offline Sync"])
 
 
 class OfflineSyncEngine:
@@ -232,3 +233,30 @@ async def sync_offline_batch(
             processed_count=processed_count,
             conflicts=conflicts,
         )
+
+
+@router.post(
+    "/sync",
+    status_code=status.HTTP_200_OK,
+    response_model=Dict[str, Any],
+)
+async def offline_sync_endpoint(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Synchronize queued offline delta transactions.
+
+    Requirements: PRD-SYS-001
+    """
+    async with db_manager.get_session_maker()() as session:
+        try:
+            engine = ServiceOfflineSyncEngine(session=session)
+            result = await engine.process_delta_batch(payload)
+            return result
+        except ValueError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e),
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Synchronization failure: {str(e)}",
+            )

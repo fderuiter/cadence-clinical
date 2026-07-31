@@ -21,6 +21,7 @@ from apps.execution.database.models import (  # noqa: F401
     MedDRAHierarchy,
     MedDRATerm,
     PendingPredecessorCheck,
+    ProcessedOfflineBatch,
     RandomizationConfig,
     SDTMDomainRecord,
     SDVSignOff,

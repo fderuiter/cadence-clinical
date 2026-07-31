@@ -1184,6 +1184,7 @@ class MigrationRule(AuditedModel):
     default_value_float: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
 
+<<<<<<< HEAD
 class ComplianceChangeRequest(AuditedModel):
     """Represents a GxP-regulated compliance change request.
 
@@ -1251,10 +1252,15 @@ class ComprehensionQuizResult(AuditedModel):
 
 class SyncedBatchIdempotencyKey(Base):
     """Represents a unique client batch synchronization token for idempotency.
+=======
+class ProcessedOfflineBatch(Base):
+    """Tracks processed offline sync batch IDs to ensure idempotency.
+>>>>>>> 14e37a8 (Add automated integration tests and implementation for offline data synchronization)
 
     Requirements: PRD-SYS-001
     """
 
+<<<<<<< HEAD
     __tablename__ = "synced_batch_idempotency_keys"
 
     client_batch_id: Mapped[str] = mapped_column(String(255), primary_key=True)
@@ -1330,3 +1336,13 @@ class DOAAuditLog(Base):
     timestamp: Mapped[datetime] = mapped_column(
         DateTime, default=func.now(), nullable=False
     )
+
+
+class ProcessedOfflineBatch(Base):
+    """Represents a processed offline batch record for idempotency tracking."""
+
+    __tablename__ = "processed_offline_batches"
+
+    client_batch_id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    device_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    synced_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
