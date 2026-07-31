@@ -20,7 +20,10 @@
         </span>
         <span class="font-medium text-gray-800 text-sm">
           {{ field.label || 'Untitled Field' }}
-          <span v-if="field.required" class="text-red-500 font-bold">*</span>
+          <span
+            v-if="field.required"
+            class="text-red-500 font-bold"
+          >*</span>
         </span>
       </div>
 
@@ -34,14 +37,17 @@
     </div>
 
     <!-- Interactive Field Preview -->
-    <div class="field-preview mt-2" @click.stop="selectField">
+    <div
+      class="field-preview mt-2"
+      @click.stop="selectField"
+    >
       <template v-if="field.type === 'text'">
         <input
           type="text"
           disabled
           class="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-gray-50 text-gray-400 cursor-not-allowed"
           placeholder="Text input preview"
-        />
+        >
       </template>
 
       <template v-else-if="field.type === 'numeric'">
@@ -50,7 +56,7 @@
           disabled
           class="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-gray-50 text-gray-400 cursor-not-allowed"
           placeholder="0.00"
-        />
+        >
       </template>
 
       <template v-else-if="field.type === 'date'">
@@ -58,7 +64,7 @@
           type="date"
           disabled
           class="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-gray-50 text-gray-400 cursor-not-allowed"
-        />
+        >
       </template>
 
       <template v-else-if="field.type === 'select'">
@@ -66,7 +72,13 @@
           disabled
           class="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-gray-50 text-gray-400 cursor-not-allowed"
         >
-          <option value="" disabled selected>-- Select Option --</option>
+          <option
+            value=""
+            disabled
+            selected
+          >
+            -- Select Option --
+          </option>
           <option
             v-for="opt in field.options || []"
             :key="opt.value"
@@ -87,7 +99,11 @@
             :key="opt.value"
             class="flex items-center gap-1.5 text-sm text-gray-500 cursor-not-allowed"
           >
-            <input type="radio" disabled class="text-indigo-600 focus:ring-indigo-500 h-4 w-4 border-gray-300" />
+            <input
+              type="radio"
+              disabled
+              class="text-indigo-600 focus:ring-indigo-500 h-4 w-4 border-gray-300"
+            >
             <span>{{ opt.label }}</span>
           </label>
         </div>
@@ -98,18 +114,30 @@
           <table class="w-full bg-gray-50 text-gray-400 cursor-not-allowed">
             <thead>
               <tr class="bg-gray-100 border-b border-gray-200">
-                <th class="p-1.5 text-left border-r border-gray-200">Col 1</th>
-                <th class="p-1.5 text-left">Col 2</th>
+                <th class="p-1.5 text-left border-r border-gray-200">
+                  Col 1
+                </th>
+                <th class="p-1.5 text-left">
+                  Col 2
+                </th>
               </tr>
             </thead>
             <tbody>
               <tr class="border-b border-gray-200">
-                <td class="p-1.5 border-r border-gray-200">-</td>
-                <td class="p-1.5">-</td>
+                <td class="p-1.5 border-r border-gray-200">
+                  -
+                </td>
+                <td class="p-1.5">
+                  -
+                </td>
               </tr>
               <tr>
-                <td class="p-1.5 border-r border-gray-200">-</td>
-                <td class="p-1.5">-</td>
+                <td class="p-1.5 border-r border-gray-200">
+                  -
+                </td>
+                <td class="p-1.5">
+                  -
+                </td>
               </tr>
             </tbody>
           </table>
@@ -126,7 +154,9 @@
       </template>
 
       <template v-else>
-        <div class="text-xs text-gray-400 italic">Custom field type preview</div>
+        <div class="text-xs text-gray-400 italic">
+          Custom field type preview
+        </div>
       </template>
     </div>
 

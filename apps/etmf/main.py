@@ -46,7 +46,13 @@ from packages.deid.manifest import build_redaction_manifest, sign_manifest_symme
 from packages.deid.models import ComplianceProfile, DetectionResult, DetectorCategory
 from packages.deid.transforms import apply_deid_transforms
 from packages.security.middleware import GatewayAuthMiddleware
-from packages.security.rbac import Principal, get_principal, has_permission
+from packages.security.rbac import (
+    Principal,
+    get_principal,
+    has_permission,
+    verify_is_auditor,
+    verify_not_auditor,
+)
 
 DATABASE_URL = os.getenv("ETMF_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
@@ -836,6 +842,7 @@ async def ingest_document(
     payload: IngestionRequest,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
+    _not_auditor: list[str] = Depends(verify_not_auditor),
 ) -> Dict[str, Any]:
     """
     Listen to and ingest system publication events or manual document archives.
@@ -1302,6 +1309,7 @@ async def get_audit_trail(
     offset: int = Query(0, ge=0, description="Offset for pagination"),
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
+    _is_auditor: list[str] = Depends(verify_is_auditor),
 ) -> PaginatedAuditLogResponse:
     """
     Retrieve audit trail of all eTMF interactions.
@@ -1309,12 +1317,6 @@ async def get_audit_trail(
     """
     request_user_id = principal.user_id
     user_roles = ",".join(principal.raw_roles)
-
-    if not has_permission(principal, "etmf_audit_logs:read"):
-        raise HTTPException(
-            status_code=403,
-            detail="Forbidden: Access is restricted to authorized auditor/inspection roles.",
-        )
 
     # Log access to the audit trail itself
     await write_audit_log(
@@ -1466,6 +1468,7 @@ async def create_expectation(
     payload: ExpectedDocumentCreate,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
+    _not_auditor: list[str] = Depends(verify_not_auditor),
 ) -> ExpectedDocumentResponse:
     """
     Create a new Expected Document List (EDL) expectation.
@@ -1538,6 +1541,7 @@ async def update_expectation(
     payload: ExpectedDocumentCreate,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
+    _not_auditor: list[str] = Depends(verify_not_auditor),
 ) -> ExpectedDocumentResponse:
     """
     Update an existing Expected Document List (EDL) expectation.
@@ -1790,6 +1794,7 @@ async def redact_document_endpoint(
     payload: RedactRequest,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
+    _not_auditor: list[str] = Depends(verify_not_auditor),
 ) -> DocumentResponse:
     """
     Perform controlled redaction on an existing unredacted eTMF document, producing a new
@@ -1933,6 +1938,7 @@ async def auto_redact_document_endpoint(
     payload: AutomatedRedactRequest,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
+    _not_auditor: list[str] = Depends(verify_not_auditor),
 ) -> AutomatedRedactResponse:
     """
     Perform controlled automated redaction on an existing unredacted eTMF document, producing a new
@@ -2129,6 +2135,7 @@ async def manual_redact_document_endpoint(
     payload: ManualRedactRequest,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
+    _not_auditor: list[str] = Depends(verify_not_auditor),
 ) -> ManualRedactResponse:
     """
     Perform controlled manual redaction on an existing unredacted eTMF document using specified character spans and literal terms.
@@ -2376,6 +2383,7 @@ async def transition_document_status_endpoint(
     payload: TransitionRequest,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
+    _not_auditor: list[str] = Depends(verify_not_auditor),
 ) -> Dict[str, Any]:
     """
     Perform a secure, 21 CFR Part 11 compliant Quality Control (QC) status transition on an eTMF document.
@@ -2470,6 +2478,7 @@ async def update_document_expiration_endpoint(
     payload: DocumentExpirationUpdate,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
+    _not_auditor: list[str] = Depends(verify_not_auditor),
 ) -> DocumentResponse:
     """
     Update expiration-related metadata for an eTMF document.
@@ -2578,6 +2587,7 @@ async def sign_document_endpoint(
     payload: SignDocumentRequest,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
+    _not_auditor: list[str] = Depends(verify_not_auditor),
 ) -> DocumentResponse:
     """
     Approve and cryptographically sign an eTMF document, producing a 21 CFR Part 11 compliant
@@ -3382,6 +3392,7 @@ async def bulk_archive_study_documents(
     payload: StudyArchiveRequest,
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
+    _not_auditor: list[str] = Depends(verify_not_auditor),
 ) -> StudyArchiveResponse:
     """
     Perform authorized bulk study-level document archival transitioning eligible eTMF documents to

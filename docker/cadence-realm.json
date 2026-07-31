@@ -39,7 +39,7 @@
       },
       {
         "name": "Subject",
-        "description": "Subject/Patient role permitted for diary submissions, bulk sync, read assignments/instruments/compliance/notifications, and notification acknowledgements."
+        "description": "Subject / Patient (ePRO) role permitted for diary submissions, bulk sync, read assignments/instruments/compliance/notifications, and notification acknowledgements."
       },
       {
         "name": "quality_manager",

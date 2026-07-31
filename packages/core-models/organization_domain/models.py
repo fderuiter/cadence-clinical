@@ -20,6 +20,7 @@ class OrganizationType(str, Enum):
     SPONSOR = "sponsor"
     CRO = "CRO"
     IRB_IEC = "IRB/IEC"
+    CENTRAL_LAB = "central laboratory"
     CENTRAL_LABORATORY = "central laboratory"
     SITE = "site"
 
@@ -31,6 +32,19 @@ class ClinicalStaffRole(str, Enum):
     External Monitor persona aligned to CRO affiliation.
     """
 
+    PRINCIPAL_INVESTIGATOR = "Principal Investigator"
+    SUB_INVESTIGATOR = "Sub-Investigator"
+    CRC = "CRC"
+    CRA_MONITOR = "CRA/Monitor"
+    EXTERNAL_MONITOR = "External Monitor"
+
+
+class StaffRole(str, Enum):
+    """
+    Shared Clinical & Site Staff roles vocabulary, derived from SDLC Security Compliance & Audit Spec.
+    """
+
+    PI = "Principal Investigator"
     PRINCIPAL_INVESTIGATOR = "Principal Investigator"
     SUB_INVESTIGATOR = "Sub-Investigator"
     CRC = "CRC"

@@ -18,8 +18,13 @@
     </div>
     <div class="query-panel-body">
       <!-- NONE state -->
-      <div v-if="status === 'NONE'" class="query-create-section">
-        <p class="query-panel-instruction">Raise a query for this field:</p>
+      <div
+        v-if="status === 'NONE'"
+        class="query-create-section"
+      >
+        <p class="query-panel-instruction">
+          Raise a query for this field:
+        </p>
         <div class="form-group">
           <label :for="`query-message-${id}`">Discrepancy Message</label>
           <textarea
@@ -27,7 +32,7 @@
             v-model="messageInput"
             placeholder="Enter clinical discrepancy details..."
             required
-          ></textarea>
+          />
         </div>
         <button
           type="button"
@@ -58,7 +63,10 @@
           Raised by: {{ query.createdBy || "System" }} on
           {{ query.createdAt || "N/A" }}
         </p>
-        <div class="query-respond-section" style="margin-top: 12px">
+        <div
+          class="query-respond-section"
+          style="margin-top: 12px"
+        >
           <div class="form-group">
             <label :for="`query-response-${id}`">Your Response</label>
             <textarea
@@ -66,7 +74,7 @@
               v-model="responseInput"
               placeholder="Enter clinical justification or resolution explanation..."
               required
-            ></textarea>
+            />
           </div>
           <button
             type="button"
@@ -81,8 +89,13 @@
       </div>
 
       <!-- ANSWERED state -->
-      <div v-else-if="status === 'ANSWERED'" class="query-details">
-        <div class="query-status-badge badge-answered">Status: ANSWERED</div>
+      <div
+        v-else-if="status === 'ANSWERED'"
+        class="query-details"
+      >
+        <div class="query-status-badge badge-answered">
+          Status: ANSWERED
+        </div>
         <p class="query-current-msg">
           <strong>Discrepancy:</strong> {{ query.message }}
         </p>
@@ -120,8 +133,13 @@
       </div>
 
       <!-- CLOSED state -->
-      <div v-else-if="status === 'CLOSED'" class="query-details">
-        <div class="query-status-badge badge-closed">Status: CLOSED</div>
+      <div
+        v-else-if="status === 'CLOSED'"
+        class="query-details"
+      >
+        <div class="query-status-badge badge-closed">
+          Status: CLOSED
+        </div>
         <p class="query-current-msg">
           <strong>Discrepancy:</strong> {{ query.message }}
         </p>
