@@ -5,7 +5,7 @@
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#3b82f6",
-  "description": "Patient/Subject-facing eCOA Companion Portal",
+  "description": "Patient/Subject-facing eCOA Companion Portal (Phase 19 PWA)",
   "icons": [
     {
       "src": "/subject-portal/icon-192.png",

@@ -3,7 +3,7 @@ from datetime import date, datetime, timezone
 from typing import Any, Dict, Optional
 
 from sqlalchemy import JSON, Date, DateTime, Integer, String, func
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, synonym
 from sqlmodel import Field, SQLModel
 
 
@@ -62,6 +62,11 @@ class ISFDocument(Base):
         String(100), default="eISF", nullable=False
     )
 
+    # Synonyms and aliases for site_id and binder classification organizer structure
+    site_uuid = synonym("site_id")
+    binder_section = synonym("binder_classification")
+    artifact_type = synonym("binder_classification")
+
 
 class ISFAuditLog(Base):
     """
@@ -85,6 +90,10 @@ class ISFAuditLog(Base):
     )
     details: Mapped[str] = mapped_column(String(1000), nullable=False)
     reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+
+    # Synonyms to mirror TMFAuditLog exactly for Part 11 and user-scoping traceability
+    user_id = synonym("actor_id")
+    user_role = synonym("actor_role")
 
 
 class EISFSectionTaxonomy(SQLModel, table=True):

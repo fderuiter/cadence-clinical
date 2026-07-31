@@ -90,14 +90,15 @@ def verify_record_signature(record: SyncRecord, secret: bytes) -> bool:
 
 def reconcile_records(
     existing_data: Dict[str, Any],
-    existing_metadata: Optional[SyncMetadata],
-    incoming_record: SyncRecord,
+    existing_metadata: Optional[Any],
+    incoming_record: Any,
     strategy: str,
     secret: Optional[bytes] = None,
     require_signature: bool = False,
+    target_exists: bool = True,
 ) -> Dict[str, Any]:
     """
-    Reconciles existing data/metadata and an incoming SyncRecord based on the selected conflict strategy.
+    Reconciles existing data/metadata and an incoming SyncRecord or generic payload dictionary based on the selected conflict strategy.
 
     Supported strategies:
     - CLIENT_WINS: The incoming record completely replaces the existing record.
@@ -107,6 +108,54 @@ def reconcile_records(
 
     Raises SignatureValidationError if verification fails when required or if invalid.
     """
+    # Normalize incoming_record if it is passed as a generic dict payload shape: {data, metadata: {timestamps, modified_by}}
+    if isinstance(incoming_record, dict):
+        dedup_key = incoming_record.get("deduplication_key") or incoming_record.get("dedup_key") or "default_dedup_key"
+        data = incoming_record.get("data", {})
+        metadata_dict = incoming_record.get("metadata", {})
+
+        raw_timestamps = metadata_dict.get("timestamps") or {}
+        parsed_timestamps = {}
+        for k, v in raw_timestamps.items():
+            if isinstance(v, str):
+                parsed_timestamps[k] = datetime.fromisoformat(v)
+            else:
+                parsed_timestamps[k] = v
+
+        metadata = SyncMetadata(
+            timestamps=parsed_timestamps,
+            modified_by=metadata_dict.get("modified_by", "unknown"),
+            signature=metadata_dict.get("signature"),
+        )
+        incoming_record = SyncRecord(
+            deduplication_key=dedup_key,
+            data=data,
+            metadata=metadata,
+        )
+
+    # Normalize existing_metadata if it is a dict
+    if isinstance(existing_metadata, dict):
+        raw_timestamps = existing_metadata.get("timestamps") or {}
+        parsed_timestamps = {}
+        for k, v in raw_timestamps.items():
+            if isinstance(v, str):
+                parsed_timestamps[k] = datetime.fromisoformat(v)
+            else:
+                parsed_timestamps[k] = v
+        existing_metadata = SyncMetadata(
+            timestamps=parsed_timestamps,
+            modified_by=existing_metadata.get("modified_by", "unknown"),
+            signature=existing_metadata.get("signature"),
+        )
+
+    # 0. Structural Conflict Detection
+    if not target_exists:
+        return {
+            "status": "STRUCTURAL_CONFLICT",
+            "data": incoming_record.data,
+            "metadata": incoming_record.metadata,
+        }
+
     # 1. Signature Verification
     if require_signature or incoming_record.metadata.signature is not None:
         if not secret:
