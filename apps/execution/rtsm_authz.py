@@ -55,21 +55,81 @@ def dispatch_access_violation_alert(
         run_async(publish_notification(payload))
 
 
-def verify_site_access(
+async def write_security_alert(
+    session: Any,
     principal: Principal,
     site_id: Optional[str],
+    study_id: Optional[str],
+    subject_id: Optional[str],
+    reason: str,
+) -> None:
+    """Write a persistent security alert audit log entry for cross-site or cross-study denials.
+
+    Saves to the active session and also commits in a separate database session
+    to ensure the alert is persisted even if the active transaction is rolled back.
+    """
+    from apps.execution.database.models import AuditLog
+    from packages.security.context import current_user_id, current_ip_address
+
+    actor_id = current_user_id.get()
+    if (actor_id is None or actor_id == "system") and principal:
+        actor_id = principal.user_id
+    client_ip = current_ip_address.get()
+
+    record_id = f"site:{site_id or 'None'}:study:{study_id or 'None'}:subject:{subject_id or 'None'}"
+
+    # Construct AuditLog row
+    alert = AuditLog(
+        table_name="security_alerts",
+        record_id=record_id,
+        action="SECURITY_ALERT",
+        user_id=actor_id,
+        ip_address=client_ip,
+        change_reason=reason,
+    )
+
+    if session is not None:
+        try:
+            session.add(alert)
+            await session.flush()
+        except Exception:
+            pass
+
+    # Mirror eISF's inline session.add(...) + commit pattern using separate session maker
+    from apps.execution.database.core import db_manager
+    try:
+        async with db_manager.get_session_maker()() as audit_session:
+            audit_alert = AuditLog(
+                table_name="security_alerts",
+                record_id=record_id,
+                action="SECURITY_ALERT",
+                user_id=actor_id,
+                ip_address=client_ip,
+                change_reason=reason,
+            )
+            audit_session.add(audit_alert)
+            await audit_session.commit()
+    except Exception:
+        pass
+
+
+async def verify_site_access(
+    principal: Principal,
+    site_id: Optional[str],
+    session: Optional[Any] = None,
     study_id: Optional[str] = None,
     subject_id: Optional[str] = None,
 ) -> None:
     """Enforce site and study isolation for site-scoped or restricted resources.
 
     Validates that the requesting principal possesses authorized access to the requested
-    study and site boundaries. If access is unauthorized, dispatches a security alert and
-    raises an HTTP 403 Forbidden exception.
+    study and site boundaries. If access is unauthorized, dispatches a security alert,
+    writes a persisted SECURITY_ALERT audit log, and raises an HTTP 403 Forbidden exception.
 
     Args:
         principal: The authenticated Principal making the request.
         site_id: Target site identifier for the requested resource.
+        session: Optional active database session to record the security alert.
         study_id: Target study identifier for the requested resource.
         subject_id: Optional subject identifier for context tracking.
 
@@ -84,6 +144,17 @@ def verify_site_access(
             dispatch_access_violation_alert(
                 principal, site_id, study_id=study_id, subject_id=subject_id
             )
+            reason = f"Forbidden: User {principal.user_id} with roles {principal.roles} attempted unauthorized access to study {study_id}."
+            if session is not None:
+                await write_security_alert(
+                    session, principal, site_id, study_id, subject_id, reason
+                )
+            else:
+                from apps.execution.database.core import db_manager
+                async with db_manager.get_session_maker()() as temp_session:
+                    await write_security_alert(
+                        temp_session, principal, site_id, study_id, subject_id, reason
+                    )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Forbidden: access restricted to your assigned study.",
@@ -100,6 +171,17 @@ def verify_site_access(
         dispatch_access_violation_alert(
             principal, site_id, study_id=study_id, subject_id=subject_id
         )
+        reason = f"Forbidden: Site-scoped user {principal.user_id} lacks site assignments."
+        if session is not None:
+            await write_security_alert(
+                session, principal, site_id, study_id, subject_id, reason
+            )
+        else:
+            from apps.execution.database.core import db_manager
+            async with db_manager.get_session_maker()() as temp_session:
+                await write_security_alert(
+                    temp_session, principal, site_id, study_id, subject_id, reason
+                )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Forbidden: access restricted to your assigned site(s).",
@@ -113,6 +195,17 @@ def verify_site_access(
         dispatch_access_violation_alert(
             principal, site_id, study_id=study_id, subject_id=subject_id
         )
+        reason = f"Forbidden: User {principal.user_id} with roles {principal.roles} attempted unauthorized access to site {site_id}."
+        if session is not None:
+            await write_security_alert(
+                session, principal, site_id, study_id, subject_id, reason
+            )
+        else:
+            from apps.execution.database.core import db_manager
+            async with db_manager.get_session_maker()() as temp_session:
+                await write_security_alert(
+                    temp_session, principal, site_id, study_id, subject_id, reason
+                )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Forbidden: access restricted to your assigned site(s).",

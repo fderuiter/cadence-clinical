@@ -556,6 +556,7 @@ class SubjectCreate(BaseModel):
 
     subject_id: str
     study_id: str
+    site_id: Optional[str] = None
     demographics: Optional[Demographics] = None
 
 
@@ -565,6 +566,7 @@ class SubjectResponse(BaseModel):
     id: str
     subject_id: str
     study_id: str
+    site_id: Optional[str] = None
     encrypted_demographics: Optional[str] = None
 
 
@@ -623,6 +625,7 @@ class VisitCreate(BaseModel):
     subject_id: str
     visit_name: str
     study_id: str
+    site_id: Optional[str] = None
     visit_date: Optional[datetime] = None
 
 
@@ -634,6 +637,7 @@ class VisitResponse(BaseModel):
     visit_name: str
     visit_date: datetime
     study_id: str
+    site_id: Optional[str] = None
     protocol_version_tag: Optional[str] = None
     protocol_version_index: Optional[int] = None
 
@@ -643,6 +647,7 @@ class ObservationCreate(BaseModel):
 
     subject_id: str
     study_id: Optional[str] = None
+    site_id: Optional[str] = None
     visit_id: Optional[str] = None
     domain: str
     test_code: str
@@ -661,6 +666,7 @@ class ObservationResponse(BaseModel):
     id: str
     subject_id: str
     study_id: str
+    site_id: Optional[str] = None
     visit_id: Optional[str] = None
     domain: str
     observation_date: datetime
@@ -711,6 +717,7 @@ class MigrationRuleResponse(BaseModel):
 @app.post("/api/v1/execution/subjects", response_model=SubjectResponse)
 async def create_subject(
     payload: SubjectCreate,
+    principal: Principal = Depends(get_principal),
     roles: list[str] = Depends(verify_not_auditor),
 ) -> SubjectResponse:
     """Create a new clinical subject pseudonymously."""
@@ -721,6 +728,18 @@ async def create_subject(
         )
 
     async with db_manager.get_session_maker()() as session:
+        site_id = payload.site_id
+        if not site_id and principal.assigned_sites:
+            site_id = principal.assigned_sites[0]
+
+        await verify_site_access(
+            principal,
+            site_id,
+            session=session,
+            study_id=payload.study_id,
+            subject_id=payload.subject_id,
+        )
+
         async with session.begin():
             # Query max enrollment_index for the study inside the active transaction
             stmt_max = select(func.max(ClinicalSubject.enrollment_index)).where(
@@ -733,6 +752,7 @@ async def create_subject(
             subj = ClinicalSubject(
                 subject_id=payload.subject_id,
                 study_id=payload.study_id,
+                site_id=site_id,
                 encrypted_demographics=encrypted_demo,
                 enrollment_index=new_idx,
             )
@@ -745,6 +765,7 @@ async def create_subject(
             id=subj_db.id,
             subject_id=subj_db.subject_id,
             study_id=subj_db.study_id,
+            site_id=subj_db.site_id,
             encrypted_demographics=subj_db.encrypted_demographics,
         )
 
@@ -1348,16 +1369,36 @@ async def randomize_subject_endpoint(
 @app.post("/api/v1/execution/visits", response_model=VisitResponse)
 async def create_visit(
     payload: VisitCreate,
+    principal: Principal = Depends(get_principal),
     roles: list[str] = Depends(verify_not_auditor),
 ) -> VisitResponse:
     """Create a new clinical visit."""
     async with db_manager.get_session_maker()() as session:
+        site_id = payload.site_id
+        if not site_id:
+            stmt_subj = select(ClinicalSubject).where(ClinicalSubject.subject_id == payload.subject_id)
+            res_subj = await session.execute(stmt_subj)
+            subj_db = res_subj.scalars().first()
+            if subj_db:
+                site_id = subj_db.site_id
+        if not site_id and principal.assigned_sites:
+            site_id = principal.assigned_sites[0]
+
+        await verify_site_access(
+            principal,
+            site_id,
+            session=session,
+            study_id=payload.study_id,
+            subject_id=payload.subject_id,
+        )
+
         vdate = payload.visit_date or datetime.now()
         visit = ClinicalVisit(
             subject_id=payload.subject_id,
             visit_name=payload.visit_name,
             visit_date=vdate,
             study_id=payload.study_id,
+            site_id=site_id,
         )
         # Stamping capture-time protocol-version identity
         stmt_consent = (
@@ -1386,6 +1427,7 @@ async def create_visit(
             visit_name=visit_db.visit_name,
             visit_date=visit_db.visit_date,
             study_id=visit_db.study_id,
+            site_id=visit_db.site_id,
             protocol_version_tag=visit_db.protocol_version_tag,
             protocol_version_index=visit_db.protocol_version_index,
         )
@@ -1395,6 +1437,7 @@ async def create_visit(
 async def create_observation(
     payload: ObservationCreate,
     background_tasks: BackgroundTasks,
+    principal: Principal = Depends(get_principal),
     roles: list[str] = Depends(verify_not_auditor),
 ) -> ObservationResponse:
     """Create a new clinical observation, performing unit normalization and outlier checks."""
@@ -1416,6 +1459,21 @@ async def create_observation(
                     detail="Subject not registered; cannot infer study_id",
                 )
             study_id = subj_db.study_id
+
+        # Sourcing site_id
+        site_id = payload.site_id
+        if not site_id and subj_db:
+            site_id = subj_db.site_id
+        if not site_id and principal.assigned_sites:
+            site_id = principal.assigned_sites[0]
+
+        await verify_site_access(
+            principal,
+            site_id,
+            session=session,
+            study_id=study_id,
+            subject_id=payload.subject_id,
+        )
 
         obs_date = payload.observation_date or datetime.now()
 
@@ -1476,6 +1534,7 @@ async def create_observation(
         obs = ClinicalObservation(
             subject_id=payload.subject_id,
             study_id=study_id,
+            site_id=site_id,
             visit_id=payload.visit_id,
             domain=payload.domain,
             observation_date=obs_date,
@@ -1690,6 +1749,7 @@ async def create_observation(
             id=obs_db.id,
             subject_id=obs_db.subject_id,
             study_id=obs_db.study_id,
+            site_id=obs_db.site_id,
             visit_id=obs_db.visit_id,
             domain=obs_db.domain,
             observation_date=obs_db.observation_date,
