@@ -463,6 +463,7 @@ def import_mapped_usdm_study(study_id: str, study_projection: Dict[str, Any]) ->
     )
     if not version_exists:
         import os
+
         from packages.security.signing import generate_canonical_signature
 
         version_data = {

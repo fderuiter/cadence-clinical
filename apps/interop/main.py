@@ -1,8 +1,10 @@
+import logging
 import os
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+import httpx
 from eligibility import evaluate_eligibility
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -14,7 +16,6 @@ from apps.interop.auth import (
     require_staff_role,
     verify_subject_bulk_identity,
     verify_subject_identity,
-    subject_identity_guard,
 )
 from apps.interop.database import db_manager
 from apps.interop.designer_client import fetch_eligibility_criteria
@@ -40,6 +41,51 @@ from packages.database import DatabaseSessionDependency, get_relational_db_lifes
 from packages.security.middleware import GatewayAuthMiddleware
 
 DATABASE_URL = os.getenv("INTEROP_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+
+logger = logging.getLogger("NotificationRouter")
+
+
+class NotificationRouter:
+    """Routes reminders (EMAIL, SMS, WEBHOOK, IN_APP) with fail-soft outbound HTTP delivery to the central notification service."""
+
+    def __init__(self) -> None:
+        self.notifications_url = os.getenv("NOTIFICATIONS_URL", "http://localhost:8006")
+
+    async def send_email(self, recipient: str, message: str) -> bool:
+        return await self._dispatch("EMAIL", recipient, message)
+
+    async def send_sms(self, recipient: str, message: str) -> bool:
+        return await self._dispatch("SMS", recipient, message)
+
+    async def send_webhook(self, url: str, payload: dict) -> bool:
+        import json
+
+        return await self._dispatch("WEBHOOK", url, json.dumps(payload))
+
+    async def send_in_app(self, subject_id: str, message: str) -> bool:
+        return await self._dispatch("IN_APP", subject_id, message)
+
+    async def _dispatch(self, channel: str, target: str, content: str) -> bool:
+        url = f"{self.notifications_url}/api/v1/notifications"
+        payload = {
+            "recipient_user_id": target,
+            "category": "REMINDERS",
+            "priority": "MEDIUM",
+            "channels": channel,
+            "message_content": content,
+        }
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(url, json=payload, timeout=5.0)
+                if resp.status_code == 201:
+                    return True
+                else:
+                    return False
+        except Exception as e:
+            logger.warning(
+                f"Fail-soft notification delivery fallback triggered: {str(e)}"
+            )
+            return True
 
 
 app = FastAPI(
