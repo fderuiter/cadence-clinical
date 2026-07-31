@@ -18,6 +18,8 @@ from apps.execution.database.models import (  # noqa: F401
     DictionaryImportJob,
     FormSubmission,
     LabReferenceRange,
+    LabTestMaster,
+    LabUnitConversion,
     MedDRAHierarchy,
     MedDRATerm,
     PendingPredecessorCheck,
@@ -439,6 +441,28 @@ async def upgrade_existing_tables(conn) -> None:
             await conn.execute(
                 text(f"ALTER TABLE {table_name} ADD COLUMN site_id VARCHAR(255);")
             )
+
+    # Upgrade lab_reference_ranges with new GxP columns
+    ref_cols = await conn.run_sync(
+        lambda sc: get_table_columns(sc, "lab_reference_ranges")
+    )
+    if ref_cols:
+        new_ref_cols = [
+            ("created_at", "TIMESTAMP"),
+            ("created_by", "VARCHAR(255)"),
+            ("reason_for_change", "VARCHAR(1000)"),
+            ("version_index", "INTEGER NOT NULL DEFAULT 1"),
+        ]
+        for col_name, col_type in new_ref_cols:
+            if col_name not in ref_cols:
+                print(
+                    f"Adding missing column {col_name} to lab_reference_ranges table..."
+                )
+                await conn.execute(
+                    text(
+                        f"ALTER TABLE lab_reference_ranges ADD COLUMN {col_name} {col_type};"
+                    )
+                )
 
     # 4. Update clinical_subjects with enrollment_index and backfill existing entries
     subj_cols = await conn.run_sync(
