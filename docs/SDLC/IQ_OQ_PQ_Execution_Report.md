@@ -772,7 +772,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_eisf_sync_unmapped_propagation` | `tests.test_eisf_sync` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_document_record_instantiation_defaults` | `tests.test_eisf_taxonomy` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_taxonomy_querying_returns_8_mandatory_sections` | `tests.test_eisf_taxonomy` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_aggregate_eligibility_evaluation` | `tests.test_eligibility_engine` | PRD-MDR-007 | 🟢 PASSED | < 1s |
+| `test_aggregate_eligibility_evaluation` | `tests.test_eligibility_engine` | PRD-ELIGIBILITY-008, PRD-MDR-007 | 🟢 PASSED | < 1s |
+| `test_eligibility_criterion_compatibility_and_enums` | `tests.test_eligibility_engine` | PRD-ELIGIBILITY-009 | 🟢 PASSED | < 1s |
+| `test_evaluate_criteria_group_helper` | `tests.test_eligibility_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_evaluate_structured_expression_helper` | `tests.test_eligibility_engine` | PRD-ELIGIBILITY-010 | 🟢 PASSED | < 1s |
 | `test_evaluation_all_operators` | `tests.test_eligibility_engine` | PRD-ELIGIBILITY-005, PRD-MDR-007 | 🟢 PASSED | < 1s |
 | `test_evaluation_incompatible_types_graceful_handling` | `tests.test_eligibility_engine` | PRD-ELIGIBILITY-007 | 🟢 PASSED | < 1s |
 | `test_evaluation_kleene_indeterminate_propagation` | `tests.test_eligibility_engine` | PRD-ELIGIBILITY-006, PRD-MDR-007 | 🟢 PASSED | < 1s |

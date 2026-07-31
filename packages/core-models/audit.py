@@ -8,10 +8,9 @@ from datetime_helpers import AwareDatetime
 from pydantic import BaseModel, Field, field_validator
 
 
-class AuditFields(BaseModel):
+class Part11AuditMixin(BaseModel):
     """
-    A reusable Pydantic v2 model/mixin containing standard 21 CFR Part 11
-    compliant audit and metadata fields.
+    A reusable Pydantic v2 mixin providing 21 CFR Part 11 compliant audit metadata.
     """
 
     created_at: AwareDatetime = Field(
@@ -20,7 +19,7 @@ class AuditFields(BaseModel):
     )
     created_by: str = Field(
         ...,
-        description="Unique identifier (e.g. username/OIDC user_id) of the user who created the record.",
+        description="Unique identifier of the user who created the record.",
     )
     reason_for_change: str = Field(
         ...,
@@ -28,7 +27,7 @@ class AuditFields(BaseModel):
     )
     version_index: int = Field(
         default=1,
-        description="Optimistic locking or row version counter, initialized to 1.",
+        description="Row version counter or index.",
     )
 
     @field_validator("reason_for_change")
@@ -42,3 +41,11 @@ class AuditFields(BaseModel):
                 "Reason for change cannot be empty or consist only of whitespace."
             )
         return v
+
+
+class AuditFields(Part11AuditMixin):
+    """
+    A reusable Pydantic v2 model/mixin containing standard 21 CFR Part 11
+    compliant audit and metadata fields.
+    """
+    pass
