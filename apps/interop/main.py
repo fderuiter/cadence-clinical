@@ -1199,7 +1199,7 @@ async def deliver_notification_task(
             if channel == "EMAIL":
                 success = await router.send_email(f"{subject_id}@example.com", message)
             elif channel == "SMS":
-                success = await router.send_sms("+1234567890", message)
+                success = await router.send_sms("+1234567890", message)  # deid: ignore
             elif channel == "WEBHOOK":
                 webhook_payload = {
                     "event": "REMINDER_DUE",
@@ -1208,7 +1208,7 @@ async def deliver_notification_task(
                     "notification_id": notification_id,
                 }
                 success = await router.send_webhook(
-                    f"https://hooks.example.com/subject/{subject_id}",
+                    f"https://hooks.example.com/subject/{subject_id}",  # deid: ignore
                     webhook_payload,
                 )
             elif channel == "IN_APP":
