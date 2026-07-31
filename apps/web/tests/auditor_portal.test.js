@@ -282,7 +282,9 @@ describe("Auditor Portal - eTMF Inspection & Execution Sealing Integration", () 
       milestone: "INITIATION",
     });
 
-    expect(wrapper.text()).toContain("eTMF Completeness Tracking & Verification");
+    expect(wrapper.text()).toContain(
+      "eTMF Completeness Tracking & Verification"
+    );
     expect(wrapper.text()).toContain("MILESTONE COMPLIANT");
     expect(wrapper.text()).toContain("1 / 1 Artifacts Present");
     expect(wrapper.text()).toContain("FDA Form 1572");
@@ -301,7 +303,9 @@ describe("Auditor Portal - eTMF Inspection & Execution Sealing Integration", () 
     // Wait for completeness load to reject
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    expect(wrapper.text()).toContain("Database connection timeout during EDL check");
+    expect(wrapper.text()).toContain(
+      "Database connection timeout during EDL check"
+    );
   });
 
   it("ensures write and ledger purge controls are completely removed and unavailable to Auditor role", () => {

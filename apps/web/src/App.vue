@@ -206,23 +206,43 @@ const store = useClinicalStore();
 const authStore = useAuthStore();
 
 const canViewMdr = computed(() => {
-  return hasRequiredRole(authStore.normalizedRoles, ["sponsor_designer", "data_manager", "sponsor_admin"]);
+  return hasRequiredRole(authStore.normalizedRoles, [
+    "sponsor_designer",
+    "data_manager",
+    "sponsor_admin",
+  ]);
 });
 
 const canViewEcrf = computed(() => {
-  return hasRequiredRole(authStore.normalizedRoles, ["site_investigator", "crc", "data_manager", "sponsor_admin"]);
+  return hasRequiredRole(authStore.normalizedRoles, [
+    "site_investigator",
+    "crc",
+    "data_manager",
+    "sponsor_admin",
+  ]);
 });
 
 const canViewCtms = computed(() => {
-  return hasRequiredRole(authStore.normalizedRoles, ["cra", "monitor", "sponsor_admin"]);
+  return hasRequiredRole(authStore.normalizedRoles, [
+    "cra",
+    "monitor",
+    "sponsor_admin",
+  ]);
 });
 
 const canViewRules = computed(() => {
-  return hasRequiredRole(authStore.normalizedRoles, ["data_manager", "sponsor_admin"]);
+  return hasRequiredRole(authStore.normalizedRoles, [
+    "data_manager",
+    "sponsor_admin",
+  ]);
 });
 
 const canViewAudit = computed(() => {
-  return hasRequiredRole(authStore.normalizedRoles, ["auditor", "tmf_auditor", "sponsor_admin"]);
+  return hasRequiredRole(authStore.normalizedRoles, [
+    "auditor",
+    "tmf_auditor",
+    "sponsor_admin",
+  ]);
 });
 
 const canViewEtmf = computed(() => {

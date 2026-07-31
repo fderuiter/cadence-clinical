@@ -167,27 +167,45 @@ const MOCK_APPROVED_CONTENT = {
   language_code: "en",
   version_index: 1,
   clauses: [
-    { clause_id: "clause-risk", title: "Risks & Side Effects", text: "There is a risk of mild temporary headache.", version_index: 1 },
-    { clause_id: "clause-benefit", title: "Expected Benefits", text: "You will receive expert medical monitoring and potential symptom improvement.", version_index: 1 }
+    {
+      clause_id: "clause-risk",
+      title: "Risks & Side Effects",
+      text: "There is a risk of mild temporary headache.",
+      version_index: 1,
+    },
+    {
+      clause_id: "clause-benefit",
+      title: "Expected Benefits",
+      text: "You will receive expert medical monitoring and potential symptom improvement.",
+      version_index: 1,
+    },
   ],
   workflow_steps: [
     { type: "comprehension_check" },
-    { type: "signature_placeholder" }
-  ]
+    { type: "signature_placeholder" },
+  ],
 };
 
 const MOCK_COMPREHENSION_CHECK = {
   template_id: "template-icf",
   version_index: 1,
   questions: [
-    { id: "q_headache", text: "What is a potential temporary side effect?", options: ["Headache", "Nausea", "Vision Loss"] },
-    { id: "q_withdraw", text: "Can you withdraw from the study at any time?", options: ["Yes", "No"] }
+    {
+      id: "q_headache",
+      text: "What is a potential temporary side effect?",
+      options: ["Headache", "Nausea", "Vision Loss"],
+    },
+    {
+      id: "q_withdraw",
+      text: "Can you withdraw from the study at any time?",
+      options: ["Yes", "No"],
+    },
   ],
   expected_answers: {
     q_headache: "Headache",
-    q_withdraw: "Yes"
+    q_withdraw: "Yes",
   },
-  threshold_policy: { min_correct: 2 }
+  threshold_policy: { min_correct: 2 },
 };
 
 // Auth Fetch Helpers
@@ -326,8 +344,12 @@ async function dispatchApi(endpoint, options = {}) {
 
   if (options.change_reason) {
     defaultHeaders["X-Change-Reason"] = options.change_reason;
-  } else if (options.headers && (options.headers["X-Change-Reason"] || options.headers["x-change-reason"])) {
-    defaultHeaders["X-Change-Reason"] = options.headers["X-Change-Reason"] || options.headers["x-change-reason"];
+  } else if (
+    options.headers &&
+    (options.headers["X-Change-Reason"] || options.headers["x-change-reason"])
+  ) {
+    defaultHeaders["X-Change-Reason"] =
+      options.headers["X-Change-Reason"] || options.headers["x-change-reason"];
   }
 
   if (state.session.token) {
@@ -601,7 +623,8 @@ function openSignatureModal(actionType = "epro") {
   if (errorBanner) errorBanner.style.display = "none";
 
   if (actionType === "consent") {
-    if (modalHeader) modalHeader.textContent = "eConsent Electronic Signature Required";
+    if (modalHeader)
+      modalHeader.textContent = "eConsent Electronic Signature Required";
     reasonSelect.innerHTML = `
       <option value="Enrollment Confirmation and Consent">Enrollment Confirmation and Consent</option>
       <option value="Re-consent on amended protocol version">Re-consent on amended protocol version</option>
@@ -636,14 +659,17 @@ async function verifyAndSubmitSignature() {
   const username = usernameInput.value.trim();
   const password = passwordInput.value;
   const reasonSelect = document.getElementById("sign-reason").value;
-  const reasonCustom = document.getElementById("sign-reason-custom").value.trim();
+  const reasonCustom = document
+    .getElementById("sign-reason-custom")
+    .value.trim();
   const errorBanner = document.getElementById("modal-error-banner");
 
   if (errorBanner) errorBanner.style.display = "none";
 
   if (!username || !password) {
     if (errorBanner) {
-      errorBanner.textContent = "Please enter both User ID and Security PIN/Password to sign.";
+      errorBanner.textContent =
+        "Please enter both User ID and Security PIN/Password to sign.";
       errorBanner.style.display = "block";
     } else {
       alert("Please enter both User ID and Security PIN/Password to sign.");
@@ -670,29 +696,35 @@ async function verifyAndSubmitSignature() {
     if (isAuthenticatedSession()) {
       try {
         // Step 1: obtain short-lived sig_token
-        const tokenResponse = await dispatchApi("api/v1/auth/signature-verification", {
-          method: "POST",
-          body: JSON.stringify({
-            username: cleanUsername,
-            password: cleanPassword,
-            action: "SIGN_CONSENT",
-          }),
-        });
+        const tokenResponse = await dispatchApi(
+          "api/v1/auth/signature-verification",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              username: cleanUsername,
+              password: cleanPassword,
+              action: "SIGN_CONSENT",
+            }),
+          }
+        );
 
         const sigToken = tokenResponse.sig_token;
 
         // Step 2: Sign consent document
-        await dispatchApi("api/v1/econsent/templates/template-icf/versions/1/sign", {
-          method: "POST",
-          body: JSON.stringify({
-            subject_pseudonym: state.session.userId,
-            signature_data: cleanUsername,
-            reason_for_change: finalReason,
-          }),
-          headers: {
-            "X-Sig-Token": sigToken,
-          },
-        });
+        await dispatchApi(
+          "api/v1/econsent/templates/template-icf/versions/1/sign",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              subject_pseudonym: state.session.userId,
+              signature_data: cleanUsername,
+              reason_for_change: finalReason,
+            }),
+            headers: {
+              "X-Sig-Token": sigToken,
+            },
+          }
+        );
 
         // Set local signed state
         state.consentSigned = true;
@@ -1130,10 +1162,21 @@ async function loadConsentDetails() {
       const localApproved = JSON.parse(JSON.stringify(MOCK_APPROVED_CONTENT));
       localApproved.language_code = state.consentLanguage;
       if (state.consentLanguage === "es") {
-        localApproved.template_name = "Formulario de Consentimiento Informado Principal";
+        localApproved.template_name =
+          "Formulario de Consentimiento Informado Principal";
         localApproved.clauses = [
-          { clause_id: "clause-risk", title: "Riesgos y Efectos Secundarios", text: "Existe el riesgo de dolor de cabeza leve y temporal.", version_index: 1 },
-          { clause_id: "clause-benefit", title: "Beneficios Esperados", text: "Recibirá monitoreo médico experto y una posible mejoría de los síntomas.", version_index: 1 }
+          {
+            clause_id: "clause-risk",
+            title: "Riesgos y Efectos Secundarios",
+            text: "Existe el riesgo de dolor de cabeza leve y temporal.",
+            version_index: 1,
+          },
+          {
+            clause_id: "clause-benefit",
+            title: "Beneficios Esperados",
+            text: "Recibirá monitoreo médico experto y una posible mejoría de los síntomas.",
+            version_index: 1,
+          },
         ];
       }
       state.consentContent = localApproved;
@@ -1176,7 +1219,8 @@ function renderConsentUI() {
   }
 
   // 1. Render Metadata and Clauses (Informed Consent document)
-  document.getElementById("consent-template-title").textContent = tpl.template_name;
+  document.getElementById("consent-template-title").textContent =
+    tpl.template_name;
 
   const metaDisplay = document.getElementById("consent-metadata-display");
   metaDisplay.innerHTML = `
@@ -1191,24 +1235,30 @@ function renderConsentUI() {
   const clausesContainer = document.getElementById("consent-clauses-container");
   clausesContainer.innerHTML = "";
 
-  const clauseSections = sections.filter(s => s.type === "clause");
-  clausesContainer.innerHTML = clauseSections.map(sec => `
+  const clauseSections = sections.filter((s) => s.type === "clause");
+  clausesContainer.innerHTML = clauseSections
+    .map(
+      (sec) => `
     <div class="clause-view-box" style="border: 1px solid var(--border-color); padding: 16px; border-radius: 6px; background: rgba(255,255,255,0.01);">
       <h4 style="margin-top: 0; color: var(--primary-color); border-bottom: 1px dashed var(--border-color); padding-bottom: 6px;">${sec.title}</h4>
       <p style="margin: 0; font-size: 14px;">${sec.content}</p>
     </div>
-  `).join("");
+  `
+    )
+    .join("");
 
   // 2. Render Comprehension checks (Step 1)
   const qContainer = document.getElementById("consent-questions-container");
   qContainer.innerHTML = "";
 
   if (state.consentSigned) {
-    document.getElementById("consent-comprehension-card").style.display = "none";
+    document.getElementById("consent-comprehension-card").style.display =
+      "none";
     document.getElementById("consent-signature-card").style.display = "none";
     return;
   } else {
-    document.getElementById("consent-comprehension-card").style.display = "block";
+    document.getElementById("consent-comprehension-card").style.display =
+      "block";
     document.getElementById("consent-signature-card").style.display = "block";
   }
 
@@ -1248,7 +1298,8 @@ async function submitConsentAnswers() {
   const answers = {};
 
   check.questions.forEach((q) => {
-    const val = document.querySelector(`input[name="${q.id}"]:checked`)?.value || "";
+    const val =
+      document.querySelector(`input[name="${q.id}"]:checked`)?.value || "";
 
     // Clear previous errors
     const container = document.getElementById(`field-container-${q.id}`);
@@ -1261,7 +1312,7 @@ async function submitConsentAnswers() {
     const fieldMeta = {
       id: q.id,
       label: q.text,
-      validation: { required: true }
+      validation: { required: true },
     };
 
     const res = validateField(fieldMeta, val);
@@ -1278,7 +1329,11 @@ async function submitConsentAnswers() {
   }
 
   // Shape submission payload using ui helper
-  const payload = shapeComprehensionAnswers(state.session.userId, answers, "Comprehension verification check submission");
+  const payload = shapeComprehensionAnswers(
+    state.session.userId,
+    answers,
+    "Comprehension verification check submission"
+  );
 
   try {
     let resultResponse;
@@ -1307,7 +1362,7 @@ async function submitConsentAnswers() {
         next_step: passed ? "sign_consent" : "retry_checks",
         message: passed
           ? "Congratulations! You have passed the comprehension check and can proceed to sign the consent form."
-          : `You got ${correct} out of ${check.questions.length} questions correct. The passing threshold is ${minRequired}. Please review the material and try again.`
+          : `You got ${correct} out of ${check.questions.length} questions correct. The passing threshold is ${minRequired}. Please review the material and try again.`,
       };
     }
 
@@ -1709,7 +1764,9 @@ async function initializeApp() {
     });
   }
 
-  const btnSubmitAnswers = document.getElementById("btn-submit-consent-answers");
+  const btnSubmitAnswers = document.getElementById(
+    "btn-submit-consent-answers"
+  );
   if (btnSubmitAnswers) {
     btnSubmitAnswers.addEventListener("click", () => {
       submitConsentAnswers();

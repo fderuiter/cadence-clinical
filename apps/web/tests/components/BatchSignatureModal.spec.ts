@@ -144,10 +144,13 @@ describe("BatchSignatureModal.vue", () => {
 
     // Verify error banner is shown
     expect(wrapper.find(".error-banner").exists()).toBe(true);
-    expect(wrapper.find(".error-banner").text()).toContain("Authentication failed");
+    expect(wrapper.find(".error-banner").text()).toContain(
+      "Authentication failed"
+    );
 
     // Password must be wiped
-    const passwordInput = wrapper.find(".password-input").element as HTMLInputElement;
+    const passwordInput = wrapper.find(".password-input")
+      .element as HTMLInputElement;
     expect(passwordInput.value).toBe("");
   });
 
@@ -162,7 +165,8 @@ describe("BatchSignatureModal.vue", () => {
       study_id: "STUDY-USDM-001",
       subject_id: "SUBJ-101",
       signed_forms_count: 1,
-      content_digest: "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+      content_digest:
+        "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08", // pragma: allowlist secret
       timestamp_utc: "2026-08-27T10:00:00Z",
       audit_tx: "tx_xyz789",
     };

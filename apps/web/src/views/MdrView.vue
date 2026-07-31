@@ -699,7 +699,9 @@ const soaData = computed(() => {
       epoch_id: "EP-DEFAULT",
       sequence: idx + 1,
     }));
-    const epochs = [{ epoch_id: "EP-DEFAULT", epoch_name: "Default Epoch", sequence: 1 }];
+    const epochs = [
+      { epoch_id: "EP-DEFAULT", epoch_name: "Default Epoch", sequence: 1 },
+    ];
     const rows = forms.map((form) => ({
       activity_id: form.name,
       activity_name: form.name,

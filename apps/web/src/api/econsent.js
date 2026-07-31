@@ -28,7 +28,8 @@ export const econsentService = {
 
   getClause(clauseId, params = {}, options = {}) {
     const query = new URLSearchParams();
-    if (params.version_index !== undefined) query.append("version_index", params.version_index);
+    if (params.version_index !== undefined)
+      query.append("version_index", params.version_index);
     const queryString = query.toString();
     const path = queryString
       ? `/api/v1/econsent/clauses/${clauseId}?${queryString}`
@@ -42,7 +43,11 @@ export const econsentService = {
   },
 
   updateTemplate(templateId, body, options = {}) {
-    return apiClient.put(`/api/v1/econsent/templates/${templateId}`, body, options);
+    return apiClient.put(
+      `/api/v1/econsent/templates/${templateId}`,
+      body,
+      options
+    );
   },
 
   listTemplates(params = {}, options = {}) {
@@ -59,7 +64,8 @@ export const econsentService = {
 
   getTemplate(templateId, params = {}, options = {}) {
     const query = new URLSearchParams();
-    if (params.version_index !== undefined) query.append("version_index", params.version_index);
+    if (params.version_index !== undefined)
+      query.append("version_index", params.version_index);
     const queryString = query.toString();
     const path = queryString
       ? `/api/v1/econsent/templates/${templateId}?${queryString}`
@@ -69,7 +75,8 @@ export const econsentService = {
 
   composeTemplate(templateId, params = {}, options = {}) {
     const query = new URLSearchParams();
-    if (params.version_index !== undefined) query.append("version_index", params.version_index);
+    if (params.version_index !== undefined)
+      query.append("version_index", params.version_index);
     const queryString = query.toString();
     const path = queryString
       ? `/api/v1/econsent/templates/${templateId}/compose?${queryString}`
@@ -78,7 +85,11 @@ export const econsentService = {
   },
 
   publishTemplate(templateId, options = {}) {
-    return apiClient.post(`/api/v1/econsent/templates/${templateId}/publish`, {}, options);
+    return apiClient.post(
+      `/api/v1/econsent/templates/${templateId}/publish`,
+      {},
+      options
+    );
   },
 
   // --- Comprehension Checks ---
@@ -103,14 +114,19 @@ export const econsentService = {
   },
 
   updateTranslation(translationId, body, options = {}) {
-    return apiClient.put(`/api/v1/econsent/translations/${translationId}`, body, options);
+    return apiClient.put(
+      `/api/v1/econsent/translations/${translationId}`,
+      body,
+      options
+    );
   },
 
   listTranslations(params = {}, options = {}) {
     const query = new URLSearchParams();
     if (params.source_id) query.append("source_id", params.source_id);
     if (params.source_type) query.append("source_type", params.source_type);
-    if (params.language_code) query.append("language_code", params.language_code);
+    if (params.language_code)
+      query.append("language_code", params.language_code);
     if (params.status) query.append("status", params.status);
     if (params.all_versions) query.append("all_versions", params.all_versions);
     const queryString = query.toString();
@@ -122,7 +138,8 @@ export const econsentService = {
 
   getTranslation(translationId, params = {}, options = {}) {
     const query = new URLSearchParams();
-    if (params.version_index !== undefined) query.append("version_index", params.version_index);
+    if (params.version_index !== undefined)
+      query.append("version_index", params.version_index);
     const queryString = query.toString();
     const path = queryString
       ? `/api/v1/econsent/translations/${translationId}?${queryString}`
@@ -131,14 +148,20 @@ export const econsentService = {
   },
 
   transitionTranslation(translationId, body, options = {}) {
-    return apiClient.post(`/api/v1/econsent/translations/${translationId}/transition`, body, options);
+    return apiClient.post(
+      `/api/v1/econsent/translations/${translationId}/transition`,
+      body,
+      options
+    );
   },
 
   // --- Approved Composed Content (Participant) ---
   getApprovedContent(templateId, params = {}, options = {}) {
     const query = new URLSearchParams();
-    if (params.language_code) query.append("language_code", params.language_code);
-    if (params.version_index !== undefined) query.append("version_index", params.version_index);
+    if (params.language_code)
+      query.append("language_code", params.language_code);
+    if (params.version_index !== undefined)
+      query.append("version_index", params.version_index);
     const queryString = query.toString();
     const path = queryString
       ? `/api/v1/econsent/templates/${templateId}/approved-content?${queryString}`

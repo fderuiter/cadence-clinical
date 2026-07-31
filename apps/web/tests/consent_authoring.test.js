@@ -10,10 +10,16 @@ import { router } from "../src/router";
 vi.mock("../src/api/econsent", () => ({
   econsentService: {
     listTemplates: vi.fn(() => Promise.resolve([])),
-    createTemplate: vi.fn(() => Promise.resolve({ template_id: "tpl-new", version_index: 1 })),
-    updateTemplate: vi.fn(() => Promise.resolve({ template_id: "tpl-new", version_index: 2 })),
+    createTemplate: vi.fn(() =>
+      Promise.resolve({ template_id: "tpl-new", version_index: 1 })
+    ),
+    updateTemplate: vi.fn(() =>
+      Promise.resolve({ template_id: "tpl-new", version_index: 2 })
+    ),
     composeTemplate: vi.fn(() => Promise.resolve({ clauses: [] })),
-    publishTemplate: vi.fn(() => Promise.resolve({ template_id: "tpl-1", is_published: true })),
+    publishTemplate: vi.fn(() =>
+      Promise.resolve({ template_id: "tpl-1", is_published: true })
+    ),
   },
 }));
 
@@ -63,7 +69,9 @@ describe("ConsentAuthoringView.vue Component and RBAC Router Tests", () => {
 
       const wrapper = mount(ConsentAuthoringView);
       expect(wrapper.find("#access-denied-card").exists()).toBe(true);
-      expect(wrapper.text()).toContain("21 CFR Part 11 Role Gating - Access Denied");
+      expect(wrapper.text()).toContain(
+        "21 CFR Part 11 Role Gating - Access Denied"
+      );
     });
 
     it("renders authoring editor layout when role authorization checks pass", async () => {

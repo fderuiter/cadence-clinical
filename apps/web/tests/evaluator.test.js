@@ -259,7 +259,12 @@ describe("Client-side AST Evaluator & Cascading Nullification", () => {
       };
 
       // Valid value
-      let res = validateField(heightFieldMeta, "1.75", { height: 1.75 }, evaluateAST);
+      let res = validateField(
+        heightFieldMeta,
+        "1.75",
+        { height: 1.75 },
+        evaluateAST
+      );
       expect(res.valid).toBe(true);
 
       // Invalid value violating constraint (value <= 0)

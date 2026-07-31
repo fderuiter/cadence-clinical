@@ -11,19 +11,21 @@ describe("ReasonModal.vue", () => {
         description: "To comply with Part 11, please select a reason.",
         options: [
           { value: "Initial Entry", text: "Initial Setup" },
-          { value: "Other", text: "Other" }
-        ]
-      }
+          { value: "Other", text: "Other" },
+        ],
+      },
     });
 
     expect(wrapper.find(".modal").exists()).toBe(true);
     expect(wrapper.find(".modal-header").text()).toBe("Reason Required");
-    expect(wrapper.find(".modal-body p").text()).toBe("To comply with Part 11, please select a reason.");
+    expect(wrapper.find(".modal-body p").text()).toBe(
+      "To comply with Part 11, please select a reason."
+    );
 
     const hiddenWrapper = mount(ReasonModal, {
       props: {
-        show: false
-      }
+        show: false,
+      },
     });
     expect(hiddenWrapper.find(".modal").exists()).toBe(false);
   });
@@ -33,15 +35,15 @@ describe("ReasonModal.vue", () => {
       props: {
         show: true,
         idPrefix: "test-prefix-",
-        options: [
-          { value: "Initial Entry", text: "Initial Setup" }
-        ]
-      }
+        options: [{ value: "Initial Entry", text: "Initial Setup" }],
+      },
     });
 
     expect(wrapper.find("#test-prefix-reason-modal").exists()).toBe(true);
     expect(wrapper.find("#test-prefix-modal-title").exists()).toBe(true);
-    expect(wrapper.find("#test-prefix-change-reason-select").exists()).toBe(true);
+    expect(wrapper.find("#test-prefix-change-reason-select").exists()).toBe(
+      true
+    );
     expect(wrapper.find("#test-prefix-change-reason-text").exists()).toBe(true);
     expect(wrapper.find("#test-prefix-btn-cancel-change").exists()).toBe(true);
     expect(wrapper.find("#test-prefix-btn-save-change").exists()).toBe(true);
@@ -52,10 +54,8 @@ describe("ReasonModal.vue", () => {
       props: {
         show: true,
         idPrefix: "acc-",
-        options: [
-          { value: "Initial Entry", text: "Initial Setup" }
-        ]
-      }
+        options: [{ value: "Initial Entry", text: "Initial Setup" }],
+      },
     });
 
     const overlay = wrapper.find("#acc-reason-modal");
@@ -77,9 +77,9 @@ describe("ReasonModal.vue", () => {
         idPrefix: "sel-",
         options: [
           { value: "Initial Entry", text: "Initial Setup" },
-          { value: "Other", text: "Other Reason" }
-        ]
-      }
+          { value: "Other", text: "Other Reason" },
+        ],
+      },
     });
 
     const select = wrapper.find("select");
@@ -93,10 +93,8 @@ describe("ReasonModal.vue", () => {
     const wrapper = mount(ReasonModal, {
       props: {
         show: true,
-        options: [
-          { value: "Initial Entry", text: "Initial Setup" }
-        ]
-      }
+        options: [{ value: "Initial Entry", text: "Initial Setup" }],
+      },
     });
 
     await wrapper.find("#btn-cancel-change").trigger("click");
@@ -107,17 +105,17 @@ describe("ReasonModal.vue", () => {
     const wrapper = mount(ReasonModal, {
       props: {
         show: true,
-        options: [
-          { value: "Initial Entry", text: "Initial Setup" }
-        ]
-      }
+        options: [{ value: "Initial Entry", text: "Initial Setup" }],
+      },
     });
 
     await wrapper.find("textarea").setValue("Typo correction");
     await wrapper.find("#btn-save-change").trigger("click");
 
     expect(wrapper.emitted("confirm")).toBeTruthy();
-    expect(wrapper.emitted("confirm")[0]).toEqual(["Initial Entry: Typo correction"]);
+    expect(wrapper.emitted("confirm")[0]).toEqual([
+      "Initial Entry: Typo correction",
+    ]);
   });
 
   it("strictly validates custom explanation is non-empty when Other is selected", async () => {
@@ -127,9 +125,9 @@ describe("ReasonModal.vue", () => {
         idPrefix: "val-",
         options: [
           { value: "Initial Entry", text: "Initial Setup" },
-          { value: "Other", text: "Other (specify below)" }
-        ]
-      }
+          { value: "Other", text: "Other (specify below)" },
+        ],
+      },
     });
 
     const select = wrapper.find("select");
@@ -143,7 +141,9 @@ describe("ReasonModal.vue", () => {
     expect(errorMsg.exists()).toBe(true);
     expect(errorMsg.attributes("role")).toBe("status");
     expect(errorMsg.attributes("aria-live")).toBe("polite");
-    expect(errorMsg.text()).toContain("Custom explanation is required when selecting 'Other'.");
+    expect(errorMsg.text()).toContain(
+      "Custom explanation is required when selecting 'Other'."
+    );
 
     // Provide custom explanation and confirm
     await wrapper.find("textarea").setValue("Authorized modification");

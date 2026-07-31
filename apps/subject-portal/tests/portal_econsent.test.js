@@ -167,7 +167,7 @@ describe("eConsent Patient Portal - Workflow and Gating Integration Tests", () =
 
     // Check wrong choices
     document.getElementById("q_headache_option_1").checked = true; // Nausea (wrong)
-    document.getElementById("q_withdraw_option_1").checked = true;  // No (wrong)
+    document.getElementById("q_withdraw_option_1").checked = true; // No (wrong)
 
     await portal.submitConsentAnswers();
 
@@ -177,11 +177,13 @@ describe("eConsent Patient Portal - Workflow and Gating Integration Tests", () =
 
     const banner = document.getElementById("comprehension-status-banner");
     expect(banner.style.display).toBe("block");
-    expect(banner.textContent).toContain("Please review the material and try again");
+    expect(banner.textContent).toContain(
+      "Please review the material and try again"
+    );
 
     // Now check correct choices
     document.getElementById("q_headache_option_0").checked = true; // Headache (correct)
-    document.getElementById("q_withdraw_option_0").checked = true;  // Yes (correct)
+    document.getElementById("q_withdraw_option_0").checked = true; // Yes (correct)
 
     await portal.submitConsentAnswers();
 

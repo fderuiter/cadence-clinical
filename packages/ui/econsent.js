@@ -45,7 +45,10 @@ export function normalizeApprovedConsent(content) {
     sections.push({
       id: `workflow-step-${idx}`,
       type: "workflow_step",
-      title: step.type === "comprehension_check" ? "Comprehension Check" : "Signature Requirement",
+      title:
+        step.type === "comprehension_check"
+          ? "Comprehension Check"
+          : "Signature Requirement",
       step: step,
     });
   });

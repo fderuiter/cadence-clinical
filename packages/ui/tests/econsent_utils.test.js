@@ -97,7 +97,11 @@ describe("eConsent Presentation and Gating Utilities", () => {
   describe("shapeComprehensionAnswers", () => {
     it("should correctly structure payload for submission", () => {
       const answers = { q1: "A", q2: "Yes" };
-      const payload = shapeComprehensionAnswers("SUB-101", answers, "Testing submission");
+      const payload = shapeComprehensionAnswers(
+        "SUB-101",
+        answers,
+        "Testing submission"
+      );
 
       expect(payload).toEqual({
         subject_pseudonym: "SUB-101",

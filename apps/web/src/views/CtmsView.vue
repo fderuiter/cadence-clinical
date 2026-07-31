@@ -24,10 +24,18 @@
             </thead>
             <tbody>
               <tr v-for="m in store.currentCtmsData.milestones" :key="m.id">
-                <td><strong>{{ m.type }}</strong></td>
+                <td>
+                  <strong>{{ m.type }}</strong>
+                </td>
                 <td>{{ m.plannedDate || "N/A" }}</td>
                 <td>{{ m.actualDate || "Pending" }}</td>
-                <td><span class="badge" :class="{ gxp: m.status === 'ACHIEVED' }">{{ m.status }}</span></td>
+                <td>
+                  <span
+                    class="badge"
+                    :class="{ gxp: m.status === 'ACHIEVED' }"
+                    >{{ m.status }}</span
+                  >
+                </td>
               </tr>
             </tbody>
           </table>
@@ -59,11 +67,19 @@
             </thead>
             <tbody>
               <tr v-for="v in store.currentCtmsData.visits" :key="v.id">
-                <td><strong>{{ v.type }}</strong></td>
+                <td>
+                  <strong>{{ v.type }}</strong>
+                </td>
                 <td>{{ v.scheduledDate || "N/A" }}</td>
                 <td>{{ v.actualDate || "Pending" }}</td>
                 <td>{{ v.cra || "N/A" }}</td>
-                <td><span class="badge" :class="{ gxp: v.status === 'SIGNED_OFF' }">{{ v.status }}</span></td>
+                <td>
+                  <span
+                    class="badge"
+                    :class="{ gxp: v.status === 'SIGNED_OFF' }"
+                    >{{ v.status }}</span
+                  >
+                </td>
               </tr>
             </tbody>
           </table>
@@ -199,7 +215,9 @@ function scheduleVisit() {
       .slice(0, 10),
     actualDate: "",
     status: "SCHEDULED",
-    cra: store.user?.username ? `cra_${store.user.username}` : "cra_demo_seed_fderuiter",
+    cra: store.user?.username
+      ? `cra_${store.user.username}`
+      : "cra_demo_seed_fderuiter",
   };
   store.currentCtmsData.visits.push(newVisit);
   store.addLedgerBlock(

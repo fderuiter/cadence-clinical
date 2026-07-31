@@ -29,7 +29,9 @@ export const useSignatureStore = defineStore("signatures", {
     lastSignatureResult: null as BatchSignResponse | null,
   }),
   actions: {
-    async submitBatchSignature(payload: BatchSignPayload): Promise<BatchSignResponse> {
+    async submitBatchSignature(
+      payload: BatchSignPayload
+    ): Promise<BatchSignResponse> {
       this.isSigning = true;
       this.signatureError = null;
       try {
@@ -45,13 +47,13 @@ export const useSignatureStore = defineStore("signatures", {
           printed_name: printedName,
         };
 
-        const response = await apiClient.post(
+        const response = (await apiClient.post(
           "/api/v1/execution/signatures/batch-sign-off",
           requestPayload,
           {
             changeReason: payload.meaning,
           }
-        ) as BatchSignResponse;
+        )) as BatchSignResponse;
 
         this.lastSignatureResult = response;
         return response;

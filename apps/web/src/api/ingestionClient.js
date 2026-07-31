@@ -44,7 +44,9 @@ export const ingestionClient = {
    */
   async getJobStatus(jobId, options = {}) {
     const { changeReason = "Get job status" } = options;
-    return apiClient.get(`/api/v1/designer/ingestion/jobs/${jobId}`, { changeReason });
+    return apiClient.get(`/api/v1/designer/ingestion/jobs/${jobId}`, {
+      changeReason,
+    });
   },
 
   /**
@@ -52,13 +54,23 @@ export const ingestionClient = {
    */
   async getCandidate(candidateId, options = {}) {
     const { changeReason = "Get candidate draft" } = options;
-    return apiClient.get(`/api/v1/designer/ingestion/candidates/${candidateId}`, { changeReason });
+    return apiClient.get(
+      `/api/v1/designer/ingestion/candidates/${candidateId}`,
+      { changeReason }
+    );
   },
 
   /**
    * Transitions an item's review status with a mandatory change justification reason.
    */
-  async transitionItem(candidateId, itemId, status, reason, updatedFields = {}, options = {}) {
+  async transitionItem(
+    candidateId,
+    itemId,
+    status,
+    reason,
+    updatedFields = {},
+    options = {}
+  ) {
     const { changeReason = "Review candidate item" } = options;
     return apiClient.post(
       `/api/v1/designer/ingestion/candidates/${candidateId}/items/${itemId}/transition`,
@@ -76,5 +88,5 @@ export const ingestionClient = {
       { change_reason: changeReason },
       { changeReason }
     );
-  }
+  },
 };

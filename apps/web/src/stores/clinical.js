@@ -716,7 +716,9 @@ export const useClinicalStore = defineStore("clinical", {
       this.ingestionLoading = true;
       this.ingestionError = null;
       try {
-        const draft = await ingestionClient.uploadProtocol(file, { changeReason });
+        const draft = await ingestionClient.uploadProtocol(file, {
+          changeReason,
+        });
         this.candidateDraft = draft;
         this.ingestionJobs.push({
           job_id: draft.id,
@@ -748,11 +750,23 @@ export const useClinicalStore = defineStore("clinical", {
       }
     },
 
-    async transitionCandidateItemState(candidateId, itemId, status, reason, updatedFields = {}) {
+    async transitionCandidateItemState(
+      candidateId,
+      itemId,
+      status,
+      reason,
+      updatedFields = {}
+    ) {
       this.ingestionLoading = true;
       this.ingestionError = null;
       try {
-        const draft = await ingestionClient.transitionItem(candidateId, itemId, status, reason, updatedFields);
+        const draft = await ingestionClient.transitionItem(
+          candidateId,
+          itemId,
+          status,
+          reason,
+          updatedFields
+        );
         this.candidateDraft = draft;
         this.ingestionLoading = false;
         return draft;
@@ -767,7 +781,10 @@ export const useClinicalStore = defineStore("clinical", {
       this.ingestionLoading = true;
       this.ingestionError = null;
       try {
-        const res = await ingestionClient.promoteCandidate(candidateId, changeReason);
+        const res = await ingestionClient.promoteCandidate(
+          candidateId,
+          changeReason
+        );
         if (this.candidateDraft && this.candidateDraft.id === candidateId) {
           this.candidateDraft.status = "PROMOTED";
         }

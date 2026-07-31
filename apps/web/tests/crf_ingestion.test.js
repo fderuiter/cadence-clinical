@@ -29,21 +29,30 @@ describe("Protocol Ingestion / CRF Builder Frontend Tests", () => {
         json: async () => mockResponse,
       });
 
-      const file = new File(["dummy protocol pdf"], "protocol.pdf", { type: "application/pdf" });
-      const result = await ingestionClient.uploadProtocol(file, { changeReason: "Ingesting trial blueprint" });
+      const file = new File(["dummy protocol pdf"], "protocol.pdf", {
+        type: "application/pdf",
+      });
+      const result = await ingestionClient.uploadProtocol(file, {
+        changeReason: "Ingesting trial blueprint",
+      });
 
       expect(global.fetch).toHaveBeenCalledTimes(1);
       const [url, options] = global.fetch.mock.calls[0];
       expect(url).toContain("/api/v1/designer/ingestion/upload");
       expect(options.method).toBe("POST");
-      expect(options.headers["X-Change-Reason"]).toBe("Ingesting trial blueprint");
+      expect(options.headers["X-Change-Reason"]).toBe(
+        "Ingesting trial blueprint"
+      );
       expect(options.body).toBeInstanceOf(FormData);
       expect(result).toEqual(mockResponse);
     });
 
     it("transitionItem posts status transition with a mandatory reason", async () => {
       const { apiClient } = await import("../src/api/apiClient");
-      apiClient.post.mockResolvedValueOnce({ id: "cand_123", status: "PENDING_REVIEW" });
+      apiClient.post.mockResolvedValueOnce({
+        id: "cand_123",
+        status: "PENDING_REVIEW",
+      });
 
       const result = await ingestionClient.transitionItem(
         "cand_123",
@@ -62,9 +71,15 @@ describe("Protocol Ingestion / CRF Builder Frontend Tests", () => {
 
     it("promoteCandidate submits change reason to promote the draft", async () => {
       const { apiClient } = await import("../src/api/apiClient");
-      apiClient.post.mockResolvedValueOnce({ status: "PROMOTED", version_id: "ver_draft_1" });
+      apiClient.post.mockResolvedValueOnce({
+        status: "PROMOTED",
+        version_id: "ver_draft_1",
+      });
 
-      const result = await ingestionClient.promoteCandidate("cand_123", "Clinical setup promotion");
+      const result = await ingestionClient.promoteCandidate(
+        "cand_123",
+        "Clinical setup promotion"
+      );
 
       expect(apiClient.post).toHaveBeenCalledWith(
         "/api/v1/designer/ingestion/candidates/cand_123/promote",
@@ -86,7 +101,9 @@ describe("Protocol Ingestion / CRF Builder Frontend Tests", () => {
         },
       };
 
-      vi.spyOn(ingestionClient, "uploadProtocol").mockResolvedValueOnce(mockCandidate);
+      vi.spyOn(ingestionClient, "uploadProtocol").mockResolvedValueOnce(
+        mockCandidate
+      );
 
       const file = new File(["dummy docx"], "protocol.docx");
       await store.uploadProtocolDocument(file, "Store upload test");
@@ -110,25 +127,44 @@ describe("Protocol Ingestion / CRF Builder Frontend Tests", () => {
       const mockUpdatedCandidate = {
         ...mockCandidate,
         items: {
-          cand_visit_1: { id: "cand_visit_1", review_status: "ACCEPTED", reason: "Approved visit" },
+          cand_visit_1: {
+            id: "cand_visit_1",
+            review_status: "ACCEPTED",
+            reason: "Approved visit",
+          },
         },
       };
 
-      vi.spyOn(ingestionClient, "transitionItem").mockResolvedValueOnce(mockUpdatedCandidate);
+      vi.spyOn(ingestionClient, "transitionItem").mockResolvedValueOnce(
+        mockUpdatedCandidate
+      );
 
-      await store.transitionCandidateItemState("cand_xyz", "cand_visit_1", "ACCEPTED", "Approved visit");
+      await store.transitionCandidateItemState(
+        "cand_xyz",
+        "cand_visit_1",
+        "ACCEPTED",
+        "Approved visit"
+      );
 
       expect(store.candidateDraft).toEqual(mockUpdatedCandidate);
-      expect(store.candidateDraft.items.cand_visit_1.review_status).toBe("ACCEPTED");
+      expect(store.candidateDraft.items.cand_visit_1.review_status).toBe(
+        "ACCEPTED"
+      );
     });
 
     it("promoteCandidateDraft transitions store draft status to PROMOTED", async () => {
       const store = useClinicalStore();
       store.candidateDraft = { id: "cand_xyz", status: "PENDING_REVIEW" };
 
-      vi.spyOn(ingestionClient, "promoteCandidate").mockResolvedValueOnce({ status: "PROMOTED", version_id: "ver_draft_1" });
+      vi.spyOn(ingestionClient, "promoteCandidate").mockResolvedValueOnce({
+        status: "PROMOTED",
+        version_id: "ver_draft_1",
+      });
 
-      const res = await store.promoteCandidateDraft("cand_xyz", "Promoting from store action");
+      const res = await store.promoteCandidateDraft(
+        "cand_xyz",
+        "Promoting from store action"
+      );
 
       expect(res.status).toBe("PROMOTED");
       expect(store.candidateDraft.status).toBe("PROMOTED");

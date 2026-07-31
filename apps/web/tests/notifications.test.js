@@ -377,7 +377,7 @@ describe("Notifications System End-to-End Visual Integration", () => {
           created_at: "2026-08-17T09:00:00Z",
           created_by: "system",
           version_index: 1,
-        }
+        },
       ]);
 
       const wrapper = mount(NotificationsView, {
@@ -390,7 +390,9 @@ describe("Notifications System End-to-End Visual Integration", () => {
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find(".global-indicator").exists()).toBe(true);
-      expect(wrapper.find(".global-indicator").text()).toContain("Global / Broadcast");
+      expect(wrapper.find(".global-indicator").text()).toContain(
+        "Global / Broadcast"
+      );
     });
 
     it("resets all filters when clicking Reset Filters", async () => {
@@ -435,7 +437,7 @@ describe("Notifications System End-to-End Visual Integration", () => {
           created_at: "2026-08-17T09:00:00Z",
           created_by: "system",
           version_index: 2,
-        }
+        },
       ]);
 
       const wrapper = mount(NotificationsView, {
@@ -473,7 +475,9 @@ describe("Notifications System End-to-End Visual Integration", () => {
       await wrapper.find(".btn-resolve").trigger("click");
       expect(wrapper.find("#justification-modal").exists()).toBe(true);
 
-      await wrapper.find("#modal-reason-select").setValue("Corrective action documented");
+      await wrapper
+        .find("#modal-reason-select")
+        .setValue("Corrective action documented");
       await wrapper.find("#btn-submit-modal").trigger("click");
 
       await new Promise((resolve) => setTimeout(resolve, 50));
@@ -507,7 +511,9 @@ describe("Notifications System End-to-End Visual Integration", () => {
 
       // Reopen
       await wrapper.find(".btn-acknowledge").trigger("click");
-      expect(wrapper.find("#modal-reason-select").element.value).toBe("Action completed successfully");
+      expect(wrapper.find("#modal-reason-select").element.value).toBe(
+        "Action completed successfully"
+      );
       expect(wrapper.find("#modal-custom-reason").element.value).toBe("");
     });
 
@@ -525,7 +531,9 @@ describe("Notifications System End-to-End Visual Integration", () => {
       await wrapper.find("#btn-cancel-modal").trigger("click");
 
       expect(wrapper.find("#justification-modal").exists()).toBe(false);
-      expect(notificationsService.acknowledgeNotification).not.toHaveBeenCalled();
+      expect(
+        notificationsService.acknowledgeNotification
+      ).not.toHaveBeenCalled();
     });
   });
 
@@ -589,7 +597,9 @@ describe("Notifications System End-to-End Visual Integration", () => {
 
   describe("Pinia Store Unit Tests", () => {
     it("handles loading and error state transitions during fetchNotifications", async () => {
-      notificationsService.getNotifications.mockRejectedValue(new Error("Database offline"));
+      notificationsService.getNotifications.mockRejectedValue(
+        new Error("Database offline")
+      );
 
       await notificationsStore.fetchNotifications();
       expect(notificationsStore.loading).toBe(false);
@@ -598,11 +608,19 @@ describe("Notifications System End-to-End Visual Integration", () => {
     });
 
     it("re-throws server-side errors on failed acknowledge and resolve actions", async () => {
-      notificationsService.acknowledgeNotification.mockRejectedValue(new Error("Acknowledge forbidden"));
-      notificationsService.resolveNotification.mockRejectedValue(new Error("Resolve unprocessable"));
+      notificationsService.acknowledgeNotification.mockRejectedValue(
+        new Error("Acknowledge forbidden")
+      );
+      notificationsService.resolveNotification.mockRejectedValue(
+        new Error("Resolve unprocessable")
+      );
 
-      await expect(notificationsStore.acknowledge("notif-123", "Reason")).rejects.toThrow("Acknowledge forbidden");
-      await expect(notificationsStore.resolve("notif-123", "Reason")).rejects.toThrow("Resolve unprocessable");
+      await expect(
+        notificationsStore.acknowledge("notif-123", "Reason")
+      ).rejects.toThrow("Acknowledge forbidden");
+      await expect(
+        notificationsStore.resolve("notif-123", "Reason")
+      ).rejects.toThrow("Resolve unprocessable");
     });
   });
 
@@ -619,23 +637,29 @@ describe("Notifications System End-to-End Visual Integration", () => {
       globalThis.fetch.mockResolvedValue({
         ok: true,
         status: 200,
-        json: async () => [{ id: "notif-01" }]
+        json: async () => [{ id: "notif-01" }],
       });
 
       // Import actual notificationsService
-      const { notificationsService: realService } = await vi.importActual("../src/api/notifications");
+      const { notificationsService: realService } = await vi.importActual(
+        "../src/api/notifications"
+      );
 
       await realService.getNotifications({
         category: "ALERTS",
         priority: "CRITICAL",
-        status: "OPEN"
+        status: "OPEN",
       });
 
       expect(globalThis.fetch).toHaveBeenCalledTimes(1);
       const [url, options] = globalThis.fetch.mock.calls[0];
 
-      expect(url).toContain("/api/v1/notifications?category=ALERTS&priority=CRITICAL&status=OPEN");
-      expect(options.headers["Authorization"]).toBe("Bearer dummy-jwt-signature-token");
+      expect(url).toContain(
+        "/api/v1/notifications?category=ALERTS&priority=CRITICAL&status=OPEN"
+      );
+      expect(options.headers["Authorization"]).toBe(
+        "Bearer dummy-jwt-signature-token"
+      );
     });
 
     it("attaches X-Change-Reason to mutations correctly", async () => {
@@ -645,12 +669,16 @@ describe("Notifications System End-to-End Visual Integration", () => {
       globalThis.fetch.mockResolvedValue({
         ok: true,
         status: 200,
-        json: async () => ({ id: "notif-01", status: "ACKNOWLEDGED" })
+        json: async () => ({ id: "notif-01", status: "ACKNOWLEDGED" }),
       });
 
-      const { notificationsService: realService } = await vi.importActual("../src/api/notifications");
+      const { notificationsService: realService } = await vi.importActual(
+        "../src/api/notifications"
+      );
 
-      await realService.acknowledgeNotification("notif-01", { changeReason: "Attestation reason" });
+      await realService.acknowledgeNotification("notif-01", {
+        changeReason: "Attestation reason",
+      });
 
       const [, options] = globalThis.fetch.mock.calls[0];
       expect(options.headers["X-Change-Reason"]).toBe("Attestation reason");

@@ -378,25 +378,57 @@
           <section id="view-consent" class="portal-view">
             <div class="view-header">
               <h2>My Informed Consent Review</h2>
-              <p>Please read the study details below, complete the comprehension check, and submit your digital signature.</p>
+              <p>
+                Please read the study details below, complete the comprehension
+                check, and submit your digital signature.
+              </p>
             </div>
 
             <!-- Language selector for approved content -->
-            <div class="card" style="margin-bottom: 16px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+            <div
+              class="card"
+              style="
+                margin-bottom: 16px;
+                padding: 12px 16px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 16px;
+              "
+            >
               <div>
-                <label for="consent-lang-selector" style="font-weight: bold; margin-right: 8px;">Select Language:</label>
-                <select id="consent-lang-selector" style="padding: 6px 12px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-color);">
+                <label
+                  for="consent-lang-selector"
+                  style="font-weight: bold; margin-right: 8px"
+                  >Select Language:</label
+                >
+                <select
+                  id="consent-lang-selector"
+                  style="
+                    padding: 6px 12px;
+                    border-radius: 4px;
+                    border: 1px solid var(--border-color);
+                    background: var(--bg-color);
+                    color: var(--text-color);
+                  "
+                >
                   <option value="en">English (en)</option>
                   <option value="es">Español (es)</option>
                   <option value="nl">Nederlands (nl)</option>
                   <option value="fr">Français (fr)</option>
                 </select>
               </div>
-              <span id="consent-status-badge" class="status-pill pending">Pending Check</span>
+              <span id="consent-status-badge" class="status-pill pending"
+                >Pending Check</span
+              >
             </div>
 
             <!-- Loading indicator -->
-            <div id="consent-loading" class="loading-state" style="display: none;">
+            <div
+              id="consent-loading"
+              class="loading-state"
+              style="display: none"
+            >
               Loading informed consent details...
             </div>
 
@@ -412,43 +444,99 @@
                 margin-bottom: 16px;
               "
             >
-              <p style="color: var(--danger); font-weight: bold; font-size: 16px">
+              <p
+                style="color: var(--danger); font-weight: bold; font-size: 16px"
+              >
                 Failed to load consent form.
               </p>
-              <p style="font-size: 14px; margin-bottom: 12px" id="consent-error-msg">
+              <p
+                style="font-size: 14px; margin-bottom: 12px"
+                id="consent-error-msg"
+              >
                 Unknown error
               </p>
-              <button type="button" id="btn-retry-consent" class="btn btn-primary">
+              <button
+                type="button"
+                id="btn-retry-consent"
+                class="btn btn-primary"
+              >
                 Retry
               </button>
             </div>
 
             <!-- Consent Document Content & Visual Renderer -->
-            <div id="consent-content-wrapper" style="display: none;">
+            <div id="consent-content-wrapper" style="display: none">
               <!-- Metadata and Clauses -->
-              <div class="card" style="margin-bottom: 24px;">
-                <h3 id="consent-template-title" style="margin-top: 0; color: var(--primary-color);">Informed Consent Form</h3>
-                <div id="consent-metadata-display" style="font-size: 12px; color: var(--text-muted); border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+              <div class="card" style="margin-bottom: 24px">
+                <h3
+                  id="consent-template-title"
+                  style="margin-top: 0; color: var(--primary-color)"
+                >
+                  Informed Consent Form
+                </h3>
+                <div
+                  id="consent-metadata-display"
+                  style="
+                    font-size: 12px;
+                    color: var(--text-muted);
+                    border-bottom: 1px solid var(--border-color);
+                    padding-bottom: 12px;
+                    margin-bottom: 16px;
+                  "
+                >
                   <!-- Dynamically populated template metadata -->
                 </div>
-                <div id="consent-clauses-container" style="line-height: 1.6; display: flex; flex-direction: column; gap: 16px;">
+                <div
+                  id="consent-clauses-container"
+                  style="
+                    line-height: 1.6;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 16px;
+                  "
+                >
                   <!-- Dynamically populated clauses -->
                 </div>
               </div>
 
               <!-- Comprehension Check Form Section -->
-              <div class="card" id="consent-comprehension-card" style="margin-bottom: 24px;">
-                <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px;">
+              <div
+                class="card"
+                id="consent-comprehension-card"
+                style="margin-bottom: 24px"
+              >
+                <h3
+                  style="
+                    margin-top: 0;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                  "
+                >
                   <span>🧠</span> Step 1: Comprehension Verification Check
                 </h3>
-                <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 16px;">
-                  Please answer the following brief questions to verify your understanding of the trial risks and procedures.
+                <p
+                  style="
+                    font-size: 14px;
+                    color: var(--text-muted);
+                    margin-bottom: 16px;
+                  "
+                >
+                  Please answer the following brief questions to verify your
+                  understanding of the trial risks and procedures.
                 </p>
 
                 <!-- Status Feedback region -->
                 <div
                   id="comprehension-status-banner"
-                  style="display: none; padding: 12px; border-radius: 6px; margin-bottom: 16px; font-size: 14px; font-weight: 600;"
+                  style="
+                    display: none;
+                    padding: 12px;
+                    border-radius: 6px;
+                    margin-bottom: 16px;
+                    font-size: 14px;
+                    font-weight: 600;
+                  "
                   role="status"
                   aria-live="polite"
                 >
@@ -459,23 +547,51 @@
                   <!-- Dynamically rendered questions using radio grids -->
                 </div>
 
-                <div class="form-actions" style="margin-top: 20px;">
-                  <button type="button" id="btn-submit-consent-answers" class="btn btn-primary">
+                <div class="form-actions" style="margin-top: 20px">
+                  <button
+                    type="button"
+                    id="btn-submit-consent-answers"
+                    class="btn btn-primary"
+                  >
                     Verify and Submit Answers
                   </button>
                 </div>
               </div>
 
               <!-- Signature Section -->
-              <div class="card" id="consent-signature-card" style="margin-bottom: 24px;">
-                <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px;">
+              <div
+                class="card"
+                id="consent-signature-card"
+                style="margin-bottom: 24px"
+              >
+                <h3
+                  style="
+                    margin-top: 0;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                  "
+                >
                   <span>✍️</span> Step 2: Electronic Signature
                 </h3>
-                <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 16px;">
-                  By signing this document, you confirm that you have read this informed consent, have passed the verification, and agree to participate.
+                <p
+                  style="
+                    font-size: 14px;
+                    color: var(--text-muted);
+                    margin-bottom: 16px;
+                  "
+                >
+                  By signing this document, you confirm that you have read this
+                  informed consent, have passed the verification, and agree to
+                  participate.
                 </p>
                 <div class="form-actions">
-                  <button type="button" id="btn-trigger-consent-sign" class="btn btn-primary" disabled>
+                  <button
+                    type="button"
+                    id="btn-trigger-consent-sign"
+                    class="btn btn-primary"
+                    disabled
+                  >
                     Sign Consent Form
                   </button>
                 </div>
@@ -486,9 +602,18 @@
       </div>
 
       <!-- Electronic Signature and Reason Modal -->
-      <div class="modal-overlay" id="portal-sign-modal" style="display: none" role="dialog" aria-modal="true" aria-labelledby="portal-modal-title">
+      <div
+        class="modal-overlay"
+        id="portal-sign-modal"
+        style="display: none"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="portal-modal-title"
+      >
         <div class="modal">
-          <div class="modal-header" id="portal-modal-title">Electronic Signature Required</div>
+          <div class="modal-header" id="portal-modal-title">
+            Electronic Signature Required
+          </div>
           <div class="modal-body">
             <p>
               To comply with <strong>FDA 21 CFR Part 11 / EU Annex 11</strong>,
@@ -496,7 +621,21 @@
               your change reason or completion affirmation.
             </p>
             <!-- Accessible modal live error region -->
-            <div id="modal-error-banner" style="display: none; padding: 8px; border-radius: 4px; background-color: #fee2e2; color: #b91c1c; margin-bottom: 12px; font-size: 13px; font-weight: 600;" role="status" aria-live="polite"></div>
+            <div
+              id="modal-error-banner"
+              style="
+                display: none;
+                padding: 8px;
+                border-radius: 4px;
+                background-color: #fee2e2;
+                color: #b91c1c;
+                margin-bottom: 12px;
+                font-size: 13px;
+                font-weight: 600;
+              "
+              role="status"
+              aria-live="polite"
+            ></div>
 
             <div class="form-group mb-12">
               <label for="sign-reason">Reason for Action / Declaration</label>

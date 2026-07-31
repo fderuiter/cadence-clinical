@@ -207,11 +207,20 @@ describe("cross-language parity", () => {
   const getPythonOutput = (script) => {
     const cwd = process.cwd();
     const env = { ...process.env, PYTHONPATH: cwd };
-    const pyScript = script.trim().split("\n").map(line => line.trim()).filter(Boolean).join("; ");
+    const pyScript = script
+      .trim()
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .join("; ");
     try {
-      return execSync(`uv run python -c "${pyScript}"`, { env, cwd }).toString().trim();
+      return execSync(`uv run python -c "${pyScript}"`, { env, cwd })
+        .toString()
+        .trim();
     } catch {
-      return execSync(`python3 -c "${pyScript}"`, { env, cwd }).toString().trim();
+      return execSync(`python3 -c "${pyScript}"`, { env, cwd })
+        .toString()
+        .trim();
     }
   };
 
