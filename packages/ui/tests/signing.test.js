@@ -203,7 +203,7 @@ describe("sha256", () => {
   });
 });
 
-describe("cross-language parity", () => {
+describe("cross-language parity", { timeout: 30000 }, () => {
   const getPythonOutput = (script) => {
     const cwd = process.cwd();
     const env = { ...process.env, PYTHONPATH: cwd };
@@ -213,15 +213,23 @@ describe("cross-language parity", () => {
       .map((line) => line.trim())
       .filter(Boolean)
       .join("; ");
-    try {
-      return execSync(`uv run python -c "${pyScript}"`, { env, cwd })
-        .toString()
-        .trim();
-    } catch {
-      return execSync(`python3 -c "${pyScript}"`, { env, cwd })
-        .toString()
-        .trim();
+    const pythonPaths = [
+      "/app/.venv/bin/python",
+      "./.venv/bin/python",
+      "python3",
+      "python",
+      "uv run python",
+    ];
+    for (const pyPath of pythonPaths) {
+      try {
+        return execSync(`${pyPath} -c "${pyScript}"`, { env, cwd, stdio: "pipe" })
+          .toString()
+          .trim();
+      } catch {
+        // Try next candidate path
+      }
     }
+    throw new Error("Failed to execute Python script with any python interpreter.");
   };
 
   it("JS can decrypt a Python-produced AES-GCM envelope", async () => {
