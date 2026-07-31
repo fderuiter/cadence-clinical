@@ -223,7 +223,6 @@ def receive_before_flush(session: Session, flush_context, instances):
 
                             if study_id:
                                 consent_fetched = False
-                                consent_signed = False
                                 try:
                                     from apps.execution.econsent_client import (
                                         fetch_subject_consent_status,
@@ -239,7 +238,6 @@ def receive_before_flush(session: Session, flush_context, instances):
                                     )
                                     consent_fetched = True
                                     if consent_data and consent_data.get("signed"):
-                                        consent_signed = True
                                         version_index = consent_data.get(
                                             "version_index"
                                         )
@@ -296,7 +294,6 @@ def receive_before_flush(session: Session, flush_context, instances):
                                             for other_consent in others:
                                                 other_consent.requires_reconsent = False
                                     else:
-                                        consent_signed = False
                                         # Canonical eConsent says unsigned or not found
                                         # Mark all local SubjectConsent caches as unsigned
                                         stmt_all = select(SubjectConsent).where(
@@ -317,7 +314,6 @@ def receive_before_flush(session: Session, flush_context, instances):
                                         and "Failed to connect" not in str(exc.detail)
                                     ):
                                         consent_fetched = True
-                                        consent_signed = False
 
                                 # Check if any SubjectConsent records exist for this study in DB or current session
                                 stmt_study_consents = select(SubjectConsent).where(
