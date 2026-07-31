@@ -644,6 +644,45 @@
           }
         }
       }
+    },
+    "/api/v1/compliance/change-requests/analyze-diff": {
+      "post": {
+        "summary": "Analyze Diff Endpoint",
+        "description": "Analyze proposed setting change and evaluate GxP regulatory risk level.\n\nRequirements: PRD-SYS-001",
+        "operationId": "analyze_diff_endpoint_api_v1_compliance_change_requests_analyze_diff_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingDiffEntry"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegulatoryRiskAssessment"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -778,6 +817,77 @@
         ],
         "title": "PaginatedTicketAuditLogResponse",
         "description": "Paginated representation of ticket audit trail logs."
+      },
+      "RegulatoryRiskAssessment": {
+        "properties": {
+          "risk_level": {
+            "type": "string",
+            "enum": [
+              "HIGH_RISK",
+              "MEDIUM_RISK",
+              "LOW_RISK"
+            ],
+            "title": "Risk Level"
+          },
+          "affected_gxp_clauses": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Affected Gxp Clauses"
+          },
+          "requires_qa_signoff": {
+            "type": "boolean",
+            "title": "Requires Qa Signoff"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "risk_summary": {
+            "type": "string",
+            "title": "Risk Summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "risk_level",
+          "affected_gxp_clauses",
+          "requires_qa_signoff",
+          "summary",
+          "risk_summary"
+        ],
+        "title": "RegulatoryRiskAssessment",
+        "description": "Schema representing a clinical and regulatory risk assessment for a setting change."
+      },
+      "SettingDiffEntry": {
+        "properties": {
+          "setting_key": {
+            "type": "string",
+            "title": "Setting Key"
+          },
+          "old_value": {
+            "type": "string",
+            "title": "Old Value"
+          },
+          "new_value": {
+            "type": "string",
+            "title": "New Value"
+          },
+          "data_type": {
+            "type": "string",
+            "title": "Data Type",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "setting_key",
+          "old_value",
+          "new_value"
+        ],
+        "title": "SettingDiffEntry",
+        "description": "Schema representing a configuration setting difference entry."
       },
       "TicketAssignPayload": {
         "properties": {
