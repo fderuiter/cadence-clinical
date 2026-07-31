@@ -72,9 +72,21 @@ importers:
 
   apps/web:
     dependencies:
+      keycloak-js:
+        specifier: ^26.2.4
+        version: 26.2.4
+      pinia:
+        specifier: ^4.0.2
+        version: 4.0.2(@vue/devtools-api@8.1.5)(typescript@7.0.2)(vue@3.5.40(typescript@7.0.2))
       ui:
         specifier: workspace:*
         version: link:../../packages/ui
+      vue:
+        specifier: ^3.5.40
+        version: 3.5.40(typescript@7.0.2)
+      vue-router:
+        specifier: ^5.2.0
+        version: 5.2.0(@vue/compiler-sfc@3.5.40)(pinia@4.0.2(@vue/devtools-api@8.1.5)(typescript@7.0.2)(vue@3.5.40(typescript@7.0.2)))(rolldown@1.1.5)(rollup@4.62.3)(vite@8.1.5(yaml@2.9.0))(vue@3.5.40(typescript@7.0.2))
       vuedraggable:
         specifier: 4.1.0
         version: 4.1.0(vue@3.5.40(typescript@7.0.2))
@@ -97,24 +109,12 @@ importers:
       jsdom:
         specifier: ^29.1.1
         version: 29.1.1
-      keycloak-js:
-        specifier: ^26.2.4
-        version: 26.2.4
-      pinia:
-        specifier: ^4.0.2
-        version: 4.0.2(@vue/devtools-api@8.1.5)(typescript@7.0.2)(vue@3.5.40(typescript@7.0.2))
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
       vite:
         specifier: ^8.1.5
         version: 8.1.5(yaml@2.9.0)
-      vue:
-        specifier: ^3.5.40
-        version: 3.5.40(typescript@7.0.2)
-      vue-router:
-        specifier: ^5.2.0
-        version: 5.2.0(@vue/compiler-sfc@3.5.40)(pinia@4.0.2(@vue/devtools-api@8.1.5)(typescript@7.0.2)(vue@3.5.40(typescript@7.0.2)))(rolldown@1.1.5)(rollup@4.62.3)(vite@8.1.5(yaml@2.9.0))(vue@3.5.40(typescript@7.0.2))
 
   packages/ui:
     devDependencies:

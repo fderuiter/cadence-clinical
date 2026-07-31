@@ -81,7 +81,11 @@ describe("Accessibility Composables & Query Panel Integration", () => {
       expect(document.activeElement).toBe(btn1);
 
       // Trigger Shift+Tab keydown
-      const event = new KeyboardEvent("keydown", { key: "Tab", shiftKey: true, bubbles: true });
+      const event = new KeyboardEvent("keydown", {
+        key: "Tab",
+        shiftKey: true,
+        bubbles: true,
+      });
       document.dispatchEvent(event);
 
       // Focus should loop back to the last element
@@ -110,7 +114,10 @@ describe("Accessibility Composables & Query Panel Integration", () => {
       const onClose = vi.fn();
       mount(TestEscapeComponent, { props: { onClose }, attachTo: container });
 
-      const event = new KeyboardEvent("keydown", { key: "Escape", bubbles: true });
+      const event = new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+      });
       document.dispatchEvent(event);
 
       expect(onClose).toHaveBeenCalledTimes(1);
@@ -118,11 +125,17 @@ describe("Accessibility Composables & Query Panel Integration", () => {
 
     it("does not call close handler after being unmounted", () => {
       const onClose = vi.fn();
-      const wrapper = mount(TestEscapeComponent, { props: { onClose }, attachTo: container });
+      const wrapper = mount(TestEscapeComponent, {
+        props: { onClose },
+        attachTo: container,
+      });
 
       wrapper.unmount();
 
-      const event = new KeyboardEvent("keydown", { key: "Escape", bubbles: true });
+      const event = new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+      });
       document.dispatchEvent(event);
 
       expect(onClose).not.toHaveBeenCalled();
@@ -155,7 +168,10 @@ describe("Accessibility Composables & Query Panel Integration", () => {
       expect(document.activeElement).toBe(closeBtn);
 
       // Pressing Escape should close the query panel and return focus to the flag button
-      const escapeEvent = new KeyboardEvent("keydown", { key: "Escape", bubbles: true });
+      const escapeEvent = new KeyboardEvent("keydown", {
+        key: "Escape",
+        bubbles: true,
+      });
       document.dispatchEvent(escapeEvent);
       await nextTick();
 
