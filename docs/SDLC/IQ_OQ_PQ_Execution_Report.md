@@ -9,10 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1713
-- **Passed:** 1713 🟢
-- **Total Automated Test Cases Run:** 28
-- **Passed:** 28 🟢
+- **Total Automated Test Cases Run:** 1717
+- **Passed:** 1717 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -484,6 +482,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_redaction_manifest_asymmetric_tamper_evident` | `tests.test_deid_transforms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_redaction_manifest_symmetric_tamper_evident` | `tests.test_deid_transforms` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_shift_date_string` | `tests.test_deid_transforms` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_free_text_pii_scrubbing` | `tests.test_deident_scrubber` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_scrubber_preserves_date_intervals` | `tests.test_deident_scrubber` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_scrubber_subject_id_non_reversible` | `tests.test_deident_scrubber` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_sdtm_json_builder_integration` | `tests.test_deident_scrubber` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_age_capping_and_edge_cases` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
 | `test_compliance_profiles` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
 | `test_date_shifting_and_edge_cases` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
@@ -1485,10 +1487,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_rewrite_references_nested_references` | `tests.test_schema_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_rewrite_references_recursion_protection` | `tests.test_schema_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_static_schema_validation_script` | `tests.test_schema_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_free_text_pii_scrubbing` | `tests.test_deident_scrubber` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_scrubber_preserves_date_intervals` | `tests.test_deident_scrubber` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_scrubber_subject_id_non_reversible` | `tests.test_deident_scrubber` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_sdtm_json_builder_integration` | `tests.test_deident_scrubber` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ae_required_optional_and_date_order` | `tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_auditable_model_fields_and_validation` | `tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cm_required_optional_and_date_order` | `tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
