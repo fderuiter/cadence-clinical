@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1828
-- **Passed:** 1828 🟢
+- **Total Automated Test Cases Run:** 1792
+- **Passed:** 1792 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -630,6 +630,22 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_signature_verification_replay_attack_prevention` | `tests.test_double_auth` | PRD-QRY-005 | 🟢 PASSED | < 1s |
 | `test_signature_verification_role_insufficient_auth` | `tests.test_double_auth` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_verification_token_expiration` | `tests.test_double_auth` | PRD-QRY-005 | 🟢 PASSED | < 1s |
+| `test_generate_e2b_xml_happy_path` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_generate_e2b_xml_invalid_raises_value_error` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_icsr_version_and_reason_for_change_rendering` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_invalid_namespace_fails` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_invalid_root_tag_fails` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_malformed_xml_validation_fails` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_drugs_or_drug_fields_fails` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_header_fails` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_header_fields_fail` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_patient_fails` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_patient_fields_fail` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_reactions_or_reaction_term_fails` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_safety_report_fails` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_missing_worldwide_unique_case_id_fails` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_valid_icsr_rendering_and_validation` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_validate_e2b_xml_structure_direct` | `tests.test_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_parse_e2b_xml_valid_payload` | `tests.test_e2b_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_assignment_compliance_states_and_recalculations` | `tests.test_ecoa_coverage` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_instrument_retrieval_and_assignment_boundaries` | `tests.test_ecoa_coverage` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1525,6 +1541,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_valid_icsr_rendering_and_validation` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validate_e2b_xml_structure_direct` | `tests.test_safety_e2b` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_e2b_xml_generation_and_parser_roundtrip` | `tests.test_safety_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_safety_gateway_negative_signatures_async` | `tests.test_safety_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_safety_reconciliation_job_lifecycle_async` | `tests.test_safety_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_dispatch_safety_report_post_endpoint` | `tests.test_safety_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reconcile_sae_cases_post_endpoint` | `tests.test_safety_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_database_manager_uninitialized_raises_exception` | `tests.test_safety_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
