@@ -114,6 +114,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-08: RTSM Supply Domain Persistence Models](2026-08-08-rtsm-supply-domain-persistence.md)
 - [2026-08-09: eISF Browse, RBAC, Downloads, and Completeness](2026-08-09-eisf-maintenance-and-formatting.md)
 - [2026-08-09: eTMF Filterable and Paginated Audit Log API](2026-08-09-etmf-filterable-paginated-audit-log.md)
+- [2026-08-31: Randomization and Trial Supply Management](2026-08-31-randomization-and-trial-supply-management.md)
 
 ### 5. Compliance, Audit & Governance
 - [2026-07-31: GxP 21 CFR Part 11 eConsent Audit Trails](2026-07-31-gxp-21-cfr-part-11-econsent-audit-trails.md)
@@ -132,6 +133,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-18: Document Redaction Architecture, Regulatory Data-Handling, and Compliance Profiles](2026-08-18-document-redaction-architecture.md)
 
 ### 6. Frontend & Design System
+- [2026-07-31: Vue SPA Component Smoke Test and Vitest Pipeline Integration](2026-07-31-vue-spa-component-smoke-test-and-vitest-pipeline-integration.md)
 - [2026-07-31: Resolve Vitest Peer Dependency Conflict in Shared UI Package](2026-07-31-resolve-vitest-peer-dependency-conflict-in-shared-ui-package.md)
 - [2026-07-30: Deprecate legacy econsent helper in packages ui](2026-07-30-deprecate-legacy-econsent-helper-in-packages-ui.md)
 - [2026-07-30: eConsent Visual Editor and Subject Consent Portal UI Architecture](2026-07-30-econsent-visual-editor-and-subject-consent-portal-ui-architecture.md)

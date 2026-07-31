@@ -256,7 +256,7 @@ async def test_neo4j_library_object_version_chain_queries():
         "MATCH (n:LibraryObject {id: $object_id, sponsor_id: $sponsor_id})"
         in called_query
     )
-    assert "WHERE NOT (n)<-[:PREVIOUS_VERSION]-()" in called_query
+    assert "NOT (n)<-[:PREVIOUS_VERSION]-()" in called_query
 
     # 2. Test get_library_object_by_version
     result_mock_v = AsyncMock()

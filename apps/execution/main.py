@@ -1037,23 +1037,10 @@ async def unblind_subject(
     verify_change_justification(request)
 
     # Step-up re-authentication: validate X-Sig-Token before any write
-    from jose import JWTError
-    from jose import jwt as jose_jwt
-
     sig_token = request.headers.get("X-Sig-Token")
-    if not sig_token:
-        raise HTTPException(
-            status_code=401,
-            detail="REAUTHENTICATION_REQUIRED",
-        )
-    _secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()
-    try:
-        jose_jwt.decode(sig_token, _secret, algorithms=["HS256"])
-    except JWTError:
-        raise HTTPException(
-            status_code=401,
-            detail="REAUTHENTICATION_REQUIRED",
-        )
+    from packages.security.sig_token_verifier import verify_and_consume_sig_token
+
+    verify_and_consume_sig_token(sig_token, principal.user_id)
 
     # Validate min-length justification explicitly
     if len(payload.justification) < MIN_JUSTIFICATION_LENGTH:
@@ -4415,22 +4402,11 @@ async def post_batch_sign_off(
     """Perform a PI-only, atomic batch electronic-signature for form-, visit-, and subject-level sign-off."""
     # Secondary safety validation of the signature token batch-binding
     sig_token = request.headers.get("X-Sig-Token")
-    if not sig_token:
-        raise HTTPException(
-            status_code=401,
-            detail="REAUTHENTICATION_REQUIRED",
-        )
+    user_id = getattr(request.state, "user_id", "")
 
-    from jose import JWTError, jwt
+    from packages.security.sig_token_verifier import verify_and_consume_sig_token
 
-    secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()
-    try:
-        sig_payload = jwt.decode(sig_token, secret, algorithms=["HS256"])
-    except JWTError:
-        raise HTTPException(
-            status_code=401,
-            detail="REAUTHENTICATION_REQUIRED",
-        )
+    sig_payload = verify_and_consume_sig_token(sig_token, user_id)
 
     token_batch_id = sig_payload.get("batch_id")
     if not token_batch_id:

@@ -10,10 +10,11 @@ from execution.signature_transport_models import (
     BatchSignatureRequest,
     BatchSignatureResponse,
 )
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 import packages  # noqa: F401
 from packages.security.middleware import get_current_user
+from packages.security.sig_token_verifier import verify_and_consume_sig_token
 from packages.security.signature_builder import CryptographicSignatureBuilder
 
 router = APIRouter(prefix="/api/v1/execution/signatures", tags=["Signatures"])
@@ -25,6 +26,7 @@ router = APIRouter(prefix="/api/v1/execution/signatures", tags=["Signatures"])
     status_code=status.HTTP_201_CREATED,
 )
 async def batch_signature_sign_off_endpoint(
+    request: Request,
     payload: BatchSignatureRequest,
     current_user: dict = Depends(get_current_user),
 ) -> BatchSignatureResponse:
@@ -32,6 +34,9 @@ async def batch_signature_sign_off_endpoint(
 
     Requirements: PRD-SYS-001
     """
+    sig_token = request.headers.get("X-Sig-Token")
+    verify_and_consume_sig_token(sig_token, current_user["sub"])
+
     if not payload.target_form_ids:
         raise HTTPException(
             status_code=400,

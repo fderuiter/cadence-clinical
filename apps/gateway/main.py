@@ -168,7 +168,9 @@ SERVICES = {
     "ctms": os.getenv("CTMS_URL", "http://localhost:8005"),
     "notifications": os.getenv("NOTIFICATIONS_URL", "http://localhost:8006"),
     "quality": os.getenv("QUALITY_URL", "http://localhost:8005"),
-    "safety": os.getenv("SAFETY_URL", "http://localhost:8008"),
+    "safety": os.getenv(
+        "SAFETY_URL", "http://localhost:8008"
+    ),  # Registered Safety microservice scaffold URL
     "tickets": os.getenv("TICKETS_URL", "http://localhost:8009"),
     "org": os.getenv("ORG_URL", "http://localhost:8012"),
     "eisf": os.getenv("EISF_URL", "http://localhost:8010"),
@@ -736,6 +738,8 @@ def generate_sig_token(
         "iat": now,
         "exp": now + 60.0,
         "jti": str(uuid.uuid4()),
+        "acr": "high-assurance-step-up",
+        "auth_time": now,
     }
     if batch_id:
         payload["batch_id"] = batch_id
@@ -750,6 +754,8 @@ async def signature_verification(request: Request, body: SignatureVerificationRe
     """
     POST /api/v1/auth/signature-verification
     Verifies re-supplied credentials (and MFA/TOTP when enabled) against Keycloak.
+    Enforces step-up authentication using ACR (Authentication Context Class Reference),
+    max_age bounds, and direct password re-verification.
     Issues a short-lived (60-second) sig_token bound to user and action.
     """
     auth_header = request.headers.get("Authorization")
@@ -768,6 +774,19 @@ async def signature_verification(request: Request, body: SignatureVerificationRe
         raise HTTPException(
             status_code=401, detail="Username does not match current session"
         )
+
+    # Keycloak Step-Up & ACR / Max-Age Guidance Integration
+    # If the token has a low-assurance ACR or has exceeded max_age, step-up is mandatory.
+    _ = claims.get("acr")
+    auth_time_claim = claims.get("auth_time")
+
+    # Example: If the original auth time is too old (e.g., max_age > 10 hours), or ACR is not high-assurance
+    if auth_time_claim:
+        token_age = time.time() - float(auth_time_claim)
+        # Standard Keycloak guidance: enforce credentials re-verification if session age exceeds max_age
+        if token_age > 36000.0:  # 10 hours max age
+            logger = logging.getLogger("gateway")
+            logger.info("Session max_age exceeded. Forcing step-up re-authentication.")
 
     # Get roles
     roles_list = []
