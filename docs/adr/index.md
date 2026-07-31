@@ -27,6 +27,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-07-30: ADR 2026-07-30: Rule Authoring, Validation, and DDF Delivery](2026-07-30-rule-authoring-validation-and-ddf-delivery.md)
 - [2026-08-02: Shared Eligibility Criteria Domain Contract, DSL Parser, and Deterministic Evaluator](2026-08-02-eligibility-criteria-evaluation-engine.md)
 - [2026-08-02: Protocol Document Rendering Architecture and Content Contract](2026-08-02-protocol-rendering-architecture.md)
+- [2026-08-28: Protocol Document Rendering Architecture](2026-08-28-protocol-document-rendering-architecture.md)
 - [2026-08-09: Global Library Object Instantiation in Clinical Studies](2026-08-09-global-library-object-instantiation.md)
 - [2026-08-11: Unified Parameterized Relational Database Lifespan Wrapper](2026-08-11-unified-parameterized-relational-database-lifespan-wrapper.md)
 - [2026-08-19: Global Library Architecture, Lifecycle, and Multi-Tenant Isolation](2026-08-19-global-library-architecture-lifecycle-tenancy.md)
