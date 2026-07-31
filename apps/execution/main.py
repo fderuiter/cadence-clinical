@@ -2967,7 +2967,10 @@ async def get_meddra_code(
     target_level: Optional[MedDRATargetLevelEnum] = Query(MedDRATargetLevelEnum.LLT),
     roles: list[str] = Depends(get_normalized_roles),
 ) -> MedDRACodingResult:
-    """Performs coding or interactive auto-complete lookup on adverse events using version-aware matcher."""
+    """Performs coding or interactive auto-complete lookup on adverse events using version-aware matcher.
+
+    Delegates lookup to search_dictionary/match_verbatim_term matching engine.
+    """
     from apps.execution.coding import search_dictionary
 
     async with db_manager.get_session_maker()() as session:
@@ -3071,7 +3074,10 @@ async def get_whodrug_code(
     version: str,
     roles: list[str] = Depends(get_normalized_roles),
 ) -> WHODrugCodingResult:
-    """Performs coding or interactive lookup on WHODrug database using version-aware matcher."""
+    """Performs coding or interactive lookup on WHODrug database using version-aware matcher.
+
+    Delegates lookup to search_dictionary/match_verbatim_term matching engine.
+    """
     from apps.execution.coding import search_dictionary
 
     async with db_manager.get_session_maker()() as session:

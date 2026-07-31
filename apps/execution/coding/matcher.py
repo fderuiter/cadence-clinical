@@ -2,6 +2,8 @@
 
 This module implements the core text preprocessing and normalization, similarity
 scoring calculations, dictionary-specific lookup, and caching for MedDRA and WHODrug.
+
+Satisfies Phase 17 Requirements.
 """
 
 import collections
