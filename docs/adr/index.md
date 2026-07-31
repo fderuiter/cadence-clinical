@@ -165,3 +165,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-26: eSignature-Backed Delegation of Authority (DOA) Log and Task Delegation Service](2026-08-26-esignature-backed-doa-task-delegation-service.md)
 - [2026-08-27: Offline Data Ingestion & Sync Engine](2026-08-27-offline-data-reconciliation-integrity.md)
 - [2026-08-27: 21 CFR Part 11 Batch Electronic Signatures for PI Casebook Sign-Off](2026-08-27-prd-sys-001-compliance-batch-e-signatures.md)
+- [2026-07-31: SDV & TSDV Metadata and Database Migrations](2026-07-31-sdv-tsdv-metadata-enhancements.md)
