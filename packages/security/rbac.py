@@ -206,14 +206,6 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "quality_audit_logs": {"read"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
-        # Execution Core Resources
-        "tsdv_config": {"create", "read", "update", "delete"},
-        "form_submission": {"create", "read", "update", "delete"},
-        "pi_signoff": {"create", "read", "update", "delete"},
-        "medical_coding": {"create", "read", "update", "delete"},
-        "trial_lock": {"create", "read", "update", "delete"},
-        "export_unmasked": {"create", "read", "update", "delete"},
-        "sdv": {"create", "read", "update", "delete"},
     },
     ROLE_SPONSOR_DESIGNER: {
         "study_design": {"create", "read", "update", "delete", "approve", "reorder"},
@@ -307,13 +299,6 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "quality_audit_logs": {"read"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
-        # Execution Core Resources
-        "tsdv_config": {"read"},
-        "form_submission": {"read"},
-        "pi_signoff": {"read"},
-        "medical_coding": {"create", "read", "update", "delete"},
-        "trial_lock": {"create", "read", "update", "delete"},
-        "sdv": {"read", "update"},
     },
     ROLE_SPONSOR_MM: {
         "study_design": {"read"},
@@ -415,6 +400,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
     },
     "monitor": {
         "study_design": {"read"},
+        "sdv": {"create", "read", "update", "delete"},
         "system_audit_logs": {"read"},
         "regulatory_form": {"create", "read", "sign"},
         "training_log": {"create", "read", "sign"},
@@ -433,12 +419,6 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "quality_event": {"create", "read", "update"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
-        # Execution Core Resources
-        "tsdv_config": {"create", "read", "update", "delete"},
-        "form_submission": {"read"},
-        "pi_signoff": {"read"},
-        "trial_lock": {"read"},
-        "sdv": {"create", "read", "update", "delete"},
     },
     ROLE_SUBJECT: {
         "ecrf_data_entry": {"create", "update"},  # 'Diary' maps to create/update
@@ -568,14 +548,6 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "quality_audit_logs": {"read"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
-        # Execution Core Resources
-        "tsdv_config": {"create", "read", "update", "delete"},
-        "form_submission": {"create", "read", "update", "delete"},
-        "pi_signoff": {"create", "read", "update", "delete"},
-        "medical_coding": {"create", "read", "update", "delete"},
-        "trial_lock": {"create", "read", "update", "delete"},
-        "export_unmasked": {"create", "read", "update", "delete"},
-        "sdv": {"create", "read", "update", "delete"},
     },
     "quality_manager": {
         "quality_event": {"create", "read", "update", "delete", "investigate"},
@@ -620,14 +592,6 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "training_log": {"create", "read", "sign"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
-        # Execution Core Resources
-        "tsdv_config": {"create", "read", "update", "delete"},
-        "form_submission": {"create", "read", "update", "delete"},
-        "pi_signoff": {"create", "read", "update", "delete"},
-        "medical_coding": {"create", "read", "update", "delete"},
-        "trial_lock": {"create", "read", "update", "delete"},
-        "export_unmasked": {"create", "read", "update", "delete"},
-        "sdv": {"create", "read", "update", "delete"},
     },
     "anonymous": {
         "ctms_study": {"read"},

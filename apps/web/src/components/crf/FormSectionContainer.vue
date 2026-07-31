@@ -127,7 +127,8 @@ function toggleCollapse() {
   if (storeSection) {
     storeSection.isCollapsed = !storeSection.isCollapsed;
   } else {
-    emit("update-section", { ...props.section, isCollapsed: !props.section.isCollapsed });
+    props.section.isCollapsed = !props.section.isCollapsed;
+    emit("update-section", { ...props.section, isCollapsed: props.section.isCollapsed });
   }
 }
 
