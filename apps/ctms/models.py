@@ -1,6 +1,6 @@
 import uuid
 from datetime import date, datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -506,6 +506,35 @@ class DOADelegationRecord(SQLModel, table=True):
 
 
 GeneratedForm = RegulatoryForm
+
+
+class CTMSDelegation(Base):
+    """
+    Represents site staff task delegation of authority with Part 11 compliance.
+
+    Requirements: PRD-SYS-001
+    """
+
+    __tablename__ = "ctms_delegations"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    staff_user_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    task_codes: Mapped[List[str]] = mapped_column(JSON, nullable=False)
+    start_date: Mapped[str] = mapped_column(String(50), nullable=False)
+    end_date: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    signed_off: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    # Standard Part 11 Audit Fields
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
 
 async def write_audit_log(

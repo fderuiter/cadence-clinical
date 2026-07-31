@@ -28,6 +28,7 @@ from apps.ctms.models import (
     write_audit_log,
 )
 from apps.ctms.rendering import render_confirmation_letter, render_follow_up_letter
+from apps.ctms.routers.doa import router as doa_router
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.rbac import Principal, get_principal, has_permission
@@ -47,6 +48,9 @@ app = FastAPI(
 
 # Enforce secure gateway authentication middleware
 app.add_middleware(GatewayAuthMiddleware)
+
+# Include Delegation of Authority (DOA) router
+app.include_router(doa_router)
 
 
 # Dependable to obtain database session

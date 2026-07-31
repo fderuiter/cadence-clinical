@@ -1,4 +1,4 @@
-"""Integration test suite for Delegation of Authority (DOA) log REST API endpoints.
+"""Integration test suite for CTMS Delegation of Authority (DOA) log REST API endpoints.
 
 Requirements: PRD-SYS-001
 """
@@ -6,115 +6,212 @@ Requirements: PRD-SYS-001
 import os
 import time
 
+import pytest_asyncio
 from fastapi.testclient import TestClient
 from jose import jwt
 
 import packages  # noqa: F401
-from apps.execution.main import app
-from packages.security.signing import generate_gateway_signature
+from apps.ctms.database import db_manager
+from apps.ctms.main import app
+from apps.ctms.models import Base
+from apps.gateway.main import generate_signature
 
-client = TestClient(app)
 GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode(
     "utf-8"
 )
 
 
-def _make_doa_auth_headers(
-    user_id: str = "pi_user_301",
-    roles: str = "principal_investigator",
-    change_reason: str = "Approve DOA Assignment",
-    action: str = "/api/v1/execution/doa/sign-off",
+@pytest_asyncio.fixture(autouse=True)
+async def setup_db():
+    """Setup in-memory CTMS database for unit and integration testing."""
+    db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)
+    async with db_manager.engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+    async with db_manager.engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+    await db_manager.close()
+
+
+def get_ctms_auth_headers(
+    roles: str = "CRA",
+    change_reason: str = "DOA Configuration",
+    action: str = None,
+    user_id: str = "cra_user_01",
 ) -> dict:
+    """Helper to generate valid gateway V2 signed headers for testing."""
     timestamp = str(time.time())
-    signature = generate_gateway_signature(
-        user_id=user_id,
-        roles=roles,
-        timestamp=timestamp,
-        secret=GATEWAY_SECRET,
-        change_reason=change_reason,
-        tenant_id="tenant_default",
+    sig = generate_signature(
+        user_id, roles, timestamp, version="2", change_reason=change_reason
     )
     headers = {
         "X-User-Id": user_id,
         "X-User-Roles": roles,
         "X-Gateway-Timestamp": timestamp,
-        "X-Gateway-Signature": signature,
+        "X-Gateway-Signature": sig,
         "X-Signature-Version": "2",
-        "X-Change-Reason": change_reason,
-        "X-Tenant-Id": "tenant_default",
     }
-
-    sig_payload = {
-        "sub": user_id,
-        "username": user_id,
-        "action": action,
-        "semantic_action": "execution.form.signoff",
-        "roles": [roles],
-        "iat": time.time(),
-        "exp": time.time() + 300.0,
-        "jti": f"jti_{time.time()}_{user_id}",
-    }
-
-    sig_token = jwt.encode(sig_payload, GATEWAY_SECRET, algorithm="HS256")
-    headers["X-Sig-Token"] = sig_token
+    if change_reason:
+        headers["X-Change-Reason"] = change_reason
+    if action:
+        sig_payload = {
+            "sub": user_id,
+            "username": user_id,
+            "action": action,
+            "roles": [roles],
+            "iat": time.time(),
+            "exp": time.time() + 300.0,
+        }
+        headers["X-Sig-Token"] = jwt.encode(
+            sig_payload, "internal-gateway-secret-12345", algorithm="HS256"
+        )
     return headers
 
 
-def test_doa_assignment_and_signoff_api_flow() -> None:
-    """Validate POST assignment, POST sign-off, and GET site DOA log API endpoints.
+def test_ctms_doa_lifecycle_flow():
+    """Validate delegation creation, PI sign-off, log retrieval, PDF export, and revocation.
 
     Requirements: PRD-SYS-001
     """
-    headers = _make_doa_auth_headers(
+    client = TestClient(app)
+    site_id = "site_doa_101"
+    staff_user_id = "kc-staff-001"
+
+    # Step 1: Create a delegation assignment -> PENDING_PI_APPROVAL
+    headers = get_ctms_auth_headers(roles="CRA", change_reason="Assign nurse duties")
+    delegate_payload = {
+        "site_id": site_id,
+        "staff_user_id": staff_user_id,
+        "task_codes": ["SUBJECT_INFORMED_CONSENT", "CRF_DATA_ENTRY"],
+        "start_date": "2026-07-01",
+        "reason_for_change": "Assigning trial nurse Jacqueline Thorne",
+    }
+
+    resp_delegate = client.post(
+        "/api/v1/ctms/doa/delegate",
+        json=delegate_payload,
+        headers=headers,
+    )
+
+    assert resp_delegate.status_code == 201
+    data_delegate = resp_delegate.json()
+    assert data_delegate["status"] == "PENDING_PI_APPROVAL"
+    assert data_delegate["site_id"] == site_id
+    record_id = data_delegate["record_id"]
+
+    # Step 2: Retrieve site DOA log and check states (record should be inactive and unsigned)
+    headers_read = get_ctms_auth_headers(roles="Monitor")
+    resp_log = client.get(
+        f"/api/v1/ctms/doa/sites/{site_id}/log",
+        headers=headers_read,
+    )
+
+    assert resp_log.status_code == 200
+    data_log = resp_log.json()
+    assert data_log["site_id"] == site_id
+    assert len(data_log["delegated_staff"]) == 1
+    staff_record = data_log["delegated_staff"][0]
+    assert staff_record["record_id"] == record_id
+    assert staff_record["is_active"] is False
+    assert staff_record["signed_off"] is False
+
+    # Check that audit log has DOA_LOG_MODIFIED event
+    assert len(data_log["audit_history"]) >= 1
+    assert data_log["audit_history"][0]["action"] == "DOA_LOG_MODIFIED"
+
+    # Step 3: PI eSignature Sign-Off and activation
+    sign_off_action = "/api/v1/ctms/doa/sign-off"
+    headers_pi = get_ctms_auth_headers(
+        roles="Principal Investigator",
+        change_reason="PI Endorsement of nurse duties",
+        action=sign_off_action,
         user_id="pi_user_301",
-        roles="principal_investigator",
-        change_reason="Approve DOA Assignment",
+    )
+    sign_payload = {
+        "record_id": record_id,
+        "reason_for_change": "Delegation approved with PI eSignature",
+    }
+
+    resp_sign = client.post(
+        sign_off_action,
+        json=sign_payload,
+        headers=headers_pi,
     )
 
-    study_id = "study_doa_api_01"
-    site_id = "site_doa_301"
-
-    # Step 1: Add DOA Assignment
-    res_assign = client.post(
-        "/api/v1/execution/doa/assignment",
-        json={
-            "study_id": study_id,
-            "site_id": site_id,
-            "personnel_name": "Nurse Jacqueline Thorne",
-            "personnel_email": "jthorne@site.org",
-            "role": "STUDY_NURSE",
-            "delegated_tasks": ["PHYSICAL_EXAMINATION", "CRF_DATA_ENTRY"],
-            "start_date": "2026-07-20",
-        },
-        headers=headers,
-    )
-
-    assert res_assign.status_code == 201
-    data_assign = res_assign.json()
-    rec_id = data_assign["record_id"]
-    assert data_assign["signed_off"] is False
-
-    # Step 2: PI Sign-Off
-    res_sign = client.post(
-        "/api/v1/execution/doa/sign-off",
-        json={
-            "record_id": rec_id,
-            "reason_for_change": "PI Delegation Endorsement",
-        },
-        headers=headers,
-    )
-
-    assert res_sign.status_code == 200
-    data_sign = res_sign.json()
+    assert resp_sign.status_code == 200
+    data_sign = resp_sign.json()
+    assert data_sign["status"] == "ACTIVE"
+    assert data_sign["record_id"] == record_id
     assert data_sign["signed_off"] is True
 
-    # Step 3: Get Site DOA Log
-    res_log = client.get(
-        f"/api/v1/execution/doa/log/{study_id}/{site_id}",
+    # Check updated site log (should be ACTIVE now)
+    resp_log_2 = client.get(
+        f"/api/v1/ctms/doa/sites/{site_id}/log",
+        headers=headers_read,
+    )
+    assert resp_log_2.status_code == 200
+    data_log_2 = resp_log_2.json()
+    assert data_log_2["delegated_staff"][0]["is_active"] is True
+    assert data_log_2["delegated_staff"][0]["signed_off"] is True
+    # Audit trail should have multiple DOA_LOG_MODIFIED records
+    assert len(data_log_2["audit_history"]) == 2
+
+    # Step 4: Export signed PDF DOA log
+    resp_pdf = client.get(
+        f"/api/v1/ctms/doa/sites/{site_id}/export-pdf",
+        headers=headers_read,
+    )
+    assert resp_pdf.status_code == 200
+    assert resp_pdf.headers["content-type"] == "application/pdf"
+    assert len(resp_pdf.content) > 0
+
+    # Step 5: Revoke/end the task delegation
+    revoke_payload = {
+        "record_id": record_id,
+        "reason_for_change": "Nurse Jacqueline Thorne resigned",
+    }
+
+    resp_revoke = client.post(
+        "/api/v1/ctms/doa/revoke",
+        json=revoke_payload,
         headers=headers,
     )
 
-    assert res_log.status_code == 200
-    log_entries = res_log.json()
-    assert len(log_entries) >= 1
-    assert log_entries[0]["personnel_name"] == "Nurse Jacqueline Thorne"
+    assert resp_revoke.status_code == 200
+    data_revoke = resp_revoke.json()
+    assert data_revoke["status"] == "REVOKED"
+    assert data_revoke["record_id"] == record_id
+
+    # Verify log state is updated to inactive
+    resp_log_3 = client.get(
+        f"/api/v1/ctms/doa/sites/{site_id}/log",
+        headers=headers_read,
+    )
+    assert resp_log_3.status_code == 200
+    assert resp_log_3.json()["delegated_staff"][0]["is_active"] is False
+
+
+def test_ctms_doa_rbac_violations():
+    """Verify that unauthorized roles get rejected with 403 Forbidden.
+
+    Requirements: PRD-SYS-001
+    """
+    client = TestClient(app)
+    headers_unauth = get_ctms_auth_headers(
+        roles="Site Investigator", change_reason="Attempting DOA modification"
+    )
+
+    delegate_payload = {
+        "site_id": "site_doa_101",
+        "staff_user_id": "kc-staff-001",
+        "task_codes": ["SUBJECT_INFORMED_CONSENT"],
+        "start_date": "2026-07-01",
+        "reason_for_change": "Unauthorized assignment",
+    }
+
+    resp_delegate = client.post(
+        "/api/v1/ctms/doa/delegate",
+        json=delegate_payload,
+        headers=headers_unauth,
+    )
+    assert resp_delegate.status_code == 403
