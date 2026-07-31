@@ -467,7 +467,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_cli_main_clean` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cli_main_violation` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cli_should_scan_file` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_compliance_profiles` | `tests.test_deid` | PRD-TMF-005 | 🟢 PASSED | < 1s |
+| `test_compliance_profiles` | `tests.test_deid` | EU-CTR-001, HIPAA-001, PRD-TMF-005 | 🟢 PASSED | < 1s |
 | `test_custom_literal_terms` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_dates_detector` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_deidentify_free_text_direct` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -494,16 +494,16 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_scrubber_subject_id_non_reversible` | `tests.test_deident_scrubber` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_sdtm_json_builder_integration` | `tests.test_deident_scrubber` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_age_capping_and_edge_cases` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
-| `test_compliance_profiles` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
+| `test_compliance_profiles` | `tests.test_deidentification` | EU-CTR-001, HIPAA-001, PRD-TMF-005 | 🟢 PASSED | < 1s |
 | `test_date_shifting_and_edge_cases` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
-| `test_detections_all_categories` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
-| `test_hmac_pseudonymization_determinism` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
+| `test_detections_all_categories` | `tests.test_deidentification` | HIPAA-001, PRD-TMF-005 | 🟢 PASSED | < 1s |
+| `test_hmac_pseudonymization_determinism` | `tests.test_deidentification` | PRD-MDR-006, PRD-TMF-005 | 🟢 PASSED | < 1s |
 | `test_manifest_tamper_evident_asymmetric` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
 | `test_manifest_tamper_evident_symmetric` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
 | `test_no_raw_matched_values_persisted` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
-| `test_overlap_resolution_comprehensive` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
+| `test_overlap_resolution_comprehensive` | `tests.test_deidentification` | PRD-MDR-006, PRD-TMF-005 | 🟢 PASSED | < 1s |
 | `test_source_documents_remain_unchanged` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
-| `test_transforms_all_strategies` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
+| `test_transforms_all_strategies` | `tests.test_deidentification` | PRD-MDR-006, PRD-TMF-005 | 🟢 PASSED | < 1s |
 | `test_delegation_allowed_non_pi_when_not_enforced` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_delegation_denied_site_mismatch` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_delegation_denied_sponsor_mismatch` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
