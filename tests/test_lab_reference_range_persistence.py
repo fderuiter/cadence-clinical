@@ -134,7 +134,7 @@ async def test_lab_reference_range_audit_and_triggers():
         insert_log = logs[0]
         assert insert_log.action == "INSERT"
         assert insert_log.new_values["test_code"] == "RBC"
-        assert insert_log.new_values["source"] == "LOCAL"
+        assert insert_log.new_values["lab_source"] == "LOCAL"
 
     # Update range limits and verify audit tracking
     async with db_manager.get_session_maker()() as session:
@@ -167,8 +167,8 @@ async def test_lab_reference_range_audit_and_triggers():
         assert len(logs) == 2
         update_log = logs[1]
         assert update_log.action == "UPDATE"
-        assert update_log.old_values["low_bound"] == 4.0
-        assert update_log.new_values["low_bound"] == 3.8
+        assert update_log.old_values["range_low"] == 4.0
+        assert update_log.new_values["range_low"] == 3.8
 
     # Soft-delete the reference range and verify state change and audit log action
     async with db_manager.get_session_maker()() as session:
@@ -241,6 +241,10 @@ async def test_clinical_observation_extended_fields():
                 lab_indicator="H",
                 lab_out_of_range=True,
                 matched_normal_bounds='{"low": 10.0, "high": 40.0}',
+                range_indicator="HIGH",
+                is_out_of_range=True,
+                reference_range_low=10.0,
+                reference_range_high=40.0,
             )
             session.add(obs)
 
@@ -257,6 +261,10 @@ async def test_clinical_observation_extended_fields():
         assert saved_obs.lab_indicator == "H"
         assert saved_obs.lab_out_of_range is True
         assert saved_obs.matched_normal_bounds == '{"low": 10.0, "high": 40.0}'
+        assert saved_obs.range_indicator == "HIGH"
+        assert saved_obs.is_out_of_range is True
+        assert saved_obs.reference_range_low == 10.0
+        assert saved_obs.reference_range_high == 40.0
 
 
 @pytest.mark.asyncio
@@ -333,6 +341,10 @@ async def test_schema_evolution_migration_upgrade():
             "lab_indicator",
             "lab_out_of_range",
             "matched_normal_bounds",
+            "range_indicator",
+            "is_out_of_range",
+            "reference_range_low",
+            "reference_range_high",
             "site_id",
             "is_sdv_verified",
             "sdv_verified_by",
