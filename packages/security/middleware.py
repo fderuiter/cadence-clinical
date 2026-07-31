@@ -39,6 +39,24 @@ class DownstreamReplayCache:
 downstream_replay_cache = DownstreamReplayCache()
 
 
+# Centralized path-to-schema registry mapping request URLs (or substrings of URLs) to expected schema fields.
+PATH_SCHEMA_REGISTRY: dict[str, list[str]] = {
+    "/api/v1/execution/batch-sign-off": [
+        "study_id",
+        "target_type",
+        "target_ids",
+        "signing_reason",
+    ],
+    "/api/v1/execution/signatures/batch-sign-off": [
+        "study_id",
+        "target_type",
+        "target_ids",
+        "signing_reason",
+    ],
+    "/api/v1/etmf/batch-sign-off": ["document_ids", "signing_reason"],
+}
+
+
 def verify_sig_token(
     sig_token: Optional[str],
     user_id: str,
@@ -314,7 +332,24 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
 
             # Check batch binding if path is batch-sign-off or if token contains batch_id
             token_batch_id = sig_payload.get("batch_id")
-            if "batch-sign-off" in path_lower:
+
+            # Resolve schema keys dynamically using the request URL path
+            schema_keys = None
+            for reg_path, keys in PATH_SCHEMA_REGISTRY.items():
+                if reg_path.lower() in path_lower:
+                    schema_keys = keys
+                    break
+
+            if schema_keys is None and "batch-sign-off" in path_lower:
+                # Fallback default schema for backward compatibility if path contains batch-sign-off but not explicitly mapped
+                schema_keys = [
+                    "study_id",
+                    "target_type",
+                    "target_ids",
+                    "signing_reason",
+                ]
+
+            if schema_keys is not None:
                 if not token_batch_id:
                     return JSONResponse(
                         status_code=401,
@@ -325,36 +360,40 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
                         },
                     )
 
-                req_study_id = body_json.get("study_id")
-                req_target_type = body_json.get("target_type")
-                req_target_ids = body_json.get("target_ids")
-                req_signing_reason = body_json.get("signing_reason")
+                # Validate all registered schema fields are present
+                missing_fields = []
+                for key in schema_keys:
+                    if (
+                        body_json is None
+                        or key not in body_json
+                        or body_json[key] is None
+                    ):
+                        missing_fields.append(key)
 
-                if not all(
-                    [
-                        req_study_id,
-                        req_target_type,
-                        req_target_ids is not None,
-                        req_signing_reason,
-                    ]
-                ):
+                if missing_fields:
                     return JSONResponse(
                         status_code=400,
                         content={
                             "detail": "REAUTHENTICATION_REQUIRED",
                             "error": "REAUTHENTICATION_REQUIRED",
-                            "message": "Missing batch sign-off fields for validation.",
+                            "message": f"Missing batch sign-off fields for validation: {', '.join(missing_fields)}.",
                         },
                     )
 
-                # Compute canonical batch binding
-                norm_study = str(req_study_id).strip()
-                norm_type = str(req_target_type).strip().upper()
-                sorted_ids = sorted([str(tid).strip() for tid in req_target_ids])
-                norm_ids = ",".join(sorted_ids)
-                norm_reason = str(req_signing_reason).strip()
+                # Compute canonical batch binding using the resolved keys
+                norm_vals = []
+                for key in schema_keys:
+                    val = body_json[key]
+                    if key == "target_type":
+                        norm_val = str(val).strip().upper()
+                    elif isinstance(val, list):
+                        sorted_items = sorted([str(item).strip() for item in val])
+                        norm_val = ",".join(sorted_items)
+                    else:
+                        norm_val = str(val).strip()
+                    norm_vals.append(norm_val)
 
-                binding_str = f"{norm_study}:{norm_type}:{norm_ids}:{norm_reason}"
+                binding_str = ":".join(norm_vals)
                 computed_batch_id = hashlib.sha256(
                     binding_str.encode("utf-8")
                 ).hexdigest()

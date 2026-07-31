@@ -547,3 +547,96 @@ export async function deriveSessionKey(sessionMaterial, salt, info) {
 
   return new Uint8Array(derivedBits);
 }
+
+/**
+ * Centralized path-to-schema registry mapping request URLs (or substrings of URLs) to expected schema fields.
+ */
+export const PATH_SCHEMA_REGISTRY = {
+  "/api/v1/execution/batch-sign-off": ["study_id", "target_type", "target_ids", "signing_reason"],
+  "/api/v1/execution/signatures/batch-sign-off": ["study_id", "target_type", "target_ids", "signing_reason"],
+  "/api/v1/etmf/batch-sign-off": ["document_ids", "signing_reason"],
+};
+
+/**
+ * Resolves the configured schema keys for a given request path.
+ * Supports fallback to the default EDC schema if the path contains 'batch-sign-off'
+ * but is not explicitly mapped.
+ *
+ * @param {string} path - The request path.
+ * @returns {string[]|null} The schema keys, or null if not a batch signing path.
+ */
+export function resolveSchemaKeys(path) {
+  if (!path) return null;
+  const pathLower = path.toLowerCase();
+  for (const [regPath, keys] of Object.entries(PATH_SCHEMA_REGISTRY)) {
+    if (pathLower.includes(regPath.toLowerCase())) {
+      return keys;
+    }
+  }
+  if (pathLower.includes("batch-sign-off")) {
+    return ["study_id", "target_type", "target_ids", "signing_reason"];
+  }
+  return null;
+}
+
+/**
+ * Validates a payload against the schema keys resolved for the given path.
+ * Throws an Error if any required field is missing.
+ *
+ * @param {string} path - The request path.
+ * @param {Object} payload - The request payload.
+ */
+export function validatePayloadForPath(path, payload) {
+  const keys = resolveSchemaKeys(path);
+  if (!keys) return;
+
+  if (!payload) {
+    throw new Error("Missing batch sign-off payload.");
+  }
+
+  const missingFields = [];
+  for (const key of keys) {
+    if (payload[key] === undefined || payload[key] === null) {
+      missingFields.push(key);
+    }
+  }
+  if (missingFields.length > 0) {
+    throw new Error(`Missing batch sign-off fields for validation: ${missingFields.join(", ")}.`);
+  }
+}
+
+/**
+ * Computes a secure SHA-256 hash using a colon-separated sequence of the resolved keys.
+ * Preserves exact compatibility with the clinical trial (EDC) and other schemas.
+ *
+ * @param {string} path - The request path.
+ * @param {Object} payload - The request payload.
+ * @returns {Promise<string>} The hexadecimal SHA-256 batch ID.
+ */
+export async function computeBatchIdForPath(path, payload) {
+  const keys = resolveSchemaKeys(path);
+  if (!keys) {
+    throw new Error(`Path ${path} is not a registered batch sign-off path.`);
+  }
+
+  validatePayloadForPath(path, payload);
+
+  const normVals = [];
+  for (const key of keys) {
+    const val = payload[key];
+    let normVal = "";
+    if (key === "target_type") {
+      normVal = String(val).trim().toUpperCase();
+    } else if (Array.isArray(val)) {
+      const sortedItems = [...val].map((item) => String(item).trim()).sort();
+      normVal = sortedItems.join(",");
+    } else {
+      normVal = String(val).trim();
+    }
+    normVals.push(normVal);
+  }
+
+  const bindingStr = normVals.join(":");
+  return sha256(bindingStr);
+}
+

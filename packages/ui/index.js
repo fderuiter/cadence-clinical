@@ -29,6 +29,10 @@ export {
   encryptAESGCM,
   decryptAESGCM,
   deriveSessionKey,
+  PATH_SCHEMA_REGISTRY,
+  resolveSchemaKeys,
+  validatePayloadForPath,
+  computeBatchIdForPath,
 } from "./signing.js";
 
 export {

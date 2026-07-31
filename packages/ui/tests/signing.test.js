@@ -7,6 +7,10 @@ import {
   generateGatewaySignature,
   verifyGatewaySignature,
   sha256,
+  PATH_SCHEMA_REGISTRY,
+  resolveSchemaKeys,
+  validatePayloadForPath,
+  computeBatchIdForPath,
 } from "../index.js";
 import { encryptAESGCM, decryptAESGCM, deriveSessionKey } from "../signing.js";
 
@@ -301,3 +305,87 @@ print(derived.hex())
     expect(jsHex).toBe(pythonHex);
   });
 });
+
+describe("Metadata-Driven Path-to-Schema Registry", () => {
+  it("resolves EDC and eTMF paths to correct schema keys", () => {
+    const edcKeys = resolveSchemaKeys("/api/v1/execution/batch-sign-off");
+    expect(edcKeys).toEqual(["study_id", "target_type", "target_ids", "signing_reason"]);
+
+    const etmfKeys = resolveSchemaKeys("/api/v1/etmf/batch-sign-off");
+    expect(etmfKeys).toEqual(["document_ids", "signing_reason"]);
+
+    // Test fallback behavior
+    const fallbackKeys = resolveSchemaKeys("/some/unknown/batch-sign-off/endpoint");
+    expect(fallbackKeys).toEqual(["study_id", "target_type", "target_ids", "signing_reason"]);
+
+    // Test non-matching path
+    expect(resolveSchemaKeys("/api/v1/some-other-path")).toBeNull();
+  });
+
+  it("validates registered path payloads successfully or throws clear errors", () => {
+    const validEdcPayload = {
+      study_id: "STUDY-001",
+      target_type: "FORM",
+      target_ids: ["id1"],
+      signing_reason: "reason",
+    };
+    // Should not throw
+    expect(() => validatePayloadForPath("/api/v1/execution/batch-sign-off", validEdcPayload)).not.toThrow();
+
+    const invalidEdcPayload = {
+      study_id: "STUDY-001",
+      target_type: "FORM",
+      // missing target_ids and signing_reason
+    };
+    expect(() => validatePayloadForPath("/api/v1/execution/batch-sign-off", invalidEdcPayload)).toThrow(
+      "Missing batch sign-off fields for validation: target_ids, signing_reason"
+    );
+
+    const validEtmfPayload = {
+      document_ids: ["doc1"],
+      signing_reason: "reason",
+    };
+    // Should not throw
+    expect(() => validatePayloadForPath("/api/v1/etmf/batch-sign-off", validEtmfPayload)).not.toThrow();
+
+    const invalidEtmfPayload = {
+      signing_reason: "reason",
+      // missing document_ids
+    };
+    expect(() => validatePayloadForPath("/api/v1/etmf/batch-sign-off", invalidEtmfPayload)).toThrow(
+      "Missing batch sign-off fields for validation: document_ids"
+    );
+  });
+
+  it("computes batch ID hash correctly for registered schemas", async () => {
+    const edcPayload = {
+      study_id: "STUDY-001",
+      target_type: "FORM",
+      target_ids: ["id2", "id1"],
+      signing_reason: "PI signoff",
+    };
+
+    const etmfPayload = {
+      document_ids: ["doc2", "doc1"],
+      signing_reason: "eTMF signoff",
+    };
+
+    const edcBatchId = await computeBatchIdForPath("/api/v1/execution/batch-sign-off", edcPayload);
+    const etmfBatchId = await computeBatchIdForPath("/api/v1/etmf/batch-sign-off", etmfPayload);
+
+    expect(edcBatchId).toBeDefined();
+    expect(etmfBatchId).toBeDefined();
+    expect(edcBatchId).not.toEqual(etmfBatchId);
+
+    // Verify ordering in list/array formats does not affect hash (it is sorted)
+    const edcPayloadUnordered = {
+      study_id: "STUDY-001",
+      target_type: "FORM",
+      target_ids: ["id1", "id2"],
+      signing_reason: "PI signoff",
+    };
+    const edcBatchIdUnordered = await computeBatchIdForPath("/api/v1/execution/batch-sign-off", edcPayloadUnordered);
+    expect(edcBatchId).toEqual(edcBatchIdUnordered);
+  });
+});
+
