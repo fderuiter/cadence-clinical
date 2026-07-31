@@ -28,7 +28,7 @@ from apps.execution.services.offline_sync import (
 )
 from packages.security.middleware import get_current_user
 
-router = APIRouter(prefix="/api/v1/execution/offline", tags=["Offline Sync"])
+router = APIRouter(prefix="", tags=["Offline Sync"])
 
 
 class OfflineSyncEngine:
@@ -136,7 +136,7 @@ class OfflineSyncEngine:
 
 
 @router.post(
-    "/sync-batch",
+    "/api/v1/offline/sync-batch",
     response_model=OfflineBatchSyncResponse,
     status_code=status.HTTP_200_OK,
 )
@@ -238,7 +238,7 @@ async def sync_offline_batch(
 
 
 @router.post(
-    "/sync",
+    "/api/v1/execution/offline/sync",
     status_code=status.HTTP_200_OK,
     response_model=Dict[str, Any],
 )
