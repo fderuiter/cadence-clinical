@@ -40,81 +40,38 @@
       >
         eCRF Formal Approval & Production Handoff
       </div>
-      <div class="modal-body" style="padding: 16px">
-        <p
-          style="
-            font-size: 13px;
-            color: #64748b;
-            line-height: 1.4;
-            margin-bottom: 16px;
-          "
-        >
-          To comply with <strong>GxP 21 CFR Part 11</strong>, advancing this
-          form design to production requires zero unresolved critical comments,
-          complete edit-check verification, and electronic signature sign-off.
+      <div
+        class="modal-body"
+        style="padding: 16px"
+      >
+        <p style="font-size: 13px; color: #64748b; line-height: 1.4; margin-bottom: 16px;">
+          To comply with <strong>GxP 21 CFR Part 11</strong>, advancing this form design to production requires zero unresolved critical comments, complete edit-check verification, and electronic signature sign-off.
         </p>
 
         <!-- Checklist Section -->
         <div
           class="checklist-section"
-          style="
-            background-color: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            padding: 12px;
-            margin-bottom: 16px;
-          "
+          style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; margin-bottom: 16px;"
         >
-          <h4
-            style="
-              margin: 0 0 8px 0;
-              font-size: 13px;
-              color: #475569;
-              font-weight: 600;
-            "
-          >
+          <h4 style="margin: 0 0 8px 0; font-size: 13px; color: #475569; font-weight: 600;">
             Pre-Approval Checklist
           </h4>
-          <ul
-            style="
-              list-style: none;
-              padding: 0;
-              margin: 0;
-              font-size: 13px;
-              color: #334155;
-            "
-          >
-            <li
-              style="
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                margin-bottom: 6px;
-              "
-            >
+          <ul style="list-style: none; padding: 0; margin: 0; font-size: 13px; color: #334155;">
+            <li style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
               <span
                 class="checklist-icon"
-                :style="
-                  hasZeroUnresolved ? 'color: #10b981;' : 'color: #ef4444;'
-                "
+                :style="hasZeroUnresolved ? 'color: #10b981;' : 'color: #ef4444;'"
               >
-                {{ hasZeroUnresolved ? "✓" : "❌" }}
+                {{ hasZeroUnresolved ? '✓' : '❌' }}
               </span>
-              <span
-                >No unresolved CRITICAL review comments ({{
-                  unresolvedCount
-                }}
-                pending)</span
-              >
+              <span>No unresolved CRITICAL review comments ({{ unresolvedCount }} pending)</span>
             </li>
-            <li style="display: flex; align-items: center; gap: 8px">
+            <li style="display: flex; align-items: center; gap: 8px;">
               <span
                 class="checklist-icon"
-                :style="
-                  editChecksVerified ? 'color: #10b981;' : 'color: #ef4444;'
-                "
+                :style="editChecksVerified ? 'color: #10b981;' : 'color: #ef4444;'"
               >
-                {{ editChecksVerified ? "✓" : "❌" }}
+                {{ editChecksVerified ? '✓' : '❌' }}
               </span>
               <span>All critical edit checks verified and validated</span>
             </li>
@@ -122,50 +79,46 @@
         </div>
 
         <!-- Form fields -->
-        <div class="form-group" style="margin-bottom: 12px">
+        <div
+          class="form-group"
+          style="margin-bottom: 12px"
+        >
           <label
             for="approval-role"
-            style="
-              display: block;
-              font-weight: 500;
-              margin-bottom: 4px;
-              font-size: 13px;
-              color: #475569;
-            "
+            style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 13px; color: #475569;"
           >
             Select Role
           </label>
           <select
             id="approval-role"
             v-model="selectedRole"
-            style="
-              width: 100%;
-              padding: 8px;
-              border: 1px solid #cbd5e1;
-              border-radius: 4px;
-              font-size: 13px;
-              background: white;
-            "
+            style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 13px; background: white;"
           >
-            <option value="" disabled>-- Select Role --</option>
-            <option value="Lead Data Manager">Lead Data Manager</option>
+            <option
+              value=""
+              disabled
+            >
+              -- Select Role --
+            </option>
+            <option value="Lead Data Manager">
+              Lead Data Manager
+            </option>
             <option value="Principal Investigator">
               Principal Investigator
             </option>
-            <option value="Lead Biostatistician">Lead Biostatistician</option>
+            <option value="Lead Biostatistician">
+              Lead Biostatistician
+            </option>
           </select>
         </div>
 
-        <div class="form-group" style="margin-bottom: 12px">
+        <div
+          class="form-group"
+          style="margin-bottom: 12px"
+        >
           <label
             for="approval-password"
-            style="
-              display: block;
-              font-weight: 500;
-              margin-bottom: 4px;
-              font-size: 13px;
-              color: #475569;
-            "
+            style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 13px; color: #475569;"
           >
             Password / Credentials Re-Authentication
           </label>
@@ -174,26 +127,17 @@
             v-model="password"
             type="password"
             placeholder="Enter password..."
-            style="
-              width: 100%;
-              padding: 8px;
-              border: 1px solid #cbd5e1;
-              border-radius: 4px;
-              font-size: 13px;
-            "
-          />
+            style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 13px;"
+          >
         </div>
 
-        <div class="form-group" style="margin-bottom: 12px">
+        <div
+          class="form-group"
+          style="margin-bottom: 12px"
+        >
           <label
             for="approval-reason"
-            style="
-              display: block;
-              font-weight: 500;
-              margin-bottom: 4px;
-              font-size: 13px;
-              color: #475569;
-            "
+            style="display: block; font-weight: 500; margin-bottom: 4px; font-size: 13px; color: #475569;"
           >
             Reason for Approval
           </label>
@@ -202,25 +146,14 @@
             v-model="reason"
             type="text"
             placeholder="Reason for approval (e.g. Protocol amendment complete)..."
-            style="
-              width: 100%;
-              padding: 8px;
-              border: 1px solid #cbd5e1;
-              border-radius: 4px;
-              font-size: 13px;
-            "
-          />
+            style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 13px;"
+          >
         </div>
 
         <div
           v-if="error"
           id="approval-error-msg"
-          style="
-            margin-top: 8px;
-            color: #ef4444;
-            font-size: 13px;
-            font-weight: 500;
-          "
+          style="margin-top: 8px; color: #ef4444; font-size: 13px; font-weight: 500;"
         >
           {{ error }}
         </div>
@@ -274,7 +207,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch } from 'vue';
 
 const props = defineProps({
   isOpen: {
@@ -291,57 +224,52 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["cancel", "approve"]);
+const emit = defineEmits(['cancel', 'approve']);
 
-const selectedRole = ref("");
-const password = ref("");
-const reason = ref("");
-const error = ref("");
+const selectedRole = ref('');
+const password = ref('');
+const reason = ref('');
+const error = ref('');
 
 const hasZeroUnresolved = computed(() => props.unresolvedCount === 0);
-const isChecklistComplete = computed(
-  () => hasZeroUnresolved.value && props.editChecksVerified
-);
+const isChecklistComplete = computed(() => hasZeroUnresolved.value && props.editChecksVerified);
 
-watch(
-  () => props.isOpen,
-  (newVal) => {
-    if (newVal) {
-      selectedRole.value = "";
-      password.value = "";
-      reason.value = "";
-      error.value = "";
-    }
+watch(() => props.isOpen, (newVal) => {
+  if (newVal) {
+    selectedRole.value = '';
+    password.value = '';
+    reason.value = '';
+    error.value = '';
   }
-);
+});
 
 const cancel = () => {
-  emit("cancel");
+  emit('cancel');
 };
 
 const confirm = () => {
   if (!isChecklistComplete.value) {
-    error.value = "Pre-approval checklist must be complete to advance design.";
+    error.value = 'Pre-approval checklist must be complete to advance design.';
     return;
   }
   if (!selectedRole.value) {
-    error.value = "Please select a signing role.";
+    error.value = 'Please select a signing role.';
     return;
   }
   if (!password.value) {
-    error.value = "Re-authentication password is required.";
+    error.value = 'Re-authentication password is required.';
     return;
   }
   if (!reason.value.trim()) {
-    error.value = "Reason for approval is required.";
+    error.value = 'Reason for approval is required.';
     return;
   }
 
   // Wiping password immediately for Part 11 security
   const p = password.value;
-  password.value = "";
+  password.value = '';
 
-  emit("approve", {
+  emit('approve', {
     role: selectedRole.value,
     password: p,
     reason: reason.value,

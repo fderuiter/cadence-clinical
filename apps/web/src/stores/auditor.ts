@@ -89,31 +89,18 @@ export const useAuditorStore = defineStore("auditor", {
         content = JSON.stringify(this.auditEvents, null, 2);
         mimeType = "application/json";
       } else if (format === "CSV") {
-        const headers = [
-          "Timestamp",
-          "User",
-          "Action",
-          "Details",
-          "Reason for Change",
-          "Version Index",
-        ];
+        const headers = ["Timestamp", "User", "Action", "Details", "Reason for Change", "Version Index"];
         const rows = this.auditEvents.map((event) => [
           event.timestamp || "",
           event.user_id || event.user || "",
           event.action || "",
           event.details || event.message || "",
           event.reason_for_change || event.reasonForChange || "",
-          event.version_index !== undefined
-            ? event.version_index
-            : event.versionIndex !== undefined
-              ? event.versionIndex
-              : "",
+          event.version_index !== undefined ? event.version_index : (event.versionIndex !== undefined ? event.versionIndex : ""),
         ]);
         content = [
           headers.join(","),
-          ...rows.map((r) =>
-            r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")
-          ),
+          ...rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")),
         ].join("\n");
         mimeType = "text/csv";
       } else {

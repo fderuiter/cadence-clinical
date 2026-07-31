@@ -1,7 +1,6 @@
-import { defineStore } from "pinia";
+import { defineStore } from 'pinia';
 
-export type SyncStatus =
-  "IDLE" | "SYNCING" | "CONFLICT_DETECTED" | "ERROR" | "COMPLETED";
+export type SyncStatus = 'IDLE' | 'SYNCING' | 'CONFLICT_DETECTED' | 'ERROR' | 'COMPLETED';
 
 export interface SyncState {
   status: SyncStatus;
@@ -9,9 +8,9 @@ export interface SyncState {
   conflict: any | null;
 }
 
-export const useSyncStore = defineStore("sync", {
+export const useSyncStore = defineStore('sync', {
   state: (): SyncState => ({
-    status: "IDLE",
+    status: 'IDLE',
     pendingCount: 0,
     conflict: null,
   }),
@@ -27,6 +26,6 @@ export const useSyncStore = defineStore("sync", {
     },
     clearConflict() {
       this.conflict = null;
-    },
-  },
+    }
+  }
 });

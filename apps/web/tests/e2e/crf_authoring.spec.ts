@@ -4,9 +4,7 @@ import { CrfCanvasPage } from "./pages/CrfCanvasPage";
 test.describe("CRF Authoring and Interactive Builder Workspace", () => {
   test.use({ storageState: "playwright/.auth/user.json" });
 
-  test("should successfully configure epochs, encounters, and applicability timing", async ({
-    page,
-  }) => {
+  test("should successfully configure epochs, encounters, and applicability timing", async ({ page }) => {
     const canvas = new CrfCanvasPage(page);
     await canvas.goto();
 

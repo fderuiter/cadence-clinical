@@ -1249,3 +1249,166 @@ def test_principal_agreement_with_middleware_coercion() -> None:
     assert data_free["assigned_sites"] == []
     assert data_free["sponsor_id"] is None
     assert data_free["unblinded_access"] is False
+
+
+def test_new_execution_permissions() -> None:
+    """Verify has_permission allows/denies the new resource permissions correctly.
+
+    Resources: tsdv_config, form_submission, pi_signoff, medical_coding, trial_lock, export_unmasked
+    """
+    from packages.security.rbac import (
+        ROLE_AUDITOR_CANONICAL,
+        ROLE_CRA_CANONICAL,
+        ROLE_CRC,
+        ROLE_EXTERNAL_MONITOR,
+        ROLE_INVESTIGATOR,
+        ROLE_SPONSOR_DESIGNER,
+        ROLE_SPONSOR_DM,
+        ROLE_SPONSOR_MM,
+        ROLE_SPONSOR_STATISTICIAN,
+        ROLE_SUBJECT,
+        ROLE_SYSADMIN,
+        ROLE_UNBLINDED_STATISTICIAN,
+        Principal,
+        has_permission,
+    )
+
+    sysadmin = Principal(user_id="sys", roles=[ROLE_SYSADMIN])
+    dm = Principal(user_id="dm", roles=[ROLE_SPONSOR_DM])
+    designer = Principal(user_id="des", roles=[ROLE_SPONSOR_DESIGNER])
+    mm = Principal(user_id="mm", roles=[ROLE_SPONSOR_MM])
+    statistician = Principal(user_id="stat", roles=[ROLE_SPONSOR_STATISTICIAN])
+    pi = Principal(user_id="pi", roles=[ROLE_INVESTIGATOR])
+    crc = Principal(user_id="crc", roles=[ROLE_CRC])
+    cra = Principal(user_id="cra", roles=[ROLE_CRA_CANONICAL])
+    subject = Principal(user_id="subj", roles=[ROLE_SUBJECT])
+    auditor = Principal(user_id="aud", roles=[ROLE_AUDITOR_CANONICAL])
+    ext_monitor = Principal(user_id="em", roles=[ROLE_EXTERNAL_MONITOR])
+    unblinded_stat = Principal(user_id="ustat", roles=[ROLE_UNBLINDED_STATISTICIAN])
+
+    # 1. TSDV Config (tsdv_config)
+    assert has_permission(sysadmin, "tsdv_config:create") is True
+    assert has_permission(cra, "tsdv_config:create") is True
+    assert has_permission(dm, "tsdv_config:read") is True
+    assert has_permission(pi, "tsdv_config:read") is True
+    assert has_permission(auditor, "tsdv_config:read") is True
+    assert has_permission(ext_monitor, "tsdv_config:read") is True
+    assert has_permission(crc, "tsdv_config:read") is False
+
+    # 2. Form Submission (form_submission)
+    assert has_permission(sysadmin, "form_submission:delete") is True
+    assert has_permission(crc, "form_submission:create") is True
+    assert has_permission(pi, "form_submission:create") is True
+    assert has_permission(subject, "form_submission:create") is True
+    assert has_permission(dm, "form_submission:read") is True
+    assert has_permission(mm, "form_submission:read") is True
+    assert has_permission(cra, "form_submission:read") is True
+    assert has_permission(auditor, "form_submission:read") is True
+    assert has_permission(designer, "form_submission:read") is False
+
+    # 3. PI Sign-off (pi_signoff)
+    assert has_permission(sysadmin, "pi_signoff:delete") is True
+    assert has_permission(pi, "pi_signoff:create") is True
+    assert has_permission(crc, "pi_signoff:read") is True
+    assert has_permission(dm, "pi_signoff:read") is True
+    assert has_permission(cra, "pi_signoff:read") is True
+    assert has_permission(crc, "pi_signoff:create") is False
+
+    # 4. Medical Coding (medical_coding)
+    assert has_permission(sysadmin, "medical_coding:create") is True
+    assert has_permission(dm, "medical_coding:create") is True
+    assert has_permission(mm, "medical_coding:read") is True
+    assert has_permission(auditor, "medical_coding:read") is True
+    assert has_permission(pi, "medical_coding:read") is False
+
+    # 5. Trial Lock (trial_lock)
+    assert has_permission(sysadmin, "trial_lock:create") is True
+    assert has_permission(dm, "trial_lock:create") is True
+    assert has_permission(designer, "trial_lock:read") is True
+    assert has_permission(mm, "trial_lock:read") is True
+    assert has_permission(statistician, "trial_lock:read") is True
+    assert has_permission(pi, "trial_lock:read") is True
+    assert has_permission(crc, "trial_lock:read") is True
+    assert has_permission(cra, "trial_lock:read") is True
+    assert has_permission(subject, "trial_lock:read") is False
+
+    # 6. Export Unmasked (export_unmasked)
+    assert has_permission(sysadmin, "export_unmasked:create") is True
+    assert has_permission(statistician, "export_unmasked:create") is True
+    assert has_permission(unblinded_stat, "export_unmasked:create") is True
+    assert has_permission(dm, "export_unmasked:create") is False
+    assert has_permission(pi, "export_unmasked:create") is False
+
+
+def test_is_auditor_helper() -> None:
+    """Test is_auditor helper identifies auditor personas correctly."""
+    from packages.security.rbac import is_auditor
+
+    class MockRequest:
+        def __init__(self, roles_str: str):
+            class State:
+                pass
+
+            self.state = State()
+            self.state.roles = roles_str
+            self.headers = {}
+
+    assert is_auditor(MockRequest("auditor")) is True
+    assert is_auditor(MockRequest("inspector")) is True
+    assert is_auditor(MockRequest("regulatory_inspector")) is True
+    assert is_auditor(MockRequest("cra")) is False
+    assert is_auditor(MockRequest("admin")) is False
+
+
+def test_require_role_dependency() -> None:
+    """Test require_role dependency factory enforces a single role."""
+    from packages.security.rbac import require_role
+
+    class MockRequest:
+        def __init__(self, roles_str: str):
+            class State:
+                pass
+
+            self.state = State()
+            self.state.roles = roles_str
+            self.headers = {}
+
+    req_cra = require_role("CRA")
+
+    # 1. Allowed
+    res = req_cra(MockRequest("cra"))
+    assert "cra" in res
+
+    # 2. Denied
+    with pytest.raises(HTTPException) as exc_info:
+        req_cra(MockRequest("admin"))
+    assert exc_info.value.status_code == 403
+
+
+def test_require_any_role_dependency() -> None:
+    """Test require_any_role dependency factory enforces any of specified roles."""
+    from packages.security.rbac import require_any_role
+
+    class MockRequest:
+        def __init__(self, roles_str: str):
+            class State:
+                pass
+
+            self.state = State()
+            self.state.roles = roles_str
+            self.headers = {}
+
+    req_roles = require_any_role("CRA", "Data Manager")
+
+    # 1. Allowed CRA
+    res = req_roles(MockRequest("cra"))
+    assert "cra" in res
+
+    # 2. Allowed DM
+    res = req_roles(MockRequest("data manager"))
+    assert "data_manager" in res or "sponsor_dm" in res or "data manager" in res
+
+    # 3. Denied
+    with pytest.raises(HTTPException) as exc_info:
+        req_roles(MockRequest("auditor"))
+    assert exc_info.value.status_code == 403

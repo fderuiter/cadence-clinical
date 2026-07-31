@@ -41,9 +41,7 @@ describe("ReviewCommentsSidebar.vue", () => {
     const cards = wrapper.findAll(".comment-card");
     expect(cards.length).toBe(2);
 
-    expect(wrapper.find(".sidebar-header h3").text()).toBe(
-      "Review Comments (2)"
-    );
+    expect(wrapper.find(".sidebar-header h3").text()).toBe("Review Comments (2)");
     expect(wrapper.find(".field-indicator").text()).toContain("field-age");
 
     const texts = cards.map((c) => c.find(".comment-text").text());
@@ -53,9 +51,7 @@ describe("ReviewCommentsSidebar.vue", () => {
     // The resolved class is set on resolved comment cards
     const resolvedCard = wrapper.find(".comment-card.resolved");
     expect(resolvedCard.exists()).toBe(true);
-    expect(resolvedCard.find(".comment-text").text()).toBe(
-      "Validated and verified as correct"
-    );
+    expect(resolvedCard.find(".comment-text").text()).toBe("Validated and verified as correct");
   });
 
   it("displays empty state when no comments match the selected fieldId", () => {
@@ -66,13 +62,9 @@ describe("ReviewCommentsSidebar.vue", () => {
       },
     });
 
-    expect(wrapper.find(".sidebar-header h3").text()).toBe(
-      "Review Comments (0)"
-    );
+    expect(wrapper.find(".sidebar-header h3").text()).toBe("Review Comments (0)");
     expect(wrapper.find(".empty-state").exists()).toBe(true);
-    expect(wrapper.find(".empty-state").text()).toContain(
-      "No comments yet for this field"
-    );
+    expect(wrapper.find(".empty-state").text()).toContain("No comments yet for this field");
   });
 
   it("emits post-comment event with correct payload when post button is clicked", async () => {

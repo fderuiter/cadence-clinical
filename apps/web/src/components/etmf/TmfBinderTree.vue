@@ -2,15 +2,24 @@
   <div class="tmf-binder-tree-container">
     <div class="tree-search-bar">
       <input
-        type="text"
         v-model="searchQuery"
+        type="text"
         placeholder="Search zones, sections, or artifacts..."
         class="search-input"
-      />
+      >
       <div class="filter-controls">
-        <select v-model="selectedZoneFilter" class="zone-filter-select">
-          <option value="">All Zones</option>
-          <option v-for="node in tree" :key="node.id" :value="node.code">
+        <select
+          v-model="selectedZoneFilter"
+          class="zone-filter-select"
+        >
+          <option value="">
+            All Zones
+          </option>
+          <option
+            v-for="node in tree"
+            :key="node.id"
+            :value="node.code"
+          >
             Zone {{ node.code }}: {{ node.name }}
           </option>
         </select>
@@ -18,7 +27,10 @@
     </div>
 
     <div class="tree-root-nodes">
-      <div v-if="filteredTree.length === 0" class="empty-tree-message">
+      <div
+        v-if="filteredTree.length === 0"
+        class="empty-tree-message"
+      >
         No matching TMF items found.
       </div>
       <div
@@ -28,8 +40,8 @@
       >
         <div
           class="node-header zone-header"
-          @click="toggleNode(zone.id)"
           :class="{ 'is-expanded': isExpanded(zone.id) }"
+          @click="toggleNode(zone.id)"
         >
           <span class="toggle-icon">{{ isExpanded(zone.id) ? "▼" : "▶" }}</span>
           <span class="folder-icon">📂</span>
@@ -43,7 +55,10 @@
           </span>
         </div>
 
-        <div v-if="isExpanded(zone.id)" class="node-children zone-children">
+        <div
+          v-if="isExpanded(zone.id)"
+          class="node-children zone-children"
+        >
           <div
             v-for="section in zone.children"
             :key="section.id"
@@ -51,12 +66,10 @@
           >
             <div
               class="node-header section-header"
-              @click="toggleNode(section.id)"
               :class="{ 'is-expanded': isExpanded(section.id) }"
+              @click="toggleNode(section.id)"
             >
-              <span class="toggle-icon">{{
-                isExpanded(section.id) ? "▼" : "▶"
-              }}</span>
+              <span class="toggle-icon">{{ isExpanded(section.id) ? "▼" : "▶" }}</span>
               <span class="folder-icon">📁</span>
               <span class="section-label">Section {{ section.code }}:</span>
               <span class="node-name">{{ section.name }}</span>
@@ -206,10 +219,7 @@ const filteredTree = computed(() => {
             expandedNodes.value[section.id] = true;
             return {
               ...section,
-              children:
-                matchingArtifacts.length > 0
-                  ? matchingArtifacts
-                  : section.children,
+              children: matchingArtifacts.length > 0 ? matchingArtifacts : section.children,
             };
           }
           return null;
@@ -225,8 +235,7 @@ const filteredTree = computed(() => {
         expandedNodes.value[zone.id] = true;
         return {
           ...zone,
-          children:
-            matchingSections.length > 0 ? matchingSections : zone.children,
+          children: matchingSections.length > 0 ? matchingSections : zone.children,
         };
       }
 

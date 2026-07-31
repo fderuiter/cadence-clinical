@@ -9,9 +9,7 @@ export class CrfCanvasPage {
   }
 
   async openInteractiveBuilder() {
-    const btn = this.page.locator(
-      "button:has-text('Open Interactive Builder')"
-    );
+    const btn = this.page.locator("button:has-text('Open Interactive Builder')");
     await expect(btn).toBeVisible();
     await btn.click();
   }
@@ -22,10 +20,7 @@ export class CrfCanvasPage {
     await this.page.click("button:has-text('Add Epoch')");
 
     // Handle the Part 11 Reason modal
-    await this.page.fill(
-      "#change-reason-text",
-      "Initial study design epoch setup"
-    );
+    await this.page.fill("#change-reason-text", "Initial study design epoch setup");
     await this.page.click("#btn-save-change");
   }
 
@@ -36,10 +31,7 @@ export class CrfCanvasPage {
     await this.page.click("button:has-text('Add Visit')");
 
     // Handle the Part 11 Reason modal
-    await this.page.fill(
-      "#change-reason-text",
-      "Adding visit encounter to timeline"
-    );
+    await this.page.fill("#change-reason-text", "Adding visit encounter to timeline");
     await this.page.click("#btn-save-change");
   }
 
@@ -49,28 +41,18 @@ export class CrfCanvasPage {
     await this.page.click("button:has-text('Add Procedure')");
 
     // Handle the Part 11 Reason modal
-    await this.page.fill(
-      "#change-reason-text",
-      "Adding clinical procedure requirement"
-    );
+    await this.page.fill("#change-reason-text", "Adding clinical procedure requirement");
     await this.page.click("#btn-save-change");
   }
 
-  async configureApplicability(
-    procId: string,
-    visitId: string,
-    timing: string
-  ) {
+  async configureApplicability(procId: string, visitId: string, timing: string) {
     await this.page.selectOption("#link-procedure", procId);
     await this.page.selectOption("#link-visit", visitId);
     await this.page.fill("#link-timing", timing);
     await this.page.click("button:has-text('Apply Applicability & Timing')");
 
     // Handle the Part 11 Reason modal
-    await this.page.fill(
-      "#change-reason-text",
-      "Establishing applicability rules for procedure"
-    );
+    await this.page.fill("#change-reason-text", "Establishing applicability rules for procedure");
     await this.page.click("#btn-save-change");
   }
 

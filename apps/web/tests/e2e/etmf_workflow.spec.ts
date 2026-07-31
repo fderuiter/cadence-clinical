@@ -54,9 +54,7 @@ test.describe("eTMF Document Management Workflow", () => {
     });
   });
 
-  test("should successfully upload document and verify DIA TMF tag and preview", async ({
-    page,
-  }) => {
+  test("should successfully upload document and verify DIA TMF tag and preview", async ({ page }) => {
     const etmf = new EtmfPage(page);
     await etmf.goto();
 
@@ -89,9 +87,7 @@ test.describe("eTMF Document Management Workflow", () => {
     }
   });
 
-  test("should digitally sign document and verify version increment to v1.1", async ({
-    page,
-  }) => {
+  test("should digitally sign document and verify version increment to v1.1", async ({ page }) => {
     const etmf = new EtmfPage(page);
     await etmf.goto();
 
@@ -122,18 +118,10 @@ test.describe("eTMF Document Management Workflow", () => {
       await page.click("#btn-confirm-sig");
 
       // Verify version incremented to v1.1 and status is SIGNED
-      const versionCell = page
-        .locator(".clinical-table tbody tr")
-        .first()
-        .locator("td")
-        .nth(5);
+      const versionCell = page.locator(".clinical-table tbody tr").first().locator("td").nth(5);
       await expect(versionCell).toContainText("v1.1");
 
-      const statusCell = page
-        .locator(".clinical-table tbody tr")
-        .first()
-        .locator("td")
-        .nth(4);
+      const statusCell = page.locator(".clinical-table tbody tr").first().locator("td").nth(4);
       await expect(statusCell).toContainText("SIGNED");
     } finally {
       if (fs.existsSync(tempFilePath)) {

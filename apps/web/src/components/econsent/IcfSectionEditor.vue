@@ -10,72 +10,72 @@
       <button
         type="button"
         class="toolbar-btn"
-        @click="formatDoc('bold')"
         title="Bold"
+        @click="formatDoc('bold')"
       >
         <strong>B</strong>
       </button>
       <button
         type="button"
         class="toolbar-btn"
-        @click="formatDoc('italic')"
         title="Italic"
+        @click="formatDoc('italic')"
       >
         <em>I</em>
       </button>
       <button
         type="button"
         class="toolbar-btn"
-        @click="formatHeading('h2')"
         title="Heading 2"
+        @click="formatHeading('h2')"
       >
         H2
       </button>
       <button
         type="button"
         class="toolbar-btn"
-        @click="formatHeading('h3')"
         title="Heading 3"
+        @click="formatHeading('h3')"
       >
         H3
       </button>
       <button
         type="button"
         class="toolbar-btn"
-        @click="formatDoc('insertUnorderedList')"
         title="Bullet List"
+        @click="formatDoc('insertUnorderedList')"
       >
         • List
       </button>
       <button
         type="button"
         class="toolbar-btn"
-        @click="formatDoc('insertOrderedList')"
         title="Numbered List"
+        @click="formatDoc('insertOrderedList')"
       >
         1. List
       </button>
       <button
         type="button"
         class="toolbar-btn"
-        @click="insertTable"
         title="Insert Table"
+        @click="insertTable"
       >
         📊 Table
       </button>
       <button
         type="button"
         class="toolbar-btn"
-        @click="insertImage"
         title="Insert Image Embed"
+        @click="insertImage"
       >
         🖼️ Image
       </button>
       <button
         type="button"
         class="toolbar-btn glossary-btn"
-        @click="promptGlossary"
         title="Annotate Glossary Term"
+        @click="promptGlossary"
       >
         🏷️ Glossary Term
       </button>
@@ -96,10 +96,13 @@
       @focusin="handleCanvasMouseOver"
       @focusout="hidePopover"
       v-html="localHtml"
-    ></div>
+    />
 
     <!-- Glossary Term Annotation Dialog/Modal -->
-    <div v-if="showGlossaryModal" class="glossary-modal-overlay">
+    <div
+      v-if="showGlossaryModal"
+      class="glossary-modal-overlay"
+    >
       <div class="glossary-modal card">
         <h4>Annotate Selected Text as Glossary Term</h4>
         <p class="selected-text-preview">
@@ -113,7 +116,7 @@
             placeholder="e.g. An examination of tissue removed from a living body to discover the presence or cause of a disease."
             rows="3"
             class="form-control"
-          ></textarea>
+          />
         </div>
         <div class="modal-actions">
           <button
@@ -140,32 +143,33 @@
       class="glossary-popover"
       :style="{ top: popoverY + 'px', left: popoverX + 'px' }"
     >
-      <div class="popover-title">Glossary Definition</div>
+      <div class="popover-title">
+        Glossary Definition
+      </div>
       <div class="popover-body">
-        <strong>{{ hoveredGlossaryTerm }}</strong
-        >: {{ hoveredGlossaryDefinition }}
+        <strong>{{ hoveredGlossaryTerm }}</strong>: {{ hoveredGlossaryDefinition }}
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from "vue";
+import { ref, watch, onMounted } from 'vue';
 
 const props = defineProps({
   section: {
     type: Object,
     required: true,
-  },
+  }
 });
 
-const emit = defineEmits(["update"]);
+const emit = defineEmits(['update']);
 
 const editorRef = ref(null);
-const localHtml = ref("");
+const localHtml = ref('');
 const showGlossaryModal = ref(false);
-const selectedText = ref("");
-const glossaryDefinition = ref("");
+const selectedText = ref('');
+const glossaryDefinition = ref('');
 let savedSelection = null;
 
 // Popover State
@@ -175,29 +179,25 @@ const popoverX = ref(null);
 const popoverY = ref(null);
 
 // Synchronize with prop changes
-watch(
-  () => props.section.id,
-  () => {
-    localHtml.value = props.section.html;
-    if (editorRef.value) {
-      editorRef.value.innerHTML = props.section.html;
-    }
-  },
-  { immediate: true }
-);
+watch(() => props.section.id, () => {
+  localHtml.value = props.section.html;
+  if (editorRef.value) {
+    editorRef.value.innerHTML = props.section.html;
+  }
+}, { immediate: true });
 
 onMounted(() => {
   localHtml.value = props.section.html;
 });
 
 // Format actions via standard execCommand (or manual DOM fallback)
-const formatDoc = (command, value = "") => {
+const formatDoc = (command, value = '') => {
   document.execCommand(command, false, value);
   handleInput();
 };
 
 const formatHeading = (tag) => {
-  formatDoc("formatBlock", `<${tag}>`);
+  formatDoc('formatBlock', `<${tag}>`);
 };
 
 const insertTable = () => {
@@ -217,17 +217,14 @@ const insertTable = () => {
       </tbody>
     </table>
   `;
-  formatDoc("insertHTML", tableHtml);
+  formatDoc('insertHTML', tableHtml);
 };
 
 const insertImage = () => {
-  const imageUrl = prompt(
-    "Enter Image URL:",
-    "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=500&q=80"
-  );
+  const imageUrl = prompt('Enter Image URL:', 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=500&q=80');
   if (imageUrl) {
     const imgHtml = `<img src="${imageUrl}" alt="Consent diagram" style="max-width: 100%; border-radius: 6px; margin: 12px 0; display: block;" />`;
-    formatDoc("insertHTML", imgHtml);
+    formatDoc('insertHTML', imgHtml);
   }
 };
 
@@ -242,41 +239,39 @@ const promptGlossary = () => {
       glossaryDefinition.value = getPredefinedDefinition(selected);
       showGlossaryModal.value = true;
     } else {
-      alert(
-        "Please highlight/select a term in the editor text first to annotate it."
-      );
+      alert('Please highlight/select a term in the editor text first to annotate it.');
     }
   } else {
-    alert("Please select a term in the editor text first.");
+    alert('Please select a term in the editor text first.');
   }
 };
 
 const getPredefinedDefinition = (term) => {
   const t = term.toLowerCase();
-  if (t.includes("biopsy")) {
-    return "An examination of tissue removed from a living body to discover the presence, cause, or extent of a disease.";
+  if (t.includes('biopsy')) {
+    return 'An examination of tissue removed from a living body to discover the presence, cause, or extent of a disease.';
   }
-  if (t.includes("hypertension")) {
-    return "Abnormally high blood pressure.";
+  if (t.includes('hypertension')) {
+    return 'Abnormally high blood pressure.';
   }
-  if (t.includes("confidentiality")) {
-    return "The state of keeping or being kept secret or private.";
+  if (t.includes('confidentiality')) {
+    return 'The state of keeping or being kept secret or private.';
   }
-  if (t.includes("voluntary")) {
-    return "Done, given, or acting of one's own free will; without coercion.";
+  if (t.includes('voluntary')) {
+    return 'Done, given, or acting of one\'s own free will; without coercion.';
   }
-  return "";
+  return '';
 };
 
 const applyGlossaryAnnotation = () => {
   if (savedSelection && glossaryDefinition.value) {
-    const span = document.createElement("span");
-    span.className = "glossary-term";
-    span.setAttribute("data-definition", glossaryDefinition.value);
-    span.style.borderBottom = "2px dashed #3b82f6";
-    span.style.cursor = "help";
-    span.style.backgroundColor = "#eff6ff";
-    span.style.padding = "0 2px";
+    const span = document.createElement('span');
+    span.className = 'glossary-term';
+    span.setAttribute('data-definition', glossaryDefinition.value);
+    span.style.borderBottom = '2px dashed #3b82f6';
+    span.style.cursor = 'help';
+    span.style.backgroundColor = '#eff6ff';
+    span.style.padding = '0 2px';
     span.innerText = selectedText.value;
 
     savedSelection.deleteContents();
@@ -297,15 +292,15 @@ const handleInput = () => {
   if (editorRef.value) {
     const html = editorRef.value.innerHTML;
     localHtml.value = html;
-    emit("update", { id: props.section.id, html });
+    emit('update', { id: props.section.id, html });
   }
 };
 
 // Canvas Interaction (Hover popover logic)
 const handleCanvasClick = (e) => {
   const target = e.target;
-  if (target && target.classList.contains("glossary-term")) {
-    const definition = target.getAttribute("data-definition");
+  if (target && target.classList.contains('glossary-term')) {
+    const definition = target.getAttribute('data-definition');
     const term = target.innerText;
     if (definition) {
       alert(`Glossary Definition:\n\n${term}: ${definition}`);
@@ -315,8 +310,8 @@ const handleCanvasClick = (e) => {
 
 const handleCanvasMouseOver = (e) => {
   const target = e.target;
-  if (target && target.classList.contains("glossary-term")) {
-    const definition = target.getAttribute("data-definition");
+  if (target && target.classList.contains('glossary-term')) {
+    const definition = target.getAttribute('data-definition');
     const term = target.innerText;
     if (definition) {
       hoveredGlossaryTerm.value = term;

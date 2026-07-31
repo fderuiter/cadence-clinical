@@ -10,33 +10,29 @@ import PdfPreviewModal from "../../src/components/etmf/PdfPreviewModal.vue";
 // Mock etmfService so no real network requests are made
 vi.mock("../../src/api/etmf", () => ({
   etmfService: {
-    getDocuments: vi.fn(() =>
-      Promise.resolve([
-        {
-          id: "DOC-100",
-          study_id: "STUDY-USDM-001",
-          zone: 1,
-          section: "01.01",
-          artifact_code: "01.01.01",
-          artifact_type: "Clinical Trial Protocol",
-          filename: "protocol_v1_draft.pdf",
-          mime_type: "application/pdf",
-          created_at: "2026-08-01T12:00:00Z",
-          created_by: "fderuiter",
-          version_index: 1,
-          status: "DRAFT",
-          reason_for_change: "Initial version",
-        },
-      ])
-    ),
-    ingestDocument: vi.fn(() =>
-      Promise.resolve({
-        status: "success",
-        document_id: "DOC-101",
+    getDocuments: vi.fn(() => Promise.resolve([
+      {
+        id: "DOC-100",
+        study_id: "STUDY-USDM-001",
+        zone: 1,
+        section: "01.01",
+        artifact_code: "01.01.01",
+        artifact_type: "Clinical Trial Protocol",
+        filename: "protocol_v1_draft.pdf",
+        mime_type: "application/pdf",
+        created_at: "2026-08-01T12:00:00Z",
+        created_by: "fderuiter",
         version_index: 1,
-      })
-    ),
-  },
+        status: "DRAFT",
+        reason_for_change: "Initial version",
+      }
+    ])),
+    ingestDocument: vi.fn(() => Promise.resolve({
+      status: "success",
+      document_id: "DOC-101",
+      version_index: 1
+    })),
+  }
 }));
 
 describe("DocumentManagerView.vue Component Integration Tests", () => {
@@ -119,9 +115,9 @@ describe("DocumentManagerView.vue Component Integration Tests", () => {
         signer: "Frans de Ruiter",
         signing_timestamp: "2026-08-15T09:35:00Z",
         signature_manifestation: {
-          signing_reason: "Consent approval",
-        },
-      },
+          signing_reason: "Consent approval"
+        }
+      }
     ];
 
     const wrapper = mount(DocumentManagerView, {

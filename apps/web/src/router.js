@@ -147,13 +147,7 @@ const routes = [
     component: () => import("./views/DocumentManagerView.vue"),
     meta: {
       requiresAuth: true,
-      requiresRole: [
-        "cra",
-        "monitor",
-        "auditor",
-        "tmf_auditor",
-        "sponsor_admin",
-      ],
+      requiresRole: ["cra", "monitor", "auditor", "tmf_auditor", "sponsor_admin"],
     },
   },
   {

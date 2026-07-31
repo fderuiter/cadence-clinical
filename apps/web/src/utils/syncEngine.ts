@@ -1,23 +1,23 @@
-import { useSyncStore } from "../stores/sync";
+import { useSyncStore } from '../stores/sync';
 
 export interface PendingDelta {
   deltaId: string;
   entityType: string;
   entityId: string;
-  action: "CREATE" | "UPDATE" | "SUBMIT";
+  action: 'CREATE' | 'UPDATE' | 'SUBMIT';
   payload: Record<string, any>;
   clientTimestampUtc: string;
   reasonForChange: string;
 }
 
 export class IndexedDBManager {
-  private dbName = "SyncEngineDB";
-  private storeName = "pending_sync_deltas";
+  private dbName = 'SyncEngineDB';
+  private storeName = 'pending_sync_deltas';
   private useMemory = false;
   private memoryStore: Map<string, PendingDelta> = new Map();
 
   constructor() {
-    if (typeof window === "undefined" || !window.indexedDB) {
+    if (typeof window === 'undefined' || !window.indexedDB) {
       this.useMemory = true;
     }
   }
@@ -36,7 +36,7 @@ export class IndexedDBManager {
       request.onupgradeneeded = (event: any) => {
         const db = event.target.result;
         if (!db.objectStoreNames.contains(this.storeName)) {
-          db.createObjectStore(this.storeName, { keyPath: "deltaId" });
+          db.createObjectStore(this.storeName, { keyPath: 'deltaId' });
         }
       };
     });
@@ -57,7 +57,7 @@ export class IndexedDBManager {
     }
     const db = await this.getDB();
     return new Promise((resolve, reject) => {
-      const tx = db.transaction(this.storeName, "readwrite");
+      const tx = db.transaction(this.storeName, 'readwrite');
       const store = tx.objectStore(this.storeName);
       const req = store.put(delta);
       req.onerror = () => reject(req.error);
@@ -71,7 +71,7 @@ export class IndexedDBManager {
     }
     const db = await this.getDB();
     return new Promise((resolve, reject) => {
-      const tx = db.transaction(this.storeName, "readonly");
+      const tx = db.transaction(this.storeName, 'readonly');
       const store = tx.objectStore(this.storeName);
       const req = store.getAll();
       req.onerror = () => reject(req.error);
@@ -85,7 +85,7 @@ export class IndexedDBManager {
     }
     const db = await this.getDB();
     return new Promise((resolve, reject) => {
-      const tx = db.transaction(this.storeName, "readonly");
+      const tx = db.transaction(this.storeName, 'readonly');
       const store = tx.objectStore(this.storeName);
       const req = store.count();
       req.onerror = () => reject(req.error);
@@ -95,12 +95,12 @@ export class IndexedDBManager {
 
   async clearDeltas(ids: string[]): Promise<void> {
     if (this.useMemory) {
-      ids.forEach((id) => this.memoryStore.delete(id));
+      ids.forEach(id => this.memoryStore.delete(id));
       return;
     }
     const db = await this.getDB();
     return new Promise((resolve, reject) => {
-      const tx = db.transaction(this.storeName, "readwrite");
+      const tx = db.transaction(this.storeName, 'readwrite');
       const store = tx.objectStore(this.storeName);
       let completed = 0;
       let errored = false;
@@ -108,7 +108,7 @@ export class IndexedDBManager {
         resolve();
         return;
       }
-      ids.forEach((id) => {
+      ids.forEach(id => {
         const req = store.delete(id);
         req.onerror = () => {
           if (!errored) {
@@ -137,18 +137,18 @@ export class ClientSyncEngine {
 
   constructor() {
     this.dbManager = new IndexedDBManager();
-    if (typeof window !== "undefined") {
-      window.addEventListener("online", () => {
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', () => {
         this.flushQueue();
       });
     }
   }
 
-  async queueDelta(delta: Omit<PendingDelta, "deltaId">): Promise<void> {
+  async queueDelta(delta: Omit<PendingDelta, 'deltaId'>): Promise<void> {
     const deltaId = `delta_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const item: PendingDelta = {
       deltaId,
-      ...delta,
+      ...delta
     };
     await this.dbManager.init();
     await this.dbManager.addDelta(item);
@@ -161,13 +161,13 @@ export class ClientSyncEngine {
     if (this.isSyncing) return;
     this.isSyncing = true;
     const syncStore = useSyncStore();
-    syncStore.setStatus("SYNCING");
+    syncStore.setStatus('SYNCING');
 
     try {
       await this.dbManager.init();
       const allDeltas = await this.dbManager.getDeltas();
       if (allDeltas.length === 0) {
-        syncStore.setStatus("IDLE");
+        syncStore.setStatus('IDLE');
         syncStore.setPendingCount(0);
         this.isSyncing = false;
         this.resetBackoff();
@@ -179,48 +179,45 @@ export class ClientSyncEngine {
       const deltasToSync = allDeltas.slice(0, batchSize);
 
       const clientBatchId = `batch_${Date.now()}`;
-      const response = await fetch("/api/v1/offline/sync-batch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('/api/v1/offline/sync-batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           client_batch_id: clientBatchId,
-          device_id:
-            typeof navigator !== "undefined"
-              ? navigator.userAgent
-              : "NodeJS/Test",
-          deltas: deltasToSync,
-        }),
+          device_id: typeof navigator !== 'undefined' ? navigator.userAgent : 'NodeJS/Test',
+          deltas: deltasToSync
+        })
       });
 
       if (response.status === 409) {
         // Conflict detected!
         const data = await response.json();
-        syncStore.setStatus("CONFLICT_DETECTED");
+        syncStore.setStatus('CONFLICT_DETECTED');
         syncStore.setConflict({
           clientBatchId,
           conflictItem: data.conflict || deltasToSync[0],
           clientValue: data.clientValue || deltasToSync[0]?.payload || {},
-          serverValue: data.serverValue || {},
+          serverValue: data.serverValue || {}
         });
         this.isSyncing = false;
         return;
       }
 
       const data = await response.json().catch(() => ({}));
-      if (data.status === "CONFLICT_DETECTED") {
-        syncStore.setStatus("CONFLICT_DETECTED");
+      if (data.status === 'CONFLICT_DETECTED') {
+        syncStore.setStatus('CONFLICT_DETECTED');
         syncStore.setConflict({
           clientBatchId,
           conflictItem: data.conflict || deltasToSync[0],
           clientValue: data.clientValue || deltasToSync[0]?.payload || {},
-          serverValue: data.serverValue || {},
+          serverValue: data.serverValue || {}
         });
         this.isSyncing = false;
         return;
       }
 
       if (response.status === 503) {
-        throw new Error("503 Service Unavailable");
+        throw new Error('503 Service Unavailable');
       }
 
       if (!response.ok) {
@@ -228,7 +225,7 @@ export class ClientSyncEngine {
       }
 
       // Successful sync! Clear these deltas.
-      await this.dbManager.clearDeltas(deltasToSync.map((d) => d.deltaId));
+      await this.dbManager.clearDeltas(deltasToSync.map(d => d.deltaId));
       const remainingCount = await this.dbManager.getDeltasCount();
       syncStore.setPendingCount(remainingCount);
 
@@ -239,33 +236,29 @@ export class ClientSyncEngine {
         this.isSyncing = false;
         setTimeout(() => this.flushQueue(), 0);
       } else {
-        syncStore.setStatus("COMPLETED");
+        syncStore.setStatus('COMPLETED');
         this.isSyncing = false;
       }
     } catch (err: any) {
-      syncStore.setStatus("ERROR");
+      syncStore.setStatus('ERROR');
       this.isSyncing = false;
       this.scheduleRetry();
     }
   }
 
-  async resolveConflict(
-    conflictId: string,
-    strategy: "SERVER_WIN" | "CLIENT_WIN" | "MANUAL_REVIEW",
-    reason: string
-  ): Promise<void> {
+  async resolveConflict(conflictId: string, strategy: 'SERVER_WIN' | 'CLIENT_WIN' | 'MANUAL_REVIEW', reason: string): Promise<void> {
     const syncStore = useSyncStore();
-    syncStore.setStatus("SYNCING");
+    syncStore.setStatus('SYNCING');
 
     try {
-      const response = await fetch("/api/v1/offline/resolve-conflict", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('/api/v1/offline/resolve-conflict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           delta_id: conflictId,
           strategy,
-          reason_for_change: reason,
-        }),
+          reason_for_change: reason
+        })
       });
 
       if (!response.ok) {
@@ -283,10 +276,10 @@ export class ClientSyncEngine {
         // Continue draining remaining deltas
         setTimeout(() => this.flushQueue(), 0);
       } else {
-        syncStore.setStatus("COMPLETED");
+        syncStore.setStatus('COMPLETED');
       }
     } catch (err) {
-      syncStore.setStatus("ERROR");
+      syncStore.setStatus('ERROR');
       throw err;
     }
   }
@@ -296,10 +289,7 @@ export class ClientSyncEngine {
       clearTimeout(this.retryTimeoutId);
     }
     this.retryCount++;
-    const delay = Math.min(
-      this.initialRetryDelay * Math.pow(2, this.retryCount),
-      this.maxRetryDelay
-    );
+    const delay = Math.min(this.initialRetryDelay * Math.pow(2, this.retryCount), this.maxRetryDelay);
     this.retryTimeoutId = setTimeout(() => {
       this.flushQueue();
     }, delay);
