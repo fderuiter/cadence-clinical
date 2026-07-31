@@ -12,6 +12,7 @@ from fastapi import (
     Request,
 )
 from fastapi.responses import Response
+from audit import AuditAction
 from protocol_version_ref import ProtocolVersionRef
 from pydantic import BaseModel, Field, model_validator
 from signature import SigningReason
@@ -784,7 +785,7 @@ async def write_audit_log(
     session: AsyncSession,
     user_id: str,
     user_role: str | list[str],
-    action: str,
+    action: AuditAction | str,
     document_id: Optional[str],
     details: str,
     reason_for_change: Optional[str] = None,
@@ -797,10 +798,12 @@ async def write_audit_log(
     else:
         user_role_str = user_role
 
+    action_str = action.value if hasattr(action, "value") else action
+
     log_entry = TMFAuditLog(
         user_id=user_id,
         user_role=user_role_str,
-        action=action,
+        action=action_str,
         document_id=document_id,
         details=details,
         reason_for_change=reason_for_change,
@@ -1017,7 +1020,7 @@ async def list_documents(
         session=session,
         user_id=user_id,
         user_role=user_roles,
-        action="LIST",
+        action=AuditAction.LIST,
         document_id=None,
         details=f"Listed eTMF documents matching criteria: {search_criteria}.",
     )
@@ -1061,7 +1064,7 @@ async def view_document(
         session=session,
         user_id=user_id,
         user_role=user_roles,
-        action="VIEW",
+        action=AuditAction.VIEW,
         document_id=doc.id,
         details=f"Viewed metadata for eTMF document '{doc.filename}' (ID: {doc.id}).",
     )
@@ -1152,7 +1155,7 @@ async def get_document_versions(
         session=session,
         user_id=user_id,
         user_role=user_roles,
-        action="VERSION_HISTORY_VIEW",
+        action=AuditAction.VERSION_HISTORY_VIEW,
         document_id=doc.id,
         details=f"Viewed version history and QC transitions for document lineage (study: {doc.study_id}, artifact: {doc.artifact_code}).",
     )
@@ -1207,11 +1210,11 @@ async def download_document(
         from apps.etmf.watermark import apply_watermark
 
         final_content = apply_watermark(doc.content, doc.mime_type, user_id, user_roles)
-        action_name = "WATERMARKED_DOWNLOAD"
+        action_name = AuditAction.WATERMARKED_DOWNLOAD
         details_msg = f"Downloaded watermarked content for eTMF document '{doc.filename}' (ID: {doc.id})."
     else:
         final_content = doc.content
-        action_name = "DOWNLOAD"
+        action_name = AuditAction.DOWNLOAD
         details_msg = (
             f"Downloaded content for eTMF document '{doc.filename}' (ID: {doc.id})."
         )
@@ -1279,7 +1282,7 @@ async def download_watermarked_document(
         session=session,
         user_id=user_id,
         user_role=user_roles,
-        action="WATERMARKED_DOWNLOAD",
+        action=AuditAction.WATERMARKED_DOWNLOAD,
         document_id=doc.id,
         details=f"Downloaded watermarked content for eTMF document '{doc.filename}' (ID: {doc.id}).",
     )
@@ -1323,7 +1326,7 @@ async def get_audit_trail(
         session=session,
         user_id=request_user_id,
         user_role=user_roles,
-        action="AUDIT_VIEW",
+        action=AuditAction.AUDIT_VIEW,
         document_id=document_id,
         details="Accessed eTMF immutable audit trail logs.",
     )
@@ -1438,7 +1441,7 @@ async def list_expectations(
         session=session,
         user_id=user_id,
         user_role=user_roles,
-        action="EDL_VIEW",
+        action=AuditAction.EDL_VIEW,
         document_id=None,
         details=f"Listed EDL expectations for study '{study_id}', site '{site_id}', milestone '{milestone}'.",
     )
@@ -1513,7 +1516,7 @@ async def create_expectation(
         session=session,
         user_id=user_id,
         user_role=user_roles,
-        action="EDL_UPDATE",
+        action=AuditAction.EDL_UPDATE,
         document_id=exp.id,
         details=f"Created expected document '{payload.artifact_type}' for study '{payload.study_id}', site '{payload.site_id}', milestone '{milestone_normalized}'. Reason: {payload.reason_for_change}",
     )
@@ -1591,7 +1594,7 @@ async def update_expectation(
         session=session,
         user_id=user_id,
         user_role=user_roles,
-        action="EDL_UPDATE",
+        action=AuditAction.EDL_UPDATE,
         document_id=exp.id,
         details=f"Updated expected document '{payload.artifact_type}' (ID: {edl_id}) for study '{payload.study_id}', site '{payload.site_id}', milestone '{milestone_normalized}'. Reason: {payload.reason_for_change}",
     )
@@ -1766,7 +1769,7 @@ async def check_completeness(
         session=session,
         user_id=user_id,
         user_role=user_roles,
-        action="COMPLETENESS",
+        action=AuditAction.COMPLETENESS,
         document_id=None,
         details=f"Performed completeness checking for study '{study_id}', site '{site_id}', milestone '{milestone_normalized}'. Complete: {is_complete}.",
     )
@@ -1841,7 +1844,7 @@ async def redact_document_endpoint(
             session=session,
             user_id=user_id,
             user_role=user_roles,
-            action="MUTATION_REJECTED",
+            action=AuditAction.MUTATION_REJECTED,
             document_id=source_doc.id,
             details=f"Rejected attempt to redact signed document '{source_doc.filename}' (ID: {source_doc.id}). Error: IMMUTABILITY_VIOLATION.",
         )
@@ -1919,7 +1922,7 @@ async def redact_document_endpoint(
         session=session,
         user_id=user_id,
         user_role=user_roles,
-        action="REDACT",
+        action=AuditAction.REDACT,
         document_id=redacted_doc.id,
         details=details_str,
     )
