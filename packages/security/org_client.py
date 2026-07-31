@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 import time
@@ -5,7 +6,9 @@ from typing import Any, Dict
 
 import httpx
 
-from packages.security.signing import generate_gateway_signature
+from packages.security.gateway_client import GatewayBaseClient
+
+logger = logging.getLogger("packages.security.org_client")
 
 
 async def resolve_personnel_assignments(keycloak_user_id: str) -> Dict[str, Any]:
@@ -69,53 +72,45 @@ async def resolve_personnel_assignments(keycloak_user_id: str) -> Dict[str, Any]
         }
 
     org_service_url = os.getenv("ORG_SERVICE_URL", "http://localhost:8001")
-    gateway_secret_env = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
-    gateway_secret = (
-        gateway_secret_env.encode("utf-8")
-        if isinstance(gateway_secret_env, str)
-        else gateway_secret_env
-    )
-
     user_id = "security-service"
     roles = "admin"
-    timestamp = str(time.time())
+    change_reason = "Internal Principal Enrichment"
 
-    signature = generate_gateway_signature(
-        user_id=user_id,
-        roles=roles,
-        timestamp=timestamp,
-        secret=gateway_secret,
-        change_reason="Internal Principal Enrichment",
-    )
-
-    headers = {
-        "X-User-Id": user_id,
-        "X-User-Roles": roles,
-        "X-Gateway-Timestamp": timestamp,
-        "X-Gateway-Signature": signature,
-        "X-Signature-Version": "2",
-        "X-Change-Reason": "Internal Principal Enrichment",
-    }
-
-    url = f"{org_service_url.rstrip('/')}/api/v1/org/assignments/resolve"
-    params = {"keycloak_user_id": keycloak_user_id}
+    client = GatewayBaseClient(base_url=org_service_url, timeout=5.0)
 
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            response = await client.get(url, params=params, headers=headers)
-            if response.status_code == 200:
-                return response.json()
-            else:
-                return {
-                    "personnel_id": "",
-                    "roles": [],
-                    "assigned_sites": [],
-                    "assigned_studies": [],
-                }
-    except Exception:
+        response = await client.request(
+            method="GET",
+            path="/api/v1/org/assignments/resolve",
+            user_id=user_id,
+            roles=roles,
+            change_reason=change_reason,
+            params={"keycloak_user_id": keycloak_user_id},
+        )
+        if response.status_code == 200:
+            return response.json()
+        else:
+            logger.error(
+                "resolve_personnel_assignments: request to org service failed with status %s: %s",
+                response.status_code,
+                response.text,
+            )
+            return {
+                "personnel_id": "",
+                "roles": [],
+                "assigned_sites": [],
+                "assigned_studies": [],
+            }
+    except Exception as e:
+        logger.error(
+            "resolve_personnel_assignments: exception during org assignments resolution: %s",
+            e,
+            exc_info=True,
+        )
         return {
             "personnel_id": "",
             "roles": [],
             "assigned_sites": [],
             "assigned_studies": [],
         }
+

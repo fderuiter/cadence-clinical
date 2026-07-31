@@ -81,8 +81,14 @@ from packages.security.signing import (
     generate_canonical_signature,
     verify_canonical_signature,
 )
+from packages.security.gateway_client import (
+    GatewayBaseClient,
+    run_async,
+)
 
 __all__ = [
+    "GatewayBaseClient",
+    "run_async",
     "current_user_id",
     "current_change_reason",
     "current_ip_address",
