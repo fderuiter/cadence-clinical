@@ -11,6 +11,8 @@ Based on the executed automated verification suite, the platform meets all prede
 ### Validation Result Summary
 - **Total Automated Test Cases Run:** 1762
 - **Passed:** 1762 🟢
+- **Total Automated Test Cases Run:** 1763
+- **Passed:** 1763 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1055,6 +1057,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_resolve_concept_id` | `tests.test_inverse_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_unmapped_fields_preservation` | `tests.test_inverse_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_unsupported_rule_expression_raises_value_error` | `tests.test_inverse_mapper` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_lab_master_migrations` | `tests.test_lab_master_migrations` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_absent_boundaries` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_age_boundaries` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_critical_boundaries_and_exclusion` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1607,6 +1610,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_verify_gateway_signature_scope_fallback_restrictions` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_gateway_signature_tenant_and_multishape_restrictions` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_sig_token_helper_scenarios` | `tests.test_security_middleware` | Trace-15 | 🟢 PASSED | < 1s |
+| `test_verify_and_consume_sig_token_expired` | `tests.test_sig_token_verifier` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_verify_and_consume_sig_token_mismatched_user` | `tests.test_sig_token_verifier` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_verify_and_consume_sig_token_replay_blocked` | `tests.test_sig_token_verifier` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_verify_and_consume_sig_token_success` | `tests.test_sig_token_verifier` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_compute_content_digest` | `tests.test_signature_builder` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_rsa_signature_sign_and_verify` | `tests.test_signature_builder` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_asymmetric_sign_and_verify` | `tests.test_signature_manifestation` | *Regression/Helper* | 🟢 PASSED | < 1s |

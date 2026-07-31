@@ -1,3 +1,4 @@
+// ESLint configuration for Vue single-file components
 import js from "@eslint/js";
 import vuePlugin from "eslint-plugin-vue";
 import vuejsAccessibility from "eslint-plugin-vuejs-accessibility";
