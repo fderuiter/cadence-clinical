@@ -1,7 +1,11 @@
 """
 De-identification module for SDTM/ADaM export pipelines.
 Provides deterministic pseudonymization, stable per-subject date-shifting, and age capping.
+
+Requirements Traceability: PRD-SYS-001 | GxP 21 CFR Part 11 Regulated
 """
+
+# @req:PRD-SYS-001
 
 import re
 from datetime import timedelta
@@ -43,6 +47,7 @@ def shift_partial_date(date_str: str, shift_days: int) -> str:
     Parses full or partial dates and shifts them while keeping relative ordering
     and leaving imprecise/placeholder components untouched.
     """
+    # @req:PRD-SYS-001
     if not date_str:
         return date_str
 
@@ -101,6 +106,7 @@ def deidentify_record(row: Dict[str, Any], salt: str) -> Dict[str, Any]:
     """
     Transforms a single SDTM/ADaM record without mutating the input.
     """
+    # @req:PRD-SYS-001
     # Create a shallow/deep copy of the dictionary
     r = dict(row)
 
@@ -163,6 +169,7 @@ def deidentify_export_data(
     """
     Applies non-mutating de-identification transform over lists or bundles of SDTM/ADaM records.
     """
+    # @req:PRD-SYS-001
     if isinstance(export_data, dict):
         new_bundle = {}
         for ds_name, records in export_data.items():
@@ -179,6 +186,7 @@ def scrub_error_message(msg: str) -> str:
     Scrubs and redacts raw subject identifiers and quoted field values
     to prevent leaking PII/PHI in biostat export audit error logs.
     """
+    # @req:PRD-SYS-001
     if not msg:
         return msg
     # Redact subject patterns like SUBJ-101, SUBJ-INVALID

@@ -3,7 +3,11 @@ Dataset-JSON Serializer Module.
 
 Provides functions to serialize SDTM or ADaM clinical datasets into
 CDISC Dataset-JSON format using Pydantic v2 models.
+
+Requirements Traceability: PRD-SYS-001 | GxP 21 CFR Part 11 Regulated
 """
+
+# @req:PRD-SYS-001
 
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Union
@@ -348,6 +352,7 @@ def serialize_to_dataset_json(
     source_system_version: Optional[str] = None,
 ) -> DatasetJSON:
     """Serializes dataset lists or mapped bundles into CDISC Dataset-JSON structure."""
+    # @req:PRD-SYS-001
     item_group_data = {}
 
     if isinstance(data, dict):

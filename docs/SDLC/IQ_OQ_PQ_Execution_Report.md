@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1737
-- **Passed:** 1737 🟢
+- **Total Automated Test Cases Run:** 1740
+- **Passed:** 1740 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -303,10 +303,13 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_sdtm_supplemental_qualifiers` | `tests.test_biostat_export` | SDTM-SUPP-01 | 🟢 PASSED | < 1s |
 | `test_adam_dataset_export_success` | `tests.test_biostat_exports` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_biostat_bundle_export_success` | `tests.test_biostat_exports` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_export_null_observations_handling` | `tests.test_biostat_exports` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_export_validation_failure_handling` | `tests.test_biostat_exports` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_extreme_date_shifting_and_masking` | `tests.test_biostat_exports` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_invalid_adam_dataset_rejection` | `tests.test_biostat_exports` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_invalid_sdtm_domain_rejection` | `tests.test_biostat_exports` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_sdtm_domain_export_success` | `tests.test_biostat_exports` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_tenant_boundary_enforcement` | `tests.test_biostat_exports` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_unauthenticated_access_rejection` | `tests.test_biostat_exports` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_local_storage_provider_integrity_failure` | `tests.test_blob_store` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_local_storage_provider_lifecycle` | `tests.test_blob_store` | *Regression/Helper* | 🟢 PASSED | < 1s |
