@@ -1,7 +1,6 @@
 import os
 import threading
 import time
-from typing import Dict, Optional
 
 from fastapi import HTTPException
 from jose import JWTError, jwt
@@ -15,10 +14,10 @@ class TokenConsumptionCache:
     """
 
     def __init__(self) -> None:
-        self._consumed: Dict[str, float] = {}
+        self._consumed: dict[str, float] = {}
         self._lock = threading.Lock()
 
-    def consume(self, token: str, jti: Optional[str], exp: float) -> bool:
+    def consume(self, token: str, jti: str | None, exp: float) -> bool:
         """Atomically verify and consume a token.
 
         Args:
@@ -53,9 +52,9 @@ token_consumption_cache = TokenConsumptionCache()
 
 
 def verify_and_consume_sig_token(
-    sig_token: Optional[str],
+    sig_token: str | None,
     expected_user_id: str,
-    secret: Optional[bytes] = None,
+    secret: bytes | None = None,
 ) -> dict:
     """Centralized 21 CFR Part 11 signature token verifier and single-use consumer.
 

@@ -163,6 +163,7 @@ class SAEReconciliationJob(Base):
     run_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("sae_reconciliation_runs.id"), nullable=True, index=True
     )
+    error: Mapped[str | None] = mapped_column(String, nullable=True)
 
     # 21 CFR Part 11 Compliance Auditing Metadata
     created_at: Mapped[datetime] = mapped_column(
@@ -173,6 +174,14 @@ class SAEReconciliationJob(Base):
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     run: Mapped[Optional["SAEReconciliationRun"]] = relationship("SAEReconciliationRun")
+
+    @property
+    def error_message(self) -> str | None:
+        return self.error
+
+    @error_message.setter
+    def error_message(self, val: str | None) -> None:
+        self.error = val
 
 
 class SafetyAuditLog(Base):
