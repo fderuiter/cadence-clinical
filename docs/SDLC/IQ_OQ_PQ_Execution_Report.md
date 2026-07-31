@@ -14,6 +14,11 @@ Based on the executed automated verification suite, the platform meets all prede
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
+- **Total Automated Test Cases Run:** 1628
+- **Passed:** 1620 🟢
+- **Failed/Errors:** 8 🔴
+- **Skipped:** 0 ⚪
+- **Overall Operational Pass Rate:** 99.51%
 
 ## 2. Installation Qualification (IQ)
 
@@ -208,12 +213,14 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_scan_phi_post_endpoint` | `tests.test_anonymization_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_parameters_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_paths_and_methods_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_api_parameters_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🔴 FAILED | < 1s |
+| `test_api_paths_and_methods_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🔴 FAILED | < 1s |
 | `test_api_request_bodies_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_api_responses_parity` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_extra_response_properties_pass_validation` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_markdown_spec_extract_and_parse` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_markdown_spec_syntax_checks_malformed_yaml` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_undocumented_parameter_fails_parity_check` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_undocumented_parameter_fails_parity_check` | `tests.test_api_contract_validation` | *Regression/Helper* | 🔴 FAILED | < 1s |
 | `test_undocumented_route_fails_parity_check` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validation_fails_on_route_path_mismatch` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_artifact_cascade_engine_generation` | `tests.test_artifact_cascade` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -554,6 +561,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_doa_assignment_record_creation` | `tests.test_doa_models` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_doa_delegation_record_defaults` | `tests.test_doa_models` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_doa_delegation_record_validation` | `tests.test_doa_models` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_doa_historical_audit_trail_logging` | `tests.test_doa_audit_suite` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_doa_assignment_record_creation` | `tests.test_doa_models` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_doa_assignment_and_signoff_api_flow` | `tests.test_doa_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_doa_service_assignment_and_pi_signoff` | `tests.test_doa_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_complete_doa_workflow_lifecycle` | `tests.test_doa_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -653,6 +662,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_eisf_sync_exact_duplicate_ignored` | `tests.test_eisf_sync` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_sync_per_field_metadata_lww` | `tests.test_eisf_sync` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_sync_unmapped_propagation` | `tests.test_eisf_sync` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_eisf_document_record_instantiation_defaults` | `tests.test_eisf_taxonomy` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_eisf_taxonomy_querying_returns_8_mandatory_sections` | `tests.test_eisf_taxonomy` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_aggregate_eligibility_evaluation` | `tests.test_eligibility_engine` | PRD-MDR-007 | 🟢 PASSED | < 1s |
 | `test_evaluation_all_operators` | `tests.test_eligibility_engine` | PRD-ELIGIBILITY-005, PRD-MDR-007 | 🟢 PASSED | < 1s |
 | `test_evaluation_incompatible_types_graceful_handling` | `tests.test_eligibility_engine` | PRD-ELIGIBILITY-007 | 🟢 PASSED | < 1s |
@@ -976,11 +987,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_lab_reference_range_audit_and_triggers` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_lab_reference_range_crud_and_precision` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_schema_evolution_migration_upgrade` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001, PRD-QRY-005 | 🟢 PASSED | < 1s |
-| `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_scrambled_sequence` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_valid` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | 🔴 FAILED | < 1s |
+| `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | 🔴 FAILED | < 1s |
+| `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | 🔴 FAILED | < 1s |
+| `test_layout_validation_scrambled_sequence` | `tests.test_layout_validator` | *Regression/Helper* | 🔴 FAILED | < 1s |
+| `test_layout_validation_valid` | `tests.test_layout_validator` | *Regression/Helper* | 🔴 FAILED | < 1s |
 | `test_ledger_sealing_and_validation` | `tests.test_ledger_and_triggers` | PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_out_of_band_update_triggers_audit_entry` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_prevent_audit_ledger_seals_mutation` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
