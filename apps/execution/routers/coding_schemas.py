@@ -2,22 +2,24 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, List, Optional, Union
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, model_validator, field_validator
+
+from apps.execution.database.models import DictionaryType, ImportState
 
 
 # Enums
 class DictTypeEnum(str, Enum):
-    MEDDRA = "MEDDRA"
-    WHODRUG = "WHODRUG"
-    LOINC = "LOINC"
-    SNOMED = "SNOMED"
+    MEDDRA = DictionaryType.MEDDRA.value
+    WHODRUG = DictionaryType.WHODRUG.value
+    LOINC = DictionaryType.LOINC.value
+    SNOMED = DictionaryType.SNOMED.value
 
 
 class JobStatusEnum(str, Enum):
-    PENDING = "PENDING"
-    PROCESSING = "PROCESSING"
-    COMPLETED = "COMPLETED"
-    FAILED = "FAILED"
+    PENDING = ImportState.PENDING.value
+    PROCESSING = ImportState.PROCESSING.value
+    COMPLETED = ImportState.COMPLETED.value
+    FAILED = ImportState.FAILED.value
 
 
 class PrimarySocFlagEnum(str, Enum):
@@ -30,6 +32,13 @@ class DictionaryImportRequest(BaseModel):
     dictionary_type: DictTypeEnum
     version: str
     parse_multilingual: bool = True
+
+    @field_validator("version")
+    @classmethod
+    def validate_version_non_empty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Version must be a non-empty string.")
+        return v
 
 
 class CoderActionRequest(BaseModel):
