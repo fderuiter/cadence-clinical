@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1783
-- **Passed:** 1783 🟢
+- **Total Automated Test Cases Run:** 1784
+- **Passed:** 1784 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1066,6 +1066,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_create_lab_reference_range_validation_errors` | `tests.test_lab_ranges_crud` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_and_update_lab_reference_range` | `tests.test_lab_ranges_crud` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_list_and_filter_lab_reference_ranges` | `tests.test_lab_ranges_crud` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_list_lab_reference_ranges_filtering_by_lab_source` | `tests.test_lab_ranges_crud` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_soft_delete_lab_reference_range` | `tests.test_lab_ranges_crud` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_update_local_to_central_invariant_enforcement` | `tests.test_lab_ranges_crud` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_lab_ranges_comprehensive_e2e_workflow` | `tests.test_lab_ranges_e2e_verification` | PRD-LAB-001 | 🟢 PASSED | < 1s |
