@@ -6,6 +6,7 @@
 import time
 from datetime import datetime, timedelta, timezone
 
+import httpx
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
@@ -1497,3 +1498,56 @@ async def test_compute_reminders_all_subjects_staff():
     )
     assert resp.status_code == 200
     assert resp.json()["created_count"] >= 4
+
+
+@pytest.mark.asyncio
+async def test_notification_router_transports(monkeypatch):
+    """
+    Verify that NotificationRouter correctly routes emails, SMS, webhooks, and in-app reminders.
+    Ensures that fail-soft behavior works correctly even if the downstream service is down/unavailable.
+    """
+    from apps.interop.main import NotificationRouter
+
+    router = NotificationRouter()
+
+    # Mock post to succeed with 201
+    class MockResponse:
+        def __init__(self, status_code):
+            self.status_code = status_code
+            self.text = "Mock Created"
+
+    async def mock_post_success(self_client, url, **kwargs):
+        return MockResponse(201)
+
+    monkeypatch.setattr(httpx.AsyncClient, "post", mock_post_success)
+
+    # 1. Test success pathways
+    assert await router.send_email("test@example.com", "Hello Email") is True
+    assert await router.send_sms("+1234567890", "Hello SMS") is True
+    assert (
+        await router.send_webhook("https://example.com/hook", {"data": "test"}) is True
+    )
+    assert await router.send_in_app("subject_alice", "Hello Portal") is True
+
+    # 2. Mock post to fail with 500 error but verify it behaves fail-soft
+    async def mock_post_fail(self_client, url, **kwargs):
+        return MockResponse(500)
+
+    monkeypatch.setattr(httpx.AsyncClient, "post", mock_post_fail)
+    assert await router.send_email("test@example.com", "Hello Email Fail") is False
+    assert await router.send_sms("+1234567890", "Hello SMS Fail") is False
+    assert (
+        await router.send_webhook("https://example.com/hook", {"data": "fail"}) is False
+    )
+
+    # 3. Mock post to raise an exception and verify fail-soft (returns True for stubbed delivery)
+    async def mock_post_exception(self_client, url, **kwargs):
+        raise httpx.RequestError("Network down")
+
+    monkeypatch.setattr(httpx.AsyncClient, "post", mock_post_exception)
+    assert await router.send_email("test@example.com", "Hello Exception") is True
+    assert await router.send_sms("+1234567890", "Hello Exception") is True
+    assert (
+        await router.send_webhook("https://example.com/hook", {"data": "exception"})
+        is True
+    )

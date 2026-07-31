@@ -22,7 +22,46 @@ def test_organization_type_values():
     assert OrganizationType.CRO == "CRO"
     assert OrganizationType.IRB_IEC == "IRB/IEC"
     assert OrganizationType.CENTRAL_LABORATORY == "central laboratory"
+    assert OrganizationType.CENTRAL_LAB == "central laboratory"
     assert OrganizationType.SITE == "site"
+
+
+def test_staff_role_values():
+    """
+    Verify that StaffRole enum contains the expected exact values.
+    """
+    from organization_domain import StaffRole
+
+    assert StaffRole.PRINCIPAL_INVESTIGATOR == "Principal Investigator"
+    assert StaffRole.PI == "Principal Investigator"
+    assert StaffRole.SUB_INVESTIGATOR == "Sub-Investigator"
+    assert StaffRole.CRC == "CRC"
+    assert StaffRole.CRA_MONITOR == "CRA/Monitor"
+    assert StaffRole.EXTERNAL_MONITOR == "External Monitor"
+
+
+def test_audit_mixin():
+    """
+    Verify that AuditMixin adds the four required auditing fields to a SQLAlchemy declarative model.
+    """
+    from sqlalchemy.orm import DeclarativeBase
+
+    from packages.database import AuditMixin
+
+    class MockBase(DeclarativeBase):
+        pass
+
+    class MockModel(MockBase, AuditMixin):
+        __tablename__ = "mock_table"
+        import sqlalchemy
+
+        id = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
+
+    # Check that fields are mapped on the class
+    assert hasattr(MockModel, "created_at")
+    assert hasattr(MockModel, "created_by")
+    assert hasattr(MockModel, "reason_for_change")
+    assert hasattr(MockModel, "version_index")
 
 
 def test_clinical_staff_role_values():
