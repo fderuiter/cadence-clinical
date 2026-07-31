@@ -30,6 +30,7 @@ class MedDRAParser:
 
     Yields versioned five-level terminology (LLT, PT, HLT, HLGT, SOC)
     and hierarchy records.
+    Satisfies Epic #109 / Issue #1122 / Phase 16: Dictionary Ingestion & Persistence.
     """
 
     def __init__(self, dictionary_version: str, encoding: str = "utf-8"):
@@ -491,6 +492,7 @@ class WHODrugParser:
 
     Produces versioned drug, ingredient, and ATC classification records.
     Supports fixed-width and delimited text file formats with configurable mappings.
+    Satisfies Epic #109 / Issue #1122 / Phase 16: Dictionary Ingestion & Persistence.
     """
 
     DEFAULT_CONFIGS = {
