@@ -462,6 +462,23 @@ WHITELISTED_ROUTES = {
         "delete",
         "/api/v1/studies/{study_id}/versions/{version_id}/links/arm-applicability",
     ),
+    ("post", "/api/v1/compliance/change-requests/analyze-diff"),
+    ("post", "/api/v1/synopsis/export"),
+    ("get", "/api/v1/synopsis/render/{study_id}"),
+    ("post", "/api/v1/designer/sentinel/evaluate"),
+    ("post", "/api/v1/designer/cascade/propagate"),
+    ("get", "/api/v1/designer/export/m11/{study_id}"),
+    ("post", "/api/v1/execution/locks/lock"),
+    ("post", "/api/v1/execution/locks/unlock"),
+    ("get", "/api/v1/execution/locks/status/{form_id}"),
+    ("post", "/api/v1/execution/signatures/batch-sign-off"),
+    ("post", "/api/v1/execution/amendments/publish"),
+    ("get", "/api/v1/execution/amendments/summary/{study_id}/{version}"),
+    ("post", "/api/v1/execution/auditor/token/generate"),
+    ("get", "/api/v1/execution/auditor/inspect/audit-trail/{study_id}"),
+    ("post", "/api/v1/execution/safety/dispatch"),
+    ("post", "/api/v1/execution/safety/reconcile"),
+    ("post", "/api/v1/execution/eisf/upload"),
 }
 
 

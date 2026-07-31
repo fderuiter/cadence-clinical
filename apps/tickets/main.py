@@ -29,8 +29,13 @@ from apps.tickets.models import (
     TicketPriority,
     TicketStatus,
 )
+from apps.tickets.models.diff_models import (
+    RegulatoryRiskAssessment,
+    SettingDiffEntry,
+)
 from apps.tickets.notification_events import generate_ticket_notification_payloads
 from apps.tickets.notifications_client import publish_notification
+from apps.tickets.services.change_analyzer import SettingChangeAnalyzer
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.context import audit_context
 from packages.security.middleware import GatewayAuthMiddleware
@@ -1323,3 +1328,25 @@ async def list_ticket_comments(
         )
         for c in comments
     ]
+
+
+@app.post(
+    "/api/v1/compliance/change-requests/analyze-diff",
+    response_model=RegulatoryRiskAssessment,
+)
+async def analyze_diff_endpoint(
+    payload: SettingDiffEntry,
+    principal: Principal = Depends(get_principal),
+    _not_auditor=Depends(verify_not_auditor),
+) -> RegulatoryRiskAssessment:
+    """
+    Analyze proposed setting change and evaluate GxP regulatory risk level.
+
+    Requirements: PRD-SYS-001
+    """
+    analyzer = SettingChangeAnalyzer()
+    return analyzer.analyze_change(
+        setting_key=payload.setting_key,
+        old_val=payload.old_value,
+        new_val=payload.new_value,
+    )

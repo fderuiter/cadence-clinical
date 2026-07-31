@@ -1095,6 +1095,8 @@ async def proxy_requests(request: Request, path: str) -> Response:
         target_url = f"{SERVICES['org']}/{path[len('org/') :]}"
     elif path.startswith("api/v1/org"):
         target_url = f"{SERVICES['org']}/{path}"
+    elif path.startswith("api/v1/compliance"):
+        target_url = f"{SERVICES['tickets']}/{path}"
     elif path.startswith("api/v1/tickets"):
         target_url = f"{SERVICES['tickets']}/{path}"
     elif path == "events/publish":
