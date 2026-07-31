@@ -5,6 +5,222 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/api/v1/ctms/doa/delegate": {
+      "post": {
+        "tags": [
+          "DOA"
+        ],
+        "summary": "Delegate Site Tasks",
+        "description": "Assign site trial task delegation requiring Principal Investigator sign-off.\n\nRequirements: PRD-SYS-001",
+        "operationId": "delegate_site_tasks_api_v1_ctms_doa_delegate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DelegationTaskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Delegate Site Tasks Api V1 Ctms Doa Delegate Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/doa/revoke": {
+      "post": {
+        "tags": [
+          "DOA"
+        ],
+        "summary": "Revoke Site Tasks",
+        "description": "Revoke or end a delegated trial duty with reason for change.\n\nRequirements: PRD-SYS-001",
+        "operationId": "revoke_site_tasks_api_v1_ctms_doa_revoke_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevokeDelegationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Revoke Site Tasks Api V1 Ctms Doa Revoke Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/doa/sign-off": {
+      "post": {
+        "tags": [
+          "DOA"
+        ],
+        "summary": "Sign Off Delegation",
+        "description": "Endorse Delegation of Authority task assignment with Principal Investigator eSignature.\n\nRequirements: PRD-SYS-001",
+        "operationId": "sign_off_delegation_api_v1_ctms_doa_sign_off_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DOASignOffRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Sign Off Delegation Api V1 Ctms Doa Sign Off Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/doa/sites/{site_id}/log": {
+      "get": {
+        "tags": [
+          "DOA"
+        ],
+        "summary": "Get Site Doa Log",
+        "description": "Fetch active and historical DOA log matrix for a site.\n\nRequirements: PRD-SYS-001",
+        "operationId": "get_site_doa_log_api_v1_ctms_doa_sites__site_id__log_get",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DOALogResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ctms/doa/sites/{site_id}/export-pdf": {
+      "get": {
+        "tags": [
+          "DOA"
+        ],
+        "summary": "Export Site Doa Pdf",
+        "description": "Export 21 CFR Part 11 signed DOA PDF log.\n\nRequirements: PRD-SYS-001",
+        "operationId": "export_site_doa_pdf_api_v1_ctms_doa_sites__site_id__export_pdf_get",
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Site Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health Check",
@@ -1927,6 +2143,110 @@
         "title": "ConflictStrategy",
         "description": "Explicit validated conflict resolution strategies."
       },
+      "DOALogResponse": {
+        "properties": {
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "Investigator site ID"
+          },
+          "pi_name": {
+            "type": "string",
+            "title": "Pi Name",
+            "description": "Name of the Principal Investigator at the site"
+          },
+          "delegated_staff": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Delegated Staff",
+            "description": "List of active and inactive delegated site staff members and their tasks"
+          },
+          "audit_history": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Audit History",
+            "description": "Immutable chronologically-ordered CTMS audit log history for this site's DOA"
+          }
+        },
+        "type": "object",
+        "required": [
+          "site_id",
+          "pi_name",
+          "delegated_staff",
+          "audit_history"
+        ],
+        "title": "DOALogResponse",
+        "description": "Response payload containing the active and historical DOA log matrix for a site."
+      },
+      "DOASignOffRequest": {
+        "properties": {
+          "record_id": {
+            "type": "string",
+            "title": "Record Id",
+            "description": "The unique delegation record ID to sign off"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Mandatory GxP 21 CFR Part 11 justification reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "record_id",
+          "reason_for_change"
+        ],
+        "title": "DOASignOffRequest",
+        "description": "Payload for Principal Investigator step-up eSignature endorsement."
+      },
+      "DelegationTaskRequest": {
+        "properties": {
+          "site_id": {
+            "type": "string",
+            "title": "Site Id",
+            "description": "The unique investigator site ID"
+          },
+          "staff_user_id": {
+            "type": "string",
+            "title": "Staff User Id",
+            "description": "Unique user Keycloak subject ID of the staff member"
+          },
+          "task_codes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Task Codes",
+            "description": "List of delegated trial duty task codes"
+          },
+          "start_date": {
+            "type": "string",
+            "title": "Start Date",
+            "description": "Effective start date of the delegation (YYYY-MM-DD)"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Mandatory GxP justification reason for delegation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "site_id",
+          "staff_user_id",
+          "task_codes",
+          "start_date",
+          "reason_for_change"
+        ],
+        "title": "DelegationTaskRequest",
+        "description": "Payload to assign a new trial duty delegation to a site staff member."
+      },
       "FindingCreate": {
         "properties": {
           "text": {
@@ -2712,6 +3032,27 @@
           "version_index"
         ],
         "title": "RecruitmentRecordResponse"
+      },
+      "RevokeDelegationRequest": {
+        "properties": {
+          "record_id": {
+            "type": "string",
+            "title": "Record Id",
+            "description": "The unique delegation record ID to revoke"
+          },
+          "reason_for_change": {
+            "type": "string",
+            "title": "Reason For Change",
+            "description": "Mandatory justification reason for revocation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "record_id",
+          "reason_for_change"
+        ],
+        "title": "RevokeDelegationRequest",
+        "description": "Payload to revoke or end a delegated trial duty with reason for change."
       },
       "SiteMilestoneCreate": {
         "properties": {
