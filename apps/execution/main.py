@@ -65,12 +65,10 @@ from apps.execution.database.models import (
     FormSubmission,
     ImportState,
     MigrationRule,
-    SDVSignOff,
     StudyAuthoredRule,
     SubjectConsent,
     SubjectRandomization,
     TranslationJob,
-    TSDVConfig,
 )
 from apps.execution.database.models import (
     DictionaryType as DBDictionaryType,
@@ -99,6 +97,7 @@ from apps.execution.routers.eisf import router as eisf_router
 from apps.execution.routers.locks import router as locks_router
 from apps.execution.routers.offline import router as offline_router
 from apps.execution.routers.safety import router as safety_router
+from apps.execution.routers.sdv import router as sdv_router
 from apps.execution.routers.signatures import router as signatures_router
 from apps.execution.rtsm_authz import redact_response, verify_site_access
 from apps.execution.rtsm_supply import (
@@ -109,7 +108,6 @@ from apps.execution.rtsm_supply import (
 from apps.execution.subject_lifecycle import InvalidStateTransitionError
 from apps.execution.translator import process_translation
 from apps.execution.trial_lock import TrialLockManager
-from apps.execution.tsdv import evaluate_tsdv_requirement
 from apps.execution.ucum import convert_unit, get_normalized_representation
 from packages.security import (
     ROLE_AUTHORIZED_ER_PHYSICIAN,
@@ -301,6 +299,7 @@ app.include_router(anonymization_router)
 app.include_router(doa_router)
 app.include_router(offline_router)
 app.include_router(documents_router)
+app.include_router(sdv_router)
 
 
 @app.exception_handler(RequestValidationError)
@@ -677,12 +676,34 @@ class ObservationResponse(BaseModel):
     lab_indicator: Optional[str] = None
     lab_out_of_range: Optional[bool] = None
     matched_normal_bounds: Optional[str] = None
+    range_indicator: Optional[str] = None
+    is_out_of_range: Optional[bool] = None
+    reference_range_low: Optional[float] = None
+    reference_range_high: Optional[float] = None
     protocol_version_tag: Optional[str] = None
     protocol_version_index: Optional[int] = None
     range_indicator: Optional[str] = None
     is_out_of_range: Optional[bool] = None
     reference_range_low: Optional[float] = None
     reference_range_high: Optional[float] = None
+
+    @model_validator(mode="after")
+    def populate_range_fields(self) -> "ObservationResponse":
+        if self.range_indicator is None and self.lab_indicator is not None:
+            self.range_indicator = self.lab_indicator
+        if self.is_out_of_range is None and self.lab_out_of_range is not None:
+            self.is_out_of_range = self.lab_out_of_range
+        if self.reference_range_low is None or self.reference_range_high is None:
+            if self.matched_normal_bounds:
+                try:
+                    bounds = json.loads(self.matched_normal_bounds)
+                    if self.reference_range_low is None:
+                        self.reference_range_low = bounds.get("low")
+                    if self.reference_range_high is None:
+                        self.reference_range_high = bounds.get("high")
+                except Exception:
+                    pass
+        return self
 
 
 class MigrationRuleCreate(BaseModel):
@@ -1706,12 +1727,12 @@ async def create_observation(
             lab_indicator=obs_db.lab_indicator,
             lab_out_of_range=obs_db.lab_out_of_range,
             matched_normal_bounds=obs_db.matched_normal_bounds,
-            protocol_version_tag=obs_db.protocol_version_tag,
-            protocol_version_index=obs_db.protocol_version_index,
             range_indicator=obs_db.lab_indicator,
             is_out_of_range=obs_db.lab_out_of_range,
             reference_range_low=ref_low,
             reference_range_high=ref_high,
+            protocol_version_tag=obs_db.protocol_version_tag,
+            protocol_version_index=obs_db.protocol_version_index,
         )
 
 
@@ -2066,6 +2087,7 @@ def validate_lab_range_payload(data: dict) -> None:
 async def create_lab_range(
     payload: LabReferenceRangeCreate,
     roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER)),
+    _justification: None = Depends(verify_change_justification),
 ) -> LabReferenceRangeResponse:
     """Create a new lab reference range, validating all range invariants."""
     from apps.execution.database.models import LabReferenceRange
@@ -2092,31 +2114,26 @@ async def create_lab_range(
                 critical_high=data.get("critical_high"),
             )
             session.add(lab_range)
-
-        # Retrieve the latest committed state
-        async with session.begin():
-            stmt = select(LabReferenceRange).where(LabReferenceRange.id == lab_range.id)
-            res = await session.execute(stmt)
-            saved_range = res.scalar_one()
+            await session.flush()
 
         return LabReferenceRangeResponse(
-            id=saved_range.id,
-            study_id=saved_range.study_id,
-            test_code=saved_range.test_code,
-            test_name=saved_range.test_name,
-            source=saved_range.source,
-            site_id=saved_range.site_id,
-            unit=saved_range.unit,
-            normalized_unit=saved_range.normalized_unit,
-            sex_applicability=saved_range.sex_applicability,
-            age_low=saved_range.age_low,
-            age_high=saved_range.age_high,
-            low_bound=saved_range.low_bound,
-            high_bound=saved_range.high_bound,
-            critical_low=saved_range.critical_low,
-            critical_high=saved_range.critical_high,
-            version=saved_range.version,
-            is_deleted=saved_range.is_deleted,
+            id=lab_range.id,
+            study_id=lab_range.study_id,
+            test_code=lab_range.test_code,
+            test_name=lab_range.test_name,
+            source=lab_range.source,
+            site_id=lab_range.site_id,
+            unit=lab_range.unit,
+            normalized_unit=lab_range.normalized_unit,
+            sex_applicability=lab_range.sex_applicability,
+            age_low=lab_range.age_low,
+            age_high=lab_range.age_high,
+            low_bound=lab_range.low_bound,
+            high_bound=lab_range.high_bound,
+            critical_low=lab_range.critical_low,
+            critical_high=lab_range.critical_high,
+            version=lab_range.version,
+            is_deleted=lab_range.is_deleted,
         )
 
 
@@ -2128,6 +2145,7 @@ async def list_lab_ranges(
     study_id: Optional[str] = None,
     test_code: Optional[str] = None,
     source: Optional[str] = None,
+    lab_source: Optional[str] = None,
     include_deleted: bool = False,
     roles: list[str] = Depends(get_normalized_roles),
 ) -> List[LabReferenceRangeResponse]:
@@ -2145,6 +2163,8 @@ async def list_lab_ranges(
             stmt = stmt.where(LabReferenceRange.test_code == test_code)
         if source:
             stmt = stmt.where(LabReferenceRange.source == source)
+        if lab_source:
+            stmt = stmt.where(LabReferenceRange.source == lab_source)
 
         res = await session.execute(stmt)
         ranges = res.scalars().all()
@@ -2220,6 +2240,7 @@ async def update_lab_range(
     range_id: str,
     payload: LabReferenceRangeUpdate,
     roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER)),
+    _justification: None = Depends(verify_change_justification),
 ) -> LabReferenceRangeResponse:
     """Update an existing lab reference range, validating all range invariants on the merged state."""
     from apps.execution.database.models import LabReferenceRange
@@ -2270,30 +2291,26 @@ async def update_lab_range(
             r.high_bound = merged_data["high_bound"]
             r.critical_low = merged_data["critical_low"]
             r.critical_high = merged_data["critical_high"]
-
-        async with session.begin():
-            stmt = select(LabReferenceRange).where(LabReferenceRange.id == range_id)
-            res = await session.execute(stmt)
-            updated_range = res.scalar_one()
+            await session.flush()
 
         return LabReferenceRangeResponse(
-            id=updated_range.id,
-            study_id=updated_range.study_id,
-            test_code=updated_range.test_code,
-            test_name=updated_range.test_name,
-            source=updated_range.source,
-            site_id=updated_range.site_id,
-            unit=updated_range.unit,
-            normalized_unit=updated_range.normalized_unit,
-            sex_applicability=updated_range.sex_applicability,
-            age_low=updated_range.age_low,
-            age_high=updated_range.age_high,
-            low_bound=updated_range.low_bound,
-            high_bound=updated_range.high_bound,
-            critical_low=updated_range.critical_low,
-            critical_high=updated_range.critical_high,
-            version=updated_range.version,
-            is_deleted=updated_range.is_deleted,
+            id=r.id,
+            study_id=r.study_id,
+            test_code=r.test_code,
+            test_name=r.test_name,
+            source=r.source,
+            site_id=r.site_id,
+            unit=r.unit,
+            normalized_unit=r.normalized_unit,
+            sex_applicability=r.sex_applicability,
+            age_low=r.age_low,
+            age_high=r.age_high,
+            low_bound=r.low_bound,
+            high_bound=r.high_bound,
+            critical_low=r.critical_low,
+            critical_high=r.critical_high,
+            version=r.version,
+            is_deleted=r.is_deleted,
         )
 
 
@@ -2304,6 +2321,7 @@ async def update_lab_range(
 async def delete_lab_range(
     range_id: str,
     roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER)),
+    _justification: None = Depends(verify_change_justification),
 ) -> LabReferenceRangeResponse:
     """Soft-delete a lab reference range by setting is_deleted = True."""
     from apps.execution.database.models import LabReferenceRange
@@ -2319,30 +2337,26 @@ async def delete_lab_range(
                 )
 
             r.is_deleted = True
-
-        async with session.begin():
-            stmt = select(LabReferenceRange).where(LabReferenceRange.id == range_id)
-            res = await session.execute(stmt)
-            deleted_range = res.scalar_one()
+            await session.flush()
 
         return LabReferenceRangeResponse(
-            id=deleted_range.id,
-            study_id=deleted_range.study_id,
-            test_code=deleted_range.test_code,
-            test_name=deleted_range.test_name,
-            source=deleted_range.source,
-            site_id=deleted_range.site_id,
-            unit=deleted_range.unit,
-            normalized_unit=deleted_range.normalized_unit,
-            sex_applicability=deleted_range.sex_applicability,
-            age_low=deleted_range.age_low,
-            age_high=deleted_range.age_high,
-            low_bound=deleted_range.low_bound,
-            high_bound=deleted_range.high_bound,
-            critical_low=deleted_range.critical_low,
-            critical_high=deleted_range.critical_high,
-            version=deleted_range.version,
-            is_deleted=deleted_range.is_deleted,
+            id=r.id,
+            study_id=r.study_id,
+            test_code=r.test_code,
+            test_name=r.test_name,
+            source=r.source,
+            site_id=r.site_id,
+            unit=r.unit,
+            normalized_unit=r.normalized_unit,
+            sex_applicability=r.sex_applicability,
+            age_low=r.age_low,
+            age_high=r.age_high,
+            low_bound=r.low_bound,
+            high_bound=r.high_bound,
+            critical_low=r.critical_low,
+            critical_high=r.critical_high,
+            version=r.version,
+            is_deleted=r.is_deleted,
         )
 
 
@@ -3465,385 +3479,6 @@ async def open_query(
             field_id=q_db.field_id,
             query_type=q_db.query_type,
             action_required=q_db.action_required,
-        )
-
-
-# ==========================================
-# SDV Sign-off API
-# ==========================================
-
-
-class SamplingModelEnum(str, Enum):
-    SUBJECT_BASED = "SUBJECT_BASED"
-    FIELD_BASED = "FIELD_BASED"
-    COMBINED = "COMBINED"
-
-
-class TSDVConfigCreate(BaseModel):
-    study_id: str
-    sampling_model: SamplingModelEnum
-    initial_full_sdv_subject_count: int = Field(default=0, ge=0)
-    random_sample_percentage: float = Field(default=0.0, ge=0.0, le=100.0)
-    full_sdv_domains: Optional[list[str]] = None
-    safety_endpoints: Optional[list[str]] = None
-    zero_sdv_domains: Optional[list[str]] = None
-    trial_random_seed: Optional[int] = Field(default=None, ge=0)
-
-    @model_validator(mode="after")
-    def validate_seed(self) -> "TSDVConfigCreate":
-        if self.random_sample_percentage > 0.0 and self.trial_random_seed is None:
-            raise ValueError(
-                "trial_random_seed is required when random_sample_percentage is greater than 0"
-            )
-        return self
-
-
-class TSDVConfigResponse(BaseModel):
-    id: str
-    study_id: str
-    sampling_model: str
-    initial_full_sdv_subject_count: int
-    random_sample_percentage: float
-    full_sdv_domains: Optional[list[str]] = None
-    safety_endpoints: Optional[list[str]] = None
-    zero_sdv_domains: Optional[list[str]] = None
-    trial_random_seed: Optional[int] = None
-    version: int
-
-    class Config:
-        from_attributes = True
-
-
-@app.post(
-    "/api/v1/execution/tsdv/config",
-    response_model=TSDVConfigResponse,
-    status_code=201,
-)
-async def create_or_update_tsdv_config(
-    request: Request,
-    payload: TSDVConfigCreate,
-    roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER)),
-) -> TSDVConfig:
-    """Create or update Targeted SDV (TSDV) configuration for a study.
-
-    Restricts config writes to CRA/Data Manager roles with GxP change justifications.
-    """
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            await session.execute(
-                text("SELECT set_config('cadence.app_writing', 'true', true);")
-            )
-            stmt = select(TSDVConfig).where(TSDVConfig.study_id == payload.study_id)
-            res = await session.execute(stmt)
-            config = res.scalars().first()
-
-            if config:
-                config.sampling_model = payload.sampling_model.value
-                config.initial_full_sdv_subject_count = (
-                    payload.initial_full_sdv_subject_count
-                )
-                config.random_sample_percentage = payload.random_sample_percentage
-                config.full_sdv_domains = payload.full_sdv_domains
-                config.safety_endpoints = payload.safety_endpoints
-                config.zero_sdv_domains = payload.zero_sdv_domains
-                config.trial_random_seed = payload.trial_random_seed
-            else:
-                config = TSDVConfig(
-                    study_id=payload.study_id,
-                    sampling_model=payload.sampling_model.value,
-                    initial_full_sdv_subject_count=payload.initial_full_sdv_subject_count,
-                    random_sample_percentage=payload.random_sample_percentage,
-                    full_sdv_domains=payload.full_sdv_domains,
-                    safety_endpoints=payload.safety_endpoints,
-                    zero_sdv_domains=payload.zero_sdv_domains,
-                    trial_random_seed=payload.trial_random_seed,
-                )
-                session.add(config)
-
-    async with db_manager.get_session_maker()() as session:
-        stmt = select(TSDVConfig).where(TSDVConfig.study_id == payload.study_id)
-        res = await session.execute(stmt)
-        config = res.scalars().one()
-        return config
-
-
-@app.get(
-    "/api/v1/execution/tsdv/config/{study_id}",
-    response_model=TSDVConfigResponse,
-)
-async def get_tsdv_config(
-    study_id: str,
-    roles: list[str] = Depends(require_roles(ROLE_CRA, ROLE_DATA_MANAGER)),
-) -> TSDVConfig:
-    """Retrieve Targeted SDV (TSDV) configuration for a study."""
-    async with db_manager.get_session_maker()() as session:
-        stmt = select(TSDVConfig).where(TSDVConfig.study_id == study_id)
-        res = await session.execute(stmt)
-        config = res.scalars().first()
-        if not config:
-            raise HTTPException(
-                status_code=404,
-                detail=f"TSDV configuration not found for study {study_id}",
-            )
-        return config
-
-
-class TSDVEvaluationResponse(BaseModel):
-    required: bool
-    subject_selected: bool
-    field_decision: Optional[bool] = None
-    sampling_model: str
-    config_id: str
-    enrollment_index: int
-    explanation: str
-
-
-@app.get(
-    "/api/v1/execution/tsdv/required",
-    response_model=TSDVEvaluationResponse,
-)
-async def evaluate_tsdv_rule(
-    study_id: str,
-    subject_id: str,
-    domain: Optional[str] = None,
-    enrollment_index: Optional[int] = None,
-    roles: list[str] = Depends(get_normalized_roles),
-) -> TSDVEvaluationResponse:
-    """Evaluate Targeted SDV (TSDV) requirement for a given context.
-
-    Calculates deterministic sampling decisions and returns component results with an audit explanation.
-    """
-    async with db_manager.get_session_maker()() as session:
-        # 1. Resolve Study TSDV Configuration
-        stmt_cfg = select(TSDVConfig).where(TSDVConfig.study_id == study_id)
-        res_cfg = await session.execute(stmt_cfg)
-        config = res_cfg.scalars().first()
-        if not config:
-            raise HTTPException(
-                status_code=404,
-                detail=f"TSDV configuration not found for study {study_id}",
-            )
-
-        # 2. Resolve Subject and Enrollment Index
-        stmt_subj = select(ClinicalSubject).where(
-            ClinicalSubject.study_id == study_id,
-            ClinicalSubject.is_deleted.is_(False),
-        )
-        res_subj = await session.execute(stmt_subj)
-        subjects = list(res_subj.scalars().all())
-
-        # Sort alphabetically as a deterministic fallback only
-        subjects_sorted = sorted(subjects, key=lambda s: s.subject_id)
-
-        target_sub = None
-        fallback_index = None
-        for idx, sub in enumerate(subjects_sorted):
-            if sub.subject_id == subject_id or sub.id == subject_id:
-                target_sub = sub
-                fallback_index = idx
-                break
-
-        if target_sub is None:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Subject {subject_id} not found in study {study_id}",
-            )
-
-        # Resolve persisted enrollment_index, with alphabetical as fallback if not backfilled yet
-        resolved_index = (
-            target_sub.enrollment_index
-            if target_sub.enrollment_index is not None
-            else fallback_index
-        )
-
-        if enrollment_index is not None:
-            if enrollment_index != resolved_index:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Conflicting enrollment_index {enrollment_index} supplied. Persisted index is {resolved_index}.",
-                )
-        else:
-            enrollment_index = resolved_index
-
-        subject_uuid = target_sub.id
-
-        # 3. Perform Deterministic Evaluation
-        required, subject_selected, field_decision, explanation = (
-            evaluate_tsdv_requirement(
-                config=config,
-                subject_uuid=subject_uuid,
-                enrollment_index=enrollment_index,
-                domain=domain,
-            )
-        )
-
-        return TSDVEvaluationResponse(
-            required=required,
-            subject_selected=subject_selected,
-            field_decision=field_decision,
-            sampling_model=config.sampling_model,
-            config_id=config.id,
-            enrollment_index=enrollment_index,
-            explanation=explanation,
-        )
-
-
-class SDVScopeEnum(str, Enum):
-    FIELD = "FIELD"
-    PAGE = "PAGE"
-    VISIT = "VISIT"
-
-
-class SDVSignOffRequest(BaseModel):
-    """Pydantic request schema for SDV sign-off."""
-
-    scope: SDVScopeEnum
-    target_id: str
-    subject_id: str
-    study_id: str
-    site_id: Optional[str] = None
-
-
-class SDVSignOffResponse(BaseModel):
-    """Pydantic response schema for SDV sign-off."""
-
-    id: str
-    scope: str
-    target_id: str
-    subject_id: str
-    study_id: str
-    site_id: Optional[str] = None
-    is_verified: bool
-    verified_by: Optional[str] = None
-    verified_at: Optional[datetime] = None
-    dropped_reason: Optional[str] = None
-    dropped_at: Optional[datetime] = None
-
-
-@app.post("/api/v1/execution/sdv/signoff", response_model=SDVSignOffResponse)
-async def sdv_signoff(
-    payload: SDVSignOffRequest,
-    roles: list[str] = Depends(require_roles(ROLE_CRA, "monitor")),
-) -> SDVSignOffResponse:
-    """CRA/monitor-gated SDV sign-off endpoint for Field, Page, or Visit scopes."""
-    async with db_manager.get_session_maker()() as session:
-        # 1. Validate Subject exists and is consistent with Study
-        stmt_subj = select(ClinicalSubject).where(
-            ClinicalSubject.subject_id == payload.subject_id,
-            ClinicalSubject.study_id == payload.study_id,
-        )
-        res_subj = await session.execute(stmt_subj)
-        subj_db = res_subj.scalars().first()
-        if not subj_db:
-            raise HTTPException(
-                status_code=404,
-                detail="Subject not found or inconsistent study reference.",
-            )
-
-        # 2. Scope-specific validation
-        obs_db = None
-        if payload.scope == SDVScopeEnum.FIELD:
-            stmt_obs = select(ClinicalObservation).where(
-                ClinicalObservation.id == payload.target_id,
-                ClinicalObservation.subject_id == payload.subject_id,
-                ClinicalObservation.study_id == payload.study_id,
-            )
-            res_obs = await session.execute(stmt_obs)
-            obs_db = res_obs.scalars().first()
-            if not obs_db:
-                raise HTTPException(
-                    status_code=404,
-                    detail="Clinical observation not found or inconsistent target/subject/study reference.",
-                )
-        elif payload.scope == SDVScopeEnum.VISIT:
-            stmt_visit = select(ClinicalVisit).where(
-                ClinicalVisit.id == payload.target_id,
-                ClinicalVisit.subject_id == payload.subject_id,
-                ClinicalVisit.study_id == payload.study_id,
-            )
-            res_visit = await session.execute(stmt_visit)
-            visit_db = res_visit.scalars().first()
-            if not visit_db:
-                raise HTTPException(
-                    status_code=404,
-                    detail="Clinical visit not found or inconsistent target/subject/study reference.",
-                )
-        elif payload.scope == SDVScopeEnum.PAGE:
-            stmt_page_obs = select(ClinicalObservation).where(
-                ClinicalObservation.page_id == payload.target_id,
-                ClinicalObservation.subject_id == payload.subject_id,
-                ClinicalObservation.study_id == payload.study_id,
-            )
-            res_page_obs = await session.execute(stmt_page_obs)
-            if not res_page_obs.scalars().first():
-                raise HTTPException(
-                    status_code=404,
-                    detail="Page ID not found or inconsistent target/subject/study reference.",
-                )
-
-        # 3. Apply sign-off behavior
-        verifier_id = current_user_id.get() or "system"
-        verified_at = datetime.utcnow()
-
-        # Update or create the matching SDVSignOff record
-        stmt_signoff = select(SDVSignOff).where(
-            SDVSignOff.scope == payload.scope.value,
-            SDVSignOff.target_id == payload.target_id,
-            SDVSignOff.subject_id == payload.subject_id,
-            SDVSignOff.study_id == payload.study_id,
-        )
-        res_signoff = await session.execute(stmt_signoff)
-        signoff_db = res_signoff.scalars().first()
-
-        site_id = payload.site_id or (
-            subj_db.site_id if hasattr(subj_db, "site_id") else None
-        )
-
-        if signoff_db:
-            signoff_db.is_verified = True
-            signoff_db.verified_by = verifier_id
-            signoff_db.verified_at = verified_at
-            signoff_db.dropped_reason = None
-            signoff_db.dropped_at = None
-        else:
-            signoff_db = SDVSignOff(
-                scope=payload.scope.value,
-                target_id=payload.target_id,
-                subject_id=payload.subject_id,
-                study_id=payload.study_id,
-                site_id=site_id,
-                is_verified=True,
-                verified_by=verifier_id,
-                verified_at=verified_at,
-            )
-            session.add(signoff_db)
-
-        # For FIELD scope, update the ClinicalObservation too
-        if payload.scope == SDVScopeEnum.FIELD and obs_db:
-            obs_db.is_sdv_verified = True
-            obs_db.sdv_verified_by = verifier_id
-            obs_db.sdv_verified_at = verified_at
-
-        # Save changes
-        await session.commit()
-
-        # Re-query
-        stmt_re = select(SDVSignOff).where(SDVSignOff.id == signoff_db.id)
-        res_re = await session.execute(stmt_re)
-        re_signoff = res_re.scalar_one()
-
-        return SDVSignOffResponse(
-            id=re_signoff.id,
-            scope=re_signoff.scope,
-            target_id=re_signoff.target_id,
-            subject_id=re_signoff.subject_id,
-            study_id=re_signoff.study_id,
-            site_id=re_signoff.site_id,
-            is_verified=re_signoff.is_verified,
-            verified_by=re_signoff.verified_by,
-            verified_at=re_signoff.verified_at,
-            dropped_reason=re_signoff.dropped_reason,
-            dropped_at=re_signoff.dropped_at,
         )
 
 
