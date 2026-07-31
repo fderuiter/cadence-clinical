@@ -991,7 +991,9 @@ def test_terminology_cache_functionality():
     # Cache has expired HEADACHE entry.
     # We query terminology_cache singleton in apps/safety/reconciliation.py
     from apps.safety.reconciliation import terminology_cache
+
     terminology_cache.clear()
+
     # Mocking execution client resolving
     class MockFailClient:
         async def resolve_meddra_code(self, term, version, client=None):
@@ -999,14 +1001,19 @@ def test_terminology_cache_functionality():
 
     # Set expired value manually
     terminology_cache.set("HEADACHE", "26.0", data)
-    terminology_cache._cache[("HEADACHE", "26.0")] = (data, time.time() - 3600.0) # Expired 1 hour ago
+    terminology_cache._cache[("HEADACHE", "26.0")] = (
+        data,
+        time.time() - 3600.0,
+    )  # Expired 1 hour ago
 
     # Run query with a failing client to trigger stale-on-error fallback
     import asyncio
+
     async def run_fallback_test():
+        from unittest.mock import AsyncMock, MagicMock
+
         from apps.safety.execution_client import ExecutionClient
         from apps.safety.reconciliation import run_reconciliation
-        from unittest.mock import AsyncMock, MagicMock
 
         mock_session = MagicMock()
         mock_session.begin_nested = MagicMock()
@@ -1017,19 +1024,23 @@ def test_terminology_cache_functionality():
         mock_session.execute = AsyncMock(return_value=mock_result)
 
         # We need exec_client to raise exception on resolve_meddra_code
-        fail_client = MockFailClient()
+        _ = MockFailClient()
 
         # Mocking ExecutionClient.fetch_ae_data and resolve_meddra_code calls
         orig_fetch = ExecutionClient.fetch_ae_data
         orig_resolve = ExecutionClient.resolve_meddra_code
         try:
+
             async def mock_fetch(self, study_id, client=None):
                 return {"AE": [{"AETERM": "HEADACHE", "USUBJID": "SUBJ-001"}]}
+
             ExecutionClient.fetch_ae_data = mock_fetch
+
             # This is called internally in run_reconciliation:
             # We want it to raise so the fallback is triggered
             async def mock_resolve_fail(self, term, version, client=None):
                 raise RuntimeError("Service down")
+
             ExecutionClient.resolve_meddra_code = mock_resolve_fail
 
             res = await run_reconciliation(
