@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f9f9f9; }
+        .container { max-width: 600px; margin: 0 auto; background: #ffffff; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px; }
+        .header { font-size: 18px; font-weight: bold; margin-bottom: 10px; color: #5bc0de; }
+        .meta { color: #666; font-size: 12px; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .content { font-size: 14px; line-height: 1.5; color: #444; margin-bottom: 20px; }
+        .footer { font-size: 11px; color: #999; border-top: 1px solid #eee; padding-top: 10px; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">[INFO] Protocol Amendment Submitted</div>
+        <div class="meta">
+            <strong>Study ID:</strong> {{ study_id }}<br>
+            <strong>Event ID:</strong> {{ event_id }}<br>
+            <strong>Timestamp (UTC):</strong> {{ timestamp_utc }}
+        </div>
+        <div class="content">
+            <p>Dear Study Personnel,</p>
+            <p>A new protocol amendment has been submitted for this study:</p>
+            <ul>
+                <li><strong>Amendment ID/Tag:</strong> {{ payload.amendment_tag }}</li>
+                <li><strong>Version Index:</strong> {{ payload.version_index }}</li>
+                <li><strong>Reason for Change:</strong> {{ payload.change_reason }}</li>
+                <li><strong>Submitted By:</strong> {{ payload.submitted_by }}</li>
+            </ul>
+            <p>Please review the updated protocol documentation inside the Metadata Designer to ensure clinical workflow alignment.</p>
+        </div>
+        <div class="footer">
+            <p>This is an automated system-generated notification from Cadence Clinical Designer.<br>
+            All study protocol designs are versioned and signed in compliance with 21 CFR Part 11.</p>
+        </div>
+    </div>
+</body>
+</html>

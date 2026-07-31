@@ -495,6 +495,7 @@ WHITELISTED_ROUTES = {
     ("get", "/api/v1/execution/eisf/binder/{study_id}/{site_id}"),
     ("post", "/api/v1/execution/anonymization/scan-phi"),
     ("post", "/api/v1/execution/anonymization/redact-pdf"),
+    ("post", "/api/v1/execution/anonymization/scan-phi"),
     ("post", "/api/v1/execution/doa/assignment"),
     ("post", "/api/v1/execution/doa/sign-off"),
     ("get", "/api/v1/execution/doa/log/{study_id}/{site_id}"),

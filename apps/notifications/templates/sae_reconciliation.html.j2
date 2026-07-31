@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f9f9f9; }
+        .container { max-width: 600px; margin: 0 auto; background: #ffffff; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px; }
+        .header { font-size: 18px; font-weight: bold; margin-bottom: 10px; color: #d9534f; }
+        .meta { color: #666; font-size: 12px; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .content { font-size: 14px; line-height: 1.5; color: #444; margin-bottom: 20px; }
+        .footer { font-size: 11px; color: #999; border-top: 1px solid #eee; padding-top: 10px; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">[URGENT] Serious Adverse Event (SAE) Reconciliation Alert</div>
+        <div class="meta">
+            <strong>Study ID:</strong> {{ study_id }}<br>
+            <strong>Event ID:</strong> {{ event_id }}<br>
+            <strong>Timestamp (UTC):</strong> {{ timestamp_utc }}
+        </div>
+        <div class="content">
+            <p>Dear Safety Officer / Medical Monitor,</p>
+            <p>An urgent Serious Adverse Event (SAE) discrepancy has been flagged during the reconciliation pass:</p>
+            <ul>
+                <li><strong>Subject ID:</strong> {{ payload.subject_id }}</li>
+                <li><strong>Event Description:</strong> {{ payload.adverse_event_description }}</li>
+                <li><strong>Reconciliation Flag:</strong> {{ payload.flag_reason }}</li>
+                <li><strong>Discrepancy Source:</strong> {{ payload.discrepancy_source }}</li>
+            </ul>
+            <p>Please review the reconciliation logs and take appropriate actions immediately to ensure trial safety compliance.</p>
+        </div>
+        <div class="footer">
+            <p>This is an automated system-generated safety alert from Cadence Clinical Safety Portal.<br>
+            All critical clinical safety flags are documented in compliance with GxP trial protocol.</p>
+        </div>
+    </div>
+</body>
+</html>
