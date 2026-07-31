@@ -33,6 +33,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-19: Global Library Architecture, Lifecycle, and Multi-Tenant Isolation](2026-08-19-global-library-architecture-lifecycle-tenancy.md)
 
 ### 2. API Gateway, Security & Identity
+- [2026-07-31: Extend Centralized Permission Matrix for Medical Coding](2026-07-31-extend-centralized-permission-matrix-for-medical-coding.md)
 - [2026-07-31: Decoupling Cross-Service Python Imports and Security RBAC Isolation](2026-07-31-decoupling-cross-service-python-imports-and-security-rbac-isolation.md)
 - [2026-07-30: Signatures and Workflow Automation Phase 1 and 2 Primitives](2026-07-30-signatures-and-workflow-automation-phase-1-and-2-primitives.md)
 
