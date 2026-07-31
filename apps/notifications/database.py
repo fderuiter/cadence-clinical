@@ -1,3 +1,7 @@
 from packages.database import RelationalDatabaseManager
 
-db_manager = RelationalDatabaseManager(service_name="Notifications")
+class NotificationsDatabaseManager(RelationalDatabaseManager):
+    def __init__(self) -> None:
+        super().__init__(service_name="Notifications")
+
+db_manager = NotificationsDatabaseManager()
