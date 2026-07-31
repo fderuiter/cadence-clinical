@@ -24,6 +24,7 @@ from apps.execution.database.models import (  # noqa: F401
     StratumState,
     StudyAuthoredRule,
     SubjectRandomization,
+    SyncedBatchIdempotencyKey,
     TSDVConfig,
     WHODrugATC,
     WHODrugDrugATC,

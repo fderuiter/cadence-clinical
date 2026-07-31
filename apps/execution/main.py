@@ -96,6 +96,7 @@ from apps.execution.routers.auditor import router as auditor_router
 from apps.execution.routers.doa import router as doa_router
 from apps.execution.routers.eisf import router as eisf_router
 from apps.execution.routers.locks import router as locks_router
+from apps.execution.routers.offline import router as offline_router
 from apps.execution.routers.safety import router as safety_router
 from apps.execution.routers.signatures import router as signatures_router
 from apps.execution.rtsm_authz import redact_response, verify_site_access
@@ -297,6 +298,7 @@ app.include_router(safety_router)
 app.include_router(eisf_router)
 app.include_router(anonymization_router)
 app.include_router(doa_router)
+app.include_router(offline_router)
 
 
 @app.exception_handler(RequestValidationError)
