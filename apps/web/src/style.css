@@ -385,7 +385,7 @@ main {
 }
 
 .clinical-input input[type="text"]:focus {
-  outline: none;
+  outline: 2px solid transparent;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
 }
