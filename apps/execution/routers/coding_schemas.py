@@ -1,8 +1,8 @@
 from datetime import datetime
 from enum import Enum
-from typing import Any, List, Optional, Union
+from typing import Any, List, Literal, Optional, Union
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, field_validator, model_validator, ValidationInfo
 
 
 # Enums
@@ -31,6 +31,14 @@ class DictionaryImportRequest(BaseModel):
     version: str
     parse_multilingual: bool = True
 
+    @model_validator(mode="after")
+    def validate_dictionary_type(self) -> "DictionaryImportRequest":
+        if self.dictionary_type not in (DictTypeEnum.MEDDRA, DictTypeEnum.WHODRUG):
+            raise ValueError(
+                f"Unsupported dictionary type: {self.dictionary_type.value}"
+            )
+        return self
+
 
 class CoderActionRequest(BaseModel):
     action: str  # "ACCEPT" or "OVERRIDE" or "QUERY"
@@ -38,6 +46,17 @@ class CoderActionRequest(BaseModel):
     term: Optional[str] = None  # required for OVERRIDE
     suggestion_index: Optional[int] = None  # optional for ACCEPT
     reason_for_change: Optional[str] = None  # required for OVERRIDE
+
+    @field_validator("reason_for_change")
+    @classmethod
+    def validate_reason_for_change_field(cls, v: Optional[str], info: ValidationInfo) -> Optional[str]:
+        action_upper = (info.data.get("action") or "").upper()
+        if action_upper == "OVERRIDE":
+            if not v or not v.strip():
+                raise ValueError(
+                    "reason_for_change is required for OVERRIDE action and cannot be empty."
+                )
+        return v
 
     @model_validator(mode="after")
     def validate_override_fields(self) -> "CoderActionRequest":
@@ -55,8 +74,16 @@ class CoderActionRequest(BaseModel):
 
 
 class ImpactAnalysisRequest(BaseModel):
-    dictionary_type: str
+    dictionary_type: DictTypeEnum
     new_version: str
+
+    @model_validator(mode="after")
+    def validate_dictionary_type(self) -> "ImpactAnalysisRequest":
+        if self.dictionary_type not in (DictTypeEnum.MEDDRA, DictTypeEnum.WHODRUG):
+            raise ValueError(
+                f"Unsupported dictionary type: {self.dictionary_type.value}"
+            )
+        return self
 
 
 # Response Models
@@ -88,7 +115,7 @@ class MedDRAMatch(BaseModel):
 
 
 class MedDRACodeLookupResponse(BaseModel):
-    status: str
+    status: Literal["AUTO-CODED", "SUGGESTIONS", "UNCODABLE"] = "AUTO-CODED"
     matches: List[MedDRAMatch]
 
 
@@ -117,7 +144,7 @@ class WHODrugMatch(BaseModel):
 
 
 class WHODrugCodeLookupResponse(BaseModel):
-    status: str
+    status: Literal["AUTO-CODED", "SUGGESTIONS", "UNCODABLE"] = "AUTO-CODED"
     matches: List[WHODrugMatch]
 
 
@@ -134,8 +161,8 @@ class ImpactMetrics(BaseModel):
 
 
 class ImpactAnalysisResponse(BaseModel):
-    status: str
-    dictionary_type: str
+    status: Literal["success"] = "success"
+    dictionary_type: DictTypeEnum
     new_version: str
     metrics: ImpactMetrics
 
