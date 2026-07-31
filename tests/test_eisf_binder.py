@@ -22,28 +22,6 @@ from apps.gateway.main import generate_signature
 from packages.security.rbac import Principal
 
 
-@pytest_asyncio.fixture
-async def db_session() -> AsyncGenerator:
-    """Provides an isolated database session for testing EISFBinderService.
-
-    Requirements: PRD-SYS-001
-    """
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        poolclass=StaticPool,
-        connect_args={"check_same_thread": False},
-        echo=False,
-    )
-    async with engine.begin() as conn:
-        await conn.run_sync(ServiceBase.metadata.create_all)
-
-    session_maker = async_sessionmaker(engine, expire_on_commit=False)
-    async with session_maker() as session:
-        yield session
-
-    await engine.dispose()
-
-
 @pytest_asyncio.fixture(autouse=True)
 async def setup_eisf_db() -> AsyncGenerator:
     """Setup in-memory eISF database for testing FastAPI endpoints.
@@ -58,8 +36,19 @@ async def setup_eisf_db() -> AsyncGenerator:
     )
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(EisfModelBase.metadata.create_all)
+        await conn.run_sync(ServiceBase.metadata.create_all)
     yield
-    await db_manager.close()
+
+
+@pytest_asyncio.fixture
+async def db_session() -> AsyncGenerator:
+    """Provides an isolated database session for testing EISFBinderService.
+
+    Requirements: PRD-SYS-001
+    """
+    session_maker = async_sessionmaker(db_manager.engine, expire_on_commit=False)
+    async with session_maker() as session:
+        yield session
 
 
 @pytest.fixture
