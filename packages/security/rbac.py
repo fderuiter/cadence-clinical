@@ -139,6 +139,7 @@ ROLE_ALIASES = {
 ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
     ROLE_SYSADMIN: {
         "study_design": {"create", "read", "update", "delete", "approve", "reorder"},
+        "synergy_engine": {"generate", "read"},
         "global_library": {
             "create",
             "update",

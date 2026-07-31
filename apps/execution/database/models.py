@@ -926,6 +926,27 @@ class FormSubmission(AuditedModel):
     signature_manifest: Mapped[dict] = mapped_column(JSON, nullable=True)
 
 
+class SynergyJob(AuditedModel):
+    """Represents an automated eCRF & Study Spec Auto-Generator (Synergy Engine) job.
+
+    Inherits from AuditedModel to maintain an immutable audit log and GxP audit trail.
+    """
+
+    __tablename__ = "synergy_jobs"
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    specification_text: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(50), default="COMPLETED", nullable=False)
+    generated_usdm: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON-serialized
+    generated_ecrfs: Mapped[Optional[str]] = mapped_column(Text, nullable=True) # JSON-serialized
+
+    # GxP fields
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    created_by: Mapped[str] = mapped_column(String(255), default="system", nullable=False)
+    reason_for_change: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+
 class RandomizationConfig(AuditedModel):
     """Represents a trial's randomization configuration."""
 
