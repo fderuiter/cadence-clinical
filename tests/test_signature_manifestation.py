@@ -280,7 +280,9 @@ def test_part11_manifestation_mapping_and_validation(crypto_material):
     )
     assert manifest.network_ip_address == "192.168.10.12"
     assert manifest.device_user_agent == "Safari 15.0"
+    # fmt: off
     assert manifest.signature_hash_sha256 == "abcde1234567890f" * 4  # pragma: allowlist secret
+    # fmt: on
 
     # Check legacy fields have been mapped/populated properly via validator
     assert manifest.signer_id == "dr_jones"
@@ -306,7 +308,9 @@ def test_part11_manifestation_mapping_and_validation(crypto_material):
     assert legacy_manifest.signing_reason == SigningReason.REVIEW
     assert legacy_manifest.ip_address == "10.0.0.5"
     assert legacy_manifest.user_agent == "Firefox 90.0"
+    # fmt: off
     assert legacy_manifest.sha256_hash == "12345abcde" * 6 + "1234"  # pragma: allowlist secret
+    # fmt: on
 
     # Check mapped Part 11 fields
     assert legacy_manifest.signer_username == "nurse_smith"
@@ -316,7 +320,9 @@ def test_part11_manifestation_mapping_and_validation(crypto_material):
     assert legacy_manifest.signing_reason_text == "REVIEW"
     assert legacy_manifest.network_ip_address == "10.0.0.5"
     assert legacy_manifest.device_user_agent == "Firefox 90.0"
+    # fmt: off
     assert legacy_manifest.signature_hash_sha256 == "12345abcde" * 6 + "1234"  # pragma: allowlist secret
+    # fmt: on
 
 
 def test_part11_signing_verification_primitives(crypto_material, monkeypatch):
