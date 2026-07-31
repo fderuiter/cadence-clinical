@@ -311,4 +311,141 @@ describe("CrfAuthoringCanvas.vue & Drag-and-Drop Authoring Component Suite", () 
     expect(placeholder.exists()).toBe(true);
     expect(placeholder.text()).toContain("Drag and drop field widgets here");
   });
+
+  describe("Viewport-Aware Grid Inspector Suite", () => {
+    let store: any;
+    const formSchema = {
+      id: "form-test-warnings",
+      name: "Viewport Test Form",
+      sections: [
+        {
+          id: "section-warnings-1",
+          name: "Section 1",
+          isCollapsed: false,
+          items: [
+            {
+              id: "field-narrow",
+              label: "Narrow Input Field",
+              type: "text",
+              gridSpan: 2,
+              required: true,
+            },
+            {
+              id: "field-wide",
+              label: "Wide Input Field",
+              type: "text",
+              gridSpan: 12,
+              required: false,
+            }
+          ],
+        },
+      ],
+    };
+
+    beforeEach(() => {
+      store = useDesignerStore();
+      store.activeForm = JSON.parse(JSON.stringify(formSchema));
+    });
+
+    it("allows switching viewports and updates store viewport state", async () => {
+      const wrapper = mount(CrfAuthoringCanvas, {
+        props: {
+          formSchema: store.activeForm,
+          selectedFieldId: null,
+        },
+      });
+
+      expect(store.viewport).toBe("desktop");
+
+      const mobileBtn = wrapper.find(".btn-viewport-mobile");
+      expect(mobileBtn.exists()).toBe(true);
+      await mobileBtn.trigger("click");
+
+      expect(store.viewport).toBe("mobile");
+
+      const tabletBtn = wrapper.find(".btn-viewport-tablet");
+      expect(tabletBtn.exists()).toBe(true);
+      await tabletBtn.trigger("click");
+
+      expect(store.viewport).toBe("tablet");
+    });
+
+    it("displays warnings instantly when simulated column widths drop below 150px threshold", async () => {
+      const wrapper = mount(CrfAuthoringCanvas, {
+        props: {
+          formSchema: store.activeForm,
+          selectedFieldId: null,
+        },
+      });
+
+      // On desktop, width of field-narrow (span 2) is (1200 / 12) * 2 = 200px. No warning.
+      store.setViewport("desktop");
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find(".warning-count").text()).toBe("0");
+
+      // Switch to mobile. Width is (480 / 12) * 2 = 80px (< 150px). Warning should appear!
+      store.setViewport("mobile");
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find(".warning-count").text()).toBe("1");
+      expect(wrapper.find(".warnings-section").text()).toContain("Label may clip/overlap: column width is 80px (< 150px)");
+    });
+
+    it("syncs properties inspector adjustments with the designer store state", async () => {
+      const wrapper = mount(CrfAuthoringCanvas, {
+        props: {
+          formSchema: store.activeForm,
+          selectedFieldId: "field-narrow",
+        },
+      });
+
+      // Properties Inspector should display field-narrow attributes
+      const labelInput = wrapper.find("#inspect-field-label");
+      expect(labelInput.exists()).toBe(true);
+      
+      // Update the label
+      await labelInput.setValue("Updated Label Name");
+      expect(store.activeForm.sections[0].items[0].label).toBe("Updated Label Name");
+
+      // Update gridSpan
+      const spanSelect = wrapper.find("#inspect-field-span");
+      expect(spanSelect.exists()).toBe(true);
+      await spanSelect.setValue("8"); // change span from 2 to 8
+
+      expect(store.activeForm.sections[0].items[0].gridSpan).toBe(8);
+    });
+
+    it("blocks compiler translation on warnings unless explicitly dismissed", async () => {
+      const wrapper = mount(CrfAuthoringCanvas, {
+        props: {
+          formSchema: store.activeForm,
+          selectedFieldId: null,
+        },
+      });
+
+      // Enable mobile mode to trigger warnings
+      store.setViewport("mobile");
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find(".warning-count").text()).toBe("1");
+
+      const compileBtn = wrapper.find(".btn-compile");
+      expect(compileBtn.exists()).toBe(true);
+      
+      // Attempt compilation
+      await compileBtn.trigger("click");
+      expect(wrapper.find(".compilation-error").exists()).toBe(true);
+      expect(wrapper.find(".compilation-success").exists()).toBe(false);
+
+      // Dismiss layout warnings
+      const dismissCheckbox = wrapper.find("#dismiss-warnings-checkbox");
+      expect(dismissCheckbox.exists()).toBe(true);
+      await dismissCheckbox.setValue(true);
+
+      // Re-compile
+      await compileBtn.trigger("click");
+      expect(wrapper.find(".compilation-error").exists()).toBe(false);
+      expect(wrapper.find(".compilation-success").exists()).toBe(true);
+    });
+  });
 });
