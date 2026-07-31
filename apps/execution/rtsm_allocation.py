@@ -103,9 +103,8 @@ class RandomizationConfigSchema(BaseModel):
                 raise ValueError(
                     "stratification_factors must be provided and non-empty for STRATIFIED_BLOCK."
                 )
-        elif self.algorithm_type == "PERMUTED_BLOCK":
-            if self.stratification_factors:
-                self.stratification_factors = None
+        elif self.algorithm_type == "PERMUTED_BLOCK" and self.stratification_factors:
+            self.stratification_factors = None
 
         # 5. Validate minimization parameters
         if self.algorithm_type == "MINIMIZATION":
@@ -254,7 +253,7 @@ def allocate_minimization(
     """
     weights = factor_weights or {}
     arms = list(arms_ratios.keys())
-    K = len(arms)
+    k_len = len(arms)
 
     # Imbalance score for each potential arm assignment
     imbalance_scores: Dict[str, float] = {}
@@ -311,7 +310,7 @@ def allocate_minimization(
     best_arms = [arm for arm, score in imbalance_scores.items() if score == min_score]
     other_arms = [arm for arm, score in imbalance_scores.items() if score > min_score]
 
-    M = len(best_arms)
+    m_len = len(best_arms)
     num_other = len(other_arms)
 
     # Compute selection probabilities
@@ -321,10 +320,10 @@ def allocate_minimization(
     if num_other == 0:
         # All arms are tied
         for arm in arms:
-            probabilities[arm] = 1.0 / K
+            probabilities[arm] = 1.0 / k_len
     else:
         for arm in best_arms:
-            probabilities[arm] = p_preferred / M
+            probabilities[arm] = p_preferred / m_len
         for arm in other_arms:
             probabilities[arm] = (1.0 - p_preferred) / num_other
 
@@ -332,8 +331,7 @@ def allocate_minimization(
     population = list(probabilities.keys())
     weights_list = [probabilities[arm] for arm in population]
 
-    selected_arm = rng.choices(population, weights=weights_list, k=1)[0]
-    return selected_arm
+    return rng.choices(population, weights=weights_list, k=1)[0]
 
 
 class RTSMAllocator:
@@ -418,7 +416,7 @@ class RTSMAllocator:
                 "updated_block_index": updated_idx,
             }
 
-        elif self.config.algorithm_type == "MINIMIZATION":
+        if self.config.algorithm_type == "MINIMIZATION":
             if previous_allocations is None:
                 previous_allocations = []
             if subject_factors is None:
@@ -438,7 +436,4 @@ class RTSMAllocator:
                 "stratum_key": stratum_key,
             }
 
-        else:
-            raise ValueError(
-                f"Unsupported algorithm type: '{self.config.algorithm_type}'"
-            )
+        raise ValueError(f"Unsupported algorithm type: '{self.config.algorithm_type}'")

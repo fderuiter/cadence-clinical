@@ -53,11 +53,10 @@ class CoderActionRequest(BaseModel):
         cls, v: Optional[str], info: ValidationInfo
     ) -> Optional[str]:
         action_upper = (info.data.get("action") or "").upper()
-        if action_upper == "OVERRIDE":
-            if not v or not v.strip():
-                raise ValueError(
-                    "reason_for_change is required for OVERRIDE action and cannot be empty."
-                )
+        if action_upper == "OVERRIDE" and (not v or not v.strip()):
+            raise ValueError(
+                "reason_for_change is required for OVERRIDE action and cannot be empty."
+            )
         return v
 
     @model_validator(mode="after")
@@ -198,4 +197,3 @@ class ImpactAnalysisResponse(BaseModel):
     dictionary_type: DictTypeEnum
     new_version: str
     metrics: ImpactMetrics
-

@@ -105,28 +105,27 @@ async def test_lab_reference_range_audit_and_triggers():
     for LabReferenceRange adhere to 21 CFR Part 11 requirements.
     """
     range_id = None
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            await session.execute(
-                text("SELECT set_config('cadence.app_writing', 'true', 1);")
-            )
-            lab_range = LabReferenceRange(
-                study_id="STUDY-123",
-                test_code="RBC",
-                test_name="Red Blood Cell Count",
-                source="LOCAL",
-                site_id="SITE-01",
-                unit="10^12/L",
-                normalized_unit="10^12/L",
-                sex_applicability="F",
-                age_low=0.0,
-                age_high=99.0,
-                low_bound=4.0,
-                high_bound=5.2,
-            )
-            session.add(lab_range)
-            await session.flush()
-            range_id = lab_range.id
+    async with db_manager.get_session_maker()() as session, session.begin():
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', 1);")
+        )
+        lab_range = LabReferenceRange(
+            study_id="STUDY-123",
+            test_code="RBC",
+            test_name="Red Blood Cell Count",
+            source="LOCAL",
+            site_id="SITE-01",
+            unit="10^12/L",
+            normalized_unit="10^12/L",
+            sex_applicability="F",
+            age_low=0.0,
+            age_high=99.0,
+            low_bound=4.0,
+            high_bound=5.2,
+        )
+        session.add(lab_range)
+        await session.flush()
+        range_id = lab_range.id
 
     # Verify insert audit log exists
     async with db_manager.get_session_maker()() as session:
@@ -141,17 +140,16 @@ async def test_lab_reference_range_audit_and_triggers():
         assert insert_log.new_values["lab_source"] == "LOCAL"
 
     # Update range limits and verify audit tracking
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            await session.execute(
-                text("SELECT set_config('cadence.app_writing', 'true', 1);")
-            )
-            result = await session.execute(
-                select(LabReferenceRange).where(LabReferenceRange.id == range_id)
-            )
-            saved_range = result.scalar_one()
-            saved_range.low_bound = 3.8
-            saved_range.high_bound = 5.0
+    async with db_manager.get_session_maker()() as session, session.begin():
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', 1);")
+        )
+        result = await session.execute(
+            select(LabReferenceRange).where(LabReferenceRange.id == range_id)
+        )
+        saved_range = result.scalar_one()
+        saved_range.low_bound = 3.8
+        saved_range.high_bound = 5.0
 
     # Verify update audit log and incremented version
     async with db_manager.get_session_maker()() as session:
@@ -175,16 +173,15 @@ async def test_lab_reference_range_audit_and_triggers():
         assert update_log.new_values["range_low"] == 3.8
 
     # Soft-delete the reference range and verify state change and audit log action
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            await session.execute(
-                text("SELECT set_config('cadence.app_writing', 'true', 1);")
-            )
-            result = await session.execute(
-                select(LabReferenceRange).where(LabReferenceRange.id == range_id)
-            )
-            range_to_delete = result.scalar_one()
-            range_to_delete.is_deleted = True
+    async with db_manager.get_session_maker()() as session, session.begin():
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', 1);")
+        )
+        result = await session.execute(
+            select(LabReferenceRange).where(LabReferenceRange.id == range_id)
+        )
+        range_to_delete = result.scalar_one()
+        range_to_delete.is_deleted = True
 
     async with db_manager.get_session_maker()() as session:
         result = await session.execute(
@@ -206,16 +203,13 @@ async def test_lab_reference_range_audit_and_triggers():
         assert delete_log.new_values["is_deleted"] is True
 
     # Attempt to execute a hard delete and verify DB trigger-level prevention
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            with pytest.raises(
-                Exception, match="Hard deletions are strictly forbidden"
-            ):
-                await session.execute(
-                    text("DELETE FROM lab_reference_ranges WHERE id = :id;").bindparams(
-                        id=range_id
-                    )
+    async with db_manager.get_session_maker()() as session, session.begin():
+        with pytest.raises(Exception, match="Hard deletions are strictly forbidden"):
+            await session.execute(
+                text("DELETE FROM lab_reference_ranges WHERE id = :id;").bindparams(
+                    id=range_id
                 )
+            )
 
 
 @pytest.mark.asyncio
@@ -225,32 +219,31 @@ async def test_clinical_observation_extended_fields():
     Verify that ClinicalObservation allows storage, snapshots, and updates of
     source, site_id, and evaluation snapshot fields.
     """
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            await session.execute(
-                text("SELECT set_config('cadence.app_writing', 'true', 1);")
-            )
-            obs = ClinicalObservation(
-                subject_id="SUBJ-002",
-                study_id="STUDY-123",
-                domain="LB",
-                test_code="ALT",
-                test_name="Alanine Aminotransferase",
-                value=45.0,
-                unit="U/L",
-                normalized_value=45.0,
-                normalized_unit="U/L",
-                lab_source="LOCAL",
-                lab_site_id="SITE-A",
-                lab_indicator="H",
-                lab_out_of_range=True,
-                matched_normal_bounds='{"low": 10.0, "high": 40.0}',
-                range_indicator="H",
-                is_out_of_range=True,
-                reference_range_low=10.0,
-                reference_range_high=40.0,
-            )
-            session.add(obs)
+    async with db_manager.get_session_maker()() as session, session.begin():
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', 1);")
+        )
+        obs = ClinicalObservation(
+            subject_id="SUBJ-002",
+            study_id="STUDY-123",
+            domain="LB",
+            test_code="ALT",
+            test_name="Alanine Aminotransferase",
+            value=45.0,
+            unit="U/L",
+            normalized_value=45.0,
+            normalized_unit="U/L",
+            lab_source="LOCAL",
+            lab_site_id="SITE-A",
+            lab_indicator="H",
+            lab_out_of_range=True,
+            matched_normal_bounds='{"low": 10.0, "high": 40.0}',
+            range_indicator="H",
+            is_out_of_range=True,
+            reference_range_low=10.0,
+            reference_range_high=40.0,
+        )
+        session.add(obs)
 
     async with db_manager.get_session_maker()() as session:
         result = await session.execute(

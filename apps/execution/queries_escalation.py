@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import logging
 import os
 from datetime import datetime, timedelta
@@ -162,9 +163,7 @@ async def stop_background_query_escalation() -> None:
     global _escalation_task, _should_run
     _should_run = False
     if _escalation_task:
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await _escalation_task
-        except asyncio.CancelledError:
-            pass
         _escalation_task = None
     logger.info("Background clinical query escalation stopped.")

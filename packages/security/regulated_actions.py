@@ -39,8 +39,7 @@ class DetectionRule:
         path_lower = path.lower()
         if self.is_regex:
             return bool(re.search(self.path_pattern, path_lower))
-        else:
-            return self.path_pattern in path_lower
+        return self.path_pattern in path_lower
 
     def matches_body(self, body: Optional[dict]) -> bool:
         if not self.body_conditions:

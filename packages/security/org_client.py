@@ -20,24 +20,24 @@ async def resolve_personnel_assignments(keycloak_user_id: str) -> Dict[str, Any]
                 from sqlalchemy.orm import desc
 
                 db_mgr = sys.modules["apps.org.database"].db_manager
-                Personnel = sys.modules["apps.org.models"].Personnel
-                PersonnelAssignment = sys.modules["apps.org.models"].PersonnelAssignment
+                personnel_cls = sys.modules["apps.org.models"].Personnel
+                personnel_assignment_cls = sys.modules["apps.org.models"].PersonnelAssignment
 
                 session_maker = db_mgr.get_session_maker()
                 async with session_maker() as session:
                     stmt = (
-                        select(Personnel)
-                        .where(Personnel.keycloak_user_id == keycloak_user_id)
-                        .order_by(desc(Personnel.version_index))
+                        select(personnel_cls)
+                        .where(personnel_cls.keycloak_user_id == keycloak_user_id)
+                        .order_by(desc(personnel_cls.version_index))
                     )
                     person = (await session.execute(stmt)).scalars().first()
                     if person:
                         stmt_assign = (
-                            select(PersonnelAssignment)
-                            .where(PersonnelAssignment.personnel_id == person.id)
+                            select(personnel_assignment_cls)
+                            .where(personnel_assignment_cls.personnel_id == person.id)
                             .order_by(
-                                PersonnelAssignment.id,
-                                desc(PersonnelAssignment.version_index),
+                                personnel_assignment_cls.id,
+                                desc(personnel_assignment_cls.version_index),
                             )
                         )
                         all_assigns = (
@@ -86,18 +86,17 @@ async def resolve_personnel_assignments(keycloak_user_id: str) -> Dict[str, Any]
         )
         if response.status_code == 200:
             return response.json()
-        else:
-            logger.error(
-                "resolve_personnel_assignments: request to org service failed with status %s: %s",
-                response.status_code,
-                response.text,
-            )
-            return {
-                "personnel_id": "",
-                "roles": [],
-                "assigned_sites": [],
-                "assigned_studies": [],
-            }
+        logger.error(
+            "resolve_personnel_assignments: request to org service failed with status %s: %s",
+            response.status_code,
+            response.text,
+        )
+        return {
+            "personnel_id": "",
+            "roles": [],
+            "assigned_sites": [],
+            "assigned_studies": [],
+        }
     except Exception as e:
         logger.error(
             "resolve_personnel_assignments: exception during org assignments resolution: %s",

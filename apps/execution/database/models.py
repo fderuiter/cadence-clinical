@@ -211,9 +211,8 @@ class ClinicalSubject(AuditedModel):
             "COMPLETED",
             "UNBLINDED",
             "WITHDRAWN",
-        ):
-            if self.strat_factors is not None and self.strat_factors != value:
-                raise LockedFactorMutationError()
+        ) and self.strat_factors is not None and self.strat_factors != value:
+            raise LockedFactorMutationError()
         return value
 
     def randomize(

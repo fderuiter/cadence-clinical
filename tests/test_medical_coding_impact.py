@@ -36,357 +36,348 @@ async def setup_test_db():
 
 
 async def seed_test_dictionaries():
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            # Old MedDRA (25.0)
-            session.add(
-                MedDRATerm(
-                    dictionary_version="25.0",
-                    code="M1",
-                    term_name="Headache",
-                    level="LLT",
-                )
+    async with db_manager.get_session_maker()() as session, session.begin():
+        # Old MedDRA (25.0)
+        session.add(
+            MedDRATerm(
+                dictionary_version="25.0",
+                code="M1",
+                term_name="Headache",
+                level="LLT",
             )
-            session.add(
-                MedDRATerm(
-                    dictionary_version="25.0",
-                    code="M2",
-                    term_name="Nausea",
-                    level="LLT",
-                )
+        )
+        session.add(
+            MedDRATerm(
+                dictionary_version="25.0",
+                code="M2",
+                term_name="Nausea",
+                level="LLT",
             )
-            session.add(
-                MedDRATerm(
-                    dictionary_version="25.0",
-                    code="M3",
-                    term_name="Fatigue",
-                    level="LLT",
-                )
+        )
+        session.add(
+            MedDRATerm(
+                dictionary_version="25.0",
+                code="M3",
+                term_name="Fatigue",
+                level="LLT",
             )
+        )
 
-            session.add(
-                MedDRAHierarchy(
-                    dictionary_version="25.0",
-                    llt_code="M1",
-                    pt_code="M1",
-                    hlt_code="H1",
-                    hlgt_code="HG1",
-                    soc_code="S1",
-                    primary_soc_flag="Y",
-                )
+        session.add(
+            MedDRAHierarchy(
+                dictionary_version="25.0",
+                llt_code="M1",
+                pt_code="M1",
+                hlt_code="H1",
+                hlgt_code="HG1",
+                soc_code="S1",
+                primary_soc_flag="Y",
             )
-            session.add(
-                MedDRAHierarchy(
-                    dictionary_version="25.0",
-                    llt_code="M2",
-                    pt_code="M2",
-                    hlt_code="H2",
-                    hlgt_code="HG2",
-                    soc_code="S2",
-                    primary_soc_flag="Y",
-                )
+        )
+        session.add(
+            MedDRAHierarchy(
+                dictionary_version="25.0",
+                llt_code="M2",
+                pt_code="M2",
+                hlt_code="H2",
+                hlgt_code="HG2",
+                soc_code="S2",
+                primary_soc_flag="Y",
             )
-            session.add(
-                MedDRAHierarchy(
-                    dictionary_version="25.0",
-                    llt_code="M3",
-                    pt_code="M3",
-                    hlt_code="H3",
-                    hlgt_code="HG3",
-                    soc_code="S3",
-                    primary_soc_flag="Y",
-                )
+        )
+        session.add(
+            MedDRAHierarchy(
+                dictionary_version="25.0",
+                llt_code="M3",
+                pt_code="M3",
+                hlt_code="H3",
+                hlgt_code="HG3",
+                soc_code="S3",
+                primary_soc_flag="Y",
             )
+        )
 
-            # New MedDRA (26.0)
-            # M1 is unchanged (same code and same hierarchy)
-            session.add(
-                MedDRATerm(
-                    dictionary_version="26.0",
-                    code="M1",
-                    term_name="Headache",
-                    level="LLT",
-                )
+        # New MedDRA (26.0)
+        # M1 is unchanged (same code and same hierarchy)
+        session.add(
+            MedDRATerm(
+                dictionary_version="26.0",
+                code="M1",
+                term_name="Headache",
+                level="LLT",
             )
-            session.add(
-                MedDRAHierarchy(
-                    dictionary_version="26.0",
-                    llt_code="M1",
-                    pt_code="M1",
-                    hlt_code="H1",
-                    hlgt_code="HG1",
-                    soc_code="S1",
-                    primary_soc_flag="Y",
-                )
+        )
+        session.add(
+            MedDRAHierarchy(
+                dictionary_version="26.0",
+                llt_code="M1",
+                pt_code="M1",
+                hlt_code="H1",
+                hlgt_code="HG1",
+                soc_code="S1",
+                primary_soc_flag="Y",
             )
+        )
 
-            # M2 is reclassified (different hlt_code)
-            session.add(
-                MedDRATerm(
-                    dictionary_version="26.0",
-                    code="M2",
-                    term_name="Nausea",
-                    level="LLT",
-                )
+        # M2 is reclassified (different hlt_code)
+        session.add(
+            MedDRATerm(
+                dictionary_version="26.0",
+                code="M2",
+                term_name="Nausea",
+                level="LLT",
             )
-            session.add(
-                MedDRAHierarchy(
-                    dictionary_version="26.0",
-                    llt_code="M2",
-                    pt_code="M2",
-                    hlt_code="H2_NEW",
-                    hlgt_code="HG2",
-                    soc_code="S2",
-                    primary_soc_flag="Y",
-                )
+        )
+        session.add(
+            MedDRAHierarchy(
+                dictionary_version="26.0",
+                llt_code="M2",
+                pt_code="M2",
+                hlt_code="H2_NEW",
+                hlgt_code="HG2",
+                soc_code="S2",
+                primary_soc_flag="Y",
             )
+        )
 
-            # M3 is deprecated (does not exist in 26.0)
+        # M3 is deprecated (does not exist in 26.0)
 
-            # Old WHODrug (2023-03)
-            session.add(
-                WHODrugRecord(
-                    dictionary_version="2023-03",
-                    drug_code="W1",
-                    preferred_name="ASPIRIN",
-                )
+        # Old WHODrug (2023-03)
+        session.add(
+            WHODrugRecord(
+                dictionary_version="2023-03",
+                drug_code="W1",
+                preferred_name="ASPIRIN",
             )
-            session.add(
-                WHODrugATC(
-                    dictionary_version="2023-03", atc_code="A1", description="Analgesic"
-                )
+        )
+        session.add(
+            WHODrugATC(
+                dictionary_version="2023-03", atc_code="A1", description="Analgesic"
             )
-            session.add(
-                WHODrugDrugATC(
-                    dictionary_version="2023-03", drug_code="W1", atc_code="A1"
-                )
+        )
+        session.add(
+            WHODrugDrugATC(dictionary_version="2023-03", drug_code="W1", atc_code="A1")
+        )
+        session.add(
+            WHODrugIngredient(
+                dictionary_version="2023-03",
+                ingredient_code="I1",
+                ingredient_name="Aspirin Active",
             )
-            session.add(
-                WHODrugIngredient(
-                    dictionary_version="2023-03",
-                    ingredient_code="I1",
-                    ingredient_name="Aspirin Active",
-                )
+        )
+        session.add(
+            WHODrugDrugIngredient(
+                dictionary_version="2023-03", drug_code="W1", ingredient_code="I1"
             )
-            session.add(
-                WHODrugDrugIngredient(
-                    dictionary_version="2023-03", drug_code="W1", ingredient_code="I1"
-                )
-            )
+        )
 
-            session.add(
-                WHODrugRecord(
-                    dictionary_version="2023-03",
-                    drug_code="W2",
-                    preferred_name="IBUPROFEN",
-                )
+        session.add(
+            WHODrugRecord(
+                dictionary_version="2023-03",
+                drug_code="W2",
+                preferred_name="IBUPROFEN",
             )
-            session.add(
-                WHODrugATC(
-                    dictionary_version="2023-03", atc_code="A2", description="NSAID"
-                )
-            )
-            session.add(
-                WHODrugDrugATC(
-                    dictionary_version="2023-03", drug_code="W2", atc_code="A2"
-                )
-            )
+        )
+        session.add(
+            WHODrugATC(dictionary_version="2023-03", atc_code="A2", description="NSAID")
+        )
+        session.add(
+            WHODrugDrugATC(dictionary_version="2023-03", drug_code="W2", atc_code="A2")
+        )
 
-            session.add(
-                WHODrugRecord(
-                    dictionary_version="2023-03",
-                    drug_code="W3",
-                    preferred_name="PARACETAMOL",
-                )
+        session.add(
+            WHODrugRecord(
+                dictionary_version="2023-03",
+                drug_code="W3",
+                preferred_name="PARACETAMOL",
             )
+        )
 
-            # New WHODrug (2024-03)
-            # W1 is unchanged
-            session.add(
-                WHODrugRecord(
-                    dictionary_version="2024-03",
-                    drug_code="W1",
-                    preferred_name="ASPIRIN",
-                )
+        # New WHODrug (2024-03)
+        # W1 is unchanged
+        session.add(
+            WHODrugRecord(
+                dictionary_version="2024-03",
+                drug_code="W1",
+                preferred_name="ASPIRIN",
             )
-            session.add(
-                WHODrugATC(
-                    dictionary_version="2024-03", atc_code="A1", description="Analgesic"
-                )
+        )
+        session.add(
+            WHODrugATC(
+                dictionary_version="2024-03", atc_code="A1", description="Analgesic"
             )
-            session.add(
-                WHODrugDrugATC(
-                    dictionary_version="2024-03", drug_code="W1", atc_code="A1"
-                )
+        )
+        session.add(
+            WHODrugDrugATC(dictionary_version="2024-03", drug_code="W1", atc_code="A1")
+        )
+        session.add(
+            WHODrugIngredient(
+                dictionary_version="2024-03",
+                ingredient_code="I1",
+                ingredient_name="Aspirin Active",
             )
-            session.add(
-                WHODrugIngredient(
-                    dictionary_version="2024-03",
-                    ingredient_code="I1",
-                    ingredient_name="Aspirin Active",
-                )
+        )
+        session.add(
+            WHODrugDrugIngredient(
+                dictionary_version="2024-03", drug_code="W1", ingredient_code="I1"
             )
-            session.add(
-                WHODrugDrugIngredient(
-                    dictionary_version="2024-03", drug_code="W1", ingredient_code="I1"
-                )
-            )
+        )
 
-            # W2 is reclassified (different ATC code)
-            session.add(
-                WHODrugRecord(
-                    dictionary_version="2024-03",
-                    drug_code="W2",
-                    preferred_name="IBUPROFEN",
-                )
+        # W2 is reclassified (different ATC code)
+        session.add(
+            WHODrugRecord(
+                dictionary_version="2024-03",
+                drug_code="W2",
+                preferred_name="IBUPROFEN",
             )
-            session.add(
-                WHODrugATC(
-                    dictionary_version="2024-03",
-                    atc_code="A2_NEW",
-                    description="NSAID New",
-                )
+        )
+        session.add(
+            WHODrugATC(
+                dictionary_version="2024-03",
+                atc_code="A2_NEW",
+                description="NSAID New",
             )
-            session.add(
-                WHODrugDrugATC(
-                    dictionary_version="2024-03", drug_code="W2", atc_code="A2_NEW"
-                )
+        )
+        session.add(
+            WHODrugDrugATC(
+                dictionary_version="2024-03", drug_code="W2", atc_code="A2_NEW"
             )
+        )
 
-            # W3 is deprecated (does not exist in 2024-03)
+        # W3 is deprecated (does not exist in 2024-03)
 
-            # Seed clinical subject & existing assignments
-            session.add(
-                ClinicalSubject(
-                    id="SUBJ-UUID-1", subject_id="SUBJ-001", study_id="STUDY-001"
-                )
+        # Seed clinical subject & existing assignments
+        session.add(
+            ClinicalSubject(
+                id="SUBJ-UUID-1", subject_id="SUBJ-001", study_id="STUDY-001"
             )
+        )
 
-            # MedDRA Assignments (25.0)
-            session.add(
-                ClinicalCodingAssignment(
-                    id="A-M1",
-                    verbatim_text="Headache",
-                    source_field="AE.AETERM",
-                    dictionary_type="MEDDRA",
-                    dictionary_version="25.0",
-                    coded_code="M1",
-                    coded_term="Headache",
-                    status=CodingState.CODED,
-                    hierarchy={
-                        "hierarchies": [
-                            {
-                                "llt_code": "M1",
-                                "pt_code": "M1",
-                                "hlt_code": "H1",
-                                "hlgt_code": "HG1",
-                                "soc_code": "S1",
-                                "primary_soc_flag": "Y",
-                            }
-                        ]
-                    },
-                )
+        # MedDRA Assignments (25.0)
+        session.add(
+            ClinicalCodingAssignment(
+                id="A-M1",
+                verbatim_text="Headache",
+                source_field="AE.AETERM",
+                dictionary_type="MEDDRA",
+                dictionary_version="25.0",
+                coded_code="M1",
+                coded_term="Headache",
+                status=CodingState.CODED,
+                hierarchy={
+                    "hierarchies": [
+                        {
+                            "llt_code": "M1",
+                            "pt_code": "M1",
+                            "hlt_code": "H1",
+                            "hlgt_code": "HG1",
+                            "soc_code": "S1",
+                            "primary_soc_flag": "Y",
+                        }
+                    ]
+                },
             )
-            session.add(
-                ClinicalCodingAssignment(
-                    id="A-M2",
-                    verbatim_text="Nausea",
-                    source_field="AE.AETERM",
-                    dictionary_type="MEDDRA",
-                    dictionary_version="25.0",
-                    coded_code="M2",
-                    coded_term="Nausea",
-                    status=CodingState.CODED,
-                    hierarchy={
-                        "hierarchies": [
-                            {
-                                "llt_code": "M2",
-                                "pt_code": "M2",
-                                "hlt_code": "H2",
-                                "hlgt_code": "HG2",
-                                "soc_code": "S2",
-                                "primary_soc_flag": "Y",
-                            }
-                        ]
-                    },
-                )
+        )
+        session.add(
+            ClinicalCodingAssignment(
+                id="A-M2",
+                verbatim_text="Nausea",
+                source_field="AE.AETERM",
+                dictionary_type="MEDDRA",
+                dictionary_version="25.0",
+                coded_code="M2",
+                coded_term="Nausea",
+                status=CodingState.CODED,
+                hierarchy={
+                    "hierarchies": [
+                        {
+                            "llt_code": "M2",
+                            "pt_code": "M2",
+                            "hlt_code": "H2",
+                            "hlgt_code": "HG2",
+                            "soc_code": "S2",
+                            "primary_soc_flag": "Y",
+                        }
+                    ]
+                },
             )
-            session.add(
-                ClinicalCodingAssignment(
-                    id="A-M3",
-                    verbatim_text="Fatigue",
-                    source_field="AE.AETERM",
-                    dictionary_type="MEDDRA",
-                    dictionary_version="25.0",
-                    coded_code="M3",
-                    coded_term="Fatigue",
-                    status=CodingState.CODED,
-                    hierarchy={
-                        "hierarchies": [
-                            {
-                                "llt_code": "M3",
-                                "pt_code": "M3",
-                                "hlt_code": "H3",
-                                "hlgt_code": "HG3",
-                                "soc_code": "S3",
-                                "primary_soc_flag": "Y",
-                            }
-                        ]
-                    },
-                )
+        )
+        session.add(
+            ClinicalCodingAssignment(
+                id="A-M3",
+                verbatim_text="Fatigue",
+                source_field="AE.AETERM",
+                dictionary_type="MEDDRA",
+                dictionary_version="25.0",
+                coded_code="M3",
+                coded_term="Fatigue",
+                status=CodingState.CODED,
+                hierarchy={
+                    "hierarchies": [
+                        {
+                            "llt_code": "M3",
+                            "pt_code": "M3",
+                            "hlt_code": "H3",
+                            "hlgt_code": "HG3",
+                            "soc_code": "S3",
+                            "primary_soc_flag": "Y",
+                        }
+                    ]
+                },
             )
+        )
 
-            # WHODrug Assignments (2023-03)
-            session.add(
-                ClinicalCodingAssignment(
-                    id="A-W1",
-                    verbatim_text="Aspirin",
-                    source_field="CM.CMTRT",
-                    dictionary_type="WHODRUG",
-                    dictionary_version="2023-03",
-                    coded_code="W1",
-                    coded_term="ASPIRIN",
-                    status=CodingState.CODED,
-                    hierarchy={
-                        "atc_context": [{"atc_code": "A1", "description": "Analgesic"}],
-                        "ingredients": [
-                            {
-                                "ingredient_code": "I1",
-                                "ingredient_name": "Aspirin Active",
-                            }
-                        ],
-                    },
-                )
+        # WHODrug Assignments (2023-03)
+        session.add(
+            ClinicalCodingAssignment(
+                id="A-W1",
+                verbatim_text="Aspirin",
+                source_field="CM.CMTRT",
+                dictionary_type="WHODRUG",
+                dictionary_version="2023-03",
+                coded_code="W1",
+                coded_term="ASPIRIN",
+                status=CodingState.CODED,
+                hierarchy={
+                    "atc_context": [{"atc_code": "A1", "description": "Analgesic"}],
+                    "ingredients": [
+                        {
+                            "ingredient_code": "I1",
+                            "ingredient_name": "Aspirin Active",
+                        }
+                    ],
+                },
             )
-            session.add(
-                ClinicalCodingAssignment(
-                    id="A-W2",
-                    verbatim_text="Ibuprofen",
-                    source_field="CM.CMTRT",
-                    dictionary_type="WHODRUG",
-                    dictionary_version="2023-03",
-                    coded_code="W2",
-                    coded_term="IBUPROFEN",
-                    status=CodingState.CODED,
-                    hierarchy={
-                        "atc_context": [{"atc_code": "A2", "description": "NSAID"}],
-                        "ingredients": [],
-                    },
-                )
+        )
+        session.add(
+            ClinicalCodingAssignment(
+                id="A-W2",
+                verbatim_text="Ibuprofen",
+                source_field="CM.CMTRT",
+                dictionary_type="WHODRUG",
+                dictionary_version="2023-03",
+                coded_code="W2",
+                coded_term="IBUPROFEN",
+                status=CodingState.CODED,
+                hierarchy={
+                    "atc_context": [{"atc_code": "A2", "description": "NSAID"}],
+                    "ingredients": [],
+                },
             )
-            session.add(
-                ClinicalCodingAssignment(
-                    id="A-W3",
-                    verbatim_text="Paracetamol",
-                    source_field="CM.CMTRT",
-                    dictionary_type="WHODRUG",
-                    dictionary_version="2023-03",
-                    coded_code="W3",
-                    coded_term="PARACETAMOL",
-                    status=CodingState.CODED,
-                    hierarchy={"atc_context": [], "ingredients": []},
-                )
+        )
+        session.add(
+            ClinicalCodingAssignment(
+                id="A-W3",
+                verbatim_text="Paracetamol",
+                source_field="CM.CMTRT",
+                dictionary_type="WHODRUG",
+                dictionary_version="2023-03",
+                coded_code="W3",
+                coded_term="PARACETAMOL",
+                status=CodingState.CODED,
+                hierarchy={"atc_context": [], "ingredients": []},
             )
+        )
 
 
 @pytest.mark.asyncio
@@ -541,16 +532,15 @@ async def test_impact_analysis_meddra_and_whodrug_lifecycle():
         # 3. Verify Idempotency: Re-running impact analysis does not duplicate ledger events.
         # Let's revert the status and version of assignments to CODED / 25.0
         # but keep the ledger entries to simulate an interrupted or re-run process
-        async with db_manager.get_session_maker()() as session:
-            async with session.begin():
-                stmt = select(ClinicalCodingAssignment).where(
-                    ClinicalCodingAssignment.id.in_(["A-M1", "A-M2", "A-M3"])
-                )
-                res = await session.execute(stmt)
-                for a in res.scalars().all():
-                    a.status = CodingState.CODED
-                    a.dictionary_version = "25.0"
-                    session.add(a)
+        async with db_manager.get_session_maker()() as session, session.begin():
+            stmt = select(ClinicalCodingAssignment).where(
+                ClinicalCodingAssignment.id.in_(["A-M1", "A-M2", "A-M3"])
+            )
+            res = await session.execute(stmt)
+            for a in res.scalars().all():
+                a.status = CodingState.CODED
+                a.dictionary_version = "25.0"
+                session.add(a)
 
         resp_meddra_rerun = await client.post(
             "/api/v1/execution/coding/impact-analysis",

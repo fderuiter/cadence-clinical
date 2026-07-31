@@ -1,3 +1,4 @@
+import contextlib
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -60,19 +61,17 @@ async def test_run_migrations_failure():
 def test_main_cli():
     # To prevent the "coroutine never awaited" runtime warning, we consume the coroutine in the mock.
     def mock_run_impl(coro):
-        try:
+        with contextlib.suppress(Exception):
             coro.close()
-        except Exception:
-            pass
 
-    with patch(
-        "apps.execution.database.migrate.asyncio.run", side_effect=mock_run_impl
-    ) as mock_run:
-        with patch(
-            "sys.argv", ["migrate.py", "--db-url", "sqlite+aiosqlite:///:memory:"]
-        ):
-            main()
-            mock_run.assert_called_once()
+    with (
+        patch(
+            "apps.execution.database.migrate.asyncio.run", side_effect=mock_run_impl
+        ) as mock_run,
+        patch("sys.argv", ["migrate.py", "--db-url", "sqlite+aiosqlite:///:memory:"]),
+    ):
+        main()
+        mock_run.assert_called_once()
 
 
 @pytest.mark.asyncio

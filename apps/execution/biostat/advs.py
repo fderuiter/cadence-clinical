@@ -1,5 +1,6 @@
 """ADVS derivation module for SDTM VS and ADSL datasets."""
 
+import contextlib
 from typing import Any, Dict, List
 
 from apps.execution.biostat.dates import to_sas_date
@@ -67,10 +68,7 @@ def derive_advs(
 
         vstest = vs_rec.get("VSTEST") or paramcd or ""
         vsstresu = vs_rec.get("VSSTRESU") or ""
-        if vstest and vsstresu:
-            param = f"{vstest} ({vsstresu})"
-        else:
-            param = vstest
+        param = f"{vstest} ({vsstresu})" if vstest and vsstresu else vstest
         advs_rec["PARAM"] = param
 
         # 2. AVAL & AVALC
@@ -124,10 +122,8 @@ def derive_advs(
                     avisitn = v
                     break
         if avisitn is not None:
-            try:
+            with contextlib.suppress(ValueError, TypeError):
                 avisitn = float(avisitn)
-            except (ValueError, TypeError):
-                pass
         advs_rec["AVISITN"] = avisitn
 
         # Default placeholder columns for baseline/change variables
@@ -190,11 +186,15 @@ def derive_advs(
             is_post_baseline = False
             r_avisitn = r.get("AVISITN")
             r_ady = r.get("ADY")
-            if r_avisitn is not None and r_avisitn > 1:
-                is_post_baseline = True
-            elif r_ady is not None and r_ady > 0:
-                is_post_baseline = True
-            elif r_avisitn is None and r_ady is None and r is not baseline_rec:
+            if (
+                r_avisitn is not None
+                and r_avisitn > 1
+                or r_ady is not None
+                and r_ady > 0
+                or r_avisitn is None
+                and r_ady is None
+                and r is not baseline_rec
+            ):
                 is_post_baseline = True
 
             if is_post_baseline:

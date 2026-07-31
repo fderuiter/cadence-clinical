@@ -75,12 +75,11 @@ class StudyScopeChecker:
         if study_id:
             study_id = str(study_id).strip()
 
-        if study_id:
-            if not can_access_study(principal, study_id):
-                raise HTTPException(
-                    status_code=403,
-                    detail="Forbidden: Insufficient scope access for this study.",
-                )
+        if study_id and not can_access_study(principal, study_id):
+            raise HTTPException(
+                status_code=403,
+                detail="Forbidden: Insufficient scope access for this study.",
+            )
 
         return principal
 
@@ -197,43 +196,41 @@ async def create_or_update_tsdv_config(
 
     Restricts config writes to CRA/Data Manager roles with GxP change justifications.
     """
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            await session.execute(
-                text("SELECT set_config('cadence.app_writing', 'true', true);")
-            )
-            stmt = select(TSDVConfig).where(TSDVConfig.study_id == payload.study_id)
-            res = await session.execute(stmt)
-            config = res.scalars().first()
+    async with db_manager.get_session_maker()() as session, session.begin():
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', true);")
+        )
+        stmt = select(TSDVConfig).where(TSDVConfig.study_id == payload.study_id)
+        res = await session.execute(stmt)
+        config = res.scalars().first()
 
-            if config:
-                config.sampling_model = payload.sampling_model.value
-                config.initial_full_sdv_subject_count = (
-                    payload.initial_full_sdv_subject_count
-                )
-                config.random_sample_percentage = payload.random_sample_percentage
-                config.full_sdv_domains = payload.full_sdv_domains
-                config.safety_endpoints = payload.safety_endpoints
-                config.zero_sdv_domains = payload.zero_sdv_domains
-                config.trial_random_seed = payload.trial_random_seed
-            else:
-                config = TSDVConfig(
-                    study_id=payload.study_id,
-                    sampling_model=payload.sampling_model.value,
-                    initial_full_sdv_subject_count=payload.initial_full_sdv_subject_count,
-                    random_sample_percentage=payload.random_sample_percentage,
-                    full_sdv_domains=payload.full_sdv_domains,
-                    safety_endpoints=payload.safety_endpoints,
-                    zero_sdv_domains=payload.zero_sdv_domains,
-                    trial_random_seed=payload.trial_random_seed,
-                )
-                session.add(config)
+        if config:
+            config.sampling_model = payload.sampling_model.value
+            config.initial_full_sdv_subject_count = (
+                payload.initial_full_sdv_subject_count
+            )
+            config.random_sample_percentage = payload.random_sample_percentage
+            config.full_sdv_domains = payload.full_sdv_domains
+            config.safety_endpoints = payload.safety_endpoints
+            config.zero_sdv_domains = payload.zero_sdv_domains
+            config.trial_random_seed = payload.trial_random_seed
+        else:
+            config = TSDVConfig(
+                study_id=payload.study_id,
+                sampling_model=payload.sampling_model.value,
+                initial_full_sdv_subject_count=payload.initial_full_sdv_subject_count,
+                random_sample_percentage=payload.random_sample_percentage,
+                full_sdv_domains=payload.full_sdv_domains,
+                safety_endpoints=payload.safety_endpoints,
+                zero_sdv_domains=payload.zero_sdv_domains,
+                trial_random_seed=payload.trial_random_seed,
+            )
+            session.add(config)
 
     async with db_manager.get_session_maker()() as session:
         stmt = select(TSDVConfig).where(TSDVConfig.study_id == payload.study_id)
         res = await session.execute(stmt)
-        config = res.scalars().one()
-        return config
+        return res.scalars().one()
 
 
 @router.get(

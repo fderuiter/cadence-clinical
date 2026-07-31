@@ -112,7 +112,7 @@ async def render_synopsis_download(
     if fmt == "html":
         html_content = assembler.assemble_and_render_html(study=study)
         return HTMLResponse(content=html_content)
-    elif fmt == "docx":
+    if fmt == "docx":
         rendered_doc = assemble_rendered_protocol_document(study=study)
         docx_bytes = renderer.render_docx(rendered_doc)
         return Response(
@@ -122,13 +122,13 @@ async def render_synopsis_download(
                 "Content-Disposition": f"attachment; filename=synopsis_{study_id}.docx"
             },
         )
-    else:  # pdf
-        html_str = assembler.assemble_and_render_html(study=study)
-        pdf_bytes = renderer.render_pdf(html_str)
-        return Response(
-            content=pdf_bytes,
-            media_type="application/pdf",
-            headers={
-                "Content-Disposition": f"attachment; filename=synopsis_{study_id}.pdf"
-            },
-        )
+    # pdf
+    html_str = assembler.assemble_and_render_html(study=study)
+    pdf_bytes = renderer.render_pdf(html_str)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename=synopsis_{study_id}.pdf"
+        },
+    )

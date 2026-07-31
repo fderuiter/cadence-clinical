@@ -139,7 +139,7 @@ def reconcile_records(
             "status": "UPDATED_CLIENT_WINS",
         }
 
-    elif strategy_upper == "SERVER_WINS":
+    if strategy_upper == "SERVER_WINS":
         # Keep existing, construct default/fallback metadata if missing
         fallback_metadata = existing_metadata or SyncMetadata(
             timestamps={
@@ -153,7 +153,7 @@ def reconcile_records(
             "status": "IGNORED_SERVER_WINS",
         }
 
-    elif strategy_upper == "MERGE":
+    if strategy_upper == "MERGE":
         # Initialize merged data and timestamps
         merged_data = {}
         merged_timestamps: Dict[str, datetime] = {}

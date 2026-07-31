@@ -15,7 +15,7 @@ from execution.lock_models import (
 import packages  # noqa: F401
 from apps.execution.services.lock_enforcement import (
     DataLockEnforcer,
-    FormLockedException,
+    FormLockedError,
 )
 
 
@@ -39,7 +39,7 @@ def test_lock_enforcement_form_level_blocked() -> None:
 
     enforcer = DataLockEnforcer()
 
-    with pytest.raises(FormLockedException) as exc:
+    with pytest.raises(FormLockedError) as exc:
         enforcer.assert_submission_allowed(
             form_id="form_vs_01",
             field_updates={"SYSBP": 120},
@@ -70,8 +70,8 @@ def test_lock_enforcement_field_level_blocked() -> None:
 
     enforcer = DataLockEnforcer()
 
-    # Updating locked field SYSBP raises FormLockedException
-    with pytest.raises(FormLockedException) as exc:
+    # Updating locked field SYSBP raises FormLockedError
+    with pytest.raises(FormLockedError) as exc:
         enforcer.assert_submission_allowed(
             form_id="form_vs_01",
             field_updates={"SYSBP": 130, "DIABP": 80},

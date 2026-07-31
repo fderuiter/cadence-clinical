@@ -35,7 +35,7 @@ def get_global_auth_headers(
     sig = generate_signature(
         user_id, roles, timestamp, version="2", change_reason=change_reason
     )
-    headers = {
+    return {
         "X-User-Id": user_id,
         "X-User-Roles": roles,
         "X-Gateway-Timestamp": timestamp,
@@ -43,7 +43,6 @@ def get_global_auth_headers(
         "X-Signature-Version": "2",
         "X-Change-Reason": change_reason,
     }
-    return headers
 
 
 def get_site_auth_headers(
@@ -64,7 +63,7 @@ def get_site_auth_headers(
         change_reason=change_reason,
         site_id=site_id,
     )
-    headers = {
+    return {
         "X-User-Id": user_id,
         "X-User-Roles": roles,
         "X-Site-Id": site_id,
@@ -73,7 +72,6 @@ def get_site_auth_headers(
         "X-Signature-Version": "2",
         "X-Change-Reason": change_reason,
     }
-    return headers
 
 
 @pytest.mark.asyncio

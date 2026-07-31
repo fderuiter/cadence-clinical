@@ -122,7 +122,7 @@ def compile_condition_to_xpath(node: Any) -> str:
             return f"'{val}'"
         return str(val)
 
-    elif node_type == "field_ref":
+    if node_type == "field_ref":
         ref = (
             getattr(node, "field_ref", None)
             if hasattr(node, "field_ref")
@@ -140,7 +140,7 @@ def compile_condition_to_xpath(node: Any) -> str:
         sanitized = sanitize_identifier(field_id)
         return f"/{sanitized}"
 
-    elif node_type == "logical":
+    if node_type == "logical":
         operator = (
             getattr(node, "operator", None)
             if hasattr(node, "operator")
@@ -159,7 +159,7 @@ def compile_condition_to_xpath(node: Any) -> str:
         compiled_ops = [compile_condition_to_xpath(op) for op in operands]
         return f"({op_lower.join(compiled_ops)})"
 
-    elif node_type == "comparison":
+    if node_type == "comparison":
         operator = (
             getattr(node, "operator", None)
             if hasattr(node, "operator")
@@ -177,7 +177,7 @@ def compile_condition_to_xpath(node: Any) -> str:
         right = compile_condition_to_xpath(operands[1])
         return f"({left} {op_symbol} {right})"
 
-    elif node_type == "function":
+    if node_type == "function":
         operator = (
             getattr(node, "operator", None)
             if hasattr(node, "operator")
@@ -194,11 +194,11 @@ def compile_condition_to_xpath(node: Any) -> str:
             if len(operands) != 1:
                 raise ValueError(f"Function '{operator}' requires exactly 1 operand")
             return f"empty({compile_condition_to_xpath(operands[0])})"
-        elif operator == "is_not_empty":
+        if operator == "is_not_empty":
             if len(operands) != 1:
                 raise ValueError(f"Function '{operator}' requires exactly 1 operand")
             return f"not(empty({compile_condition_to_xpath(operands[0])}))"
-        elif operator == "indexed-repeat":
+        if operator == "indexed-repeat":
             if len(operands) != 3:
                 raise ValueError(f"Function '{operator}' requires exactly 3 operands")
             compiled_ops = [compile_condition_to_xpath(op) for op in operands]
@@ -399,12 +399,10 @@ async def process_translation(
                                     docs.extend(payload["study"]["documentedBy"])
                         if "protocol" in payload and isinstance(
                             payload["protocol"], dict
+                        ) and "documentedBy" in payload["protocol"] and isinstance(
+                            payload["protocol"]["documentedBy"], list
                         ):
-                            if "documentedBy" in payload["protocol"]:
-                                if isinstance(
-                                    payload["protocol"]["documentedBy"], list
-                                ):
-                                    docs.extend(payload["protocol"]["documentedBy"])
+                            docs.extend(payload["protocol"]["documentedBy"])
 
                         # Process items for templates
                         raw_items = payload.get("protocol", {}).get("items", [])
@@ -517,27 +515,7 @@ async def process_translation(
                                     nc_name = nc.get("name")
                                     # Match on ID, name, or variations
                                     if (
-                                        nc_id == orig_id
-                                        or nc_name == orig_id
-                                        or (
-                                            nc_id
-                                            and orig_id
-                                            and nc_id.lower() == orig_id.lower()
-                                        )
-                                        or (
-                                            nc_name
-                                            and orig_id
-                                            and nc_name.lower() == orig_id.lower()
-                                        )
-                                        or nc_id == f"nc_{orig_id}"
-                                        or nc_name == f"nc_{orig_id}"
-                                        or nc_id == item_id
-                                        or nc_name == item_id
-                                        or (nc_id and nc_id.lower() == item_id.lower())
-                                        or (
-                                            nc_name
-                                            and nc_name.lower() == item_id.lower()
-                                        )
+                                        nc_name in (orig_id, item_id) or nc_id in (orig_id, item_id) or nc_id and orig_id and nc_id.lower() == orig_id.lower() or nc_name and orig_id and nc_name.lower() == orig_id.lower() or nc_id == f"nc_{orig_id}" or nc_name == f"nc_{orig_id}" or nc_id and nc_id.lower() == item_id.lower() or nc_name and nc_name.lower() == item_id.lower()
                                     ):
                                         associated_ncs.append(nc)
 
@@ -554,25 +532,23 @@ async def process_translation(
                                     if (
                                         "hint" in nc_id.lower()
                                         or "hint" in nc_name.lower()
-                                    ):
-                                        if (
-                                            orig_id and orig_id.lower() in nc_id.lower()
-                                        ) or (
-                                            orig_id
-                                            and orig_id.lower() in nc_name.lower()
-                                        ):
-                                            hint_ncs.append(nc)
+                                    ) and ((
+                                        orig_id and orig_id.lower() in nc_id.lower()
+                                    ) or (
+                                        orig_id
+                                        and orig_id.lower() in nc_name.lower()
+                                    )):
+                                        hint_ncs.append(nc)
                                     if (
                                         "desc" in nc_id.lower()
                                         or "desc" in nc_name.lower()
-                                    ):
-                                        if (
-                                            orig_id and orig_id.lower() in nc_id.lower()
-                                        ) or (
-                                            orig_id
-                                            and orig_id.lower() in nc_name.lower()
-                                        ):
-                                            desc_ncs.append(nc)
+                                    ) and ((
+                                        orig_id and orig_id.lower() in nc_id.lower()
+                                    ) or (
+                                        orig_id
+                                        and orig_id.lower() in nc_name.lower()
+                                    )):
+                                        desc_ncs.append(nc)
 
                                 # Process matching associated_ncs
                                 for nc in associated_ncs:
@@ -622,9 +598,7 @@ async def process_translation(
                                             elif (
                                                 "desc" in child_name.lower()
                                                 or "desc" in child_id_str.lower()
-                                            ):
-                                                desc = val
-                                            elif not desc:
+                                            ) or not desc:
                                                 desc = val
                                         else:
                                             # Check direct NarrativeContentItem from childIds
@@ -640,9 +614,7 @@ async def process_translation(
                                                 elif (
                                                     "desc" in c_name.lower()
                                                     or "desc" in child_id.lower()
-                                                ):
-                                                    desc = c_text
-                                                elif not desc:
+                                                ) or not desc:
                                                     desc = c_text
 
                                 if not hint and hint_ncs:

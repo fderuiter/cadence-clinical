@@ -158,13 +158,12 @@ def evaluate_tsdv_requirement(
                 f"under {sampling_model} model."
             )
         return True, subject_selected, field_decision, explanation
-    else:
-        pct = getattr(config, "random_sample_percentage", 0.0) or 0.0
-        explanation = (
-            f"Not required: Subject was not selected via deterministic random sampling percentage ({pct}%) "
-            f"under {sampling_model} model."
-        )
-        return False, subject_selected, field_decision, explanation
+    pct = getattr(config, "random_sample_percentage", 0.0) or 0.0
+    explanation = (
+        f"Not required: Subject was not selected via deterministic random sampling percentage ({pct}%) "
+        f"under {sampling_model} model."
+    )
+    return False, subject_selected, field_decision, explanation
 
 
 def evaluate_bulk_tsdv(

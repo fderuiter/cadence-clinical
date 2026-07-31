@@ -10,7 +10,7 @@ import packages  # noqa: F401
 from apps.execution.main import app
 from apps.execution.services.lock_enforcement import (
     DataLockEnforcer,
-    FormLockedException,
+    FormLockedError,
 )
 from tests.test_lock_router import _make_auth_headers
 
@@ -67,8 +67,8 @@ def test_granular_locking_end_to_end_audit_flow() -> None:
             field_updates={"SYSBP": 125, "DIABP": 82},
             active_locks=active_locks,
         )
-        assert False, "Should have raised FormLockedException"
-    except FormLockedException as exc:
+        assert False, "Should have raised FormLockedError"
+    except FormLockedError as exc:
         assert "is in LOCKED state" in str(exc)
 
     # Step 4: Execute GxP Unlock Override via API endpoint

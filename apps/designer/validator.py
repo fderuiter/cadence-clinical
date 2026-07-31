@@ -627,13 +627,15 @@ async def generate_alignment_report(study_id: str) -> StudyAlignmentReport:
     for flat_k, flat_v in flat_odm.items():
         is_id_key = False
         if (
-            flat_k.endswith("OID")
-            or flat_k.endswith("@OID")
-            or flat_k.endswith(".id")
-            or flat_k.endswith("@id")
+            (
+                flat_k.endswith("OID")
+                or flat_k.endswith("@OID")
+                or flat_k.endswith(".id")
+                or flat_k.endswith("@id")
+            )
+            or "ItemDef" in flat_k
+            and (flat_k.endswith("OID") or flat_k.endswith("id"))
         ):
-            is_id_key = True
-        elif "ItemDef" in flat_k and (flat_k.endswith("OID") or flat_k.endswith("id")):
             is_id_key = True
 
         if is_id_key and flat_v:

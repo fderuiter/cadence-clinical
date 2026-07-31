@@ -7,6 +7,7 @@ strongly-typed SDTM models (DM, VS, LB, AE, CM) in packages/core-models/sdtm.
 All computations are pure and run without database I/O.
 """
 
+import contextlib
 import re
 from datetime import date, datetime
 from typing import Any, Dict, List, Optional
@@ -50,8 +51,7 @@ def to_dtc(val: Any) -> Optional[str]:
         if not val_clean:
             return None
         # Normalize slashes commonly entered in EDC to hyphens
-        val_clean = val_clean.replace("/", "-")
-        return val_clean
+        return val_clean.replace("/", "-")
     return str(val)
 
 
@@ -72,9 +72,9 @@ def get_demographics(subject: Any) -> Dict[str, Any]:
                 pass
     if isinstance(demographics, dict):
         return demographics
-    elif hasattr(demographics, "model_dump"):
+    if hasattr(demographics, "model_dump"):
         return demographics.model_dump()
-    elif hasattr(demographics, "dict"):
+    if hasattr(demographics, "dict"):
         return demographics.dict()
     return {}
 
@@ -363,10 +363,8 @@ def map_dm(
                 elif raw_race and str(raw_race).startswith("["):
                     import json as py_json
 
-                    try:
+                    with contextlib.suppress(Exception):
                         raw_race = py_json.loads(str(raw_race))
-                    except Exception:
-                        pass
         if not raw_race:
             raw_race = "OTHER"
         race_val = normalize_race(raw_race)
@@ -608,10 +606,7 @@ def map_lb(
             lbstresn = _get_val(o, "normalized_value")
             lbstresu = _get_val(o, "normalized_unit")
 
-            if lbstresn is not None:
-                lbstresc = str(lbstresn)
-            else:
-                lbstresc = lborres
+            lbstresc = str(lbstresn) if lbstresn is not None else lborres
 
             lbnrind = (
                 _get_val(o, "lab_indicator")
@@ -707,10 +702,7 @@ def map_ae(
                 group_key = f"page_{page_id}"
             else:
                 dtc = _get_obs_date(o, visits_by_id)
-                if dtc:
-                    group_key = f"date_{dtc}"
-                else:
-                    group_key = f"uniq_{id(o)}"
+                group_key = f"date_{dtc}" if dtc else f"uniq_{id(o)}"
             groups.setdefault(group_key, []).append(o)
 
         subject_events = []
@@ -924,10 +916,7 @@ def map_cm(
                 group_key = f"page_{page_id}"
             else:
                 dtc = _get_obs_date(o, visits_by_id)
-                if dtc:
-                    group_key = f"date_{dtc}"
-                else:
-                    group_key = f"uniq_{id(o)}"
+                group_key = f"date_{dtc}" if dtc else f"uniq_{id(o)}"
             groups.setdefault(group_key, []).append(o)
 
         subject_events = []
@@ -1105,21 +1094,20 @@ def map_to_sdtm(
         return map_dm(
             subjects, visits, observations, created_by, reason_for_change, **kwargs
         )
-    elif domain_upper == "VS":
+    if domain_upper == "VS":
         return map_vs(
             subjects, visits, observations, created_by, reason_for_change, **kwargs
         )
-    elif domain_upper == "LB":
+    if domain_upper == "LB":
         return map_lb(
             subjects, visits, observations, created_by, reason_for_change, **kwargs
         )
-    elif domain_upper == "AE":
+    if domain_upper == "AE":
         return map_ae(
             subjects, visits, observations, created_by, reason_for_change, **kwargs
         )
-    elif domain_upper == "CM":
+    if domain_upper == "CM":
         return map_cm(
             subjects, visits, observations, created_by, reason_for_change, **kwargs
         )
-    else:
-        raise ValueError(f"SDTM mapping domain '{domain}' is not supported.")
+    raise ValueError(f"SDTM mapping domain '{domain}' is not supported.")

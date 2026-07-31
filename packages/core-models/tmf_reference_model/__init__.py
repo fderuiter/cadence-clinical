@@ -585,12 +585,11 @@ def resolve_artifact(
             raise ValueError(
                 f"Unknown artifact with name '{name}' in version '{version}'."
             )
-        elif len(matches) > 1:
+        if len(matches) > 1:
             raise ValueError(
                 f"Ambiguous artifact input for name '{name}' in version '{version}': multiple matches found."
             )
-        else:
-            artifact_by_name = matches[0]
+        artifact_by_name = matches[0]
 
     # Resolve final artifact and check for mismatches
     if artifact_by_code and artifact_by_name:

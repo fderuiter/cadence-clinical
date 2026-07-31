@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import datetime as dt
 import functools
 import re
@@ -287,13 +288,12 @@ async def assert_library_object_mutable(
     If it is in use, raises LibraryObjectInUseError.
     """
     is_mock = driver_or_tx is None
-    if not is_mock:
-        if (
-            type(driver_or_tx).__name__ in ("MagicMock", "AsyncMock")
-            or hasattr(driver_or_tx, "assert_called")
-            or hasattr(driver_or_tx, "called")
-        ):
-            is_mock = True
+    if not is_mock and (
+        type(driver_or_tx).__name__ in ("MagicMock", "AsyncMock")
+        or hasattr(driver_or_tx, "assert_called")
+        or hasattr(driver_or_tx, "called")
+    ):
+        is_mock = True
 
     if is_mock:
         from apps.designer.db import MOCK_STUDIES, MOCK_STUDY_VERSIONS
@@ -467,10 +467,8 @@ def deserialize_library_props(props: Dict[str, Any]) -> Dict[str, Any]:
 
     new_props = dict(props)
     if "payload_json" in new_props:
-        try:
+        with contextlib.suppress(Exception):
             new_props["payload"] = json.loads(new_props["payload_json"])
-        except Exception:
-            pass
     return new_props
 
 
@@ -514,12 +512,11 @@ async def create_library_object_version(
             new_ver_dict["version"] = new_ver_num
             existing_versions.append(new_ver_dict)
             return deserialize_library_props(copy.deepcopy(new_ver_dict))
-        else:
-            new_ver_dict = copy.deepcopy(serialized_properties)
-            new_ver_dict["id"] = object_id
-            new_ver_dict["version"] = 1
-            MOCK_LIBRARY_OBJECTS[object_id] = [new_ver_dict]
-            return deserialize_library_props(copy.deepcopy(new_ver_dict))
+        new_ver_dict = copy.deepcopy(serialized_properties)
+        new_ver_dict["id"] = object_id
+        new_ver_dict["version"] = 1
+        MOCK_LIBRARY_OBJECTS[object_id] = [new_ver_dict]
+        return deserialize_library_props(copy.deepcopy(new_ver_dict))
 
     query = """
     MATCH (old:LibraryObject {id: $object_id})

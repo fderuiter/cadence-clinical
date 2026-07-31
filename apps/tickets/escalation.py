@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import logging
 import os
 import sys
@@ -67,8 +68,7 @@ async def dispatch_escalation_notification(
 
         from apps.tickets.notifications_client import publish_notification
 
-        success = await publish_notification(payload)
-        return success
+        return await publish_notification(payload)
     except Exception as e:
         logger.error(
             "Exception in dispatch_escalation_notification for ticket %s: %s",
@@ -293,9 +293,7 @@ async def stop_background_ticket_escalation() -> None:
     global _escalation_task, _should_run
     _should_run = False
     if _escalation_task:
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await _escalation_task
-        except asyncio.CancelledError:
-            pass
         _escalation_task = None
     logger.info("Background ticket escalation worker stopped.")

@@ -54,79 +54,74 @@ async def setup_db() -> AsyncGenerator[None, None]:
 async def test_meddra_term_unique_constraint() -> None:
     """Verify that unique constraints prevent duplicate terminology records for identical version, code, and level."""
     # First insert
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            term1 = MedDRATerm(
-                dictionary_version="26.0",
-                code="10019211",
-                term_name="Headache",
-                level="LLT",
-            )
-            session.add(term1)
+    async with db_manager.get_session_maker()() as session, session.begin():
+        term1 = MedDRATerm(
+            dictionary_version="26.0",
+            code="10019211",
+            term_name="Headache",
+            level="LLT",
+        )
+        session.add(term1)
 
     # Second insert with identical version, code, and level should fail
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            term2 = MedDRATerm(
-                dictionary_version="26.0",
-                code="10019211",
-                term_name="Cephalea",
-                level="LLT",
-            )
-            session.add(term2)
-            with pytest.raises(IntegrityError):
-                await session.commit()
+    async with db_manager.get_session_maker()() as session, session.begin():
+        term2 = MedDRATerm(
+            dictionary_version="26.0",
+            code="10019211",
+            term_name="Cephalea",
+            level="LLT",
+        )
+        session.add(term2)
+        with pytest.raises(IntegrityError):
+            await session.commit()
 
 
 @pytest.mark.asyncio
 async def test_whodrug_record_unique_constraint() -> None:
     """Verify that unique constraints prevent duplicate WHODrug record inserts for identical version and drug_code."""
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            drug1 = WHODrugRecord(
-                dictionary_version="2024-03",
-                drug_code="00010101001",
-                preferred_name="ASPIRIN",
-                drug_name="ASPIRIN TABLET",
-            )
-            session.add(drug1)
+    async with db_manager.get_session_maker()() as session, session.begin():
+        drug1 = WHODrugRecord(
+            dictionary_version="2024-03",
+            drug_code="00010101001",
+            preferred_name="ASPIRIN",
+            drug_name="ASPIRIN TABLET",
+        )
+        session.add(drug1)
 
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            drug2 = WHODrugRecord(
-                dictionary_version="2024-03",
-                drug_code="00010101001",
-                preferred_name="ASPIRIN PAIN RELIEF",
-                drug_name="ASPIRIN FORTE",
-            )
-            session.add(drug2)
-            with pytest.raises(IntegrityError):
-                await session.commit()
+    async with db_manager.get_session_maker()() as session, session.begin():
+        drug2 = WHODrugRecord(
+            dictionary_version="2024-03",
+            drug_code="00010101001",
+            preferred_name="ASPIRIN PAIN RELIEF",
+            drug_name="ASPIRIN FORTE",
+        )
+        session.add(drug2)
+        with pytest.raises(IntegrityError):
+            await session.commit()
 
 
 @pytest.mark.asyncio
 async def test_lookup_and_indexes() -> None:
     """Assert that lookup-oriented index queries function correctly on terminology tables."""
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            term1 = MedDRATerm(
-                dictionary_version="26.0",
-                code="10019205",
-                term_name="Nervous system disorders",
-                level="SOC",
-            )
-            session.add(term1)
+    async with db_manager.get_session_maker()() as session, session.begin():
+        term1 = MedDRATerm(
+            dictionary_version="26.0",
+            code="10019205",
+            term_name="Nervous system disorders",
+            level="SOC",
+        )
+        session.add(term1)
 
-            hierarchy1 = MedDRAHierarchy(
-                dictionary_version="26.0",
-                llt_code="10019211",
-                pt_code="10019211",
-                hlt_code="10019231",
-                hlgt_code="10029214",
-                soc_code="10029205",
-                primary_soc_flag="Y",
-            )
-            session.add(hierarchy1)
+        hierarchy1 = MedDRAHierarchy(
+            dictionary_version="26.0",
+            llt_code="10019211",
+            pt_code="10019211",
+            hlt_code="10019231",
+            hlgt_code="10029214",
+            soc_code="10029205",
+            primary_soc_flag="Y",
+        )
+        session.add(hierarchy1)
 
     async with db_manager.get_session_maker()() as session:
         # Test term query
@@ -155,63 +150,52 @@ async def test_lookup_and_indexes() -> None:
 async def test_audit_trigger_logging_on_coding_workflow() -> None:
     """Verify that mutations on clinical coding models write audit trail records correctly."""
     # 1. INSERT audit log test
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            assignment = ClinicalCodingAssignment(
-                verbatim_text="headache symptom",
-                source_field="AE.AETERM",
-                observation_id="obs_123",
-                dictionary_type="MEDDRA",
-                dictionary_version="26.0",
-                coded_code="10019211",
-                coded_term="Headache",
-                status="CODED",
-            )
-            session.add(assignment)
+    async with db_manager.get_session_maker()() as session, session.begin():
+        assignment = ClinicalCodingAssignment(
+            verbatim_text="headache symptom",
+            source_field="AE.AETERM",
+            observation_id="obs_123",
+            dictionary_type="MEDDRA",
+            dictionary_version="26.0",
+            coded_code="10019211",
+            coded_term="Headache",
+            status="CODED",
+        )
+        session.add(assignment)
 
     # Verify INSERT audit log exists
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            res = await session.execute(
-                select(AuditLog).where(
-                    AuditLog.table_name == "clinical_coding_assignments"
-                )
-            )
-            logs = res.scalars().all()
-            insert_logs = [log for log in logs if log.action == "INSERT"]
-            assert len(insert_logs) >= 1
-            assert any(
-                lg.new_values["verbatim_text"] == "headache symptom"
-                for lg in insert_logs
-            )
-            assert any(lg.new_values["coded_code"] == "10019211" for lg in insert_logs)
+    async with db_manager.get_session_maker()() as session, session.begin():
+        res = await session.execute(
+            select(AuditLog).where(AuditLog.table_name == "clinical_coding_assignments")
+        )
+        logs = res.scalars().all()
+        insert_logs = [log for log in logs if log.action == "INSERT"]
+        assert len(insert_logs) >= 1
+        assert any(
+            lg.new_values["verbatim_text"] == "headache symptom" for lg in insert_logs
+        )
+        assert any(lg.new_values["coded_code"] == "10019211" for lg in insert_logs)
 
     # 2. UPDATE audit log test
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            # Query and update status
-            stmt = select(ClinicalCodingAssignment).where(
-                ClinicalCodingAssignment.observation_id == "obs_123"
-            )
-            res = await session.execute(stmt)
-            obj = res.scalar_one()
-            obj.status = "RECODING_REQUIRED"
+    async with db_manager.get_session_maker()() as session, session.begin():
+        # Query and update status
+        stmt = select(ClinicalCodingAssignment).where(
+            ClinicalCodingAssignment.observation_id == "obs_123"
+        )
+        res = await session.execute(stmt)
+        obj = res.scalar_one()
+        obj.status = "RECODING_REQUIRED"
 
     # Verify UPDATE audit log is recorded
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            res = await session.execute(
-                select(AuditLog).where(
-                    AuditLog.table_name == "clinical_coding_assignments"
-                )
-            )
-            logs = res.scalars().all()
-            update_logs = [log for log in logs if log.action == "UPDATE"]
-            assert len(update_logs) >= 1
-            assert any(lg.old_values["status"] == "CODED" for lg in update_logs)
-            assert any(
-                lg.new_values["status"] == "RECODING_REQUIRED" for lg in update_logs
-            )
+    async with db_manager.get_session_maker()() as session, session.begin():
+        res = await session.execute(
+            select(AuditLog).where(AuditLog.table_name == "clinical_coding_assignments")
+        )
+        logs = res.scalars().all()
+        update_logs = [log for log in logs if log.action == "UPDATE"]
+        assert len(update_logs) >= 1
+        assert any(lg.old_values["status"] == "CODED" for lg in update_logs)
+        assert any(lg.new_values["status"] == "RECODING_REQUIRED" for lg in update_logs)
 
     # 3. Prevent hard delete, but allow soft delete
     async with db_manager.get_session_maker()() as session:
@@ -227,73 +211,66 @@ async def test_audit_trigger_logging_on_coding_workflow() -> None:
                 )
 
     # Soft delete instead
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            stmt = select(ClinicalCodingAssignment).where(
-                ClinicalCodingAssignment.observation_id == "obs_123"
-            )
-            res = await session.execute(stmt)
-            obj = res.scalar_one()
-            obj.is_deleted = True
+    async with db_manager.get_session_maker()() as session, session.begin():
+        stmt = select(ClinicalCodingAssignment).where(
+            ClinicalCodingAssignment.observation_id == "obs_123"
+        )
+        res = await session.execute(stmt)
+        obj = res.scalar_one()
+        obj.is_deleted = True
 
     # Verify soft delete maps to 'DELETE' action in AuditLog
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            res = await session.execute(
-                select(AuditLog).where(
-                    AuditLog.table_name == "clinical_coding_assignments"
-                )
-            )
-            logs = res.scalars().all()
-            delete_logs = [log for log in logs if log.action == "DELETE"]
-            assert len(delete_logs) >= 1
-            assert any(lg.old_values["is_deleted"] == 0 for lg in delete_logs)
-            assert any(lg.new_values["is_deleted"] == 1 for lg in delete_logs)
+    async with db_manager.get_session_maker()() as session, session.begin():
+        res = await session.execute(
+            select(AuditLog).where(AuditLog.table_name == "clinical_coding_assignments")
+        )
+        logs = res.scalars().all()
+        delete_logs = [log for log in logs if log.action == "DELETE"]
+        assert len(delete_logs) >= 1
+        assert any(lg.old_values["is_deleted"] == 0 for lg in delete_logs)
+        assert any(lg.new_values["is_deleted"] == 1 for lg in delete_logs)
 
 
 @pytest.mark.asyncio
 async def test_dictionary_import_job_lifecycle() -> None:
     """Verify that import job lifecycle can be persisted, tracked, and audited."""
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            job = DictionaryImportJob(
-                dictionary_type="WHODRUG",
-                dictionary_version="2024-03",
-                status="PENDING",
-            )
-            session.add(job)
+    async with db_manager.get_session_maker()() as session, session.begin():
+        job = DictionaryImportJob(
+            dictionary_type="WHODRUG",
+            dictionary_version="2024-03",
+            status="PENDING",
+        )
+        session.add(job)
 
     # Update job state
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            stmt = select(DictionaryImportJob).where(
-                DictionaryImportJob.dictionary_version == "2024-03"
-            )
-            res = await session.execute(stmt)
-            job_obj = res.scalar_one()
-            job_obj.status = "COMPLETED"
-            job_obj.progress_percentage = 100
-            job_obj.records_imported = 45000
+    async with db_manager.get_session_maker()() as session, session.begin():
+        stmt = select(DictionaryImportJob).where(
+            DictionaryImportJob.dictionary_version == "2024-03"
+        )
+        res = await session.execute(stmt)
+        job_obj = res.scalar_one()
+        job_obj.status = "COMPLETED"
+        job_obj.progress_percentage = 100
+        job_obj.records_imported = 45000
 
     # Assert persistence and audit capture
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            stmt = select(DictionaryImportJob).where(
-                DictionaryImportJob.dictionary_version == "2024-03"
-            )
-            res = await session.execute(stmt)
-            job_obj = res.scalar_one()
-            assert job_obj.status == "COMPLETED"
-            assert job_obj.records_imported == 45000
+    async with db_manager.get_session_maker()() as session, session.begin():
+        stmt = select(DictionaryImportJob).where(
+            DictionaryImportJob.dictionary_version == "2024-03"
+        )
+        res = await session.execute(stmt)
+        job_obj = res.scalar_one()
+        assert job_obj.status == "COMPLETED"
+        assert job_obj.records_imported == 45000
 
-            res_logs = await session.execute(
-                select(AuditLog).where(AuditLog.table_name == "dictionary_import_jobs")
-            )
-            logs = res_logs.scalars().all()
-            assert len(logs) > 0
-            # Ensure audit is tracking changes on dictionary_import_jobs
-            assert any(lg.action == "INSERT" for lg in logs)
-            assert any(lg.action == "UPDATE" for lg in logs)
+        res_logs = await session.execute(
+            select(AuditLog).where(AuditLog.table_name == "dictionary_import_jobs")
+        )
+        logs = res_logs.scalars().all()
+        assert len(logs) > 0
+        # Ensure audit is tracking changes on dictionary_import_jobs
+        assert any(lg.action == "INSERT" for lg in logs)
+        assert any(lg.action == "UPDATE" for lg in logs)
 
 
 # ==================================================
@@ -311,7 +288,7 @@ def get_import_auth_headers(
     sig = generate_signature(
         user_id, roles, timestamp, version="2", change_reason=change_reason
     )
-    headers = {
+    return {
         "X-User-Id": user_id,
         "X-User-Roles": roles,
         "X-Gateway-Timestamp": timestamp,
@@ -319,7 +296,6 @@ def get_import_auth_headers(
         "X-Signature-Version": "2",
         "X-Change-Reason": change_reason,
     }
-    return headers
 
 
 @pytest.mark.asyncio
@@ -368,7 +344,7 @@ async def test_meddra_import_happy_path() -> None:
                 assert status_info["records_imported"] > 0
                 assert status_info["errors_encountered"] == 0
                 break
-            elif status_info["status"] == "FAILED":
+            if status_info["status"] == "FAILED":
                 pytest.fail(f"Job failed unexpectedly: {status_info}")
             await asyncio.sleep(0.1)
 
@@ -429,7 +405,7 @@ async def test_whodrug_import_happy_path() -> None:
                 assert status_info["records_imported"] == 2
                 assert status_info["errors_encountered"] == 0
                 break
-            elif status_info["status"] == "FAILED":
+            if status_info["status"] == "FAILED":
                 pytest.fail(f"Job failed unexpectedly: {status_info}")
             await asyncio.sleep(0.1)
 
@@ -556,7 +532,7 @@ async def test_import_failure_rollback_and_failed_state() -> None:
                 assert status_info["records_imported"] == 0
                 assert status_info["errors_encountered"] == 1
                 break
-            elif status_info["status"] == "COMPLETED":
+            if status_info["status"] == "COMPLETED":
                 pytest.fail("Job completed but was expected to fail.")
             await asyncio.sleep(0.1)
 
@@ -577,27 +553,26 @@ async def test_meddra_lookup_endpoint_happy_path() -> None:
     import httpx
 
     # Seed some MedDRA data first
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            session.add(
-                MedDRATerm(
-                    dictionary_version="26.0",
-                    code="10019211",
-                    term_name="Headache",
-                    level="LLT",
-                )
+    async with db_manager.get_session_maker()() as session, session.begin():
+        session.add(
+            MedDRATerm(
+                dictionary_version="26.0",
+                code="10019211",
+                term_name="Headache",
+                level="LLT",
             )
-            session.add(
-                MedDRAHierarchy(
-                    dictionary_version="26.0",
-                    llt_code="10019211",
-                    pt_code="10019211",
-                    hlt_code="10019231",
-                    hlgt_code="10029214",
-                    soc_code="10029205",
-                    primary_soc_flag="Y",
-                )
+        )
+        session.add(
+            MedDRAHierarchy(
+                dictionary_version="26.0",
+                llt_code="10019211",
+                pt_code="10019211",
+                hlt_code="10019231",
+                hlgt_code="10029214",
+                soc_code="10029205",
+                primary_soc_flag="Y",
             )
+        )
 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=exec_app), base_url="http://test"
@@ -636,44 +611,43 @@ async def test_whodrug_lookup_endpoint_happy_path() -> None:
     )
 
     # Seed WHODrug data
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            session.add(
-                WHODrugRecord(
-                    dictionary_version="2024-03",
-                    drug_code="00010101001",
-                    preferred_name="ASPIRIN",
-                    drug_name="ASPIRIN TABLET",
-                )
+    async with db_manager.get_session_maker()() as session, session.begin():
+        session.add(
+            WHODrugRecord(
+                dictionary_version="2024-03",
+                drug_code="00010101001",
+                preferred_name="ASPIRIN",
+                drug_name="ASPIRIN TABLET",
             )
-            session.add(
-                WHODrugATC(
-                    dictionary_version="2024-03",
-                    atc_code="N02BA01",
-                    description="acetylsalicylic acid",
-                )
+        )
+        session.add(
+            WHODrugATC(
+                dictionary_version="2024-03",
+                atc_code="N02BA01",
+                description="acetylsalicylic acid",
             )
-            session.add(
-                WHODrugDrugATC(
-                    dictionary_version="2024-03",
-                    drug_code="00010101001",
-                    atc_code="N02BA01",
-                )
+        )
+        session.add(
+            WHODrugDrugATC(
+                dictionary_version="2024-03",
+                drug_code="00010101001",
+                atc_code="N02BA01",
             )
-            session.add(
-                WHODrugIngredient(
-                    dictionary_version="2024-03",
-                    ingredient_code="0000000001",
-                    ingredient_name="ACETYLSALICYLIC ACID",
-                )
+        )
+        session.add(
+            WHODrugIngredient(
+                dictionary_version="2024-03",
+                ingredient_code="0000000001",
+                ingredient_name="ACETYLSALICYLIC ACID",
             )
-            session.add(
-                WHODrugDrugIngredient(
-                    dictionary_version="2024-03",
-                    drug_code="00010101001",
-                    ingredient_code="0000000001",
-                )
+        )
+        session.add(
+            WHODrugDrugIngredient(
+                dictionary_version="2024-03",
+                drug_code="00010101001",
+                ingredient_code="0000000001",
             )
+        )
 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=exec_app), base_url="http://test"
