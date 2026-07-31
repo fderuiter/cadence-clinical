@@ -2527,9 +2527,9 @@ async def process_visit_sync(
     import importlib
 
     _interop_sync = importlib.import_module("apps.interop.sync_engine")
-    SignatureValidationError = _interop_sync.SignatureValidationError
-    SyncMetadata = _interop_sync.SyncMetadata
-    SyncRecord = _interop_sync.SyncRecord
+    signature_validation_error = _interop_sync.SignatureValidationError
+    sync_metadata = _interop_sync.SyncMetadata
+    sync_record = _interop_sync.SyncRecord
     reconcile_records = _interop_sync.reconcile_records
     verify_record_signature = _interop_sync.verify_record_signature
 
@@ -2545,7 +2545,7 @@ async def process_visit_sync(
         else:
             timestamps[k] = payload.device_timestamp
 
-    metadata = SyncMetadata(
+    metadata = sync_metadata(
         timestamps=timestamps,
         modified_by=payload.offline_sync_markers.client_id,
         signature=payload.offline_sync_markers.signature,
@@ -2555,7 +2555,7 @@ async def process_visit_sync(
     site_id = visit.site_id
     dedup_key = f"{study_id}:{site_id}:{payload.visit_id}"
 
-    incoming_record = SyncRecord(
+    incoming_record = sync_record(
         deduplication_key=dedup_key,
         data={
             "actual_date": payload.actual_date.isoformat()
@@ -2574,11 +2574,11 @@ async def process_visit_sync(
     if payload.offline_sync_markers.signature is not None:
         try:
             if not verify_record_signature(incoming_record, secret_bytes):
-                raise SignatureValidationError(
+                raise signature_validation_error(
                     "Invalid signature on the incoming record."
                 )
             signature_status = "VALID"
-        except SignatureValidationError as e:
+        except signature_validation_error as e:
             signature_status = "FAILED"
             signature_detail = str(e)
             raise HTTPException(status_code=400, detail=str(e))
@@ -2598,7 +2598,7 @@ async def process_visit_sync(
             else:
                 existing_timestamps[k] = visit.actual_date or visit.created_at
 
-        existing_metadata = SyncMetadata(
+        existing_metadata = sync_metadata(
             timestamps=existing_timestamps,
             modified_by=existing_markers.get("client_id", "server"),
             signature=existing_markers.get("signature"),
@@ -2624,7 +2624,7 @@ async def process_visit_sync(
     )
 
     status = res["status"]
-    reconciled_metadata: SyncMetadata = res["metadata"]
+    reconciled_metadata: sync_metadata = res["metadata"]
 
     markers_dict = payload.offline_sync_markers.model_dump(mode="json")
     markers_dict["timestamps"] = {

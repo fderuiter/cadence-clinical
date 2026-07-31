@@ -165,7 +165,7 @@ def _extract_dataset_records(
         if name.upper() == dataset_name.upper():
             if hasattr(val, "items") and hasattr(val, "itemData"):
                 return _to_dict_list(val)
-            elif isinstance(val, dict):
+            if isinstance(val, dict):
                 items = val.get("items") or []
                 item_data = val.get("itemData") or []
                 var_names = [
@@ -404,8 +404,7 @@ def validate_dataset_json(
                     dict(r) if isinstance(r, dict) else getattr(r, "__dict__", {})
                     for r in ext_val
                 ]
-            else:
-                return _extract_dataset_records(ext_val, name_upper)
+            return _extract_dataset_records(ext_val, name_upper)
         return None
 
     adsl_records = get_dataset_records("ADSL")

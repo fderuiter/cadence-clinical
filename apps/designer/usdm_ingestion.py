@@ -52,8 +52,7 @@ def safe_parse_payload(raw_text: str) -> Tuple[Dict[str, Any], str]:
             parsed = json.loads(stripped)
             if isinstance(parsed, dict):
                 return parsed, "JSON"
-            else:
-                raise ValueError("JSON payload must be a dictionary.")
+            raise ValueError("JSON payload must be a dictionary.")
         except json.JSONDecodeError:
             # Let's fall back to YAML or raise
             pass
@@ -80,10 +79,9 @@ def resolve_usdm_version(
         if override in ("v2", "v3"):
             evidence.append(f"Explicit version override provided: {override}")
             return override, evidence
-        else:
-            evidence.append(
-                f"Ignored invalid override '{override}'. Falling back to structural rules."
-            )
+        evidence.append(
+            f"Ignored invalid override '{override}'. Falling back to structural rules."
+        )
 
     if "studyVersions" in payload:
         evidence.append(
@@ -96,7 +94,7 @@ def resolve_usdm_version(
         return "v3", evidence
 
     # Check deeper for specific v2/v3 structures
-    for key in payload.keys():
+    for key in payload:
         if "version" in key.lower():
             evidence.append(
                 f"Detected key '{key}' in root, treating as USDM v3 fallback."
@@ -459,7 +457,7 @@ def validate_usdm_payload(
     # 6. Extensible custom elements warning
     # Warn when payload contains non-standard XML/JSON tags that do not map to USDM schema
     known_study_fields = set(usdm_model.Study.model_fields.keys())
-    for key in payload.keys():
+    for key in payload:
         # Treat studyVersions as a known normalized key, ignore it
         if key == "studyVersions":
             continue

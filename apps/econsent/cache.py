@@ -68,7 +68,7 @@ class ApprovedTranslationCache:
 
     def invalidate_template(self, template_id: str) -> None:
         with self._lock:
-            keys_to_del = [k for k in self._cache.keys() if k[0] == template_id]
+            keys_to_del = [k for k in self._cache if k[0] == template_id]
             for k in keys_to_del:
                 del self._cache[k]
 

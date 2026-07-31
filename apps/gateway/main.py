@@ -72,7 +72,7 @@ allowed_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_credentials=True if "*" not in allowed_origins else False,
+    allow_credentials="*" not in allowed_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -268,14 +268,18 @@ async def verify_token(token: str) -> Dict[str, Any]:
         async with jwks_fetch_lock:
             if not _is_kid_cached(kid):
                 try:
-                    client_to_use = http_client if http_client is not None else httpx.AsyncClient()
+                    client_to_use = (
+                        http_client if http_client is not None else httpx.AsyncClient()
+                    )
                     resp = await client_to_use.get(JWKS_URL, timeout=5.0)
                     if resp.status_code == 200:
                         global jwks_cache
                         jwks_cache = resp.json()
                     else:
                         logger = logging.getLogger("gateway")
-                        logger.error(f"Failed to fetch JWKS dynamically: HTTP status code {resp.status_code}")
+                        logger.error(
+                            f"Failed to fetch JWKS dynamically: HTTP status code {resp.status_code}"
+                        )
                 except Exception as e:
                     logger = logging.getLogger("gateway")
                     logger.error(f"Failed to fetch JWKS dynamically: {str(e)}")
@@ -486,7 +490,7 @@ async def get_openapi_json() -> Response:
                     new_data[k] = rewrite_references(v, prefix, visited)
             visited.remove(id(data))
             return new_data
-        elif isinstance(data, list):
+        if isinstance(data, list):
             visited.add(id(data))
             new_list = [rewrite_references(item, prefix, visited) for item in data]
             visited.remove(id(data))
@@ -1027,21 +1031,20 @@ async def proxy_requests(request: Request, path: str) -> Response:
         if len(parts) == 5:
             # POST /api/v1/interop/epro/submit
             if (
-                parts[:4] == ["api", "v1", "interop", "epro"]
-                and parts[4] == "submit"
-                and method == "POST"
-            ):
-                is_allowed = True
-            # POST /api/v1/interop/epro/sync
-            elif (
-                parts[:4] == ["api", "v1", "interop", "epro"]
-                and parts[4] == "sync"
-                and method == "POST"
-            ):
-                is_allowed = True
-            # GET /api/v1/interop/instruments/{instrument-id}
-            elif (
-                parts[:4] == ["api", "v1", "interop", "instruments"] and method == "GET"
+                (
+                    parts[:4] == ["api", "v1", "interop", "epro"]
+                    and parts[4] == "submit"
+                    and method == "POST"
+                )
+                or (
+                    parts[:4] == ["api", "v1", "interop", "epro"]
+                    and parts[4] == "sync"
+                    and method == "POST"
+                )
+                or (
+                    parts[:4] == ["api", "v1", "interop", "instruments"]
+                    and method == "GET"
+                )
             ):
                 is_allowed = True
 
@@ -1055,28 +1058,24 @@ async def proxy_requests(request: Request, path: str) -> Response:
                     is_allowed = True
             # GET /api/v1/interop/subjects/{authenticated-subject-id}/instruments
             elif (
-                parts[:3] == ["api", "v1", "interop"]
-                and parts[3] == "subjects"
-                and parts[5] == "instruments"
-                and method == "GET"
-            ):
-                if parts[4] == user_id:
-                    is_allowed = True
-            # GET /api/v1/interop/subjects/{authenticated-subject-id}/compliance
-            elif (
-                parts[:3] == ["api", "v1", "interop"]
-                and parts[3] == "subjects"
-                and parts[5] == "compliance"
-                and method == "GET"
-            ):
-                if parts[4] == user_id:
-                    is_allowed = True
-            # GET /api/v1/interop/subjects/{authenticated-subject-id}/notifications
-            elif (
-                parts[:3] == ["api", "v1", "interop"]
-                and parts[3] == "subjects"
-                and parts[5] == "notifications"
-                and method == "GET"
+                (
+                    parts[:3] == ["api", "v1", "interop"]
+                    and parts[3] == "subjects"
+                    and parts[5] == "instruments"
+                    and method == "GET"
+                )
+                or (
+                    parts[:3] == ["api", "v1", "interop"]
+                    and parts[3] == "subjects"
+                    and parts[5] == "compliance"
+                    and method == "GET"
+                )
+                or (
+                    parts[:3] == ["api", "v1", "interop"]
+                    and parts[3] == "subjects"
+                    and parts[5] == "notifications"
+                    and method == "GET"
+                )
             ):
                 if parts[4] == user_id:
                     is_allowed = True
@@ -1151,9 +1150,7 @@ async def proxy_requests(request: Request, path: str) -> Response:
         target_url = f"{SERVICES['org']}/{path[len('org/') :]}"
     elif path.startswith("api/v1/org"):
         target_url = f"{SERVICES['org']}/{path}"
-    elif path.startswith("api/v1/compliance"):
-        target_url = f"{SERVICES['tickets']}/{path}"
-    elif path.startswith("api/v1/tickets"):
+    elif path.startswith("api/v1/compliance") or path.startswith("api/v1/tickets"):
         target_url = f"{SERVICES['tickets']}/{path}"
     elif path == "events/publish":
         target_url = f"{SERVICES['eisf']}/events/publish"

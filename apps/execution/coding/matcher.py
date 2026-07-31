@@ -7,6 +7,7 @@ Satisfies Phase 17 Requirements.
 """
 
 import collections
+import contextlib
 import math
 import os
 import re
@@ -378,7 +379,7 @@ async def _match_meddra(
             "suggestions": [],
         }
 
-    elif highest_score >= 0.60:
+    if highest_score >= 0.60:
         suggestions_list = []
         for score, t in scored_candidates:
             if 0.60 <= score < 0.85:
@@ -400,12 +401,11 @@ async def _match_meddra(
             "suggestions": suggestions_list,
         }
 
-    else:
-        return {
-            "status": "UNCODABLE",
-            "match": None,
-            "suggestions": [],
-        }
+    return {
+        "status": "UNCODABLE",
+        "match": None,
+        "suggestions": [],
+    }
 
 
 async def _get_whodrug_context(
@@ -507,7 +507,7 @@ async def _match_whodrug(
             "suggestions": [],
         }
 
-    elif highest_score >= 0.60:
+    if highest_score >= 0.60:
         suggestions_list = []
         for score, r in scored_candidates:
             if 0.60 <= score < 0.85:
@@ -532,12 +532,11 @@ async def _match_whodrug(
             "suggestions": suggestions_list,
         }
 
-    else:
-        return {
-            "status": "UNCODABLE",
-            "match": None,
-            "suggestions": [],
-        }
+    return {
+        "status": "UNCODABLE",
+        "match": None,
+        "suggestions": [],
+    }
 
 
 async def match_verbatim_term(
@@ -578,10 +577,8 @@ async def match_verbatim_term(
         else:
             result = await _match_whodrug(session, verbatim, norm_verbatim, version)
 
-        try:
+        with contextlib.suppress(Exception):
             coding_cache.set(cache_key, result)
-        except Exception:
-            pass
 
         return result
 

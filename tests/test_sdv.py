@@ -145,36 +145,35 @@ async def test_sdv_signoff_endpoints_rbac_and_target_validation():
     deterministic repeat sign-off behavior, and correct persistence of PAGE/VISIT SDVSignOff records.
     """
     # 1. Populate DB with test subject, visit, and observations
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            await session.execute(
-                text("SELECT set_config('cadence.app_writing', 'true', 1);")
-            )
-            subj = ClinicalSubject(
-                subject_id="SUBJ-SDV-1", study_id="STUDY-SDV-TEST", site_id="SITE-SDV-1"
-            )
-            session.add(subj)
+    async with db_manager.get_session_maker()() as session, session.begin():
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', 1);")
+        )
+        subj = ClinicalSubject(
+            subject_id="SUBJ-SDV-1", study_id="STUDY-SDV-TEST", site_id="SITE-SDV-1"
+        )
+        session.add(subj)
 
-            visit = ClinicalVisit(
-                id="VISIT-SDV-1",
-                subject_id="SUBJ-SDV-1",
-                study_id="STUDY-SDV-TEST",
-                visit_name="Screening",
-            )
-            session.add(visit)
+        visit = ClinicalVisit(
+            id="VISIT-SDV-1",
+            subject_id="SUBJ-SDV-1",
+            study_id="STUDY-SDV-TEST",
+            visit_name="Screening",
+        )
+        session.add(visit)
 
-            obs = ClinicalObservation(
-                id="OBS-SDV-1",
-                subject_id="SUBJ-SDV-1",
-                study_id="STUDY-SDV-TEST",
-                visit_id="VISIT-SDV-1",
-                page_id="PAGE-SDV-1",
-                domain="VS",
-                test_code="SYSBP",
-                test_name="Systolic Blood Pressure",
-                value=120.0,
-            )
-            session.add(obs)
+        obs = ClinicalObservation(
+            id="OBS-SDV-1",
+            subject_id="SUBJ-SDV-1",
+            study_id="STUDY-SDV-TEST",
+            visit_id="VISIT-SDV-1",
+            page_id="PAGE-SDV-1",
+            domain="VS",
+            test_code="SYSBP",
+            test_name="Systolic Blood Pressure",
+            value=120.0,
+        )
+        session.add(obs)
 
     # 2. RBAC checks: Only allowed roles can sign off (CRA, monitor). Site Investigator should be forbidden (403)
     async with httpx.AsyncClient(
@@ -381,46 +380,45 @@ async def test_sdv_automatic_verification_drop_compliance():
     does not drop on metadata-only changes, and sends expected mockable dashboard notifications.
     """
     # 1. Populate DB with a verified observation and a matching field-level sign-off
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            await session.execute(
-                text("SELECT set_config('cadence.app_writing', 'true', 1);")
-            )
-            subj = ClinicalSubject(
-                subject_id="SUBJ-DROP-1",
-                study_id="STUDY-DROP-TEST",
-                site_id="SITE-DROP-1",
-            )
-            session.add(subj)
+    async with db_manager.get_session_maker()() as session, session.begin():
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', 1);")
+        )
+        subj = ClinicalSubject(
+            subject_id="SUBJ-DROP-1",
+            study_id="STUDY-DROP-TEST",
+            site_id="SITE-DROP-1",
+        )
+        session.add(subj)
 
-            obs = ClinicalObservation(
-                id="OBS-DROP-1",
-                subject_id="SUBJ-DROP-1",
-                study_id="STUDY-DROP-TEST",
-                visit_id="VISIT-DROP-1",
-                page_id="PAGE-DROP-1",
-                domain="LB",
-                test_code="WBC",
-                test_name="White Blood Cells",
-                value=6.5,
-                value_string="6.5",
-                normalized_value="6.5",
-                is_sdv_verified=True,
-                sdv_verified_by="CRA-VERIFIER",
-                sdv_verified_at=datetime.now(UTC),
-            )
-            session.add(obs)
+        obs = ClinicalObservation(
+            id="OBS-DROP-1",
+            subject_id="SUBJ-DROP-1",
+            study_id="STUDY-DROP-TEST",
+            visit_id="VISIT-DROP-1",
+            page_id="PAGE-DROP-1",
+            domain="LB",
+            test_code="WBC",
+            test_name="White Blood Cells",
+            value=6.5,
+            value_string="6.5",
+            normalized_value="6.5",
+            is_sdv_verified=True,
+            sdv_verified_by="CRA-VERIFIER",
+            sdv_verified_at=datetime.now(UTC),
+        )
+        session.add(obs)
 
-            signoff = SDVSignOff(
-                scope="FIELD",
-                target_id="OBS-DROP-1",
-                subject_id="SUBJ-DROP-1",
-                study_id="STUDY-DROP-TEST",
-                is_verified=True,
-                verified_by="CRA-VERIFIER",
-                verified_at=datetime.now(UTC),
-            )
-            session.add(signoff)
+        signoff = SDVSignOff(
+            scope="FIELD",
+            target_id="OBS-DROP-1",
+            subject_id="SUBJ-DROP-1",
+            study_id="STUDY-DROP-TEST",
+            is_verified=True,
+            verified_by="CRA-VERIFIER",
+            verified_at=datetime.now(UTC),
+        )
+        session.add(signoff)
 
     # 2. Editing without a GxP change reason (or with empty/default reasons) must fail
     for bad_reason in ["", "system_operation", "default_reason", "   "]:
@@ -460,23 +458,25 @@ async def test_sdv_automatic_verification_drop_compliance():
 
     # 4. Editing 'value' triggers the drop, clears metadata, drops sign-off, records audit log and notifications
     mock_notify = MagicMock()
-    with patch(
-        "apps.execution.trial_lock.NotificationRouter.send_dashboard_notification",
-        mock_notify,
-    ):
-        with audit_context(
+    with (
+        patch(
+            "apps.execution.trial_lock.NotificationRouter.send_dashboard_notification",
+            mock_notify,
+        ),
+        audit_context(
             user_id="editor-user",
             change_reason="Clinical value updated by lab coordinator",
-        ):
-            async with db_manager.get_session_maker()() as session:
-                res = await session.execute(
-                    select(ClinicalObservation).where(
-                        ClinicalObservation.id == "OBS-DROP-1"
-                    )
+        ),
+    ):
+        async with db_manager.get_session_maker()() as session:
+            res = await session.execute(
+                select(ClinicalObservation).where(
+                    ClinicalObservation.id == "OBS-DROP-1"
                 )
-                obs_edit = res.scalar_one()
-                obs_edit.value = 8.8
-                await session.commit()
+            )
+            obs_edit = res.scalar_one()
+            obs_edit.value = 8.8
+            await session.commit()
 
     # Verify drop results for 'value' modification
     async with db_manager.get_session_maker()() as session:
@@ -526,28 +526,25 @@ async def test_sdv_automatic_verification_drop_compliance():
     assert payload["change_reason"] == "Clinical value updated by lab coordinator"
 
     # Reset verification status for next checks (value_string and normalized_value edits)
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            await session.execute(
-                text("SELECT set_config('cadence.app_writing', 'true', 1);")
-            )
-            res_obs = await session.execute(
-                select(ClinicalObservation).where(
-                    ClinicalObservation.id == "OBS-DROP-1"
-                )
-            )
-            o = res_obs.scalar_one()
-            o.is_sdv_verified = True
-            o.sdv_verified_by = "CRA-VERIFIER"
-            o.sdv_verified_at = datetime.now(UTC)
+    async with db_manager.get_session_maker()() as session, session.begin():
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', 1);")
+        )
+        res_obs = await session.execute(
+            select(ClinicalObservation).where(ClinicalObservation.id == "OBS-DROP-1")
+        )
+        o = res_obs.scalar_one()
+        o.is_sdv_verified = True
+        o.sdv_verified_by = "CRA-VERIFIER"
+        o.sdv_verified_at = datetime.now(UTC)
 
-            res_so = await session.execute(
-                select(SDVSignOff).where(SDVSignOff.target_id == "OBS-DROP-1")
-            )
-            so = res_so.scalar_one()
-            so.is_verified = True
-            so.dropped_reason = None
-            so.dropped_at = None
+        res_so = await session.execute(
+            select(SDVSignOff).where(SDVSignOff.target_id == "OBS-DROP-1")
+        )
+        so = res_so.scalar_one()
+        so.is_verified = True
+        so.dropped_reason = None
+        so.dropped_at = None
 
     # 5. Editing 'value_string' triggers the drop
     with audit_context(
@@ -568,6 +565,19 @@ async def test_sdv_automatic_verification_drop_compliance():
             select(ClinicalObservation).where(ClinicalObservation.id == "OBS-DROP-1")
         )
         assert res_obs.scalar_one().is_sdv_verified is False
+
+    # Reset verification status for the last check
+    async with db_manager.get_session_maker()() as session, session.begin():
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', 1);")
+        )
+        res_obs = await session.execute(
+            select(ClinicalObservation).where(ClinicalObservation.id == "OBS-DROP-1")
+        )
+        o = res_obs.scalar_one()
+        o.is_sdv_verified = True
+        o.sdv_verified_by = "CRA-VERIFIER"
+        o.sdv_verified_at = datetime.now(UTC)
 
 
 @pytest.mark.asyncio

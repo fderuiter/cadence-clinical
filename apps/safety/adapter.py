@@ -42,13 +42,12 @@ class SafetyDatabaseAdapter:
                 content=xml_content,
                 headers={"Content-Type": "application/xml"},
             )
-        else:
-            async with httpx.AsyncClient() as client:
-                return await client.post(
-                    self.endpoint_url,
-                    content=xml_content,
-                    headers={"Content-Type": "application/xml"},
-                )
+        async with httpx.AsyncClient() as client:
+            return await client.post(
+                self.endpoint_url,
+                content=xml_content,
+                headers={"Content-Type": "application/xml"},
+            )
 
     async def fetch_case(self, case_id: str) -> Dict[str, Any]:
         """

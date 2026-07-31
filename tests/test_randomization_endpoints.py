@@ -8,15 +8,14 @@
 
 import os
 import time
+
 import httpx
 import pytest
 import pytest_asyncio
 from sqlalchemy import select
 
-from apps.execution.database.context import current_session
 from apps.execution.database.core import db_manager
-from apps.execution.database.decorators import transactional
-from apps.execution.database.models import Base, ClinicalSubject, SubjectConsent
+from apps.execution.database.models import Base, ClinicalSubject
 from apps.execution.main import app
 
 GATEWAY_SECRET = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345")
@@ -67,7 +66,9 @@ async def setup_test_db():
 async def test_subject_state_transition_endpoint() -> None:
     """Verify subject state transition validation and endpoint responses."""
     # 1. Create a subject via db
-    headers = get_auth_headers(roles="site investigator", change_reason="Initial Screening")
+    headers = get_auth_headers(
+        roles="site investigator", change_reason="Initial Screening"
+    )
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
@@ -105,7 +106,9 @@ async def test_subject_state_transition_endpoint() -> None:
 
         # Verify status in db is ENROLLED
         async with db_manager.get_session_maker()() as session:
-            stmt = select(ClinicalSubject).where(ClinicalSubject.subject_id == "SUBJ-901")
+            stmt = select(ClinicalSubject).where(
+                ClinicalSubject.subject_id == "SUBJ-901"
+            )
             res = await session.execute(stmt)
             subj = res.scalars().one()
             assert subj.status == "ENROLLED"
@@ -117,7 +120,9 @@ async def test_subject_demographics_mutation_and_deletion_endpoints() -> None:
 
     but mutations/deletions are strictly rejected post-randomization.
     """
-    headers = get_auth_headers(roles="site investigator", change_reason="Baseline Updates")
+    headers = get_auth_headers(
+        roles="site investigator", change_reason="Baseline Updates"
+    )
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
@@ -139,7 +144,11 @@ async def test_subject_demographics_mutation_and_deletion_endpoints() -> None:
             headers=headers,
             json={
                 "strat_factors": {"site": "SITE-A"},
-                "demographics": {"gender": "M", "birthdate": "1980-05-15", "race": "White"},
+                "demographics": {
+                    "gender": "M",
+                    "birthdate": "1980-05-15",
+                    "race": "White",
+                },
             },
         )
         assert put_res.status_code == 200
@@ -156,7 +165,9 @@ async def test_subject_demographics_mutation_and_deletion_endpoints() -> None:
         # Force subject state to RANDOMIZED in DB
         async with db_manager.get_session_maker()() as session:
             async with session.begin():
-                stmt = select(ClinicalSubject).where(ClinicalSubject.subject_id == "SUBJ-902")
+                stmt = select(ClinicalSubject).where(
+                    ClinicalSubject.subject_id == "SUBJ-902"
+                )
                 res = await session.execute(stmt)
                 subj = res.scalars().one()
                 # Bypass validators by changing underlying status and setting random ID
@@ -165,13 +176,19 @@ async def test_subject_demographics_mutation_and_deletion_endpoints() -> None:
                 session.add(subj)
 
         # 3. Test idempotent PUT (setting identical strat_factors and demographics) -> Allowed
-        headers_put = get_auth_headers(roles="site investigator", change_reason="Idempotent Update")
+        headers_put = get_auth_headers(
+            roles="site investigator", change_reason="Idempotent Update"
+        )
         put_idempotent = await client.put(
             "/api/v1/execution/subjects/SUBJ-902/demographics",
             headers=headers_put,
             json={
                 "strat_factors": {"site": "SITE-A"},
-                "demographics": {"gender": "M", "birthdate": "1980-05-15", "race": "White"},
+                "demographics": {
+                    "gender": "M",
+                    "birthdate": "1980-05-15",
+                    "race": "White",
+                },
             },
         )
         assert put_idempotent.status_code == 200
@@ -199,7 +216,9 @@ async def test_subject_demographics_mutation_and_deletion_endpoints() -> None:
         assert put_mutated_demo.json()["detail"] == "LOCKED_FACTOR_MUTATION"
 
         # 6. Test deleting demographics post-randomization -> SOFT_DELETE_BLOCKED 403
-        headers_delete = get_auth_headers(roles="site investigator", change_reason="Delete Request")
+        headers_delete = get_auth_headers(
+            roles="site investigator", change_reason="Delete Request"
+        )
         delete_res = await client.delete(
             "/api/v1/execution/subjects/SUBJ-902/demographics",
             headers=headers_delete,

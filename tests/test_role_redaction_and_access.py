@@ -1,17 +1,23 @@
 import time
+
 import pytest
 import pytest_asyncio
-from fastapi import Request, HTTPException
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
-from sqlalchemy import select
 
 from apps.execution.database.core import db_manager as exec_db_manager
-from apps.execution.database.models import Base as ExecBase, ClinicalSubject, ClinicalVisit, SubjectRandomization
+from apps.execution.database.models import Base as ExecBase
+from apps.execution.database.models import (
+    ClinicalSubject,
+    ClinicalVisit,
+    SubjectRandomization,
+)
 from apps.execution.main import app as exec_app
 from apps.gateway.main import generate_signature
 from packages.security import TrialRole, check_trial_role, enforce_site_isolation
-from packages.security.rbac import Principal, ROLE_INVESTIGATOR, ROLE_CRA_CANONICAL
 from packages.security.audit_logger import audit_logger_engine
+from packages.security.rbac import Principal
+
 
 @pytest_asyncio.fixture(autouse=True)
 async def setup_dbs():
@@ -24,6 +30,7 @@ async def setup_dbs():
         await conn.run_sync(ExecBase.metadata.drop_all)
     await exec_db_manager.close()
 
+
 def get_auth_headers(
     roles: str = "admin", site_id: str = "", change_reason: str = "Authorized change"
 ) -> dict:
@@ -31,7 +38,12 @@ def get_auth_headers(
     timestamp = str(time.time())
     user_id = "test_user_uuid"
     sig = generate_signature(
-        user_id, roles, timestamp, version="2", change_reason=change_reason, site_id=site_id
+        user_id,
+        roles,
+        timestamp,
+        version="2",
+        change_reason=change_reason,
+        site_id=site_id,
     )
     headers = {
         "X-User-Id": user_id,
@@ -45,24 +57,29 @@ def get_auth_headers(
         headers["X-Site-Id"] = site_id
     return headers
 
+
 class DummyRequest:
     def __init__(self, roles_val, ip_address="127.0.0.1"):
         self.state = DummyState(roles_val, ip_address)
         self.headers = {}
         self.client = DummyClient(ip_address)
 
+
 class DummyState:
     def __init__(self, roles_val, ip_address):
         self.roles = roles_val
         self.ip_address = ip_address
 
+
 class DummyClient:
     def __init__(self, host):
         self.host = host
 
+
 # =====================================================================
 # Task 1 Tests: TrialRole Enum and Helpers & Site Isolation Guard
 # =====================================================================
+
 
 def test_trial_role_enum_and_helper():
     """Verify TrialRole enum covers the required roles and check_trial_role resolves correctly."""
@@ -86,6 +103,7 @@ def test_trial_role_enum_and_helper():
     req3 = DummyRequest("sponsor_dm")
     assert check_trial_role(req3, TrialRole.DATA_MANAGER) is True
 
+
 def test_site_isolation_guard_and_audit():
     """Verify site isolation guard (PRD-SYS-004) raises 403 and writes security audit alerts."""
     # Reset audit chain
@@ -96,7 +114,7 @@ def test_site_isolation_guard_and_audit():
         user_id="user_uuid_123",
         roles=["investigator"],
         assigned_sites=["site_boston"],
-        unblinded_access=False
+        unblinded_access=False,
     )
 
     # Accessing same site -> OK
@@ -124,6 +142,7 @@ def test_site_isolation_guard_and_audit():
 # Task 2 Tests: Dynamic Blinding Redaction on subject/visit GET APIs
 # =====================================================================
 
+
 @pytest.mark.asyncio
 async def test_get_subject_api_blinding_and_isolation():
     """Test subject GET endpoint applies site isolation and dynamic blinding."""
@@ -133,9 +152,7 @@ async def test_get_subject_api_blinding_and_isolation():
     async with exec_db_manager.get_session_maker()() as session:
         async with session.begin():
             subj = ClinicalSubject(
-                subject_id="SUBJ_BOSTON",
-                study_id="study_001",
-                site_id="site_boston"
+                subject_id="SUBJ_BOSTON", study_id="study_001", site_id="site_boston"
             )
             session.add(subj)
             await session.flush()
@@ -148,6 +165,7 @@ async def test_get_subject_api_blinding_and_isolation():
             # Encrypted allocation block (reusing standard crypt format)
             # From apps/execution/cryptography.py: encrypt returns hex-encoded payload
             from apps.execution.cryptography import AllocationKeyManager
+
             key_mgr = AllocationKeyManager()
             await key_mgr.load_from_db(session)
             encrypted = key_mgr.encrypt({"allocation": "Active Treatment Arm"})
@@ -157,13 +175,15 @@ async def test_get_subject_api_blinding_and_isolation():
                 site_id="site_boston",
                 subject_id="SUBJ_BOSTON",
                 encrypted_allocation=encrypted,
-                kit_reference="IP-KIT-999"
+                kit_reference="IP-KIT-999",
             )
             session.add(rand)
 
     # 2. Query subject as Admin (unblinded, globally authorized)
     headers_admin = get_auth_headers(roles="admin")
-    resp_admin = client.get("/api/v1/execution/subjects/SUBJ_BOSTON", headers=headers_admin)
+    resp_admin = client.get(
+        "/api/v1/execution/subjects/SUBJ_BOSTON", headers=headers_admin
+    )
     assert resp_admin.status_code == 200
     data_admin = resp_admin.json()
     assert data_admin["subject_id"] == "SUBJ_BOSTON"
@@ -173,7 +193,9 @@ async def test_get_subject_api_blinding_and_isolation():
 
     # 3. Query subject as Site Investigator from same site (blinded, site-authorized)
     headers_inv_boston = get_auth_headers(roles="investigator", site_id="site_boston")
-    resp_inv = client.get("/api/v1/execution/subjects/SUBJ_BOSTON", headers=headers_inv_boston)
+    resp_inv = client.get(
+        "/api/v1/execution/subjects/SUBJ_BOSTON", headers=headers_inv_boston
+    )
     assert resp_inv.status_code == 200
     data_inv = resp_inv.json()
     assert data_inv["subject_id"] == "SUBJ_BOSTON"
@@ -184,7 +206,9 @@ async def test_get_subject_api_blinding_and_isolation():
 
     # 4. Query subject as Site Investigator from another site (blocked by site isolation)
     headers_inv_chicago = get_auth_headers(roles="investigator", site_id="site_chicago")
-    resp_bad = client.get("/api/v1/execution/subjects/SUBJ_BOSTON", headers=headers_inv_chicago)
+    resp_bad = client.get(
+        "/api/v1/execution/subjects/SUBJ_BOSTON", headers=headers_inv_chicago
+    )
     assert resp_bad.status_code == 403
 
 
@@ -199,9 +223,7 @@ async def test_get_visit_api_blinding_and_isolation():
     async with exec_db_manager.get_session_maker()() as session:
         async with session.begin():
             subj = ClinicalSubject(
-                subject_id="SUBJ_BOSTON",
-                study_id="study_001",
-                site_id="site_boston"
+                subject_id="SUBJ_BOSTON", study_id="study_001", site_id="site_boston"
             )
             session.add(subj)
             await session.flush()
@@ -211,6 +233,7 @@ async def test_get_visit_api_blinding_and_isolation():
             subj.status = "RANDOMIZED"
 
             from apps.execution.cryptography import AllocationKeyManager
+
             key_mgr = AllocationKeyManager()
             await key_mgr.load_from_db(session)
             encrypted = key_mgr.encrypt({"allocation": "Active Treatment Arm"})
@@ -220,7 +243,7 @@ async def test_get_visit_api_blinding_and_isolation():
                 site_id="site_boston",
                 subject_id="SUBJ_BOSTON",
                 encrypted_allocation=encrypted,
-                kit_reference="IP-KIT-999"
+                kit_reference="IP-KIT-999",
             )
             session.add(rand)
 
@@ -228,13 +251,15 @@ async def test_get_visit_api_blinding_and_isolation():
                 id=visit_id,
                 subject_id="SUBJ_BOSTON",
                 visit_name="Week 4 Follow-up",
-                study_id="study_001"
+                study_id="study_001",
             )
             session.add(visit)
 
     # 2. Query visit as Admin (unblinded, globally authorized)
     headers_admin = get_auth_headers(roles="admin")
-    resp_admin = client.get(f"/api/v1/execution/visits/{visit_id}", headers=headers_admin)
+    resp_admin = client.get(
+        f"/api/v1/execution/visits/{visit_id}", headers=headers_admin
+    )
     assert resp_admin.status_code == 200
     data_admin = resp_admin.json()
     assert data_admin["id"] == visit_id
@@ -253,7 +278,9 @@ async def test_get_visit_api_blinding_and_isolation():
 
     # 4. Query visit as Site Investigator from same site (blinded, site-authorized)
     headers_inv_boston = get_auth_headers(roles="investigator", site_id="site_boston")
-    resp_inv = client.get(f"/api/v1/execution/visits/{visit_id}", headers=headers_inv_boston)
+    resp_inv = client.get(
+        f"/api/v1/execution/visits/{visit_id}", headers=headers_inv_boston
+    )
     assert resp_inv.status_code == 200
     data_inv = resp_inv.json()
     assert data_inv["treatment_group"] == "MASKED"
@@ -262,5 +289,7 @@ async def test_get_visit_api_blinding_and_isolation():
 
     # 5. Query visit as Site Investigator from another site (blocked by site isolation)
     headers_inv_chicago = get_auth_headers(roles="investigator", site_id="site_chicago")
-    resp_bad = client.get(f"/api/v1/execution/visits/{visit_id}", headers=headers_inv_chicago)
+    resp_bad = client.get(
+        f"/api/v1/execution/visits/{visit_id}", headers=headers_inv_chicago
+    )
     assert resp_bad.status_code == 403

@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import os
 from datetime import datetime, timedelta
 from typing import List, Optional
@@ -252,10 +253,8 @@ async def stop_dispatcher() -> None:
     global dispatcher_task
     if dispatcher_task:
         dispatcher_task.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await dispatcher_task
-        except asyncio.CancelledError:
-            pass
 
 
 app = FastAPI(

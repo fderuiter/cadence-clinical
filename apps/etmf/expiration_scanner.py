@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import logging
 import os
 from datetime import date, datetime, timezone
@@ -296,9 +297,7 @@ async def stop_background_etmf_expiration_scanner() -> None:
     global _scanner_task, _should_run
     _should_run = False
     if _scanner_task:
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await _scanner_task
-        except asyncio.CancelledError:
-            pass
         _scanner_task = None
     logger.info("Background eTMF expiration scanner stopped.")

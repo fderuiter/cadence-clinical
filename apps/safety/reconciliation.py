@@ -22,11 +22,10 @@ def generate_stable_event_key(subject_key: str, sae: SeriousAdverseEvent) -> str
     subj = str(subject_key).strip().upper()
     if sae.AESEQ is not None:
         return f"{subj}:SEQ-{sae.AESEQ}"
-    else:
-        # Normalize verbatim term (strip excess spaces, uppercase)
-        normalized_term = re.sub(r"\s+", " ", sae.AETERM.strip().upper())
-        start_date = (sae.AESTDTC or "").strip()
-        return f"{subj}:TERM-{normalized_term}:{start_date}"
+    # Normalize verbatim term (strip excess spaces, uppercase)
+    normalized_term = re.sub(r"\s+", " ", sae.AETERM.strip().upper())
+    start_date = (sae.AESTDTC or "").strip()
+    return f"{subj}:TERM-{normalized_term}:{start_date}"
 
 
 def normalize_edc_ae_to_sae(

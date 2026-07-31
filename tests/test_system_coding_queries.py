@@ -64,25 +64,24 @@ async def setup_test_db():
 
 async def seed_data():
     """Seed minimum required database records for system coding query tests."""
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            # Seed MedDRA Headache so there is at least one dictionary version "26.0" term
-            session.add(
-                MedDRATerm(
-                    dictionary_version="26.0",
-                    code="10019211",
-                    term_name="Headache",
-                    level="LLT",
-                )
+    async with db_manager.get_session_maker()() as session, session.begin():
+        # Seed MedDRA Headache so there is at least one dictionary version "26.0" term
+        session.add(
+            MedDRATerm(
+                dictionary_version="26.0",
+                code="10019211",
+                term_name="Headache",
+                level="LLT",
             )
-            # Seed a Clinical Subject
-            session.add(
-                ClinicalSubject(
-                    id="SUBJ-UUID-1",
-                    subject_id="SUBJ-001",
-                    study_id="STUDY-001",
-                )
+        )
+        # Seed a Clinical Subject
+        session.add(
+            ClinicalSubject(
+                id="SUBJ-UUID-1",
+                subject_id="SUBJ-001",
+                study_id="STUDY-001",
             )
+        )
 
 
 @pytest.mark.asyncio

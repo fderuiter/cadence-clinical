@@ -220,7 +220,7 @@ class AllocationKeyManager:
         # Split into 2 shares requiring 2 (k=2, n=2)
         shares = self.split_key(master_key, n=2, k=2)
 
-        custody_shares = [
+        return [
             {
                 "custodian": "Lead Unblinded Statistician",
                 "version": version,
@@ -234,7 +234,6 @@ class AllocationKeyManager:
                 "y": shares[1][1],
             },
         ]
-        return custody_shares
 
     def encrypt(
         self, data: Dict[str, Any], session: Optional[AsyncSession] = None
@@ -249,8 +248,7 @@ class AllocationKeyManager:
 
         # Prepend version indicator
         version_bytes = self._current_version.to_bytes(4, byteorder="big")
-        final_payload = base64.b64encode(version_bytes + encrypted).decode("utf-8")
-        return final_payload
+        return base64.b64encode(version_bytes + encrypted).decode("utf-8")
 
     def decrypt(self, encrypted_str: str) -> Dict[str, Any]:
         """Decrypts data using the appropriate historical key."""

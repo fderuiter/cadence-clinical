@@ -39,10 +39,7 @@ def normalize_concept(
     system = concept_data.get("terminology") or default_system
     # "valid" maps to the active status (default to True if not present)
     valid = concept_data.get("active")
-    if valid is None:
-        valid = True
-    else:
-        valid = bool(valid)
+    valid = True if valid is None else bool(valid)
 
     return {
         "code": code,
@@ -127,7 +124,7 @@ class NCIEVSClient:
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
                 raise EVSNotFoundError(f"Concept not found or invalid: {code}") from e
-            elif e.response.status_code in (400, 422):
+            if e.response.status_code in (400, 422):
                 is_invalid = False
                 try:
                     body = e.response.json()

@@ -77,10 +77,7 @@ def check_file_imports(file_path: Path) -> list[str]:
                 else:
                     resolved_parts = base_parts
             else:
-                if node.module:
-                    resolved_parts = node.module.split(".")
-                else:
-                    resolved_parts = []
+                resolved_parts = node.module.split(".") if node.module else []
 
             if len(resolved_parts) >= 2 and resolved_parts[0] == "apps":
                 imported_service = resolved_parts[1]

@@ -229,13 +229,12 @@ def _to_dict(record: Any) -> Dict[str, Any]:
     """Helper to safely convert pydantic models or dict-like objects to a standard dict."""
     if hasattr(record, "model_dump"):
         return record.model_dump()
-    elif hasattr(record, "dict"):
+    if hasattr(record, "dict"):
         return record.dict()
-    elif isinstance(record, dict):
+    if isinstance(record, dict):
         return dict(record)
-    else:
-        # Fallback for arbitrary class objects
-        return getattr(record, "__dict__", {})
+    # Fallback for arbitrary class objects
+    return getattr(record, "__dict__", {})
 
 
 def _infer_type(value: Any) -> str:

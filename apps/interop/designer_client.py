@@ -113,16 +113,15 @@ async def fetch_eligibility_criteria(study_id: str) -> List[EligibilityCriterion
             if response.status_code == 200:
                 raw_list = response.json()
                 return [map_db_to_criterion(item) for item in raw_list]
-            elif response.status_code == 404:
+            if response.status_code == 404:
                 raise HTTPException(
                     status_code=404,
                     detail=f"Study {study_id} or eligibility criteria not found in Designer service.",
                 )
-            else:
-                raise HTTPException(
-                    status_code=502,
-                    detail=f"Failed to fetch eligibility criteria: Designer service returned {response.status_code}",
-                )
+            raise HTTPException(
+                status_code=502,
+                detail=f"Failed to fetch eligibility criteria: Designer service returned {response.status_code}",
+            )
     except httpx.RequestError as e:
         raise HTTPException(
             status_code=502,
