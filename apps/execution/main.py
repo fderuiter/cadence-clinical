@@ -757,6 +757,7 @@ async def evaluate_and_transition_screening(
         require_roles(ROLE_SITE_INVESTIGATOR, ROLE_DATA_MANAGER, "investigator")
     ),
     _justification=Depends(verify_change_justification),
+    _not_auditor: list[str] = Depends(verify_not_auditor),
 ) -> SubjectScreeningResponse:
     """Evaluate subject's eligibility criteria and execute the guarded screening lifecycle transition."""
     change_reason = request.headers.get("X-Change-Reason", "")
@@ -1004,6 +1005,7 @@ async def unblind_subject(
             detail="ROLE_INSUFFICIENT",
         )
     ),
+    _not_auditor: list[str] = Depends(verify_not_auditor),
 ) -> SubjectUnblindResponse:
     """Execute an emergency treatment-allocation unblinding for a randomised subject.
 
@@ -1280,6 +1282,7 @@ async def randomize_subject_endpoint(
             ROLE_SITE_INVESTIGATOR, ROLE_INVESTIGATOR, ROLE_CRC, "investigator"
         )
     ),
+    _not_auditor: list[str] = Depends(verify_not_auditor),
 ) -> SubjectRandomizationResponse:
     """Execute GxP compliant subject randomization allocation and block-index advancement."""
     # Ensure change justification headers are present and valid

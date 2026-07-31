@@ -6,6 +6,10 @@ import yaml
 from pydantic import BaseModel, Field, ValidationError
 
 from apps.designer.rules import detect_circular_dependencies
+from apps.designer.version_adapter import (
+    infer_usdm_version,
+    normalize_payload_to_canonical,
+)
 
 
 class ValidationIssue(BaseModel):
@@ -74,85 +78,17 @@ def resolve_usdm_version(
 ) -> Tuple[str, List[str]]:
     """
     Resolves USDM v2 vs v3 version using structural rules or explicit override.
+    Delegates to version_adapter module.
     """
-    evidence = []
-    if override:
-        if override in ("v2", "v3"):
-            evidence.append(f"Explicit version override provided: {override}")
-            return override, evidence
-        else:
-            evidence.append(
-                f"Ignored invalid override '{override}'. Falling back to structural rules."
-            )
-
-    if "studyVersions" in payload:
-        evidence.append(
-            "Detected 'studyVersions' key in study root, indicative of USDM v2."
-        )
-        return "v2", evidence
-
-    if "versions" in payload:
-        evidence.append("Detected 'versions' key in study root, indicative of USDM v3.")
-        return "v3", evidence
-
-    # Check deeper for specific v2/v3 structures
-    for key in payload.keys():
-        if "version" in key.lower():
-            evidence.append(
-                f"Detected key '{key}' in root, treating as USDM v3 fallback."
-            )
-            return "v3", evidence
-
-    evidence.append(
-        "No version-specific keys found in root. Falling back to USDM v3 by default."
-    )
-    return "v3", evidence
+    return infer_usdm_version(payload, override=override)
 
 
 def normalize_usdm_payload(payload: Dict[str, Any], version: str) -> Dict[str, Any]:
     """
     Normalizes USDM shape differences into the contract expected by usdm_model.Study.
+    Delegates to version_adapter module.
     """
-    import copy
-
-    normalized = copy.deepcopy(payload)
-
-    # If v2, rename studyVersions -> versions
-    if version == "v2":
-        if "studyVersions" in normalized and "versions" not in normalized:
-            normalized["versions"] = normalized.pop("studyVersions")
-
-    # Ensure versions is a list of dicts
-    versions_list = normalized.get("versions")
-    if isinstance(versions_list, list):
-        for ver in versions_list:
-            if not isinstance(ver, dict):
-                continue
-
-            # Normalize StudyVersion fields
-            # Check if studyDesigns is present under different keys (e.g. studyDesign, designs)
-            if "studyDesign" in ver and "studyDesigns" not in ver:
-                ver["studyDesigns"] = ver.pop("studyDesign")
-            elif "designs" in ver and "studyDesigns" not in ver:
-                ver["studyDesigns"] = ver.pop("designs")
-
-            designs = ver.get("studyDesigns")
-            if isinstance(designs, list):
-                for design in designs:
-                    if not isinstance(design, dict):
-                        continue
-
-                    # In StudyDesign, normalize studyArms -> arms, studyEpochs -> epochs
-                    if "studyArms" in design and "arms" not in design:
-                        design["arms"] = design.pop("studyArms")
-                    if "studyEpochs" in design and "epochs" not in design:
-                        design["epochs"] = design.pop("studyEpochs")
-
-    # Ensure basic instanceType values are present if absent
-    if "instanceType" not in normalized:
-        normalized["instanceType"] = "Study"
-
-    return normalized
+    return normalize_payload_to_canonical(payload, version)
 
 
 def traverse_rules_in_payload(
@@ -294,7 +230,7 @@ def validate_usdm_payload(
                 ValidationIssue(field=loc_path, reason=err["msg"], value=inp_val)
             )
 
-    # 5. Required Business & Structural Checks
+    # 5. Required Business & Structural Checks (mirroring cdisc_validator.py style)
 
     # Unique ID validation across study elements
     # Gather IDs of study, versions, designs, arms, epochs, encounters, activities
@@ -308,22 +244,74 @@ def validate_usdm_payload(
             all_ids[element_id_str] = []
         all_ids[element_id_str].append(path)
 
-    # Traverse normalized payload for IDs
-    add_id(normalized_payload.get("id"), "Study")
+    # Validate root elements presence
+    if "id" not in normalized_payload:
+        errors.append(
+            ValidationIssue(
+                field="id", reason="Missing mandatory study root element: 'id'."
+            )
+        )
+    else:
+        add_id(normalized_payload.get("id"), "Study")
+
+    if "name" not in normalized_payload:
+        errors.append(
+            ValidationIssue(
+                field="name", reason="Missing mandatory study root element: 'name'."
+            )
+        )
 
     versions = normalized_payload.get("versions", [])
     if isinstance(versions, list):
         for v_idx, ver in enumerate(versions):
             if not isinstance(ver, dict):
                 continue
-            add_id(ver.get("id"), f"versions[{v_idx}]")
+
+            # Check mandatory StudyVersion elements
+            ver_id = ver.get("id")
+            if not ver_id:
+                errors.append(
+                    ValidationIssue(
+                        field=f"versions[{v_idx}].id",
+                        reason=f"Missing mandatory study version element: 'id' in versions[{v_idx}].",
+                    )
+                )
+            else:
+                add_id(ver_id, f"versions[{v_idx}]")
+
+            if not ver.get("versionIdentifier"):
+                errors.append(
+                    ValidationIssue(
+                        field=f"versions[{v_idx}].versionIdentifier",
+                        reason=f"Missing mandatory study version element: 'versionIdentifier' in versions[{v_idx}].",
+                    )
+                )
 
             designs = ver.get("studyDesigns", [])
             if isinstance(designs, list):
                 for d_idx, design in enumerate(designs):
                     if not isinstance(design, dict):
                         continue
-                    add_id(design.get("id"), f"versions[{v_idx}].studyDesigns[{d_idx}]")
+
+                    # Check mandatory StudyDesign elements
+                    design_id = design.get("id")
+                    if not design_id:
+                        errors.append(
+                            ValidationIssue(
+                                field=f"versions[{v_idx}].studyDesigns[{d_idx}].id",
+                                reason=f"Missing mandatory study design element: 'id' in studyDesigns[{d_idx}].",
+                            )
+                        )
+                    else:
+                        add_id(design_id, f"versions[{v_idx}].studyDesigns[{d_idx}]")
+
+                    if not design.get("name"):
+                        errors.append(
+                            ValidationIssue(
+                                field=f"versions[{v_idx}].studyDesigns[{d_idx}].name",
+                                reason=f"Missing mandatory study design element: 'name' in studyDesigns[{d_idx}].",
+                            )
+                        )
 
                     # Arms
                     arms = design.get("arms", [])
@@ -331,10 +319,28 @@ def validate_usdm_payload(
                         for a_idx, arm in enumerate(arms):
                             if not isinstance(arm, dict):
                                 continue
-                            add_id(
-                                arm.get("id"),
-                                f"versions[{v_idx}].studyDesigns[{d_idx}].arms[{a_idx}]",
-                            )
+
+                            arm_id = arm.get("id")
+                            if not arm_id:
+                                errors.append(
+                                    ValidationIssue(
+                                        field=f"versions[{v_idx}].studyDesigns[{d_idx}].arms[{a_idx}].id",
+                                        reason=f"Missing mandatory study arm element: 'id' in arms[{a_idx}].",
+                                    )
+                                )
+                            else:
+                                add_id(
+                                    arm_id,
+                                    f"versions[{v_idx}].studyDesigns[{d_idx}].arms[{a_idx}]",
+                                )
+
+                            if not arm.get("name"):
+                                errors.append(
+                                    ValidationIssue(
+                                        field=f"versions[{v_idx}].studyDesigns[{d_idx}].arms[{a_idx}].name",
+                                        reason=f"Missing mandatory study arm element: 'name' in arms[{a_idx}].",
+                                    )
+                                )
 
                     # Epochs
                     epochs = design.get("epochs", [])
@@ -342,10 +348,28 @@ def validate_usdm_payload(
                         for ep_idx, epoch in enumerate(epochs):
                             if not isinstance(epoch, dict):
                                 continue
-                            add_id(
-                                epoch.get("id"),
-                                f"versions[{v_idx}].studyDesigns[{d_idx}].epochs[{ep_idx}]",
-                            )
+
+                            epoch_id = epoch.get("id")
+                            if not epoch_id:
+                                errors.append(
+                                    ValidationIssue(
+                                        field=f"versions[{v_idx}].studyDesigns[{d_idx}].epochs[{ep_idx}].id",
+                                        reason=f"Missing mandatory study epoch element: 'id' in epochs[{ep_idx}].",
+                                    )
+                                )
+                            else:
+                                add_id(
+                                    epoch_id,
+                                    f"versions[{v_idx}].studyDesigns[{d_idx}].epochs[{ep_idx}]",
+                                )
+
+                            if not epoch.get("name"):
+                                errors.append(
+                                    ValidationIssue(
+                                        field=f"versions[{v_idx}].studyDesigns[{d_idx}].epochs[{ep_idx}].name",
+                                        reason=f"Missing mandatory study epoch element: 'name' in epochs[{ep_idx}].",
+                                    )
+                                )
 
                     # Encounters / Visits
                     encounters = design.get("encounters", [])
