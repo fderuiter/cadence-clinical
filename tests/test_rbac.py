@@ -1293,3 +1293,49 @@ def test_principal_agreement_with_middleware_coercion() -> None:
     assert data_free["assigned_sites"] == []
     assert data_free["sponsor_id"] is None
     assert data_free["unblinded_access"] is False
+
+
+def test_lab_range_rbac_permissions() -> None:
+    """Verify that lab_range permissions are mapped correctly for all canonical/legacy roles."""
+    from packages.security.rbac import (
+        ROLE_SYSADMIN,
+        ROLE_SPONSOR_DM,
+        ROLE_CRA_CANONICAL,
+        ROLE_INVESTIGATOR,
+        ROLE_CRC,
+        ROLE_PRINCIPAL_INVESTIGATOR,
+        ROLE_AUTHORIZED_ER_PHYSICIAN,
+        ROLE_LEAD_INVESTIGATOR,
+        Principal,
+        has_permission,
+    )
+
+    sysadmin = Principal(user_id="sys1", roles=[ROLE_SYSADMIN])
+    dm = Principal(user_id="dm1", roles=[ROLE_SPONSOR_DM])
+    admin = Principal(user_id="admin1", roles=["admin"])
+    cra = Principal(user_id="cra1", roles=[ROLE_CRA_CANONICAL])
+    monitor = Principal(user_id="mon1", roles=["monitor"])
+
+    investigator = Principal(user_id="inv1", roles=[ROLE_INVESTIGATOR])
+    crc = Principal(user_id="crc1", roles=[ROLE_CRC])
+
+    pi = Principal(user_id="pi1", roles=[ROLE_PRINCIPAL_INVESTIGATOR])
+    er_phys = Principal(user_id="er1", roles=[ROLE_AUTHORIZED_ER_PHYSICIAN])
+    lead_inv = Principal(user_id="lead1", roles=[ROLE_LEAD_INVESTIGATOR])
+
+    # Check full read/write/delete permissions for data management roles
+    for p in (sysadmin, dm, admin, cra, monitor):
+        for action in ("create", "read", "update", "delete"):
+            assert has_permission(p, f"lab_range:{action}") is True
+
+    # Check read-only permissions for investigator and coordinator
+    for p in (investigator, crc):
+        assert has_permission(p, "lab_range:read") is True
+        for action in ("create", "update", "delete"):
+            assert has_permission(p, f"lab_range:{action}") is False
+
+    # Check inherited read-only permissions for derived investigator roles (PI, ER physician, Lead Investigator)
+    for p in (pi, er_phys, lead_inv):
+        assert has_permission(p, "lab_range:read") is True
+        for action in ("create", "update", "delete"):
+            assert has_permission(p, f"lab_range:{action}") is False

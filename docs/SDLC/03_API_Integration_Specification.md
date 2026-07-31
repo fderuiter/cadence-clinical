@@ -564,6 +564,46 @@ Compiles and validates a rule expression, returning the compiled XPath represent
 }
 ```
 
+
+#### 4.4.4 `POST /api/v1/studies/{study_id}/rules/validate`
+Compiles and validates a rule expression, returning the compiled XPath representation and identifying unknown fields or circular skip-logic dependencies. This endpoint acts as the primary validation service for live feedback.
+
+**Request Body**:
+```json
+{
+  "type": "skip_logic",
+  "condition": {
+    "type": "comparison",
+    "operator": "==",
+    "operands": [
+      {
+        "type": "field_ref",
+        "field_ref": {
+          "field_id": "VSPERF_INVALID"
+        }
+      },
+      {
+        "type": "constant",
+        "value": "N"
+      }
+    ]
+  },
+  "action": "hide",
+  "target_field": "VSSBP"
+}
+```
+
+**Response (HTTP 200)**:
+```json
+{
+  "xpath": "(/clinical_data/VSPERF_INVALID = 'N')",
+  "failures": [
+    "Unknown field reference: 'VSPERF_INVALID'"
+  ],
+  "circular_cycles": []
+}
+```
+
 ---
 
 ## 5. Medical Dictionary Connectors
@@ -3863,6 +3903,39 @@ paths:
 
         Detects unknown field references and circular skip-logic dependencies.'
       operationId: compile_preview_rule_api_v1_studies__study_id__rules_preview_post
+      parameters:
+      - name: study_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Study Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRuleRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RulePreviewResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/studies/{study_id}/rules/validate:
+    post:
+      summary: Compile Validate Rule
+      description: 'Read-only compile and validation preview route.
+
+        Detects unknown field references and circular skip-logic dependencies.'
+      operationId: compile_validate_rule_api_v1_studies__study_id__rules_validate_post
       parameters:
       - name: study_id
         in: path
