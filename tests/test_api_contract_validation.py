@@ -369,6 +369,7 @@ WHITELISTED_ROUTES = {
     ("get", "/api/v1/execution/amendments/summary/{study_id}/{version}"),
     ("post", "/api/v1/execution/doa/assignment"),
     ("post", "/api/v1/execution/doa/sign-off"),
+    ("get", "/api/v1/execution/doa/log/{study_id}/{site_id}"),
     ("post", "/api/v1/execution/auditor/token/generate"),
     ("get", "/api/v1/execution/auditor/inspect/audit-trail/{study_id}"),
     ("post", "/api/v1/execution/safety/dispatch"),
