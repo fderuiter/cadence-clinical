@@ -175,6 +175,7 @@ class ClinicalSubject(AuditedModel):
 
     subject_id: Mapped[str] = mapped_column(String(255), nullable=False)
     study_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    # site_id column for site-level locks (Task 3)
     site_id: Mapped[Optional[str]] = mapped_column(
         String(255), nullable=True, index=True
     )
@@ -263,6 +264,9 @@ class SubjectConsent(AuditedModel):
 
     subject_id: Mapped[str] = mapped_column(String(255), nullable=False)
     study_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    site_id: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True, index=True
+    )
     version_tag: Mapped[str] = mapped_column(String(50), nullable=False)
     version_index: Mapped[int] = mapped_column(Integer, nullable=False)
     icf_signed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
@@ -281,6 +285,9 @@ class ConsentFormRecord(AuditedModel):
     __tablename__ = "consent_form_records"
 
     subject_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    site_id: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True, index=True
+    )
     icf_version_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     printed_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     relationship_to_subject: Mapped[Optional[str]] = mapped_column(
@@ -302,6 +309,9 @@ class ConsentSignature(AuditedModel):
     __tablename__ = "consent_signatures"
 
     subject_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    site_id: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True, index=True
+    )
     icf_version_id: Mapped[str] = mapped_column(String(100), nullable=False)
     printed_name: Mapped[str] = mapped_column(String(255), nullable=False)
     signature_svg_data: Mapped[Optional[str]] = mapped_column(String, nullable=True)
@@ -1049,6 +1059,9 @@ class PendingPredecessorCheck(AuditedModel):
     __table_args__ = (Index("idx_pending_pred_subject_rule", "subject_id", "rule_id"),)
 
     subject_id: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
+    site_id: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True, index=True
+    )
     study_id: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
     current_visit_id: Mapped[str] = mapped_column(String(255), nullable=True)
     current_visit_name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -1277,6 +1290,9 @@ class ComprehensionQuizResult(AuditedModel):
     __tablename__ = "comprehension_quiz_results"
 
     subject_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    site_id: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True, index=True
+    )
     icf_version_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     score: Mapped[float] = mapped_column(Float, nullable=False)
     passed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

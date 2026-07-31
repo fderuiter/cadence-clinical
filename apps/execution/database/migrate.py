@@ -426,6 +426,11 @@ async def upgrade_existing_tables(conn) -> None:
         "sdv_sign_offs",
         "clinical_subjects",
         "clinical_visits",
+        "subject_consents",
+        "consent_form_records",
+        "consent_signatures",
+        "comprehension_quiz_results",
+        "pending_predecessor_checks",
     ]
     for table_name in tables_to_upgrade:
         cols = await conn.run_sync(lambda sc, tn=table_name: get_table_columns(sc, tn))
