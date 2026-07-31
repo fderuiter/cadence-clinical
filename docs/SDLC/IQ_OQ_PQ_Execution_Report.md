@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1783
-- **Passed:** 1783 🟢
+- **Total Automated Test Cases Run:** 1744
+- **Passed:** 1744 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -607,6 +607,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_normalize_line_javascript` | `tests.test_detect_duplication` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_normalize_line_python` | `tests.test_detect_duplication` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_normalize_line_vue` | `tests.test_detect_duplication` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_path_normalization_win32` | `tests.test_detect_duplication` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_repo_root_resolution` | `tests.test_detect_duplication` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_scan_file_for_lines` | `tests.test_detect_duplication` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_doa_historical_audit_trail_logging` | `tests.test_doa_audit_suite` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_doa_assignment_record_creation` | `tests.test_doa_models` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -932,6 +934,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_gateway_semantic_action_issuance_and_enforcement` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_sponsor_claim_extraction` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_startup_development_with_bypass_configs` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gateway_startup_offline_idp_recovery` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_startup_production_no_bypass_configs` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_startup_production_with_skip_jwks` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_startup_production_with_test_secret` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -961,7 +964,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_signature_verification_study_designer_role_allowed` | `tests.test_gateway` | Trace-15 | 🟢 PASSED | < 1s |
 | `test_signature_verification_success` | `tests.test_gateway` | Trace-15 | 🟢 PASSED | < 1s |
 | `test_signature_verification_with_batch_id` | `tests.test_gateway` | Trace-15 | 🟢 PASSED | < 1s |
+| `test_verify_token_fetch_failure_fallback` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_token_invalid` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_verify_token_on_demand_success` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_verify_token_stampede_protection` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_base_client_headers` | `tests.test_gateway_base_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_base_client_request_exception_logging` | `tests.test_gateway_base_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_base_client_request_failure_logging` | `tests.test_gateway_base_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
