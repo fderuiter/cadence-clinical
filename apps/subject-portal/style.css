@@ -1,7 +1,7 @@
 /* eCOA Subject Portal failure styles */
 :root {
-  --primary: #026593;
-  --primary-dark: #014c6f;
+  --primary: #026597;
+  --primary-dark: #014d76;
   --primary-light: #e0f2fe;
   --text-main: #0f172a;
   --text-muted: #475569;
@@ -14,7 +14,7 @@
   --warning-bg: #fef9c3;
   --danger: #b91c1c;
   --danger-bg: #fee2e2;
-  --accent: #4f46e5;
+  --accent: #4338ca;
 }
 
 * {

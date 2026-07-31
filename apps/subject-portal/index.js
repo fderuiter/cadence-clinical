@@ -248,28 +248,40 @@ function showView(viewId) {
   });
   document.querySelectorAll(".nav-item").forEach((item) => {
     item.classList.remove("active");
+    const btn = item.querySelector("button");
+    if (btn) {
+      btn.setAttribute("aria-selected", "false");
+    }
   });
 
   const targetView = document.getElementById(viewId);
   if (targetView) targetView.classList.add("active");
 
   // Highlight matching sidebar/navbar tab
+  let activeTabId = null;
   if (viewId === "view-tasks" || viewId === "view-questionnaire") {
-    const tab = document.getElementById("tab-btn-tasks");
-    if (tab) tab.classList.add("active");
+    activeTabId = "tab-btn-tasks";
   } else if (viewId === "view-compliance") {
-    const tab = document.getElementById("tab-btn-compliance");
-    if (tab) tab.classList.add("active");
+    activeTabId = "tab-btn-compliance";
   } else if (viewId === "view-inbox") {
-    const tab = document.getElementById("tab-btn-inbox");
-    if (tab) tab.classList.add("active");
+    activeTabId = "tab-btn-inbox";
   } else if (viewId === "view-consent") {
-    const tab = document.getElementById("tab-btn-consent");
-    if (tab) tab.classList.add("active");
-    // Hook fetch consent details when loading consent tab
-    if (typeof loadConsentDetails === "function") {
-      loadConsentDetails();
+    activeTabId = "tab-btn-consent";
+  }
+
+  if (activeTabId) {
+    const tab = document.getElementById(activeTabId);
+    if (tab) {
+      tab.classList.add("active");
+      const btn = tab.querySelector("button");
+      if (btn) {
+        btn.setAttribute("aria-selected", "true");
+      }
     }
+  }
+
+  if (viewId === "view-consent" && typeof loadConsentDetails === "function") {
+    loadConsentDetails();
   }
 }
 
@@ -591,6 +603,16 @@ function validateActiveQuestionnaire() {
         });
       }
     }
+    const input = document.getElementById(id);
+    if (input) {
+      input.removeAttribute("aria-invalid");
+      input.removeAttribute("aria-describedby");
+    }
+    const radios = document.querySelectorAll(`input[name="${id}"]`);
+    radios.forEach((r) => {
+      r.removeAttribute("aria-invalid");
+      r.removeAttribute("aria-describedby");
+    });
 
     const fieldMeta = {
       id: id,
@@ -621,6 +643,7 @@ function markFieldInvalid(fieldId, msg) {
   if (container) {
     container.classList.add("has-error");
     const errDiv = document.createElement("div");
+    errDiv.id = `error-msg-${fieldId}`;
     errDiv.className = "validation-error-msg";
     errDiv.id = `${fieldId}-error`;
     errDiv.style.color = "var(--danger)";
@@ -630,21 +653,17 @@ function markFieldInvalid(fieldId, msg) {
     errDiv.textContent = msg;
     container.appendChild(errDiv);
 
-    // Link the input tag to validation message using ARIA attributes
+    // Link directly to the input elements using aria-describedby and aria-invalid
     const input = document.getElementById(fieldId);
     if (input) {
-      input.setAttribute("aria-describedby", `${fieldId}-error`);
+      input.setAttribute("aria-describedby", `error-msg-${fieldId}`);
       input.setAttribute("aria-invalid", "true");
-    } else {
-      // Handle radio options
-      const radioInputs = container.querySelectorAll(
-        `input[name="${fieldId}"]`
-      );
-      radioInputs.forEach((radio) => {
-        radio.setAttribute("aria-describedby", `${fieldId}-error`);
-        radio.setAttribute("aria-invalid", "true");
-      });
     }
+    const radios = document.querySelectorAll(`input[name="${fieldId}"]`);
+    radios.forEach((r) => {
+      r.setAttribute("aria-describedby", `error-msg-${fieldId}`);
+      r.setAttribute("aria-invalid", "true");
+    });
   }
 }
 
@@ -683,14 +702,20 @@ function openSignatureModal(actionType = "epro") {
     reasonSelect.value = "Initial Questionnaire Completion";
   }
 
-  document.getElementById("sign-reason-custom").value = "";
+  document.getElementById("portal-sign-modal").style.display = "flex";
 
+  // Focus trap: set focus to the first focusable element inside the modal
   const modal = document.getElementById("portal-sign-modal");
   if (modal) {
-    modal.style.display = "flex";
-    const usernameInput = document.getElementById("sign-username");
-    if (usernameInput) {
-      usernameInput.focus();
+    const focusableSelectors =
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+    let elements = Array.from(
+      modal.querySelectorAll(focusableSelectors)
+    ).filter((el) => !el.disabled);
+    const visible = elements.filter((el) => el.offsetParent !== null);
+    const focusableElements = visible.length > 0 ? visible : elements;
+    if (focusableElements.length > 0) {
+      focusableElements[0].focus();
     }
   }
 }
@@ -698,13 +723,14 @@ function openSignatureModal(actionType = "epro") {
 function closeSignatureModal() {
   // Credential hygiene: clear PIN / password from DOM immediately on cancel
   document.getElementById("sign-password").value = "";
-  const modal = document.getElementById("portal-sign-modal");
-  if (modal) {
-    modal.style.display = "none";
-  }
-
-  // Restore focus to initiating button on close
+  document.getElementById("portal-sign-modal").style.display = "none";
   if (
+    state.initiatingButton &&
+    typeof state.initiatingButton.focus === "function"
+  ) {
+    state.initiatingButton.focus();
+    state.initiatingButton = null;
+  } else if (
     state.previouslyFocusedElement &&
     typeof state.previouslyFocusedElement.focus === "function"
   ) {
@@ -1382,6 +1408,16 @@ async function submitConsentAnswers() {
         });
       }
     }
+    const input = document.getElementById(q.id);
+    if (input) {
+      input.removeAttribute("aria-invalid");
+      input.removeAttribute("aria-describedby");
+    }
+    const radios = document.querySelectorAll(`input[name="${q.id}"]`);
+    radios.forEach((r) => {
+      r.removeAttribute("aria-invalid");
+      r.removeAttribute("aria-describedby");
+    });
 
     const fieldMeta = {
       id: q.id,
@@ -1970,6 +2006,126 @@ async function initializeApp() {
   if (btnRetryCompliance) {
     btnRetryCompliance.addEventListener("click", retryCompliance);
   }
+
+  // Setup semantic ARIA roles, states, and arrow key navigation for the tab list
+  const navTabs = document.querySelector(".nav-tabs");
+  if (navTabs) {
+    navTabs.setAttribute("role", "tablist");
+    const tabItems = Array.from(navTabs.querySelectorAll(".nav-item"));
+    tabItems.forEach((item) => {
+      item.setAttribute("role", "presentation");
+      const btn = item.querySelector("button");
+      if (btn) {
+        btn.setAttribute("role", "tab");
+        if (!btn.id) {
+          btn.id = "btn-" + item.id;
+        }
+        let controls = "";
+        if (item.id === "tab-btn-tasks") controls = "view-tasks";
+        else if (item.id === "tab-btn-compliance") controls = "view-compliance";
+        else if (item.id === "tab-btn-inbox") controls = "view-inbox";
+        else if (item.id === "tab-btn-consent") controls = "view-consent";
+        btn.setAttribute("aria-controls", controls);
+
+        const isSelected = item.classList.contains("active");
+        btn.setAttribute("aria-selected", isSelected ? "true" : "false");
+      }
+    });
+
+    document.querySelectorAll(".portal-view").forEach((v) => {
+      v.setAttribute("role", "tabpanel");
+      let btnId = "";
+      if (v.id === "view-tasks") btnId = "btn-tab-btn-tasks";
+      else if (v.id === "view-compliance") btnId = "btn-tab-btn-compliance";
+      else if (v.id === "view-inbox") btnId = "btn-tab-btn-inbox";
+      else if (v.id === "view-consent") btnId = "btn-tab-btn-consent";
+      if (btnId) {
+        v.setAttribute("aria-labelledby", btnId);
+      }
+    });
+
+    // Remove any existing keydown listener to avoid duplicates
+    if (navTabs._keydownListener) {
+      navTabs.removeEventListener("keydown", navTabs._keydownListener);
+    }
+    navTabs._keydownListener = (e) => {
+      const activeElement = document.activeElement;
+      if (
+        !activeElement ||
+        activeElement.tagName !== "BUTTON" ||
+        activeElement.getAttribute("role") !== "tab"
+      ) {
+        return;
+      }
+
+      const buttons = Array.from(
+        navTabs.querySelectorAll("button[role='tab']")
+      );
+      const currentIndex = buttons.indexOf(activeElement);
+      if (currentIndex === -1) return;
+
+      let nextIndex = currentIndex;
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        nextIndex = (currentIndex + 1) % buttons.length;
+        e.preventDefault();
+      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        nextIndex = (currentIndex - 1 + buttons.length) % buttons.length;
+        e.preventDefault();
+      } else if (e.key === "Home") {
+        nextIndex = 0;
+        e.preventDefault();
+      } else if (e.key === "End") {
+        nextIndex = buttons.length - 1;
+        e.preventDefault();
+      }
+
+      if (nextIndex !== currentIndex) {
+        const nextBtn = buttons[nextIndex];
+        nextBtn.focus();
+        nextBtn.click();
+      }
+    };
+    navTabs.addEventListener("keydown", navTabs._keydownListener);
+  }
+
+  // Focus trap for the signature modal (prevents escaping focus)
+  if (typeof window !== "undefined") {
+    if (!window.__TAB_TRAP_LISTENER_ADDED__) {
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "Tab") {
+          const modal = document.getElementById("portal-sign-modal");
+          if (modal && modal.style.display !== "none") {
+            const focusableSelectors =
+              'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+            let elements = Array.from(
+              modal.querySelectorAll(focusableSelectors)
+            ).filter((el) => !el.disabled);
+            const visible = elements.filter((el) => el.offsetParent !== null);
+            const focusableElements = visible.length > 0 ? visible : elements;
+
+            if (focusableElements.length > 0) {
+              const firstFocusable = focusableElements[0];
+              const lastFocusable =
+                focusableElements[focusableElements.length - 1];
+
+              if (e.shiftKey) {
+                if (document.activeElement === firstFocusable) {
+                  lastFocusable.focus();
+                  e.preventDefault();
+                }
+              } else {
+                if (document.activeElement === lastFocusable) {
+                  firstFocusable.focus();
+                  e.preventDefault();
+                }
+              }
+            }
+          }
+        }
+      });
+      window.__TAB_TRAP_LISTENER_ADDED__ = true;
+    }
+  }
 }
 
 // Auto-run on load in DOM environments
@@ -2004,6 +2160,7 @@ export {
   submitConsentAnswers,
   openSignatureModal,
   closeSignatureModal,
+  markFieldInvalid,
 };
 
 function createClinicalInput(

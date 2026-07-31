@@ -1,6 +1,7 @@
 // Verified Subject Portal core workflow tests
 import "fake-indexeddb/auto";
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import axe from "axe-core";
 
 // Set up JSDOM mock elements before importing index.js
 beforeEach(async () => {
@@ -1002,45 +1003,151 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       );
     });
 
-    it("traps keyboard focus inside the signature modal and restores focus on close", async () => {
-      const portal = await import("../index.js");
-      await portal.initializeApp();
+    describe("eCOA Patient Portal - Dynamic JSDOM Accessibility Audits", () => {
+      it("passes automated axe-core audits for WCAG 2.1 AA", async () => {
+        const portal = await import("../index.js");
+        await portal.initializeApp();
 
-      // Create a mock trigger button and focus it
-      const mockTrigger = document.createElement("button");
-      mockTrigger.id = "mock-trigger";
-      document.body.appendChild(mockTrigger);
-      mockTrigger.focus();
-      expect(document.activeElement).toBe(mockTrigger);
+        // Run axe audit on the rendered body layout
+        const results = await axe.run(document.body, {
+          runOnly: {
+            type: "tag",
+            values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"],
+          },
+        });
 
-      // Open the modal
-      portal.openSignatureModal("epro");
+        if (results.violations.length > 0) {
+          console.log(
+            "Axe-core dynamic WCAG 2.1 AA violations detected:",
+            JSON.stringify(results.violations, null, 2)
+          );
+        }
+        expect(results.violations).toEqual([]);
+      });
 
-      // Focus should be directed inside the modal on open (username field)
-      const usernameInput = document.getElementById("sign-username");
-      expect(document.activeElement).toBe(usernameInput);
+      it("supports keyboard arrow-key navigation on navigation tabs", async () => {
+        const portal = await import("../index.js");
+        await portal.initializeApp();
 
-      // Emulate Tab key trapping on the last focusable element
-      const modalSignBtn = document.getElementById("btn-modal-sign");
-      modalSignBtn.focus();
-      expect(document.activeElement).toBe(modalSignBtn);
+        const navTabs = document.querySelector(".nav-tabs");
+        const buttons = Array.from(
+          navTabs.querySelectorAll("button[role='tab']")
+        );
+        expect(buttons).toHaveLength(3);
 
-      // Trigger Tab key press on document
-      const tabEvent = new KeyboardEvent("keydown", { key: "Tab" });
-      document.dispatchEvent(tabEvent);
+        // Focus the first button
+        buttons[0].focus();
+        expect(document.activeElement).toBe(buttons[0]);
 
-      // Focus should wrap around to the first focusable element inside the modal (the reason select)
-      const firstFocusable = document.getElementById("sign-reason");
-      expect(document.activeElement).toBe(firstFocusable);
+        // Trigger ArrowRight keydown
+        const arrowRightEvent = new KeyboardEvent("keydown", {
+          key: "ArrowRight",
+          bubbles: true,
+        });
+        navTabs.dispatchEvent(arrowRightEvent);
 
-      // Close the modal
-      portal.closeSignatureModal();
+        // Focus should move to the second button and click should activate it
+        expect(document.activeElement).toBe(buttons[1]);
+        expect(buttons[1].getAttribute("aria-selected")).toBe("true");
+        expect(buttons[0].getAttribute("aria-selected")).toBe("false");
 
-      // Focus should be restored to the initiating button
-      expect(document.activeElement).toBe(mockTrigger);
+        // Trigger ArrowLeft keydown
+        const arrowLeftEvent = new KeyboardEvent("keydown", {
+          key: "ArrowLeft",
+          bubbles: true,
+        });
+        navTabs.dispatchEvent(arrowLeftEvent);
 
-      // Clean up mock elements
-      mockTrigger.remove();
+        // Focus should wrap back to the first button
+        expect(document.activeElement).toBe(buttons[0]);
+        expect(buttons[0].getAttribute("aria-selected")).toBe("true");
+      });
+
+      it("enforces focus containment within the signing modal and restores focus on closure", async () => {
+        const portal = await import("../index.js");
+        await portal.initializeApp();
+
+        // Set initiating element
+        const triggerButton = document
+          .getElementById("tab-btn-tasks")
+          .querySelector("button");
+        triggerButton.focus();
+        expect(document.activeElement).toBe(triggerButton);
+
+        // Open signature modal
+        portal.openSignatureModal("epro");
+        expect(document.getElementById("portal-sign-modal").style.display).toBe(
+          "flex"
+        );
+
+        // Focus should immediately move to the first focusable element inside the modal (e.g. select element or first input)
+        const modal = document.getElementById("portal-sign-modal");
+        const focusableSelectors = "button, [href], input, select, textarea";
+        const focusableElements = Array.from(
+          modal.querySelectorAll(focusableSelectors)
+        ).filter((el) => !el.disabled);
+
+        expect(document.activeElement).toBe(focusableElements[0]);
+
+        // Focus last element
+        const lastElement = focusableElements[focusableElements.length - 1];
+        lastElement.focus();
+        expect(document.activeElement).toBe(lastElement);
+
+        // Press Tab key -> should wrap to the first element
+        const tabEvent = new KeyboardEvent("keydown", {
+          key: "Tab",
+          bubbles: true,
+        });
+        window.dispatchEvent(tabEvent);
+        expect(document.activeElement).toBe(focusableElements[0]);
+
+        // Press Shift+Tab on the first element -> should wrap to the last element
+        focusableElements[0].focus();
+        const shiftTabEvent = new KeyboardEvent("keydown", {
+          key: "Tab",
+          shiftKey: true,
+          bubbles: true,
+        });
+        window.dispatchEvent(shiftTabEvent);
+        expect(document.activeElement).toBe(lastElement);
+
+        // Close modal -> focus should restore to triggerButton
+        portal.closeSignatureModal();
+        expect(document.getElementById("portal-sign-modal").style.display).toBe(
+          "none"
+        );
+        expect(document.activeElement).toBe(triggerButton);
+      });
+
+      it("links form field errors dynamically to input elements using aria-describedby", async () => {
+        const portal = await import("../index.js");
+        await portal.initializeApp();
+
+        // Render a mock form input
+        const container = document.getElementById(
+          "questionnaire-form-container"
+        );
+        container.innerHTML = `
+          <div class="clinical-input" id="field-container-systolic">
+            <label for="systolic">Systolic</label>
+            <input type="text" id="systolic" />
+          </div>
+        `;
+
+        // Call markFieldInvalid
+        portal.markFieldInvalid("systolic", "Value must be between 50 and 250");
+
+        const input = document.getElementById("systolic");
+        expect(input.getAttribute("aria-invalid")).toBe("true");
+        expect(input.getAttribute("aria-describedby")).toBe(
+          "error-msg-systolic"
+        );
+
+        const errorMsg = document.getElementById("error-msg-systolic");
+        expect(errorMsg).not.toBeNull();
+        expect(errorMsg.textContent).toBe("Value must be between 50 and 250");
+      });
     });
   });
 });
