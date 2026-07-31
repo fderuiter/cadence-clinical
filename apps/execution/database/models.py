@@ -16,7 +16,13 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, validates
+from sqlalchemy.orm import (
+    DeclarativeBase,
+    Mapped,
+    mapped_column,
+    validates,
+    relationship,
+)
 
 from apps.execution.subject_lifecycle import (
     LockedFactorMutationError,
@@ -1079,3 +1085,54 @@ class MigrationRule(AuditedModel):
     target_field: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     default_value_string: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     default_value_float: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+
+
+class ComplianceChangeRequest(AuditedModel):
+    """Represents a GxP-regulated compliance change request.
+
+    Maintains a multi-approver workflow for system settings and policy updates.
+    """
+
+    __tablename__ = "compliance_change_requests"
+
+    setting_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    old_value: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    new_value: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    requested_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason: Mapped[str] = mapped_column(String(1000), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(50), default="PENDING_APPROVAL", nullable=False
+    )
+    impact_assessment: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+
+    signatures: Mapped[list["ChangeApprovalSignature"]] = relationship(
+        "ChangeApprovalSignature",
+        primaryjoin="ComplianceChangeRequest.id == foreign(ChangeApprovalSignature.change_request_id)",
+        back_populates="change_request",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+
+class ChangeApprovalSignature(AuditedModel):
+    """Represents a cryptographic/electronic approval signature for a change request."""
+
+    __tablename__ = "change_approval_signatures"
+    __table_args__ = (
+        UniqueConstraint("signature_token", name="uq_change_approval_signature_token"),
+    )
+
+    change_request_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    approver_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    signature_token: Mapped[str] = mapped_column(String(255), nullable=False)
+    role: Mapped[str] = mapped_column(String(255), nullable=False)
+    signed_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+
+    change_request: Mapped["ComplianceChangeRequest"] = relationship(
+        "ComplianceChangeRequest",
+        primaryjoin="foreign(ChangeApprovalSignature.change_request_id) == ComplianceChangeRequest.id",
+        back_populates="signatures",
+        uselist=False,
+    )
