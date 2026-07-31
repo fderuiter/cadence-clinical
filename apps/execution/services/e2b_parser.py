@@ -4,9 +4,9 @@ Requirements: PRD-SYS-001
 """
 
 import uuid
-import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 
+import defusedxml.ElementTree as ET
 from execution.safety_models import (
     CausalityEnum,
     SAECaseRecord,
