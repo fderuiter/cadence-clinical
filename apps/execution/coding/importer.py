@@ -47,7 +47,7 @@ async def update_job_progress(
                 if error_details is not None:
                     job.error_details = error_details[:1000]
                 if status in (ImportState.COMPLETED, ImportState.FAILED):
-                    job.completed_at = datetime.now(timezone.utc)
+                    job.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 async def process_dictionary_import(

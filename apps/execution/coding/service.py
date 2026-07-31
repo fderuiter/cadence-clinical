@@ -324,7 +324,7 @@ async def process_coding_action(
     assignment.score = score
     assignment.hierarchy = hierarchy
     assignment.assigned_by = actor
-    assignment.assigned_at = datetime.now(timezone.utc)
+    assignment.assigned_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # 3. Create a ledger record for ACCEPT or OVERRIDE
     if action_upper in ("ACCEPT", "OVERRIDE"):
@@ -341,7 +341,7 @@ async def process_coding_action(
             new_coded_term=coded_term,
             recoding_reason=reason_for_change or f"Manual decision: {action_upper}",
             decision_by=actor,
-            decision_at=datetime.now(timezone.utc),
+            decision_at=datetime.now(timezone.utc).replace(tzinfo=None),
         )
         session.add(ledger)
 
@@ -357,7 +357,7 @@ async def process_coding_action(
         for active_q in active_queries:
             active_q.status = "CLOSED"
             active_q.resolver = actor
-            active_q.resolved_at = datetime.now(timezone.utc)
+            active_q.resolved_at = datetime.now(timezone.utc).replace(tzinfo=None)
             active_q.response = f"Resolved via manual coding action: {action_upper} on code {coded_code}."
             session.add(active_q)
 

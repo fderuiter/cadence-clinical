@@ -577,7 +577,7 @@ async def poll_and_dispatch() -> None:
 
                 delivery.status = "SUCCESS"
                 delivery.etmf_document_id = doc_id
-                delivery.completed_at = datetime.now(timezone.utc)
+                delivery.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
                 delivery.last_error = None
 
                 await write_audit_log(
