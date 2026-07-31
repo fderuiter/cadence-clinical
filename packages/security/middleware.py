@@ -169,7 +169,18 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
 
         try:
             ts = float(timestamp)
-            if abs(time.time() - ts) > 300:
+            drift_limit_raw = os.getenv("GATEWAY_DRIFT_LIMIT")
+            if drift_limit_raw is None:
+                drift_limit = 30.0
+            else:
+                try:
+                    drift_limit = float(drift_limit_raw)
+                except ValueError:
+                    drift_limit = 30.0
+            if drift_limit < 5.0:
+                drift_limit = 5.0
+
+            if abs(time.time() - ts) > drift_limit:
                 status_code = 403 if is_mutation else 401
                 return JSONResponse(
                     status_code=status_code,

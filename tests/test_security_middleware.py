@@ -1762,3 +1762,152 @@ def test_middleware_scope_header_mutation_and_injection_rejection() -> None:
     headers_injected_unblinded["X-Unblinded-Access"] = "true"
     res = client.get("/verify-context-scope", headers=headers_injected_unblinded)
     assert res.status_code in (401, 403)
+
+
+def test_gateway_drift_limit_custom_success(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that GATEWAY_DRIFT_LIMIT accepts a request within a custom set limit (e.g. 10s)."""
+    monkeypatch.setenv("GATEWAY_DRIFT_LIMIT", "10.0")
+    client = TestClient(test_app)
+    
+    user_id = "test_user"
+    roles = "sponsor_designer"
+    change_reason = "gxp signoff"
+    timestamp = str(time.time() - 6) # Within 10s limit
+    
+    sig = generate_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        version="2",
+        change_reason=change_reason,
+        tenant_id="tenant_default",
+    )
+    
+    headers = {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": sig,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": change_reason,
+    }
+    
+    res = client.get("/secure-endpoint", headers=headers)
+    assert res.status_code == 200
+
+
+def test_gateway_drift_limit_custom_expired(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that GATEWAY_DRIFT_LIMIT rejects a request older than custom set limit (e.g. 10s)."""
+    monkeypatch.setenv("GATEWAY_DRIFT_LIMIT", "10.0")
+    client = TestClient(test_app)
+    
+    user_id = "test_user"
+    roles = "sponsor_designer"
+    change_reason = "gxp signoff"
+    timestamp = str(time.time() - 12) # Older than 10s limit
+    
+    sig = generate_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        version="2",
+        change_reason=change_reason,
+        tenant_id="tenant_default",
+    )
+    
+    headers = {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": sig,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": change_reason,
+    }
+    
+    res = client.get("/secure-endpoint", headers=headers)
+    assert res.status_code == 401
+
+
+def test_gateway_drift_limit_default_expired(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that GATEWAY_DRIFT_LIMIT rejects a request older than the default 30s limit (e.g. 35s) when not configured."""
+    monkeypatch.delenv("GATEWAY_DRIFT_LIMIT", raising=False)
+    client = TestClient(test_app)
+    
+    user_id = "test_user"
+    roles = "sponsor_designer"
+    change_reason = "gxp signoff"
+    timestamp = str(time.time() - 35) # Older than default 30s limit
+    
+    sig = generate_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        version="2",
+        change_reason=change_reason,
+        tenant_id="tenant_default",
+    )
+    
+    headers = {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": sig,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": change_reason,
+    }
+    
+    res = client.get("/secure-endpoint", headers=headers)
+    assert res.status_code == 401
+
+
+def test_gateway_drift_limit_guardrail(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that GATEWAY_DRIFT_LIMIT rejects configured values below 5.0s and defaults to 5.0s."""
+    monkeypatch.setenv("GATEWAY_DRIFT_LIMIT", "2.0") # Configured below 5s, should default to 5s
+    client = TestClient(test_app)
+    
+    user_id = "test_user"
+    roles = "sponsor_designer"
+    change_reason = "gxp signoff"
+    
+    # 1. Within 5s, should be accepted (4s)
+    timestamp_ok = str(time.time() - 4)
+    sig_ok = generate_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp_ok,
+        version="2",
+        change_reason=change_reason,
+        tenant_id="tenant_default",
+    )
+    headers_ok = {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp_ok,
+        "X-Gateway-Signature": sig_ok,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": change_reason,
+    }
+    res_ok = client.get("/secure-endpoint", headers=headers_ok)
+    assert res_ok.status_code == 200
+
+    # 2. Outside 5s, should be rejected (6s)
+    timestamp_fail = str(time.time() - 6)
+    sig_fail = generate_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp_fail,
+        version="2",
+        change_reason=change_reason,
+        tenant_id="tenant_default",
+    )
+    headers_fail = {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp_fail,
+        "X-Gateway-Signature": sig_fail,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": change_reason,
+    }
+    res_fail = client.get("/secure-endpoint", headers=headers_fail)
+    assert res_fail.status_code == 401
+

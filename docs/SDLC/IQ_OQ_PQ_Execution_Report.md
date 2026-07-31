@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1783
-- **Passed:** 1783 🟢
+- **Total Automated Test Cases Run:** 1793
+- **Passed:** 1793 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -838,6 +838,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_stale_timestamp_rejection` | `tests.test_etmf_inbound_email` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_unresolvable_recipient_address` | `tests.test_etmf_inbound_email` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_valid_inbound_email_ingestion` | `tests.test_etmf_inbound_email` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_webhook_drift_limit_custom_expired` | `tests.test_etmf_inbound_email` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_webhook_drift_limit_custom_success` | `tests.test_etmf_inbound_email` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_webhook_drift_limit_default_expired` | `tests.test_etmf_inbound_email` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_webhook_drift_limit_guardrail` | `tests.test_etmf_inbound_email` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_trigger_global_trial_lock` | `tests.test_etmf_lock_integration` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_trial_lock_status_error` | `tests.test_etmf_lock_integration` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_trial_lock_status_locked` | `tests.test_etmf_lock_integration` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -934,7 +938,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_gateway_scope_extraction_and_verification_integrity` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_semantic_action_issuance_and_enforcement` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_sponsor_claim_extraction` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gateway_startup_dev_succeeds_with_default_secret` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_startup_development_with_bypass_configs` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gateway_startup_production_fails_with_default_secret` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_startup_production_no_bypass_configs` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_startup_production_with_skip_jwks` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_startup_production_with_test_secret` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1583,6 +1589,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_downstream_signature_gated_endpoint_replay_blocked` | `tests.test_security_middleware` | Trace-15 | 🟢 PASSED | < 1s |
 | `test_downstream_signature_gated_endpoint_requires_sig_token` | `tests.test_security_middleware` | Trace-15 | 🟢 PASSED | < 1s |
 | `test_downstream_signature_gated_endpoint_valid_sig_token` | `tests.test_security_middleware` | Trace-15 | 🟢 PASSED | < 1s |
+| `test_gateway_drift_limit_custom_expired` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gateway_drift_limit_custom_success` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gateway_drift_limit_default_expired` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_gateway_drift_limit_guardrail` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_middleware_cross_request_scope_isolation` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_middleware_expired_timestamp` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_middleware_explicit_legacy_version_accepted` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |

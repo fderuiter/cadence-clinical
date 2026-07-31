@@ -2103,12 +2103,60 @@ def test_gateway_startup_production_no_bypass_configs() -> None:
 
     env = {
         "APP_ENV": "production",
+        "GATEWAY_SECRET": "a-secure-custom-gateway-secret-string",
     }
     # Ensure bypass env vars are not in the environment
     env_keys = ["JWT_TEST_SECRET", "ALLOW_UNVERIFIED_JWT_FOR_TEST", "SKIP_JWKS_FETCH"]
     for key in env_keys:
         if key in env:
             del env[key]
+
+    result = subprocess.run(
+        [sys.executable, "-c", "import apps.gateway.main"],
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
+
+
+def test_gateway_startup_production_fails_with_default_secret() -> None:
+    """
+    Test that the gateway crashes on startup in production when using the default fallback secret.
+    """
+    import subprocess
+    import sys
+
+    env = {
+        "APP_ENV": "production",
+    }
+    # Ensure GATEWAY_SECRET is not set, meaning it falls back to the default
+    if "GATEWAY_SECRET" in env:
+        del env["GATEWAY_SECRET"]
+
+    result = subprocess.run(
+        [sys.executable, "-c", "import apps.gateway.main"],
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode != 0
+    assert "GATEWAY_SECRET" in result.stderr
+
+
+def test_gateway_startup_dev_succeeds_with_default_secret() -> None:
+    """
+    Test that the gateway successfully starts up in local environments (e.g. development)
+    even when using the default fallback secret.
+    """
+    import subprocess
+    import sys
+
+    env = {
+        "APP_ENV": "development",
+    }
+    if "GATEWAY_SECRET" in env:
+        del env["GATEWAY_SECRET"]
 
     result = subprocess.run(
         [sys.executable, "-c", "import apps.gateway.main"],

@@ -355,10 +355,21 @@ def verify_inbound_email_signature(
         "INBOUND_EMAIL_HMAC_SECRET", "dev-default-secret-inbound-email-hmac"
     )
 
-    # 1. Timestamp Freshness Check (300-second drift window)
+    webhook_drift_limit_raw = os.getenv("WEBHOOK_DRIFT_LIMIT")
+    if webhook_drift_limit_raw is None:
+        drift_limit = 30.0
+    else:
+        try:
+            drift_limit = float(webhook_drift_limit_raw)
+        except ValueError:
+            drift_limit = 30.0
+    if drift_limit < 5.0:
+        drift_limit = 5.0
+
+    # 1. Timestamp Freshness Check
     try:
         ts = float(timestamp)
-        if abs(time.time() - ts) > 300:
+        if abs(time.time() - ts) > drift_limit:
             return False
     except (ValueError, TypeError):
         return False
@@ -368,7 +379,7 @@ def verify_inbound_email_signature(
     if not replay_key:
         return False
 
-    if inbound_email_replay_cache.is_replayed(replay_key):
+    if inbound_email_replay_cache.is_replayed(replay_key, ttl=drift_limit):
         return False
 
     # 3. Signature Verification

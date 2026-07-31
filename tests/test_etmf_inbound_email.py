@@ -381,3 +381,119 @@ async def test_immutability_violation_inbound_email():
         res = await session.execute(stmt)
         logs = res.scalars().all()
         assert len(logs) == 1
+
+
+def test_webhook_drift_limit_custom_success(monkeypatch):
+    """Test that WEBHOOK_DRIFT_LIMIT accepts a request within a custom set limit (e.g. 10s)."""
+    monkeypatch.setenv("WEBHOOK_DRIFT_LIMIT", "10.0")
+    client = TestClient(app)
+    timestamp = str(time.time() - 6) # Within 10s limit
+    token = "unique-token-drift-custom-success"
+    signature = compute_signature(timestamp, token)
+
+    response = client.post(
+        "/api/v1/etmf/inbound-email",
+        data={
+            "sender": "sender@example.com",
+            "recipient": "study-xyz+conduct@example.com",
+            "subject": "Subject",
+            "body-plain": "Body",
+            "timestamp": timestamp,
+            "token": token,
+            "signature": signature,
+            "Message-Id": "<msg-drift-custom-success@example.com>",
+        },
+    )
+    assert response.status_code == 201
+
+
+def test_webhook_drift_limit_custom_expired(monkeypatch):
+    """Test that WEBHOOK_DRIFT_LIMIT rejects a request older than custom set limit (e.g. 10s)."""
+    monkeypatch.setenv("WEBHOOK_DRIFT_LIMIT", "10.0")
+    client = TestClient(app)
+    timestamp = str(time.time() - 12) # Older than 10s limit
+    token = "unique-token-drift-custom-expired"
+    signature = compute_signature(timestamp, token)
+
+    response = client.post(
+        "/api/v1/etmf/inbound-email",
+        data={
+            "sender": "sender@example.com",
+            "recipient": "study-xyz+conduct@example.com",
+            "subject": "Subject",
+            "body-plain": "Body",
+            "timestamp": timestamp,
+            "token": token,
+            "signature": signature,
+            "Message-Id": "<msg-drift-custom-expired@example.com>",
+        },
+    )
+    assert response.status_code == 401
+
+
+def test_webhook_drift_limit_default_expired(monkeypatch):
+    """Test that WEBHOOK_DRIFT_LIMIT rejects a request older than the default 30s limit (e.g. 35s) when not configured."""
+    monkeypatch.delenv("WEBHOOK_DRIFT_LIMIT", raising=False)
+    client = TestClient(app)
+    timestamp = str(time.time() - 35) # Older than default 30s limit
+    token = "unique-token-drift-default-expired"
+    signature = compute_signature(timestamp, token)
+
+    response = client.post(
+        "/api/v1/etmf/inbound-email",
+        data={
+            "sender": "sender@example.com",
+            "recipient": "study-xyz+conduct@example.com",
+            "subject": "Subject",
+            "body-plain": "Body",
+            "timestamp": timestamp,
+            "token": token,
+            "signature": signature,
+            "Message-Id": "<msg-drift-default-expired@example.com>",
+        },
+    )
+    assert response.status_code == 401
+
+
+def test_webhook_drift_limit_guardrail(monkeypatch):
+    """Test that WEBHOOK_DRIFT_LIMIT rejects configured values below 5.0s and defaults to 5.0s."""
+    monkeypatch.setenv("WEBHOOK_DRIFT_LIMIT", "2.0") # Configured below 5.0s, should be bumped to 5.0s
+    client = TestClient(app)
+    
+    # Within 5.0s, so it should be accepted (4s)
+    timestamp_ok = str(time.time() - 4.0)
+    token_ok = "unique-token-drift-guardrail-ok"
+    sig_ok = compute_signature(timestamp_ok, token_ok)
+    response_ok = client.post(
+        "/api/v1/etmf/inbound-email",
+        data={
+            "sender": "sender@example.com",
+            "recipient": "study-xyz+conduct@example.com",
+            "subject": "Subject",
+            "body-plain": "Body",
+            "timestamp": timestamp_ok,
+            "token": token_ok,
+            "signature": sig_ok,
+            "Message-Id": "<msg-drift-guardrail-ok@example.com>",
+        },
+    )
+    assert response_ok.status_code == 201
+
+    # Outside 5.0s, so it should be rejected (6s)
+    timestamp_fail = str(time.time() - 6.0)
+    token_fail = "unique-token-drift-guardrail-fail"
+    sig_fail = compute_signature(timestamp_fail, token_fail)
+    response_fail = client.post(
+        "/api/v1/etmf/inbound-email",
+        data={
+            "sender": "sender@example.com",
+            "recipient": "study-xyz+conduct@example.com",
+            "subject": "Subject",
+            "body-plain": "Body",
+            "timestamp": timestamp_fail,
+            "token": token_fail,
+            "signature": sig_fail,
+            "Message-Id": "<msg-drift-guardrail-fail@example.com>",
+        },
+    )
+    assert response_fail.status_code == 401
