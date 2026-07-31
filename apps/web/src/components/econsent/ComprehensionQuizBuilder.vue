@@ -13,7 +13,7 @@
             max="100"
             step="5"
             class="form-control threshold-input"
-          >
+          />
           <span class="percentage-symbol">%</span>
         </div>
       </div>
@@ -21,10 +21,7 @@
 
     <!-- Question List -->
     <div class="questions-list">
-      <div
-        v-if="econsentStore.quizQuestions.length === 0"
-        class="no-questions"
-      >
+      <div v-if="econsentStore.quizQuestions.length === 0" class="no-questions">
         <p>No comprehension check questions added yet. Click "Add Question" below to draft one.</p>
       </div>
 
@@ -38,8 +35,8 @@
           <button
             type="button"
             class="btn-delete"
-            title="Remove Question"
             @click="removeQuestion(qIndex)"
+            title="Remove Question"
           >
             ✕ Remove
           </button>
@@ -54,7 +51,7 @@
             placeholder="e.g. What is the main benefit of participating?"
             class="form-control"
             @input="updateTranslation(q)"
-          >
+          />
         </div>
 
         <!-- Choices/Options Builder -->
@@ -69,22 +66,22 @@
               type="radio"
               :name="'correct-opt-' + q.id"
               :checked="q.correctAnswerIndex === optIndex"
-              title="Mark as correct answer"
               @change="q.correctAnswerIndex = optIndex"
-            >
+              title="Mark as correct answer"
+            />
             <input
               v-model="q.options[optIndex]"
               type="text"
               :placeholder="'Option ' + (optIndex + 1)"
               class="form-control option-input"
               @input="updateTranslation(q)"
-            >
+            />
             <button
               type="button"
               class="btn-remove-opt"
               :disabled="q.options.length <= 2"
-              title="Remove Option"
               @click="removeOption(qIndex, optIndex)"
+              title="Remove Option"
             >
               ✕
             </button>
@@ -108,7 +105,7 @@
             placeholder="e.g. Hint: Refer to Section 2 of the consent document."
             class="form-control"
             @input="updateTranslation(q)"
-          >
+          />
         </div>
       </div>
     </div>

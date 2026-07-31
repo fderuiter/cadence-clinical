@@ -15,7 +15,7 @@ os.makedirs(TEMPLATES_DIR, exist_ok=True)
 
 jinja_env = Environment(
     loader=FileSystemLoader(TEMPLATES_DIR),
-    autoescape=select_autoescape(default_for_string=True, default=True),
+    autoescape=select_autoescape(["html", "xml", "j2"]),
 )
 
 
