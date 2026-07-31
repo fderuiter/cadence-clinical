@@ -713,6 +713,7 @@ def test_sdv_transport_schemas():
         scope="FIELD",
         target_ids=["OBS-1", "OBS-2"],
         reason_for_change="Initial sign-off of Vital Signs",
+        signing_reason="SDV verification of target data.",
         site_id="SITE-X",
     )
     assert req_sdv.study_id == "STUDY-01"
@@ -720,17 +721,19 @@ def test_sdv_transport_schemas():
 
     # 2. Test BulkSdvSignOffResponse
     res_sdv = BulkSdvSignOffResponse(
-        signed_count=2,
-        signed_target_ids=["OBS-1", "OBS-2"],
-        skipped_target_ids=[],
+        bulk_id="bulk_12345678",
+        verified_count=2,
+        verified_target_ids=["OBS-1", "OBS-2"],
+        skipped_targets=[],
         content_digest="abc123sha256",
         timestamp_utc="2026-07-29T12:00:00Z",
-        audit_tx="tx-1001",
+        audit_tx="tx_123456789012",
     )
-    assert res_sdv.signed_count == 2
+    assert res_sdv.verified_count == 2
 
     # 3. Test QueryTargetDescriptor & BulkQueryGenerationRequest
     target_desc = QueryTargetDescriptor(
+        study_id="STUDY-01",
         subject_id="SUBJ-123",
         visit_id="VISIT-A",
         domain="VS",
@@ -740,9 +743,6 @@ def test_sdv_transport_schemas():
     )
 
     req_query = BulkQueryGenerationRequest(
-        study_id="STUDY-01",
-        site_id="SITE-X",
-        subject_id="SUBJ-123",
         targets=[target_desc],
         reason_for_change="System generated out-of-bounds check",
     )
@@ -751,9 +751,9 @@ def test_sdv_transport_schemas():
 
     # 4. Test BulkQueryGenerationResponse
     res_query = BulkQueryGenerationResponse(
-        generated_count=1,
+        batch_id="batch_12345678",
+        audit_tx="tx_123456789012",
         generated_query_ids=["QRY-99"],
         skipped_targets=[],
-        timestamp_utc="2026-07-29T12:05:00Z",
     )
-    assert res_query.generated_count == 1
+    assert len(res_query.generated_query_ids) == 1

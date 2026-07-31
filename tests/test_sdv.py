@@ -658,8 +658,8 @@ async def test_bulk_sdv_signoff_happy_path():
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data["signed_count"] == 2
-        assert set(data["signed_target_ids"]) == {"OBS-BULK-1", "OBS-BULK-2"}
+        assert data["verified_count"] == 2
+        assert set(data["verified_target_ids"]) == {"OBS-BULK-1", "OBS-BULK-2"}
         assert data["content_digest"] is not None
 
     # 3. Assert that multiple SDVSignOff rows are upserted with is_verified=True
@@ -874,7 +874,7 @@ async def test_bulk_sdv_signoff_rbac_and_idempotency():
             headers=headers_cra_1,
         )
         assert resp1.status_code == 200
-        assert resp1.json()["signed_count"] == 1
+        assert resp1.json()["verified_count"] == 1
 
         # Re-send the exact same valid request (second time)
         headers_cra_2 = get_bulk_sdv_auth_headers(
@@ -886,8 +886,8 @@ async def test_bulk_sdv_signoff_rbac_and_idempotency():
             headers=headers_cra_2,
         )
         assert resp2.status_code == 200
-        assert resp2.json()["signed_count"] == 0
-        assert resp2.json()["skipped_target_ids"] == ["OBS-RBAC-IDEM"]
+        assert resp2.json()["verified_count"] == 0
+        assert resp2.json()["skipped_targets"] == [{"target_id": "OBS-RBAC-IDEM", "reason": "Already verified"}]
 
         # Ensure no duplicates in the database
         async with db_manager.get_session_maker()() as session:
