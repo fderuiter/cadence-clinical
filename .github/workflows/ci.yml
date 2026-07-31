@@ -432,24 +432,24 @@ jobs:
 
       - name: Download Unit Test Report
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: junit-report-unit
           path: .
-          ignore-on-missing: true
 
       - name: Download Integration Test Report
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: junit-report-integration
           path: .
-          ignore-on-missing: true
 
       - name: Download Qualification Test Report
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: junit-report-qualification
           path: .
-          ignore-on-missing: true
 
       - name: Merge JUnit XML Reports
         run: python3 scripts/merge_junit.py report.xml report-unit.xml report-integration.xml report-qualification.xml
@@ -484,10 +484,10 @@ jobs:
       - name: Download Duplication Summary
         if: always()
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: duplication-summary
           path: .
-          ignore-on-missing: true
 
       - name: Post PR Comment
         env:
