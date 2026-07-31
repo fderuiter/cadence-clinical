@@ -27,8 +27,14 @@ export function debounce(func, wait) {
  * @param {string} [statusMessage=''] - The dynamic explanation message of the current validation status.
  * @returns {string} The HTML markup.
  */
-export function createClinicalLookupInput(id, label, value = "", status = "none", statusMessage = "") {
-  let statusHtml = "";
+export function createClinicalLookupInput(
+  id,
+  label,
+  value = "",
+  status = "none",
+  statusMessage = ""
+) {
+  let statusHtml;
   if (status !== "none") {
     let stateClass = "";
     let statusIcon = "";
@@ -37,7 +43,8 @@ export function createClinicalLookupInput(id, label, value = "", status = "none"
     if (status === "loading") {
       stateClass = "lookup-loading";
       statusIcon = "⏳";
-      if (!ariaLiveMessage) ariaLiveMessage = "Searching terminology database...";
+      if (!ariaLiveMessage)
+        ariaLiveMessage = "Searching terminology database...";
     } else if (status === "valid") {
       stateClass = "lookup-valid";
       statusIcon = "✅";
@@ -45,11 +52,13 @@ export function createClinicalLookupInput(id, label, value = "", status = "none"
     } else if (status === "invalid") {
       stateClass = "lookup-invalid";
       statusIcon = "❌";
-      if (!ariaLiveMessage) ariaLiveMessage = "Invalid code. Please check and try again.";
+      if (!ariaLiveMessage)
+        ariaLiveMessage = "Invalid code. Please check and try again.";
     } else if (status === "degraded") {
       stateClass = "lookup-degraded";
       statusIcon = "⚠️";
-      if (!ariaLiveMessage) ariaLiveMessage = "Terminology service degraded. Validation offline.";
+      if (!ariaLiveMessage)
+        ariaLiveMessage = "Terminology service degraded. Validation offline.";
     }
 
     statusHtml = `

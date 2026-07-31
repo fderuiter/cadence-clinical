@@ -26,6 +26,7 @@ class TerminologyCache:
             self.ttl = float(ttl)
         else:
             import os
+
             env_ttl = os.getenv("TERMINOLOGY_CACHE_TTL") or os.getenv("CACHE_TTL")
             if env_ttl is not None:
                 try:

@@ -146,7 +146,9 @@ async def process_sae_reconciliation(
         async with session_maker() as session:
             try:
                 # 1. Update status to PROCESSING
-                stmt = select(SAEReconciliationJob).where(SAEReconciliationJob.id == job_id)
+                stmt = select(SAEReconciliationJob).where(
+                    SAEReconciliationJob.id == job_id
+                )
                 result = await session.execute(stmt)
                 job = result.scalars().first()
                 if not job:
@@ -179,7 +181,9 @@ async def process_sae_reconciliation(
                 discrepancies = results["discrepancies"]
 
                 # 3. Update status to COMPLETED
-                stmt = select(SAEReconciliationJob).where(SAEReconciliationJob.id == job_id)
+                stmt = select(SAEReconciliationJob).where(
+                    SAEReconciliationJob.id == job_id
+                )
                 result = await session.execute(stmt)
                 job = result.scalars().first()
                 if job:

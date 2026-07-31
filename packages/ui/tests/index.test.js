@@ -12,28 +12,49 @@ describe("createClinicalLookupInput", () => {
   });
 
   it("generates loading status correctly", () => {
-    const html = createClinicalLookupInput("test-id", "Test Label", "C123", "loading");
+    const html = createClinicalLookupInput(
+      "test-id",
+      "Test Label",
+      "C123",
+      "loading"
+    );
     expect(html).toContain("lookup-loading");
     expect(html).toContain("⏳");
     expect(html).toContain("Searching terminology database...");
   });
 
   it("generates valid status with custom message", () => {
-    const html = createClinicalLookupInput("test-id", "Test Label", "C123", "valid", "Code is VALID");
+    const html = createClinicalLookupInput(
+      "test-id",
+      "Test Label",
+      "C123",
+      "valid",
+      "Code is VALID"
+    );
     expect(html).toContain("lookup-valid");
     expect(html).toContain("✅");
     expect(html).toContain("Code is VALID");
   });
 
   it("generates invalid status correctly", () => {
-    const html = createClinicalLookupInput("test-id", "Test Label", "C123", "invalid");
+    const html = createClinicalLookupInput(
+      "test-id",
+      "Test Label",
+      "C123",
+      "invalid"
+    );
     expect(html).toContain("lookup-invalid");
     expect(html).toContain("❌");
     expect(html).toContain("Invalid code.");
   });
 
   it("generates degraded status correctly", () => {
-    const html = createClinicalLookupInput("test-id", "Test Label", "C123", "degraded");
+    const html = createClinicalLookupInput(
+      "test-id",
+      "Test Label",
+      "C123",
+      "degraded"
+    );
     expect(html).toContain("lookup-degraded");
     expect(html).toContain("⚠️");
     expect(html).toContain("Terminology service degraded.");

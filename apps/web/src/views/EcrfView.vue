@@ -356,14 +356,13 @@
               Candidate ID:
               <code
                 style="
-                  background-color: #f1f5f9;
+                  background-color: rgb(241 245 249);
                   padding: 2px 4px;
                   border-radius: 4px;
                 "
                 class="candidate-id"
                 >{{ store.candidateDraft.id }}</code
               >
-              <!-- deid: ignore -->
             </span>
             <span
               :class="[
@@ -418,7 +417,7 @@
                   <span
                     class="badge"
                     style="
-                      background-color: #e2e8f0;
+                      background-color: rgb(226 232 240);
                       color: #475569;
                       font-size: 0.75rem;
                       text-transform: uppercase;
@@ -924,7 +923,9 @@ async function performConceptCodeValidation(fieldId, value) {
     } else if (res.state === "DEGRADED") {
       lookupStatuses.value[fieldId] = {
         status: "degraded",
-        message: res.error_message || "Terminology service degraded. Validation offline.",
+        message:
+          res.error_message ||
+          "Terminology service degraded. Validation offline.",
       };
     }
   } catch (error) {
