@@ -3883,7 +3883,7 @@ async def create_study_rule(
         raise HTTPException(status_code=404, detail="Study not found")
 
     user_id = getattr(request.state, "user_id", "system")
-    change_reason = getattr(request.state, "change_reason", "system_operation")
+    change_reason = resolve_change_reason(request, None)
     rule_dict = payload.model_dump()
 
     driver = getattr(request.app.state, "driver", None)
@@ -3951,7 +3951,7 @@ async def update_study_rule_by_id(
         raise HTTPException(status_code=404, detail="Study not found")
 
     user_id = getattr(request.state, "user_id", "system")
-    change_reason = getattr(request.state, "change_reason", "system_operation")
+    change_reason = resolve_change_reason(request, None)
 
     driver = getattr(request.app.state, "driver", None)
     if driver is not None:
@@ -3999,7 +3999,7 @@ async def delete_study_rule_by_id(
         raise HTTPException(status_code=404, detail="Study not found")
 
     user_id = getattr(request.state, "user_id", "system")
-    change_reason = getattr(request.state, "change_reason", "system_operation")
+    change_reason = resolve_change_reason(request, None)
 
     driver = getattr(request.app.state, "driver", None)
     if driver is not None:
@@ -4024,6 +4024,49 @@ async def delete_study_rule_by_id(
     status_code=status.HTTP_200_OK,
 )
 async def compile_preview_rule(
+    study_id: str, payload: CreateRuleRequest, request: Request
+) -> RulePreviewResponse:
+    """
+    Read-only compile and validation preview route.
+    Detects unknown field references and circular skip-logic dependencies.
+    """
+    study_data = get_study_projection(study_id)
+    if not study_data:
+        raise HTTPException(status_code=404, detail="Study not found")
+
+    xpath = compile_to_xpath(payload.condition)
+    failures = detect_unknown_fields(payload.condition, study_data)
+
+    driver = getattr(request.app.state, "driver", None)
+    if driver is not None:
+        existing_rules = await get_rules_from_graph(driver, study_id)
+    else:
+        existing_rules = get_mock_rules(study_id)
+
+    temp_rules = [dict(r) for r in existing_rules]
+    temp_rules.append(
+        {
+            "id": "proposed_rule",
+            "type": payload.type,
+            "condition": payload.condition.model_dump(),
+            "target_field": payload.target_field,
+        }
+    )
+    circular_cycles = detect_circular_dependencies(temp_rules)
+
+    return RulePreviewResponse(
+        xpath=xpath,
+        failures=failures,
+        circular_cycles=circular_cycles,
+    )
+
+
+@app.post(
+    "/api/v1/studies/{study_id}/rules/validate",
+    response_model=RulePreviewResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def compile_validate_rule(
     study_id: str, payload: CreateRuleRequest, request: Request
 ) -> RulePreviewResponse:
     """
