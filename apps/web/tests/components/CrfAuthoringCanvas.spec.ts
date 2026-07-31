@@ -136,6 +136,13 @@ describe("CrfAuthoringCanvas.vue & Drag-and-Drop Authoring Component Suite", () 
       items: [],
     };
 
+    const store = useDesignerStore();
+    store.activeForm = {
+      id: "form-1",
+      name: "Draft",
+      sections: [section],
+    };
+
     const wrapper = mount(FormSectionContainer, {
       props: {
         section,
@@ -235,7 +242,9 @@ describe("CrfAuthoringCanvas.vue & Drag-and-Drop Authoring Component Suite", () 
 
     // Verify Pinia state reflects duplication
     expect(store.activeForm.sections[0].items.length).toBe(2);
-    expect(store.activeForm.sections[0].items[1].label).toBe("Pulse Rate (Copy)");
+    expect(store.activeForm.sections[0].items[1].label).toBe(
+      "Pulse Rate (Copy)"
+    );
     expect(store.selectedFieldId).toBe(section.items[1].id);
   });
 

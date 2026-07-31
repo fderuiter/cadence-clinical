@@ -1472,6 +1472,9 @@ async def create_observation(
             norm_val, matched_range
         )
 
+        ref_low = matched_range.range_low if matched_range else None
+        ref_high = matched_range.range_high if matched_range else None
+
         # Stamping capture-time protocol-version identity
         protocol_version_tag = None
         protocol_version_index = None
