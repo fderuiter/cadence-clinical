@@ -1,3 +1,5789 @@
 {
-  "duplicates": []
+  "duplicates": [
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/ClinicalInput.vue",
+        "start": 29,
+        "end": 44
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+        "start": 59,
+        "end": 74
+      },
+      "preview": "    <!-- Validation Error -->\n    <div\n      v-if=\"showError\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/ClinicalInput.vue",
+        "start": 30,
+        "end": 45
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+        "start": 60,
+        "end": 75
+      },
+      "preview": "    <div\n      v-if=\"showError\"\n      class=\"validation-error-msg\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/ClinicalInput.vue",
+        "start": 31,
+        "end": 46
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+        "start": 61,
+        "end": 76
+      },
+      "preview": "      v-if=\"showError\"\n      class=\"validation-error-msg\"\n    >\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/ClinicalInput.vue",
+        "start": 32,
+        "end": 47
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+        "start": 62,
+        "end": 77
+      },
+      "preview": "      class=\"validation-error-msg\"\n    >\n      {{ error }}\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/ClinicalInput.vue",
+        "start": 33,
+        "end": 48
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+        "start": 63,
+        "end": 78
+      },
+      "preview": "    >\n      {{ error }}\n    </div>\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/ClinicalInput.vue",
+        "start": 34,
+        "end": 49
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+        "start": 64,
+        "end": 79
+      },
+      "preview": "      {{ error }}\n    </div>\n    <!-- Query Panel -->\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/ClinicalInput.vue",
+        "start": 35,
+        "end": 51
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+        "start": 65,
+        "end": 81
+      },
+      "preview": "    </div>\n    <!-- Query Panel -->\n    <ClinicalQueryPanel\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/ClinicalInput.vue",
+        "start": 37,
+        "end": 56
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+        "start": 67,
+        "end": 86
+      },
+      "preview": "    <!-- Query Panel -->\n    <ClinicalQueryPanel\n      v-if=\"isQueryOpen\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/ClinicalInput.vue",
+        "start": 38,
+        "end": 57
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+        "start": 68,
+        "end": 87
+      },
+      "preview": "    <ClinicalQueryPanel\n      v-if=\"isQueryOpen\"\n      :id=\"id\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/ClinicalInput.vue",
+        "start": 39,
+        "end": 58
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+        "start": 69,
+        "end": 88
+      },
+      "preview": "      v-if=\"isQueryOpen\"\n      :id=\"id\"\n      :query=\"query\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/ClinicalInput.vue",
+        "start": 40,
+        "end": 59
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+        "start": 70,
+        "end": 89
+      },
+      "preview": "      :id=\"id\"\n      :query=\"query\"\n      @close-panel=\"isQueryOpen = false\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/ClinicalInput.vue",
+        "start": 41,
+        "end": 60
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+        "start": 71,
+        "end": 90
+      },
+      "preview": "      :query=\"query\"\n      @close-panel=\"isQueryOpen = false\"\n      @create-query=\"$emit('create-query', $event)\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/ClinicalInput.vue",
+        "start": 42,
+        "end": 61
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+        "start": 72,
+        "end": 91
+      },
+      "preview": "      @close-panel=\"isQueryOpen = false\"\n      @create-query=\"$emit('create-query', $event)\"\n      @respond-query=\"$emit('respond-query', $event)\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/ClinicalInput.vue",
+        "start": 43,
+        "end": 62
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+        "start": 73,
+        "end": 92
+      },
+      "preview": "      @create-query=\"$emit('create-query', $event)\"\n      @respond-query=\"$emit('respond-query', $event)\"\n      @close-query=\"$emit('close-query')\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/ClinicalInput.vue",
+        "start": 44,
+        "end": 63
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+        "start": 74,
+        "end": 93
+      },
+      "preview": "      @respond-query=\"$emit('respond-query', $event)\"\n      @close-query=\"$emit('close-query')\"\n      @reopen-query=\"$emit('reopen-query')\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/ClinicalInput.vue",
+        "start": 45,
+        "end": 64
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+        "start": 75,
+        "end": 94
+      },
+      "preview": "      @close-query=\"$emit('close-query')\"\n      @reopen-query=\"$emit('reopen-query')\"\n    />\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/ClinicalInput.vue",
+        "start": 46,
+        "end": 65
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+        "start": 76,
+        "end": 95
+      },
+      "preview": "      @reopen-query=\"$emit('reopen-query')\"\n    />\n  </div>\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/ClinicalInput.vue",
+        "start": 47,
+        "end": 66
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+        "start": 77,
+        "end": 96
+      },
+      "preview": "    />\n  </div>\n</template>\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/ClinicalInput.vue",
+        "start": 48,
+        "end": 67
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+        "start": 78,
+        "end": 97
+      },
+      "preview": "  </div>\n</template>\n<script setup>\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/ClinicalInput.vue",
+        "start": 49,
+        "end": 68
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+        "start": 79,
+        "end": 98
+      },
+      "preview": "</template>\n<script setup>\nconst props = defineProps({\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/ClinicalInput.vue",
+        "start": 51,
+        "end": 69
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+        "start": 81,
+        "end": 99
+      },
+      "preview": "<script setup>\nconst props = defineProps({\n  id: {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/ClinicalInput.vue",
+        "start": 56,
+        "end": 70
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+        "start": 86,
+        "end": 100
+      },
+      "preview": "const props = defineProps({\n  id: {\n    type: String,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/ClinicalInput.vue",
+        "start": 57,
+        "end": 71
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+        "start": 87,
+        "end": 101
+      },
+      "preview": "  id: {\n    type: String,\n    required: true,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/ClinicalInput.vue",
+        "start": 58,
+        "end": 72
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+        "start": 88,
+        "end": 102
+      },
+      "preview": "    type: String,\n    required: true,\n  },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/ClinicalInput.vue",
+        "start": 59,
+        "end": 73
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+        "start": 89,
+        "end": 103
+      },
+      "preview": "    required: true,\n  },\n  label: {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/ClinicalInput.vue",
+        "start": 60,
+        "end": 74
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+        "start": 90,
+        "end": 104
+      },
+      "preview": "  },\n  label: {\n    type: String,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/ClinicalInput.vue",
+        "start": 61,
+        "end": 75
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+        "start": 91,
+        "end": 105
+      },
+      "preview": "  label: {\n    type: String,\n    required: true,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/ClinicalInput.vue",
+        "start": 62,
+        "end": 76
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+        "start": 92,
+        "end": 106
+      },
+      "preview": "    type: String,\n    required: true,\n  },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/ClinicalInput.vue",
+        "start": 63,
+        "end": 77
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+        "start": 93,
+        "end": 107
+      },
+      "preview": "    required: true,\n  },\n  modelValue: {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/ClinicalInput.vue",
+        "start": 64,
+        "end": 78
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+        "start": 94,
+        "end": 108
+      },
+      "preview": "  },\n  modelValue: {\n    type: [String, Number],\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/ClinicalInput.vue",
+        "start": 65,
+        "end": 79
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+        "start": 95,
+        "end": 109
+      },
+      "preview": "  modelValue: {\n    type: [String, Number],\n    default: \"\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/web/src/components/clinical/ClinicalInput.vue",
+        "start": 66,
+        "end": 80
+      },
+      "loc2": {
+        "file": "apps/web/src/components/clinical/ClinicalLookupInput.vue",
+        "start": 96,
+        "end": 110
+      },
+      "preview": "    type: [String, Number],\n    default: \"\",\n  },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/etmf/lock_client.py",
+        "start": 52,
+        "end": 68
+      },
+      "loc2": {
+        "file": "apps/execution/designer_client.py",
+        "start": 57,
+        "end": 74
+      },
+      "preview": "    timestamp = str(time.time())\n    signature = generate_gateway_signature(\n        user_id=user_id,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/etmf/lock_client.py",
+        "start": 52,
+        "end": 68
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 60,
+        "end": 77
+      },
+      "preview": "    timestamp = str(time.time())\n    signature = generate_gateway_signature(\n        user_id=user_id,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/etmf/lock_client.py",
+        "start": 52,
+        "end": 68
+      },
+      "loc2": {
+        "file": "apps/interop/designer_client.py",
+        "start": 90,
+        "end": 106
+      },
+      "preview": "    timestamp = str(time.time())\n    signature = generate_gateway_signature(\n        user_id=user_id,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 57,
+        "end": 74
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 60,
+        "end": 77
+      },
+      "preview": "        timestamp = str(time.time())\n        signature = generate_gateway_signature(\n            user_id=user_id,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 57,
+        "end": 74
+      },
+      "loc2": {
+        "file": "apps/interop/designer_client.py",
+        "start": 90,
+        "end": 106
+      },
+      "preview": "        timestamp = str(time.time())\n        signature = generate_gateway_signature(\n            user_id=user_id,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 60,
+        "end": 77
+      },
+      "loc2": {
+        "file": "apps/interop/designer_client.py",
+        "start": 90,
+        "end": 106
+      },
+      "preview": "        timestamp = str(time.time())\n        signature = generate_gateway_signature(\n            user_id=user_id,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 45,
+        "end": 62
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 48,
+        "end": 65
+      },
+      "preview": "        \"\"\"\n        gateway_secret_env = os.getenv(\n            \"GATEWAY_SECRET\", \"internal-gateway-secret-12345\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 46,
+        "end": 63
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 49,
+        "end": 66
+      },
+      "preview": "        gateway_secret_env = os.getenv(\n            \"GATEWAY_SECRET\", \"internal-gateway-secret-12345\"\n        )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 47,
+        "end": 64
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 50,
+        "end": 67
+      },
+      "preview": "            \"GATEWAY_SECRET\", \"internal-gateway-secret-12345\"\n        )\n        gateway_secret = (\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 48,
+        "end": 65
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 51,
+        "end": 68
+      },
+      "preview": "        )\n        gateway_secret = (\n            gateway_secret_env.encode(\"utf-8\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 49,
+        "end": 66
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 52,
+        "end": 69
+      },
+      "preview": "        gateway_secret = (\n            gateway_secret_env.encode(\"utf-8\")\n            if isinstance(gateway_secret_env, str)\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 50,
+        "end": 68
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 53,
+        "end": 71
+      },
+      "preview": "            gateway_secret_env.encode(\"utf-8\")\n            if isinstance(gateway_secret_env, str)\n            else gateway_secret_env\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 51,
+        "end": 69
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 54,
+        "end": 72
+      },
+      "preview": "            if isinstance(gateway_secret_env, str)\n            else gateway_secret_env\n        )\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 52,
+        "end": 70
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 55,
+        "end": 73
+      },
+      "preview": "            else gateway_secret_env\n        )\n        user_id = \"execution-service\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 53,
+        "end": 71
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 56,
+        "end": 74
+      },
+      "preview": "        )\n        user_id = \"execution-service\"\n        roles = \"system\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 55,
+        "end": 72
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 58,
+        "end": 75
+      },
+      "preview": "        user_id = \"execution-service\"\n        roles = \"system\"\n        timestamp = str(time.time())\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/designer_client.py",
+        "start": 56,
+        "end": 73
+      },
+      "loc2": {
+        "file": "apps/execution/econsent_client.py",
+        "start": 59,
+        "end": 76
+      },
+      "preview": "        roles = \"system\"\n        timestamp = str(time.time())\n        signature = generate_gateway_signature(\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 47,
+        "end": 69
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 45,
+        "end": 67
+      },
+      "preview": "    \"\"\"\n    if not date_str:\n        return date_str\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 48,
+        "end": 70
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 46,
+        "end": 68
+      },
+      "preview": "    if not date_str:\n        return date_str\n    original_str = date_str.strip()\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 49,
+        "end": 71
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 47,
+        "end": 69
+      },
+      "preview": "        return date_str\n    original_str = date_str.strip()\n    if not original_str:\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 51,
+        "end": 72
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 49,
+        "end": 70
+      },
+      "preview": "    original_str = date_str.strip()\n    if not original_str:\n        return date_str\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 52,
+        "end": 75
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 50,
+        "end": 73
+      },
+      "preview": "    if not original_str:\n        return date_str\n    t_split = original_str.split(\"T\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 53,
+        "end": 76
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 51,
+        "end": 74
+      },
+      "preview": "        return date_str\n    t_split = original_str.split(\"T\")\n    date_part = t_split[0]\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 56,
+        "end": 77
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 54,
+        "end": 75
+      },
+      "preview": "    t_split = original_str.split(\"T\")\n    date_part = t_split[0]\n    time_part = \"T\" + t_split[1] if len(t_split) > 1 else \"\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 57,
+        "end": 78
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 55,
+        "end": 76
+      },
+      "preview": "    date_part = t_split[0]\n    time_part = \"T\" + t_split[1] if len(t_split) > 1 else \"\"\n    parts = re.split(r\"([- /])\", date_part)\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 58,
+        "end": 80
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 56,
+        "end": 78
+      },
+      "preview": "    time_part = \"T\" + t_split[1] if len(t_split) > 1 else \"\"\n    parts = re.split(r\"([- /])\", date_part)\n    if len(parts) >= 1 and parts[0].isdigit() and len(parts[0]) == 4:\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 61,
+        "end": 81
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 59,
+        "end": 79
+      },
+      "preview": "    parts = re.split(r\"([- /])\", date_part)\n    if len(parts) >= 1 and parts[0].isdigit() and len(parts[0]) == 4:\n        year_str = parts[0]\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 64,
+        "end": 82
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 62,
+        "end": 80
+      },
+      "preview": "    if len(parts) >= 1 and parts[0].isdigit() and len(parts[0]) == 4:\n        year_str = parts[0]\n        month_str = \"06\"  # Default mid-year for partial/missing month\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 65,
+        "end": 85
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 63,
+        "end": 83
+      },
+      "preview": "        year_str = parts[0]\n        month_str = \"06\"  # Default mid-year for partial/missing month\n        day_str = \"15\"  # Default mid-month for partial/missing day\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 66,
+        "end": 86
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 64,
+        "end": 84
+      },
+      "preview": "        month_str = \"06\"  # Default mid-year for partial/missing month\n        day_str = \"15\"  # Default mid-month for partial/missing day\n        if len(parts) >= 3 and parts[2].isdigit():\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 67,
+        "end": 87
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 65,
+        "end": 85
+      },
+      "preview": "        day_str = \"15\"  # Default mid-month for partial/missing day\n        if len(parts) >= 3 and parts[2].isdigit():\n            month_str = parts[2]\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 69,
+        "end": 88
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 67,
+        "end": 86
+      },
+      "preview": "        if len(parts) >= 3 and parts[2].isdigit():\n            month_str = parts[2]\n        if len(parts) >= 5 and parts[4].isdigit():\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 70,
+        "end": 89
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 68,
+        "end": 87
+      },
+      "preview": "            month_str = parts[2]\n        if len(parts) >= 5 and parts[4].isdigit():\n            day_str = parts[4]\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 71,
+        "end": 90
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 69,
+        "end": 88
+      },
+      "preview": "        if len(parts) >= 5 and parts[4].isdigit():\n            day_str = parts[4]\n        dummy_date_str = f\"{year_str}-{month_str}-{day_str}\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 72,
+        "end": 91
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 70,
+        "end": 89
+      },
+      "preview": "            day_str = parts[4]\n        dummy_date_str = f\"{year_str}-{month_str}-{day_str}\"\n        try:\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 75,
+        "end": 92
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 73,
+        "end": 90
+      },
+      "preview": "        dummy_date_str = f\"{year_str}-{month_str}-{day_str}\"\n        try:\n            dt = date_parser.parse(dummy_date_str)\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 76,
+        "end": 94
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 74,
+        "end": 92
+      },
+      "preview": "        try:\n            dt = date_parser.parse(dummy_date_str)\n            shifted_dt = dt + timedelta(days=shift_days)\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 77,
+        "end": 95
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 75,
+        "end": 93
+      },
+      "preview": "            dt = date_parser.parse(dummy_date_str)\n            shifted_dt = dt + timedelta(days=shift_days)\n            shifted_year = f\"{shifted_dt.year:04d}\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/execution/services/deident_scrubber.py",
+        "start": 78,
+        "end": 96
+      },
+      "loc2": {
+        "file": "apps/execution/biostat/deid.py",
+        "start": 76,
+        "end": 94
+      },
+      "preview": "            shifted_dt = dt + timedelta(days=shift_days)\n            shifted_year = f\"{shifted_dt.year:04d}\"\n            shifted_month = f\"{shifted_dt.month:02d}\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/rendering.py",
+        "start": 324,
+        "end": 342
+      },
+      "loc2": {
+        "file": "apps/designer/renderer.py",
+        "start": 99,
+        "end": 117
+      },
+      "preview": "    tpl = load_docx_template()\n    subdoc = tpl.new_subdoc()\n    if output == \"combined\" or output == \"soa\":\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/rendering.py",
+        "start": 327,
+        "end": 343
+      },
+      "loc2": {
+        "file": "apps/designer/renderer.py",
+        "start": 102,
+        "end": 118
+      },
+      "preview": "    subdoc = tpl.new_subdoc()\n    if output == \"combined\" or output == \"soa\":\n        build_soa_subdoc(subdoc, doc.soa_matrix)\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/rendering.py",
+        "start": 328,
+        "end": 344
+      },
+      "loc2": {
+        "file": "apps/designer/renderer.py",
+        "start": 103,
+        "end": 119
+      },
+      "preview": "    if output == \"combined\" or output == \"soa\":\n        build_soa_subdoc(subdoc, doc.soa_matrix)\n    else:\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/rendering.py",
+        "start": 329,
+        "end": 345
+      },
+      "loc2": {
+        "file": "apps/designer/renderer.py",
+        "start": 104,
+        "end": 120
+      },
+      "preview": "        build_soa_subdoc(subdoc, doc.soa_matrix)\n    else:\n        subdoc.add_paragraph(\"Schedule of Activities (SoA) omitted from this view.\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/rendering.py",
+        "start": 330,
+        "end": 346
+      },
+      "loc2": {
+        "file": "apps/designer/renderer.py",
+        "start": 105,
+        "end": 121
+      },
+      "preview": "    else:\n        subdoc.add_paragraph(\"Schedule of Activities (SoA) omitted from this view.\")\n    context = {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/rendering.py",
+        "start": 331,
+        "end": 347
+      },
+      "loc2": {
+        "file": "apps/designer/renderer.py",
+        "start": 106,
+        "end": 122
+      },
+      "preview": "        subdoc.add_paragraph(\"Schedule of Activities (SoA) omitted from this view.\")\n    context = {\n        \"metadata\": {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/rendering.py",
+        "start": 334,
+        "end": 348
+      },
+      "loc2": {
+        "file": "apps/designer/renderer.py",
+        "start": 109,
+        "end": 123
+      },
+      "preview": "    context = {\n        \"metadata\": {\n            \"creator\": doc.metadata.creator,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/rendering.py",
+        "start": 335,
+        "end": 349
+      },
+      "loc2": {
+        "file": "apps/designer/renderer.py",
+        "start": 110,
+        "end": 124
+      },
+      "preview": "        \"metadata\": {\n            \"creator\": doc.metadata.creator,\n            \"timestamp\": doc.metadata.timestamp.strftime(\"%Y-%m-%d %H:%M:%S UTC\"),\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/rendering.py",
+        "start": 336,
+        "end": 350
+      },
+      "loc2": {
+        "file": "apps/designer/renderer.py",
+        "start": 111,
+        "end": 125
+      },
+      "preview": "            \"creator\": doc.metadata.creator,\n            \"timestamp\": doc.metadata.timestamp.strftime(\"%Y-%m-%d %H:%M:%S UTC\"),\n            \"change_reason\": doc.metadata.change_reason or \"\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/rendering.py",
+        "start": 337,
+        "end": 351
+      },
+      "loc2": {
+        "file": "apps/designer/renderer.py",
+        "start": 112,
+        "end": 126
+      },
+      "preview": "            \"timestamp\": doc.metadata.timestamp.strftime(\"%Y-%m-%d %H:%M:%S UTC\"),\n            \"change_reason\": doc.metadata.change_reason or \"\",\n            \"version_index\": doc.metadata.version_index,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/rendering.py",
+        "start": 338,
+        "end": 352
+      },
+      "loc2": {
+        "file": "apps/designer/renderer.py",
+        "start": 113,
+        "end": 127
+      },
+      "preview": "            \"change_reason\": doc.metadata.change_reason or \"\",\n            \"version_index\": doc.metadata.version_index,\n        },\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/rendering.py",
+        "start": 339,
+        "end": 353
+      },
+      "loc2": {
+        "file": "apps/designer/renderer.py",
+        "start": 114,
+        "end": 128
+      },
+      "preview": "            \"version_index\": doc.metadata.version_index,\n        },\n        \"synopsis\": {\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/rendering.py",
+        "start": 340,
+        "end": 354
+      },
+      "loc2": {
+        "file": "apps/designer/renderer.py",
+        "start": 115,
+        "end": 129
+      },
+      "preview": "        },\n        \"synopsis\": {\n            \"study_id\": doc.synopsis.study_id,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/rendering.py",
+        "start": 341,
+        "end": 355
+      },
+      "loc2": {
+        "file": "apps/designer/renderer.py",
+        "start": 116,
+        "end": 130
+      },
+      "preview": "        \"synopsis\": {\n            \"study_id\": doc.synopsis.study_id,\n            \"protocol_title\": doc.synopsis.protocol_title,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/rendering.py",
+        "start": 342,
+        "end": 356
+      },
+      "loc2": {
+        "file": "apps/designer/renderer.py",
+        "start": 117,
+        "end": 131
+      },
+      "preview": "            \"study_id\": doc.synopsis.study_id,\n            \"protocol_title\": doc.synopsis.protocol_title,\n            \"protocol_number\": doc.synopsis.protocol_number or \"\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/rendering.py",
+        "start": 343,
+        "end": 359
+      },
+      "loc2": {
+        "file": "apps/designer/renderer.py",
+        "start": 118,
+        "end": 134
+      },
+      "preview": "            \"protocol_title\": doc.synopsis.protocol_title,\n            \"protocol_number\": doc.synopsis.protocol_number or \"\",\n            \"sponsor_name\": doc.synopsis.sponsor_name or \"\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/rendering.py",
+        "start": 344,
+        "end": 360
+      },
+      "loc2": {
+        "file": "apps/designer/renderer.py",
+        "start": 119,
+        "end": 135
+      },
+      "preview": "            \"protocol_number\": doc.synopsis.protocol_number or \"\",\n            \"sponsor_name\": doc.synopsis.sponsor_name or \"\",\n            \"phase\": doc.synopsis.phase or \"\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/rendering.py",
+        "start": 345,
+        "end": 361
+      },
+      "loc2": {
+        "file": "apps/designer/renderer.py",
+        "start": 120,
+        "end": 136
+      },
+      "preview": "            \"sponsor_name\": doc.synopsis.sponsor_name or \"\",\n            \"phase\": doc.synopsis.phase or \"\",\n            \"objectives\": doc.synopsis.objectives,\n..."
+    },
+    {
+      "loc1": {
+        "file": "apps/designer/rendering.py",
+        "start": 346,
+        "end": 362
+      },
+      "loc2": {
+        "file": "apps/designer/renderer.py",
+        "start": 121,
+        "end": 137
+      },
+      "preview": "            \"phase\": doc.synopsis.phase or \"\",\n            \"objectives\": doc.synopsis.objectives,\n            \"study_design_type\": doc.synopsis.study_design_type or \"\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 46,
+        "end": 64
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 47,
+        "end": 65
+      },
+      "preview": "    Args:\n        value (str): The raw string value to pseudonymize.\n        salt (Union[str, bytes]): The secret salt used for the HMAC operation.\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 47,
+        "end": 66
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 48,
+        "end": 67
+      },
+      "preview": "        value (str): The raw string value to pseudonymize.\n        salt (Union[str, bytes]): The secret salt used for the HMAC operation.\n    Returns:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 48,
+        "end": 67
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 49,
+        "end": 68
+      },
+      "preview": "        salt (Union[str, bytes]): The secret salt used for the HMAC operation.\n    Returns:\n        str: Hex-encoded HMAC-SHA256 of the value.\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 50,
+        "end": 68
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 51,
+        "end": 69
+      },
+      "preview": "    Returns:\n        str: Hex-encoded HMAC-SHA256 of the value.\n    \"\"\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 51,
+        "end": 69
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 52,
+        "end": 70
+      },
+      "preview": "        str: Hex-encoded HMAC-SHA256 of the value.\n    \"\"\"\n    if isinstance(salt, str):\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 52,
+        "end": 70
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 53,
+        "end": 71
+      },
+      "preview": "    \"\"\"\n    if isinstance(salt, str):\n        salt = salt.encode(\"utf-8\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 53,
+        "end": 71
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 54,
+        "end": 72
+      },
+      "preview": "    if isinstance(salt, str):\n        salt = salt.encode(\"utf-8\")\n    return hmac.new(salt, value.encode(\"utf-8\"), hashlib.sha256).hexdigest()\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 54,
+        "end": 74
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 55,
+        "end": 75
+      },
+      "preview": "        salt = salt.encode(\"utf-8\")\n    return hmac.new(salt, value.encode(\"utf-8\"), hashlib.sha256).hexdigest()\ndef shift_date_string(date_str: str, shift_days: int = DEFAULT_DATE_SHIFT_DAYS) -> str:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 55,
+        "end": 75
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 56,
+        "end": 76
+      },
+      "preview": "    return hmac.new(salt, value.encode(\"utf-8\"), hashlib.sha256).hexdigest()\ndef shift_date_string(date_str: str, shift_days: int = DEFAULT_DATE_SHIFT_DAYS) -> str:\n    \"\"\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 58,
+        "end": 76
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 59,
+        "end": 77
+      },
+      "preview": "def shift_date_string(date_str: str, shift_days: int = DEFAULT_DATE_SHIFT_DAYS) -> str:\n    \"\"\"\n    Parses a date string and shifts it by shift_days while attempting to preserve its format.\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 59,
+        "end": 77
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 60,
+        "end": 78
+      },
+      "preview": "    \"\"\"\n    Parses a date string and shifts it by shift_days while attempting to preserve its format.\n    Args:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 60,
+        "end": 78
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 61,
+        "end": 79
+      },
+      "preview": "    Parses a date string and shifts it by shift_days while attempting to preserve its format.\n    Args:\n        date_str (str): The raw date string.\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 62,
+        "end": 79
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 63,
+        "end": 80
+      },
+      "preview": "    Args:\n        date_str (str): The raw date string.\n        shift_days (int): The number of days to shift. Defaults to 365.\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 63,
+        "end": 80
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 64,
+        "end": 81
+      },
+      "preview": "        date_str (str): The raw date string.\n        shift_days (int): The number of days to shift. Defaults to 365.\n    Returns:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 64,
+        "end": 81
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 65,
+        "end": 82
+      },
+      "preview": "        shift_days (int): The number of days to shift. Defaults to 365.\n    Returns:\n        str: The formatted shifted date string, or \"[DATE_INVALID]\" if parsing fails.\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 84,
+        "end": 104
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 87,
+        "end": 107
+      },
+      "preview": "            has_comma = \",\" in date_str\n            fmt = \"%b %d, %Y\" if has_comma else \"%b %d %Y\"\n            return shifted_dt.strftime(fmt)\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 85,
+        "end": 105
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 88,
+        "end": 108
+      },
+      "preview": "            fmt = \"%b %d, %Y\" if has_comma else \"%b %d %Y\"\n            return shifted_dt.strftime(fmt)\n        return shifted_dt.strftime(\"%Y-%m-%d\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 86,
+        "end": 106
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 89,
+        "end": 109
+      },
+      "preview": "            return shifted_dt.strftime(fmt)\n        return shifted_dt.strftime(\"%Y-%m-%d\")\n    except Exception:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 89,
+        "end": 107
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 92,
+        "end": 110
+      },
+      "preview": "        return shifted_dt.strftime(\"%Y-%m-%d\")\n    except Exception:\n        return \"[DATE_INVALID]\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 90,
+        "end": 109
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 93,
+        "end": 112
+      },
+      "preview": "    except Exception:\n        return \"[DATE_INVALID]\"\ndef cap_age_string(age_str: str, cap: int = 89) -> str:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 91,
+        "end": 110
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 94,
+        "end": 113
+      },
+      "preview": "        return \"[DATE_INVALID]\"\ndef cap_age_string(age_str: str, cap: int = 89) -> str:\n    \"\"\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 94,
+        "end": 111
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 97,
+        "end": 114
+      },
+      "preview": "def cap_age_string(age_str: str, cap: int = 89) -> str:\n    \"\"\"\n    Finds the numeric age value in a string, and if it exceeds the cap, generalizes it.\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 95,
+        "end": 112
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 98,
+        "end": 115
+      },
+      "preview": "    \"\"\"\n    Finds the numeric age value in a string, and if it exceeds the cap, generalizes it.\n    Args:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 96,
+        "end": 113
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 99,
+        "end": 116
+      },
+      "preview": "    Finds the numeric age value in a string, and if it exceeds the cap, generalizes it.\n    Args:\n        age_str (str): The age matched string (e.g., \"age 95\", \"92 years old\").\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 98,
+        "end": 114
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 101,
+        "end": 117
+      },
+      "preview": "    Args:\n        age_str (str): The age matched string (e.g., \"age 95\", \"92 years old\").\n        cap (int): The maximum age limit. Defaults to 89.\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 99,
+        "end": 116
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 102,
+        "end": 119
+      },
+      "preview": "        age_str (str): The age matched string (e.g., \"age 95\", \"92 years old\").\n        cap (int): The maximum age limit. Defaults to 89.\n    Returns:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 100,
+        "end": 119
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 103,
+        "end": 122
+      },
+      "preview": "        cap (int): The maximum age limit. Defaults to 89.\n    Returns:\n        str: The generalized age string, or the original if age is below or equal to cap.\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 102,
+        "end": 120
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 105,
+        "end": 123
+      },
+      "preview": "    Returns:\n        str: The generalized age string, or the original if age is below or equal to cap.\n    \"\"\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 103,
+        "end": 121
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 106,
+        "end": 124
+      },
+      "preview": "        str: The generalized age string, or the original if age is below or equal to cap.\n    \"\"\"\n    match = re.search(r\"\\d{1,3}\", age_str)\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 104,
+        "end": 122
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 107,
+        "end": 125
+      },
+      "preview": "    \"\"\"\n    match = re.search(r\"\\d{1,3}\", age_str)\n    if not match:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 105,
+        "end": 123
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 108,
+        "end": 126
+      },
+      "preview": "    match = re.search(r\"\\d{1,3}\", age_str)\n    if not match:\n        return age_str\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 106,
+        "end": 124
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 109,
+        "end": 127
+      },
+      "preview": "    if not match:\n        return age_str\n    try:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 107,
+        "end": 125
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 110,
+        "end": 128
+      },
+      "preview": "        return age_str\n    try:\n        age_val = int(match.group())\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 109,
+        "end": 126
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 112,
+        "end": 129
+      },
+      "preview": "    try:\n        age_val = int(match.group())\n        if age_val > cap:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 110,
+        "end": 127
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 113,
+        "end": 130
+      },
+      "preview": "        age_val = int(match.group())\n        if age_val > cap:\n            return age_str.replace(match.group(), f\"{cap}+\", 1)\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 111,
+        "end": 128
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 114,
+        "end": 131
+      },
+      "preview": "        if age_val > cap:\n            return age_str.replace(match.group(), f\"{cap}+\", 1)\n    except Exception:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 112,
+        "end": 129
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 115,
+        "end": 132
+      },
+      "preview": "            return age_str.replace(match.group(), f\"{cap}+\", 1)\n    except Exception:\n        pass\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 113,
+        "end": 130
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 116,
+        "end": 133
+      },
+      "preview": "    except Exception:\n        pass\n    return age_str\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 114,
+        "end": 132
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 117,
+        "end": 135
+      },
+      "preview": "        pass\n    return age_str\ndef apply_deid_transforms(\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 116,
+        "end": 133
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 119,
+        "end": 136
+      },
+      "preview": "    return age_str\ndef apply_deid_transforms(\n    text: str,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 119,
+        "end": 134
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 122,
+        "end": 137
+      },
+      "preview": "def apply_deid_transforms(\n    text: str,\n    results: List[DetectionResult],\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 136,
+        "end": 155
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 139,
+        "end": 158
+      },
+      "preview": "        default_strategy (str): Default strategy to use if none is specified for a category. Defaults to \"mask\".\n        salt (Union[str, bytes]): Salt used for deterministic pseudonymization.\n        shift_days (int): Shifts dates by this number of days. Defaults to DEFAULT_DATE_SHIFT_DAYS (365).\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 137,
+        "end": 156
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 140,
+        "end": 159
+      },
+      "preview": "        salt (Union[str, bytes]): Salt used for deterministic pseudonymization.\n        shift_days (int): Shifts dates by this number of days. Defaults to DEFAULT_DATE_SHIFT_DAYS (365).\n        age_cap (int): Caps ages above this limit. Defaults to 89.\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 166,
+        "end": 182
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 177,
+        "end": 193
+      },
+      "preview": "        elif strategy == \"pseudonymize\":\n            replacement = pseudonymize_value(res.value, salt)\n        elif strategy == \"date_shift\":\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 167,
+        "end": 183
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 178,
+        "end": 194
+      },
+      "preview": "            replacement = pseudonymize_value(res.value, salt)\n        elif strategy == \"date_shift\":\n            if res.category == DetectorCategory.DATES:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 168,
+        "end": 184
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 179,
+        "end": 195
+      },
+      "preview": "        elif strategy == \"date_shift\":\n            if res.category == DetectorCategory.DATES:\n                replacement = shift_date_string(res.value, shift_days)\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 169,
+        "end": 185
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 180,
+        "end": 196
+      },
+      "preview": "            if res.category == DetectorCategory.DATES:\n                replacement = shift_date_string(res.value, shift_days)\n            else:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 170,
+        "end": 186
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 181,
+        "end": 197
+      },
+      "preview": "                replacement = shift_date_string(res.value, shift_days)\n            else:\n                replacement = f\"[{res.category.upper()}]\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 171,
+        "end": 187
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 182,
+        "end": 198
+      },
+      "preview": "            else:\n                replacement = f\"[{res.category.upper()}]\"\n        elif strategy == \"age_cap\":\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 172,
+        "end": 188
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 183,
+        "end": 199
+      },
+      "preview": "                replacement = f\"[{res.category.upper()}]\"\n        elif strategy == \"age_cap\":\n            if res.category == DetectorCategory.AGE:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 173,
+        "end": 189
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 184,
+        "end": 200
+      },
+      "preview": "        elif strategy == \"age_cap\":\n            if res.category == DetectorCategory.AGE:\n                replacement = cap_age_string(res.value, age_cap)\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 174,
+        "end": 191
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 185,
+        "end": 202
+      },
+      "preview": "            if res.category == DetectorCategory.AGE:\n                replacement = cap_age_string(res.value, age_cap)\n            else:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 175,
+        "end": 192
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 186,
+        "end": 203
+      },
+      "preview": "                replacement = cap_age_string(res.value, age_cap)\n            else:\n                replacement = f\"[{res.category.upper()}]\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/transforms.py",
+        "start": 176,
+        "end": 193
+      },
+      "loc2": {
+        "file": "packages/deidentification/transforms.py",
+        "start": 187,
+        "end": 204
+      },
+      "preview": "            else:\n                replacement = f\"[{res.category.upper()}]\"\n        parts[res.start : res.end] = list(replacement)\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/__init__.py",
+        "start": 2,
+        "end": 18
+      },
+      "loc2": {
+        "file": "packages/deidentification/__init__.py",
+        "start": 2,
+        "end": 18
+      },
+      "preview": "    DeidDetector,\n    redact_text,\n    resolve_overlaps,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/__init__.py",
+        "start": 3,
+        "end": 19
+      },
+      "loc2": {
+        "file": "packages/deidentification/__init__.py",
+        "start": 3,
+        "end": 19
+      },
+      "preview": "    redact_text,\n    resolve_overlaps,\n)\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/__init__.py",
+        "start": 4,
+        "end": 21
+      },
+      "loc2": {
+        "file": "packages/deidentification/__init__.py",
+        "start": 4,
+        "end": 21
+      },
+      "preview": "    resolve_overlaps,\n)\n    RedactionManifest,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/__init__.py",
+        "start": 5,
+        "end": 22
+      },
+      "loc2": {
+        "file": "packages/deidentification/__init__.py",
+        "start": 5,
+        "end": 22
+      },
+      "preview": ")\n    RedactionManifest,\n    build_redaction_manifest,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/__init__.py",
+        "start": 7,
+        "end": 23
+      },
+      "loc2": {
+        "file": "packages/deidentification/__init__.py",
+        "start": 7,
+        "end": 23
+      },
+      "preview": "    RedactionManifest,\n    build_redaction_manifest,\n    sign_manifest_asymmetric,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/__init__.py",
+        "start": 8,
+        "end": 24
+      },
+      "loc2": {
+        "file": "packages/deidentification/__init__.py",
+        "start": 8,
+        "end": 24
+      },
+      "preview": "    build_redaction_manifest,\n    sign_manifest_asymmetric,\n    sign_manifest_symmetric,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/__init__.py",
+        "start": 9,
+        "end": 25
+      },
+      "loc2": {
+        "file": "packages/deidentification/__init__.py",
+        "start": 9,
+        "end": 25
+      },
+      "preview": "    sign_manifest_asymmetric,\n    sign_manifest_symmetric,\n    verify_manifest_asymmetric,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/__init__.py",
+        "start": 10,
+        "end": 26
+      },
+      "loc2": {
+        "file": "packages/deidentification/__init__.py",
+        "start": 10,
+        "end": 26
+      },
+      "preview": "    sign_manifest_symmetric,\n    verify_manifest_asymmetric,\n    verify_manifest_symmetric,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/__init__.py",
+        "start": 11,
+        "end": 27
+      },
+      "loc2": {
+        "file": "packages/deidentification/__init__.py",
+        "start": 11,
+        "end": 27
+      },
+      "preview": "    verify_manifest_asymmetric,\n    verify_manifest_symmetric,\n)\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/__init__.py",
+        "start": 12,
+        "end": 29
+      },
+      "loc2": {
+        "file": "packages/deidentification/__init__.py",
+        "start": 12,
+        "end": 29
+      },
+      "preview": "    verify_manifest_symmetric,\n)\n    PROFILE_CATEGORIES,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/__init__.py",
+        "start": 13,
+        "end": 30
+      },
+      "loc2": {
+        "file": "packages/deidentification/__init__.py",
+        "start": 13,
+        "end": 30
+      },
+      "preview": ")\n    PROFILE_CATEGORIES,\n    ComplianceProfile,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/__init__.py",
+        "start": 15,
+        "end": 31
+      },
+      "loc2": {
+        "file": "packages/deidentification/__init__.py",
+        "start": 15,
+        "end": 31
+      },
+      "preview": "    PROFILE_CATEGORIES,\n    ComplianceProfile,\n    DetectionResult,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/__init__.py",
+        "start": 16,
+        "end": 32
+      },
+      "loc2": {
+        "file": "packages/deidentification/__init__.py",
+        "start": 16,
+        "end": 32
+      },
+      "preview": "    ComplianceProfile,\n    DetectionResult,\n    DetectorCategory,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/__init__.py",
+        "start": 17,
+        "end": 33
+      },
+      "loc2": {
+        "file": "packages/deidentification/__init__.py",
+        "start": 17,
+        "end": 33
+      },
+      "preview": "    DetectionResult,\n    DetectorCategory,\n)\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/__init__.py",
+        "start": 18,
+        "end": 34
+      },
+      "loc2": {
+        "file": "packages/deidentification/__init__.py",
+        "start": 18,
+        "end": 34
+      },
+      "preview": "    DetectorCategory,\n)\n    DEFAULT_DATE_SHIFT_DAYS,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/__init__.py",
+        "start": 19,
+        "end": 35
+      },
+      "loc2": {
+        "file": "packages/deidentification/__init__.py",
+        "start": 19,
+        "end": 35
+      },
+      "preview": ")\n    DEFAULT_DATE_SHIFT_DAYS,\n    RedactionRecordItem,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/__init__.py",
+        "start": 21,
+        "end": 36
+      },
+      "loc2": {
+        "file": "packages/deidentification/__init__.py",
+        "start": 21,
+        "end": 36
+      },
+      "preview": "    DEFAULT_DATE_SHIFT_DAYS,\n    RedactionRecordItem,\n    apply_deid_transforms,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/__init__.py",
+        "start": 22,
+        "end": 37
+      },
+      "loc2": {
+        "file": "packages/deidentification/__init__.py",
+        "start": 22,
+        "end": 37
+      },
+      "preview": "    RedactionRecordItem,\n    apply_deid_transforms,\n    cap_age_string,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/__init__.py",
+        "start": 23,
+        "end": 38
+      },
+      "loc2": {
+        "file": "packages/deidentification/__init__.py",
+        "start": 23,
+        "end": 38
+      },
+      "preview": "    apply_deid_transforms,\n    cap_age_string,\n    pseudonymize_value,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/__init__.py",
+        "start": 24,
+        "end": 39
+      },
+      "loc2": {
+        "file": "packages/deidentification/__init__.py",
+        "start": 24,
+        "end": 39
+      },
+      "preview": "    cap_age_string,\n    pseudonymize_value,\n    shift_date_string,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/__init__.py",
+        "start": 25,
+        "end": 40
+      },
+      "loc2": {
+        "file": "packages/deidentification/__init__.py",
+        "start": 25,
+        "end": 40
+      },
+      "preview": "    pseudonymize_value,\n    shift_date_string,\n)\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/__init__.py",
+        "start": 26,
+        "end": 41
+      },
+      "loc2": {
+        "file": "packages/deidentification/__init__.py",
+        "start": 26,
+        "end": 41
+      },
+      "preview": "    shift_date_string,\n)\n__all__ = [\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/__init__.py",
+        "start": 27,
+        "end": 42
+      },
+      "loc2": {
+        "file": "packages/deidentification/__init__.py",
+        "start": 27,
+        "end": 42
+      },
+      "preview": ")\n__all__ = [\n    \"ComplianceProfile\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/__init__.py",
+        "start": 29,
+        "end": 43
+      },
+      "loc2": {
+        "file": "packages/deidentification/__init__.py",
+        "start": 29,
+        "end": 43
+      },
+      "preview": "__all__ = [\n    \"ComplianceProfile\",\n    \"DetectionResult\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/__init__.py",
+        "start": 30,
+        "end": 44
+      },
+      "loc2": {
+        "file": "packages/deidentification/__init__.py",
+        "start": 30,
+        "end": 44
+      },
+      "preview": "    \"ComplianceProfile\",\n    \"DetectionResult\",\n    \"DetectorCategory\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/__init__.py",
+        "start": 31,
+        "end": 45
+      },
+      "loc2": {
+        "file": "packages/deidentification/__init__.py",
+        "start": 31,
+        "end": 45
+      },
+      "preview": "    \"DetectionResult\",\n    \"DetectorCategory\",\n    \"PROFILE_CATEGORIES\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/__init__.py",
+        "start": 32,
+        "end": 46
+      },
+      "loc2": {
+        "file": "packages/deidentification/__init__.py",
+        "start": 32,
+        "end": 46
+      },
+      "preview": "    \"DetectorCategory\",\n    \"PROFILE_CATEGORIES\",\n    \"DeidDetector\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/__init__.py",
+        "start": 33,
+        "end": 47
+      },
+      "loc2": {
+        "file": "packages/deidentification/__init__.py",
+        "start": 33,
+        "end": 47
+      },
+      "preview": "    \"PROFILE_CATEGORIES\",\n    \"DeidDetector\",\n    \"resolve_overlaps\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/__init__.py",
+        "start": 34,
+        "end": 48
+      },
+      "loc2": {
+        "file": "packages/deidentification/__init__.py",
+        "start": 34,
+        "end": 48
+      },
+      "preview": "    \"DeidDetector\",\n    \"resolve_overlaps\",\n    \"redact_text\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 6,
+        "end": 23
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 6,
+        "end": 23
+      },
+      "preview": "class DetectorCategory(str, Enum):\n    \"\"\"\n    Standard categories of PII/PHI supported by the detection engine.\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 7,
+        "end": 24
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 7,
+        "end": 24
+      },
+      "preview": "    \"\"\"\n    Standard categories of PII/PHI supported by the detection engine.\n    \"\"\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 8,
+        "end": 25
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 8,
+        "end": 25
+      },
+      "preview": "    Standard categories of PII/PHI supported by the detection engine.\n    \"\"\"\n    EMAIL = \"email\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 9,
+        "end": 26
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 9,
+        "end": 26
+      },
+      "preview": "    \"\"\"\n    EMAIL = \"email\"\n    TELEPHONE_FAX = \"telephone_fax\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 11,
+        "end": 28
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 11,
+        "end": 28
+      },
+      "preview": "    EMAIL = \"email\"\n    TELEPHONE_FAX = \"telephone_fax\"\n    SSN_NATIONAL_ID = \"ssn_national_id\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 12,
+        "end": 29
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 12,
+        "end": 29
+      },
+      "preview": "    TELEPHONE_FAX = \"telephone_fax\"\n    SSN_NATIONAL_ID = \"ssn_national_id\"\n    DATES = \"dates\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 13,
+        "end": 30
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 13,
+        "end": 30
+      },
+      "preview": "    SSN_NATIONAL_ID = \"ssn_national_id\"\n    DATES = \"dates\"\n    ZIP_GEOGRAPHIC = \"zip_geographic\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 14,
+        "end": 34
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 14,
+        "end": 34
+      },
+      "preview": "    DATES = \"dates\"\n    ZIP_GEOGRAPHIC = \"zip_geographic\"\n    URLS = \"urls\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 15,
+        "end": 35
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 15,
+        "end": 35
+      },
+      "preview": "    ZIP_GEOGRAPHIC = \"zip_geographic\"\n    URLS = \"urls\"\n    IP_MAC_ADDRESSES = \"ip_mac_addresses\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 16,
+        "end": 36
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 16,
+        "end": 36
+      },
+      "preview": "    URLS = \"urls\"\n    IP_MAC_ADDRESSES = \"ip_mac_addresses\"\n    MEDICAL_RECORD_ACCOUNT = \"medical_record_account\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 17,
+        "end": 37
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 17,
+        "end": 37
+      },
+      "preview": "    IP_MAC_ADDRESSES = \"ip_mac_addresses\"\n    MEDICAL_RECORD_ACCOUNT = \"medical_record_account\"\n    AGE = \"age\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 18,
+        "end": 38
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 18,
+        "end": 38
+      },
+      "preview": "    MEDICAL_RECORD_ACCOUNT = \"medical_record_account\"\n    AGE = \"age\"\n    CUSTOM = \"custom\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 19,
+        "end": 39
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 19,
+        "end": 39
+      },
+      "preview": "    AGE = \"age\"\n    CUSTOM = \"custom\"\nclass ComplianceProfile(str, Enum):\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 20,
+        "end": 40
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 20,
+        "end": 40
+      },
+      "preview": "    CUSTOM = \"custom\"\nclass ComplianceProfile(str, Enum):\n    \"\"\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 23,
+        "end": 41
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 23,
+        "end": 41
+      },
+      "preview": "class ComplianceProfile(str, Enum):\n    \"\"\"\n    Compliance profiles that govern which PII/PHI categories are active.\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 24,
+        "end": 42
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 24,
+        "end": 42
+      },
+      "preview": "    \"\"\"\n    Compliance profiles that govern which PII/PHI categories are active.\n    \"\"\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 25,
+        "end": 43
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 25,
+        "end": 43
+      },
+      "preview": "    Compliance profiles that govern which PII/PHI categories are active.\n    \"\"\"\n    HIPAA = \"HIPAA\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 26,
+        "end": 44
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 26,
+        "end": 44
+      },
+      "preview": "    \"\"\"\n    HIPAA = \"HIPAA\"\n    GDPR = \"GDPR\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 28,
+        "end": 45
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 28,
+        "end": 45
+      },
+      "preview": "    HIPAA = \"HIPAA\"\n    GDPR = \"GDPR\"\n    EU_CTR = \"EU_CTR\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 29,
+        "end": 46
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 29,
+        "end": 46
+      },
+      "preview": "    GDPR = \"GDPR\"\n    EU_CTR = \"EU_CTR\"\nPROFILE_CATEGORIES = {\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 30,
+        "end": 47
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 30,
+        "end": 47
+      },
+      "preview": "    EU_CTR = \"EU_CTR\"\nPROFILE_CATEGORIES = {\n    ComplianceProfile.HIPAA: {\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 34,
+        "end": 48
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 34,
+        "end": 48
+      },
+      "preview": "PROFILE_CATEGORIES = {\n    ComplianceProfile.HIPAA: {\n        DetectorCategory.EMAIL,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 35,
+        "end": 49
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 35,
+        "end": 49
+      },
+      "preview": "    ComplianceProfile.HIPAA: {\n        DetectorCategory.EMAIL,\n        DetectorCategory.TELEPHONE_FAX,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 36,
+        "end": 50
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 36,
+        "end": 50
+      },
+      "preview": "        DetectorCategory.EMAIL,\n        DetectorCategory.TELEPHONE_FAX,\n        DetectorCategory.SSN_NATIONAL_ID,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 37,
+        "end": 51
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 37,
+        "end": 51
+      },
+      "preview": "        DetectorCategory.TELEPHONE_FAX,\n        DetectorCategory.SSN_NATIONAL_ID,\n        DetectorCategory.DATES,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 38,
+        "end": 52
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 38,
+        "end": 52
+      },
+      "preview": "        DetectorCategory.SSN_NATIONAL_ID,\n        DetectorCategory.DATES,\n        DetectorCategory.ZIP_GEOGRAPHIC,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 39,
+        "end": 53
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 39,
+        "end": 53
+      },
+      "preview": "        DetectorCategory.DATES,\n        DetectorCategory.ZIP_GEOGRAPHIC,\n        DetectorCategory.URLS,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 40,
+        "end": 54
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 40,
+        "end": 54
+      },
+      "preview": "        DetectorCategory.ZIP_GEOGRAPHIC,\n        DetectorCategory.URLS,\n        DetectorCategory.IP_MAC_ADDRESSES,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 41,
+        "end": 55
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 41,
+        "end": 55
+      },
+      "preview": "        DetectorCategory.URLS,\n        DetectorCategory.IP_MAC_ADDRESSES,\n        DetectorCategory.MEDICAL_RECORD_ACCOUNT,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 42,
+        "end": 56
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 42,
+        "end": 56
+      },
+      "preview": "        DetectorCategory.IP_MAC_ADDRESSES,\n        DetectorCategory.MEDICAL_RECORD_ACCOUNT,\n        DetectorCategory.AGE,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 43,
+        "end": 57
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 43,
+        "end": 57
+      },
+      "preview": "        DetectorCategory.MEDICAL_RECORD_ACCOUNT,\n        DetectorCategory.AGE,\n        DetectorCategory.CUSTOM,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 44,
+        "end": 58
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 44,
+        "end": 58
+      },
+      "preview": "        DetectorCategory.AGE,\n        DetectorCategory.CUSTOM,\n    },\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 45,
+        "end": 59
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 45,
+        "end": 59
+      },
+      "preview": "        DetectorCategory.CUSTOM,\n    },\n    ComplianceProfile.GDPR: {\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 46,
+        "end": 61
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 46,
+        "end": 61
+      },
+      "preview": "    },\n    ComplianceProfile.GDPR: {\n        DetectorCategory.EMAIL,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 47,
+        "end": 62
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 47,
+        "end": 62
+      },
+      "preview": "    ComplianceProfile.GDPR: {\n        DetectorCategory.EMAIL,\n        DetectorCategory.TELEPHONE_FAX,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 48,
+        "end": 63
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 48,
+        "end": 63
+      },
+      "preview": "        DetectorCategory.EMAIL,\n        DetectorCategory.TELEPHONE_FAX,\n        DetectorCategory.SSN_NATIONAL_ID,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 49,
+        "end": 64
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 49,
+        "end": 64
+      },
+      "preview": "        DetectorCategory.TELEPHONE_FAX,\n        DetectorCategory.SSN_NATIONAL_ID,\n        DetectorCategory.DATES,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 50,
+        "end": 65
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 50,
+        "end": 65
+      },
+      "preview": "        DetectorCategory.SSN_NATIONAL_ID,\n        DetectorCategory.DATES,\n        DetectorCategory.ZIP_GEOGRAPHIC,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 51,
+        "end": 66
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 51,
+        "end": 66
+      },
+      "preview": "        DetectorCategory.DATES,\n        DetectorCategory.ZIP_GEOGRAPHIC,\n        DetectorCategory.URLS,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 52,
+        "end": 67
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 52,
+        "end": 67
+      },
+      "preview": "        DetectorCategory.ZIP_GEOGRAPHIC,\n        DetectorCategory.URLS,\n        DetectorCategory.IP_MAC_ADDRESSES,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 53,
+        "end": 68
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 53,
+        "end": 68
+      },
+      "preview": "        DetectorCategory.URLS,\n        DetectorCategory.IP_MAC_ADDRESSES,\n        DetectorCategory.MEDICAL_RECORD_ACCOUNT,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 54,
+        "end": 72
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 54,
+        "end": 72
+      },
+      "preview": "        DetectorCategory.IP_MAC_ADDRESSES,\n        DetectorCategory.MEDICAL_RECORD_ACCOUNT,\n        DetectorCategory.AGE,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 55,
+        "end": 73
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 55,
+        "end": 73
+      },
+      "preview": "        DetectorCategory.MEDICAL_RECORD_ACCOUNT,\n        DetectorCategory.AGE,\n        DetectorCategory.CUSTOM,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 56,
+        "end": 74
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 56,
+        "end": 74
+      },
+      "preview": "        DetectorCategory.AGE,\n        DetectorCategory.CUSTOM,\n    },\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 57,
+        "end": 75
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 57,
+        "end": 75
+      },
+      "preview": "        DetectorCategory.CUSTOM,\n    },\n    ComplianceProfile.EU_CTR: {\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 58,
+        "end": 77
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 58,
+        "end": 77
+      },
+      "preview": "    },\n    ComplianceProfile.EU_CTR: {\n        DetectorCategory.EMAIL,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 59,
+        "end": 78
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 59,
+        "end": 78
+      },
+      "preview": "    ComplianceProfile.EU_CTR: {\n        DetectorCategory.EMAIL,\n        DetectorCategory.TELEPHONE_FAX,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 61,
+        "end": 79
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 61,
+        "end": 79
+      },
+      "preview": "        DetectorCategory.EMAIL,\n        DetectorCategory.TELEPHONE_FAX,\n        DetectorCategory.SSN_NATIONAL_ID,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/models.py",
+        "start": 62,
+        "end": 80
+      },
+      "loc2": {
+        "file": "packages/deidentification/models.py",
+        "start": 62,
+        "end": 80
+      },
+      "preview": "        DetectorCategory.TELEPHONE_FAX,\n        DetectorCategory.SSN_NATIONAL_ID,\n        DetectorCategory.DATES,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 5,
+        "end": 28
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 5,
+        "end": 29
+      },
+      "preview": "    PROFILE_CATEGORIES,\n    ComplianceProfile,\n    DetectionResult,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 6,
+        "end": 30
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 6,
+        "end": 31
+      },
+      "preview": "    ComplianceProfile,\n    DetectionResult,\n    DetectorCategory,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 7,
+        "end": 32
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 7,
+        "end": 33
+      },
+      "preview": "    DetectionResult,\n    DetectorCategory,\n)\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 8,
+        "end": 33
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 8,
+        "end": 34
+      },
+      "preview": "    DetectorCategory,\n)\nEMAIL_REGEX = re.compile(r\"\\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}\\b\")\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 9,
+        "end": 34
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 9,
+        "end": 35
+      },
+      "preview": ")\nEMAIL_REGEX = re.compile(r\"\\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}\\b\")\nPHONE_FAX_REGEX = re.compile(\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 12,
+        "end": 35
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 13,
+        "end": 36
+      },
+      "preview": "EMAIL_REGEX = re.compile(r\"\\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}\\b\")\nPHONE_FAX_REGEX = re.compile(\n    r\"(?:\\+\\d{1,3}[-.\\s]*)?\\(?\\d{2,4}\\)?[-.\\s]*\\d{3,4}[-.\\s]*\\d{4}\\b|\\b\\d{3}[-.\\s]*\\d{4}\\b\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 15,
+        "end": 36
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 16,
+        "end": 37
+      },
+      "preview": "PHONE_FAX_REGEX = re.compile(\n    r\"(?:\\+\\d{1,3}[-.\\s]*)?\\(?\\d{2,4}\\)?[-.\\s]*\\d{3,4}[-.\\s]*\\d{4}\\b|\\b\\d{3}[-.\\s]*\\d{4}\\b\"\n)\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 16,
+        "end": 37
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 17,
+        "end": 38
+      },
+      "preview": "    r\"(?:\\+\\d{1,3}[-.\\s]*)?\\(?\\d{2,4}\\)?[-.\\s]*\\d{3,4}[-.\\s]*\\d{4}\\b|\\b\\d{3}[-.\\s]*\\d{4}\\b\"\n)\nSSN_NATIONAL_ID_REGEX = re.compile(\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 17,
+        "end": 38
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 18,
+        "end": 39
+      },
+      "preview": ")\nSSN_NATIONAL_ID_REGEX = re.compile(\n    r\"\\b\\d{3}-\\d{2}-\\d{4}\\b|\\b[A-CEGHJ-PR-TW-Z][A-CEGHJ-NPR-TW-Z]\\s*\\d{2}\\s*\\d{2}\\s*\\d{2}\\s*[A-D]\\b\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 20,
+        "end": 39
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 21,
+        "end": 40
+      },
+      "preview": "SSN_NATIONAL_ID_REGEX = re.compile(\n    r\"\\b\\d{3}-\\d{2}-\\d{4}\\b|\\b[A-CEGHJ-PR-TW-Z][A-CEGHJ-NPR-TW-Z]\\s*\\d{2}\\s*\\d{2}\\s*\\d{2}\\s*[A-D]\\b\",\n    re.IGNORECASE,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 21,
+        "end": 43
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 22,
+        "end": 44
+      },
+      "preview": "    r\"\\b\\d{3}-\\d{2}-\\d{4}\\b|\\b[A-CEGHJ-PR-TW-Z][A-CEGHJ-NPR-TW-Z]\\s*\\d{2}\\s*\\d{2}\\s*\\d{2}\\s*[A-D]\\b\",\n    re.IGNORECASE,\n)\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 22,
+        "end": 44
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 23,
+        "end": 45
+      },
+      "preview": "    re.IGNORECASE,\n)\nDATE_PATTERNS = [\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 23,
+        "end": 45
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 24,
+        "end": 46
+      },
+      "preview": ")\nDATE_PATTERNS = [\n    re.compile(r\"\\b\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}\\b\"),\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 26,
+        "end": 48
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 27,
+        "end": 49
+      },
+      "preview": "DATE_PATTERNS = [\n    re.compile(r\"\\b\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}\\b\"),\n    re.compile(r\"\\b\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4}\\b\"),\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 28,
+        "end": 49
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 29,
+        "end": 50
+      },
+      "preview": "    re.compile(r\"\\b\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}\\b\"),\n    re.compile(r\"\\b\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4}\\b\"),\n    re.compile(\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 30,
+        "end": 50
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 31,
+        "end": 51
+      },
+      "preview": "    re.compile(r\"\\b\\d{1,2}[-/]\\d{1,2}[-/]\\d{2,4}\\b\"),\n    re.compile(\n        r\"\\b\\d{1,2}[-\\s](?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-zA-Z]*[-\\s]\\d{2,4}\\b\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 32,
+        "end": 53
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 33,
+        "end": 54
+      },
+      "preview": "    re.compile(\n        r\"\\b\\d{1,2}[-\\s](?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-zA-Z]*[-\\s]\\d{2,4}\\b\",\n        re.IGNORECASE,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 33,
+        "end": 55
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 34,
+        "end": 56
+      },
+      "preview": "        r\"\\b\\d{1,2}[-\\s](?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-zA-Z]*[-\\s]\\d{2,4}\\b\",\n        re.IGNORECASE,\n    ),\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 34,
+        "end": 57
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 35,
+        "end": 58
+      },
+      "preview": "        re.IGNORECASE,\n    ),\n    re.compile(\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 35,
+        "end": 60
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 36,
+        "end": 61
+      },
+      "preview": "    ),\n    re.compile(\n        r\"\\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-zA-Z]*\\s+\\d{1,2}(?:st|nd|rd|th)?[\\s,]+\\d{2,4}\\b\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 36,
+        "end": 61
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 37,
+        "end": 62
+      },
+      "preview": "    re.compile(\n        r\"\\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-zA-Z]*\\s+\\d{1,2}(?:st|nd|rd|th)?[\\s,]+\\d{2,4}\\b\",\n        re.IGNORECASE,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 37,
+        "end": 62
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 38,
+        "end": 63
+      },
+      "preview": "        r\"\\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-zA-Z]*\\s+\\d{1,2}(?:st|nd|rd|th)?[\\s,]+\\d{2,4}\\b\",\n        re.IGNORECASE,\n    ),\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 38,
+        "end": 63
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 39,
+        "end": 64
+      },
+      "preview": "        re.IGNORECASE,\n    ),\nZIP_GEOGRAPHIC_REGEX = re.compile(\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 39,
+        "end": 64
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 40,
+        "end": 65
+      },
+      "preview": "    ),\nZIP_GEOGRAPHIC_REGEX = re.compile(\n    r\"\\b\\d{5}(?:-\\d{4})?\\b|\\b[A-Za-z]\\d[A-Za-z][ -]?\\d[A-Za-z]\\d\\b|\\b[A-Za-z]{1,2}\\d[A-Za-z\\d]?\\s*\\d[A-Za-z]{2}\\b\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 43,
+        "end": 68
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 44,
+        "end": 69
+      },
+      "preview": "ZIP_GEOGRAPHIC_REGEX = re.compile(\n    r\"\\b\\d{5}(?:-\\d{4})?\\b|\\b[A-Za-z]\\d[A-Za-z][ -]?\\d[A-Za-z]\\d\\b|\\b[A-Za-z]{1,2}\\d[A-Za-z\\d]?\\s*\\d[A-Za-z]{2}\\b\"\n)\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 44,
+        "end": 69
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 45,
+        "end": 70
+      },
+      "preview": "    r\"\\b\\d{5}(?:-\\d{4})?\\b|\\b[A-Za-z]\\d[A-Za-z][ -]?\\d[A-Za-z]\\d\\b|\\b[A-Za-z]{1,2}\\d[A-Za-z\\d]?\\s*\\d[A-Za-z]{2}\\b\"\n)\nURLS_REGEX = re.compile(\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 45,
+        "end": 70
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 46,
+        "end": 71
+      },
+      "preview": ")\nURLS_REGEX = re.compile(\n    r\"\\b(?:https?://|www\\.)[a-zA-Z0-9-._~:/?#\\[\\]@!$&'()*+,;=]+\\b\", re.IGNORECASE\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 48,
+        "end": 71
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 49,
+        "end": 72
+      },
+      "preview": "URLS_REGEX = re.compile(\n    r\"\\b(?:https?://|www\\.)[a-zA-Z0-9-._~:/?#\\[\\]@!$&'()*+,;=]+\\b\", re.IGNORECASE\n)\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 49,
+        "end": 72
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 50,
+        "end": 73
+      },
+      "preview": "    r\"\\b(?:https?://|www\\.)[a-zA-Z0-9-._~:/?#\\[\\]@!$&'()*+,;=]+\\b\", re.IGNORECASE\n)\nIP_MAC_REGEX = re.compile(\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 50,
+        "end": 75
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 51,
+        "end": 76
+      },
+      "preview": ")\nIP_MAC_REGEX = re.compile(\n    r\"\\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\b\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 53,
+        "end": 76
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 54,
+        "end": 77
+      },
+      "preview": "IP_MAC_REGEX = re.compile(\n    r\"\\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\b\"\n    r\"|\\b(?:[0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}\\b\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 55,
+        "end": 77
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 56,
+        "end": 78
+      },
+      "preview": "    r\"\\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\b\"\n    r\"|\\b(?:[0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}\\b\"\n    r\"|\\b(?:[0-9a-fA-F]{1,4}:)+(?::[0-9a-fA-F]{1,4})+\\b\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 57,
+        "end": 78
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 58,
+        "end": 79
+      },
+      "preview": "    r\"|\\b(?:[0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}\\b\"\n    r\"|\\b(?:[0-9a-fA-F]{1,4}:)+(?::[0-9a-fA-F]{1,4})+\\b\"\n    r\"|\\b(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}\\b\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 60,
+        "end": 79
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 61,
+        "end": 80
+      },
+      "preview": "    r\"|\\b(?:[0-9a-fA-F]{1,4}:)+(?::[0-9a-fA-F]{1,4})+\\b\"\n    r\"|\\b(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}\\b\"\n    r\"|\\b::(?:[0-9a-fA-F]{1,4}:){0,6}[0-9a-fA-F]{1,4}\\b\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 61,
+        "end": 82
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 62,
+        "end": 83
+      },
+      "preview": "    r\"|\\b(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}\\b\"\n    r\"|\\b::(?:[0-9a-fA-F]{1,4}:){0,6}[0-9a-fA-F]{1,4}\\b\"\n    r\"|\\b(?:[0-9a-fA-F]{1,4}:){1,7}:\\b\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 62,
+        "end": 83
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 63,
+        "end": 84
+      },
+      "preview": "    r\"|\\b::(?:[0-9a-fA-F]{1,4}:){0,6}[0-9a-fA-F]{1,4}\\b\"\n    r\"|\\b(?:[0-9a-fA-F]{1,4}:){1,7}:\\b\"\n)\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 63,
+        "end": 84
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 64,
+        "end": 85
+      },
+      "preview": "    r\"|\\b(?:[0-9a-fA-F]{1,4}:){1,7}:\\b\"\n)\nMEDICAL_RECORD_ACCOUNT_REGEX = re.compile(\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 64,
+        "end": 85
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 65,
+        "end": 86
+      },
+      "preview": ")\nMEDICAL_RECORD_ACCOUNT_REGEX = re.compile(\n    r\"\\b(?:MRN|EHR|ACC|NHS)[-:\\s]*[a-zA-Z0-9-]*\\d[a-zA-Z0-9-]*\\b\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 68,
+        "end": 86
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 69,
+        "end": 87
+      },
+      "preview": "MEDICAL_RECORD_ACCOUNT_REGEX = re.compile(\n    r\"\\b(?:MRN|EHR|ACC|NHS)[-:\\s]*[a-zA-Z0-9-]*\\d[a-zA-Z0-9-]*\\b\"\n    r\"|\\b\\d{3}[-\\s]?\\d{3}[-\\s]?\\d{4}\\b\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 69,
+        "end": 87
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 70,
+        "end": 88
+      },
+      "preview": "    r\"\\b(?:MRN|EHR|ACC|NHS)[-:\\s]*[a-zA-Z0-9-]*\\d[a-zA-Z0-9-]*\\b\"\n    r\"|\\b\\d{3}[-\\s]?\\d{3}[-\\s]?\\d{4}\\b\",\n    re.IGNORECASE,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 70,
+        "end": 88
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 71,
+        "end": 89
+      },
+      "preview": "    r\"|\\b\\d{3}[-\\s]?\\d{3}[-\\s]?\\d{4}\\b\",\n    re.IGNORECASE,\n)\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 71,
+        "end": 89
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 72,
+        "end": 90
+      },
+      "preview": "    re.IGNORECASE,\n)\nAGE_REGEX = re.compile(\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 72,
+        "end": 90
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 73,
+        "end": 91
+      },
+      "preview": ")\nAGE_REGEX = re.compile(\n    r\"\\b(?:age[sd]?|age of)\\s*[:\\- ]?\\s*\\d{1,3}\\b\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 75,
+        "end": 91
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 76,
+        "end": 92
+      },
+      "preview": "AGE_REGEX = re.compile(\n    r\"\\b(?:age[sd]?|age of)\\s*[:\\- ]?\\s*\\d{1,3}\\b\"\n    r\"|\\b\\d{1,3}\\s*(?:years?\\s*(?:of\\s*age)?\\s*old|-years?-old|yo|-yo)\\b\",\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 76,
+        "end": 92
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 77,
+        "end": 93
+      },
+      "preview": "    r\"\\b(?:age[sd]?|age of)\\s*[:\\- ]?\\s*\\d{1,3}\\b\"\n    r\"|\\b\\d{1,3}\\s*(?:years?\\s*(?:of\\s*age)?\\s*old|-years?-old|yo|-yo)\\b\",\n    re.IGNORECASE,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 77,
+        "end": 93
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 78,
+        "end": 94
+      },
+      "preview": "    r\"|\\b\\d{1,3}\\s*(?:years?\\s*(?:of\\s*age)?\\s*old|-years?-old|yo|-yo)\\b\",\n    re.IGNORECASE,\n)\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 78,
+        "end": 94
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 79,
+        "end": 95
+      },
+      "preview": "    re.IGNORECASE,\n)\ndef resolve_overlaps(results: List[DetectionResult]) -> List[DetectionResult]:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 79,
+        "end": 96
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 80,
+        "end": 97
+      },
+      "preview": ")\ndef resolve_overlaps(results: List[DetectionResult]) -> List[DetectionResult]:\n    \"\"\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 82,
+        "end": 97
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 83,
+        "end": 98
+      },
+      "preview": "def resolve_overlaps(results: List[DetectionResult]) -> List[DetectionResult]:\n    \"\"\"\n    Resolve overlapping detection results deterministically.\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 83,
+        "end": 98
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 84,
+        "end": 99
+      },
+      "preview": "    \"\"\"\n    Resolve overlapping detection results deterministically.\n    Longer/wider matches are prioritized. For overlapping intervals, the match\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 84,
+        "end": 99
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 85,
+        "end": 100
+      },
+      "preview": "    Resolve overlapping detection results deterministically.\n    Longer/wider matches are prioritized. For overlapping intervals, the match\n    retained is determined by:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 85,
+        "end": 101
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 86,
+        "end": 102
+      },
+      "preview": "    Longer/wider matches are prioritized. For overlapping intervals, the match\n    retained is determined by:\n      1. start offset ascending\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 86,
+        "end": 102
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 87,
+        "end": 103
+      },
+      "preview": "    retained is determined by:\n      1. start offset ascending\n      2. end offset descending (wider/longer intervals processed first)\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 87,
+        "end": 103
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 88,
+        "end": 104
+      },
+      "preview": "      1. start offset ascending\n      2. end offset descending (wider/longer intervals processed first)\n      3. category name alphabetically\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 88,
+        "end": 104
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 89,
+        "end": 105
+      },
+      "preview": "      2. end offset descending (wider/longer intervals processed first)\n      3. category name alphabetically\n      4. value length descending\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 89,
+        "end": 105
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 90,
+        "end": 106
+      },
+      "preview": "      3. category name alphabetically\n      4. value length descending\n    \"\"\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 90,
+        "end": 108
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 91,
+        "end": 109
+      },
+      "preview": "      4. value length descending\n    \"\"\"\n    sorted_results = sorted(\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 91,
+        "end": 111
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 92,
+        "end": 112
+      },
+      "preview": "    \"\"\"\n    sorted_results = sorted(\n        results, key=lambda x: (x.start, -x.end, x.category, -len(x.value))\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 92,
+        "end": 112
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 93,
+        "end": 113
+      },
+      "preview": "    sorted_results = sorted(\n        results, key=lambda x: (x.start, -x.end, x.category, -len(x.value))\n    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 93,
+        "end": 113
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 94,
+        "end": 114
+      },
+      "preview": "        results, key=lambda x: (x.start, -x.end, x.category, -len(x.value))\n    )\n    resolved: List[DetectionResult] = []\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 94,
+        "end": 114
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 95,
+        "end": 115
+      },
+      "preview": "    )\n    resolved: List[DetectionResult] = []\n    for res in sorted_results:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 96,
+        "end": 115
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 97,
+        "end": 116
+      },
+      "preview": "    resolved: List[DetectionResult] = []\n    for res in sorted_results:\n        overlaps = False\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 97,
+        "end": 116
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 98,
+        "end": 117
+      },
+      "preview": "    for res in sorted_results:\n        overlaps = False\n        for accepted in resolved:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 98,
+        "end": 117
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 99,
+        "end": 118
+      },
+      "preview": "        overlaps = False\n        for accepted in resolved:\n            if max(res.start, accepted.start) < min(res.end, accepted.end):\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 99,
+        "end": 118
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 100,
+        "end": 119
+      },
+      "preview": "        for accepted in resolved:\n            if max(res.start, accepted.start) < min(res.end, accepted.end):\n                overlaps = True\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 101,
+        "end": 120
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 102,
+        "end": 121
+      },
+      "preview": "            if max(res.start, accepted.start) < min(res.end, accepted.end):\n                overlaps = True\n                break\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 102,
+        "end": 121
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 103,
+        "end": 122
+      },
+      "preview": "                overlaps = True\n                break\n        if not overlaps:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 103,
+        "end": 122
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 104,
+        "end": 123
+      },
+      "preview": "                break\n        if not overlaps:\n            resolved.append(res)\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 104,
+        "end": 124
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 105,
+        "end": 125
+      },
+      "preview": "        if not overlaps:\n            resolved.append(res)\n    return sorted(resolved, key=lambda x: x.start)\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 105,
+        "end": 126
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 106,
+        "end": 127
+      },
+      "preview": "            resolved.append(res)\n    return sorted(resolved, key=lambda x: x.start)\ndef redact_text(\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 108,
+        "end": 128
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 109,
+        "end": 129
+      },
+      "preview": "    return sorted(resolved, key=lambda x: x.start)\ndef redact_text(\n    text: str,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 111,
+        "end": 129
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 112,
+        "end": 130
+      },
+      "preview": "def redact_text(\n    text: str,\n    results: List[DetectionResult],\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 112,
+        "end": 130
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 113,
+        "end": 131
+      },
+      "preview": "    text: str,\n    results: List[DetectionResult],\n    placeholder_func: Optional[Callable[[DetectionResult], str]] = None,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 113,
+        "end": 131
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 114,
+        "end": 132
+      },
+      "preview": "    results: List[DetectionResult],\n    placeholder_func: Optional[Callable[[DetectionResult], str]] = None,\n) -> str:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 114,
+        "end": 132
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 115,
+        "end": 133
+      },
+      "preview": "    placeholder_func: Optional[Callable[[DetectionResult], str]] = None,\n) -> str:\n    \"\"\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 115,
+        "end": 133
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 116,
+        "end": 134
+      },
+      "preview": ") -> str:\n    \"\"\"\n    Redact identified terms in the source text using sequential right-to-left\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 116,
+        "end": 136
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 117,
+        "end": 137
+      },
+      "preview": "    \"\"\"\n    Redact identified terms in the source text using sequential right-to-left\n    character slicing.\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 117,
+        "end": 137
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 118,
+        "end": 138
+      },
+      "preview": "    Redact identified terms in the source text using sequential right-to-left\n    character slicing.\n    If placeholder_func is provided, it is invoked to compute the placeholder\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 118,
+        "end": 138
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 119,
+        "end": 139
+      },
+      "preview": "    character slicing.\n    If placeholder_func is provided, it is invoked to compute the placeholder\n    for each result. Otherwise, defaults to f\"[{result.category.upper()}]\".\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 120,
+        "end": 139
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 121,
+        "end": 140
+      },
+      "preview": "    If placeholder_func is provided, it is invoked to compute the placeholder\n    for each result. Otherwise, defaults to f\"[{result.category.upper()}]\".\n    \"\"\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 121,
+        "end": 141
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 122,
+        "end": 142
+      },
+      "preview": "    for each result. Otherwise, defaults to f\"[{result.category.upper()}]\".\n    \"\"\"\n    clean_results = resolve_overlaps(results)\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 122,
+        "end": 142
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 123,
+        "end": 143
+      },
+      "preview": "    \"\"\"\n    clean_results = resolve_overlaps(results)\n    parts = list(text)\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 124,
+        "end": 144
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 125,
+        "end": 145
+      },
+      "preview": "    clean_results = resolve_overlaps(results)\n    parts = list(text)\n    for res in reversed(clean_results):\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 126,
+        "end": 145
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 127,
+        "end": 146
+      },
+      "preview": "    parts = list(text)\n    for res in reversed(clean_results):\n        replacement = (\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 128,
+        "end": 146
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 129,
+        "end": 147
+      },
+      "preview": "    for res in reversed(clean_results):\n        replacement = (\n            placeholder_func(res) if placeholder_func else f\"[{res.category.upper()}]\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 129,
+        "end": 147
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 130,
+        "end": 148
+      },
+      "preview": "        replacement = (\n            placeholder_func(res) if placeholder_func else f\"[{res.category.upper()}]\"\n        )\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 130,
+        "end": 148
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 131,
+        "end": 149
+      },
+      "preview": "            placeholder_func(res) if placeholder_func else f\"[{res.category.upper()}]\"\n        )\n        parts[res.start : res.end] = list(replacement)\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 131,
+        "end": 149
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 132,
+        "end": 150
+      },
+      "preview": "        )\n        parts[res.start : res.end] = list(replacement)\n    return \"\".join(parts)\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 132,
+        "end": 150
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 133,
+        "end": 151
+      },
+      "preview": "        parts[res.start : res.end] = list(replacement)\n    return \"\".join(parts)\nclass DeidDetector:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 133,
+        "end": 151
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 134,
+        "end": 152
+      },
+      "preview": "    return \"\".join(parts)\nclass DeidDetector:\n    \"\"\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 136,
+        "end": 153
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 137,
+        "end": 154
+      },
+      "preview": "class DeidDetector:\n    \"\"\"\n    Pure-Python detection layer for structured PII/PHI matching in clinical document text.\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 137,
+        "end": 154
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 138,
+        "end": 155
+      },
+      "preview": "    \"\"\"\n    Pure-Python detection layer for structured PII/PHI matching in clinical document text.\n    \"\"\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 138,
+        "end": 155
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 139,
+        "end": 156
+      },
+      "preview": "    Pure-Python detection layer for structured PII/PHI matching in clinical document text.\n    \"\"\"\n    def __init__(self) -> None:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 139,
+        "end": 156
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 140,
+        "end": 157
+      },
+      "preview": "    \"\"\"\n    def __init__(self) -> None:\n        pass\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 141,
+        "end": 158
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 142,
+        "end": 159
+      },
+      "preview": "    def __init__(self) -> None:\n        pass\n    def detect(\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 142,
+        "end": 159
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 143,
+        "end": 160
+      },
+      "preview": "        pass\n    def detect(\n        self,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 144,
+        "end": 160
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 145,
+        "end": 161
+      },
+      "preview": "    def detect(\n        self,\n        text: str,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 145,
+        "end": 161
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 146,
+        "end": 162
+      },
+      "preview": "        self,\n        text: str,\n        profile: ComplianceProfile = ComplianceProfile.HIPAA,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 146,
+        "end": 162
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 147,
+        "end": 163
+      },
+      "preview": "        text: str,\n        profile: ComplianceProfile = ComplianceProfile.HIPAA,\n        custom_terms: Optional[List[str]] = None,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 147,
+        "end": 164
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 148,
+        "end": 165
+      },
+      "preview": "        profile: ComplianceProfile = ComplianceProfile.HIPAA,\n        custom_terms: Optional[List[str]] = None,\n    ) -> List[DetectionResult]:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 148,
+        "end": 165
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 149,
+        "end": 166
+      },
+      "preview": "        custom_terms: Optional[List[str]] = None,\n    ) -> List[DetectionResult]:\n        \"\"\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 149,
+        "end": 168
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 150,
+        "end": 169
+      },
+      "preview": "    ) -> List[DetectionResult]:\n        \"\"\"\n        Scan text for PII/PHI candidates based on compliance profile and custom terms.\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 150,
+        "end": 169
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 151,
+        "end": 170
+      },
+      "preview": "        \"\"\"\n        Scan text for PII/PHI candidates based on compliance profile and custom terms.\n        Args:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 151,
+        "end": 170
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 152,
+        "end": 171
+      },
+      "preview": "        Scan text for PII/PHI candidates based on compliance profile and custom terms.\n        Args:\n            text (str): Source text to scan.\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 153,
+        "end": 171
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 154,
+        "end": 172
+      },
+      "preview": "        Args:\n            text (str): Source text to scan.\n            profile (ComplianceProfile): Compliance profile determining active categories.\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 154,
+        "end": 172
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 155,
+        "end": 173
+      },
+      "preview": "            text (str): Source text to scan.\n            profile (ComplianceProfile): Compliance profile determining active categories.\n            custom_terms (Optional[List[str]]): Additional literal terms (e.g. names/initials) to detect.\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 155,
+        "end": 173
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 156,
+        "end": 174
+      },
+      "preview": "            profile (ComplianceProfile): Compliance profile determining active categories.\n            custom_terms (Optional[List[str]]): Additional literal terms (e.g. names/initials) to detect.\n        Returns:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 156,
+        "end": 174
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 157,
+        "end": 175
+      },
+      "preview": "            custom_terms (Optional[List[str]]): Additional literal terms (e.g. names/initials) to detect.\n        Returns:\n            List[DetectionResult]: Resolved, non-overlapping structured detection results.\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 158,
+        "end": 175
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 159,
+        "end": 176
+      },
+      "preview": "        Returns:\n            List[DetectionResult]: Resolved, non-overlapping structured detection results.\n        \"\"\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 159,
+        "end": 176
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 160,
+        "end": 177
+      },
+      "preview": "            List[DetectionResult]: Resolved, non-overlapping structured detection results.\n        \"\"\"\n        if not text:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 160,
+        "end": 177
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 161,
+        "end": 178
+      },
+      "preview": "        \"\"\"\n        if not text:\n            return []\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 161,
+        "end": 179
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 162,
+        "end": 180
+      },
+      "preview": "        if not text:\n            return []\n        active_categories = PROFILE_CATEGORIES.get(profile, set())\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 162,
+        "end": 180
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 163,
+        "end": 181
+      },
+      "preview": "            return []\n        active_categories = PROFILE_CATEGORIES.get(profile, set())\n        candidates: List[DetectionResult] = []\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 164,
+        "end": 181
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 165,
+        "end": 182
+      },
+      "preview": "        active_categories = PROFILE_CATEGORIES.get(profile, set())\n        candidates: List[DetectionResult] = []\n        if DetectorCategory.EMAIL in active_categories:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 165,
+        "end": 182
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 166,
+        "end": 183
+      },
+      "preview": "        candidates: List[DetectionResult] = []\n        if DetectorCategory.EMAIL in active_categories:\n            for m in EMAIL_REGEX.finditer(text):\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 168,
+        "end": 183
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 169,
+        "end": 184
+      },
+      "preview": "        if DetectorCategory.EMAIL in active_categories:\n            for m in EMAIL_REGEX.finditer(text):\n                candidates.append(\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 169,
+        "end": 184
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 170,
+        "end": 185
+      },
+      "preview": "            for m in EMAIL_REGEX.finditer(text):\n                candidates.append(\n                    DetectionResult(\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 170,
+        "end": 185
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 171,
+        "end": 186
+      },
+      "preview": "                candidates.append(\n                    DetectionResult(\n                        category=DetectorCategory.EMAIL,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 171,
+        "end": 186
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 172,
+        "end": 187
+      },
+      "preview": "                    DetectionResult(\n                        category=DetectorCategory.EMAIL,\n                        start=m.start(),\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 172,
+        "end": 187
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 173,
+        "end": 188
+      },
+      "preview": "                        category=DetectorCategory.EMAIL,\n                        start=m.start(),\n                        end=m.end(),\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 173,
+        "end": 188
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 174,
+        "end": 189
+      },
+      "preview": "                        start=m.start(),\n                        end=m.end(),\n                        value=m.group(),\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 174,
+        "end": 190
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 175,
+        "end": 191
+      },
+      "preview": "                        end=m.end(),\n                        value=m.group(),\n                    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 175,
+        "end": 191
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 176,
+        "end": 192
+      },
+      "preview": "                        value=m.group(),\n                    )\n                )\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 176,
+        "end": 192
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 177,
+        "end": 193
+      },
+      "preview": "                    )\n                )\n        if DetectorCategory.TELEPHONE_FAX in active_categories:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 177,
+        "end": 193
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 178,
+        "end": 194
+      },
+      "preview": "                )\n        if DetectorCategory.TELEPHONE_FAX in active_categories:\n            for m in PHONE_FAX_REGEX.finditer(text):\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 179,
+        "end": 194
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 180,
+        "end": 195
+      },
+      "preview": "        if DetectorCategory.TELEPHONE_FAX in active_categories:\n            for m in PHONE_FAX_REGEX.finditer(text):\n                candidates.append(\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 180,
+        "end": 195
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 181,
+        "end": 196
+      },
+      "preview": "            for m in PHONE_FAX_REGEX.finditer(text):\n                candidates.append(\n                    DetectionResult(\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 181,
+        "end": 196
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 182,
+        "end": 197
+      },
+      "preview": "                candidates.append(\n                    DetectionResult(\n                        category=DetectorCategory.TELEPHONE_FAX,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 182,
+        "end": 197
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 183,
+        "end": 198
+      },
+      "preview": "                    DetectionResult(\n                        category=DetectorCategory.TELEPHONE_FAX,\n                        start=m.start(),\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 183,
+        "end": 198
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 184,
+        "end": 199
+      },
+      "preview": "                        category=DetectorCategory.TELEPHONE_FAX,\n                        start=m.start(),\n                        end=m.end(),\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 184,
+        "end": 199
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 185,
+        "end": 200
+      },
+      "preview": "                        start=m.start(),\n                        end=m.end(),\n                        value=m.group(),\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 185,
+        "end": 201
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 186,
+        "end": 202
+      },
+      "preview": "                        end=m.end(),\n                        value=m.group(),\n                    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 186,
+        "end": 202
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 187,
+        "end": 203
+      },
+      "preview": "                        value=m.group(),\n                    )\n                )\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 187,
+        "end": 203
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 188,
+        "end": 204
+      },
+      "preview": "                    )\n                )\n        if DetectorCategory.SSN_NATIONAL_ID in active_categories:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 188,
+        "end": 204
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 189,
+        "end": 205
+      },
+      "preview": "                )\n        if DetectorCategory.SSN_NATIONAL_ID in active_categories:\n            for m in SSN_NATIONAL_ID_REGEX.finditer(text):\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 190,
+        "end": 205
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 191,
+        "end": 206
+      },
+      "preview": "        if DetectorCategory.SSN_NATIONAL_ID in active_categories:\n            for m in SSN_NATIONAL_ID_REGEX.finditer(text):\n                candidates.append(\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 191,
+        "end": 206
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 192,
+        "end": 207
+      },
+      "preview": "            for m in SSN_NATIONAL_ID_REGEX.finditer(text):\n                candidates.append(\n                    DetectionResult(\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 192,
+        "end": 207
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 193,
+        "end": 208
+      },
+      "preview": "                candidates.append(\n                    DetectionResult(\n                        category=DetectorCategory.SSN_NATIONAL_ID,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 193,
+        "end": 208
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 194,
+        "end": 209
+      },
+      "preview": "                    DetectionResult(\n                        category=DetectorCategory.SSN_NATIONAL_ID,\n                        start=m.start(),\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 194,
+        "end": 209
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 195,
+        "end": 210
+      },
+      "preview": "                        category=DetectorCategory.SSN_NATIONAL_ID,\n                        start=m.start(),\n                        end=m.end(),\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 195,
+        "end": 210
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 196,
+        "end": 211
+      },
+      "preview": "                        start=m.start(),\n                        end=m.end(),\n                        value=m.group(),\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 196,
+        "end": 211
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 197,
+        "end": 212
+      },
+      "preview": "                        end=m.end(),\n                        value=m.group(),\n                    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 197,
+        "end": 213
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 198,
+        "end": 214
+      },
+      "preview": "                        value=m.group(),\n                    )\n                )\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 198,
+        "end": 214
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 199,
+        "end": 215
+      },
+      "preview": "                    )\n                )\n        if DetectorCategory.DATES in active_categories:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 199,
+        "end": 215
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 200,
+        "end": 216
+      },
+      "preview": "                )\n        if DetectorCategory.DATES in active_categories:\n            for pattern in DATE_PATTERNS:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 201,
+        "end": 216
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 202,
+        "end": 217
+      },
+      "preview": "        if DetectorCategory.DATES in active_categories:\n            for pattern in DATE_PATTERNS:\n                for m in pattern.finditer(text):\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 202,
+        "end": 217
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 203,
+        "end": 218
+      },
+      "preview": "            for pattern in DATE_PATTERNS:\n                for m in pattern.finditer(text):\n                    candidates.append(\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 203,
+        "end": 218
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 204,
+        "end": 219
+      },
+      "preview": "                for m in pattern.finditer(text):\n                    candidates.append(\n                        DetectionResult(\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 204,
+        "end": 219
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 205,
+        "end": 220
+      },
+      "preview": "                    candidates.append(\n                        DetectionResult(\n                            category=DetectorCategory.DATES,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 205,
+        "end": 220
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 206,
+        "end": 221
+      },
+      "preview": "                        DetectionResult(\n                            category=DetectorCategory.DATES,\n                            start=m.start(),\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 206,
+        "end": 221
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 207,
+        "end": 222
+      },
+      "preview": "                            category=DetectorCategory.DATES,\n                            start=m.start(),\n                            end=m.end(),\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 207,
+        "end": 222
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 208,
+        "end": 223
+      },
+      "preview": "                            start=m.start(),\n                            end=m.end(),\n                            value=m.group(),\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 208,
+        "end": 224
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 209,
+        "end": 225
+      },
+      "preview": "                            end=m.end(),\n                            value=m.group(),\n                        )\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 209,
+        "end": 225
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 210,
+        "end": 226
+      },
+      "preview": "                            value=m.group(),\n                        )\n                    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 210,
+        "end": 226
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 211,
+        "end": 227
+      },
+      "preview": "                        )\n                    )\n        if DetectorCategory.ZIP_GEOGRAPHIC in active_categories:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 211,
+        "end": 227
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 212,
+        "end": 228
+      },
+      "preview": "                    )\n        if DetectorCategory.ZIP_GEOGRAPHIC in active_categories:\n            for m in ZIP_GEOGRAPHIC_REGEX.finditer(text):\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 213,
+        "end": 228
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 214,
+        "end": 229
+      },
+      "preview": "        if DetectorCategory.ZIP_GEOGRAPHIC in active_categories:\n            for m in ZIP_GEOGRAPHIC_REGEX.finditer(text):\n                candidates.append(\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 214,
+        "end": 229
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 215,
+        "end": 230
+      },
+      "preview": "            for m in ZIP_GEOGRAPHIC_REGEX.finditer(text):\n                candidates.append(\n                    DetectionResult(\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 215,
+        "end": 230
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 216,
+        "end": 231
+      },
+      "preview": "                candidates.append(\n                    DetectionResult(\n                        category=DetectorCategory.ZIP_GEOGRAPHIC,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 216,
+        "end": 231
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 217,
+        "end": 232
+      },
+      "preview": "                    DetectionResult(\n                        category=DetectorCategory.ZIP_GEOGRAPHIC,\n                        start=m.start(),\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 217,
+        "end": 232
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 218,
+        "end": 233
+      },
+      "preview": "                        category=DetectorCategory.ZIP_GEOGRAPHIC,\n                        start=m.start(),\n                        end=m.end(),\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 218,
+        "end": 233
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 219,
+        "end": 234
+      },
+      "preview": "                        start=m.start(),\n                        end=m.end(),\n                        value=m.group(),\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 219,
+        "end": 235
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 220,
+        "end": 236
+      },
+      "preview": "                        end=m.end(),\n                        value=m.group(),\n                    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 220,
+        "end": 236
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 221,
+        "end": 237
+      },
+      "preview": "                        value=m.group(),\n                    )\n                )\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 221,
+        "end": 237
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 222,
+        "end": 238
+      },
+      "preview": "                    )\n                )\n        if DetectorCategory.URLS in active_categories:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 222,
+        "end": 238
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 223,
+        "end": 239
+      },
+      "preview": "                )\n        if DetectorCategory.URLS in active_categories:\n            for m in URLS_REGEX.finditer(text):\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 224,
+        "end": 239
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 225,
+        "end": 240
+      },
+      "preview": "        if DetectorCategory.URLS in active_categories:\n            for m in URLS_REGEX.finditer(text):\n                candidates.append(\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 225,
+        "end": 240
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 226,
+        "end": 241
+      },
+      "preview": "            for m in URLS_REGEX.finditer(text):\n                candidates.append(\n                    DetectionResult(\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 226,
+        "end": 241
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 227,
+        "end": 242
+      },
+      "preview": "                candidates.append(\n                    DetectionResult(\n                        category=DetectorCategory.URLS,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 227,
+        "end": 242
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 228,
+        "end": 243
+      },
+      "preview": "                    DetectionResult(\n                        category=DetectorCategory.URLS,\n                        start=m.start(),\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 228,
+        "end": 243
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 229,
+        "end": 244
+      },
+      "preview": "                        category=DetectorCategory.URLS,\n                        start=m.start(),\n                        end=m.end(),\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 229,
+        "end": 244
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 230,
+        "end": 245
+      },
+      "preview": "                        start=m.start(),\n                        end=m.end(),\n                        value=m.group(),\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 230,
+        "end": 246
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 231,
+        "end": 247
+      },
+      "preview": "                        end=m.end(),\n                        value=m.group(),\n                    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 231,
+        "end": 247
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 232,
+        "end": 248
+      },
+      "preview": "                        value=m.group(),\n                    )\n                )\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 232,
+        "end": 248
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 233,
+        "end": 249
+      },
+      "preview": "                    )\n                )\n        if DetectorCategory.IP_MAC_ADDRESSES in active_categories:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 233,
+        "end": 249
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 234,
+        "end": 250
+      },
+      "preview": "                )\n        if DetectorCategory.IP_MAC_ADDRESSES in active_categories:\n            for m in IP_MAC_REGEX.finditer(text):\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 235,
+        "end": 250
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 236,
+        "end": 251
+      },
+      "preview": "        if DetectorCategory.IP_MAC_ADDRESSES in active_categories:\n            for m in IP_MAC_REGEX.finditer(text):\n                candidates.append(\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 236,
+        "end": 251
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 237,
+        "end": 252
+      },
+      "preview": "            for m in IP_MAC_REGEX.finditer(text):\n                candidates.append(\n                    DetectionResult(\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 237,
+        "end": 252
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 238,
+        "end": 253
+      },
+      "preview": "                candidates.append(\n                    DetectionResult(\n                        category=DetectorCategory.IP_MAC_ADDRESSES,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 238,
+        "end": 253
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 239,
+        "end": 254
+      },
+      "preview": "                    DetectionResult(\n                        category=DetectorCategory.IP_MAC_ADDRESSES,\n                        start=m.start(),\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 239,
+        "end": 254
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 240,
+        "end": 255
+      },
+      "preview": "                        category=DetectorCategory.IP_MAC_ADDRESSES,\n                        start=m.start(),\n                        end=m.end(),\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 240,
+        "end": 255
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 241,
+        "end": 256
+      },
+      "preview": "                        start=m.start(),\n                        end=m.end(),\n                        value=m.group(),\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 241,
+        "end": 257
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 242,
+        "end": 258
+      },
+      "preview": "                        end=m.end(),\n                        value=m.group(),\n                    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 242,
+        "end": 258
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 243,
+        "end": 259
+      },
+      "preview": "                        value=m.group(),\n                    )\n                )\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 243,
+        "end": 259
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 244,
+        "end": 260
+      },
+      "preview": "                    )\n                )\n        if DetectorCategory.MEDICAL_RECORD_ACCOUNT in active_categories:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 244,
+        "end": 260
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 245,
+        "end": 261
+      },
+      "preview": "                )\n        if DetectorCategory.MEDICAL_RECORD_ACCOUNT in active_categories:\n            for m in MEDICAL_RECORD_ACCOUNT_REGEX.finditer(text):\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 246,
+        "end": 261
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 247,
+        "end": 262
+      },
+      "preview": "        if DetectorCategory.MEDICAL_RECORD_ACCOUNT in active_categories:\n            for m in MEDICAL_RECORD_ACCOUNT_REGEX.finditer(text):\n                candidates.append(\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 247,
+        "end": 262
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 248,
+        "end": 263
+      },
+      "preview": "            for m in MEDICAL_RECORD_ACCOUNT_REGEX.finditer(text):\n                candidates.append(\n                    DetectionResult(\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 248,
+        "end": 263
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 249,
+        "end": 264
+      },
+      "preview": "                candidates.append(\n                    DetectionResult(\n                        category=DetectorCategory.MEDICAL_RECORD_ACCOUNT,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 249,
+        "end": 264
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 250,
+        "end": 265
+      },
+      "preview": "                    DetectionResult(\n                        category=DetectorCategory.MEDICAL_RECORD_ACCOUNT,\n                        start=m.start(),\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 250,
+        "end": 265
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 251,
+        "end": 266
+      },
+      "preview": "                        category=DetectorCategory.MEDICAL_RECORD_ACCOUNT,\n                        start=m.start(),\n                        end=m.end(),\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 251,
+        "end": 266
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 252,
+        "end": 267
+      },
+      "preview": "                        start=m.start(),\n                        end=m.end(),\n                        value=m.group(),\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 252,
+        "end": 269
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 253,
+        "end": 270
+      },
+      "preview": "                        end=m.end(),\n                        value=m.group(),\n                    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 253,
+        "end": 270
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 254,
+        "end": 271
+      },
+      "preview": "                        value=m.group(),\n                    )\n                )\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 254,
+        "end": 271
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 255,
+        "end": 272
+      },
+      "preview": "                    )\n                )\n        if DetectorCategory.AGE in active_categories:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 255,
+        "end": 273
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 256,
+        "end": 274
+      },
+      "preview": "                )\n        if DetectorCategory.AGE in active_categories:\n            for m in AGE_REGEX.finditer(text):\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 257,
+        "end": 274
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 258,
+        "end": 275
+      },
+      "preview": "        if DetectorCategory.AGE in active_categories:\n            for m in AGE_REGEX.finditer(text):\n                candidates.append(\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 258,
+        "end": 275
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 259,
+        "end": 276
+      },
+      "preview": "            for m in AGE_REGEX.finditer(text):\n                candidates.append(\n                    DetectionResult(\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 259,
+        "end": 276
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 260,
+        "end": 277
+      },
+      "preview": "                candidates.append(\n                    DetectionResult(\n                        category=DetectorCategory.AGE,\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 260,
+        "end": 277
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 261,
+        "end": 278
+      },
+      "preview": "                    DetectionResult(\n                        category=DetectorCategory.AGE,\n                        start=m.start(),\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 261,
+        "end": 278
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 262,
+        "end": 279
+      },
+      "preview": "                        category=DetectorCategory.AGE,\n                        start=m.start(),\n                        end=m.end(),\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 262,
+        "end": 279
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 263,
+        "end": 280
+      },
+      "preview": "                        start=m.start(),\n                        end=m.end(),\n                        value=m.group(),\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 263,
+        "end": 281
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 264,
+        "end": 282
+      },
+      "preview": "                        end=m.end(),\n                        value=m.group(),\n                    )\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 264,
+        "end": 282
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 265,
+        "end": 283
+      },
+      "preview": "                        value=m.group(),\n                    )\n                )\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 265,
+        "end": 283
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 266,
+        "end": 284
+      },
+      "preview": "                    )\n                )\n        if DetectorCategory.CUSTOM in active_categories and custom_terms:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 266,
+        "end": 284
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 267,
+        "end": 285
+      },
+      "preview": "                )\n        if DetectorCategory.CUSTOM in active_categories and custom_terms:\n            valid_terms = [t for t in custom_terms if t and t.strip()]\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 269,
+        "end": 285
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 270,
+        "end": 286
+      },
+      "preview": "        if DetectorCategory.CUSTOM in active_categories and custom_terms:\n            valid_terms = [t for t in custom_terms if t and t.strip()]\n            if valid_terms:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 270,
+        "end": 286
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 271,
+        "end": 287
+      },
+      "preview": "            valid_terms = [t for t in custom_terms if t and t.strip()]\n            if valid_terms:\n                valid_terms.sort(key=len, reverse=True)\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 271,
+        "end": 287
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 272,
+        "end": 288
+      },
+      "preview": "            if valid_terms:\n                valid_terms.sort(key=len, reverse=True)\n                escaped_terms = [re.escape(term) for term in valid_terms]\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 273,
+        "end": 288
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 274,
+        "end": 289
+      },
+      "preview": "                valid_terms.sort(key=len, reverse=True)\n                escaped_terms = [re.escape(term) for term in valid_terms]\n                patterns = []\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 274,
+        "end": 289
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 275,
+        "end": 290
+      },
+      "preview": "                escaped_terms = [re.escape(term) for term in valid_terms]\n                patterns = []\n                for term in escaped_terms:\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 275,
+        "end": 290
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 276,
+        "end": 291
+      },
+      "preview": "                patterns = []\n                for term in escaped_terms:\n                    start_b = r\"\\b\" if re.match(r\"^\\w\", term) else \"\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/deid/detector.py",
+        "start": 276,
+        "end": 293
+      },
+      "loc2": {
+        "file": "packages/deidentification/detectors.py",
+        "start": 277,
+        "end": 294
+      },
+      "preview": "                for term in escaped_terms:\n                    start_b = r\"\\b\" if re.match(r\"^\\w\", term) else \"\"\n                    end_b = r\"\\b\" if re.search(r\"\\w$\", term) else \"\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/core-models/organization.py",
+        "start": 27,
+        "end": 45
+      },
+      "loc2": {
+        "file": "packages/core-models/organization_domain/models.py",
+        "start": 42,
+        "end": 60
+      },
+      "preview": "class StaffRole(str, Enum):\n    \"\"\"\n    Shared Clinical & Site Staff roles vocabulary, derived from SDLC Security Compliance & Audit Spec.\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/core-models/organization.py",
+        "start": 28,
+        "end": 46
+      },
+      "loc2": {
+        "file": "packages/core-models/organization_domain/models.py",
+        "start": 43,
+        "end": 61
+      },
+      "preview": "    \"\"\"\n    Shared Clinical & Site Staff roles vocabulary, derived from SDLC Security Compliance & Audit Spec.\n    \"\"\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/core-models/organization.py",
+        "start": 29,
+        "end": 47
+      },
+      "loc2": {
+        "file": "packages/core-models/organization_domain/models.py",
+        "start": 44,
+        "end": 62
+      },
+      "preview": "    Shared Clinical & Site Staff roles vocabulary, derived from SDLC Security Compliance & Audit Spec.\n    \"\"\"\n    PI = \"Principal Investigator\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/core-models/organization.py",
+        "start": 30,
+        "end": 48
+      },
+      "loc2": {
+        "file": "packages/core-models/organization_domain/models.py",
+        "start": 45,
+        "end": 63
+      },
+      "preview": "    \"\"\"\n    PI = \"Principal Investigator\"\n    PRINCIPAL_INVESTIGATOR = \"Principal Investigator\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/core-models/organization.py",
+        "start": 32,
+        "end": 49
+      },
+      "loc2": {
+        "file": "packages/core-models/organization_domain/models.py",
+        "start": 47,
+        "end": 64
+      },
+      "preview": "    PI = \"Principal Investigator\"\n    PRINCIPAL_INVESTIGATOR = \"Principal Investigator\"\n    SUB_INVESTIGATOR = \"Sub-Investigator\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/core-models/organization.py",
+        "start": 33,
+        "end": 50
+      },
+      "loc2": {
+        "file": "packages/core-models/organization_domain/models.py",
+        "start": 48,
+        "end": 65
+      },
+      "preview": "    PRINCIPAL_INVESTIGATOR = \"Principal Investigator\"\n    SUB_INVESTIGATOR = \"Sub-Investigator\"\n    CRC = \"CRC\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/core-models/organization.py",
+        "start": 34,
+        "end": 51
+      },
+      "loc2": {
+        "file": "packages/core-models/organization_domain/models.py",
+        "start": 49,
+        "end": 66
+      },
+      "preview": "    SUB_INVESTIGATOR = \"Sub-Investigator\"\n    CRC = \"CRC\"\n    CRA_MONITOR = \"CRA/Monitor\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/core-models/organization.py",
+        "start": 35,
+        "end": 52
+      },
+      "loc2": {
+        "file": "packages/core-models/organization_domain/models.py",
+        "start": 50,
+        "end": 67
+      },
+      "preview": "    CRC = \"CRC\"\n    CRA_MONITOR = \"CRA/Monitor\"\n    EXTERNAL_MONITOR = \"External Monitor\"\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/core-models/organization.py",
+        "start": 36,
+        "end": 53
+      },
+      "loc2": {
+        "file": "packages/core-models/organization_domain/models.py",
+        "start": 51,
+        "end": 68
+      },
+      "preview": "    CRA_MONITOR = \"CRA/Monitor\"\n    EXTERNAL_MONITOR = \"External Monitor\"\nclass TrialDuty(str, Enum):\n..."
+    },
+    {
+      "loc1": {
+        "file": "packages/core-models/organization.py",
+        "start": 37,
+        "end": 54
+      },
+      "loc2": {
+        "file": "packages/core-models/organization_domain/models.py",
+        "start": 52,
+        "end": 69
+      },
+      "preview": "    EXTERNAL_MONITOR = \"External Monitor\"\nclass TrialDuty(str, Enum):\n    \"\"\"\n..."
+    }
+  ]
 }
