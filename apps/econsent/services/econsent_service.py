@@ -1,5 +1,6 @@
 import hashlib
 import os
+import tempfile
 from datetime import datetime, timezone
 from io import BytesIO
 
@@ -167,9 +168,10 @@ async def process_econsent_signature(
     session.add(signature)
 
     # 5. Write signed PDF blob into document storage layer.
-    os.makedirs("/tmp/consent_pdfs", exist_ok=True)
+    temp_dir = os.path.join(tempfile.gettempdir(), "consent_pdfs")
+    os.makedirs(temp_dir, exist_ok=True)
     pdf_filename = f"{payload.subject_id}_{payload.icf_version_id}_{now.strftime('%Y%m%d%H%M%S')}.pdf"
-    pdf_path = os.path.join("/tmp/consent_pdfs", pdf_filename)
+    pdf_path = os.path.join(temp_dir, pdf_filename)
     with open(pdf_path, "wb") as f:
         f.write(pdf_bytes)
 
