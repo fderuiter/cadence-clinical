@@ -602,6 +602,8 @@ def is_whitelisted(method: str, path: str) -> bool:
         "/api/v1/designer/sentinel",
         "/api/v1/designer/cascade",
         "/api/v1/designer/export",
+        "/api/v1/execution/subjects",
+        "/api/v1/execution/visits",
     ]
     for w in wildcards:
         if p_norm.startswith(w):
@@ -622,6 +624,10 @@ def is_whitelisted(method: str, path: str) -> bool:
         "/execution/eisf",
         "/execution/anonymization",
         "/execution/doa",
+        "/subjects",
+        "/execution/subjects",
+        "/visits",
+        "/execution/visits",
     ]:
         if p_clean.startswith(prefix):
             return True
