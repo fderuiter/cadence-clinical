@@ -197,4 +197,3 @@ class ImpactAnalysisResponse(BaseModel):
     dictionary_type: DictTypeEnum
     new_version: str
     metrics: ImpactMetrics
-
