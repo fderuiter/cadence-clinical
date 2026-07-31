@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from "vue-router";
-import { useAuthStore, ROLE_ALIASES } from "./stores/auth";
+import { useAuthStore, ROLE_ALIASES } from "../stores/auth";
 
 /**
  * Seeding Gap Documentation Resolved:
@@ -56,19 +56,19 @@ const routes = [
   {
     path: "/login",
     name: "login",
-    component: () => import("./views/LoginView.vue"),
+    component: () => import("../views/LoginView.vue"),
     meta: { requiresAuth: false },
   },
   {
     path: "/forbidden",
     name: "forbidden",
-    component: () => import("./views/ForbiddenView.vue"),
+    component: () => import("../views/ForbiddenView.vue"),
     meta: { requiresAuth: false },
   },
   {
     path: "/mdr",
     name: "mdr",
-    component: () => import("./views/MdrView.vue"),
+    component: () => import("../views/MdrView.vue"),
     meta: {
       requiresAuth: true,
       requiresRole: ["sponsor_designer", "data_manager", "sponsor_admin"],
@@ -77,7 +77,7 @@ const routes = [
   {
     path: "/icf-builder",
     name: "icf-builder",
-    component: () => import("./views/ICFBuilderView.vue"),
+    component: () => import("../views/ICFBuilderView.vue"),
     meta: {
       requiresAuth: false,
     },
@@ -85,7 +85,7 @@ const routes = [
   {
     path: "/econsent-authoring",
     name: "econsent-authoring",
-    component: () => import("./views/ConsentAuthoringView.vue"),
+    component: () => import("../views/ConsentAuthoringView.vue"),
     meta: {
       requiresAuth: true,
       requiresRole: ["sponsor_designer", "data_manager", "sponsor_admin"],
@@ -94,7 +94,7 @@ const routes = [
   {
     path: "/ecrf",
     name: "ecrf",
-    component: () => import("./views/EcrfView.vue"),
+    component: () => import("../views/EcrfView.vue"),
     meta: {
       requiresAuth: true,
       requiresRole: [
@@ -108,7 +108,7 @@ const routes = [
   {
     path: "/ctms",
     name: "ctms",
-    component: () => import("./views/CtmsView.vue"),
+    component: () => import("../views/CtmsView.vue"),
     meta: {
       requiresAuth: true,
       requiresRole: ["cra", "monitor", "sponsor_admin"],
@@ -117,7 +117,7 @@ const routes = [
   {
     path: "/audit",
     name: "audit",
-    component: () => import("./views/AuditView.vue"),
+    component: () => import("../views/AuditView.vue"),
     meta: {
       requiresAuth: true,
       requiresRole: ["auditor", "tmf_auditor", "sponsor_admin"],
@@ -126,7 +126,7 @@ const routes = [
   {
     path: "/auditor",
     name: "auditor",
-    component: () => import("./views/AuditorView.vue"),
+    component: () => import("../views/AuditorView.vue"),
     meta: {
       requiresAuth: true,
       requiresRole: ["auditor", "tmf_auditor", "sponsor_admin"],
@@ -135,7 +135,7 @@ const routes = [
   {
     path: "/rules",
     name: "rules",
-    component: () => import("./views/RulesView.vue"),
+    component: () => import("../views/RulesView.vue"),
     meta: {
       requiresAuth: true,
       requiresRole: ["data_manager", "sponsor_admin"],
@@ -144,7 +144,7 @@ const routes = [
   {
     path: "/etmf",
     name: "etmf",
-    component: () => import("./views/DocumentManagerView.vue"),
+    component: () => import("../views/DocumentManagerView.vue"),
     meta: {
       requiresAuth: true,
       requiresRole: [
@@ -159,7 +159,7 @@ const routes = [
   {
     path: "/notifications",
     name: "notifications",
-    component: () => import("./views/NotificationsView.vue"),
+    component: () => import("../views/NotificationsView.vue"),
     meta: {
       requiresAuth: true,
     },

@@ -1,7 +1,6 @@
 import logging
 import os
 import time
-from typing import List, Optional
 
 import httpx
 from eligibility.models import EligibilityCriterion
@@ -23,7 +22,7 @@ class DesignerCriteriaClient:
 
     def __init__(
         self,
-        base_url: Optional[str] = None,
+        base_url: str | None = None,
         timeout: float = 10.0,
     ) -> None:
         self.base_url = (
@@ -32,8 +31,8 @@ class DesignerCriteriaClient:
         self.timeout = timeout
 
     async def get_eligibility_criteria(
-        self, study_id: str, client: Optional[httpx.AsyncClient] = None
-    ) -> List[EligibilityCriterion]:
+        self, study_id: str, client: httpx.AsyncClient | None = None
+    ) -> list[EligibilityCriterion]:
         """Fetch eligibility criteria from Designer service by study ID.
 
         Args:
@@ -126,7 +125,7 @@ class DesignerCriteriaClient:
 
 
 # Module level helper function style modeling etmf/lock_client.py
-async def fetch_study_criteria(study_id: str) -> List[EligibilityCriterion]:
+async def fetch_study_criteria(study_id: str) -> list[EligibilityCriterion]:
     """Fetch eligibility criteria module-function style."""
     client = DesignerCriteriaClient()
     return await client.get_eligibility_criteria(study_id)

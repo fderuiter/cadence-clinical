@@ -89,7 +89,7 @@ def main():
         print(f"Error: Spec file not found at {markdown_path}", file=sys.stderr)
         sys.exit(1)
 
-    with open(markdown_path, "r", encoding="utf-8") as f:
+    with open(markdown_path, encoding="utf-8") as f:
         content = f.read()
 
     sec_title = "## 7. Complete OpenAPI 3.0 Contract Specification"

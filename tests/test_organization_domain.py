@@ -2,7 +2,7 @@
 Unit tests for the shared Organization Directory and Delegation of Authority (DOA) domain vocabulary.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from organization_domain import (
@@ -83,7 +83,7 @@ def test_audit_fields_instantiation():
     assert isinstance(audit.created_at, datetime)
 
     # Check that created_at is default-populated to UTC (approx now)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     assert abs((audit.created_at - now).total_seconds()) < 5
 
 

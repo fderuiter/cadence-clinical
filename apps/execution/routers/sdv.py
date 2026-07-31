@@ -4,9 +4,8 @@ Requirements: PRD-QRY-005, PRD-QRY-006, PRD-QRY-007
 """
 
 import uuid
-from datetime import datetime, timezone
-from enum import Enum
-from typing import List, Optional
+from datetime import UTC, datetime
+from enum import StrEnum
 
 from execution.sdv_transport_models import BulkSdvSignOffRequest, BulkSdvSignOffResponse
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -96,7 +95,7 @@ def require_study_scope() -> StudyScopeChecker:
 # ==========================================
 
 
-class SamplingModelEnum(str, Enum):
+class SamplingModelEnum(StrEnum):
     SUBJECT_BASED = "SUBJECT_BASED"
     FIELD_BASED = "FIELD_BASED"
     COMBINED = "COMBINED"
@@ -107,10 +106,10 @@ class TSDVConfigCreate(BaseModel):
     sampling_model: SamplingModelEnum
     initial_full_sdv_subject_count: int = Field(default=0, ge=0)
     random_sample_percentage: float = Field(default=0.0, ge=0.0, le=100.0)
-    full_sdv_domains: Optional[List[str]] = None
-    safety_endpoints: Optional[List[str]] = None
-    zero_sdv_domains: Optional[List[str]] = None
-    trial_random_seed: Optional[int] = Field(default=None, ge=0)
+    full_sdv_domains: list[str] | None = None
+    safety_endpoints: list[str] | None = None
+    zero_sdv_domains: list[str] | None = None
+    trial_random_seed: int | None = Field(default=None, ge=0)
 
     @model_validator(mode="after")
     def validate_seed(self) -> "TSDVConfigCreate":
@@ -127,10 +126,10 @@ class TSDVConfigResponse(BaseModel):
     sampling_model: str
     initial_full_sdv_subject_count: int
     random_sample_percentage: float
-    full_sdv_domains: Optional[List[str]] = None
-    safety_endpoints: Optional[List[str]] = None
-    zero_sdv_domains: Optional[List[str]] = None
-    trial_random_seed: Optional[int] = None
+    full_sdv_domains: list[str] | None = None
+    safety_endpoints: list[str] | None = None
+    zero_sdv_domains: list[str] | None = None
+    trial_random_seed: int | None = None
     version: int
 
     class Config:
@@ -140,14 +139,14 @@ class TSDVConfigResponse(BaseModel):
 class TSDVEvaluationResponse(BaseModel):
     required: bool
     subject_selected: bool
-    field_decision: Optional[bool] = None
+    field_decision: bool | None = None
     sampling_model: str
     config_id: str
     enrollment_index: int
     explanation: str
 
 
-class SDVScopeEnum(str, Enum):
+class SDVScopeEnum(StrEnum):
     FIELD = "FIELD"
     PAGE = "PAGE"
     VISIT = "VISIT"
@@ -160,7 +159,7 @@ class SDVSignOffRequest(BaseModel):
     target_id: str
     subject_id: str
     study_id: str
-    site_id: Optional[str] = None
+    site_id: str | None = None
 
 
 class SDVSignOffResponse(BaseModel):
@@ -171,12 +170,12 @@ class SDVSignOffResponse(BaseModel):
     target_id: str
     subject_id: str
     study_id: str
-    site_id: Optional[str] = None
+    site_id: str | None = None
     is_verified: bool
-    verified_by: Optional[str] = None
-    verified_at: Optional[datetime] = None
-    dropped_reason: Optional[str] = None
-    dropped_at: Optional[datetime] = None
+    verified_by: str | None = None
+    verified_at: datetime | None = None
+    dropped_reason: str | None = None
+    dropped_at: datetime | None = None
 
 
 # ==========================================
@@ -265,8 +264,8 @@ async def get_tsdv_config(
 async def evaluate_tsdv_rule(
     study_id: str,
     subject_id: str,
-    domain: Optional[str] = None,
-    enrollment_index: Optional[int] = None,
+    domain: str | None = None,
+    enrollment_index: int | None = None,
     principal: Principal = Depends(require_permission("sdv:read")),
     _study_scope: Principal = Depends(require_study_scope()),
 ) -> TSDVEvaluationResponse:
@@ -491,7 +490,7 @@ async def bulk_sdv_signoff(
 
             # 3. Apply sign-off behavior
             verifier_id = current_user_id.get() or "system"
-            verified_at = datetime.now(timezone.utc).replace(tzinfo=None)
+            verified_at = datetime.now(UTC).replace(tzinfo=None)
             site_id = payload.site_id or (
                 subj_db.site_id if hasattr(subj_db, "site_id") else None
             )
@@ -562,7 +561,7 @@ async def bulk_sdv_signoff(
         content_digest = hashlib.sha256(serialized_digest.encode("utf-8")).hexdigest()
 
         # Use current timestamp for UTC
-        timestamp_str = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        timestamp_str = datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
         return BulkSdvSignOffResponse(
             signed_count=len(signed_target_ids),

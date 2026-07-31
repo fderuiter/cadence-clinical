@@ -3,7 +3,7 @@
 Requirements: PRD-SYS-001
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from execution.eisf_models import (
     EISFDocumentRecord,
@@ -18,7 +18,7 @@ def test_eisf_document_record_creation() -> None:
 
     Requirements: PRD-SYS-001
     """
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now_iso = datetime.now(UTC).isoformat()
 
     doc = EISFDocumentRecord(
         document_id="doc_eisf_001",

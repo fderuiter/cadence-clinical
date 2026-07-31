@@ -1,7 +1,7 @@
 import hashlib
 import hmac
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from packages.deid.detector import DeidDetector
 from packages.deid.models import ComplianceProfile
@@ -11,7 +11,7 @@ from packages.deid.transforms import apply_deid_transforms
 def deidentify_free_text(
     text: str,
     profile: ComplianceProfile = ComplianceProfile.HIPAA,
-    custom_terms: Optional[List[str]] = None,
+    custom_terms: list[str] | None = None,
 ) -> str:
     """
     De-identify free-text clinical narrative, notes, or patient data using the
@@ -39,7 +39,7 @@ def pseudonymize_identifier(identifier: str) -> str:
     return hmac.new(salt.encode(), identifier.encode(), hashlib.sha256).hexdigest()
 
 
-def strip_pii_from_patient(patient_resource: Dict[str, Any]) -> Dict[str, Any]:
+def strip_pii_from_patient(patient_resource: dict[str, Any]) -> dict[str, Any]:
     """
     Strip direct identifiers (PII) from a FHIR Patient resource.
 
@@ -156,14 +156,14 @@ class FHIRAdapter:
     def __init__(self, study_id: str) -> None:
         self.study_id = study_id
 
-    def build_ecrf_context(self, parsed_result: Dict[str, Any]) -> Dict[str, Any]:
+    def build_ecrf_context(self, parsed_result: dict[str, Any]) -> dict[str, Any]:
         """
         Consumes the output of parse_bundle and returns a flat dictionary mapping
         variables to the canonical "eCRF.<DOMAIN>.<VARIABLE>" namespace.
         Operates exclusively on de-identified structures. Does not read raw PII.
         Handles missing/absent values gracefully by omitting keys.
         """
-        ecrf_context: Dict[str, Any] = {}
+        ecrf_context: dict[str, Any] = {}
 
         # 1. Demographics
         mapped_fields = parsed_result.get("mapped_fields", {})
@@ -222,7 +222,7 @@ class FHIRAdapter:
 
         return ecrf_context
 
-    def parse_bundle(self, bundle: Dict[str, Any]) -> Dict[str, Any]:
+    def parse_bundle(self, bundle: dict[str, Any]) -> dict[str, Any]:
         """
         Ingest a FHIR Bundle payload, pseudonymize patients, strip PII, and
         map properties to CDASH eCRF target fields.
@@ -235,8 +235,8 @@ class FHIRAdapter:
                             and a map of pre-filled CDASH fields.
         """
         entries = bundle.get("entry", [])
-        mapped_fields: Dict[str, Any] = {}
-        de_identified_patient: Optional[Dict[str, Any]] = None
+        mapped_fields: dict[str, Any] = {}
+        de_identified_patient: dict[str, Any] | None = None
         patient_id_raw = "unknown"
         patient_pseudonym = "unknown_pseudonym"
 
@@ -280,10 +280,10 @@ class FHIRAdapter:
                     mapped_fields["DM.SUBJID"] = patient_pseudonym[:12]
                     break
 
-        vitals_list: List[Dict[str, Any]] = []
-        labs_list: List[Dict[str, Any]] = []
-        conditions_list: List[Dict[str, Any]] = []
-        medications_list: List[Dict[str, Any]] = []
+        vitals_list: list[dict[str, Any]] = []
+        labs_list: list[dict[str, Any]] = []
+        conditions_list: list[dict[str, Any]] = []
+        medications_list: list[dict[str, Any]] = []
 
         # 2. Process other resources (Observation, Condition, MedicationStatement)
         for entry in entries:
@@ -313,9 +313,9 @@ class FHIRAdapter:
 
     def _parse_observation(
         self,
-        resource: Dict[str, Any],
-        vitals_list: List[Dict[str, Any]],
-        labs_list: List[Dict[str, Any]],
+        resource: dict[str, Any],
+        vitals_list: list[dict[str, Any]],
+        labs_list: list[dict[str, Any]],
     ) -> None:
         """Helper to parse a FHIR Observation resource."""
         code_codings = resource.get("code", {}).get("coding", [])
@@ -403,7 +403,7 @@ class FHIRAdapter:
             labs_list.append(record)
 
     def _parse_condition(
-        self, resource: Dict[str, Any], conditions_list: List[Dict[str, Any]]
+        self, resource: dict[str, Any], conditions_list: list[dict[str, Any]]
     ) -> None:
         """Helper to parse a FHIR Condition resource."""
         code_codings = resource.get("code", {}).get("coding", [])
@@ -434,7 +434,7 @@ class FHIRAdapter:
         )
 
     def _parse_medication_statement(
-        self, resource: Dict[str, Any], medications_list: List[Dict[str, Any]]
+        self, resource: dict[str, Any], medications_list: list[dict[str, Any]]
     ) -> None:
         """Helper to parse a FHIR MedicationStatement resource."""
         med_concept = resource.get("medicationCodeableConcept", {})

@@ -44,7 +44,10 @@ async def validate_layout_html(html_content: str):
 
     try:
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
+            browser = await p.chromium.launch(
+                headless=True,
+                args=["--no-sandbox", "--disable-setuid-sandbox"],
+            )
             page = await browser.new_page()
             await page.goto(f"file://{os.path.abspath(temp_path)}")
             await page.wait_for_timeout(100)

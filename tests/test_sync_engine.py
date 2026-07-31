@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -22,7 +22,7 @@ def test_strategy_client_wins_no_existing():
         deduplication_key="key_1",
         data={"key": "val"},
         metadata=SyncMetadata(
-            timestamps={"key": datetime.now(timezone.utc)}, modified_by="device_1"
+            timestamps={"key": datetime.now(UTC)}, modified_by="device_1"
         ),
     )
 
@@ -39,13 +39,13 @@ def test_strategy_client_wins_existing():
     # @req:PRD-EDC-008
     existing_data = {"key": "old_val", "other": "keep"}
     existing_metadata = SyncMetadata(
-        timestamps={"key": datetime.now(timezone.utc)}, modified_by="device_old"
+        timestamps={"key": datetime.now(UTC)}, modified_by="device_old"
     )
     incoming = SyncRecord(
         deduplication_key="key_1",
         data={"key": "new_val"},
         metadata=SyncMetadata(
-            timestamps={"key": datetime.now(timezone.utc)}, modified_by="device_new"
+            timestamps={"key": datetime.now(UTC)}, modified_by="device_new"
         ),
     )
 
@@ -62,13 +62,13 @@ def test_strategy_server_wins():
     # @req:PRD-EDC-008
     existing_data = {"key": "old_val"}
     existing_metadata = SyncMetadata(
-        timestamps={"key": datetime.now(timezone.utc)}, modified_by="device_old"
+        timestamps={"key": datetime.now(UTC)}, modified_by="device_old"
     )
     incoming = SyncRecord(
         deduplication_key="key_1",
         data={"key": "new_val"},
         metadata=SyncMetadata(
-            timestamps={"key": datetime.now(timezone.utc)}, modified_by="device_new"
+            timestamps={"key": datetime.now(UTC)}, modified_by="device_new"
         ),
     )
 
@@ -85,14 +85,14 @@ def test_strategy_merge_independent_fields():
     # @req:PRD-EDC-008
     existing_data = {"key_a": "val_a"}
     existing_metadata = SyncMetadata(
-        timestamps={"key_a": datetime(2026, 1, 1, tzinfo=timezone.utc)},
+        timestamps={"key_a": datetime(2026, 1, 1, tzinfo=UTC)},
         modified_by="device_old",
     )
     incoming = SyncRecord(
         deduplication_key="key_1",
         data={"key_b": "val_b"},
         metadata=SyncMetadata(
-            timestamps={"key_b": datetime(2026, 1, 2, tzinfo=timezone.utc)},
+            timestamps={"key_b": datetime(2026, 1, 2, tzinfo=UTC)},
             modified_by="device_new",
         ),
     )
@@ -100,12 +100,8 @@ def test_strategy_merge_independent_fields():
     res = reconcile_records(existing_data, existing_metadata, incoming, "MERGE")
     assert res["status"] == "MERGED"
     assert res["data"] == {"key_a": "val_a", "key_b": "val_b"}
-    assert res["metadata"].timestamps["key_a"] == datetime(
-        2026, 1, 1, tzinfo=timezone.utc
-    )
-    assert res["metadata"].timestamps["key_b"] == datetime(
-        2026, 1, 2, tzinfo=timezone.utc
-    )
+    assert res["metadata"].timestamps["key_a"] == datetime(2026, 1, 1, tzinfo=UTC)
+    assert res["metadata"].timestamps["key_b"] == datetime(2026, 1, 2, tzinfo=UTC)
 
 
 def test_strategy_merge_lww_incoming_wins():
@@ -115,14 +111,14 @@ def test_strategy_merge_lww_incoming_wins():
     # @req:PRD-EDC-008
     existing_data = {"key": "old_val"}
     existing_metadata = SyncMetadata(
-        timestamps={"key": datetime(2026, 1, 1, 10, 0, 0, tzinfo=timezone.utc)},
+        timestamps={"key": datetime(2026, 1, 1, 10, 0, 0, tzinfo=UTC)},
         modified_by="device_old",
     )
     incoming = SyncRecord(
         deduplication_key="key_1",
         data={"key": "new_val"},
         metadata=SyncMetadata(
-            timestamps={"key": datetime(2026, 1, 1, 11, 0, 0, tzinfo=timezone.utc)},
+            timestamps={"key": datetime(2026, 1, 1, 11, 0, 0, tzinfo=UTC)},
             modified_by="device_new",
         ),
     )
@@ -131,7 +127,7 @@ def test_strategy_merge_lww_incoming_wins():
     assert res["status"] == "MERGED"
     assert res["data"] == {"key": "new_val"}
     assert res["metadata"].timestamps["key"] == datetime(
-        2026, 1, 1, 11, 0, 0, tzinfo=timezone.utc
+        2026, 1, 1, 11, 0, 0, tzinfo=UTC
     )
 
 
@@ -142,14 +138,14 @@ def test_strategy_merge_lww_existing_wins():
     # @req:PRD-EDC-008
     existing_data = {"key": "old_val"}
     existing_metadata = SyncMetadata(
-        timestamps={"key": datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)},
+        timestamps={"key": datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)},
         modified_by="device_old",
     )
     incoming = SyncRecord(
         deduplication_key="key_1",
         data={"key": "new_val"},
         metadata=SyncMetadata(
-            timestamps={"key": datetime(2026, 1, 1, 11, 0, 0, tzinfo=timezone.utc)},
+            timestamps={"key": datetime(2026, 1, 1, 11, 0, 0, tzinfo=UTC)},
             modified_by="device_new",
         ),
     )
@@ -158,7 +154,7 @@ def test_strategy_merge_lww_existing_wins():
     assert res["status"] == "MERGED"
     assert res["data"] == {"key": "old_val"}
     assert res["metadata"].timestamps["key"] == datetime(
-        2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc
+        2026, 1, 1, 12, 0, 0, tzinfo=UTC
     )
 
 
@@ -169,7 +165,7 @@ def test_strategy_merge_lww_timestamp_tie():
     # @req:PRD-EDC-008
     # Case A: Incoming modified_by "device_zzz" > existing modified_by "device_old" -> incoming wins
     existing_data = {"key": "old_val"}
-    ts = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    ts = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
     existing_metadata = SyncMetadata(timestamps={"key": ts}, modified_by="device_old")
     incoming_wins = SyncRecord(
         deduplication_key="key_1",
@@ -201,7 +197,7 @@ def test_signature_validation_happy_path():
         deduplication_key="sub_123:diary_abc",
         data={"field_1": "value_1"},
         metadata=SyncMetadata(
-            timestamps={"field_1": datetime(2026, 8, 1, tzinfo=timezone.utc)},
+            timestamps={"field_1": datetime(2026, 8, 1, tzinfo=UTC)},
             modified_by="device_xyz",
         ),
     )
@@ -231,7 +227,7 @@ def test_signature_validation_failures():
         deduplication_key="sub_123:diary_abc",
         data={"field_1": "value_1"},
         metadata=SyncMetadata(
-            timestamps={"field_1": datetime(2026, 8, 1, tzinfo=timezone.utc)},
+            timestamps={"field_1": datetime(2026, 8, 1, tzinfo=UTC)},
             modified_by="device_xyz",
         ),
     )
@@ -266,8 +262,8 @@ def test_generic_natural_deduplication_key():
         data={"cra_signature": "signed", "status": "completed"},
         metadata=SyncMetadata(
             timestamps={
-                "cra_signature": datetime(2026, 5, 1, tzinfo=timezone.utc),
-                "status": datetime(2026, 5, 2, tzinfo=timezone.utc),
+                "cra_signature": datetime(2026, 5, 1, tzinfo=UTC),
+                "status": datetime(2026, 5, 2, tzinfo=UTC),
             },
             modified_by="cra_john",
         ),

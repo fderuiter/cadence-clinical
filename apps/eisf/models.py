@@ -1,6 +1,6 @@
 import uuid
-from datetime import date, datetime, timezone
-from typing import Any, Dict, Optional
+from datetime import UTC, date, datetime
+from typing import Any
 
 from sqlalchemy import JSON, Date, DateTime, Integer, String, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -33,11 +33,11 @@ class ISFDocument(Base):
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     # Expiration metadata fields
-    issue_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True, index=True)
-    expiration_date: Mapped[Optional[date]] = mapped_column(
+    issue_date: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
+    expiration_date: Mapped[date | None] = mapped_column(
         Date, nullable=True, index=True
     )
-    document_owner_id: Mapped[Optional[str]] = mapped_column(
+    document_owner_id: Mapped[str | None] = mapped_column(
         String(255), nullable=True, index=True
     )
 
@@ -48,13 +48,13 @@ class ISFDocument(Base):
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
 
     # Document metadata
-    metadata_json: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    metadata_json: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
     # Future sync identity fields
-    correlation_key: Mapped[Optional[str]] = mapped_column(
+    correlation_key: Mapped[str | None] = mapped_column(
         String(255), nullable=True, index=True
     )
-    content_checksum: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    content_checksum: Mapped[str | None] = mapped_column(String(64), nullable=True)
     sync_status: Mapped[str] = mapped_column(
         String(50), default="PENDING", nullable=False
     )
@@ -80,7 +80,7 @@ class ISFAuditLog(Base):
     actor_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     actor_role: Mapped[str] = mapped_column(String(255), nullable=False)
     action: Mapped[str] = mapped_column(String(50), nullable=False)
-    document_id: Mapped[Optional[str]] = mapped_column(
+    document_id: Mapped[str | None] = mapped_column(
         String(36), nullable=True, index=True
     )
     details: Mapped[str] = mapped_column(String(1000), nullable=False)
@@ -112,10 +112,10 @@ class EISFDocumentRecord(SQLModel, table=True):
     version_major: int = Field(default=1)
     version_minor: int = Field(default=0)
     status: str = Field(default="DRAFT")
-    expiration_date: Optional[date] = None
+    expiration_date: date | None = None
 
     # GxP Audit fields
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     created_by: str
     reason_for_change: str = "Initial Document Ingestion"
     version_index: int = Field(default=1)

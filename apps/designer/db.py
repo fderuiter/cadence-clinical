@@ -1,5 +1,5 @@
 import threading
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 # --- Mock Database Content ---
 MOCK_TERMINOLOGY = {
@@ -37,18 +37,18 @@ MOCK_STUDIES = {
 }
 
 # In-memory rule mock store fallback
-MOCK_RULES: Dict[str, List[Dict[str, Any]]] = {}
+MOCK_RULES: dict[str, list[dict[str, Any]]] = {}
 
 # In-memory eligibility criteria mock store fallback
-MOCK_ELIGIBILITY_CRITERIA: Dict[str, List[Dict[str, Any]]] = {}
+MOCK_ELIGIBILITY_CRITERIA: dict[str, list[dict[str, Any]]] = {}
 
 # --- Mock Study Version Content ---
-MOCK_STUDY_VERSIONS: Dict[str, List[Dict[str, Any]]] = {}
-MOCK_STUDY_PROJECTIONS_BY_VERSION: Dict[str, Dict[str, Any]] = {}
-MOCK_LIBRARY_OBJECTS: Dict[str, List[Dict[str, Any]]] = {}
+MOCK_STUDY_VERSIONS: dict[str, list[dict[str, Any]]] = {}
+MOCK_STUDY_PROJECTIONS_BY_VERSION: dict[str, dict[str, Any]] = {}
+MOCK_LIBRARY_OBJECTS: dict[str, list[dict[str, Any]]] = {}
 
 
-def create_mock_study_version(study_id: str, version_data: Dict[str, Any]):
+def create_mock_study_version(study_id: str, version_data: dict[str, Any]):
     """Creates a mock StudyVersion in-memory."""
     if study_id not in MOCK_STUDY_VERSIONS:
         MOCK_STUDY_VERSIONS[study_id] = []
@@ -118,7 +118,7 @@ def assert_mock_study_mutable(study_id: str):
 db_query_counts = {"terminology_lookups": 0}
 
 
-def get_study_projection(study_id: str) -> Optional[Dict[str, Any]]:
+def get_study_projection(study_id: str) -> dict[str, Any] | None:
     """Retrieves a study projection from the database.
 
     Args:
@@ -165,12 +165,12 @@ def get_study_projection(study_id: str) -> Optional[Dict[str, Any]]:
     return study
 
 
-def get_mock_rules(study_id: str) -> List[Dict[str, Any]]:
+def get_mock_rules(study_id: str) -> list[dict[str, Any]]:
     """Retrieves all non-soft-deleted mock rules for a study."""
     return [r for r in MOCK_RULES.get(study_id, []) if not r.get("is_deleted", False)]
 
 
-def get_mock_rule_by_id(study_id: str, rule_id: str) -> Optional[Dict[str, Any]]:
+def get_mock_rule_by_id(study_id: str, rule_id: str) -> dict[str, Any] | None:
     """Retrieves a specific non-soft-deleted mock rule by ID."""
     for r in MOCK_RULES.get(study_id, []):
         if r["id"] == rule_id and not r.get("is_deleted", False):
@@ -178,7 +178,7 @@ def get_mock_rule_by_id(study_id: str, rule_id: str) -> Optional[Dict[str, Any]]
     return None
 
 
-def create_mock_rule(study_id: str, rule_data: Dict[str, Any]) -> Dict[str, Any]:
+def create_mock_rule(study_id: str, rule_data: dict[str, Any]) -> dict[str, Any]:
     """Creates and saves a mock rule under a study."""
     import uuid
 
@@ -197,8 +197,8 @@ def create_mock_rule(study_id: str, rule_data: Dict[str, Any]) -> Dict[str, Any]
 
 
 def update_mock_rule(
-    study_id: str, rule_id: str, rule_data: Dict[str, Any]
-) -> Optional[Dict[str, Any]]:
+    study_id: str, rule_id: str, rule_data: dict[str, Any]
+) -> dict[str, Any] | None:
     """Updates a mock rule and increments version index."""
     for r in MOCK_RULES.get(study_id, []):
         if r["id"] == rule_id and not r.get("is_deleted", False):
@@ -218,7 +218,7 @@ def delete_mock_rule(study_id: str, rule_id: str) -> bool:
     return False
 
 
-def import_mapped_usdm_study(study_id: str, study_projection: Dict[str, Any]) -> None:
+def import_mapped_usdm_study(study_id: str, study_projection: dict[str, Any]) -> None:
     """Persists the reconstructed study projection in the mock database.
 
     Ensures the study is stored in MOCK_STUDIES dictionary.
@@ -228,7 +228,7 @@ def import_mapped_usdm_study(study_id: str, study_projection: Dict[str, Any]) ->
     MOCK_STUDIES[study_id] = study_projection
 
 
-MOCK_DESIGNER_AUDIT_LOGS: List[Dict[str, Any]] = []
+MOCK_DESIGNER_AUDIT_LOGS: list[dict[str, Any]] = []
 
 
 def run_async(coro):
@@ -248,7 +248,7 @@ def run_async(coro):
             return executor.submit(asyncio.run, coro).result()
 
 
-def get_terminology_from_db(concept_id: str) -> Optional[Dict[str, Any]]:
+def get_terminology_from_db(concept_id: str) -> dict[str, Any] | None:
     """Retrieves controlled terminology data from the database.
 
     Args:
@@ -288,7 +288,7 @@ def get_terminology_from_db(concept_id: str) -> Optional[Dict[str, Any]]:
 class TerminologyCache:
     """Thread-safe in-memory cache for controlled terminology lookups."""
 
-    def __init__(self, max_size: int = 1000, ttl: Optional[float] = None) -> None:
+    def __init__(self, max_size: int = 1000, ttl: float | None = None) -> None:
         """Initializes the terminology cache.
 
         Args:
@@ -296,7 +296,7 @@ class TerminologyCache:
             ttl (float, optional): Time-to-live in seconds. If not provided, looks up from environment.
         """
         self.max_size: int = max_size
-        self._cache: Dict[str, tuple[Dict[str, Any], float]] = {}
+        self._cache: dict[str, tuple[dict[str, Any], float]] = {}
         self._lock: threading.Lock = threading.Lock()
 
         if ttl is not None:
@@ -313,7 +313,7 @@ class TerminologyCache:
             else:
                 self.ttl = 3600.0
 
-    def get(self, concept_id: str) -> Optional[Dict[str, Any]]:
+    def get(self, concept_id: str) -> dict[str, Any] | None:
         """Retrieves a terminology concept from the cache or database.
 
         Args:
@@ -361,7 +361,7 @@ class TerminologyCache:
         with self._lock:
             self._cache.clear()
 
-    def get_status(self) -> Dict[str, int]:
+    def get_status(self) -> dict[str, int]:
         """Retrieves the current status of the cache.
 
         Returns:

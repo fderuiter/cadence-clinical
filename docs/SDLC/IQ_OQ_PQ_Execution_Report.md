@@ -1113,6 +1113,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_lab_unit_conversion_crud_and_audit` | `tests.test_lab_master_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_absent_boundaries` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_age_boundaries` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_convert_lab_unit_db_and_fallback` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_critical_boundaries_and_exclusion` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_deterministic_ties` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_is_deleted_filtering` | `tests.test_lab_ranges` | *Regression/Helper* | 🟢 PASSED | < 1s |

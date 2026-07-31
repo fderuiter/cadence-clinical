@@ -1,7 +1,7 @@
 import asyncio
 import os
 import uuid
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 from neo4j.exceptions import TransientError
@@ -195,7 +195,7 @@ class MockDatabaseState:
         study_id: str,
         user_id: str,
         change_reason: str,
-        properties: Dict[str, Any],
+        properties: dict[str, Any],
         action_id: str,
         tx_id: str,
     ):
@@ -233,7 +233,7 @@ class MockDatabaseState:
         return action_id
 
     def create_library_object_version(
-        self, object_id: str, new_properties: Dict[str, Any], tx_id: str
+        self, object_id: str, new_properties: dict[str, Any], tx_id: str
     ):
         exists = object_id in self.library_objects
 

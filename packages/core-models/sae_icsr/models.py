@@ -1,5 +1,5 @@
 import re
-from typing import Any, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -9,7 +9,7 @@ DTC_REGEX = re.compile(
 )
 
 
-def validate_dtc_format(val: Optional[str]) -> Optional[str]:
+def validate_dtc_format(val: str | None) -> str | None:
     if val is None:
         return None
     if not DTC_REGEX.match(val):
@@ -51,7 +51,7 @@ class VersionedModel(BaseModel):
     """Base class for models supporting follow-up versions with version tracking."""
 
     version_index: int = Field(1, description="Version of this record (must be >= 1)")
-    reason_for_change: Optional[str] = Field(
+    reason_for_change: str | None = Field(
         None, description="Reason for change in follow-up version"
     )
 
@@ -82,14 +82,14 @@ class MedDRACoding(BaseModel):
     hlgt_name: str = Field(..., description="High Level Group Term Name")
     soc_code: str = Field(..., description="System Organ Class Code")
     soc_name: str = Field(..., description="System Organ Class Name")
-    primary_soc_flag: Optional[str] = Field(
+    primary_soc_flag: str | None = Field(
         None, description="Primary SOC flag ('Y' or 'N')"
     )
     score: float = Field(1.0, description="Match score")
 
     @field_validator("primary_soc_flag", mode="before")
     @classmethod
-    def validate_primary_soc(cls, v: Optional[str]) -> Optional[str]:
+    def validate_primary_soc(cls, v: str | None) -> str | None:
         if v is None:
             return None
         cleaned = str(v).strip().upper()
@@ -110,23 +110,21 @@ class SeriousAdverseEvent(VersionedModel):
     )
     AETERM: str = Field(..., description="Adverse Event Term")
     AESTDTC: str = Field(..., description="Adverse Event Start Date/Time")
-    AEENDTC: Optional[str] = Field(None, description="Adverse Event End Date/Time")
+    AEENDTC: str | None = Field(None, description="Adverse Event End Date/Time")
     AESEV: str = Field(
         ..., description="Adverse Event Severity (MILD, MODERATE, SEVERE)"
     )
     AESER: str = Field(..., description="Serious Adverse Event Flag ('Y' or 'N')")
-    AEREL: Optional[str] = Field(
-        None, description="Causality / Relatedness to study drug"
-    )
-    AEOUT: Optional[str] = Field(None, description="Outcome of Adverse Event")
-    AESEQ: Optional[int] = Field(None, description="Sequence Number (must be >= 1)")
-    meddra_coding: Optional[MedDRACoding] = Field(
+    AEREL: str | None = Field(None, description="Causality / Relatedness to study drug")
+    AEOUT: str | None = Field(None, description="Outcome of Adverse Event")
+    AESEQ: int | None = Field(None, description="Sequence Number (must be >= 1)")
+    meddra_coding: MedDRACoding | None = Field(
         None, description="MedDRA coding details"
     )
 
     @field_validator("AESTDTC", "AEENDTC")
     @classmethod
-    def validate_dates(cls, v: Optional[str]) -> Optional[str]:
+    def validate_dates(cls, v: str | None) -> str | None:
         return validate_dtc_format(v)
 
     @field_validator("AESEV", mode="before")
@@ -141,7 +139,7 @@ class SeriousAdverseEvent(VersionedModel):
 
     @field_validator("AESEQ")
     @classmethod
-    def validate_sequence(cls, v: Optional[int]) -> Optional[int]:
+    def validate_sequence(cls, v: int | None) -> int | None:
         if v is not None and v < 1:
             raise ValueError("AESEQ must be greater than or equal to 1")
         return v
@@ -187,8 +185,8 @@ class ICSRReportIdentifiers(BaseModel):
     worldwide_unique_case_id: str = Field(
         ..., description="Worldwide unique case ID (e.g., ICH worldwide unique ID)"
     )
-    local_report_id: Optional[str] = Field(None, description="Local report identifier")
-    first_sender_type: Optional[str] = Field(None, description="Type of first sender")
+    local_report_id: str | None = Field(None, description="Local report identifier")
+    first_sender_type: str | None = Field(None, description="Type of first sender")
 
 
 class ICSRPatient(BaseModel):
@@ -196,11 +194,9 @@ class ICSRPatient(BaseModel):
 
     patient_id: str = Field(..., description="Patient identifier / subject key")
     sex: str = Field(..., description="Gender code (normalizes to 'M', 'F', 'U')")
-    age: Optional[float] = Field(None, description="Age of the patient")
-    age_unit: Optional[str] = Field(
-        None, description="Age unit (e.g. YEAR, MONTH, DAY)"
-    )
-    birth_date: Optional[str] = Field(None, description="Date of birth")
+    age: float | None = Field(None, description="Age of the patient")
+    age_unit: str | None = Field(None, description="Age unit (e.g. YEAR, MONTH, DAY)")
+    birth_date: str | None = Field(None, description="Date of birth")
 
     @field_validator("sex", mode="before")
     @classmethod
@@ -220,14 +216,14 @@ class ICSRPatient(BaseModel):
 
     @field_validator("age")
     @classmethod
-    def validate_age(cls, v: Optional[float]) -> Optional[float]:
+    def validate_age(cls, v: float | None) -> float | None:
         if v is not None and v < 0:
             raise ValueError("Age cannot be negative")
         return v
 
     @field_validator("age_unit")
     @classmethod
-    def validate_age_unit(cls, v: Optional[str]) -> Optional[str]:
+    def validate_age_unit(cls, v: str | None) -> str | None:
         if v is None:
             return None
         cleaned = v.strip().upper()
@@ -254,7 +250,7 @@ class ICSRPatient(BaseModel):
 
     @field_validator("birth_date")
     @classmethod
-    def validate_birth_date(cls, v: Optional[str]) -> Optional[str]:
+    def validate_birth_date(cls, v: str | None) -> str | None:
         return validate_dtc_format(v)
 
 
@@ -262,12 +258,12 @@ class ICSRReactionEvent(BaseModel):
     """ICSR reaction/event block with MedDRA coding."""
 
     reaction_term: str = Field(..., description="Reaction or event term as reported")
-    meddra_coding: Optional[MedDRACoding] = Field(
+    meddra_coding: MedDRACoding | None = Field(
         None, description="MedDRA coding details"
     )
-    start_date: Optional[str] = Field(None, description="Start date of reaction")
-    end_date: Optional[str] = Field(None, description="End date of reaction")
-    outcome: Optional[str] = Field(
+    start_date: str | None = Field(None, description="Start date of reaction")
+    end_date: str | None = Field(None, description="End date of reaction")
+    outcome: str | None = Field(
         None, description="Outcome of reaction (e.g. RECOVERED, RESOLVING, FATAL)"
     )
     seriousness_death: str = Field("N", description="Results in death ('Y' or 'N')")
@@ -289,7 +285,7 @@ class ICSRReactionEvent(BaseModel):
 
     @field_validator("start_date", "end_date")
     @classmethod
-    def validate_dates(cls, v: Optional[str]) -> Optional[str]:
+    def validate_dates(cls, v: str | None) -> str | None:
         return validate_dtc_format(v)
 
     @field_validator(
@@ -310,16 +306,14 @@ class ICSRSuspectDrug(BaseModel):
     """ICSR suspect drug block."""
 
     drug_name: str = Field(..., description="Name of suspect drug")
-    active_substance_name: Optional[str] = Field(
-        None, description="Active substance name"
-    )
-    dosage_text: Optional[str] = Field(
+    active_substance_name: str | None = Field(None, description="Active substance name")
+    dosage_text: str | None = Field(
         None, description="Dosage and administration text description"
     )
-    route_of_administration: Optional[str] = Field(
+    route_of_administration: str | None = Field(
         None, description="Route of administration"
     )
-    action_taken_with_drug: Optional[str] = Field(
+    action_taken_with_drug: str | None = Field(
         None, description="Action taken with the drug"
     )
     drug_role: str = Field(
@@ -347,9 +341,9 @@ class IndividualCaseSafetyReport(VersionedModel):
         ..., description="ICSR report identifiers"
     )
     patient: ICSRPatient = Field(..., description="Patient details")
-    reactions: List[ICSRReactionEvent] = Field(
+    reactions: list[ICSRReactionEvent] = Field(
         default_factory=list, description="List of reactions/events"
     )
-    suspect_drugs: List[ICSRSuspectDrug] = Field(
+    suspect_drugs: list[ICSRSuspectDrug] = Field(
         default_factory=list, description="List of suspect drugs"
     )

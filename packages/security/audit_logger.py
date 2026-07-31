@@ -10,7 +10,7 @@ import datetime
 import hashlib
 import hmac
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -36,7 +36,7 @@ class AuditLogPayload(BaseModel):
     reason_for_change: str = Field(
         ..., min_length=1, description="21 CFR Part 11 required change justification"
     )
-    details: Optional[Dict[str, Any]] = Field(
+    details: dict[str, Any] | None = Field(
         default_factory=dict, description="Structured contextual event details"
     )
 
@@ -46,9 +46,7 @@ class AuditLogRecord(AuditLogPayload):
 
     event_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     timestamp: datetime.datetime = Field(
-        default_factory=lambda: datetime.datetime.now(datetime.timezone.utc).replace(
-            tzinfo=None
-        )
+        default_factory=lambda: datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
     )
     previous_digest: str = Field(
         default="GENESIS_BLOCK_0000000000000000000000000000000000000000000000000000000000000000"
@@ -105,7 +103,7 @@ class AuditLoggerEngine:
 
     def __init__(self, secret_key: str = "gxp-audit-secret-key-cadence-2026") -> None:
         self.secret_key = secret_key
-        self._chain: List[AuditLogRecord] = []
+        self._chain: list[AuditLogRecord] = []
 
     @property
     def last_digest(self) -> str:
@@ -124,7 +122,7 @@ class AuditLoggerEngine:
             Appended AuditLogRecord with computed SHA-256 digest.
         """
         event_id = str(uuid.uuid4())
-        timestamp = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+        timestamp = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
         timestamp_str = timestamp.isoformat()
         prev_digest = self.last_digest
 
@@ -209,7 +207,7 @@ class CentralAuditLogger:
         entity_id: str,
         user_id: str,
         reason_for_change: str,
-        details: Optional[Dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
     ) -> AuditLogRecord:
         """Create and append an audit event log to the SHA-256 chain."""
         payload = AuditLogPayload(

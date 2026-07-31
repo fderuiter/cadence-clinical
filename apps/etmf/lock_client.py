@@ -2,7 +2,6 @@ import logging
 import os
 import sys
 import time
-from typing import Optional
 
 import httpx
 from fastapi import HTTPException
@@ -12,10 +11,10 @@ from packages.security.signing import generate_gateway_signature
 logger = logging.getLogger("etmf-lock-client")
 
 # For testing override
-trial_lock_override: Optional[bool] = None
+trial_lock_override: bool | None = None
 
 
-async def verify_trial_lock_status(is_testing: Optional[bool] = None) -> bool:
+async def verify_trial_lock_status(is_testing: bool | None = None) -> bool:
     """
     Queries the central execution service synchronously to check if the trial is locked.
     Uses gateway signature for secure authorization.
@@ -87,7 +86,7 @@ async def verify_trial_lock_status(is_testing: Optional[bool] = None) -> bool:
 
 
 async def trigger_global_trial_lock(
-    reason: str, is_testing: Optional[bool] = None
+    reason: str, is_testing: bool | None = None
 ) -> None:
     """
     Instantly triggers a global trial lock by posting to the central execution service.

@@ -2,10 +2,8 @@
 Localization-related constants and validation logic.
 """
 
-from typing import Set
-
 # A comprehensive list of supported ISO 639-1 language codes for Cadence Clinical
-SUPPORTED_LANGUAGE_CODES: Set[str] = {
+SUPPORTED_LANGUAGE_CODES: set[str] = {
     "en",
     "es",
     "fr",

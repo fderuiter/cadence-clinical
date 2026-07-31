@@ -1,5 +1,5 @@
 import re
-from typing import Callable, List, Optional
+from collections.abc import Callable
 
 from packages.deid.models import (
     PROFILE_CATEGORIES,
@@ -79,7 +79,7 @@ AGE_REGEX = re.compile(
 )
 
 
-def resolve_overlaps(results: List[DetectionResult]) -> List[DetectionResult]:
+def resolve_overlaps(results: list[DetectionResult]) -> list[DetectionResult]:
     """
     Resolve overlapping detection results deterministically.
     Longer/wider matches are prioritized. For overlapping intervals, the match
@@ -93,7 +93,7 @@ def resolve_overlaps(results: List[DetectionResult]) -> List[DetectionResult]:
         results, key=lambda x: (x.start, -x.end, x.category, -len(x.value))
     )
 
-    resolved: List[DetectionResult] = []
+    resolved: list[DetectionResult] = []
     for res in sorted_results:
         overlaps = False
         for accepted in resolved:
@@ -110,8 +110,8 @@ def resolve_overlaps(results: List[DetectionResult]) -> List[DetectionResult]:
 
 def redact_text(
     text: str,
-    results: List[DetectionResult],
-    placeholder_func: Optional[Callable[[DetectionResult], str]] = None,
+    results: list[DetectionResult],
+    placeholder_func: Callable[[DetectionResult], str] | None = None,
 ) -> str:
     """
     Redact identified terms in the source text using sequential right-to-left
@@ -145,8 +145,8 @@ class DeidDetector:
         self,
         text: str,
         profile: ComplianceProfile = ComplianceProfile.HIPAA,
-        custom_terms: Optional[List[str]] = None,
-    ) -> List[DetectionResult]:
+        custom_terms: list[str] | None = None,
+    ) -> list[DetectionResult]:
         """
         Scan text for PII/PHI candidates based on compliance profile and custom terms.
 
@@ -162,7 +162,7 @@ class DeidDetector:
             return []
 
         active_categories = PROFILE_CATEGORIES.get(profile, set())
-        candidates: List[DetectionResult] = []
+        candidates: list[DetectionResult] = []
 
         # 1. Regex scanning for standard categories
         if DetectorCategory.EMAIL in active_categories:

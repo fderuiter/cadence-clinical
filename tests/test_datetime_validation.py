@@ -7,7 +7,7 @@ Ensures that:
 4. Serialized clinical outputs format UTC timestamps strictly with trailing 'Z'.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from audit import AuditFields
@@ -74,7 +74,7 @@ def test_accept_timezone_aware_inputs():
         created_by="user1",
         reason_for_change="Test Z parsing",
     )
-    assert audit_z.created_at == datetime(2026, 7, 30, 18, 41, 42, tzinfo=timezone.utc)
+    assert audit_z.created_at == datetime(2026, 7, 30, 18, 41, 42, tzinfo=UTC)
 
     # Offset string should succeed and convert to UTC
     audit_offset = AuditFields(
@@ -83,9 +83,7 @@ def test_accept_timezone_aware_inputs():
         reason_for_change="Test offset parsing",
     )
     # 2026-07-30T18:41:42-07:00 is 2026-07-31T01:41:42Z
-    assert audit_offset.created_at == datetime(
-        2026, 7, 31, 1, 41, 42, tzinfo=timezone.utc
-    )
+    assert audit_offset.created_at == datetime(2026, 7, 31, 1, 41, 42, tzinfo=UTC)
 
 
 def test_no_silent_fallback_to_system_time():
@@ -110,7 +108,7 @@ def test_serialized_clinical_outputs_trailing_z():
     )
 
     # In Python, it is a datetime object in UTC
-    assert export_metadata.timestamp.tzinfo == timezone.utc
+    assert export_metadata.timestamp.tzinfo == UTC
 
     # Serializing to JSON (e.g. model_dump_json or model_dump(mode='json'))
     json_data = export_metadata.model_dump(mode="json")
@@ -125,12 +123,12 @@ def test_pydantic_defaults_are_timezone_aware():
     """Verify that default factories produce timezone-aware datetime values in UTC."""
     # 1. AuditFields
     audit = AuditFields(created_by="user1", reason_for_change="test defaults")
-    assert audit.created_at.tzinfo == timezone.utc
+    assert audit.created_at.tzinfo == UTC
 
     # 2. ExportMetadata
     export_metadata = ExportMetadata(creator="user1")
-    assert export_metadata.timestamp.tzinfo == timezone.utc
+    assert export_metadata.timestamp.tzinfo == UTC
 
     # 3. Comment
     comment = Comment(comment_id="c1", thread_id="t1", text="text", created_by="u1")
-    assert comment.created_at.tzinfo == timezone.utc
+    assert comment.created_at.tzinfo == UTC

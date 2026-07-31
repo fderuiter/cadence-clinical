@@ -5,8 +5,6 @@ Provides dependency-injectable authorization primitives for site-scoped
 delegation workflows in compliance with ICH E6(R2) and 21 CFR Part 11.
 """
 
-from typing import List, Optional
-
 from fastapi import HTTPException, Request, status
 from organization_domain import ClinicalStaffRole
 
@@ -65,7 +63,7 @@ def normalize_and_validate_staff_role(role_str: str) -> StaffRole:
     )
 
 
-def validate_request_staff_roles(request: Request) -> List[StaffRole]:
+def validate_request_staff_roles(request: Request) -> list[StaffRole]:
     """
     Obtains and validates all roles from request.state.roles or headers.
 
@@ -93,9 +91,9 @@ def validate_request_staff_roles(request: Request) -> List[StaffRole]:
 def verify_delegation_scope(
     request: Request,
     target_site_id: str,
-    target_sponsor_id: Optional[str] = None,
+    target_sponsor_id: str | None = None,
     enforce_pi: bool = True,
-) -> List[StaffRole]:
+) -> list[StaffRole]:
     """
     Validates the delegator's roles and context against target scopes (site_id and/or sponsor_id).
 
@@ -183,7 +181,7 @@ class DelegationChecker:
     def __init__(self, enforce_pi: bool = True):
         self.enforce_pi = enforce_pi
 
-    async def __call__(self, request: Request) -> List[StaffRole]:
+    async def __call__(self, request: Request) -> list[StaffRole]:
         # Extract target_site_id and target_sponsor_id
         target_site_id = (
             request.query_params.get("target_site_id")

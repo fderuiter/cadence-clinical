@@ -2,8 +2,8 @@ import contextlib
 import logging
 import os
 import zipfile
-from datetime import datetime, timezone
-from typing import Callable
+from collections.abc import Callable
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -47,7 +47,7 @@ async def update_job_progress(
             if error_details is not None:
                 job.error_details = error_details[:1000]
             if status in (ImportState.COMPLETED, ImportState.FAILED):
-                job.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+                job.completed_at = datetime.now(UTC).replace(tzinfo=None)
 
 
 async def process_dictionary_import(

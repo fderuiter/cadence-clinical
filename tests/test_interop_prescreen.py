@@ -403,12 +403,12 @@ def test_no_edc_mutation_boundary():
     # @req:PRD-MDR-007
     # Read the imports of apps/interop/main.py and apps/interop/fhir_adapter.py
     # to ensure no apps.execution database models are imported.
-    with open("apps/interop/main.py", "r") as f:
+    with open("apps/interop/main.py") as f:
         content = f.read()
         assert "apps.execution" not in content
         assert "ClinicalSubject" not in content
 
-    with open("apps/interop/fhir_adapter.py", "r") as f:
+    with open("apps/interop/fhir_adapter.py") as f:
         content = f.read()
         assert "apps.execution" not in content
         assert "ClinicalSubject" not in content

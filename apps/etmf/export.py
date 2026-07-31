@@ -4,8 +4,7 @@ import io
 import json
 import os
 import zipfile
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,7 +31,7 @@ async def generate_binder_zip(
     include_history: bool,
     requester_id: str,
     requester_role: str,
-    principal: Optional[Principal] = None,
+    principal: Principal | None = None,
 ) -> bytes:
     """
     Generates an inspection-ready ZIP binder for an eTMF study.
@@ -133,7 +132,7 @@ async def generate_binder_zip(
         # Build manifest
         manifest_data = {
             "study_id": study_id,
-            "export_timestamp": datetime.now(timezone.utc).isoformat(),
+            "export_timestamp": datetime.now(UTC).isoformat(),
             "exported_by": requester_id,
             "exported_by_role": requester_role,
             "include_history": include_history,

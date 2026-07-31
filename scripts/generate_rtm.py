@@ -3,7 +3,7 @@ import argparse
 import os
 import re
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 def get_stable_timestamp():
@@ -22,7 +22,7 @@ def parse_srs(filepath):
         print(f"Warning: SRS file {filepath} not found.")
         return requirements
 
-    with open(filepath, "r", encoding="utf-8") as f:
+    with open(filepath, encoding="utf-8") as f:
         content = f.read()
 
     # We look for Section 8 Trace 1, Trace 2, Trace 3
@@ -50,7 +50,7 @@ def parse_prd(filepath):
         print(f"Warning: PRD file {filepath} not found.")
         return requirements
 
-    with open(filepath, "r", encoding="utf-8") as f:
+    with open(filepath, encoding="utf-8") as f:
         content = f.read()
 
     # e.g., #### PRD-SYS-001: Standard Audit Logging (21 CFR Part 11 § 11.10(e))
@@ -97,7 +97,7 @@ def scan_tests(tests_dir):
                 parts = rel_root.split(os.sep) + [os.path.splitext(file)[0]]
                 classname = ".".join(p for p in parts if p and p != ".")
 
-                with open(filepath, "r", encoding="utf-8") as f:
+                with open(filepath, encoding="utf-8") as f:
                     lines = f.readlines()
 
                 current_test = None
@@ -256,7 +256,7 @@ def get_installed_packages():
     if not os.path.exists(lock_path):
         return "uv.lock not found."
 
-    with open(lock_path, "r", encoding="utf-8") as f:
+    with open(lock_path, encoding="utf-8") as f:
         content = f.read()
 
     packages = []
@@ -670,7 +670,7 @@ def main():
             }
 
     timestamp = (
-        datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+        datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
         if args.dynamic_timestamp
         else get_stable_timestamp()
     )

@@ -12,7 +12,7 @@ import asyncio
 import os
 import sys
 import urllib.parse
-from typing import Any, Optional
+from typing import Any
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -75,7 +75,7 @@ MOCK_STUDIES_NEO4J = [
 ]
 
 
-def validate_local_only(name: str, url: Optional[str]) -> None:
+def validate_local_only(name: str, url: str | None) -> None:
     """
     Validates that a connection string points strictly to a local development environment.
     Aborts immediately if any production keyword or non-local host is detected.

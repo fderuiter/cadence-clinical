@@ -1,5 +1,3 @@
-from typing import Dict, List, Optional
-
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -32,7 +30,7 @@ class Section(BaseModel):
     code: str = Field(..., description="Stable code for the section (e.g. '01.01')")
     name: str = Field(..., description="Canonical display name of the section")
     zone_code: int = Field(..., description="Stable code of the parent zone")
-    artifacts: List[Artifact] = Field(
+    artifacts: list[Artifact] = Field(
         default_factory=list, description="List of approved artifacts in this section"
     )
 
@@ -48,7 +46,7 @@ class Zone(BaseModel):
         ..., description="Stable, unique integer code for the zone (1 to 11)"
     )
     name: str = Field(..., description="Canonical display name of the zone")
-    sections: List[Section] = Field(
+    sections: list[Section] = Field(
         default_factory=list, description="List of sections in this zone"
     )
 
@@ -63,12 +61,12 @@ class TaxonomyCatalog(BaseModel):
     version: str = Field(
         ..., description="Unique version name of the catalog (e.g. 'v3.2.0')"
     )
-    zones: List[Zone] = Field(
+    zones: list[Zone] = Field(
         ..., description="The 11 canonical zones included in this catalog version"
     )
 
     @property
-    def artifact_map(self) -> Dict[str, Artifact]:
+    def artifact_map(self) -> dict[str, Artifact]:
         """
         Helper property returning a map of artifact_code -> Artifact for quick lookup.
         """
@@ -79,13 +77,13 @@ class TaxonomyCatalog(BaseModel):
                     mapping[artifact.code] = artifact
         return mapping
 
-    def get_artifact(self, code: str) -> Optional[Artifact]:
+    def get_artifact(self, code: str) -> Artifact | None:
         """
         Retrieve an artifact by its code.
         """
         return self.artifact_map.get(code)
 
-    def get_section(self, code: str) -> Optional[Section]:
+    def get_section(self, code: str) -> Section | None:
         """
         Retrieve a section by its code.
         """
@@ -95,7 +93,7 @@ class TaxonomyCatalog(BaseModel):
                     return section
         return None
 
-    def get_zone(self, code: int) -> Optional[Zone]:
+    def get_zone(self, code: int) -> Zone | None:
         """
         Retrieve a zone by its integer code.
         """

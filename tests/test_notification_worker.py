@@ -1,6 +1,6 @@
 import asyncio
 import contextlib
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -185,7 +185,7 @@ async def test_worker_resolves_crc_for_edc_query():
             "field_name": "Age",
             "query_message": "Age field is blank. Please verify.",
         },
-        timestamp_utc=datetime.now(timezone.utc).isoformat(),
+        timestamp_utc=datetime.now(UTC).isoformat(),
     )
 
     dispatched = await worker.process_domain_event(event)
@@ -273,7 +273,7 @@ async def test_worker_resolves_cra_for_document_expiry():
             "artifact_code": "05.02.05",
             "expiration_date": "2026-12-31",
         },
-        timestamp_utc=datetime.now(timezone.utc).isoformat(),
+        timestamp_utc=datetime.now(UTC).isoformat(),
     )
 
     dispatched = await worker.process_domain_event(event)
@@ -350,7 +350,7 @@ async def test_worker_resolves_safety_officer_for_sae_flag():
             "flag_reason": "Sponsor database AE severity grade mismatch",
             "discrepancy_source": "Dataset-JSON VS EDC Form AE",
         },
-        timestamp_utc=datetime.now(timezone.utc).isoformat(),
+        timestamp_utc=datetime.now(UTC).isoformat(),
     )
 
     dispatched = await worker.process_domain_event(event)
@@ -454,7 +454,7 @@ async def test_start_stop_notification_worker_integration():
             "change_reason": "Adding mandatory site assessment section",
             "submitted_by": "sponsor_admin_01",
         },
-        timestamp_utc=datetime.now(timezone.utc).isoformat(),
+        timestamp_utc=datetime.now(UTC).isoformat(),
     )
 
     # Start the background worker loop

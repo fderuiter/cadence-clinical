@@ -1,7 +1,7 @@
 import logging
 import os
 import time
-from typing import Any, Dict, List
+from typing import Any
 
 import httpx
 from eligibility import EligibilityCriterion, ExpressionNode, parse_dsl
@@ -12,7 +12,7 @@ from packages.security.signing import generate_gateway_signature
 logger = logging.getLogger("interop-designer-client")
 
 
-def map_db_to_criterion(db_crit: Dict[str, Any]) -> EligibilityCriterion:
+def map_db_to_criterion(db_crit: dict[str, Any]) -> EligibilityCriterion:
     """
     Deserializes a database or API JSON dict into the shared EligibilityCriterion model.
     Rehydrates the nested AST condition, or re-parses dsl_source if absent.
@@ -39,14 +39,14 @@ def map_db_to_criterion(db_crit: Dict[str, Any]) -> EligibilityCriterion:
 
     created_at = db_crit.get("created_at")
     if not created_at:
-        created_at = datetime.datetime.now(datetime.timezone.utc)
+        created_at = datetime.datetime.now(datetime.UTC)
     elif isinstance(created_at, str):
         try:
             created_at = datetime.datetime.fromisoformat(
                 created_at.replace("Z", "+00:00")
             )
         except Exception:
-            created_at = datetime.datetime.now(datetime.timezone.utc)
+            created_at = datetime.datetime.now(datetime.UTC)
     else:
         try:
             if hasattr(created_at, "isoformat"):
@@ -54,9 +54,9 @@ def map_db_to_criterion(db_crit: Dict[str, Any]) -> EligibilityCriterion:
                     created_at.isoformat().replace("Z", "+00:00")
                 )
             else:
-                created_at = datetime.datetime.now(datetime.timezone.utc)
+                created_at = datetime.datetime.now(datetime.UTC)
         except Exception:
-            created_at = datetime.datetime.now(datetime.timezone.utc)
+            created_at = datetime.datetime.now(datetime.UTC)
 
     return EligibilityCriterion(
         criterion_id=db_crit.get("criterion_id") or db_crit.get("id"),
@@ -72,7 +72,7 @@ def map_db_to_criterion(db_crit: Dict[str, Any]) -> EligibilityCriterion:
     )
 
 
-async def fetch_eligibility_criteria(study_id: str) -> List[EligibilityCriterion]:
+async def fetch_eligibility_criteria(study_id: str) -> list[EligibilityCriterion]:
     """
     Queries the central Designer service to fetch active eligibility criteria for a study.
     Uses Gateway signature for secure inter-service authorization.

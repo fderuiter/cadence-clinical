@@ -3,7 +3,6 @@ import hashlib
 import os
 import tempfile
 from pathlib import Path
-from typing import Optional, Tuple
 
 from packages.storage.blob_store import (
     BlobStorageProvider,
@@ -32,7 +31,7 @@ class LocalStorageProvider(BlobStorageProvider):
         return path
 
     async def put_object(
-        self, key: str, data: bytes, expected_sha256: Optional[str] = None
+        self, key: str, data: bytes, expected_sha256: str | None = None
     ) -> str:
         """Write binary blob to storage and return verified SHA-256 digest.
 
@@ -74,7 +73,7 @@ class LocalStorageProvider(BlobStorageProvider):
                     os.unlink(temp_path)
             raise
 
-    async def get_object(self, key: str) -> Tuple[bytes, str]:
+    async def get_object(self, key: str) -> tuple[bytes, str]:
         """Read binary blob from storage and return (content, sha256_hash).
 
         Requirements: PRD-SYS-001

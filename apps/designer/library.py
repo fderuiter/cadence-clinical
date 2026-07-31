@@ -8,14 +8,13 @@ discriminated union payload structures.
 """
 
 from datetime import datetime
-from enum import Enum
-from typing import List, Literal, Optional, Union
+from enum import StrEnum
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, field_validator
-from typing_extensions import Annotated
 
 
-class ObjectType(str, Enum):
+class ObjectType(StrEnum):
     """Supported types of clinical design objects in the Global Library."""
 
     FORM = "FORM"
@@ -24,7 +23,7 @@ class ObjectType(str, Enum):
     VISIT = "VISIT"
 
 
-class LibraryStatus(str, Enum):
+class LibraryStatus(StrEnum):
     """Standard status levels for Global Library objects."""
 
     DRAFT = "DRAFT"
@@ -69,7 +68,7 @@ class FormItem(BaseModel):
 class FormPayload(BaseModel):
     """Form-specific payload validation containing items."""
 
-    items: List[FormItem] = Field(
+    items: list[FormItem] = Field(
         ..., description="List of form items/fields defined in this template."
     )
 
@@ -80,18 +79,16 @@ class DataElementPayload(BaseModel):
     data_type: str = Field(
         ..., description="Expected value type (e.g., numeric, text)."
     )
-    allowable_units: List[str] = Field(
+    allowable_units: list[str] = Field(
         ..., description="List of standard UCUM unit codes allowed."
     )
-    default_unit: Optional[str] = Field(
+    default_unit: str | None = Field(
         None, description="Default unit code from the allowable list."
     )
 
     @field_validator("default_unit")
     @classmethod
-    def validate_default_unit_in_allowable(
-        cls, v: Optional[str], info
-    ) -> Optional[str]:
+    def validate_default_unit_in_allowable(cls, v: str | None, info) -> str | None:
         """Ensure the default unit is present in the list of allowable units if specified."""
         allowable = info.data.get("allowable_units")
         if v is not None and allowable is not None and v not in allowable:
@@ -206,12 +203,10 @@ class CreateVisitRequest(CreateLibraryObjectBase):
 
 # Discriminated Union for Creation Requests
 CreateLibraryObjectRequest = Annotated[
-    Union[
-        CreateFormRequest,
-        CreateDataElementRequest,
-        CreateArmRequest,
-        CreateVisitRequest,
-    ],
+    CreateFormRequest
+    | CreateDataElementRequest
+    | CreateArmRequest
+    | CreateVisitRequest,
     Field(discriminator="object_type"),
 ]
 
@@ -259,12 +254,10 @@ class UpdateVisitRequest(UpdateLibraryObjectBase):
 
 # Discriminated Union for Update Requests
 UpdateLibraryObjectRequest = Annotated[
-    Union[
-        UpdateFormRequest,
-        UpdateDataElementRequest,
-        UpdateArmRequest,
-        UpdateVisitRequest,
-    ],
+    UpdateFormRequest
+    | UpdateDataElementRequest
+    | UpdateArmRequest
+    | UpdateVisitRequest,
     Field(discriminator="object_type"),
 ]
 
@@ -302,14 +295,14 @@ class LibraryObjectBase(BaseModel):
     tenant_id: str = Field(..., description="Tenant / Partition identifier.")
     created_at: datetime = Field(..., description="Audit timestamp of creation.")
     created_by: str = Field(..., description="User ID who created this object.")
-    updated_at: Optional[datetime] = Field(
+    updated_at: datetime | None = Field(
         None, description="Audit timestamp of last update."
     )
-    updated_by: Optional[str] = Field(None, description="User ID of last updater.")
-    reason_for_change: Optional[str] = Field(
+    updated_by: str | None = Field(None, description="User ID of last updater.")
+    reason_for_change: str | None = Field(
         None, description="Detailed explanation of changes applied."
     )
-    prior_status: Optional[str] = Field(
+    prior_status: str | None = Field(
         None, description="Previous status before transition."
     )
 
@@ -344,11 +337,9 @@ class VisitLibraryObjectDetail(LibraryObjectBase):
 
 # Discriminated Union for Responses exposing type-specific details
 LibraryObjectDetail = Annotated[
-    Union[
-        FormLibraryObjectDetail,
-        DataElementLibraryObjectDetail,
-        ArmLibraryObjectDetail,
-        VisitLibraryObjectDetail,
-    ],
+    FormLibraryObjectDetail
+    | DataElementLibraryObjectDetail
+    | ArmLibraryObjectDetail
+    | VisitLibraryObjectDetail,
     Field(discriminator="object_type"),
 ]

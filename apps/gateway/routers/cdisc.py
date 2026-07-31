@@ -7,7 +7,6 @@ Requirements: PRD-SYS-001
 """
 
 import os
-from typing import List
 
 from cdisc.cdisc_library_client import (
     CdashDomainDefinition,
@@ -39,12 +38,12 @@ def _get_terminology_cache() -> CdiscTerminologyCache:
 
 @router.get(
     "/products",
-    response_model=List[CdiscProductSummary],
+    response_model=list[CdiscProductSummary],
     status_code=status.HTTP_200_OK,
 )
 async def list_cdisc_products(
     user: dict = Depends(get_current_user),
-) -> List[CdiscProductSummary]:
+) -> list[CdiscProductSummary]:
     """List available CDISC products and standards catalogs.
 
     Requirements: PRD-SYS-001

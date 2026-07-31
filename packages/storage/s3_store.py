@@ -1,5 +1,4 @@
 import hashlib
-from typing import Optional, Tuple
 
 import aioboto3
 from botocore.exceptions import ClientError
@@ -20,10 +19,10 @@ class S3StorageProvider(BlobStorageProvider):
     def __init__(
         self,
         bucket_name: str,
-        aws_access_key_id: Optional[str] = None,
-        aws_secret_access_key: Optional[str] = None,
-        region_name: Optional[str] = None,
-        endpoint_url: Optional[str] = None,
+        aws_access_key_id: str | None = None,
+        aws_secret_access_key: str | None = None,
+        region_name: str | None = None,
+        endpoint_url: str | None = None,
         sse_algorithm: str = "AES256",
     ):
         self.bucket_name = bucket_name
@@ -43,7 +42,7 @@ class S3StorageProvider(BlobStorageProvider):
         return self.session.client("s3", endpoint_url=self.endpoint_url)
 
     async def put_object(
-        self, key: str, data: bytes, expected_sha256: Optional[str] = None
+        self, key: str, data: bytes, expected_sha256: str | None = None
     ) -> str:
         """Write binary blob to storage and return verified SHA-256 digest.
 
@@ -77,7 +76,7 @@ class S3StorageProvider(BlobStorageProvider):
             )
         return calculated_hash
 
-    async def get_object(self, key: str) -> Tuple[bytes, str]:
+    async def get_object(self, key: str) -> tuple[bytes, str]:
         """Read binary blob from storage and return (content, sha256_hash).
 
         Requirements: PRD-SYS-001
