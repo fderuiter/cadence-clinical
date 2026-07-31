@@ -12,6 +12,14 @@ from apps.designer.version_adapter import (
 )
 
 
+class CircularDependencyError(ValueError):
+    """
+    Exception raised when circular skip-logic dependency loops exist.
+    """
+
+    pass
+
+
 class ValidationIssue(BaseModel):
     """
     Represents an individual validation error or warning.
@@ -176,7 +184,7 @@ def detect_stochastic_operators(node: Any) -> List[str]:
 
 
 def validate_usdm_payload(
-    raw_text: str, override: Optional[str] = None
+    raw_text: str, override: Optional[str] = None, raise_on_error: bool = False
 ) -> USDMValidationReport:
     """
     Performs parsing, version resolution, normalization, and full validation (Pydantic + business checks).
@@ -236,10 +244,32 @@ def validate_usdm_payload(
     # Gather IDs of study, versions, designs, arms, epochs, encounters, activities
     all_ids: Dict[str, List[str]] = {}  # id -> paths where it appeared
 
+    def is_valid_original_id(val: Any) -> bool:
+        if val is None:
+            return False
+        val_str = str(val)
+        if not val_str or not val_str.strip():
+            return False
+        if any(c.isspace() for c in val_str):
+            return False
+        import re
+
+        if not re.match(r"^[a-zA-Z0-9_\-\.:/]+$", val_str):
+            return False
+        return True
+
     def add_id(element_id: Any, path: str):
         if not element_id:
             return
         element_id_str = str(element_id)
+        if not is_valid_original_id(element_id_str):
+            errors.append(
+                ValidationIssue(
+                    field=f"{path}.id" if not path.endswith(".id") else path,
+                    reason=f"Invalid original identifier '{element_id_str}' at '{path}'. Identifiers must be non-empty and must not contain spaces or invalid characters.",
+                    value=element_id_str,
+                )
+            )
         if element_id_str not in all_ids:
             all_ids[element_id_str] = []
         all_ids[element_id_str].append(path)
@@ -265,6 +295,13 @@ def validate_usdm_payload(
     if isinstance(versions, list):
         for v_idx, ver in enumerate(versions):
             if not isinstance(ver, dict):
+                errors.append(
+                    ValidationIssue(
+                        field=f"versions[{v_idx}]",
+                        reason=f"Expected dictionary component at versions[{v_idx}], got {type(ver).__name__}.",
+                        value=str(ver),
+                    )
+                )
                 continue
 
             # Check mandatory StudyVersion elements
@@ -291,6 +328,13 @@ def validate_usdm_payload(
             if isinstance(designs, list):
                 for d_idx, design in enumerate(designs):
                     if not isinstance(design, dict):
+                        errors.append(
+                            ValidationIssue(
+                                field=f"versions[{v_idx}].studyDesigns[{d_idx}]",
+                                reason=f"Expected dictionary component at studyDesigns[{d_idx}], got {type(design).__name__}.",
+                                value=str(design),
+                            )
+                        )
                         continue
 
                     # Check mandatory StudyDesign elements
@@ -318,6 +362,13 @@ def validate_usdm_payload(
                     if isinstance(arms, list):
                         for a_idx, arm in enumerate(arms):
                             if not isinstance(arm, dict):
+                                errors.append(
+                                    ValidationIssue(
+                                        field=f"versions[{v_idx}].studyDesigns[{d_idx}].arms[{a_idx}]",
+                                        reason=f"Expected dictionary component at arms[{a_idx}], got {type(arm).__name__}.",
+                                        value=str(arm),
+                                    )
+                                )
                                 continue
 
                             arm_id = arm.get("id")
@@ -347,6 +398,13 @@ def validate_usdm_payload(
                     if isinstance(epochs, list):
                         for ep_idx, epoch in enumerate(epochs):
                             if not isinstance(epoch, dict):
+                                errors.append(
+                                    ValidationIssue(
+                                        field=f"versions[{v_idx}].studyDesigns[{d_idx}].epochs[{ep_idx}]",
+                                        reason=f"Expected dictionary component at epochs[{ep_idx}], got {type(epoch).__name__}.",
+                                        value=str(epoch),
+                                    )
+                                )
                                 continue
 
                             epoch_id = epoch.get("id")
@@ -376,6 +434,13 @@ def validate_usdm_payload(
                     if isinstance(encounters, list):
                         for enc_idx, enc in enumerate(encounters):
                             if not isinstance(enc, dict):
+                                errors.append(
+                                    ValidationIssue(
+                                        field=f"versions[{v_idx}].studyDesigns[{d_idx}].encounters[{enc_idx}]",
+                                        reason=f"Expected dictionary component at encounters[{enc_idx}], got {type(enc).__name__}.",
+                                        value=str(enc),
+                                    )
+                                )
                                 continue
                             add_id(
                                 enc.get("id"),
@@ -387,6 +452,13 @@ def validate_usdm_payload(
                     if isinstance(activities, list):
                         for act_idx, act in enumerate(activities):
                             if not isinstance(act, dict):
+                                errors.append(
+                                    ValidationIssue(
+                                        field=f"versions[{v_idx}].studyDesigns[{d_idx}].activities[{act_idx}]",
+                                        reason=f"Expected dictionary component at activities[{act_idx}], got {type(act).__name__}.",
+                                        value=str(act),
+                                    )
+                                )
                                 continue
                             add_id(
                                 act.get("id"),
@@ -496,6 +568,13 @@ def validate_usdm_payload(
             )
 
     is_valid = len(errors) == 0
+
+    if raise_on_error and not is_valid:
+        circular_errors = [
+            err.reason for err in errors if "Circular skip-logic" in err.reason
+        ]
+        if circular_errors:
+            raise CircularDependencyError("; ".join(circular_errors))
 
     return USDMValidationReport(
         version=resolved_version,

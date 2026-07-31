@@ -270,6 +270,59 @@ jobs:
           TEST_DATABASE_URL: "postgresql+asyncpg://cadence:cadence_password@localhost:5432/cadence_edc"
         run: uv run pytest -n auto --cov=apps --cov=packages --cov-fail-under=80 --ignore=tests/test_layout_validator.py --junitxml=report-unit.xml
 
+      - name: Run study designer isolated 95% coverage check
+        if: always() && steps.run_tests.outcome == 'success'
+        run: |
+          git fetch origin main --depth=1 || true
+          CHANGED_FILES=""
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            CHANGED_FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null || true)
+          else
+            CHANGED_FILES=$(git diff --name-only HEAD~1..HEAD 2>/dev/null || true)
+          fi
+          
+          if [ -z "$CHANGED_FILES" ]; then
+            CHANGED_FILES=$(git status --porcelain | awk '{print $2}' || true)
+          fi
+          
+          echo "Changed files detected:"
+          echo "$CHANGED_FILES"
+          
+          DESIGNER_CHANGED=false
+          HAS_UNSAFE_CHANGE=false
+          DESIGNER_PY_FILES=""
+          
+          for file in $CHANGED_FILES; do
+            if [[ "$file" == apps/designer/* ]]; then
+              DESIGNER_CHANGED=true
+              if [[ "$file" == *.py ]]; then
+                # Clean path format
+                clean_file=$(echo "$file" | sed 's/^[ \t]*//;s/[ \t]*$//')
+                if [ -n "$clean_file" ] && [ -f "$clean_file" ]; then
+                  DESIGNER_PY_FILES="$DESIGNER_PY_FILES $clean_file"
+                fi
+              fi
+            fi
+            if ! [[ "$file" == docs/* ]] && ! [[ "$file" == *.md ]] && ! [[ "$file" == tests/* ]] && ! [[ "$file" == *.sh ]] && ! [[ "$file" == scripts/* ]]; then
+              HAS_UNSAFE_CHANGE=true
+            fi
+          done
+          
+          if [ "$DESIGNER_CHANGED" = "true" ] && [ "$HAS_UNSAFE_CHANGE" = "true" ]; then
+            if [ -n "$DESIGNER_PY_FILES" ]; then
+              echo "Enforcing strict 95% coverage specifically on modified designer files:$DESIGNER_PY_FILES"
+              COV_ARGS=""
+              for pyfile in $DESIGNER_PY_FILES; do
+                COV_ARGS="$COV_ARGS --cov=$pyfile"
+              done
+              uv run pytest -n auto $COV_ARGS --cov-fail-under=95 --ignore=tests/test_layout_validator.py
+            else
+              echo "No python files inside apps/designer were modified."
+            fi
+          else
+            echo "Bypassing apps/designer 95% coverage check (no unsafe changes in apps/designer)."
+          fi
+
       - name: Upload unit test report
         if: always()
         uses: actions/upload-artifact@v4

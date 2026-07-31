@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1777
-- **Passed:** 1777 🟢
+- **Total Automated Test Cases Run:** 1782
+- **Passed:** 1782 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -603,6 +603,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_valid_skip_logic_schema` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_xpath_compile_logical_and_functions` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_xpath_compile_simple` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_circular_skip_logic_triggers_exception` | `tests.test_designer_synthetic_integration` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_ingestion_logic_catches_non_dictionary_and_invalid_identifiers` | `tests.test_designer_synthetic_integration` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_synthetic_payload_narrative_and_eligibility_parsing` | `tests.test_designer_synthetic_integration` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_usdm_ingestion_additional_validation_coverage` | `tests.test_designer_synthetic_integration` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_usdm_ingestion_parsing_and_structural_failures` | `tests.test_designer_synthetic_integration` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_version_diff_success` | `tests.test_designer_version_diff` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_version_diff_unrelated_or_nonexistent` | `tests.test_designer_version_diff` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_main_no_duplicates_scanned` | `tests.test_detect_duplication` | *Regression/Helper* | 🟢 PASSED | < 1s |
