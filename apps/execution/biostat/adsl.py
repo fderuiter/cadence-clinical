@@ -324,12 +324,11 @@ def derive_adsl(
                                 break
 
                     # Match by record itself
-                    if not rand_date_str:
-                        if obs_dt:
-                            if hasattr(obs_dt, "isoformat"):
-                                rand_date_str = obs_dt.isoformat()
-                            else:
-                                rand_date_str = str(obs_dt)
+                    if not rand_date_str and obs_dt:
+                        if hasattr(obs_dt, "isoformat"):
+                            rand_date_str = obs_dt.isoformat()
+                        else:
+                            rand_date_str = str(obs_dt)
                     break
 
         imputed_rand_str = (

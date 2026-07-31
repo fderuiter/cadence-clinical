@@ -250,8 +250,7 @@ async def offline_sync_endpoint(payload: Dict[str, Any]) -> Dict[str, Any]:
     async with db_manager.get_session_maker()() as session:
         try:
             engine = ServiceOfflineSyncEngine(session=session)
-            result = await engine.process_delta_batch(payload)
-            return result
+            return await engine.process_delta_batch(payload)
         except ValueError as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

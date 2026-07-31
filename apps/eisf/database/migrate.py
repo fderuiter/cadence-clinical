@@ -7,6 +7,7 @@ electronic Investigator Site File (eISF) service. It applies schema upgrades ide
 
 import argparse
 import asyncio
+import contextlib
 import os
 import sys
 
@@ -39,28 +40,24 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
             await conn.execute(
                 text("ALTER TABLE isf_documents ADD COLUMN issue_date DATE;")
             )
-            try:
+            with contextlib.suppress(Exception):
                 await conn.execute(
                     text(
                         "CREATE INDEX IF NOT EXISTS ix_isf_documents_issue_date ON isf_documents (issue_date);"
                     )
                 )
-            except Exception:
-                pass
 
         if "expiration_date" not in cols:
             print("Adding missing column expiration_date to isf_documents table...")
             await conn.execute(
                 text("ALTER TABLE isf_documents ADD COLUMN expiration_date DATE;")
             )
-            try:
+            with contextlib.suppress(Exception):
                 await conn.execute(
                     text(
                         "CREATE INDEX IF NOT EXISTS ix_isf_documents_expiration_date ON isf_documents (expiration_date);"
                     )
                 )
-            except Exception:
-                pass
 
         if "document_owner_id" not in cols:
             print("Adding missing column document_owner_id to isf_documents table...")
@@ -69,14 +66,12 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
                     "ALTER TABLE isf_documents ADD COLUMN document_owner_id VARCHAR(255);"
                 )
             )
-            try:
+            with contextlib.suppress(Exception):
                 await conn.execute(
                     text(
                         "CREATE INDEX IF NOT EXISTS ix_isf_documents_document_owner_id ON isf_documents (document_owner_id);"
                     )
                 )
-            except Exception:
-                pass
 
 
 async def run_migrations(database_url: str) -> None:

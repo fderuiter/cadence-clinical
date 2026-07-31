@@ -60,29 +60,28 @@ def _render_pdf_certificate(
         p.showPage()
         p.save()
         return pdf_buffer.getvalue()
-    else:
-        # Minimal valid PDF format when reportlab is not installed
-        header = "%PDF-1.4\n"
-        body = (
-            "GxP Consent Signature Certificate\n"
-            f"Subject ID: {payload.subject_id}\n"
-            f"Printed Name: {payload.printed_name}\n"
-            f"Relationship to Subject: {payload.relationship_to_subject}\n"
-            f"ICF Version ID: {payload.icf_version_id}\n"
-            f"Verification Hash: {sig_hash}\n"
-            f"Signed At (UTC): {now.isoformat()}\n"
-        )
-        content_stream = f"BT /F1 12 Tf 50 700 Td ({body}) Tj ET"
-        stream_len = len(content_stream)
-        objects = (
-            "1 0 obj <</Type /Catalog /Pages 2 0 R>> endobj\n"
-            "2 0 obj <</Type /Pages /Kids [3 0 R] /Count 1>> endobj\n"
-            "3 0 obj <</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources <</Font <</F1 5 0 R>>>> >> endobj\n"
-            f"4 0 obj <</Length {stream_len}>> stream\n{content_stream}\nendstream\nendobj\n"
-            "5 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica>> endobj\n"
-        )
-        xref = "xref\n0 6\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \n0000000115 00000 n \n0000000246 00000 n \n0000000350 00000 n \ntrailer <</Size 6 /Root 1 0 R>>\nstartxref\n430\n%%EOF"  # deid-ignore
-        return f"{header}{objects}{xref}".encode("latin1", errors="replace")
+    # Minimal valid PDF format when reportlab is not installed
+    header = "%PDF-1.4\n"
+    body = (
+        "GxP Consent Signature Certificate\n"
+        f"Subject ID: {payload.subject_id}\n"
+        f"Printed Name: {payload.printed_name}\n"
+        f"Relationship to Subject: {payload.relationship_to_subject}\n"
+        f"ICF Version ID: {payload.icf_version_id}\n"
+        f"Verification Hash: {sig_hash}\n"
+        f"Signed At (UTC): {now.isoformat()}\n"
+    )
+    content_stream = f"BT /F1 12 Tf 50 700 Td ({body}) Tj ET"
+    stream_len = len(content_stream)
+    objects = (
+        "1 0 obj <</Type /Catalog /Pages 2 0 R>> endobj\n"
+        "2 0 obj <</Type /Pages /Kids [3 0 R] /Count 1>> endobj\n"
+        "3 0 obj <</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources <</Font <</F1 5 0 R>>>> >> endobj\n"
+        f"4 0 obj <</Length {stream_len}>> stream\n{content_stream}\nendstream\nendobj\n"
+        "5 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica>> endobj\n"
+    )
+    xref = "xref\n0 6\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \n0000000115 00000 n \n0000000246 00000 n \n0000000350 00000 n \ntrailer <</Size 6 /Root 1 0 R>>\nstartxref\n430\n%%EOF"  # deid-ignore
+    return f"{header}{objects}{xref}".encode("latin1", errors="replace")
 
 
 async def process_econsent_signature(

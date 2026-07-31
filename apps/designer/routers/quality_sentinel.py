@@ -38,5 +38,4 @@ async def evaluate_protocol_quality_endpoint(
     report = sentinel.evaluate_protocol_quality(payload)
 
     # Apply masking for blinded users
-    masked_report = mask_payload(report, principal)
-    return masked_report
+    return mask_payload(report, principal)

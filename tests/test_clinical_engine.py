@@ -296,7 +296,7 @@ async def test_api_gateway_routing(monkeypatch: pytest.MonkeyPatch) -> None:
         url_str = str(req.url)
         if "/dictionary/unit-conversion" in url_str:
             return MockResponse(200, {"converted_value": 37.777777})
-        elif "/dictionary/export" in url_str:
+        if "/dictionary/export" in url_str:
             return MockResponse(200, {}, text_data="<ODM FileOID='Export.123'></ODM>")
         return MockResponse(404, {"error": "Not Found"})
 

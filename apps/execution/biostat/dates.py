@@ -98,27 +98,25 @@ def impute_partial_date(
         if m is None:  # Only year is known
             if trt_dt and trt_dt.year == y:
                 return f"{trt_dt.year:04d}-{trt_dt.month:02d}-{trt_dt.day:02d}"
-            else:
-                return f"{y:04d}-01-01"
-        else:  # Year and Month are known, Day is missing
-            if trt_dt and trt_dt.year == y and trt_dt.month == m:
-                return f"{trt_dt.year:04d}-{trt_dt.month:02d}-{trt_dt.day:02d}"
-            else:
-                return f"{y:04d}-{m:02d}-01"
+            return f"{y:04d}-01-01"
+        # Year and Month are known, Day is missing
+        if trt_dt and trt_dt.year == y and trt_dt.month == m:
+            return f"{trt_dt.year:04d}-{trt_dt.month:02d}-{trt_dt.day:02d}"
+        return f"{y:04d}-{m:02d}-01"
 
-    elif direction.upper() == "END":
+    if direction.upper() == "END":
         if m is None:  # Only year is known
             imputed = date(y, 12, 31)
             if eos_dt and eos_dt.year == y and eos_dt < imputed:
                 imputed = eos_dt
             return f"{imputed.year:04d}-{imputed.month:02d}-{imputed.day:02d}"
-        else:  # Year and Month are known, Day is missing
-            try:
-                last_day = calendar.monthrange(y, m)[1]
-                imputed = date(y, m, last_day)
-                return f"{imputed.year:04d}-{imputed.month:02d}-{imputed.day:02d}"
-            except ValueError:
-                return None
+        # Year and Month are known, Day is missing
+        try:
+            last_day = calendar.monthrange(y, m)[1]
+            imputed = date(y, m, last_day)
+            return f"{imputed.year:04d}-{imputed.month:02d}-{imputed.day:02d}"
+        except ValueError:
+            return None
 
     return None
 

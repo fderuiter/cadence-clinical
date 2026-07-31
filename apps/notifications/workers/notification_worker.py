@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import importlib
 import json
 import logging
@@ -372,9 +373,7 @@ async def stop_notification_worker() -> None:
     _should_run = False
     if _worker_task:
         _worker_task.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await _worker_task
-        except asyncio.CancelledError:
-            pass
         _worker_task = None
     logger.info("Notification Background Consumer Worker cleanly shut down.")

@@ -86,21 +86,21 @@ def test_get_changed_files_from_git_fallbacks(mock_run_git):
         cmd_str = " ".join(args)
         if "rev-parse --abbrev-ref" in cmd_str:
             return "feature-branch\n", ""
-        elif "rev-parse HEAD" in cmd_str:
+        if "rev-parse HEAD" in cmd_str:
             return "commit-head-sha\n", ""
-        elif "branch" in cmd_str and "--format" in cmd_str:
+        if "branch" in cmd_str and "--format" in cmd_str:
             return "main\nfeature-branch\n", ""
-        elif "merge-base" in cmd_str:
+        if "merge-base" in cmd_str:
             return "commit-base-sha\n", ""
-        elif "rev-list --count" in cmd_str:
+        if "rev-list --count" in cmd_str:
             return "1\n", ""
-        elif "rev-list --first-parent" in cmd_str:
+        if "rev-list --first-parent" in cmd_str:
             return "commit-head-sha\n", ""
-        elif "log --pretty=%P" in cmd_str:
+        if "log --pretty=%P" in cmd_str:
             return "commit-base-sha\n", ""
-        elif "diff-tree" in cmd_str:
+        if "diff-tree" in cmd_str:
             return "apps/gateway/main.py\n", ""
-        elif "--porcelain" in cmd_str:
+        if "--porcelain" in cmd_str:
             return "M  pyproject.toml\n", ""
         return "", ""
 
@@ -239,20 +239,20 @@ def test_get_closest_local_branch_point_multiple_branches(mock_run_git):
         cmd_str = " ".join(args)
         if "rev-parse --abbrev-ref" in cmd_str:
             return "feature-branch\n", ""
-        elif "rev-parse HEAD" in cmd_str:
+        if "rev-parse HEAD" in cmd_str:
             return "commit-head-sha\n", ""
-        elif "branch" in cmd_str and "--format" in cmd_str:
+        if "branch" in cmd_str and "--format" in cmd_str:
             # multiple local branches: main, other-feature, feature-branch
             return "main\nother-feature\nfeature-branch\n", ""
-        elif "merge-base" in cmd_str:
+        if "merge-base" in cmd_str:
             if "main" in cmd_str:
                 return "commit-main-mb\n", ""
-            elif "other-feature" in cmd_str:
+            if "other-feature" in cmd_str:
                 return "commit-other-mb\n", ""
         elif "rev-list --count" in cmd_str:
             if "commit-main-mb..HEAD" in cmd_str:
                 return "5\n", ""
-            elif "commit-other-mb..HEAD" in cmd_str:
+            if "commit-other-mb..HEAD" in cmd_str:
                 # other-feature is closer! (distance of 2 commits vs 5)
                 return "2\n", ""
         return "", ""
@@ -272,12 +272,12 @@ def test_get_closest_local_branch_point_fallback_to_root(mock_run_git):
         cmd_str = " ".join(args)
         if "rev-parse --abbrev-ref" in cmd_str:
             return "main\n", ""
-        elif "rev-parse HEAD" in cmd_str:
+        if "rev-parse HEAD" in cmd_str:
             return "commit-head-sha\n", ""
-        elif "branch" in cmd_str and "--format" in cmd_str:
+        if "branch" in cmd_str and "--format" in cmd_str:
             # Only current branch main exists locally
             return "main\n", ""
-        elif "rev-list --max-parents=0" in cmd_str:
+        if "rev-list --max-parents=0" in cmd_str:
             return "commit-root-sha\n", ""
         return "", ""
 
@@ -296,26 +296,26 @@ def test_get_changed_files_bypasses_merge_commits_and_parses_status(mock_run_git
         cmd_str = " ".join(args)
         if "rev-parse --abbrev-ref" in cmd_str:
             return "feature-branch\n", ""
-        elif "rev-parse HEAD" in cmd_str:
+        if "rev-parse HEAD" in cmd_str:
             return "commit-head-sha\n", ""
-        elif "branch" in cmd_str and "--format" in cmd_str:
+        if "branch" in cmd_str and "--format" in cmd_str:
             return "main\nfeature-branch\n", ""
-        elif "merge-base" in cmd_str:
+        if "merge-base" in cmd_str:
             return "commit-base-sha\n", ""
-        elif "rev-list --count" in cmd_str:
+        if "rev-list --count" in cmd_str:
             return "2\n", ""
-        elif "rev-list --first-parent" in cmd_str:
+        if "rev-list --first-parent" in cmd_str:
             # 2 commits in range: a normal commit and a merge commit
             return "commit-normal-sha\ncommit-merge-sha\n", ""
-        elif "log --pretty=%P" in cmd_str:
+        if "log --pretty=%P" in cmd_str:
             if "commit-normal-sha" in cmd_str:
                 return "commit-parent-sha\n", ""  # 1 parent (normal)
-            elif "commit-merge-sha" in cmd_str:
+            if "commit-merge-sha" in cmd_str:
                 return "commit-parent1 commit-parent2\n", ""  # 2 parents (merge)
         elif "diff-tree" in cmd_str:
             if "commit-normal-sha" in cmd_str:
                 return "apps/execution/main.py\n", ""
-            elif "commit-merge-sha" in cmd_str:
+            if "commit-merge-sha" in cmd_str:
                 # Should not be called because we bypass merge commits!
                 return "should/not/be/here.py\n", ""
         elif "--porcelain" in cmd_str:

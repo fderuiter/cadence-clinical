@@ -57,6 +57,7 @@ on the target database:
 
 import argparse
 import asyncio
+import contextlib
 import os
 import sys
 
@@ -468,32 +469,26 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
             except Exception:
                 pass
 
-            try:
+            with contextlib.suppress(Exception):
                 await conn.execute(
                     text(
                         "ALTER TABLE tmf_documents ADD COLUMN IF NOT EXISTS content_checksum VARCHAR(64);"
                     )
                 )
-            except Exception:
-                pass
 
-            try:
+            with contextlib.suppress(Exception):
                 await conn.execute(
                     text(
                         "ALTER TABLE tmf_documents ADD COLUMN IF NOT EXISTS source_system VARCHAR(255);"
                     )
                 )
-            except Exception:
-                pass
 
-            try:
+            with contextlib.suppress(Exception):
                 await conn.execute(
                     text(
                         "ALTER TABLE tmf_documents ADD COLUMN IF NOT EXISTS sync_status VARCHAR(50);"
                     )
                 )
-            except Exception:
-                pass
 
             # Attempt to add check constraint if missing
             try:
@@ -640,14 +635,12 @@ async def upgrade_existing_tables(conn, dialect_name: str) -> None:
                     )
                 )
         elif dialect_name == "postgresql":
-            try:
+            with contextlib.suppress(Exception):
                 await conn.execute(
                     text(
                         "ALTER TABLE tmf_audit_logs ADD COLUMN IF NOT EXISTS reason_for_change VARCHAR(1000);"
                     )
                 )
-            except Exception:
-                pass
 
         # Idempotent backfill/quarantine strategy for legacy records:
         # Scan legacy records with null site_id, classifying them using is_site_level_artifact.

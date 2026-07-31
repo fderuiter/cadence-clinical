@@ -46,7 +46,7 @@ class PKCS7Signer:
         signature = self.key.sign(to_sign, padding.PKCS1v15(), hashes.SHA256())
         sig_b64 = base64.b64encode(signature)
 
-        signed_payload = (
+        return (
             data
             + b"\n"
             + cert_pem
@@ -54,7 +54,6 @@ class PKCS7Signer:
             + sig_b64
             + b"\n-----END SIGNATURE-----\n"
         )
-        return signed_payload
 
     def sign_pdf(self, pdf_bytes: bytes) -> bytes:
         """Sign a PDF document. Alias for sign_document.

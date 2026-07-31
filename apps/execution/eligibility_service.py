@@ -44,8 +44,7 @@ async def evaluate_subject_eligibility(
     context = await build_eligibility_context(subject, session)
 
     # 3. Evaluate criteria
-    result = evaluate_eligibility(criteria, context)
-    return result
+    return evaluate_eligibility(criteria, context)
 
 
 def verify_subject_eligible_for_randomization(subject: ClinicalSubject) -> None:

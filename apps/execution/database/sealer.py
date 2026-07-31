@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import hashlib
 import json
 import logging
@@ -313,9 +314,7 @@ async def stop_background_sealer() -> None:
     global _sealer_task, _should_run
     _should_run = False
     if _sealer_task:
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await _sealer_task
-        except asyncio.CancelledError:
-            pass
         _sealer_task = None
     logger.info("Background ledger sealer stopped.")
