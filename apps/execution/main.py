@@ -3673,7 +3673,12 @@ class SDVScopeEnum(str, Enum):
     VISIT = "VISIT"
 
 
-class SDVSignOffRequest(BaseModel):
+# ==============================================================================
+# SDV (Source Data Verification) Sign-off Section
+# ==============================================================================
+
+
+class SDVSignoffCreate(BaseModel):
     """Pydantic request schema for SDV sign-off."""
 
     scope: SDVScopeEnum
@@ -3683,7 +3688,7 @@ class SDVSignOffRequest(BaseModel):
     site_id: Optional[str] = None
 
 
-class SDVSignOffResponse(BaseModel):
+class SDVSignoffResponse(BaseModel):
     """Pydantic response schema for SDV sign-off."""
 
     id: str
@@ -3699,12 +3704,26 @@ class SDVSignOffResponse(BaseModel):
     dropped_at: Optional[datetime] = None
 
 
-@app.post("/api/v1/execution/sdv/signoff", response_model=SDVSignOffResponse)
+# Keep the old names as aliases for backward compatibility or testing
+SDVSignOffRequest = SDVSignoffCreate
+SDVSignOffResponse = SDVSignoffResponse
+
+
+@app.post("/api/v1/execution/sdv/signoff", response_model=SDVSignoffResponse)
 async def sdv_signoff(
-    payload: SDVSignOffRequest,
-    roles: list[str] = Depends(require_roles(ROLE_CRA, "monitor")),
-) -> SDVSignOffResponse:
+    payload: SDVSignoffCreate,
+    request: Request,
+) -> SDVSignoffResponse:
     """CRA/monitor-gated SDV sign-off endpoint for Field, Page, or Visit scopes."""
+    state_roles = getattr(request.state, "roles", [])
+    if not isinstance(state_roles, list):
+        state_roles = [state_roles]
+    normalized_state_roles = [str(r).strip().lower() for r in state_roles]
+    if not any(role in ["cra", "monitor"] for role in normalized_state_roles):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: SDV sign-off is restricted to CRA or monitor roles.",
+        )
     async with db_manager.get_session_maker()() as session:
         # 1. Validate Subject exists and is consistent with Study
         stmt_subj = select(ClinicalSubject).where(
@@ -3811,7 +3830,7 @@ async def sdv_signoff(
         res_re = await session.execute(stmt_re)
         re_signoff = res_re.scalar_one()
 
-        return SDVSignOffResponse(
+        return SDVSignoffResponse(
             id=re_signoff.id,
             scope=re_signoff.scope,
             target_id=re_signoff.target_id,

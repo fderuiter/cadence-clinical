@@ -120,9 +120,9 @@ class NotificationRouter:
             logger.error("Failed to send webhook notification: %s", e, exc_info=True)
 
     def send_dashboard_notification(self, recipients: List[str], payload: dict):
-        """Sends a dashboard notification to the specified recipients."""
+        """Sends a dashboard notification to the specified recipients (PRD-QRY-006)."""
         try:
-            # 1. SDV-drop check
+            # 1. SDV-drop check (PRD-QRY-006)
             if "observation_id" in payload:
                 category = "ALERTS"
                 priority = "HIGH"
