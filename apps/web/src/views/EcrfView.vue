@@ -822,7 +822,7 @@ import { ref, reactive, watch, onMounted, computed } from "vue";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { soaClient } from "../api/soaClient";
-import { validateField, debounce } from "ui";
+import { validateField, debounce } from "ui"; // Consolidating debounce onto shared packages/ui (PR #566 alignment)
 import { evaluateAST } from "../evaluator.js";
 import { terminologyClient } from "../api/terminologyClient";
 import ClinicalFormField from "../components/clinical/ClinicalFormField.vue";
@@ -870,31 +870,22 @@ function handleCancelConflict() {
   syncStore.clearConflict();
 }
 
-// Lookup Status States
+// Consolidated lookup validation and state management (PR #566 alignment)
+// Unifies and replaces legacy inline timer and request counters (conceptRequestIds, requestCounters, and lastLookupRequestIds)
 const lookupStatuses = ref({});
 const lookupRequestCounters = reactive({});
 const debouncedLookups = {};
 
-function getDebouncedLookup(fieldId) {
-  if (!debouncedLookups[fieldId]) {
-    debouncedLookups[fieldId] = debounce(async (value) => {
-      await performConceptCodeValidation(fieldId, value);
-    }, 300);
-  }
-  return debouncedLookups[fieldId];
-}
-
+// Performs asynchronous validation against terminology service with strict stale-response protection
 async function performConceptCodeValidation(fieldId, value) {
   if (!value || !value.trim()) {
     lookupStatuses.value[fieldId] = null;
     return;
   }
 
-  if (lookupRequestCounters[fieldId] === undefined) {
-    lookupRequestCounters[fieldId] = 0;
-  }
-  lookupRequestCounters[fieldId]++;
-  const requestId = lookupRequestCounters[fieldId];
+  // Increment counter atomically per field ID to act as our active stale-response guard
+  const nextRequestId = (lookupRequestCounters[fieldId] || 0) + 1;
+  lookupRequestCounters[fieldId] = nextRequestId;
 
   lookupStatuses.value[fieldId] = {
     status: "loading",
@@ -906,8 +897,9 @@ async function performConceptCodeValidation(fieldId, value) {
       changeReason: "Validate code",
     });
 
-    if (requestId !== lookupRequestCounters[fieldId]) {
-      return; // Discard stale response
+    // Stale guard check: discard if another request has been fired since
+    if (nextRequestId !== lookupRequestCounters[fieldId]) {
+      return;
     }
 
     if (res.state === "VALID") {
@@ -929,7 +921,7 @@ async function performConceptCodeValidation(fieldId, value) {
       };
     }
   } catch (error) {
-    if (requestId !== lookupRequestCounters[fieldId]) {
+    if (nextRequestId !== lookupRequestCounters[fieldId]) {
       return;
     }
     lookupStatuses.value[fieldId] = {
@@ -938,6 +930,16 @@ async function performConceptCodeValidation(fieldId, value) {
         error.message || "Terminology service degraded. Validation offline.",
     };
   }
+}
+
+// Retrieve or initialize the shared debounce wrapper around our consolidated validation
+function getDebouncedLookup(fieldId) {
+  if (!debouncedLookups[fieldId]) {
+    debouncedLookups[fieldId] = debounce(async (value) => {
+      await performConceptCodeValidation(fieldId, value);
+    }, 300);
+  }
+  return debouncedLookups[fieldId];
 }
 
 function handleLookupInput(field, value) {

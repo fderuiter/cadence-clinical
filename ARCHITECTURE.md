@@ -128,7 +128,7 @@ Traditional clinical trial builds require manual, error-prone translation of pro
   * **Routing & Security:** The API Gateway (`apps/gateway/main.py`) performs HMAC-signed proxying and strips prefixes to route external `/api/v1/terminology` traffic directly to the Designer service (ADR-058).
   * **Signed Web Client:** The frontend client (`apps/web/src/api/terminologyClient.js`) interacts securely via standard in-transit signature verification (ADR-067).
   * **Consolidated UI Components:** `packages/ui` provides the shared `debounce` utility and `createClinicalLookupInput` helper function, which are consumed by Vue interfaces like `EcrfView.vue` and `MdrView.vue` to achieve responsive typing validation, stale response guards, and accessible ARIA live-region feedback (ADR-065).
-  * **GxP Scope & Auditing:** Features a deliberate **no-persistent-audit-trail** architectural design. Since lookups are stateless, read-only queries with signed headers, they do not mutate clinical record states and thus bypass persistent audit trailing, ensuring optimal performance and minimizing database footprints while maintaining transit integrity.
+  * **GxP Scope & Auditing:** Features a deliberate **no-persistent-audit-trail** architectural design. Since lookups are stateless, read-only queries with signed headers, they do not mutate clinical record states and thus bypass persistent audit trailing, ensuring optimal performance and minimizing database footprints while maintaining transit integrity in accordance with GxP and 21 CFR Part 11 requirements.
 
 ---
 
