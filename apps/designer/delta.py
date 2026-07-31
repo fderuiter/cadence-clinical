@@ -4724,7 +4724,9 @@ async def check_library_object_exists_any_sponsor(
 
         versions = MOCK_LIBRARY_OBJECTS.get(object_id, [])
         matching = [
-            v for v in versions if v.get("tenant_id") is None or v.get("tenant_id") == tenant_id
+            v
+            for v in versions
+            if v.get("tenant_id") is None or v.get("tenant_id") == tenant_id
         ]
         if not matching:
             return None
@@ -4768,7 +4770,9 @@ async def check_study_exists_any_sponsor(
         from apps.designer.db import MOCK_STUDIES
 
         study = MOCK_STUDIES.get(study_id)
-        if study and (study.get("tenant_id") is None or study.get("tenant_id") == tenant_id):
+        if study and (
+            study.get("tenant_id") is None or study.get("tenant_id") == tenant_id
+        ):
             return study
         return None
 
