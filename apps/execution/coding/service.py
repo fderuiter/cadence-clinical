@@ -1,10 +1,15 @@
 import logging
 from datetime import datetime, timezone
-from typing import Any, List, Optional, Union
+from typing import List, Optional
 
+from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import HTTPException
+
+from apps.execution.coding.impact import run_impact_analysis
+
+# Existing coding engine/matching modules
+from apps.execution.coding.matcher import match_verbatim_term
 
 # Database models & enums
 from apps.execution.database.models import (
@@ -12,13 +17,10 @@ from apps.execution.database.models import (
     ClinicalCodingLedger,
     ClinicalQuery,
     CodingState,
-    RecodingState,
+)
+from apps.execution.database.models import (
     DictionaryType as DBDictionaryType,
 )
-
-# Existing coding engine/matching modules
-from apps.execution.coding.matcher import match_verbatim_term
-from apps.execution.coding.impact import run_impact_analysis
 
 logger = logging.getLogger(__name__)
 
@@ -152,9 +154,7 @@ async def process_coding_action(
                 or suggestion_index < 0
                 or suggestion_index >= len(sug_list)
             ):
-                raise HTTPException(
-                    status_code=400, detail="Invalid suggestion_index"
-                )
+                raise HTTPException(status_code=400, detail="Invalid suggestion_index")
             sug = sug_list[suggestion_index]
             coded_code = sug.get("code") or sug.get("drug_code")
             coded_term = sug.get("term_name") or sug.get("preferred_name")
@@ -299,9 +299,7 @@ async def process_coding_action(
             # Fetch ATC context and ingredients for WHODrug override
             from apps.execution.coding.matcher import _get_whodrug_context
 
-            rec_obj = WHODrugRecord(
-                drug_code=code.strip(), preferred_name=term.strip()
-            )
+            rec_obj = WHODrugRecord(drug_code=code.strip(), preferred_name=term.strip())
             atc_context, ingredients = await _get_whodrug_context(
                 session, rec_obj, version
             )

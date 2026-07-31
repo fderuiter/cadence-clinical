@@ -7,7 +7,7 @@ import zipfile
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, AsyncGenerator, List, Optional, Union
+from typing import Any, AsyncGenerator, List, Optional
 
 from fastapi import (
     BackgroundTasks,
@@ -93,6 +93,22 @@ from apps.execution.query_service import QueryService, StateTransitionError
 from apps.execution.routers.amendments import router as amendments_router
 from apps.execution.routers.anonymization import router as anonymization_router
 from apps.execution.routers.auditor import router as auditor_router
+from apps.execution.routers.coding_schemas import (
+    CoderActionRequest,
+    CodingAssignmentResponse,
+    DictTypeEnum,
+    ImpactAnalysisRequest,
+    ImpactAnalysisResponse,
+    ImpactMetrics,
+    JobStatusEnum,
+    JobStatusResponse,
+    MedDRACodeMatch,
+    MedDRACodingResult,
+    WHODrugATCContext,
+    WHODrugCodeMatch,
+    WHODrugCodingResult,
+    WHODrugIngredientItem,
+)
 from apps.execution.routers.doa import router as doa_router
 from apps.execution.routers.documents import router as documents_router
 from apps.execution.routers.eisf import router as eisf_router
@@ -2489,24 +2505,6 @@ async def get_cdisc_export_dictionary(study_id: str) -> Response:
 # ==========================================
 # Medical Dictionary & UCUM Standardization API Contracts
 # ==========================================
-
-from apps.execution.routers.coding_schemas import (
-    DictTypeEnum,
-    JobStatusEnum,
-    JobStatusResponse,
-    PrimarySocFlagEnum,
-    MedDRACodeMatch,
-    MedDRACodingResult,
-    WHODrugATCContext,
-    WHODrugIngredientItem,
-    WHODrugCodeMatch,
-    WHODrugCodingResult,
-    ImpactAnalysisRequest,
-    ImpactAnalysisResponse,
-    ImpactMetrics,
-    CodingAssignmentResponse,
-    CoderActionRequest,
-)
 
 
 class UCUMConvertRequest(BaseModel):
@@ -5271,7 +5269,9 @@ async def list_coding_assignments(
     roles: list[str] = Depends(get_normalized_roles),
 ) -> List[CodingAssignmentResponse]:
     """Lists and filters medical coding assignments."""
-    from apps.execution.coding import list_coding_assignments as list_assignments_service
+    from apps.execution.coding import (
+        list_coding_assignments as list_assignments_service,
+    )
 
     async with db_manager.get_session_maker()() as session:
         assignments = await list_assignments_service(
