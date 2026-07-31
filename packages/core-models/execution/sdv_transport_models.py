@@ -3,6 +3,8 @@
 Requirements: PRD-SYS-001
 """
 
+# Phase 1 — Backend Contracts and Domain Support (PRD-SYS-001)
+
 from typing import List, Optional
 
 from pydantic import BaseModel, Field

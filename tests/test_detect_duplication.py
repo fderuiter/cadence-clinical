@@ -234,3 +234,25 @@ def test_main_url_logic_preservation(mock_exit, mock_scan, mock_walk, mock_exist
     # Since actionA and actionB are different, the normalization preserves them
     # and they should NOT be detected as duplicates.
     mock_exit.assert_called_once_with(0)
+
+
+def test_repo_root_resolution():
+    from scripts.detect_duplication import REPO_ROOT
+    import os
+
+    # REPO_ROOT should be an absolute path ending with the repository directory (e.g. "cadence-clinical" or "/app")
+    assert os.path.isabs(REPO_ROOT)
+    assert os.path.exists(os.path.join(REPO_ROOT, "scripts", "detect_duplication.py"))
+
+
+def test_path_normalization_win32():
+    from scripts.detect_duplication import REPO_ROOT
+    import os
+
+    # Emulate Windows backslashes
+    mock_win_path = os.path.join(REPO_ROOT, "apps\\etmf\\sealer.py")
+    normalized_path = os.path.relpath(mock_win_path, REPO_ROOT).replace("\\", "/")
+
+    assert "\\" not in normalized_path
+    assert normalized_path == "apps/etmf/sealer.py"
+

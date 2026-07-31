@@ -10,6 +10,7 @@ class SemanticAction(str, Enum):
     GRANT_APPROVE = "ctms.grant.approve"
 
     # Existing path-gated Execution actions
+    EXEC_SDV_BULK_SIGNOFF = "execution.sdv.bulk_signoff"
     EXEC_FORM_APPROVE = "execution.form.approve"
     EXEC_FORM_SIGNOFF = "execution.form.signoff"
     EXEC_SUBJECT_UNBLIND = "execution.subject.unblind"
@@ -87,6 +88,12 @@ DETECTION_RULES: List[DetectionRule] = [
         body_conditions={"status": ["APPROVED", "Approved", "approved"]},
     ),
     # Path-only/substring rules
+    DetectionRule(
+        action=SemanticAction.EXEC_SDV_BULK_SIGNOFF,
+        methods=["POST", "PUT", "PATCH", "DELETE"],
+        path_pattern="sdv/bulk-sign-off",
+        is_regex=False,
+    ),
     DetectionRule(
         action=SemanticAction.EXEC_FORM_APPROVE,
         methods=["POST", "PUT", "PATCH", "DELETE"],

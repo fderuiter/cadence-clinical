@@ -260,7 +260,7 @@ const filteredTree = computed(() => {
   border: 1px solid #cbd5e1;
   border-radius: 6px;
   font-size: 0.9rem;
-  outline: none;
+  outline: 2px solid transparent;
   transition: border-color 0.2s;
 }
 
@@ -275,7 +275,7 @@ const filteredTree = computed(() => {
   border-radius: 6px;
   font-size: 0.85rem;
   background-color: #f8fafc;
-  outline: none;
+  outline: 2px solid transparent;
 }
 
 .tree-root-nodes {
