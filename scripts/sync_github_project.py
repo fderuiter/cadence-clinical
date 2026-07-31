@@ -12,6 +12,7 @@ Usage:
 """
 
 import json
+import os
 import re
 import subprocess
 import sys
@@ -46,9 +47,43 @@ SIZE_OPTIONS = {
 }
 
 
+def handle_permission_error(stderr_msg):
+    combined = stderr_msg.lower()
+    patterns = [
+        "resource not accessible by integration",
+        "403",
+        "http 403",
+        "must have admin rights",
+        "viewer can't make query",
+        "could not resolve to a projectv2",
+        "not logged in",
+        "gh auth login",
+        "populate the gh_token",
+        "unauthorized",
+        "forbidden",
+        "permission",
+    ]
+    if any(p in combined for p in patterns):
+        print(
+            "WARNING: GitHub API permission or authentication error occurred.\n"
+            f"Error details: {stderr_msg.strip()}\n"
+            "Skipping automated project/issue synchronization.",
+            file=sys.stderr,
+        )
+        if (
+            os.environ.get("FAIL_ON_PROJECT_SYNC_ERROR") == "true"
+            or os.environ.get("FAIL_ON_RULESET_SYNC_ERROR") == "true"
+        ):
+            sys.exit(1)
+        else:
+            print("Exiting project sync gracefully with code 0.")
+            sys.exit(0)
+
+
 def run_cmd(args):
     res = subprocess.run(args, capture_output=True, text=True)
     if res.returncode != 0:
+        handle_permission_error(res.stderr)
         print(
             f"Command failed: {' '.join(args)}\nError: {res.stderr.strip()}",
             file=sys.stderr,
@@ -64,6 +99,7 @@ def run_gql(query, variables=None):
             cmd.extend(["-F", f"{k}={v}"])
     res = subprocess.run(cmd, capture_output=True, text=True)
     if res.returncode != 0:
+        handle_permission_error(res.stderr)
         print(f"GraphQL Query failed: {res.stderr.strip()}", file=sys.stderr)
         return None
     try:

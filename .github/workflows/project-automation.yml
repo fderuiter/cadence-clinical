@@ -32,6 +32,6 @@ jobs:
 
       - name: Run Project & Issue Sync
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PAT_FDERUITER || secrets.GITHUB_TOKEN }}
         run: |
           python3 scripts/sync_github_project.py
