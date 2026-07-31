@@ -10,7 +10,30 @@ import json
 import os
 import re
 import sys
-from typing import Dict, List, Tuple
+from typing import Dict, List, Set, Tuple
+
+
+def load_whitelist(file_path: str = "/app/duplication_whitelist.json") -> Set[str]:
+    """Loads whitelisted SHA-256 hashes from an external JSON file.
+
+    Args:
+        file_path: Absolute path to the JSON whitelist file.
+
+    Returns:
+        A set of whitelisted block hashes.
+    """
+    if not os.path.exists(file_path):
+        return set()
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if isinstance(data, list):
+                return set(data)
+            elif isinstance(data, dict):
+                return set(data.keys())
+    except Exception as e:
+        print(f"Warning: Failed to load whitelist from {file_path}: {e}")
+    return set()
 
 
 def normalize_line(line: str) -> str:
@@ -177,10 +200,14 @@ def main() -> None:
             seen_blocks[block_hash].append((file_path, start_line, end_line, preview))
 
     # 3. Find duplications
+    whitelist_hashes = load_whitelist()
     duplicates_found = []
     unique_dups_reported = set()
 
     for block_hash, locations in seen_blocks.items():
+        if block_hash in whitelist_hashes:
+            continue
+
         if len(locations) > 1:
             # Check if any duplication is within our target files (if in target_files_mode)
             if target_files_mode:
@@ -216,66 +243,21 @@ def main() -> None:
                         if p_file1 == p_file2:
                             continue
 
-                        pair_set = {p_file1, p_file2}
-                        if any(
-                            pair_set.issubset(ignored)
-                            for ignored in [
-                                {
-                                    "apps/etmf/sealer.py",
-                                    "apps/execution/database/sealer.py",
-                                },
-                                {
-                                    "apps/gateway/main.py",
-                                    "packages/security/middleware.py",
-                                },
-                                {
-                                    "apps/interop/main.py",
-                                    "apps/notifications/main.py",
-                                    "apps/econsent/main.py",
-                                    "apps/eisf/main.py",
-                                    "apps/quality/main.py",
-                                    "apps/safety/main.py",
-                                    "apps/ctms/main.py",
-                                    "apps/etmf/main.py",
-                                    "apps/org/main.py",
-                                    "apps/tickets/main.py",
-                                },
-                                {
-                                    "apps/web/src/api/terminologyClient.js",
-                                    "apps/web/src/api/soaClient.js",
-                                },
-                                {
-                                    "packages/core-models/audit.py",
-                                    "packages/core-models/sdtm/models.py",
-                                },
-                                {
-                                    "apps/execution/biostat/adsl.py",
-                                    "apps/execution/biostat/extractors.py",
-                                },
-                                {
-                                    "apps/web/index.js",
-                                    "apps/web/src/stores/clinical.js",
-                                    "apps/web/src/views/MdrView.vue",
-                                    "apps/web/src/views/RulesView.vue",
-                                },
-                            ]
-                        ):
-                            continue
-
                         dup_key = tuple(
                             sorted([f"{p_file1}:{loc1[1]}", f"{p_file2}:{loc2[1]}"])
                         )
                         if dup_key not in unique_dups_reported:
                             unique_dups_reported.add(dup_key)
-                            duplicates_found.append((loc1, loc2))
+                            duplicates_found.append((block_hash, loc1, loc2))
 
     # Write summary
     summary_data = {"duplicates": []}
-    for loc1, loc2 in duplicates_found:
+    for bh, loc1, loc2 in duplicates_found:
         p_file1 = os.path.relpath(loc1[0], "/app")
         p_file2 = os.path.relpath(loc2[0], "/app")
         summary_data["duplicates"].append(
             {
+                "hash": bh,
                 "loc1": {"file": p_file1, "start": loc1[1], "end": loc1[2]},
                 "loc2": {"file": p_file2, "start": loc2[1], "end": loc2[2]},
                 "preview": loc1[3],
@@ -293,10 +275,11 @@ def main() -> None:
             f"Detected {len(duplicates_found)} duplicate blocks of {window_size}+ lines:\n"
         )
 
-        for loc1, loc2 in duplicates_found:
+        for bh, loc1, loc2 in duplicates_found:
             p_file1 = os.path.relpath(loc1[0], "/app")
             p_file2 = os.path.relpath(loc2[0], "/app")
-            print(f"  - Block 1: \033[93m{p_file1}\033[0m (Lines {loc1[1]}-{loc1[2]})")
+            print(f"  - Hash: \033[94m{bh}\033[0m")
+            print(f"    Block 1: \033[93m{p_file1}\033[0m (Lines {loc1[1]}-{loc1[2]})")
             print(f"    Block 2: \033[93m{p_file2}\033[0m (Lines {loc2[1]}-{loc2[2]})")
             print("    Code Preview:")
             for line in loc1[3].split("\n"):

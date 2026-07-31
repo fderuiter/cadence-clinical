@@ -234,3 +234,117 @@ def test_main_url_logic_preservation(mock_exit, mock_scan, mock_walk, mock_exist
     # Since actionA and actionB are different, the normalization preserves them
     # and they should NOT be detected as duplicates.
     mock_exit.assert_called_once_with(0)
+
+
+def test_load_whitelist_success(tmp_path):
+    # Test loading whitelist from a valid JSON array
+    whitelist_file = tmp_path / "whitelist.json"
+    hashes = ["hash1", "hash2", "hash3"]
+    import json
+
+    whitelist_file.write_text(json.dumps(hashes))
+
+    from scripts.detect_duplication import load_whitelist
+
+    loaded = load_whitelist(str(whitelist_file))
+    assert loaded == {"hash1", "hash2", "hash3"}
+
+
+def test_load_whitelist_missing():
+    # Test loading whitelist from a missing file path returns empty set
+    from scripts.detect_duplication import load_whitelist
+
+    loaded = load_whitelist("/nonexistent/file.json")
+    assert loaded == set()
+
+
+@patch("sys.argv", ["scripts/detect_duplication.py"])
+@patch("os.path.exists")
+@patch("os.walk")
+@patch("scripts.detect_duplication.scan_file_for_lines")
+@patch("scripts.detect_duplication.load_whitelist")
+@patch("sys.exit")
+def test_main_with_whitelisted_duplicates(
+    mock_exit, mock_load_whitelist, mock_scan, mock_walk, mock_exists
+):
+    mock_exit.side_effect = SystemExit
+
+    # Mock file discovery
+    mock_exists.side_effect = lambda path: path in ["/app/apps", "/app/packages"]
+    mock_walk.side_effect = lambda path: (
+        [("/app/apps/serviceA", [], ["file1.js"])]
+        if "apps" in path
+        else [("/app/packages/libB", [], ["file2.js"])]
+    )
+
+    # Mock identical blocks (15 lines)
+    lines_file1 = [("identical_line", i, f"line {i}") for i in range(1, 20)]
+    lines_file2 = [("identical_line", i, f"line {i}") for i in range(1, 20)]
+    mock_scan.side_effect = lambda path: (
+        lines_file1 if "file1.js" in path else lines_file2
+    )
+
+    # First run: Whitelist is empty -> Should fail (exit 1)
+    mock_load_whitelist.return_value = set()
+    with pytest.raises(SystemExit):
+        main()
+    mock_exit.assert_called_with(1)
+    mock_exit.reset_mock()
+
+    # Second run: Whitelist contains the hash of this identical block -> Should succeed (exit 0)
+    # Let's calculate the expected hash of the block:
+    # 15 consecutive lines of "identical_line" joined with "\n"
+    import hashlib
+
+    expected_block = "\n".join(["identical_line"] * 15)
+    expected_hash = hashlib.sha256(expected_block.encode("utf-8")).hexdigest()
+
+    mock_load_whitelist.return_value = {expected_hash}
+    with pytest.raises(SystemExit):
+        main()
+    mock_exit.assert_called_with(0)
+
+
+@patch("sys.argv", ["scripts/detect_duplication.py"])
+@patch("os.path.exists")
+@patch("os.walk")
+@patch("scripts.detect_duplication.scan_file_for_lines")
+@patch("scripts.detect_duplication.load_whitelist")
+@patch("sys.exit")
+def test_main_with_mixed_duplicates(
+    mock_exit, mock_load_whitelist, mock_scan, mock_walk, mock_exists
+):
+    mock_exit.side_effect = SystemExit
+
+    # Mock file discovery
+    mock_exists.side_effect = lambda path: path in ["/app/apps", "/app/packages"]
+    mock_walk.side_effect = [
+        [("/app/apps/serviceA", [], ["file1.js", "file3.js"])],
+        [("/app/packages/libB", [], ["file2.js", "file4.js"])],
+    ]
+
+    # File 1 & 2 have "identical_line" -> whitelisted
+    lines_file1 = [("identical_line", i, f"line {i}") for i in range(1, 20)]
+    lines_file2 = [("identical_line", i, f"line {i}") for i in range(1, 20)]
+
+    # File 3 & 4 have "unrelated_duplicate" -> NOT whitelisted
+    lines_file3 = [("unrelated_duplicate", i, f"unrelated {i}") for i in range(1, 20)]
+    lines_file4 = [("unrelated_duplicate", i, f"unrelated {i}") for i in range(1, 20)]
+
+    mock_scan.side_effect = [lines_file1, lines_file2, lines_file3, lines_file4]
+
+    import hashlib
+
+    expected_block_whitelisted = "\n".join(["identical_line"] * 15)
+    whitelisted_hash = hashlib.sha256(
+        expected_block_whitelisted.encode("utf-8")
+    ).hexdigest()
+
+    # Whitelist only contains the first block's hash
+    mock_load_whitelist.return_value = {whitelisted_hash}
+
+    with pytest.raises(SystemExit):
+        main()
+
+    # Should exit with 1 because the second duplicate block (unrelated_duplicate) is not whitelisted!
+    mock_exit.assert_called_with(1)

@@ -23,7 +23,7 @@ repos:
     hooks:
       - id: detect-secrets
         args: ['--baseline', '.secrets.baseline']
-        exclude: 'pnpm-lock.yaml|uv.lock|tests/fixtures/keys/'
+        exclude: 'pnpm-lock.yaml|uv.lock|tests/fixtures/keys/|duplication_whitelist\.json'
         stages: [pre-commit, pre-push, manual]
 
   - repo: local
@@ -67,6 +67,7 @@ repos:
         entry: uv run python -m packages.deid.cli
         language: system
         files: \.(py|js|ts|tsx|jsx|json|md|log|txt)$
+        exclude: ^duplication_whitelist\.json$
         pass_filenames: true
 
       # -----------------------------------------------------------------------
