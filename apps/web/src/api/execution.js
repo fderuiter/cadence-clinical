@@ -12,8 +12,6 @@ export const executionService = {
     return apiClient.post(`/api/v1/execution/subjects`, body, options);
   },
 
-
-
   /**
    * Lists clinical queries matching filters.
    */

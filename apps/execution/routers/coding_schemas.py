@@ -1,23 +1,23 @@
 from datetime import datetime
 from enum import Enum
-from typing import Any, List, Optional, Union
+from typing import Any, List, Literal, Optional, Union
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, ValidationInfo, field_validator, model_validator
 
 
 # Enums
 class DictTypeEnum(str, Enum):
-    MEDDRA = "MEDDRA"
-    WHODRUG = "WHODRUG"
-    LOINC = "LOINC"
-    SNOMED = "SNOMED"
+    MEDDRA = DictionaryType.MEDDRA.value
+    WHODRUG = DictionaryType.WHODRUG.value
+    LOINC = DictionaryType.LOINC.value
+    SNOMED = DictionaryType.SNOMED.value
 
 
 class JobStatusEnum(str, Enum):
-    PENDING = "PENDING"
-    PROCESSING = "PROCESSING"
-    COMPLETED = "COMPLETED"
-    FAILED = "FAILED"
+    PENDING = ImportState.PENDING.value
+    PROCESSING = ImportState.PROCESSING.value
+    COMPLETED = ImportState.COMPLETED.value
+    FAILED = ImportState.FAILED.value
 
 
 class PrimarySocFlagEnum(str, Enum):
@@ -31,6 +31,13 @@ class DictionaryImportRequest(BaseModel):
     version: str
     parse_multilingual: bool = True
 
+    @field_validator("version")
+    @classmethod
+    def validate_version_non_empty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Version must be a non-empty string.")
+        return v
+
 
 class CoderActionRequest(BaseModel):
     action: str  # "ACCEPT" or "OVERRIDE" or "QUERY"
@@ -38,6 +45,19 @@ class CoderActionRequest(BaseModel):
     term: Optional[str] = None  # required for OVERRIDE
     suggestion_index: Optional[int] = None  # optional for ACCEPT
     reason_for_change: Optional[str] = None  # required for OVERRIDE
+
+    @field_validator("reason_for_change")
+    @classmethod
+    def validate_reason_for_change_field(
+        cls, v: Optional[str], info: ValidationInfo
+    ) -> Optional[str]:
+        action_upper = (info.data.get("action") or "").upper()
+        if action_upper == "OVERRIDE":
+            if not v or not v.strip():
+                raise ValueError(
+                    "reason_for_change is required for OVERRIDE action and cannot be empty."
+                )
+        return v
 
     @model_validator(mode="after")
     def validate_override_fields(self) -> "CoderActionRequest":
@@ -55,8 +75,16 @@ class CoderActionRequest(BaseModel):
 
 
 class ImpactAnalysisRequest(BaseModel):
-    dictionary_type: str
+    dictionary_type: DictTypeEnum
     new_version: str
+
+    @model_validator(mode="after")
+    def validate_dictionary_type(self) -> "ImpactAnalysisRequest":
+        if self.dictionary_type not in (DictTypeEnum.MEDDRA, DictTypeEnum.WHODRUG):
+            raise ValueError(
+                f"Unsupported dictionary type: {self.dictionary_type.value}"
+            )
+        return self
 
 
 # Response Models
@@ -88,7 +116,7 @@ class MedDRAMatch(BaseModel):
 
 
 class MedDRACodeLookupResponse(BaseModel):
-    status: str
+    status: Literal["AUTO-CODED", "SUGGESTIONS", "UNCODABLE"]
     matches: List[MedDRAMatch]
 
 
@@ -97,47 +125,40 @@ MedDRACodeMatch = MedDRAMatch
 MedDRACodingResult = MedDRACodeLookupResponse
 
 
-class WHODrugATCContext(BaseModel):
-    atc_code: str
-    description: str
-
-
 class WHODrugIngredientItem(BaseModel):
-    ingredient_code: str
-    ingredient_name: str
+    code: Optional[str] = None
+    name: Optional[str] = None
+    ingredient_code: Optional[str] = None
+    ingredient_name: Optional[str] = None
+
+
+class WHODrugATCContext(BaseModel):
+    code: Optional[str] = None
+    text: Optional[str] = None
+    atc_code: Optional[str] = None
+    description: Optional[str] = None
 
 
 class WHODrugMatch(BaseModel):
-    drug_code: str
-    preferred_name: str
+    code: Optional[str] = None
+    name: Optional[str] = None
+    drug_code: Optional[str] = None
+    preferred_name: Optional[str] = None
     drug_name: Optional[str] = None
     score: float
-    atc_context: List[WHODrugATCContext] = []
     ingredients: List[WHODrugIngredientItem] = []
+    atc: List[WHODrugATCContext] = []
+    atc_context: List[WHODrugATCContext] = []
 
 
 class WHODrugCodeLookupResponse(BaseModel):
-    status: str
+    status: Literal["AUTO-CODED", "SUGGESTIONS", "UNCODABLE"]
     matches: List[WHODrugMatch]
 
 
 # For backward compatibility
 WHODrugCodeMatch = WHODrugMatch
 WHODrugCodingResult = WHODrugCodeLookupResponse
-
-
-class ImpactMetrics(BaseModel):
-    unchanged: int
-    reclassified: int
-    deprecated: int
-    skipped: int
-
-
-class ImpactAnalysisResponse(BaseModel):
-    status: str
-    dictionary_type: str
-    new_version: str
-    metrics: ImpactMetrics
 
 
 class CodingAssignmentResponse(BaseModel):
@@ -159,3 +180,21 @@ class CodingAssignmentResponse(BaseModel):
     domain: Optional[str] = None
     version: int
     is_deleted: bool
+
+
+class ImpactMetrics(BaseModel):
+    unchanged: int = 0
+    reclassified: int = 0
+    deprecated: int = 0
+    skipped: int = 0
+    verbatim_terms_affected: Optional[int] = None
+    coded_terms_affected: Optional[int] = None
+    uncodable_terms: Optional[int] = None
+
+
+class ImpactAnalysisResponse(BaseModel):
+    status: Literal["success"]
+    dictionary_type: DictTypeEnum
+    new_version: str
+    metrics: ImpactMetrics
+

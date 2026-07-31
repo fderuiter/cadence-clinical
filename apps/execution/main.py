@@ -24,7 +24,7 @@ from fastapi import (
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from protocol_version_ref import ProtocolVersionRef
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, ValidationError, model_validator
 from sqlalchemy import func, select, text
 
 from apps.execution.biostat import (
@@ -2385,6 +2385,7 @@ from apps.execution.routers.coding_schemas import (  # noqa: E402
     CoderActionRequest,
     CodingAssignmentResponse,
     DictTypeEnum,
+    DictionaryImportRequest,
     ImpactAnalysisRequest,
     ImpactAnalysisResponse,
     ImpactMetrics,
@@ -2476,16 +2477,25 @@ async def import_dictionary(
 
     Satisfies Epic #109 / Issue #1122 / Phase 16: Dictionary Ingestion & Persistence.
     """
+    try:
+        DictionaryImportRequest(
+            dictionary_type=dictionary_type,
+            version=version,
+            parse_multilingual=parse_multilingual,
+        )
+    except ValidationError as e:
+        error_msg = e.errors()[0]["msg"] if e.errors() else str(e)
+        if error_msg.startswith("Value error, "):
+            error_msg = error_msg[len("Value error, "):]
+        raise HTTPException(
+            status_code=400,
+            detail=error_msg,
+        )
+
     if dictionary_type not in (DictTypeEnum.MEDDRA, DictTypeEnum.WHODRUG):
         raise HTTPException(
             status_code=400,
             detail=f"Import not supported for dictionary type: {dictionary_type.value}",
-        )
-
-    if not version or not version.strip():
-        raise HTTPException(
-            status_code=400,
-            detail="Version must be a non-empty string.",
         )
 
     # 1. Persist the uploaded file to secure temporary storage
