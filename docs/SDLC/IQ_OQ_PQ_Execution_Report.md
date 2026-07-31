@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1737
-- **Passed:** 1737 🟢
+- **Total Automated Test Cases Run:** 1738
+- **Passed:** 1738 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1649,6 +1649,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_subject_state_transitions` | `tests.test_subject_randomization_lifecycle` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_unblinding_and_withdrawal_behavior` | `tests.test_subject_randomization_lifecycle` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_generic_natural_deduplication_key` | `tests.test_sync_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_reconcile_records_with_generic_dictionary_payload` | `tests.test_sync_engine` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_validation_failures` | `tests.test_sync_engine` | PRD-EDC-008 | 🟢 PASSED | < 1s |
 | `test_signature_validation_happy_path` | `tests.test_sync_engine` | PRD-EDC-008 | 🟢 PASSED | < 1s |
 | `test_strategy_client_wins_existing` | `tests.test_sync_engine` | PRD-EDC-008 | 🟢 PASSED | < 1s |
