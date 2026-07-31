@@ -11,6 +11,8 @@ Based on the executed automated verification suite, the platform meets all prede
 ### Validation Result Summary
 - **Total Automated Test Cases Run:** 1682
 - **Passed:** 1682 🟢
+- **Total Automated Test Cases Run:** 1626
+- **Passed:** 1626 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -44,6 +46,7 @@ annotated-doc            0.0.4
 annotated-types          0.7.0
 anyio                    4.14.2
 asyncpg                  0.31.0
+attrs                    26.1.0
 babel                    2.18.0
 bandit                   1.9.4
 beautifulsoup4           4.15.0
@@ -85,6 +88,8 @@ identify                 2.6.19
 idna                     3.18
 iniconfig                2.3.0
 jinja2                   3.1.6
+jsonschema               4.26.0
+jsonschema-specifications 2025.9.1
 license-expression       30.4.4
 lxml                     6.1.1
 markdown-it-py           4.2.0
@@ -134,8 +139,10 @@ python-slugify           8.0.4
 pytz                     2026.2
 pyyaml                   6.0.3
 rapidfuzz                3.14.5
+referencing              0.37.0
 requests                 2.34.2
 rich                     15.0.0
+rpds-py                  2026.6.3
 rsa                      4.9.1
 ruff                     0.15.22
 six                      1.17.0
@@ -213,7 +220,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_extra_response_properties_pass_validation` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_markdown_spec_extract_and_parse` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_markdown_spec_syntax_checks_malformed_yaml` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_undocumented_parameter_fails_parity_check` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_undocumented_route_fails_parity_check` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validation_fails_on_route_path_mismatch` | `tests.test_api_contract_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_artifact_cascade_engine_generation` | `tests.test_artifact_cascade` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -416,6 +422,14 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_validator_missing_required_variables` | `tests.test_dataset_json` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validator_null_flavor_and_stat_reasnd_consistency` | `tests.test_dataset_json` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_validator_supp_dataset_linkage_and_structure` | `tests.test_dataset_json` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_build_dataset_json_validation` | `tests.test_dataset_json_builder` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_build_domain_dataset_dm` | `tests.test_dataset_json_builder` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_conformance_validation_float_data_type_error` | `tests.test_dataset_json_builder` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_conformance_validation_invalid_data_type` | `tests.test_dataset_json_builder` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_conformance_validation_missing_mandatory_vars` | `tests.test_dataset_json_builder` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_conformance_validation_missing_sequence_non_dm` | `tests.test_dataset_json_builder` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_conformance_validation_string_data_type_error` | `tests.test_dataset_json_builder` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_dynamic_fallback_unknown_domain` | `tests.test_dataset_json_builder` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_basic_detection_results` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cli_get_line_and_col` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cli_load_gitignore_patterns` | `tests.test_deid` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -564,6 +578,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_doa_delegation_record_validation` | `tests.test_doa_models` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ctms_doa_lifecycle_flow` | `tests.test_doa_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ctms_doa_rbac_violations` | `tests.test_doa_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_doa_historical_audit_trail_logging` | `tests.test_doa_audit_suite` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_doa_assignment_record_creation` | `tests.test_doa_models` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_doa_assignment_and_signoff_api_flow` | `tests.test_doa_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_doa_service_assignment_and_pi_signoff` | `tests.test_doa_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_complete_doa_workflow_lifecycle` | `tests.test_doa_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_document_renderer_render_docx` | `tests.test_document_renderer` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -664,6 +681,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_get_site_eisf_binder_authorized` | `tests.test_eisf_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_site_eisf_binder_unauthorized_cross_site` | `tests.test_eisf_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_upload_and_get_site_document` | `tests.test_eisf_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_get_site_regulatory_binder_endpoint` | `tests.test_eisf_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_upload_eisf_document_post_endpoint` | `tests.test_eisf_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_upload_and_watermark` | `tests.test_eisf_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_completeness_site_isolation` | `tests.test_eisf_site_scope` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_external_monitor_role` | `tests.test_eisf_site_scope` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1009,11 +1028,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_lab_reference_range_audit_and_triggers` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_lab_reference_range_crud_and_precision` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_schema_evolution_migration_upgrade` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001, PRD-QRY-005 | 🟢 PASSED | < 1s |
-| `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_scrambled_sequence` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_valid` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ledger_sealing_and_validation` | `tests.test_ledger_and_triggers` | PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_out_of_band_update_triggers_audit_entry` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_prevent_audit_ledger_seals_mutation` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |

@@ -90,6 +90,7 @@ dependencies = [
     "docxtpl>=0.20.2",
     "docxcompose>=2.2.0",
     "sqlmodel>=0.0.39",
+    "jsonschema>=4.20.0",
 ]
 
 [project.scripts]
