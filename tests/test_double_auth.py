@@ -1,19 +1,21 @@
 import time
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import httpx
 import pytest
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from jose import jwt
 
-from apps.gateway.main import app, generate_signature, GATEWAY_SECRET
-from packages.security.middleware import GatewayAuthMiddleware, require_gateway_permission
-from packages.security.permissions import PermissionEnum
+from apps.gateway.main import GATEWAY_SECRET, app, generate_signature
+from packages.security.middleware import (
+    GatewayAuthMiddleware,
+)
 
 
-def test_signature_verification_keycloak_token_secret(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_signature_verification_keycloak_token_secret(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """
     Test signature verification route when KEYCLOAK_CLIENT_SECRET is configured.
     """
@@ -45,7 +47,9 @@ def test_signature_verification_keycloak_token_secret(monkeypatch: pytest.Monkey
         assert "sig_token" in data
 
 
-def test_signature_verification_role_insufficient_auth(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_signature_verification_role_insufficient_auth(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """
     Test signature verification route when user lacks permitted signing role.
     """
@@ -75,14 +79,16 @@ def test_signature_verification_role_insufficient_auth(monkeypatch: pytest.Monke
         assert response.json()["detail"] == "ROLE_INSUFFICIENT"
 
 
-def test_signature_verification_token_expiration(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_signature_verification_token_expiration(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """
     # @Req:PRD-QRY-005
     # @req:PRD-QRY-005
     Test that signature verification tokens expire and are rejected after 60s.
     """
     monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
-    token = jwt.encode(
+    jwt.encode(
         {
             "sub": "cra_user_1",
             "preferred_username": "cra_user_1",
@@ -143,7 +149,9 @@ def test_signature_verification_token_expiration(monkeypatch: pytest.MonkeyPatch
     assert response.json()["detail"] == "REAUTHENTICATION_REQUIRED"
 
 
-def test_signature_verification_replay_attack_prevention(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_signature_verification_replay_attack_prevention(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """
     # @Req:PRD-QRY-005
     # @req:PRD-QRY-005

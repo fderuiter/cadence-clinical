@@ -489,7 +489,11 @@ def receive_before_flush(session: Session, flush_context, instances):
             )
 
         # Check form-level locks
-        form_id = getattr(obj, "form_id", None) or getattr(obj, "form", None) or getattr(obj, "page_id", None)
+        form_id = (
+            getattr(obj, "form_id", None)
+            or getattr(obj, "form", None)
+            or getattr(obj, "page_id", None)
+        )
         if form_id is not None and TrialLockManager.is_form_locked(str(form_id)):
             raise PermissionError(
                 f"Form {form_id} is currently locked in a read-only state."

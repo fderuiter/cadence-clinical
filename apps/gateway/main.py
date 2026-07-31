@@ -745,7 +745,9 @@ async def signature_verification(request: Request, body: SignatureVerificationRe
     )
 
     if not is_test_env:
-        token_url = os.getenv("KEYCLOAK_TOKEN_URL", JWKS_URL.replace("/certs", "/token"))
+        token_url = os.getenv(
+            "KEYCLOAK_TOKEN_URL", JWKS_URL.replace("/certs", "/token")
+        )
         try:
             data = {
                 "grant_type": "password",
@@ -916,9 +918,7 @@ async def proxy_requests(request: Request, path: str) -> Response:
         path_lower
     )
 
-    sig_token = request.headers.get("x-sig-token") or request.headers.get(
-        "X-Sig-Token"
-    )
+    sig_token = request.headers.get("x-sig-token") or request.headers.get("X-Sig-Token")
 
     if is_signature_gated and is_mutation:
         from packages.security.middleware import verify_sig_token
