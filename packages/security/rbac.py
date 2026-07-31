@@ -208,6 +208,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "eisf_document": {"create", "read", "update", "delete", "sync"},
         # Medical Coding
         "medical_coding": {"create", "read", "update"},
+        "lab_range": {"create", "read", "update", "delete"},
     },
     ROLE_SPONSOR_DESIGNER: {
         "study_design": {"create", "read", "update", "delete", "approve", "reorder"},
@@ -303,6 +304,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "eisf_document": {"create", "read", "update", "delete", "sync"},
         # Medical Coding
         "medical_coding": {"create", "read", "update"},
+        "lab_range": {"create", "read", "update", "delete"},
     },
     ROLE_SPONSOR_MM: {
         "study_design": {"read"},
@@ -333,6 +335,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
             "update",
         },  # 'Ans' (Answer query) maps to update/read
         "sdv": {"read"},
+        "lab_range": {"read"},
         "system_audit_logs": {"read"},
         "regulatory_form": {"create", "read", "sign"},
         "training_log": {"create", "read", "sign"},
@@ -359,6 +362,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
             "update",
         },  # 'C/R/U (Draft)' maps to create/read/update
         "query_lifecycle": {"read", "update"},  # 'Ans' maps to update/read
+        "lab_range": {"read"},
         "system_audit_logs": {"read"},
         "regulatory_form": {"create", "read", "sign"},
         "training_log": {"create", "read", "sign"},
@@ -403,6 +407,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "eisf_document": {"create", "read", "update", "delete", "sync"},
         # Medical Coding
         "medical_coding": {"read"},
+        "lab_range": {"create", "read", "update", "delete"},
     },
     "monitor": {
         "study_design": {"read"},
@@ -425,6 +430,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "quality_event": {"create", "read", "update"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
+        "lab_range": {"create", "read", "update", "delete"},
     },
     ROLE_SUBJECT: {
         "ecrf_data_entry": {"create", "update"},  # 'Diary' maps to create/update
@@ -554,6 +560,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "quality_audit_logs": {"read"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
+        "lab_range": {"create", "read", "update", "delete"},
     },
     "quality_manager": {
         "quality_event": {"create", "read", "update", "delete", "investigate"},
