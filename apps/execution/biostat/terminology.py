@@ -1,4 +1,3 @@
-# Phase 15: SDTM Domain Extraction Engine
 from typing import List, Optional, Union
 
 from sdtm.enums import AESeverity, Race, Sex

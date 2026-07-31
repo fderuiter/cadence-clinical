@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 import httpx
 from eligibility import evaluate_eligibility
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -167,6 +167,15 @@ class OfflineSyncMarkers(BaseModel):
         description="Optional per-field UTC timestamps indicating when each field in 'answers' was modified",
     )
 
+    @field_validator("conflict_strategy", mode="before")
+    @classmethod
+    def normalize_conflict_strategy(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            v_upper = v.upper()
+            if v_upper in ConflictStrategy.__members__:
+                return ConflictStrategy[v_upper]
+        return v
+
 
 class EPROSubmissionPayload(BaseModel):
     """
@@ -267,61 +276,8 @@ async def resolve_and_save_submission(
     res_assign = await session.execute(stmt_assign)
     assign = res_assign.scalars().first()
 
-    target_exists = inst is not None and assign is not None
-
-    # 3. Normal / Conflict flow: Check for existing EPROSubmission
-    stmt = (
-        select(EPROSubmission)
-        .where(EPROSubmission.subject_id == payload.subject_id)
-        .where(EPROSubmission.diary_id == payload.diary_id)
-    )
-    result = await session.execute(stmt)
-    existing: Optional[EPROSubmission] = result.scalars().first()
-
-    strategy = payload.offline_sync_markers.conflict_strategy
-    if isinstance(strategy, ConflictStrategy):
-        strategy = strategy.value
-    strategy = strategy.upper()
-
-    # Reconstruct existing data & metadata if existing record exists
-    if existing:
-        existing_markers = existing.offline_sync_markers or {}
-        existing_ts_raw = existing_markers.get("timestamps") or {}
-        existing_timestamps = {}
-        for k in existing.answers.keys():
-            t_val = existing_ts_raw.get(k)
-            if t_val:
-                if isinstance(t_val, str):
-                    existing_timestamps[k] = datetime.fromisoformat(t_val)
-                else:
-                    existing_timestamps[k] = t_val
-            else:
-                existing_timestamps[k] = existing.device_timestamp
-
-        existing_metadata = SyncMetadata(
-            timestamps=existing_timestamps,
-            modified_by=existing_markers.get("client_id", "server"),
-            signature=existing_markers.get("signature"),
-        )
-        existing_data = existing.answers
-    else:
-        existing_data = {}
-        existing_metadata = None
-
-    # Delegate reconciliation to sync engine
-    res = reconcile_records(
-        existing_data=existing_data,
-        existing_metadata=existing_metadata,
-        incoming_record=incoming_record,
-        strategy=strategy,
-        secret=secret_bytes,
-        require_signature=False,
-        target_exists=target_exists,
-    )
-
-    status = res["status"]
-
-    if status == "STRUCTURAL_CONFLICT":
+    if not inst or not assign:
+        # Structural conflict!
         markers_dict = payload.offline_sync_markers.model_dump(mode="json")
 
         defeated_sub = EPROSubmissionDefeated(
@@ -329,7 +285,6 @@ async def resolve_and_save_submission(
             diary_id=payload.diary_id,
             device_timestamp=payload.device_timestamp,
             answers=payload.answers,
-            winning_answers=None,
             offline_sync_markers=markers_dict,
             status="Defeated by online-merge conflict resolution",
         )
@@ -379,6 +334,56 @@ async def resolve_and_save_submission(
             },
         }
 
+    # 3. Normal / Conflict flow: Check for existing EPROSubmission
+    stmt = (
+        select(EPROSubmission)
+        .where(EPROSubmission.subject_id == payload.subject_id)
+        .where(EPROSubmission.diary_id == payload.diary_id)
+    )
+    result = await session.execute(stmt)
+    existing: Optional[EPROSubmission] = result.scalars().first()
+
+    strategy = payload.offline_sync_markers.conflict_strategy
+    if isinstance(strategy, ConflictStrategy):
+        strategy = strategy.value
+    strategy = strategy.upper()
+
+    # Reconstruct existing data & metadata if existing record exists
+    if existing:
+        existing_markers = existing.offline_sync_markers or {}
+        existing_ts_raw = existing_markers.get("timestamps") or {}
+        existing_timestamps = {}
+        for k in existing.answers.keys():
+            t_val = existing_ts_raw.get(k)
+            if t_val:
+                if isinstance(t_val, str):
+                    existing_timestamps[k] = datetime.fromisoformat(t_val)
+                else:
+                    existing_timestamps[k] = t_val
+            else:
+                existing_timestamps[k] = existing.device_timestamp
+
+        existing_metadata = SyncMetadata(
+            timestamps=existing_timestamps,
+            modified_by=existing_markers.get("client_id", "server"),
+            signature=existing_markers.get("signature"),
+        )
+        existing_data = existing.answers
+    else:
+        existing_data = {}
+        existing_metadata = None
+
+    # Delegate reconciliation to sync engine
+    res = reconcile_records(
+        existing_data=existing_data,
+        existing_metadata=existing_metadata,
+        incoming_record=incoming_record,
+        strategy=strategy,
+        secret=secret_bytes,
+        require_signature=False,
+    )
+
+    status = res["status"]
     reconciled_metadata: SyncMetadata = res["metadata"]
 
     # Format timestamps back into offline_sync_markers metadata for persistence
@@ -398,6 +403,8 @@ async def resolve_and_save_submission(
             answers=res["data"],
             offline_sync_markers=markers_dict,
             sync_status="RESOLVED",
+            created_by=user_id,
+            reason_for_change=change_reason or "ePRO mobile submission",
             version_index=1,
         )
         session.add(new_sub)
@@ -441,7 +448,6 @@ async def resolve_and_save_submission(
             diary_id=existing.diary_id,
             device_timestamp=existing.device_timestamp,
             answers=existing.answers,
-            winning_answers=payload.answers,
             offline_sync_markers=existing.offline_sync_markers,
             status="Defeated by online-merge conflict resolution",
         )
@@ -452,6 +458,7 @@ async def resolve_and_save_submission(
         existing.offline_sync_markers = markers_dict
         existing.version_index += 1
         existing.sync_status = "RESOLVED"
+        existing.reason_for_change = change_reason or "ePRO client-wins update"
         session.add(existing)
         await session.flush()
 
@@ -495,7 +502,6 @@ async def resolve_and_save_submission(
             diary_id=payload.diary_id,
             device_timestamp=payload.device_timestamp,
             answers=payload.answers,
-            winning_answers=existing.answers,
             offline_sync_markers=markers_dict,
             status="Defeated by online-merge conflict resolution",
         )
@@ -508,6 +514,8 @@ async def resolve_and_save_submission(
             answers=payload.answers,
             offline_sync_markers=markers_dict,
             sync_status="CONFLICT_IGNORED",
+            created_by=user_id,
+            reason_for_change=change_reason or "ePRO server-wins ignored",
             version_index=1,
         )
         session.add(conflict_sub)
@@ -553,7 +561,6 @@ async def resolve_and_save_submission(
             diary_id=existing.diary_id,
             device_timestamp=existing.device_timestamp,
             answers=existing.answers,
-            winning_answers=res["data"],
             offline_sync_markers=existing.offline_sync_markers,
             status="Defeated by online-merge conflict resolution",
         )
@@ -564,6 +571,7 @@ async def resolve_and_save_submission(
         existing.offline_sync_markers = markers_dict
         existing.version_index += 1
         existing.sync_status = "RESOLVED"
+        existing.reason_for_change = change_reason or "ePRO merge update"
         session.add(existing)
         await session.flush()
 
