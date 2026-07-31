@@ -279,10 +279,17 @@ class ConsentFormRecord(AuditedModel):
 
     __tablename__ = "consent_form_records"
 
-    subject_id: Mapped[str] = mapped_column(String(255), nullable=False)
-    icf_version_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    subject_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    icf_version_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    printed_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    relationship_to_subject: Mapped[Optional[str]] = mapped_column(
+        String(50), nullable=True
+    )
+    signature_svg: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    otp_auth_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     status: Mapped[str] = mapped_column(String(50), default="PENDING", nullable=False)
     signed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
 
 class ConsentSignature(AuditedModel):
@@ -296,16 +303,30 @@ class ConsentSignature(AuditedModel):
     subject_id: Mapped[str] = mapped_column(String(255), nullable=False)
     icf_version_id: Mapped[str] = mapped_column(String(100), nullable=False)
     printed_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    signature_svg_data: Mapped[str] = mapped_column(String, nullable=False)
+    signature_svg_data: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    signature_svg: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     otp_auth_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     meaning: Mapped[str] = mapped_column(
-        String(255), nullable=False, default="I agree to participate in this research study"
+        String(255),
+        nullable=False,
+        default="I agree to participate in this research study",
     )
-    cryptographic_token: Mapped[str] = mapped_column(String(255), nullable=False)
+    cryptographic_token: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True
+    )
+    verification_hash: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    signed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     timestamp: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now, nullable=False
+        DateTime, server_default=func.now(), nullable=False
     )
     status: Mapped[str] = mapped_column(String(50), default="SIGNED", nullable=False)
+    created_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, server_default=func.now(), nullable=True
+    )
+    created_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    reason_for_change: Mapped[Optional[str]] = mapped_column(
+        String(1000), nullable=True
+    )
 
 
 @event.listens_for(ConsentSignature, "before_update")
@@ -327,7 +348,9 @@ def lock_consent_form_record_update(mapper, connection, target):
     was_signed = "SIGNED" in status_history.deleted
 
     is_currently_signed = getattr(target, "status") == "SIGNED"
-    is_transitioning_to_signed = is_currently_signed and "PENDING" in status_history.deleted
+    is_transitioning_to_signed = (
+        is_currently_signed and "PENDING" in status_history.deleted
+    )
 
     if was_signed or (is_currently_signed and not is_transitioning_to_signed):
         new_status = getattr(target, "status")
@@ -1210,44 +1233,6 @@ class ChangeApprovalSignature(AuditedModel):
         back_populates="signatures",
         uselist=False,
     )
-
-
-class ConsentFormRecord(AuditedModel):
-    """Represents a subject's interactive Informed Consent Form record."""
-
-    __tablename__ = "consent_form_records"
-
-    subject_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    icf_version_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    printed_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    relationship_to_subject: Mapped[Optional[str]] = mapped_column(
-        String(50), nullable=True
-    )
-    signature_svg: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    otp_auth_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
-    status: Mapped[str] = mapped_column(String(50), default="DRAFT", nullable=False)
-    is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-
-
-class ConsentSignature(AuditedModel):
-    """Represents an electronic signature capture event."""
-
-    __tablename__ = "consent_signatures_v2"
-
-    subject_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    icf_version_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    printed_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    signature_svg: Mapped[str] = mapped_column(String, nullable=False)
-    verification_hash: Mapped[str] = mapped_column(String(64), nullable=False)
-    signed_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
-    )
-    status: Mapped[str] = mapped_column(String(50), default="SIGNED", nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=func.now(), nullable=False
-    )
-    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
-    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
 
 
 class ComprehensionQuizResult(AuditedModel):
