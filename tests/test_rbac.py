@@ -853,6 +853,51 @@ def test_rtsm_role_permissions() -> None:
     assert has_permission(cra, "rtsm_allocation:read") is False
 
 
+def test_medical_coding_rbac_permissions() -> None:
+    """Verify that medical_coding resource permissions are correctly configured in ROLE_PERMISSIONS."""
+    from packages.security.rbac import (
+        ROLE_SYSADMIN,
+        ROLE_SPONSOR_DM,
+        ROLE_CRA_CANONICAL,
+        ROLE_INVESTIGATOR,
+        Principal,
+        has_permission,
+    )
+
+    sysadmin = Principal(user_id="sys1", roles=[ROLE_SYSADMIN])
+    dm = Principal(user_id="dm1", roles=[ROLE_SPONSOR_DM])
+    term_mgr = Principal(user_id="tm1", roles=["terminology_manager"])
+    cra = Principal(user_id="c1", roles=[ROLE_CRA_CANONICAL])
+    investigator = Principal(user_id="i1", roles=[ROLE_INVESTIGATOR])
+
+    # Check sysadmin permissions
+    assert has_permission(sysadmin, "medical_coding:create") is True
+    assert has_permission(sysadmin, "medical_coding:read") is True
+    assert has_permission(sysadmin, "medical_coding:update") is True
+    assert has_permission(sysadmin, "medical_coding:delete") is False
+
+    # Check sponsor_dm permissions
+    assert has_permission(dm, "medical_coding:create") is True
+    assert has_permission(dm, "medical_coding:read") is True
+    assert has_permission(dm, "medical_coding:update") is True
+    assert has_permission(dm, "medical_coding:delete") is False
+
+    # Check terminology_manager permissions
+    assert has_permission(term_mgr, "medical_coding:create") is True
+    assert has_permission(term_mgr, "medical_coding:read") is True
+    assert has_permission(term_mgr, "medical_coding:update") is True
+    assert has_permission(term_mgr, "medical_coding:delete") is False
+
+    # Check CRA permissions
+    assert has_permission(cra, "medical_coding:read") is True
+    assert has_permission(cra, "medical_coding:create") is False
+    assert has_permission(cra, "medical_coding:update") is False
+
+    # Check site investigator does not have update
+    assert has_permission(investigator, "medical_coding:update") is False
+    assert has_permission(investigator, "medical_coding:create") is False
+
+
 def test_rtsm_role_aware_masking() -> None:
     """Verify that mask_payload applies role-conditioned unmasking for RTSM unblinded roles.
 

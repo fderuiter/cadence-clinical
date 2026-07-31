@@ -206,6 +206,8 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "quality_audit_logs": {"read"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
+        # Medical Coding
+        "medical_coding": {"create", "read", "update"},
     },
     ROLE_SPONSOR_DESIGNER: {
         "study_design": {"create", "read", "update", "delete", "approve", "reorder"},
@@ -299,6 +301,8 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "quality_audit_logs": {"read"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
+        # Medical Coding
+        "medical_coding": {"create", "read", "update"},
     },
     ROLE_SPONSOR_MM: {
         "study_design": {"read"},
@@ -397,6 +401,8 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "quality_event": {"create", "read", "update"},
         # eISF
         "eisf_document": {"create", "read", "update", "delete", "sync"},
+        # Medical Coding
+        "medical_coding": {"read"},
     },
     "monitor": {
         "study_design": {"read"},
@@ -620,6 +626,9 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
     },
     ROLE_EMERGENCY_UNBLINDER: {
         "rtsm_unblind": {"write"},
+    },
+    "terminology_manager": {
+        "medical_coding": {"create", "read", "update"},
     },
 }
 
