@@ -1363,6 +1363,107 @@ def test_gateway_startup_development_with_bypass_configs() -> None:
     assert result.returncode == 0
 
 
+def test_gateway_sig_token_coverage_under_hmac(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    # @req:Trace-15
+    Verify that when forwarding signature-gated mutations, the gateway-signed signature
+    incorporates the verified X-Sig-Token header, and that altering the token downstream
+    or trying to reuse a signature for a different token is rejected.
+    """
+    monkeypatch.setenv("JWT_TEST_SECRET", "test_secret")
+    token = jwt.encode(
+        {
+            "sub": "pi_boston",
+            "roles": ["investigator"],
+            "realm_access": {"roles": ["investigator"]},
+        },
+        "test_secret",
+        algorithm="HS256",
+    )
+
+    mock_send = AsyncMock()
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.content = b'{"status": "ok"}'
+    mock_resp.headers = {"content-type": "application/json"}
+    mock_send.return_value = mock_resp
+    monkeypatch.setattr(httpx.AsyncClient, "send", mock_send)
+
+    with TestClient(app) as client:
+        # 1. Obtain a valid sig_token
+        reauth_resp = client.post(
+            "/api/v1/auth/signature-verification",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "username": "pi_boston",
+                "password": "correct_password",  # pragma: allowlist secret
+                "action": "/api/v1/execution/form-submissions/123/approve",
+            },
+        )
+        assert reauth_resp.status_code == 200
+        sig_token = reauth_resp.json()["sig_token"]
+
+        # 2. Call gated route with valid X-Sig-Token
+        res = client.post(
+            "/api/v1/execution/form-submissions/123/approve",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "X-Sig-Token": sig_token,
+                "X-Change-Reason": "Approve form",
+            },
+        )
+        assert res.status_code == 200
+
+        # 3. Retrieve request headers sent downstream
+        sent_request = mock_send.call_args.args[0]
+        sent_headers = sent_request.headers
+
+        assert sent_headers.get("X-Sig-Token") == sig_token
+        gateway_sig = sent_headers.get("X-Gateway-Signature")
+        assert gateway_sig is not None
+
+        # 4. Verify that the gateway-signed HMAC indeed covers sig_token.
+        from packages.security.signing import verify_gateway_signature
+        gateway_secret = b"internal-gateway-secret-12345"
+
+        # Verification with the correct sig_token must succeed
+        assert verify_gateway_signature(
+            user_id=sent_headers.get("X-User-Id"),
+            roles=sent_headers.get("X-User-Roles"),
+            timestamp=sent_headers.get("X-Gateway-Timestamp"),
+            signature=gateway_sig,
+            secret=gateway_secret,
+            change_reason="Approve form",
+            tenant_id="tenant_default",
+            sig_token=sig_token,
+        ) is True
+
+        # Verification with a tampered sig_token must fail
+        assert verify_gateway_signature(
+            user_id=sent_headers.get("X-User-Id"),
+            roles=sent_headers.get("X-User-Roles"),
+            timestamp=sent_headers.get("X-Gateway-Timestamp"),
+            signature=gateway_sig,
+            secret=gateway_secret,
+            change_reason="Approve form",
+            tenant_id="tenant_default",
+            sig_token="tampered_token",
+        ) is False
+
+        # 5. Verify that client-supplied X-Sig-Token is stripped/omitted for ungated routes
+        mock_send.reset_mock()
+        res_ungated = client.get(
+            "/designer/test",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "X-Sig-Token": sig_token,
+            },
+        )
+        assert res_ungated.status_code == 200
+        sent_request_ungated = mock_send.call_args.args[0]
+        assert "X-Sig-Token" not in sent_request_ungated.headers
+
+
 def test_gateway_comprehensive_scope_spoofing_prevention(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

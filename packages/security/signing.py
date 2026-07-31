@@ -68,6 +68,7 @@ def generate_gateway_signature(
     sponsor_id: Optional[str] = None,
     unblinded_access: bool = False,
     tenant_id: Optional[str] = None,
+    sig_token: Optional[str] = None,
 ) -> str:
     """Generates an HMAC-SHA256 signature for API Gateway identity and scope headers."""
     payload = {
@@ -80,6 +81,8 @@ def generate_gateway_signature(
         "unblinded_access": unblinded_access,
         "tenant_id": tenant_id if tenant_id is not None else "",
     }
+    if sig_token is not None:
+        payload["sig_token"] = sig_token
     serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return hmac.new(secret, serialized.encode("utf-8"), hashlib.sha256).hexdigest()
 
@@ -95,6 +98,7 @@ def verify_gateway_signature(
     sponsor_id: Optional[str] = None,
     unblinded_access: bool = False,
     tenant_id: Optional[str] = None,
+    sig_token: Optional[str] = None,
 ) -> bool:
     """Verifies an HMAC-SHA256 signature for API Gateway identity and scope headers.
 
@@ -104,7 +108,7 @@ def verify_gateway_signature(
     2. Fallback verification paths (re-serialization with cleared scopes or legacy 4-field payload)
        are strictly restricted to scope-free requests only, consistent with ADR-86.
     """
-    # 1. Verify with the canonical 8-field scope-aware payload (includes tenant_id)
+    # 1. Verify with the canonical 8-field scope-aware payload (includes tenant_id, and optionally sig_token)
     expected = generate_gateway_signature(
         user_id=user_id,
         roles=roles,
@@ -115,9 +119,27 @@ def verify_gateway_signature(
         sponsor_id=sponsor_id,
         unblinded_access=unblinded_access,
         tenant_id=tenant_id,
+        sig_token=sig_token,
     )
     if hmac.compare_digest(expected, signature):
         return True
+
+    # If verification with sig_token failed, fallback to verifying without it (sig_token=None) to support backward compatibility.
+    if sig_token is not None:
+        expected_no_sig_token = generate_gateway_signature(
+            user_id=user_id,
+            roles=roles,
+            timestamp=timestamp,
+            secret=secret,
+            change_reason=change_reason,
+            site_id=site_id,
+            sponsor_id=sponsor_id,
+            unblinded_access=unblinded_access,
+            tenant_id=tenant_id,
+            sig_token=None,
+        )
+        if hmac.compare_digest(expected_no_sig_token, signature):
+            return True
 
     # Fallback 1: Try verifying with the 7-field compatibility fallback (tenant_id=None)
     # for requests signed before tenant propagation was introduced.

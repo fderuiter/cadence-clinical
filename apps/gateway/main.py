@@ -288,6 +288,7 @@ def generate_signature(
     sponsor_id: Optional[str] = None,
     unblinded_access: bool = False,
     tenant_id: Optional[str] = None,
+    sig_token: Optional[str] = None,
 ) -> str:
     """
     Generate an HMAC-SHA256 signature for identity and scope headers.
@@ -315,6 +316,7 @@ def generate_signature(
         sponsor_id=sponsor_id,
         unblinded_access=unblinded_access,
         tenant_id=tenant_id,
+        sig_token=sig_token,
     )
 
 
@@ -911,6 +913,7 @@ async def proxy_requests(request: Request, path: str) -> Response:
         path_lower
     )
 
+    sig_token = None
     if is_signature_gated and is_mutation:
         sig_token = request.headers.get("x-sig-token") or request.headers.get(
             "X-Sig-Token"
@@ -1124,6 +1127,12 @@ async def proxy_requests(request: Request, path: str) -> Response:
         ):
             headers.pop(k, None)
 
+    # Clean up/pop client-supplied X-Sig-Token unless validated
+    headers.pop("x-sig-token", None)
+    headers.pop("X-Sig-Token", None)
+    if sig_token:
+        headers["X-Sig-Token"] = sig_token
+
     change_reason = request.headers.get("x-change-reason")
     if change_reason is not None:
         if len(change_reason) > 255:
@@ -1174,6 +1183,7 @@ async def proxy_requests(request: Request, path: str) -> Response:
         sponsor_id=sponsor_id_val if sponsor_id_val else None,
         unblinded_access=unblinded_access_val,
         tenant_id=tenant_id_val,
+        sig_token=sig_token,
     )
 
     headers["X-User-Id"] = user_id
