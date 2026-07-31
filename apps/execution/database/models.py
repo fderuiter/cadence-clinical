@@ -543,6 +543,10 @@ class SDVSignOff(AuditedModel):
         verified_at (datetime): Nullable timestamp of verification.
         dropped_reason (str): Nullable reason text for dropping/rescinding verification.
         dropped_at (datetime): Nullable timestamp when verification was dropped/rescinded.
+        created_at (datetime): Chronological UTC timestamp when record was created.
+        created_by (str): OIDC user ID identifier string of the creator/verifier.
+        reason_for_change (str): Contextual/GxP change reason or operation description.
+        version_index (int): Auto-incremented sequence indicator of the record.
     """
 
     __tablename__ = "sdv_sign_offs"
@@ -561,6 +565,16 @@ class SDVSignOff(AuditedModel):
     verified_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     dropped_reason: Mapped[str] = mapped_column(String(1000), nullable=True)
     dropped_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+
+    # Mandatory GxP standard audit trail fields (PRD-SYS-001)
+    created_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, server_default=func.now(), nullable=True
+    )
+    created_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    reason_for_change: Mapped[Optional[str]] = mapped_column(
+        String(1000), nullable=True
+    )
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
 
 class TSDVConfig(AuditedModel):
