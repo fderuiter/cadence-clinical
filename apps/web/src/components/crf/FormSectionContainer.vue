@@ -121,14 +121,15 @@ const items = computed({
 });
 
 function toggleCollapse() {
+  // eslint-disable-next-line vue/no-mutating-props
+  props.section.isCollapsed = !props.section.isCollapsed;
   const storeSection = designerStore.activeForm?.sections?.find(
     (s) => s.id === props.section.id
   );
   if (storeSection) {
-    storeSection.isCollapsed = !storeSection.isCollapsed;
-  } else {
-    emit("update-section", { ...props.section, isCollapsed: !props.section.isCollapsed });
+    storeSection.isCollapsed = props.section.isCollapsed;
   }
+  emit("update-section", { ...props.section });
 }
 
 function addNewItem() {
