@@ -1,15 +1,14 @@
 """
-Organization Directory and Delegation of Authority (DOA) domain models.
+Organization, personnel, and delegation domain vocabulary.
 
 This module provides the shared Pydantic v2 domain models and controlled
 vocabularies (enums) for organization types, clinical staff roles, and
-delegatable significant trial-related duties in compliance with 21 CFR Part 11,
-EU Annex 11, and ICH E6(R2).
+delegatable significant trial-related duties.
 """
 
 from enum import Enum
 
-from audit import AuditFields  # noqa: F401
+from audit import AuditFields
 
 
 class OrganizationType(str, Enum):
@@ -23,20 +22,6 @@ class OrganizationType(str, Enum):
     CENTRAL_LAB = "central laboratory"
     CENTRAL_LABORATORY = "central laboratory"
     SITE = "site"
-
-
-class ClinicalStaffRole(str, Enum):
-    """
-    Standard clinical staff role vocabulary from docs/SDLC/05_Security_Compliance_Audit_Spec.md,
-    reused across organization directory and delegation of authority records. Includes the
-    External Monitor persona aligned to CRO affiliation.
-    """
-
-    PRINCIPAL_INVESTIGATOR = "Principal Investigator"
-    SUB_INVESTIGATOR = "Sub-Investigator"
-    CRC = "CRC"
-    CRA_MONITOR = "CRA/Monitor"
-    EXTERNAL_MONITOR = "External Monitor"
 
 
 class StaffRole(str, Enum):
@@ -67,3 +52,11 @@ class TrialDuty(str, Enum):
     LAB_SAMPLE_MANAGEMENT = "Laboratory Sample Handling, Processing & Shipment"
     SAFETY_REPORTING = "Adverse Event (AE) & Serious Adverse Event (SAE) Reporting"
     TRIAL_OVERSIGHT = "Trial Oversight & Principal Investigator Duties"
+
+
+__all__ = [
+    "AuditFields",
+    "OrganizationType",
+    "StaffRole",
+    "TrialDuty",
+]
