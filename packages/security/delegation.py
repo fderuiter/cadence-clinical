@@ -251,12 +251,14 @@ def require_staff_role(*allowed_roles: StaffRole):
     FastAPI dependency factory that returns a dependency function to enforce
     that at least one of the allowed StaffRoles is present.
     """
+
     def dependency(request: Request) -> List[StaffRole]:
         validated_roles = validate_request_staff_roles(request)
         if not any(role in allowed_roles for role in validated_roles):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Forbidden: Missing required clinical staff role. Allowed roles: {[r.value for r in allowed_roles]}."
+                detail=f"Forbidden: Missing required clinical staff role. Allowed roles: {[r.value for r in allowed_roles]}.",
             )
         return validated_roles
+
     return dependency

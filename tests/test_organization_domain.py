@@ -31,6 +31,7 @@ def test_staff_role_values():
     Verify that StaffRole enum contains the expected exact values.
     """
     from organization_domain import StaffRole
+
     assert StaffRole.PRINCIPAL_INVESTIGATOR == "Principal Investigator"
     assert StaffRole.PI == "Principal Investigator"
     assert StaffRole.SUB_INVESTIGATOR == "Sub-Investigator"
@@ -44,6 +45,7 @@ def test_audit_mixin():
     Verify that AuditMixin adds the four required auditing fields to a SQLAlchemy declarative model.
     """
     from sqlalchemy.orm import DeclarativeBase
+
     from packages.database import AuditMixin
 
     class MockBase(DeclarativeBase):
@@ -52,6 +54,7 @@ def test_audit_mixin():
     class MockModel(MockBase, AuditMixin):
         __tablename__ = "mock_table"
         import sqlalchemy
+
         id = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
 
     # Check that fields are mapped on the class

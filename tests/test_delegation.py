@@ -8,12 +8,12 @@ from fastapi.testclient import TestClient
 from organization_domain import ClinicalStaffRole
 
 from packages.security.delegation import (
+    StaffRole,
+    check_delegation_authority,
     normalize_and_validate_staff_role,
     require_delegation,
-    validate_request_staff_roles,
     require_staff_role,
-    check_delegation_authority,
-    StaffRole,
+    validate_request_staff_roles,
 )
 
 # ==========================================
@@ -281,11 +281,14 @@ def test_require_staff_role_forbidden() -> None:
     }
     response = client.post("/test-staff-role", headers=headers)
     assert response.status_code == 403
-    assert "Forbidden: Missing required clinical staff role" in response.json()["detail"]
+    assert (
+        "Forbidden: Missing required clinical staff role" in response.json()["detail"]
+    )
 
 
 def test_check_delegation_authority_success() -> None:
     """Verify that check_delegation_authority executes successfully when valid."""
+
     class MockRequest:
         def __init__(self):
             class State:

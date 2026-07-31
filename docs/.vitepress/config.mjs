@@ -16,7 +16,7 @@ const __dirname = path.dirname(__filename)
 function getAdrSidebarGroups() {
   const indexPath = path.resolve(__dirname, '../adr/index.md')
   if (!fs.existsSync(indexPath)) return []
-  
+
   const content = fs.readFileSync(indexPath, 'utf-8')
   const lines = content.split('\n')
 
