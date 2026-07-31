@@ -9,6 +9,7 @@ from cdisc.cascade_models import CascadeSummaryReport
 from fastapi import APIRouter, Depends
 
 import packages  # noqa: F401
+from apps.designer.dependencies import get_cascade_engine
 from apps.designer.services.artifact_cascade import ArtifactCascadeEngine
 from packages.security.middleware import get_current_user
 
@@ -20,12 +21,12 @@ async def propagate_cascade_endpoint(
     payload: Dict[str, Any],
     amendment_version: int = 1,
     current_user: dict = Depends(get_current_user),
+    engine: ArtifactCascadeEngine = Depends(get_cascade_engine),
 ) -> CascadeSummaryReport:
     """Cascade authored USDM protocol specification changes to downstream eCRFs and SoA matrices.
 
     Requirements: PRD-SYS-001
     """
-    engine = ArtifactCascadeEngine()
     return engine.cascade_protocol_to_downstream(
         study_payload=payload, amendment_version=amendment_version
     )

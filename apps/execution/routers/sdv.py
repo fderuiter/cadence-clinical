@@ -9,7 +9,6 @@ from enum import Enum
 from typing import List, Optional
 
 from execution.sdv_transport_models import BulkSdvSignOffRequest, BulkSdvSignOffResponse
-
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import select, text
@@ -496,14 +495,10 @@ async def bulk_sdv_signoff(
     # Validate request-body
     if not payload.reason_for_change or not payload.reason_for_change.strip():
         raise HTTPException(
-            status_code=400,
-            detail="GxP Part 11: reason_for_change cannot be blank."
+            status_code=400, detail="GxP Part 11: reason_for_change cannot be blank."
         )
     if not payload.target_ids:
-        raise HTTPException(
-            status_code=400,
-            detail="target_ids list cannot be empty."
-        )
+        raise HTTPException(status_code=400, detail="target_ids list cannot be empty.")
 
     async with db_manager.get_session_maker()() as session:
         async with session.begin():
@@ -579,7 +574,9 @@ async def bulk_sdv_signoff(
             # 3. Apply sign-off behavior
             verifier_id = current_user_id.get() or "system"
             verified_at = datetime.now(timezone.utc).replace(tzinfo=None)
-            site_id = payload.site_id or (subj_db.site_id if hasattr(subj_db, "site_id") else None)
+            site_id = payload.site_id or (
+                subj_db.site_id if hasattr(subj_db, "site_id") else None
+            )
 
             # Query existing SDVSignOff records for these targets
             stmt_signoffs = select(SDVSignOff).where(
@@ -589,7 +586,9 @@ async def bulk_sdv_signoff(
                 SDVSignOff.study_id == payload.study_id,
             )
             res_signoffs = await session.execute(stmt_signoffs)
-            existing_signoffs = {so.target_id: so for so in res_signoffs.scalars().all()}
+            existing_signoffs = {
+                so.target_id: so for so in res_signoffs.scalars().all()
+            }
 
             # We process each target_id
             for tid in payload.target_ids:
@@ -631,8 +630,9 @@ async def bulk_sdv_signoff(
             await session.commit()
 
         # Compute SHA256 digest of signed payload data
-        import json
         import hashlib
+        import json
+
         digest_payload = {
             "study_id": payload.study_id,
             "subject_id": payload.subject_id,

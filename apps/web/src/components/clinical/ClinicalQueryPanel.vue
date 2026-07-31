@@ -1,5 +1,6 @@
 <template>
   <div
+    ref="panelRef"
     :id="`query-panel-${id}`"
     class="query-panel"
     role="region"
@@ -142,6 +143,8 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
+import { useFocusTrap } from "@/composables/useFocusTrap";
+import { useEscapeClose } from "@/composables/useEscapeClose";
 
 const props = defineProps({
   id: {
@@ -161,6 +164,11 @@ const emit = defineEmits([
   "reopen-query",
   "close-panel",
 ]);
+
+const panelRef = ref(null);
+
+useFocusTrap(panelRef);
+useEscapeClose(() => emit("close-panel"));
 
 const messageInput = ref("");
 const responseInput = ref("");

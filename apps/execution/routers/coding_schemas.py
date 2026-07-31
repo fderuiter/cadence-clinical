@@ -6,6 +6,7 @@ from pydantic import BaseModel, ValidationInfo, field_validator, model_validator
 
 from apps.execution.database.models import DictionaryType, ImportState
 
+
 # Enums
 class DictTypeEnum(str, Enum):
     MEDDRA = DictionaryType.MEDDRA.value
@@ -198,4 +199,3 @@ class ImpactAnalysisResponse(BaseModel):
     dictionary_type: DictTypeEnum
     new_version: str
     metrics: ImpactMetrics
-

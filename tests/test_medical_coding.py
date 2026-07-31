@@ -754,12 +754,16 @@ async def test_lookup_endpoints_validation_errors() -> None:
         assert resp.status_code == 400
 
 
-
 @pytest.mark.asyncio
 async def test_coding_schemas_validation() -> None:
     """Verify schema-level validation of CoderActionRequest and DictionaryImportRequest."""
     from pydantic import ValidationError
-    from apps.execution.routers.coding_schemas import CoderActionRequest, DictionaryImportRequest, DictTypeEnum
+
+    from apps.execution.routers.coding_schemas import (
+        CoderActionRequest,
+        DictionaryImportRequest,
+        DictTypeEnum,
+    )
 
     # 1. CoderActionRequest: Valid ACCEPT/QUERY without extra fields
     req_accept = CoderActionRequest(action="ACCEPT", suggestion_index=0)
