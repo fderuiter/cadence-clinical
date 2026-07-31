@@ -957,3 +957,51 @@ def test_safety_reads_negative_signatures():
         res_tampered = client.get(url, headers=headers_tampered)
         assert res_tampered.status_code == 401
         assert "invalid gateway signature" in res_tampered.json()["detail"].lower()
+
+
+def test_meddra_terminology_cache_behavior():
+    # @req:Trace-14
+    from apps.safety.execution_client import MedDRATerminologyCache
+
+    # 1. Initialize cache with small TTL and max size
+    cache = MedDRATerminologyCache(max_size=2, ttl=0.1)
+
+    term = "Headache"
+    version = "26.0"
+    level = "LLT"
+    data = {"status": "AUTO-CODED", "matches": [{"llt_code": "10019211"}]}
+
+    # Verify initial get is a miss
+    valid, expired = cache.get(term, version, level)
+    assert valid is None
+    assert expired is None
+
+    # Set the value
+    cache.set(term, version, level, data)
+
+    # 2. Verify cache hit (valid data)
+    valid, expired = cache.get(term, version, level)
+    assert valid == data
+    assert expired is None
+
+    # Wait for TTL expiration
+    time.sleep(0.15)
+
+    # 3. Verify expired data fallback on get
+    valid, expired = cache.get(term, version, level)
+    assert valid is None
+    assert expired == data
+
+    # 4. Verify eviction policy (max_size=2)
+    cache.set("term1", version, level, {"val": 1})
+    cache.set("term2", version, level, {"val": 2})
+    cache.set("term3", version, level, {"val": 3})  # Should evict oldest (term / Headache)
+
+    # Headache should be completely gone now (not even expired)
+    v_evicted, e_evicted = cache.get(term, version, level)
+    assert v_evicted is None
+    assert e_evicted is None
+
+    # Term3 and Term2 should be present
+    v3, _ = cache.get("term3", version, level)
+    assert v3 == {"val": 3}

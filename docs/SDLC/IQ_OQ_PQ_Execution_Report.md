@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1737
-- **Passed:** 1737 🟢
+- **Total Automated Test Cases Run:** 1738
+- **Passed:** 1738 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1458,6 +1458,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_sae_reconciler_concordant_and_discrepant` | `tests.test_sae_reconciler` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_deterministic_output_sorting` | `tests.test_sae_reconciliation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_execution_client_and_adapter_methods` | `tests.test_sae_reconciliation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_meddra_terminology_cache_behavior` | `tests.test_sae_reconciliation` | Trace-14 | 🟢 PASSED | < 1s |
 | `test_pure_comparison_differing_fields` | `tests.test_sae_reconciliation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_pure_comparison_missing_on_either_side` | `tests.test_sae_reconciliation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_pure_comparison_same_code_different_terms` | `tests.test_sae_reconciliation` | *Regression/Helper* | 🟢 PASSED | < 1s |

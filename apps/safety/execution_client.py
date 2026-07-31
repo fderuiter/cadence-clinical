@@ -1,5 +1,6 @@
 import logging
 import os
+import threading
 import time
 from typing import Any, Dict, List, Optional
 
@@ -13,6 +14,58 @@ logger = logging.getLogger("safety-execution-client")
 # For local in-process testing / short-circuit overrides
 mock_ae_records: Optional[Dict[str, Any]] = None
 mock_meddra_resolution: Optional[Dict[str, Any]] = None
+
+
+class MedDRATerminologyCache:
+    """Thread-safe in-memory cache for MedDRA terminology lookups, modeled on apps/designer/db.py."""
+
+    def __init__(self, max_size: int = 1000, ttl: Optional[float] = None) -> None:
+        self.max_size: int = max_size
+        self._cache: Dict[tuple[str, str, str], tuple[Dict[str, Any], float]] = {}
+        self._lock: threading.Lock = threading.Lock()
+
+        if ttl is not None:
+            self.ttl = float(ttl)
+        else:
+            env_ttl = os.getenv("TERMINOLOGY_CACHE_TTL") or os.getenv("CACHE_TTL")
+            if env_ttl is not None:
+                try:
+                    self.ttl = float(env_ttl)
+                except ValueError:
+                    self.ttl = 3600.0
+            else:
+                self.ttl = 3600.0
+
+    def get(self, term: str, version: str, target_level: str) -> tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]]]:
+        """
+        Retrieves a terminology concept from the cache.
+        Returns a tuple of (valid_data, expired_data).
+        """
+        now = time.time()
+        key = (term.strip().lower(), version, target_level)
+        with self._lock:
+            if key in self._cache:
+                data, timestamp = self._cache[key]
+                if now - timestamp < self.ttl:
+                    return data, None
+                return None, data
+        return None, None
+
+    def set(self, term: str, version: str, target_level: str, data: Dict[str, Any]) -> None:
+        now = time.time()
+        key = (term.strip().lower(), version, target_level)
+        with self._lock:
+            if key not in self._cache and len(self._cache) >= self.max_size:
+                # Basic eviction policy
+                self._cache.pop(next(iter(self._cache)))
+            self._cache[key] = (data, now)
+
+    def clear(self) -> None:
+        with self._lock:
+            self._cache.clear()
+
+
+meddra_cache = MedDRATerminologyCache()
 
 
 class ExecutionClient:
@@ -155,6 +208,11 @@ class ExecutionClient:
         if mock_meddra_resolution is not None:
             return mock_meddra_resolution
 
+        # Check TerminologyCache-style cache
+        valid_data, expired_data = meddra_cache.get(term, version, target_level)
+        if valid_data is not None:
+            return valid_data
+
         url = f"{self.base_url}/api/v1/dictionaries/meddra/code"
         headers = self._get_auth_headers()
         params = {"term": term, "version": version, "target_level": target_level}
@@ -174,18 +232,26 @@ class ExecutionClient:
                     response.status_code,
                     response.text,
                 )
+                if expired_data is not None:
+                    logger.info("Falling back to expired cache data for %s", term)
+                    return expired_data
                 raise HTTPException(
                     status_code=502,
                     detail=f"Execution service dictionary endpoint returned error status {response.status_code}: {response.text}",
                 )
 
-            return response.json()
+            data = response.json()
+            meddra_cache.set(term, version, target_level, data)
+            return data
 
         except httpx.RequestError as e:
             logger.error(
                 "Failed to connect to clinical execution service for MedDRA resolution: %s",
                 e,
             )
+            if expired_data is not None:
+                logger.info("Falling back to expired cache data for %s on transport error", term)
+                return expired_data
             raise HTTPException(
                 status_code=502,
                 detail=f"Failed to connect to execution service dictionaries: {str(e)}",
@@ -196,6 +262,9 @@ class ExecutionClient:
             logger.error(
                 "Unexpected error resolving MedDRA term in execution service: %s", e
             )
+            if expired_data is not None:
+                logger.info("Falling back to expired cache data for %s on unexpected error", term)
+                return expired_data
             raise HTTPException(
                 status_code=502,
                 detail=f"Unexpected error resolving MedDRA term: {str(e)}",
