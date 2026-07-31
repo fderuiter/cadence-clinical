@@ -599,40 +599,10 @@ async def create_library_object_version(
 
 
 async def get_latest_library_object(
-    driver, object_id: str, sponsor_id: str
+    driver, object_id: str, sponsor_id: str, tenant_id: str = "tenant_default"
 ) -> dict[str, Any] | None:
     """
-    Retrieves the latest version of a specific library object under a sponsor.
-    """
-    if driver is None:
-        import copy
-
-        from apps.designer.db import MOCK_LIBRARY_OBJECTS
-
-        versions = MOCK_LIBRARY_OBJECTS.get(object_id, [])
-        matching = [v for v in versions if v.get("sponsor_id") == sponsor_id]
-        if matching:
-            return deserialize_library_props(copy.deepcopy(matching[-1]))
-        return None
-
-    query = """
-    MATCH (n:LibraryObject {id: $object_id, sponsor_id: $sponsor_id})
-    WHERE NOT (n)<-[:PREVIOUS_VERSION]-()
-    RETURN properties(n) as props
-    """
-    async with driver.session() as session:
-        res = await session.run(query, object_id=object_id, sponsor_id=sponsor_id)
-        record = await res.single()
-        if record:
-            return deserialize_library_props(record["props"])
-        return None
-
-
-async def get_library_object_by_version(
-    driver, object_id: str, sponsor_id: str, version: int
-) -> dict[str, Any] | None:
-    """
-    Retrieves a specific version of a library object under a sponsor.
+    Retrieves the latest version of a specific library object under a sponsor and tenant.
     """
     if driver is None:
         import copy
@@ -643,7 +613,51 @@ async def get_library_object_by_version(
         matching = [
             v
             for v in versions
-            if v.get("sponsor_id") == sponsor_id and int(v.get("version", 0)) == version
+            if v.get("sponsor_id") == sponsor_id
+            and (v.get("tenant_id") or "tenant_default") == tenant_id
+        ]
+        if matching:
+            return deserialize_library_props(copy.deepcopy(matching[-1]))
+        return None
+
+    query = """
+    MATCH (n:LibraryObject {id: $object_id, sponsor_id: $sponsor_id})
+    WHERE coalesce(n.tenant_id, 'tenant_default') = $tenant_id
+      AND NOT (n)<-[:PREVIOUS_VERSION]-()
+    RETURN properties(n) as props
+    """
+    async with driver.session() as session:
+        res = await session.run(
+            query, object_id=object_id, sponsor_id=sponsor_id, tenant_id=tenant_id
+        )
+        record = await res.single()
+        if record:
+            return deserialize_library_props(record["props"])
+        return None
+
+
+async def get_library_object_by_version(
+    driver,
+    object_id: str,
+    sponsor_id: str,
+    version: int,
+    tenant_id: str = "tenant_default",
+) -> dict[str, Any] | None:
+    """
+    Retrieves a specific version of a library object under a sponsor and tenant.
+    """
+    if driver is None:
+        import copy
+
+        from apps.designer.db import MOCK_LIBRARY_OBJECTS
+
+        versions = MOCK_LIBRARY_OBJECTS.get(object_id, [])
+        matching = [
+            v
+            for v in versions
+            if v.get("sponsor_id") == sponsor_id
+            and int(v.get("version", 0)) == version
+            and (v.get("tenant_id") or "tenant_default") == tenant_id
         ]
         if matching:
             return deserialize_library_props(copy.deepcopy(matching[0]))
@@ -651,11 +665,16 @@ async def get_library_object_by_version(
 
     query = """
     MATCH (n:LibraryObject {id: $object_id, sponsor_id: $sponsor_id, version: $version})
+    WHERE coalesce(n.tenant_id, 'tenant_default') = $tenant_id
     RETURN properties(n) as props
     """
     async with driver.session() as session:
         res = await session.run(
-            query, object_id=object_id, sponsor_id=sponsor_id, version=version
+            query,
+            object_id=object_id,
+            sponsor_id=sponsor_id,
+            version=version,
+            tenant_id=tenant_id,
         )
         record = await res.single()
         if record:
@@ -664,10 +683,10 @@ async def get_library_object_by_version(
 
 
 async def get_library_object_history(
-    driver, object_id: str, sponsor_id: str
+    driver, object_id: str, sponsor_id: str, tenant_id: str = "tenant_default"
 ) -> list[dict[str, Any]]:
     """
-    Retrieves the full version history of a library object under a sponsor,
+    Retrieves the full version history of a library object under a sponsor and tenant,
     ordered from earliest version to latest version (by version ascending).
     """
     if driver is None:
@@ -676,17 +695,25 @@ async def get_library_object_history(
         from apps.designer.db import MOCK_LIBRARY_OBJECTS
 
         versions = MOCK_LIBRARY_OBJECTS.get(object_id, [])
-        matching = [v for v in versions if v.get("sponsor_id") == sponsor_id]
+        matching = [
+            v
+            for v in versions
+            if v.get("sponsor_id") == sponsor_id
+            and (v.get("tenant_id") or "tenant_default") == tenant_id
+        ]
         sorted_history = sorted(matching, key=lambda x: int(x.get("version", 1)))
         return [deserialize_library_props(copy.deepcopy(v)) for v in sorted_history]
 
     query = """
     MATCH (n:LibraryObject {id: $object_id, sponsor_id: $sponsor_id})
+    WHERE coalesce(n.tenant_id, 'tenant_default') = $tenant_id
     RETURN properties(n) as props
     ORDER BY n.version ASC
     """
     async with driver.session() as session:
-        res = await session.run(query, object_id=object_id, sponsor_id=sponsor_id)
+        res = await session.run(
+            query, object_id=object_id, sponsor_id=sponsor_id, tenant_id=tenant_id
+        )
         records = await res.all()
         return [deserialize_library_props(r["props"]) for r in records]
 
@@ -697,9 +724,10 @@ async def list_library_objects(
     object_type: str | None = None,
     limit: int = 50,
     starting_after: str | None = None,
+    tenant_id: str = "tenant_default",
 ) -> list[dict[str, Any]]:
     """
-    Lists the latest version of each library object under a sponsor,
+    Lists the latest version of each library object under a sponsor and tenant,
     supporting optional filtering by object type and Stripe-style cursor-compatible ordering.
     """
     if driver is None:
@@ -709,7 +737,12 @@ async def list_library_objects(
 
         collected = []
         for obj_id, versions in MOCK_LIBRARY_OBJECTS.items():
-            matching = [v for v in versions if v.get("sponsor_id") == sponsor_id]
+            matching = [
+                v
+                for v in versions
+                if v.get("sponsor_id") == sponsor_id
+                and (v.get("tenant_id") or "tenant_default") == tenant_id
+            ]
             if matching:
                 latest = matching[-1]
                 if object_type is None or latest.get("object_type") == object_type:
@@ -728,8 +761,12 @@ async def list_library_objects(
         paginated = sorted_collected[:limit]
         return [deserialize_library_props(copy.deepcopy(v)) for v in paginated]
 
-    conditions = ["n.sponsor_id = $sponsor_id", "NOT (n)<-[:PREVIOUS_VERSION]-()"]
-    params = {"sponsor_id": sponsor_id, "limit": limit}
+    conditions = [
+        "n.sponsor_id = $sponsor_id",
+        "coalesce(n.tenant_id, 'tenant_default') = $tenant_id",
+        "NOT (n)<-[:PREVIOUS_VERSION]-()",
+    ]
+    params = {"sponsor_id": sponsor_id, "tenant_id": tenant_id, "limit": limit}
     if object_type:
         conditions.append("n.object_type = $object_type")
         params["object_type"] = object_type
@@ -4673,61 +4710,79 @@ MOCK_LIBRARY_INSTANCES: dict[str, list[dict[str, Any]]] = {}
 
 
 async def check_library_object_exists_any_sponsor(
-    driver, object_id: str, version: int | None = None
+    driver,
+    object_id: str,
+    version: int | None = None,
+    tenant_id: str = "tenant_default",
 ) -> dict[str, Any] | None:
     """
-    Looks up a library object across all sponsors to verify its existence
+    Looks up a library object across all sponsors under the same tenant to verify its existence
     and retrieve its metadata (including sponsor_id).
     """
     if driver is None:
         from apps.designer.db import MOCK_LIBRARY_OBJECTS
 
         versions = MOCK_LIBRARY_OBJECTS.get(object_id, [])
-        if not versions:
+        matching = [
+            v
+            for v in versions
+            if v.get("tenant_id") is None or v.get("tenant_id") == tenant_id
+        ]
+        if not matching:
             return None
         if version is not None:
-            matching = [v for v in versions if int(v.get("version", 0)) == version]
-            return deserialize_library_props(matching[0]) if matching else None
-        return deserialize_library_props(versions[-1])
+            matching_ver = [v for v in matching if int(v.get("version", 0)) == version]
+            return deserialize_library_props(matching_ver[0]) if matching_ver else None
+        return deserialize_library_props(matching[-1])
 
     if version is not None:
         query = """
         MATCH (n:LibraryObject {id: $object_id, version: $version})
+        WHERE coalesce(n.tenant_id, 'tenant_default') = $tenant_id
         RETURN properties(n) as props
         """
         async with driver.session() as session:
-            res = await session.run(query, object_id=object_id, version=version)
+            res = await session.run(
+                query, object_id=object_id, version=version, tenant_id=tenant_id
+            )
             record = await res.single()
             return deserialize_library_props(record["props"]) if record else None
     else:
         query = """
         MATCH (n:LibraryObject {id: $object_id})
-        WHERE NOT (n)<-[:PREVIOUS_VERSION]-()
+        WHERE coalesce(n.tenant_id, 'tenant_default') = $tenant_id
+          AND NOT (n)<-[:PREVIOUS_VERSION]-()
         RETURN properties(n) as props
         """
         async with driver.session() as session:
-            res = await session.run(query, object_id=object_id)
+            res = await session.run(query, object_id=object_id, tenant_id=tenant_id)
             record = await res.single()
             return deserialize_library_props(record["props"]) if record else None
 
 
 async def check_study_exists_any_sponsor(
-    driver, study_id: str
+    driver, study_id: str, tenant_id: str = "tenant_default"
 ) -> dict[str, Any] | None:
     """
-    Looks up a Study across all sponsors to verify existence and check sponsor ownership.
+    Looks up a Study across all sponsors under the same tenant to verify existence and check sponsor ownership.
     """
     if driver is None:
         from apps.designer.db import MOCK_STUDIES
 
-        return MOCK_STUDIES.get(study_id)
+        study = MOCK_STUDIES.get(study_id)
+        if study and (
+            study.get("tenant_id") is None or study.get("tenant_id") == tenant_id
+        ):
+            return study
+        return None
 
     query = """
     MATCH (s:Study {id: $study_id})
+    WHERE coalesce(s.tenant_id, 'tenant_default') = $tenant_id
     RETURN properties(s) as props
     """
     async with driver.session() as session:
-        res = await session.run(query, study_id=study_id)
+        res = await session.run(query, study_id=study_id, tenant_id=tenant_id)
         record = await res.single()
         return dict(record["props"]) if record else None
 
@@ -4740,6 +4795,7 @@ async def instantiate_library_object_in_study(
     version: int | None,
     sponsor_id: str,
     user_id: str,
+    tenant_id: str = "tenant_default",
 ) -> dict[str, Any]:
     """
     Clones a selected library object/version into a study as a distinct study-scoped object.
@@ -4747,9 +4803,9 @@ async def instantiate_library_object_in_study(
     """
     import copy
 
-    # 1. Fetch library object across all sponsors first
+    # 1. Fetch library object across all sponsors first under the same tenant
     library_object = await check_library_object_exists_any_sponsor(
-        driver, library_object_id, version
+        driver, library_object_id, version, tenant_id
     )
     if not library_object:
         raise ValueError(f"Library object {library_object_id} not found.")
@@ -4757,8 +4813,8 @@ async def instantiate_library_object_in_study(
     if library_object.get("sponsor_id") != sponsor_id:
         raise PermissionError("Cross-sponsor instantiation is prohibited.")
 
-    # 2. Fetch target study across all sponsors
-    study = await check_study_exists_any_sponsor(driver, study_id)
+    # 2. Fetch target study across all sponsors under the same tenant
+    study = await check_study_exists_any_sponsor(driver, study_id, tenant_id)
     if not study:
         raise ValueError(f"Study {study_id} not found.")
 
@@ -4779,6 +4835,7 @@ async def instantiate_library_object_in_study(
             "payload": copy.deepcopy(library_object.get("payload")),
             "created_at": dt.datetime.now().isoformat(),
             "created_by": user_id,
+            "tenant_id": tenant_id,
             "instantiated_from": {
                 "library_object_id": library_object["id"],
                 "version": library_object.get("version"),
@@ -4803,7 +4860,8 @@ async def instantiate_library_object_in_study(
                 object_type: lo.object_type,
                 payload_json: lo.payload_json,
                 created_at: datetime(),
-                created_by: $user_id
+                created_by: $user_id,
+                tenant_id: $tenant_id
             })
             CREATE (s)-[:HAS_LIBRARY_INSTANCE]->(instance)
             CREATE (instance)-[:INSTANTIATED_FROM {
@@ -4821,6 +4879,7 @@ async def instantiate_library_object_in_study(
                 version=library_object["version"],
                 instance_id=instance_id,
                 user_id=user_id,
+                tenant_id=tenant_id,
             )
             record = await res.single()
             if not record:
@@ -4855,6 +4914,7 @@ async def update_library_instance_in_study(
     payload: dict[str, Any],
     sponsor_id: str,
     user_id: str,
+    tenant_id: str = "tenant_default",
 ) -> dict[str, Any]:
     """
     Updates the payload of a study-scoped library instance.
@@ -4863,7 +4923,7 @@ async def update_library_instance_in_study(
     import copy
 
     # 1. Fetch target study to verify existence and sponsor ownership
-    study = await check_study_exists_any_sponsor(driver, study_id)
+    study = await check_study_exists_any_sponsor(driver, study_id, tenant_id)
     if not study:
         raise ValueError(f"Study {study_id} not found.")
 
@@ -4975,12 +5035,13 @@ async def get_library_instance_in_study(
     study_id: str,
     instance_id: str,
     sponsor_id: str,
+    tenant_id: str = "tenant_default",
 ) -> dict[str, Any]:
     """
     Retrieves a study-scoped library instance and its linked source metadata.
     """
     # Verify target study to check sponsor ownership
-    study = await check_study_exists_any_sponsor(driver, study_id)
+    study = await check_study_exists_any_sponsor(driver, study_id, tenant_id)
     if not study:
         raise ValueError(f"Study {study_id} not found.")
 

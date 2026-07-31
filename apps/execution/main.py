@@ -109,6 +109,7 @@ from apps.execution.rtsm_supply import (
     SiteInventoryNotFoundError,
     dispense_kit_transaction,
 )
+from apps.execution.sdv_helper import validate_and_upsert_sdv_target
 from apps.execution.subject_lifecycle import InvalidStateTransitionError
 from apps.execution.translator import process_translation
 from apps.execution.trial_lock import TrialLockManager
@@ -1038,23 +1039,10 @@ async def unblind_subject(
     verify_change_justification(request)
 
     # Step-up re-authentication: validate X-Sig-Token before any write
-    from jose import JWTError
-    from jose import jwt as jose_jwt
-
     sig_token = request.headers.get("X-Sig-Token")
-    if not sig_token:
-        raise HTTPException(
-            status_code=401,
-            detail="REAUTHENTICATION_REQUIRED",
-        )
-    _secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()
-    try:
-        jose_jwt.decode(sig_token, _secret, algorithms=["HS256"])
-    except JWTError:
-        raise HTTPException(
-            status_code=401,
-            detail="REAUTHENTICATION_REQUIRED",
-        )
+    from packages.security.sig_token_verifier import verify_and_consume_sig_token
+
+    verify_and_consume_sig_token(sig_token, principal.user_id)
 
     # Validate min-length justification explicitly
     if len(payload.justification) < MIN_JUSTIFICATION_LENGTH:
@@ -3049,7 +3037,10 @@ async def get_meddra_code(
     target_level: MedDRATargetLevelEnum | None = Query(MedDRATargetLevelEnum.LLT),
     roles: list[str] = Depends(get_normalized_roles),
 ) -> MedDRACodingResult:
-    """Performs coding or interactive auto-complete lookup on adverse events using version-aware matcher."""
+    """Performs coding or interactive auto-complete lookup on adverse events using version-aware matcher.
+
+    Phase 17 / Epic #109 dictionary lookup endpoint.
+    """
     from apps.execution.coding import search_dictionary
 
     async with db_manager.get_session_maker()() as session:
@@ -3153,7 +3144,10 @@ async def get_whodrug_code(
     version: str,
     roles: list[str] = Depends(get_normalized_roles),
 ) -> WHODrugCodingResult:
-    """Performs coding or interactive lookup on WHODrug database using version-aware matcher."""
+    """Performs coding or interactive lookup on WHODrug database using version-aware matcher.
+
+    Phase 17 / Epic #109 drug dictionary lookup endpoint.
+    """
     from apps.execution.coding import search_dictionary
 
     async with db_manager.get_session_maker()() as session:
@@ -4007,110 +4001,30 @@ async def sdv_signoff(
             detail="Forbidden: SDV sign-off is restricted to CRA or monitor roles.",
         )
     async with db_manager.get_session_maker()() as session:
-        # 1. Validate Subject exists and is consistent with Study
-        stmt_subj = select(ClinicalSubject).where(
-            ClinicalSubject.subject_id == payload.subject_id,
-            ClinicalSubject.study_id == payload.study_id,
-        )
-        res_subj = await session.execute(stmt_subj)
-        subj_db = res_subj.scalars().first()
-        if not subj_db:
-            raise HTTPException(
-                status_code=404,
-                detail="Subject not found or inconsistent study reference.",
-            )
-
-        # 2. Scope-specific validation
-        obs_db = None
-        if payload.scope == SDVScopeEnum.FIELD:
-            stmt_obs = select(ClinicalObservation).where(
-                ClinicalObservation.id == payload.target_id,
-                ClinicalObservation.subject_id == payload.subject_id,
-                ClinicalObservation.study_id == payload.study_id,
-            )
-            res_obs = await session.execute(stmt_obs)
-            obs_db = res_obs.scalars().first()
-            if not obs_db:
-                raise HTTPException(
-                    status_code=404,
-                    detail="Clinical observation not found or inconsistent target/subject/study reference.",
-                )
-        elif payload.scope == SDVScopeEnum.VISIT:
-            stmt_visit = select(ClinicalVisit).where(
-                ClinicalVisit.id == payload.target_id,
-                ClinicalVisit.subject_id == payload.subject_id,
-                ClinicalVisit.study_id == payload.study_id,
-            )
-            res_visit = await session.execute(stmt_visit)
-            visit_db = res_visit.scalars().first()
-            if not visit_db:
-                raise HTTPException(
-                    status_code=404,
-                    detail="Clinical visit not found or inconsistent target/subject/study reference.",
-                )
-        elif payload.scope == SDVScopeEnum.PAGE:
-            stmt_page_obs = select(ClinicalObservation).where(
-                ClinicalObservation.page_id == payload.target_id,
-                ClinicalObservation.subject_id == payload.subject_id,
-                ClinicalObservation.study_id == payload.study_id,
-            )
-            res_page_obs = await session.execute(stmt_page_obs)
-            if not res_page_obs.scalars().first():
-                raise HTTPException(
-                    status_code=404,
-                    detail="Page ID not found or inconsistent target/subject/study reference.",
-                )
-
-        # 3. Apply sign-off behavior
         verifier_id = current_user_id.get() or "system"
-        verified_at = datetime.utcnow()
+        success, err_msg = await validate_and_upsert_sdv_target(
+            session=session,
+            scope=payload.scope,
+            target_id=payload.target_id,
+            subject_id=payload.subject_id,
+            study_id=payload.study_id,
+            site_id=payload.site_id,
+            verifier_id=verifier_id,
+        )
+        if not success:
+            raise HTTPException(status_code=404, detail=err_msg)
 
-        # Update or create the matching SDVSignOff record
-        stmt_signoff = select(SDVSignOff).where(
+        await session.commit()
+
+        # Re-query
+        stmt_re = select(SDVSignOff).where(
             SDVSignOff.scope == payload.scope.value,
             SDVSignOff.target_id == payload.target_id,
             SDVSignOff.subject_id == payload.subject_id,
             SDVSignOff.study_id == payload.study_id,
         )
-        res_signoff = await session.execute(stmt_signoff)
-        signoff_db = res_signoff.scalars().first()
-
-        site_id = payload.site_id or (
-            subj_db.site_id if hasattr(subj_db, "site_id") else None
-        )
-
-        if signoff_db:
-            signoff_db.is_verified = True
-            signoff_db.verified_by = verifier_id
-            signoff_db.verified_at = verified_at
-            signoff_db.dropped_reason = None
-            signoff_db.dropped_at = None
-        else:
-            signoff_db = SDVSignOff(
-                scope=payload.scope.value,
-                target_id=payload.target_id,
-                subject_id=payload.subject_id,
-                study_id=payload.study_id,
-                site_id=site_id,
-                is_verified=True,
-                verified_by=verifier_id,
-                verified_at=verified_at,
-            )
-            session.add(signoff_db)
-
-        # For FIELD scope, update the ClinicalObservation too
-        if payload.scope == SDVScopeEnum.FIELD and obs_db:
-            obs_db.is_sdv_verified = True
-            obs_db.sdv_verified_by = verifier_id
-            obs_db.sdv_verified_at = verified_at
-
-        # Save changes
-        await session.commit()
-
-        # Re-query
-        stmt_re = select(SDVSignOff).where(SDVSignOff.id == signoff_db.id)
         res_re = await session.execute(stmt_re)
-        re_signoff = res_re.scalar_one()
+        re_signoff = res_re.scalars().first()
 
         return SDVSignoffResponse(
             id=re_signoff.id,
@@ -4416,22 +4330,11 @@ async def post_batch_sign_off(
     """Perform a PI-only, atomic batch electronic-signature for form-, visit-, and subject-level sign-off."""
     # Secondary safety validation of the signature token batch-binding
     sig_token = request.headers.get("X-Sig-Token")
-    if not sig_token:
-        raise HTTPException(
-            status_code=401,
-            detail="REAUTHENTICATION_REQUIRED",
-        )
+    user_id = getattr(request.state, "user_id", "")
 
-    from jose import JWTError, jwt
+    from packages.security.sig_token_verifier import verify_and_consume_sig_token
 
-    secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()
-    try:
-        sig_payload = jwt.decode(sig_token, secret, algorithms=["HS256"])
-    except JWTError:
-        raise HTTPException(
-            status_code=401,
-            detail="REAUTHENTICATION_REQUIRED",
-        )
+    sig_payload = verify_and_consume_sig_token(sig_token, user_id)
 
     token_batch_id = sig_payload.get("batch_id")
     if not token_batch_id:

@@ -64,6 +64,37 @@ This ensures that calling `/api/v1/...` relative paths in local components route
 
 ---
 
+## 🔑 Keycloak Authentication, Ports, & Role Normalization
+
+To enforce robust Identity and Access Management (IAM), the frontend integrates seamlessly with Keycloak using **Authorization Code Flow + PKCE**.
+
+### Dev Port & Redirect URI Alignment
+
+The Keycloak client config and local development server ports must be perfectly aligned:
+
+- **Local Dev Server:** Runs on port **`3000`** (strictly locked in `vite.config.js`).
+- **Keycloak Configuration:** The `cadence-realm.json` file (under the `cadence` realm, client `cadence-web`) is configured with matching redirect URIs and web origins:
+  - `redirectUris`: `http://localhost:3000/*`
+  - `webOrigins`: `http://localhost:3000`
+- **Keycloak Base URL:** By default, Keycloak is expected to run at `http://localhost:8080/`.
+
+### Clinical Role to Keycloak Realm Role Mapping
+
+The application utilizes a Pinia auth store (`apps/web/src/stores/auth.js`) to normalize incoming Keycloak roles into standardized UI-scoped roles. The normalization mapping details are as follows:
+
+| Clinical / Business Role   | Seeded Keycloak Realm Role            | Normalized UI Role(s)      | Mapping & Normalization Logic                                                                                                  |
+| -------------------------- | ------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Site Coordinator / CRC** | `Site Investigator`                   | `site_investigator`, `crc` | Lowercased, spaces/dashes converted to underscores, mapped via `ROLE_ALIASES`.                                                 |
+| **CRA / Monitor**          | `CRA`                                 | `cra`, `monitor`           | Normalizes to `cra` and mapped to `monitor` alias.                                                                             |
+| **Data Manager**           | `Data Manager`                        | `data_manager`             | Lowercased and converted to snake_case.                                                                                        |
+| **TMF Auditor**            | `Auditor`                             | `auditor`, `tmf_auditor`   | Maps Keycloak `Auditor` role to both `auditor` and `tmf_auditor` normalized aliases.                                           |
+| **Study Designer**         | `Sponsor Designer` / `study_designer` | `sponsor_designer`         | Maps Keycloak roles `Sponsor Designer`, `study_designer`, and `designer` into the single canonical UI role `sponsor_designer`. |
+| **Sponsor Admin**          | `Sponsor Admin`                       | `sponsor_admin`            | Lowercased and converted to snake_case.                                                                                        |
+
+This central normalization layer decouples Keycloak-level role naming from UI-level routing and capability checks, providing a robust, GxP-compliant RBAC layer.
+
+---
+
 ## 🧪 Testing
 
 Run frontend unit and integration tests using Vitest:

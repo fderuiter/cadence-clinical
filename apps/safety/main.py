@@ -13,13 +13,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from apps.safety.database import db_manager
 from apps.safety.models import (
     Base,
+    ExportJob,
     SAEDiscrepancy,
     SAEReconciliationJob,
     SAEReconciliationRun,
     SafetyAuditLog,
     SafetyCaseICSR,
-    SafetyExportJob,
+    write_audit_log,
 )
+from apps.safety.processor import process_sae_reconciliation
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
 
@@ -67,6 +69,8 @@ class SafetyExportJobResponse(BaseModel):
     id: str
     job_name: str
     status: str
+    output: str | None = None
+    error: str | None = None
     error_message: str | None = None
     created_at: str
     created_by: str
@@ -184,16 +188,15 @@ async def write_safety_audit_log(
     """
     Utility function to write to the immutable Safety audit ledger.
     """
-    log_entry = SafetyAuditLog(
+    await write_audit_log(
+        session=session,
         created_by=user_id,
         action=action,
         details=details,
-        record_id=record_id,
         reason_for_change=change_reason,
         version_index=version_index,
+        record_id=record_id,
     )
-    session.add(log_entry)
-    await session.flush()
 
 
 @app.get("/health")
@@ -217,12 +220,14 @@ def map_case_to_response(case: SafetyCaseICSR) -> SafetyCaseICSRResponse:
     )
 
 
-def map_job_to_response(job: SafetyExportJob) -> SafetyExportJobResponse:
+def map_job_to_response(job: ExportJob) -> SafetyExportJobResponse:
     return SafetyExportJobResponse(
         id=job.id,
         job_name=job.job_name,
         status=job.status,
-        error_message=job.error_message,
+        output=job.output,
+        error=job.error,
+        error_message=job.error,
         created_at=job.created_at.isoformat(),
         created_by=job.created_by,
         reason_for_change=job.reason_for_change,
@@ -435,7 +440,7 @@ async def create_export_job(
             status_code=403, detail="Missing change justification reason"
         )
 
-    job = SafetyExportJob(
+    job = ExportJob(
         job_name=payload.job_name,
         status="PENDING",
         created_by=user_id,
@@ -468,7 +473,7 @@ async def list_export_jobs(
     """
     user_id, user_role, change_reason = get_user_context(request)
 
-    stmt = select(SafetyExportJob)
+    stmt = select(ExportJob)
     result = await session.execute(stmt)
     jobs = result.scalars().all()
 
@@ -495,7 +500,7 @@ async def get_export_job(
     """
     user_id, user_role, change_reason = get_user_context(request)
 
-    stmt = select(SafetyExportJob).where(SafetyExportJob.id == id)
+    stmt = select(ExportJob).where(ExportJob.id == id)
     result = await session.execute(stmt)
     job = result.scalars().first()
 
@@ -579,27 +584,24 @@ async def export_safety_case(
             status_code=403, detail="Missing change justification reason"
         )
 
-    # 1. Render initial raw XML to validate structural correctness
-    from apps.safety.renderer import render_icsr_to_xml
-    from apps.safety.validator import validate_icsr_xml
+    # 1. Render and validate E2B(R3) XML using Phase 1 helper generate_e2b_xml
+    from apps.safety.renderer import generate_e2b_xml
 
     try:
-        raw_xml = render_icsr_to_xml(payload.icsr)
+        _ = generate_e2b_xml(payload.icsr)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Structural validation failure: {str(e)}",
+        )
     except Exception as e:
         raise HTTPException(
             status_code=422,
             detail=f"XML rendering failed: {str(e)}",
         )
 
-    is_valid, msg = validate_icsr_xml(raw_xml)
-    if not is_valid:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Structural validation failure: {msg}",
-        )
-
     # 2. Persist the export job as PENDING first
-    job = SafetyExportJob(
+    job = ExportJob(
         job_name=payload.job_name,
         status="PENDING",
         created_by=user_id,
@@ -622,7 +624,7 @@ async def export_safety_case(
     icsr_copy.patient.birth_date = None  # Remove direct DOB
 
     # Render pseudonymized XML
-    pseudonymized_xml = render_icsr_to_xml(icsr_copy)
+    pseudonymized_xml = generate_e2b_xml(icsr_copy)
 
     # 4. Transmit the pseudonymized XML payload using the SafetyDatabaseAdapter
     from apps.safety.adapter import SafetyDatabaseAdapter
@@ -635,12 +637,13 @@ async def export_safety_case(
         response = await adapter.transmit(pseudonymized_xml)
         if 200 <= response.status_code < 300:
             job.status = "COMPLETED"
+            job.output = pseudonymized_xml
         else:
             job.status = "FAILED"
-            job.error_message = f"Transmission failed with status {response.status_code}: {response.text}"
+            job.error = f"Transmission failed with status {response.status_code}: {response.text}"
     except Exception as e:
         job.status = "FAILED"
-        job.error_message = f"Transmission exception: {str(e)}"
+        job.error = f"Transmission exception: {str(e)}"
 
     await session.flush()
 
@@ -1003,7 +1006,7 @@ async def trigger_sae_reconciliation_job(
 
     test_client = getattr(request.app.state, "test_httpx_client", None)
     background_tasks.add_task(
-        reconciliation_worker,
+        process_sae_reconciliation,
         job_id=job_id,
         study_id=payload.study_id,
         user_id=user_id,

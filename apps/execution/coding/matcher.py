@@ -2,6 +2,7 @@
 
 This module implements the core text preprocessing and normalization, similarity
 scoring calculations, dictionary-specific lookup, and caching for MedDRA and WHODrug.
+Conforms to Epic #109 / Phase 17 requirements.
 """
 
 import collections
@@ -86,6 +87,7 @@ def stem_word(word: str) -> str:
        - 'ly' -> strip (e.g., 'severely' -> 'severe')
        - 'al' (excluding 'eal') -> strip (e.g., 'clinical' -> 'clinic')
     """
+    # GxP / Phase 17 Rule: Avoid stemming short terms to protect integrity
     if not word:
         return ""
     if len(word) <= 3:
@@ -130,10 +132,11 @@ def normalize_term(term: str) -> str:
     Performs case folding, clinical stop-phrase/word removal, punctuation stripping,
     and documented suffix-stripping stemming.
     """
+    # Phase 17 / Epic #109 Preprocessing engine
     if not term:
         return ""
 
-    # 1. Case-folding
+    # 1. Case-folding to standardize comparison
     text = term.lower()
 
     # 2. Clinical multi-word stop phrase removal
@@ -156,6 +159,7 @@ def normalize_term(term: str) -> str:
 
 def token_cosine_similarity(v_normalized: str, d_normalized: str) -> float:
     """Calculates the Token Cosine Similarity (S_Cos) between two normalized terms."""
+    # Phase 17: Token/Cosine similarity calculation (S_Cos)
     if not v_normalized and not d_normalized:
         return 1.0
     if not v_normalized or not d_normalized:
@@ -188,6 +192,7 @@ def calculate_combined_score(v_normalized: str, d_normalized: str) -> float:
 
     Formula: CS = 0.4 * S_Lev + 0.6 * S_Cos
     """
+    # Phase 17 combined confidence score: CS = 0.4 * S_Lev + 0.6 * S_Cos
     # 1. Levenshtein Similarity
     if not v_normalized and not d_normalized:
         s_lev = 1.0
@@ -208,7 +213,9 @@ def calculate_combined_score(v_normalized: str, d_normalized: str) -> float:
 class CodingCache:
     """Thread-safe in-memory cache for version-aware medical coding lookups."""
 
-    def __init__(self, max_size: int = 1000, ttl: float | None = None) -> None:
+    def __init__(
+        self, max_size: int = 1000, ttl: float | None = None
+    ) -> None:  # Phase 17 lookup cache configuration and TTL setup
         self.max_size = max_size
         # Map key (dict_type, version, normalized_term, target_level) -> (data, store_time)
         self._cache: dict[tuple[str, str, str, str | None], tuple[Any, float]] = {}
@@ -545,6 +552,7 @@ async def match_verbatim_term(
     target_level: str | None = None,
 ) -> dict[str, Any]:
     """Exposes version-aware, cached, and deterministic clinical terminology matching."""
+    # Phase 17 core matching interface for clinical terminology
     if not verbatim:
         return {
             "status": "UNCODABLE",

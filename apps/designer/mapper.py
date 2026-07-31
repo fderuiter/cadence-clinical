@@ -70,6 +70,15 @@ def map_study_to_usdm(study_data: dict[str, Any]) -> dict[str, Any]:
                 act_mapped = {"id": act_id, "name": act_name}
                 if item_rules:
                     act_mapped["rules"] = item_rules
+                    skip_logics = [r for r in item_rules if r["type"] == "skip_logic"]
+                    edit_checks = [r for r in item_rules if r["type"] == "constraint"]
+                    conditions = [r["condition"] for r in item_rules]
+                    if skip_logics:
+                        act_mapped["skip_logic"] = skip_logics[0]
+                    if edit_checks:
+                        act_mapped["edit_check"] = edit_checks[0]
+                    if conditions:
+                        act_mapped["conditions"] = conditions
                 activities.append(act_mapped)
 
             visit_type_concept = None
@@ -236,6 +245,15 @@ def map_study_to_usdm(study_data: dict[str, Any]) -> dict[str, Any]:
                 }
                 if act_rules:
                     act_dict["rules"] = act_rules
+                    skip_logics = [r for r in act_rules if r["type"] == "skip_logic"]
+                    edit_checks = [r for r in act_rules if r["type"] == "constraint"]
+                    conditions = [r["condition"] for r in act_rules]
+                    if skip_logics:
+                        act_dict["skip_logic"] = skip_logics[0]
+                    if edit_checks:
+                        act_dict["edit_check"] = edit_checks[0]
+                    if conditions:
+                        act_dict["conditions"] = conditions
                 arm_activities.append(act_dict)
 
             arm_visits.append(

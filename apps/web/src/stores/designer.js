@@ -32,8 +32,16 @@ export const useDesignerStore = defineStore("designer", {
       ],
     },
     selectedFieldId: null,
+    viewport: "desktop",
+    dismissedWarnings: false,
   }),
   actions: {
+    setViewport(viewport) {
+      this.viewport = viewport;
+    },
+    setDismissedWarnings(dismissed) {
+      this.dismissedWarnings = dismissed;
+    },
     setSelectedFieldId(id) {
       this.selectedFieldId = id;
     },
