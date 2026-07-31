@@ -93,6 +93,7 @@ class MockTSDVConfig:
 
 
 def test_tsdv_pure_first_n_selection():
+    # @Req:PRD-QRY-007
     # @req:PRD-QRY-007
     """Verify that all first-N subjects are always selected for full SDV."""
     config = MockTSDVConfig(
@@ -109,6 +110,7 @@ def test_tsdv_pure_first_n_selection():
 
 
 def test_tsdv_pure_deterministic_sampling():
+    # @Req:PRD-QRY-007
     # @req:PRD-QRY-007
     """Verify selection is completely stable/deterministic across repeated evaluations."""
     config = MockTSDVConfig(
@@ -129,6 +131,7 @@ def test_tsdv_pure_deterministic_sampling():
 
 
 def test_tsdv_pure_different_seeds_produce_different_values():
+    # @Req:PRD-QRY-007
     # @req:PRD-QRY-007
     """Verify different seeds and subject IDs produce different values while retaining determinism."""
     config_seed1 = MockTSDVConfig(
@@ -159,6 +162,7 @@ def test_tsdv_pure_different_seeds_produce_different_values():
 
 
 def test_tsdv_pure_percentage_boundaries():
+    # @Req:PRD-QRY-007
     # @req:PRD-QRY-007
     """Verify correct selection behavior with 0% and 100% random sample percentages."""
     config_0 = MockTSDVConfig(
@@ -182,6 +186,7 @@ def test_tsdv_pure_percentage_boundaries():
 
 
 def test_tsdv_pure_field_requirement_precedence():
+    # @Req:PRD-QRY-007
     # @req:PRD-QRY-007
     """Verify full-SDV/safety domains always require SDV, zero-SDV never require, and overrides are respected."""
     # Safety endpoints always override zero-SDV (Conflict management)
@@ -209,6 +214,7 @@ def test_tsdv_pure_field_requirement_precedence():
 
 
 def test_tsdv_pure_evaluation_sampling_models():
+    # @Req:PRD-QRY-007
     # @req:PRD-QRY-007
     """Verify combination logic and precedence of COMBINED, SUBJECT_BASED, and FIELD_BASED sampling models."""
     # 1. SUBJECT_BASED model
@@ -284,6 +290,7 @@ def test_tsdv_pure_evaluation_sampling_models():
 
 @pytest.mark.asyncio
 async def test_api_tsdv_configuration_rbac():
+    # @Req:PRD-QRY-007
     # @req:PRD-QRY-007
     """Verify write operations (creation/updating) are restricted to Allowed Data Manager/CRA roles, and check HTTP 403."""
     async with httpx.AsyncClient(
@@ -331,6 +338,7 @@ async def test_api_tsdv_configuration_rbac():
 
 @pytest.mark.asyncio
 async def test_api_tsdv_config_validation_rules():
+    # @Req:PRD-QRY-007
     # @req:PRD-QRY-007
     """Verify input validation rejects malformed percentages/counts/lists."""
     async with httpx.AsyncClient(
@@ -388,6 +396,7 @@ async def test_api_tsdv_config_validation_rules():
 
 @pytest.mark.asyncio
 async def test_api_tsdv_evaluation_integration_and_context_errors():
+    # @Req:PRD-QRY-007
     # @req:PRD-QRY-007
     """
     Verify TSDV evaluation API resolves correctly:
@@ -488,6 +497,7 @@ async def test_api_tsdv_evaluation_integration_and_context_errors():
 
 @pytest.mark.asyncio
 async def test_api_tsdv_immutable_enrollment_index_stability():
+    # @Req:PRD-QRY-007
     # @req:PRD-QRY-007
     """Verify that subject enrollment sequence is stable, immutable, and independent of alphabetical order.
 
@@ -619,3 +629,132 @@ async def test_api_tsdv_immutable_enrollment_index_stability():
         )
         assert resp_correct.status_code == 200
         assert resp_correct.json()["enrollment_index"] == 0
+
+
+def test_evaluate_bulk_tsdv():
+    """Verify evaluate_bulk_tsdv maps targets correctly and reuses evaluate_tsdv_requirement."""
+    from apps.execution.tsdv import evaluate_bulk_tsdv
+
+    config = MockTSDVConfig(
+        sampling_model="SUBJECT_BASED",
+        initial_full_sdv_subject_count=1,
+        full_sdv_domains=["VS"],
+        zero_sdv_domains=["DM"],
+    )
+
+    targets = [
+        ("SUBJ-01", 0, "LB"),  # Selected subject, unconfigured domain -> required: True
+        (
+            "SUBJ-02",
+            1,
+            "LB",
+        ),  # Non-selected subject, unconfigured domain -> required: False
+        (
+            "SUBJ-02",
+            1,
+            "VS",
+        ),  # Non-selected subject, safety/full-SDV domain -> required: True
+        ("SUBJ-01", 0, "DM"),  # Selected subject, zero-SDV domain -> required: False
+    ]
+
+    results = evaluate_bulk_tsdv(config, targets)
+    assert len(results) == 4
+
+    # Target 1
+    assert results[0].subject_uuid == "SUBJ-01"
+    assert results[0].enrollment_index == 0
+    assert results[0].domain == "LB"
+    assert results[0].required is True
+    assert results[0].subject_selected is True
+    assert results[0].field_decision is None
+    assert "within the first 1" in results[0].explanation
+
+    # Target 2
+    assert results[1].subject_uuid == "SUBJ-02"
+    assert results[1].enrollment_index == 1
+    assert results[1].domain == "LB"
+    assert results[1].required is False
+    assert results[1].subject_selected is False
+    assert results[1].field_decision is None
+    assert "not selected" in results[1].explanation
+
+    # Target 3
+    assert results[2].subject_uuid == "SUBJ-02"
+    assert results[2].enrollment_index == 1
+    assert results[2].domain == "VS"
+    assert results[2].required is True
+    assert results[2].subject_selected is False
+    assert results[2].field_decision is True
+    assert "safety/full-SDV domain" in results[2].explanation
+
+    # Target 4
+    assert results[3].subject_uuid == "SUBJ-01"
+    assert results[3].enrollment_index == 0
+    assert results[3].domain == "DM"
+    assert results[3].required is False
+    assert results[3].subject_selected is True
+    assert results[3].field_decision is False
+    assert "zero-SDV domain" in results[3].explanation
+
+
+def test_sdv_transport_schemas():
+    """Verify Pydantic v2 schemas from sdv_transport_models execute properly."""
+    from execution.sdv_transport_models import (
+        BulkQueryGenerationRequest,
+        BulkQueryGenerationResponse,
+        BulkSdvSignOffRequest,
+        BulkSdvSignOffResponse,
+        QueryTargetDescriptor,
+    )
+
+    # 1. Test BulkSdvSignOffRequest
+    req_sdv = BulkSdvSignOffRequest(
+        study_id="STUDY-01",
+        subject_id="SUBJ-123",
+        scope="FIELD",
+        target_ids=["OBS-1", "OBS-2"],
+        reason_for_change="Initial sign-off of Vital Signs",
+        site_id="SITE-X",
+    )
+    assert req_sdv.study_id == "STUDY-01"
+    assert req_sdv.target_ids == ["OBS-1", "OBS-2"]
+
+    # 2. Test BulkSdvSignOffResponse
+    res_sdv = BulkSdvSignOffResponse(
+        signed_count=2,
+        signed_target_ids=["OBS-1", "OBS-2"],
+        skipped_target_ids=[],
+        content_digest="abc123sha256",
+        timestamp_utc="2026-07-29T12:00:00Z",
+        audit_tx="tx-1001",
+    )
+    assert res_sdv.signed_count == 2
+
+    # 3. Test QueryTargetDescriptor & BulkQueryGenerationRequest
+    target_desc = QueryTargetDescriptor(
+        subject_id="SUBJ-123",
+        visit_id="VISIT-A",
+        domain="VS",
+        test_code="SYSBP",
+        observation_id="OBS-1",
+        explanation="Systolic BP is out of physiological range (250 mmHg)",
+    )
+
+    req_query = BulkQueryGenerationRequest(
+        study_id="STUDY-01",
+        site_id="SITE-X",
+        subject_id="SUBJ-123",
+        targets=[target_desc],
+        reason_for_change="System generated out-of-bounds check",
+    )
+    assert len(req_query.targets) == 1
+    assert req_query.targets[0].test_code == "SYSBP"
+
+    # 4. Test BulkQueryGenerationResponse
+    res_query = BulkQueryGenerationResponse(
+        generated_count=1,
+        generated_query_ids=["QRY-99"],
+        skipped_targets=[],
+        timestamp_utc="2026-07-29T12:05:00Z",
+    )
+    assert res_query.generated_count == 1

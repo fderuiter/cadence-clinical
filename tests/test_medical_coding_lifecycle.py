@@ -135,7 +135,10 @@ async def seed_dictionaries():
 
 @pytest.mark.asyncio
 async def test_auto_coding_on_observation_creation():
-    """Verify that observations under AE, MH, or CM domains automatically trigger medical coding."""
+    """Verify that observations under AE, MH, or CM domains automatically trigger medical coding.
+
+    Requirements: PRD-SYS-045
+    """
     await seed_dictionaries()
 
     async with httpx.AsyncClient(
@@ -185,7 +188,10 @@ async def test_auto_coding_on_observation_creation():
 
 @pytest.mark.asyncio
 async def test_mid_confidence_persists_as_suggestions():
-    """Verify that mid-confidence matches (between 0.60 and 0.85) persist as SUGGESTED and do not silently code."""
+    """Verify that mid-confidence matches (between 0.60 and 0.85) persist as SUGGESTED and do not silently code.
+
+    Requirements: PRD-SYS-045
+    """
     await seed_dictionaries()
 
     async with httpx.AsyncClient(

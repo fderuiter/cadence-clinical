@@ -1,0 +1,140 @@
+from datetime import datetime
+from enum import Enum
+from typing import Any, List, Optional, Union
+from pydantic import BaseModel, model_validator
+
+# Enums
+class DictTypeEnum(str, Enum):
+    MEDDRA = "MEDDRA"
+    WHODRUG = "WHODRUG"
+    LOINC = "LOINC"
+    SNOMED = "SNOMED"
+
+class JobStatusEnum(str, Enum):
+    PENDING = "PENDING"
+    PROCESSING = "PROCESSING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+
+class PrimarySocFlagEnum(str, Enum):
+    Y = "Y"
+    N = "N"
+
+# Request Models
+class DictionaryImportRequest(BaseModel):
+    dictionary_type: DictTypeEnum
+    version: str
+    parse_multilingual: bool = True
+
+class CoderActionRequest(BaseModel):
+    action: str  # "ACCEPT" or "OVERRIDE" or "QUERY"
+    code: Optional[str] = None  # required for OVERRIDE
+    term: Optional[str] = None  # required for OVERRIDE
+    suggestion_index: Optional[int] = None  # optional for ACCEPT
+    reason_for_change: Optional[str] = None  # required for OVERRIDE
+
+    @model_validator(mode="after")
+    def validate_override_fields(self) -> "CoderActionRequest":
+        action_upper = (self.action or "").upper()
+        if action_upper == "OVERRIDE":
+            if not self.reason_for_change or not self.reason_for_change.strip():
+                raise ValueError("reason_for_change is required for OVERRIDE action and cannot be empty.")
+            if not self.code or not self.code.strip():
+                raise ValueError("code is required for OVERRIDE action.")
+            if not self.term or not self.term.strip():
+                raise ValueError("term is required for OVERRIDE action.")
+        return self
+
+class ImpactAnalysisRequest(BaseModel):
+    dictionary_type: str
+    new_version: str
+
+# Response Models
+class JobStatusResponse(BaseModel):
+    job_id: str
+    dictionary_type: str
+    version: str
+    status: JobStatusEnum
+    started_at: datetime
+    completed_at: Optional[datetime] = None
+    progress_percentage: Optional[int] = None
+    records_imported: Optional[int] = None
+    errors_encountered: Optional[int] = None
+
+class MedDRAMatch(BaseModel):
+    llt_code: str
+    llt_name: str
+    pt_code: str
+    pt_name: str
+    hlt_code: str
+    hlt_name: str
+    hlgt_code: str
+    hlgt_name: str
+    soc_code: str
+    soc_name: str
+    primary_soc_flag: Optional[PrimarySocFlagEnum] = None
+    score: float
+
+class MedDRACodeLookupResponse(BaseModel):
+    status: str
+    matches: List[MedDRAMatch]
+
+# For backward compatibility
+MedDRACodeMatch = MedDRAMatch
+MedDRACodingResult = MedDRACodeLookupResponse
+
+class WHODrugATCContext(BaseModel):
+    atc_code: str
+    description: str
+
+class WHODrugIngredientItem(BaseModel):
+    ingredient_code: str
+    ingredient_name: str
+
+class WHODrugMatch(BaseModel):
+    drug_code: str
+    preferred_name: str
+    drug_name: Optional[str] = None
+    score: float
+    atc_context: List[WHODrugATCContext] = []
+    ingredients: List[WHODrugIngredientItem] = []
+
+class WHODrugCodeLookupResponse(BaseModel):
+    status: str
+    matches: List[WHODrugMatch]
+
+# For backward compatibility
+WHODrugCodeMatch = WHODrugMatch
+WHODrugCodingResult = WHODrugCodeLookupResponse
+
+class ImpactMetrics(BaseModel):
+    unchanged: int
+    reclassified: int
+    deprecated: int
+    skipped: int
+
+class ImpactAnalysisResponse(BaseModel):
+    status: str
+    dictionary_type: str
+    new_version: str
+    metrics: ImpactMetrics
+
+class CodingAssignmentResponse(BaseModel):
+    id: str
+    verbatim_text: str
+    source_field: Optional[str] = None
+    observation_id: Optional[str] = None
+    dictionary_type: str
+    dictionary_version: str
+    coded_code: Optional[str] = None
+    coded_term: Optional[str] = None
+    status: str
+    recoding_status: str
+    assigned_by: Optional[str] = None
+    assigned_at: datetime
+    score: Optional[float] = None
+    hierarchy: Optional[Union[dict[str, Any], list[Any]]] = None
+    suggestions: Optional[Union[list[Any], dict[str, Any]]] = None
+    domain: Optional[str] = None
+    version: int
+    is_deleted: bool
