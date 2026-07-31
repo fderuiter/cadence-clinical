@@ -41,6 +41,9 @@
         "required_status_checks": [
           {
             "context": "Test and Coverage"
+          },
+          {
+            "context": "Style and Lint Verification"
           }
         ]
       }

@@ -253,6 +253,147 @@
         }
       }
     },
+    "/api/v1/designer/forms/{form_id}/comments": {
+      "get": {
+        "tags": [
+          "FormComments"
+        ],
+        "summary": "Get Form Comments",
+        "description": "Fetch all review comments for a given form.",
+        "operationId": "get_form_comments_api_v1_designer_forms__form_id__comments_get",
+        "parameters": [
+          {
+            "name": "form_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Form Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FormReviewCommentResponse"
+                  },
+                  "title": "Response Get Form Comments Api V1 Designer Forms  Form Id  Comments Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "FormComments"
+        ],
+        "summary": "Post Form Comment",
+        "description": "Post a new review comment anchored to a field_id.",
+        "operationId": "post_form_comment_api_v1_designer_forms__form_id__comments_post",
+        "parameters": [
+          {
+            "name": "form_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Form Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommentCreatePayload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FormReviewCommentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/designer/comments/{comment_id}/resolve": {
+      "patch": {
+        "tags": [
+          "FormComments"
+        ],
+        "summary": "Resolve Comment",
+        "description": "Mark a comment thread/item as resolved and log a GxP audit event.",
+        "operationId": "resolve_comment_api_v1_designer_comments__comment_id__resolve_patch",
+        "parameters": [
+          {
+            "name": "comment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Comment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FormReviewCommentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health Check",
@@ -321,7 +462,7 @@
     "/api/v2/studies/{study_id}/usdm": {
       "get": {
         "summary": "Get Usdm Study",
-        "description": "Dynamically processes the internal projection and returns a compliant USDM structure.\n\nArgs:\n    study_id (str): The unique identifier of the study.\n\nReturns:\n    Dict[str, Any]: The dynamically mapped USDM study data.\n\nRaises:\n    HTTPException: If the study is not found or validation fails.",
+        "description": "Dynamically processes the internal projection and returns a compliant USDM structure.\n\nArgs:\n    study_id (str): The unique identifier of the study.\n    format (str, optional): Output format.\n\nReturns:\n    Any: Mapped USDM data (as dict or serialized Response).\n\nRaises:\n    HTTPException: If the study is not found or validation fails.",
         "operationId": "get_usdm_study_api_v2_studies__study_id__usdm_get",
         "parameters": [
           {
@@ -332,6 +473,24 @@
               "type": "string",
               "title": "Study Id"
             }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Output format: json or yaml",
+              "title": "Format"
+            },
+            "description": "Output format: json or yaml"
           }
         ],
         "responses": {
@@ -340,10 +499,62 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
                   "title": "Response Get Usdm Study Api V2 Studies  Study Id  Usdm Get"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Import Usdm Study",
+        "description": "Ingests, validates, maps, and persists a USDM JSON/YAML payload for a specific study.\n\nRequirements: Phase 2 Ingestion",
+        "operationId": "import_usdm_study_api_v2_studies__study_id__usdm_post",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Study Id"
+            }
+          },
+          {
+            "name": "override",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional explicit version override ('v2' or 'v3')",
+              "title": "Override"
+            },
+            "description": "Optional explicit version override ('v2' or 'v3')"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -5737,6 +5948,75 @@
         ],
         "title": "AllowableUnit"
       },
+      "AmendmentImpactReport": {
+        "properties": {
+          "base_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Version",
+            "description": "Parent/base version tag"
+          },
+          "amended_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amended Version",
+            "description": "Current amended version tag"
+          },
+          "added_forms_count": {
+            "type": "integer",
+            "title": "Added Forms Count",
+            "description": "Count of added forms",
+            "default": 0
+          },
+          "modified_forms_count": {
+            "type": "integer",
+            "title": "Modified Forms Count",
+            "description": "Count of modified forms",
+            "default": 0
+          },
+          "deleted_forms_count": {
+            "type": "integer",
+            "title": "Deleted Forms Count",
+            "description": "Count of deleted forms",
+            "default": 0
+          },
+          "estimated_cost_usd": {
+            "type": "number",
+            "title": "Estimated Cost Usd",
+            "description": "Estimated total cost in USD for this amendment",
+            "default": 0.0
+          },
+          "burden_change": {
+            "type": "number",
+            "title": "Burden Change",
+            "description": "Burden index difference from base version",
+            "default": 0.0
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation",
+            "description": "Detailed text explanation of impact and costs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "explanation"
+        ],
+        "title": "AmendmentImpactReport",
+        "description": "Analysis of changes and cost estimates of a study amendment."
+      },
       "ApproveProtocolRequest": {
         "properties": {
           "signing_reason": {
@@ -5901,6 +6181,57 @@
         "title": "ArmPayload",
         "description": "Arm-specific payload validation containing arm attributes."
       },
+      "AttritionStep": {
+        "properties": {
+          "criterion_id": {
+            "type": "string",
+            "title": "Criterion Id",
+            "description": "The ID of the eligibility criterion"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "description": "inclusion or exclusion"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "Description of the criterion"
+          },
+          "passed_count": {
+            "type": "integer",
+            "title": "Passed Count",
+            "description": "Number of patients passing this criterion"
+          },
+          "failed_count": {
+            "type": "integer",
+            "title": "Failed Count",
+            "description": "Number of patients failing this criterion"
+          },
+          "remaining_count": {
+            "type": "integer",
+            "title": "Remaining Count",
+            "description": "Number of patients continuing to the next step"
+          },
+          "attrition_rate": {
+            "type": "number",
+            "title": "Attrition Rate",
+            "description": "Percentage of current cohort lost at this step"
+          }
+        },
+        "type": "object",
+        "required": [
+          "criterion_id",
+          "type",
+          "description",
+          "passed_count",
+          "failed_count",
+          "remaining_count",
+          "attrition_rate"
+        ],
+        "title": "AttritionStep",
+        "description": "Step in the patient population attrition funnel."
+      },
       "BlockCreatedResponse": {
         "properties": {
           "status": {
@@ -5990,6 +6321,86 @@
           "file"
         ],
         "title": "Body_upload_protocol_ingestion_api_v1_designer_ingestion_upload_post"
+      },
+      "BurdenTraceItem": {
+        "properties": {
+          "component": {
+            "type": "string",
+            "title": "Component",
+            "description": "The name of the component, e.g. visits, procedures, forms"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count",
+            "description": "Occurrences of the component"
+          },
+          "weight": {
+            "type": "number",
+            "title": "Weight",
+            "description": "Weight multiplier per occurrence"
+          },
+          "subtotal": {
+            "type": "number",
+            "title": "Subtotal",
+            "description": "Subtotal burden (count * weight)"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation",
+            "description": "Trace explanation of this component"
+          }
+        },
+        "type": "object",
+        "required": [
+          "component",
+          "count",
+          "weight",
+          "subtotal",
+          "explanation"
+        ],
+        "title": "BurdenTraceItem",
+        "description": "An itemized breakdown of clinical operational burden."
+      },
+      "BurdenTraceReport": {
+        "properties": {
+          "visit_burden": {
+            "type": "number",
+            "title": "Visit Burden",
+            "description": "Aggregated burden of patient visits"
+          },
+          "procedure_burden": {
+            "type": "number",
+            "title": "Procedure Burden",
+            "description": "Aggregated burden of clinical procedures"
+          },
+          "activity_burden": {
+            "type": "number",
+            "title": "Activity Burden",
+            "description": "Aggregated burden of CRFs and forms"
+          },
+          "total_burden": {
+            "type": "number",
+            "title": "Total Burden",
+            "description": "Total clinical burden score"
+          },
+          "trace": {
+            "items": {
+              "$ref": "#/components/schemas/BurdenTraceItem"
+            },
+            "type": "array",
+            "title": "Trace",
+            "description": "Trace details explaining the sum"
+          }
+        },
+        "type": "object",
+        "required": [
+          "visit_burden",
+          "procedure_burden",
+          "activity_burden",
+          "total_burden"
+        ],
+        "title": "BurdenTraceReport",
+        "description": "Patient operational burden trace score."
       },
       "CDASHMapping": {
         "properties": {
@@ -6181,6 +6592,26 @@
           "text"
         ],
         "title": "CommentCreate"
+      },
+      "CommentCreatePayload": {
+        "properties": {
+          "field_id": {
+            "type": "string",
+            "title": "Field Id",
+            "description": "The ID of the eCRF field this comment anchors to"
+          },
+          "comment_text": {
+            "type": "string",
+            "title": "Comment Text",
+            "description": "The text content of the comment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "field_id",
+          "comment_text"
+        ],
+        "title": "CommentCreatePayload"
       },
       "CommentThread": {
         "properties": {
@@ -7392,6 +7823,41 @@
         "title": "ExpressionNode",
         "description": "Recursive node inside a structured clinical expression tree (AST).\nSupported types are: logical, comparison, field_ref, constant."
       },
+      "FeasibilityReport": {
+        "properties": {
+          "starting_cohort_size": {
+            "type": "integer",
+            "title": "Starting Cohort Size",
+            "description": "Initial patient pool size"
+          },
+          "final_eligible_count": {
+            "type": "integer",
+            "title": "Final Eligible Count",
+            "description": "Number of fully eligible patients"
+          },
+          "overall_eligibility_rate": {
+            "type": "number",
+            "title": "Overall Eligibility Rate",
+            "description": "Percentage of cohort that is eligible"
+          },
+          "attrition_steps": {
+            "items": {
+              "$ref": "#/components/schemas/AttritionStep"
+            },
+            "type": "array",
+            "title": "Attrition Steps",
+            "description": "Step-by-step funnel of attrition"
+          }
+        },
+        "type": "object",
+        "required": [
+          "starting_cohort_size",
+          "final_eligible_count",
+          "overall_eligibility_rate"
+        ],
+        "title": "FeasibilityReport",
+        "description": "Cohort-backed patient population feasibility and attrition rates."
+      },
       "FieldReference-Input": {
         "properties": {
           "field_id": {
@@ -7632,6 +8098,69 @@
         ],
         "title": "FormPayload",
         "description": "Form-specific payload validation containing items."
+      },
+      "FormReviewCommentResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "form_id": {
+            "type": "string",
+            "title": "Form Id"
+          },
+          "field_id": {
+            "type": "string",
+            "title": "Field Id"
+          },
+          "author_id": {
+            "type": "string",
+            "title": "Author Id"
+          },
+          "comment_text": {
+            "type": "string",
+            "title": "Comment Text"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "isResolved": {
+            "type": "boolean",
+            "title": "Isresolved"
+          },
+          "authorName": {
+            "type": "string",
+            "title": "Authorname"
+          },
+          "createdAt": {
+            "type": "string",
+            "title": "Createdat"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "form_id",
+          "field_id",
+          "author_id",
+          "comment_text",
+          "status",
+          "created_at",
+          "isResolved",
+          "authorName",
+          "createdAt",
+          "text"
+        ],
+        "title": "FormReviewCommentResponse"
       },
       "HTTPValidationError": {
         "properties": {
@@ -8203,6 +8732,50 @@
             "type": "boolean",
             "title": "Passed",
             "description": "True if no ERROR severity findings exist"
+          },
+          "readability": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReadabilityReport"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Readability metrics of narrative text blocks"
+          },
+          "burden_details": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BurdenTraceReport"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Traceable operational burden details"
+          },
+          "amendment_impact": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AmendmentImpactReport"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Amendment impact and cost estimation"
+          },
+          "feasibility": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FeasibilityReport"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Pluggable patient population feasibility metrics"
           }
         },
         "type": "object",
@@ -8230,7 +8803,7 @@
           "category": {
             "type": "string",
             "title": "Category",
-            "description": "Category: Structural, Regulatory, Burden"
+            "description": "Category: Structural, Regulatory, Burden, Inconsistency"
           },
           "message": {
             "type": "string",
@@ -8259,6 +8832,51 @@
         ],
         "title": "QualityRuleFinding",
         "description": "Specific protocol quality rule finding.\n\nRequirements: PRD-SYS-001"
+      },
+      "ReadabilityReport": {
+        "properties": {
+          "flesch_reading_ease": {
+            "type": "number",
+            "title": "Flesch Reading Ease",
+            "description": "Flesch Reading Ease score"
+          },
+          "flesch_kincaid_grade_level": {
+            "type": "number",
+            "title": "Flesch Kincaid Grade Level",
+            "description": "Flesch-Kincaid Grade Level"
+          },
+          "word_count": {
+            "type": "integer",
+            "title": "Word Count",
+            "description": "Total words counted"
+          },
+          "sentence_count": {
+            "type": "integer",
+            "title": "Sentence Count",
+            "description": "Total sentences counted"
+          },
+          "syllable_count": {
+            "type": "integer",
+            "title": "Syllable Count",
+            "description": "Total syllables counted"
+          },
+          "interpretation": {
+            "type": "string",
+            "title": "Interpretation",
+            "description": "Human-readable readability description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "flesch_reading_ease",
+          "flesch_kincaid_grade_level",
+          "word_count",
+          "sentence_count",
+          "syllable_count",
+          "interpretation"
+        ],
+        "title": "ReadabilityReport",
+        "description": "Deterministic readability metrics of block texts."
       },
       "RenameConceptRequest": {
         "properties": {

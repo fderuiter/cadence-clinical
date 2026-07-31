@@ -1,5 +1,5 @@
 import DefaultTheme from 'vitepress/theme'
-import { onMounted, watch } from 'vue'
+import { onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vitepress'
 import './custom.css'
 
@@ -7,6 +7,22 @@ export default {
   extends: DefaultTheme,
   setup() {
     const route = useRoute()
+    const activeCleanups = new Set()
+
+    const clearAllActiveDrags = () => {
+      activeCleanups.forEach((cleanup) => {
+        try {
+          cleanup();
+        } catch (err) {
+          console.error('Error during drag cleanup:', err);
+        }
+      });
+      activeCleanups.clear();
+    };
+
+    onUnmounted(() => {
+      clearAllActiveDrags();
+    });
 
     const initPanZoom = () => {
       if (typeof window === 'undefined') return;
@@ -104,6 +120,46 @@ export default {
       toolbar.appendChild(btnReset);
       outerContainer.appendChild(toolbar);
 
+      let listenersAttached = false;
+
+      const handleMouseMove = (e) => {
+        if (!isDragging) return;
+        panX = e.clientX - startX;
+        panY = e.clientY - startY;
+        updateTransform();
+      };
+
+      const handleMouseUp = () => {
+        cleanupDrag();
+      };
+
+      const handleTouchMove = (e) => {
+        if (!isDragging || e.touches.length !== 1) return;
+        panX = e.touches[0].clientX - startX;
+        panY = e.touches[0].clientY - startY;
+        updateTransform();
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+      };
+
+      const handleTouchEnd = () => {
+        cleanupDrag();
+      };
+
+      const cleanupDrag = () => {
+        isDragging = false;
+        wrapper.classList.remove('active');
+        if (listenersAttached) {
+          window.removeEventListener('mousemove', handleMouseMove);
+          window.removeEventListener('mouseup', handleMouseUp);
+          window.removeEventListener('touchmove', handleTouchMove);
+          window.removeEventListener('touchend', handleTouchEnd);
+          listenersAttached = false;
+        }
+        activeCleanups.delete(cleanupDrag);
+      };
+
       // Drag and drop / panning functionality on the wrapper
       wrapper.addEventListener('mousedown', (e) => {
         if (e.button !== 0) return; // Only left click
@@ -112,18 +168,15 @@ export default {
         startY = e.clientY - panY;
         wrapper.classList.add('active');
         e.preventDefault();
-      });
 
-      window.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
-        panX = e.clientX - startX;
-        panY = e.clientY - startY;
-        updateTransform();
-      });
-
-      window.addEventListener('mouseup', () => {
-        isDragging = false;
-        wrapper.classList.remove('active');
+        if (!listenersAttached) {
+          window.addEventListener('mousemove', handleMouseMove);
+          window.addEventListener('mouseup', handleMouseUp);
+          window.addEventListener('touchmove', handleTouchMove, { passive: false });
+          window.addEventListener('touchend', handleTouchEnd);
+          listenersAttached = true;
+          activeCleanups.add(cleanupDrag);
+        }
       });
 
       // Touch panning
@@ -132,18 +185,16 @@ export default {
           isDragging = true;
           startX = e.touches[0].clientX - panX;
           startY = e.touches[0].clientY - panY;
+
+          if (!listenersAttached) {
+            window.addEventListener('mousemove', handleMouseMove);
+            window.addEventListener('mouseup', handleMouseUp);
+            window.addEventListener('touchmove', handleTouchMove, { passive: false });
+            window.addEventListener('touchend', handleTouchEnd);
+            listenersAttached = true;
+            activeCleanups.add(cleanupDrag);
+          }
         }
-      });
-
-      wrapper.addEventListener('touchmove', (e) => {
-        if (!isDragging || e.touches.length !== 1) return;
-        panX = e.touches[0].clientX - startX;
-        panY = e.touches[0].clientY - startY;
-        updateTransform();
-      });
-
-      wrapper.addEventListener('touchend', () => {
-        isDragging = false;
       });
     };
 
@@ -153,6 +204,7 @@ export default {
     })
 
     watch(() => route.path, () => {
+      clearAllActiveDrags();
       setTimeout(initPanZoom, 600);
     })
   }

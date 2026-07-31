@@ -24,7 +24,7 @@ from fastapi import (
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from protocol_version_ref import ProtocolVersionRef
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, ValidationError, model_validator
 from sqlalchemy import func, select, text
 
 from apps.execution.biostat import (
@@ -63,6 +63,7 @@ from apps.execution.database.models import (
     CodingState,
     DictionaryImportJob,
     FormSubmission,
+    FormSubmissionStatus,
     ImportState,
     MigrationRule,
     SDVSignOff,
@@ -1253,6 +1254,204 @@ async def randomize_subject_endpoint(
     return SubjectRandomizationResponse(**masked_response)
 
 
+class SubjectStateUpdateRequest(BaseModel):
+    status: Optional[str] = None
+    state: Optional[str] = None
+
+
+class SubjectDemographicsUpdateRequest(BaseModel):
+    demographics: Optional[Demographics] = None
+    strat_factors: Optional[dict[str, Any]] = None
+
+
+@app.patch(
+    "/api/v1/execution/subjects/{id}/state",
+    response_model=SubjectResponse,
+)
+@app.patch(
+    "/subjects/{id}/state",
+    response_model=SubjectResponse,
+)
+async def update_subject_state_endpoint(
+    id: str,
+    payload: SubjectStateUpdateRequest,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+) -> SubjectResponse:
+    # Ensure change justification headers are present and valid
+    verify_change_justification(request)
+    change_reason = request.headers.get("X-Change-Reason")
+
+    target_state = payload.status or payload.state
+    if not target_state:
+        raise HTTPException(status_code=400, detail="Either status or state must be provided.")
+
+    async with db_manager.get_session_maker()() as session:
+        async with session.begin():
+            stmt = select(ClinicalSubject).where(
+                (ClinicalSubject.subject_id == id) | (ClinicalSubject.id == id)
+            )
+            result = await session.execute(stmt)
+            subject = result.scalars().first()
+            if not subject:
+                raise HTTPException(status_code=404, detail="Subject not found")
+
+            # Try to transition state
+            try:
+                subject.status = target_state
+            except InvalidStateTransitionError:
+                raise HTTPException(status_code=400, detail="INVALID_STATE_TRANSITION")
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+            session.add(subject)
+
+        # Retrieve and return updated subject
+        stmt_ref = select(ClinicalSubject).where(ClinicalSubject.id == subject.id)
+        res_ref = await session.execute(stmt_ref)
+        subj_db = res_ref.scalar_one()
+        return SubjectResponse(
+            id=subj_db.id,
+            subject_id=subj_db.subject_id,
+            study_id=subj_db.study_id,
+            encrypted_demographics=subj_db.encrypted_demographics,
+        )
+
+
+@app.put(
+    "/api/v1/execution/subjects/{id}/demographics",
+    response_model=SubjectResponse,
+)
+@app.put(
+    "/subjects/{id}/demographics",
+    response_model=SubjectResponse,
+)
+async def update_subject_demographics_endpoint(
+    id: str,
+    payload: SubjectDemographicsUpdateRequest,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+) -> SubjectResponse:
+    # Ensure change justification headers are present and valid
+    verify_change_justification(request)
+    change_reason = request.headers.get("X-Change-Reason")
+
+    async with db_manager.get_session_maker()() as session:
+        async with session.begin():
+            stmt = select(ClinicalSubject).where(
+                (ClinicalSubject.subject_id == id) | (ClinicalSubject.id == id)
+            )
+            result = await session.execute(stmt)
+            subject = result.scalars().first()
+            if not subject:
+                raise HTTPException(status_code=404, detail="Subject not found")
+
+            # Check if post-randomization
+            is_post_rand = subject.status in (
+                "RANDOMIZED",
+                "ACTIVE",
+                "COMPLETED",
+                "UNBLINDED",
+                "WITHDRAWN",
+            )
+
+            # Update strat_factors if provided
+            if payload.strat_factors is not None:
+                if is_post_rand and subject.strat_factors != payload.strat_factors:
+                    raise HTTPException(
+                        status_code=422, detail="LOCKED_FACTOR_MUTATION"
+                    )
+                subject.strat_factors = payload.strat_factors
+
+            # Update demographics if provided
+            if payload.demographics is not None:
+                current_demo = {}
+                if subject.encrypted_demographics:
+                    try:
+                        current_demo = decrypt_demographics(subject.encrypted_demographics)
+                    except Exception:
+                        pass
+
+                new_demo = payload.demographics.dict(exclude_none=True)
+                if is_post_rand and current_demo != new_demo:
+                    raise HTTPException(
+                        status_code=422, detail="LOCKED_FACTOR_MUTATION"
+                    )
+                encrypted_demo = encrypt_demographics(new_demo)
+                subject.encrypted_demographics = encrypted_demo
+
+            session.add(subject)
+
+        # Retrieve and return
+        stmt_ref = select(ClinicalSubject).where(ClinicalSubject.id == subject.id)
+        res_ref = await session.execute(stmt_ref)
+        subj_db = res_ref.scalar_one()
+        return SubjectResponse(
+            id=subj_db.id,
+            subject_id=subj_db.subject_id,
+            study_id=subj_db.study_id,
+            encrypted_demographics=subj_db.encrypted_demographics,
+        )
+
+
+@app.delete(
+    "/api/v1/execution/subjects/{id}/demographics",
+    response_model=SubjectResponse,
+)
+@app.delete(
+    "/subjects/{id}/demographics",
+    response_model=SubjectResponse,
+)
+async def delete_subject_demographics_endpoint(
+    id: str,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+) -> SubjectResponse:
+    # Ensure change justification headers are present and valid
+    verify_change_justification(request)
+    change_reason = request.headers.get("X-Change-Reason")
+
+    async with db_manager.get_session_maker()() as session:
+        async with session.begin():
+            stmt = select(ClinicalSubject).where(
+                (ClinicalSubject.subject_id == id) | (ClinicalSubject.id == id)
+            )
+            result = await session.execute(stmt)
+            subject = result.scalars().first()
+            if not subject:
+                raise HTTPException(status_code=404, detail="Subject not found")
+
+            # Check if post-randomization
+            is_post_rand = subject.status in (
+                "RANDOMIZED",
+                "ACTIVE",
+                "COMPLETED",
+                "UNBLINDED",
+                "WITHDRAWN",
+            )
+
+            if is_post_rand:
+                raise HTTPException(
+                    status_code=403, detail="SOFT_DELETE_BLOCKED"
+                )
+
+            # Pre-randomization: we can clear demographics/factors
+            subject.encrypted_demographics = None
+            subject.strat_factors = None
+            session.add(subject)
+
+        # Retrieve and return
+        stmt_ref = select(ClinicalSubject).where(ClinicalSubject.id == subject.id)
+        res_ref = await session.execute(stmt_ref)
+        subj_db = res_ref.scalar_one()
+        return SubjectResponse(
+            id=subj_db.id,
+            subject_id=subj_db.subject_id,
+            study_id=subj_db.study_id,
+            encrypted_demographics=subj_db.encrypted_demographics,
+        )
+
+
 @app.post("/api/v1/execution/visits", response_model=VisitResponse)
 async def create_visit(
     payload: VisitCreate,
@@ -2384,6 +2583,7 @@ async def get_cdisc_export_dictionary(study_id: str) -> Response:
 from apps.execution.routers.coding_schemas import (  # noqa: E402
     CoderActionRequest,
     CodingAssignmentResponse,
+    DictionaryImportRequest,
     DictTypeEnum,
     ImpactAnalysisRequest,
     ImpactAnalysisResponse,
@@ -2476,16 +2676,25 @@ async def import_dictionary(
 
     Satisfies Epic #109 / Issue #1122 / Phase 16: Dictionary Ingestion & Persistence.
     """
+    try:
+        DictionaryImportRequest(
+            dictionary_type=dictionary_type,
+            version=version,
+            parse_multilingual=parse_multilingual,
+        )
+    except ValidationError as e:
+        error_msg = e.errors()[0]["msg"] if e.errors() else str(e)
+        if error_msg.startswith("Value error, "):
+            error_msg = error_msg[len("Value error, ") :]
+        raise HTTPException(
+            status_code=400,
+            detail=error_msg,
+        )
+
     if dictionary_type not in (DictTypeEnum.MEDDRA, DictTypeEnum.WHODRUG):
         raise HTTPException(
             status_code=400,
             detail=f"Import not supported for dictionary type: {dictionary_type.value}",
-        )
-
-    if not version or not version.strip():
-        raise HTTPException(
-            status_code=400,
-            detail="Version must be a non-empty string.",
         )
 
     # 1. Persist the uploaded file to secure temporary storage
@@ -3693,6 +3902,19 @@ VALID_SIGNING_REASONS = {
 }
 
 
+class FormSubmissionStatusEnum(str, Enum):
+    DRAFT = FormSubmissionStatus.DRAFT.value
+    COMPLETED = FormSubmissionStatus.COMPLETED.value
+    APPROVED = FormSubmissionStatus.APPROVED.value
+
+
+class SigningReasonCode(str, Enum):
+    DATA_RECORDING = "DATA_RECORDING"
+    PI_APPROVAL = "PI_APPROVAL"
+    REVIEW_CONFIRMATION = "REVIEW_CONFIRMATION"
+    COMPLIANCE_ATTESTATION = "COMPLIANCE_ATTESTATION"
+
+
 class FormSubmissionCreate(BaseModel):
     study_id: str
     site_id: str
@@ -3708,7 +3930,7 @@ class FormSubmissionResponse(BaseModel):
     subject_id: str
     visit_id: Optional[str] = None
     form_id: str
-    status: str
+    status: FormSubmissionStatusEnum
     version: int
     is_deleted: bool
     signature_manifest: Optional[dict[str, Any]] = None

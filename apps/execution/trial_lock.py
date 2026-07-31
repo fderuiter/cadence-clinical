@@ -235,32 +235,32 @@ class TrialLockManager:
 
     @classmethod
     def lock_form(cls, form_id: str):
-        """Locks a specific form by form_id."""
+        """Locks a specific form by form_id (Task 1)."""
         cls._locked_forms.add(str(form_id))
 
     @classmethod
     def unlock_form(cls, form_id: str):
-        """Unlocks a specific form by form_id."""
+        """Unlocks a specific form by form_id (Task 1)."""
         cls._locked_forms.discard(str(form_id))
 
     @classmethod
     def is_form_locked(cls, form_id: str) -> bool:
-        """Checks if a form is locked."""
+        """Checks if a form is locked (Task 1)."""
         return str(form_id) in cls._locked_forms
 
     @classmethod
     def lock_subject(cls, subject_id: str):
-        """Locks a specific subject by subject_id."""
+        """Locks a specific subject by subject_id (Task 1)."""
         cls._locked_subjects.add(str(subject_id))
 
     @classmethod
     def unlock_subject(cls, subject_id: str):
-        """Unlocks a specific subject by subject_id."""
+        """Unlocks a specific subject by subject_id (Task 1)."""
         cls._locked_subjects.discard(str(subject_id))
 
     @classmethod
     def is_subject_locked(cls, subject_id: str) -> bool:
-        """Checks if a subject is locked."""
+        """Checks if a subject is locked (Task 1)."""
         return str(subject_id) in cls._locked_subjects
 
     @classmethod
@@ -294,10 +294,11 @@ class TrialLockManager:
 
     @classmethod
     def reset(cls):
-        """Resets lock (mostly for testing)."""
+        """Resets lock (mostly for testing) (Task 1)."""
         cls._is_locked = False
         cls._locked_at = None
         cls._locked_sites.clear()
         cls._locked_visits.clear()
+        # Explicitly clear new collections to maintain test isolation (Task 1)
         cls._locked_forms.clear()
         cls._locked_subjects.clear()

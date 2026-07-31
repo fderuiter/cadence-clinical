@@ -1,8 +1,14 @@
+import os
 from unittest.mock import patch
 
 import pytest
 
-from scripts.detect_duplication import main, normalize_line, scan_file_for_lines
+from scripts.detect_duplication import (
+    REPO_ROOT,
+    main,
+    normalize_line,
+    scan_file_for_lines,
+)
 
 # Language Coverage Tests
 
@@ -136,10 +142,12 @@ def test_main_no_duplicates_scanned(mock_exit, mock_scan, mock_walk, mock_exists
     mock_exit.side_effect = SystemExit
 
     # Mock file discovery
-    mock_exists.side_effect = lambda path: path in ["/app/apps", "/app/packages"]
+    mock_exists.side_effect = lambda path: (
+        os.path.basename(path) in ["apps", "packages"]
+    )
     mock_walk.side_effect = [
-        [("/app/apps/serviceA", [], ["file1.js"])],
-        [("/app/packages/libB", [], ["file2.js"])],
+        [(os.path.join(REPO_ROOT, "apps/serviceA"), [], ["file1.js"])],
+        [(os.path.join(REPO_ROOT, "packages/libB"), [], ["file2.js"])],
     ]
 
     # Mock no duplicate line blocks (less than 15 lines)
@@ -162,10 +170,12 @@ def test_main_with_duplicates_detected(mock_exit, mock_scan, mock_walk, mock_exi
     mock_exit.side_effect = SystemExit
 
     # Mock file discovery
-    mock_exists.side_effect = lambda path: path in ["/app/apps", "/app/packages"]
+    mock_exists.side_effect = lambda path: (
+        os.path.basename(path) in ["apps", "packages"]
+    )
     mock_walk.side_effect = [
-        [("/app/apps/serviceA", [], ["file1.js"])],
-        [("/app/packages/libB", [], ["file2.js"])],
+        [(os.path.join(REPO_ROOT, "apps/serviceA"), [], ["file1.js"])],
+        [(os.path.join(REPO_ROOT, "packages/libB"), [], ["file2.js"])],
     ]
 
     # Mock duplicate line blocks (15 lines of identical content)
@@ -197,10 +207,12 @@ def test_main_url_logic_preservation(mock_exit, mock_scan, mock_walk, mock_exist
 
     # This test verifies that different code logic following a URL is NOT truncated
     # into identical lines, which would cause false-positive duplication blocks.
-    mock_exists.side_effect = lambda path: path in ["/app/apps", "/app/packages"]
+    mock_exists.side_effect = lambda path: (
+        os.path.basename(path) in ["apps", "packages"]
+    )
     mock_walk.side_effect = [
-        [("/app/apps/serviceA", [], ["file1.js"])],
-        [("/app/packages/libB", [], ["file2.js"])],
+        [(os.path.join(REPO_ROOT, "apps/serviceA"), [], ["file1.js"])],
+        [(os.path.join(REPO_ROOT, "packages/libB"), [], ["file2.js"])],
     ]
 
     # File 1 has logic fetching URL and calling actionA
@@ -234,3 +246,26 @@ def test_main_url_logic_preservation(mock_exit, mock_scan, mock_walk, mock_exist
     # Since actionA and actionB are different, the normalization preserves them
     # and they should NOT be detected as duplicates.
     mock_exit.assert_called_once_with(0)
+
+
+def test_repo_root_resolution():
+    import os
+
+    from scripts.detect_duplication import REPO_ROOT
+
+    # REPO_ROOT should be an absolute path ending with the repository directory (e.g. "cadence-clinical" or "/app")
+    assert os.path.isabs(REPO_ROOT)
+    assert os.path.exists(os.path.join(REPO_ROOT, "scripts", "detect_duplication.py"))
+
+
+def test_path_normalization_win32():
+    import os
+
+    from scripts.detect_duplication import REPO_ROOT
+
+    # Emulate Windows backslashes
+    mock_win_path = os.path.join(REPO_ROOT, "apps\\etmf\\sealer.py")
+    normalized_path = os.path.relpath(mock_win_path, REPO_ROOT).replace("\\", "/")
+
+    assert "\\" not in normalized_path
+    assert normalized_path == "apps/etmf/sealer.py"

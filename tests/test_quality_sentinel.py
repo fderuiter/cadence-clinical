@@ -377,3 +377,70 @@ def test_pluggable_fixture_patient_attrition() -> None:
 
     assert report.feasibility.final_eligible_count == 3
     assert report.feasibility.overall_eligibility_rate == 60.0  # 3/5 = 60%
+
+
+def test_quality_sentinel_router_endpoint_dependency_override() -> None:
+    """Validate POST /api/v1/designer/sentinel/evaluate with dependency overrides.
+
+    Requirements: PRD-SYS-001
+    """
+    import time
+    from unittest.mock import patch
+
+    from cdisc.sentinel_models import ProtocolQualityScore
+
+    from apps.designer.dependencies import get_quality_sentinel
+    from packages.security.rbac import Principal, get_principal
+
+    class MockProtocolQualitySentinel:
+        def evaluate_protocol_quality(self, payload: dict) -> ProtocolQualityScore:
+            return ProtocolQualityScore(
+                study_id="mocked_sentinel_study_555",
+                passed=True,
+                quality_score=95.5,
+                patient_burden_index=0.0,
+                findings=[],
+            )
+
+    # Register dependency overrides
+    app.dependency_overrides[get_quality_sentinel] = lambda: (
+        MockProtocolQualitySentinel()
+    )
+
+    # Return a mocked Principal with admin/sponsor_designer role to bypass require_permission
+    mock_principal = Principal(
+        user_id="mocked_designer_user",
+        roles=["sponsor_designer"],
+        unblinded_access=True,
+    )
+    app.dependency_overrides[get_principal] = lambda: mock_principal
+
+    try:
+        # Patch verify_gateway_signature to return True, bypassing cryptographic signature validation
+        with patch(
+            "packages.security.signing.verify_gateway_signature", return_value=True
+        ):
+            # Perform request with dummy gateway headers (no real cryptographic signing needed)
+            response = client.post(
+                "/api/v1/designer/sentinel/evaluate",
+                json={
+                    "id": "study_sentinel_override",
+                },
+                headers={
+                    "X-User-Id": "mocked_designer_user",
+                    "X-User-Roles": "STUDY_DESIGNER",
+                    "X-Gateway-Timestamp": str(time.time()),
+                    "X-Gateway-Signature": "dummy_signature",
+                    "X-Signature-Version": "2",
+                    "X-Change-Reason": "Testing sentinel dependency override",
+                },
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["study_id"] == "mocked_sentinel_study_555"
+            assert data["passed"] is True
+            assert data["quality_score"] == 95.5
+    finally:
+        # Clean up dependency overrides
+        app.dependency_overrides.clear()

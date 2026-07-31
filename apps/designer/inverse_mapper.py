@@ -1,3 +1,7 @@
+"""
+Inverse USDM mapper for Phase 2 - Bidirectional Import & Export Mapping.
+"""
+
 from typing import Any, Dict, Optional
 
 from apps.designer.db import MOCK_TERMINOLOGY

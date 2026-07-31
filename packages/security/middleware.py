@@ -227,6 +227,8 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
         else:
             tenant_id = str(tenant_id).strip()
 
+        sig_token = request.headers.get("X-Sig-Token")
+
         if version in ("2", "v2"):
             from packages.security.signing import verify_gateway_signature
 
@@ -241,6 +243,7 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
                 sponsor_id=sponsor_id,
                 unblinded_access=unblinded_access,
                 tenant_id=tenant_id,
+                sig_token=sig_token,
             )
         else:
             # Version 1/v1 (legacy colon concatenated format) - doesn't support scope
@@ -289,7 +292,6 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
         )
 
         if is_signature_gated and is_mutation:
-            sig_token = request.headers.get("X-Sig-Token")
             success, result = verify_sig_token(
                 sig_token=sig_token,
                 user_id=user_id,
@@ -355,6 +357,58 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
                 norm_reason = str(req_signing_reason).strip()
 
                 binding_str = f"{norm_study}:{norm_type}:{norm_ids}:{norm_reason}"
+                computed_batch_id = hashlib.sha256(
+                    binding_str.encode("utf-8")
+                ).hexdigest()
+
+                if token_batch_id != computed_batch_id:
+                    return JSONResponse(
+                        status_code=401,
+                        content={
+                            "detail": "REAUTHENTICATION_REQUIRED",
+                            "error": "REAUTHENTICATION_REQUIRED",
+                            "message": "Signature token batch binding mismatch.",
+                        },
+                    )
+            elif "sdv/bulk-sign-off" in path_lower:
+                if not token_batch_id:
+                    return JSONResponse(
+                        status_code=401,
+                        content={
+                            "detail": "REAUTHENTICATION_REQUIRED",
+                            "error": "REAUTHENTICATION_REQUIRED",
+                            "message": "Signature token is not bound to a batch.",
+                        },
+                    )
+
+                req_study_id = body_json.get("study_id")
+                req_scope = body_json.get("scope")
+                req_target_ids = body_json.get("target_ids")
+                req_reason = body_json.get("reason_for_change")
+
+                if (
+                    not req_study_id
+                    or not req_scope
+                    or req_target_ids is None
+                    or not req_target_ids
+                    or not req_reason
+                    or not str(req_reason).strip()
+                ):
+                    return JSONResponse(
+                        status_code=400,
+                        content={
+                            "detail": "REAUTHENTICATION_REQUIRED",
+                            "error": "REAUTHENTICATION_REQUIRED",
+                            "message": "Missing bulk sign-off fields for validation.",
+                        },
+                    )
+
+                norm_study = str(req_study_id).strip()
+                norm_scope = str(req_scope).strip()
+                sorted_ids = sorted([str(tid).strip() for tid in req_target_ids])
+                norm_reason = str(req_reason).strip()
+
+                binding_str = f"{norm_study}:{norm_scope}:{sorted_ids}:{norm_reason}"
                 computed_batch_id = hashlib.sha256(
                     binding_str.encode("utf-8")
                 ).hexdigest()
