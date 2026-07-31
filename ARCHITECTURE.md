@@ -120,6 +120,16 @@ Traditional clinical trial builds require manual, error-prone translation of pro
   * Supports bidirectional offline sync with automated conflict reconciliation strategies and deduplication mechanisms.
   * Integrated on host port `8010` and aggregated into the gateway's unified OpenAPI specification.
 
+### M. Controlled Terminology & NCI Thesaurus Subsystem (`apps/designer`, `packages/ui`, `apps/gateway`)
+* **Role:** Real-time CDISC CT / NCI Thesaurus integration and live field validation.
+* **Core Responsibilities & Flow:**
+  * **EVS Client (`apps/designer/evs_client.py`):** Establishes an asynchronous client hitting the external NCI EVS REST API, providing robust lookup, search, and type-safe error handling.
+  * **Terminology Cache (`TerminologyCache`):** Combines database/in-memory cache-aside lookup with a thread-safe TTL and automatic fallback to mock/offline datasets on transport or service degradation.
+  * **Routing & Security:** The API Gateway (`apps/gateway/main.py`) performs HMAC-signed proxying and strips prefixes to route external `/api/v1/terminology` traffic directly to the Designer service (ADR-058).
+  * **Signed Web Client:** The frontend client (`apps/web/src/api/terminologyClient.js`) interacts securely via standard in-transit signature verification (ADR-067).
+  * **Consolidated UI Components:** `packages/ui` provides the shared `debounce` utility and `createClinicalLookupInput` helper function, which are consumed by Vue interfaces like `EcrfView.vue` and `MdrView.vue` to achieve responsive typing validation, stale response guards, and accessible ARIA live-region feedback (ADR-065).
+  * **GxP Scope & Auditing:** Features a deliberate **no-persistent-audit-trail** architectural design. Since lookups are stateless, read-only queries with signed headers, they do not mutate clinical record states and thus bypass persistent audit trailing, ensuring optimal performance and minimizing database footprints while maintaining transit integrity.
+
 ---
 
 ## 3. Data Transformation Flow
