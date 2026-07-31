@@ -232,6 +232,7 @@ WHITELISTED_ROUTES = {
     ("get", "/api/v1/execution/doa/log/{study_id}/{site_id}"),
     ("post", "/api/v1/execution/doa/sign-off"),
     ("post", "/api/v1/execution/doa/assignment"),
+    ("post", "/api/v1/execution/offline/sync-batch"),
     ("post", "/api/v1/execution/anonymization/redact-pdf"),
     ("post", "/api/v1/execution/anonymization/scan-phi"),
     ("get", "/api/v1/execution/eisf/binder/{study_id}/{site_id}"),

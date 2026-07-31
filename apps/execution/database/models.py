@@ -1184,7 +1184,6 @@ class MigrationRule(AuditedModel):
     default_value_float: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
 
-<<<<<<< HEAD
 class ComplianceChangeRequest(AuditedModel):
     """Represents a GxP-regulated compliance change request.
 
@@ -1252,15 +1251,10 @@ class ComprehensionQuizResult(AuditedModel):
 
 class SyncedBatchIdempotencyKey(Base):
     """Represents a unique client batch synchronization token for idempotency.
-=======
-class ProcessedOfflineBatch(Base):
-    """Tracks processed offline sync batch IDs to ensure idempotency.
->>>>>>> 14e37a8 (Add automated integration tests and implementation for offline data synchronization)
 
     Requirements: PRD-SYS-001
     """
 
-<<<<<<< HEAD
     __tablename__ = "synced_batch_idempotency_keys"
 
     client_batch_id: Mapped[str] = mapped_column(String(255), primary_key=True)

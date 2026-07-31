@@ -23,7 +23,9 @@ from apps.execution.database.models import (
     FormSubmission,
     SyncedBatchIdempotencyKey,
 )
-from apps.execution.services.offline_sync import OfflineSyncEngine as ServiceOfflineSyncEngine
+from apps.execution.services.offline_sync import (
+    OfflineSyncEngine as ServiceOfflineSyncEngine,
+)
 from packages.security.middleware import get_current_user
 
 router = APIRouter(prefix="/api/v1/execution/offline", tags=["Offline Sync"])
