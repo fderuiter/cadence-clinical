@@ -9,10 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1742
-- **Passed:** 1742 🟢
-- **Total Automated Test Cases Run:** 1758
-- **Passed:** 1758 🟢
+- **Total Automated Test Cases Run:** 1763
+- **Passed:** 1763 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -505,9 +503,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_no_raw_matched_values_persisted` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
 | `test_overlap_resolution_comprehensive` | `tests.test_deidentification` | PRD-MDR-006, PRD-TMF-005 | 🟢 PASSED | < 1s |
 | `test_source_documents_remain_unchanged` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
-| `test_transforms_all_strategies` | `tests.test_deidentification` | PRD-TMF-005 | 🟢 PASSED | < 1s |
-| `test_check_delegation_authority_success` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_transforms_all_strategies` | `tests.test_deidentification` | PRD-MDR-006, PRD-TMF-005 | 🟢 PASSED | < 1s |
+| `test_check_delegation_authority_success` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_delegation_allowed_non_pi_when_not_enforced` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_delegation_denied_site_mismatch` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_delegation_denied_sponsor_mismatch` | `tests.test_delegation` | *Regression/Helper* | 🟢 PASSED | < 1s |
