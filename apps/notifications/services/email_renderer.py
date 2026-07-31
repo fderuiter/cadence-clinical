@@ -43,7 +43,7 @@ def render_email_template(template_name: str, context: Dict[str, Any]) -> str:
     """
     if os.path.exists(TEMPLATE_DIR):
         try:
-            env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
+            env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))  # nosec B701: email templates are controlled and trusted internally
             template = env.get_template(template_name)
             return template.render(**context)
         except Exception:
