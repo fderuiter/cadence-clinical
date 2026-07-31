@@ -608,3 +608,75 @@ async def test_update_local_to_central_invariant_enforcement() -> None:
         assert res_update_valid.status_code == 200
         assert res_update_valid.json()["source"] == "CENTRAL"
         assert res_update_valid.json()["site_id"] is None
+
+
+@pytest.mark.asyncio
+async def test_list_lab_reference_ranges_filtering_by_lab_source() -> None:
+    """Verify that list_lab_ranges correctly filters reference ranges when the lab_source query parameter is used."""
+    headers = get_auth_headers(roles="cra")
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # Create a CENTRAL lab reference range
+        payload_central = {
+            "study_id": "STUDY-FILTER",
+            "test_code": "ALT",
+            "test_name": "Alanine Aminotransferase",
+            "source": "CENTRAL",
+            "site_id": None,
+            "unit": "U/L",
+            "normalized_unit": "U/L",
+            "sex_applicability": "ALL",
+        }
+        res_central = await client.post(
+            "/api/v1/execution/lab-ranges",
+            json=payload_central,
+            headers=headers,
+        )
+        assert res_central.status_code == 201
+
+        # Create a LOCAL lab reference range
+        payload_local = {
+            "study_id": "STUDY-FILTER",
+            "test_code": "ALT",
+            "test_name": "Alanine Aminotransferase",
+            "source": "LOCAL",
+            "site_id": "SITE-FILTER-A",
+            "unit": "U/L",
+            "normalized_unit": "U/L",
+            "sex_applicability": "ALL",
+        }
+        res_local = await client.post(
+            "/api/v1/execution/lab-ranges",
+            json=payload_local,
+            headers=headers,
+        )
+        assert res_local.status_code == 201
+
+        # Query all ranges
+        res_all = await client.get(
+            "/api/v1/execution/lab-ranges?study_id=STUDY-FILTER",
+            headers=headers,
+        )
+        assert res_all.status_code == 200
+        assert len(res_all.json()) == 2
+
+        # Query only CENTRAL ranges using lab_source parameter
+        res_filter_central = await client.get(
+            "/api/v1/execution/lab-ranges?study_id=STUDY-FILTER&lab_source=CENTRAL",
+            headers=headers,
+        )
+        assert res_filter_central.status_code == 200
+        ranges_central = res_filter_central.json()
+        assert len(ranges_central) == 1
+        assert ranges_central[0]["source"] == "CENTRAL"
+
+        # Query only LOCAL ranges using lab_source parameter
+        res_filter_local = await client.get(
+            "/api/v1/execution/lab-ranges?study_id=STUDY-FILTER&lab_source=LOCAL",
+            headers=headers,
+        )
+        assert res_filter_local.status_code == 200
+        ranges_local = res_filter_local.json()
+        assert len(ranges_local) == 1
+        assert ranges_local[0]["source"] == "LOCAL"

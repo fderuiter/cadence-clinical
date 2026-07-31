@@ -677,8 +677,30 @@ class ObservationResponse(BaseModel):
     lab_indicator: Optional[str] = None
     lab_out_of_range: Optional[bool] = None
     matched_normal_bounds: Optional[str] = None
+    range_indicator: Optional[str] = None
+    is_out_of_range: Optional[bool] = None
+    reference_range_low: Optional[float] = None
+    reference_range_high: Optional[float] = None
     protocol_version_tag: Optional[str] = None
     protocol_version_index: Optional[int] = None
+
+    @model_validator(mode="after")
+    def populate_range_fields(self) -> "ObservationResponse":
+        if self.range_indicator is None and self.lab_indicator is not None:
+            self.range_indicator = self.lab_indicator
+        if self.is_out_of_range is None and self.lab_out_of_range is not None:
+            self.is_out_of_range = self.lab_out_of_range
+        if self.reference_range_low is None or self.reference_range_high is None:
+            if self.matched_normal_bounds:
+                try:
+                    bounds = json.loads(self.matched_normal_bounds)
+                    if self.reference_range_low is None:
+                        self.reference_range_low = bounds.get("low")
+                    if self.reference_range_high is None:
+                        self.reference_range_high = bounds.get("high")
+                except Exception:
+                    pass
+        return self
 
 
 class MigrationRuleCreate(BaseModel):
@@ -1669,6 +1691,16 @@ async def create_observation(
             change_reason=change_reason,
         )
 
+        ref_low = None
+        ref_high = None
+        if obs_db.matched_normal_bounds:
+            try:
+                bounds = json.loads(obs_db.matched_normal_bounds)
+                ref_low = bounds.get("low")
+                ref_high = bounds.get("high")
+            except Exception:
+                pass
+
         return ObservationResponse(
             id=obs_db.id,
             subject_id=obs_db.subject_id,
@@ -1689,6 +1721,10 @@ async def create_observation(
             lab_indicator=obs_db.lab_indicator,
             lab_out_of_range=obs_db.lab_out_of_range,
             matched_normal_bounds=obs_db.matched_normal_bounds,
+            range_indicator=obs_db.lab_indicator,
+            is_out_of_range=obs_db.lab_out_of_range,
+            reference_range_low=ref_low,
+            reference_range_high=ref_high,
             protocol_version_tag=obs_db.protocol_version_tag,
             protocol_version_index=obs_db.protocol_version_index,
         )
@@ -2107,6 +2143,7 @@ async def list_lab_ranges(
     study_id: Optional[str] = None,
     test_code: Optional[str] = None,
     source: Optional[str] = None,
+    lab_source: Optional[str] = None,
     include_deleted: bool = False,
     roles: list[str] = Depends(get_normalized_roles),
 ) -> List[LabReferenceRangeResponse]:
@@ -2124,6 +2161,8 @@ async def list_lab_ranges(
             stmt = stmt.where(LabReferenceRange.test_code == test_code)
         if source:
             stmt = stmt.where(LabReferenceRange.source == source)
+        if lab_source:
+            stmt = stmt.where(LabReferenceRange.source == lab_source)
 
         res = await session.execute(stmt)
         ranges = res.scalars().all()
