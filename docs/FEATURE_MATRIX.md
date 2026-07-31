@@ -14,6 +14,7 @@ This matrix details the distribution of core compliance and tracking features ac
 | **eTMF Taxonomy Classification** | API Gateway resolution via catalog | Enforced strict ingestion hierarchy validations | v1.4.0 | Supported |
 | **CTMS Site Operational Tracking**| N/A | Secured monitor/milestone/CRA workload operations & append-only audit trail | v1.5.0 | Supported |
 | **Quality & CAPA Management**     | N/A | Secured protocol deviation tracking, Root Cause Analysis (RCA), CAPA transition workflows, and append-only QA audit logs | v1.5.0 | Supported |
+| **CDISC SDTM Mapping** | N/A | Authenticated SDTM/ADaM extraction, Dataset-JSON serialization, structural/referential validation, and BiostatExport audit logging | v1.7.0 | Supported |
 | **ePRO Patient Diary Submissions** | N/A | Secured REST single/bulk submissions with deterministic conflict strategy resolution | v1.6.0 | Supported |
 | **Offline PWA Portal & Sync**     | Independent client UI and IndexedDB queue | N/A (Client-side execution cached via Service Workers) | v1.6.0 | Supported |
 | **Multi-Channel Patient Alerts**  | N/A | Automated compliance reminders computed from Subject Assignments via SMS/Email/Webhook | v1.6.0 | Supported |
@@ -46,6 +47,7 @@ The table below specifies how individual clinical domain entities are processed,
 | **eISF Audit Logs** | eISF Service | SQLite/PostgreSQL | Append-only chronological audit logging for all site operations, views, and sync conflict resolutions |
 | **CTMS Visits & Milestones** | CTMS Service | SQLite/PostgreSQL | Explicit `CTMSAuditLog` writes & standard Part 11 fields |
 | **Protocol Deviations & CAPA**| Quality Service | SQLite/PostgreSQL | Automated `QualityAuditLog` logging, transition controls, and 21 CFR Part 11 fields |
+| **SDTM/ADaM Export** | Execution | PostgreSQL | `BiostatExport` audited-model logging (plus generic `before_flush` hook) |
 | **Subject Assignments** | Interop Service | SQLite/PostgreSQL | Explicit `InteropAuditLog` writes with Part 11 metadata |
 | **ePRO Submissions** | Interop Service | SQLite/PostgreSQL | Immutable database-level submission logging and conflict strategy reconciliation |
 | **Patient Notifications**| Interop Service | SQLite/PostgreSQL | Append-only delivery logs and read acknowledgment timestamp auditing |
