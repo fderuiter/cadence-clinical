@@ -3857,6 +3857,10 @@ class ProtocolAmendRequest(BaseModel):
 @app.post(
     "/api/designer/protocols/{id}/amend",
     status_code=status.HTTP_201_CREATED,
+    dependencies=[
+        Depends(require_permission("study_design:update")),
+        Depends(require_study_scope()),
+    ],
 )
 async def amend_protocol(
     id: str,
