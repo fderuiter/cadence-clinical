@@ -196,3 +196,29 @@ class AuditLoggerEngine:
 
 # Global default audit logger engine instance
 audit_logger_engine = AuditLoggerEngine()
+
+
+class CentralAuditLogger:
+    """Centralized audit logging facade for clinical and eConsent workflow events."""
+
+    @staticmethod
+    def log_event(
+        service_name: str,
+        action_type: str,
+        entity_name: str,
+        entity_id: str,
+        user_id: str,
+        reason_for_change: str,
+        details: Optional[Dict[str, Any]] = None,
+    ) -> AuditLogRecord:
+        """Create and append an audit event log to the SHA-256 chain."""
+        payload = AuditLogPayload(
+            service_name=service_name,
+            action_type=action_type,
+            entity_name=entity_name,
+            entity_id=entity_id,
+            user_id=user_id,
+            reason_for_change=reason_for_change,
+            details=details or {},
+        )
+        return audit_logger_engine.log_event(payload)

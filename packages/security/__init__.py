@@ -2,6 +2,7 @@ from packages.security.audit_logger import (
     AuditLoggerEngine,
     AuditLogPayload,
     AuditLogRecord,
+    CentralAuditLogger,
     audit_logger_engine,
 )
 from packages.security.context import (
@@ -145,6 +146,7 @@ __all__ = [
     "AuditLogPayload",
     "AuditLogRecord",
     "audit_logger_engine",
+    "CentralAuditLogger",
     "SignatureVerificationRequest",
     "SignatureVerificationResult",
     "verify_electronic_signature",
