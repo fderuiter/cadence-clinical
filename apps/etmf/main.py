@@ -4,6 +4,7 @@ import time
 from datetime import date, datetime, timezone
 from typing import Any, Dict, List, Optional
 
+from audit import AuditAction
 from fastapi import (
     Depends,
     FastAPI,
@@ -12,7 +13,6 @@ from fastapi import (
     Request,
 )
 from fastapi.responses import Response
-from audit import AuditAction
 from protocol_version_ref import ProtocolVersionRef
 from pydantic import BaseModel, Field, model_validator
 from signature import SigningReason
