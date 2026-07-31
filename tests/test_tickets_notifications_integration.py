@@ -56,7 +56,6 @@ def get_auth_headers(
 @pytest.mark.asyncio
 @patch("apps.tickets.main.publish_notification", new_callable=AsyncMock)
 async def test_ticket_assignment_notification(mock_publish):
-    # @req:Trace-14
     """
     Assert that assigning a ticket triggers a notification targeting the assignee user,
     and excluding the acting user.
@@ -116,7 +115,6 @@ async def test_ticket_assignment_notification(mock_publish):
 @pytest.mark.asyncio
 @patch("apps.tickets.main.publish_notification", new_callable=AsyncMock)
 async def test_ticket_comment_notification(mock_publish):
-    # @req:Trace-14
     """
     Assert that adding a comment to a ticket triggers notifications targeting the assignee and reporter,
     excluding the comment author.
@@ -160,7 +158,6 @@ async def test_ticket_comment_notification(mock_publish):
 @pytest.mark.asyncio
 @patch("apps.tickets.main.publish_notification", new_callable=AsyncMock)
 async def test_ticket_transition_notification(mock_publish):
-    # @req:Trace-14
     """
     Assert that transitioning ticket status triggers notifications targeting reporter + assignee,
     excluding the actor, and includes the old and new statuses.
@@ -206,7 +203,6 @@ async def test_ticket_transition_notification(mock_publish):
 @pytest.mark.asyncio
 @patch("apps.tickets.main.publish_notification", new_callable=AsyncMock)
 async def test_update_ticket_notifications(mock_publish):
-    # @req:Trace-14
     """
     Assert that PUT /api/v1/tickets/{id} detects both assignment diff and status change,
     and correctly enqueues two separate notifications.
@@ -258,7 +254,6 @@ async def test_update_ticket_notifications(mock_publish):
 @pytest.mark.asyncio
 @patch("apps.tickets.main.publish_notification")
 async def test_notification_failure_isolation(mock_publish):
-    # @req:Trace-14
     """
     Assert that if publish_notification fails or raises an exception, the ticket mutation
     still commits successfully and audit log is fully written.
@@ -311,7 +306,6 @@ async def test_notification_failure_isolation(mock_publish):
 @pytest.mark.asyncio
 @patch("apps.tickets.main.publish_notification", new_callable=AsyncMock)
 async def test_notification_idempotency(mock_publish):
-    # @req:Trace-14
     """
     Assert that identical events carry a stable/consistent key based on (ticket_id, event, version)
     so duplicates are harmless.

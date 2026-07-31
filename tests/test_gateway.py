@@ -108,7 +108,6 @@ async def test_get_openapi_json(monkeypatch: pytest.MonkeyPatch) -> None:
         assert "/notifications/test" in data["paths"]
         assert "/safety/test" in data["paths"]
         assert "/eisf/test" in data["paths"]
-        assert "/tickets/test" in data["paths"]
         assert "Designer_TestModel" in data["components"]["schemas"]
         assert "Execution_TestModel" in data["components"]["schemas"]
         assert "Ctms_TestModel" in data["components"]["schemas"]
@@ -116,7 +115,6 @@ async def test_get_openapi_json(monkeypatch: pytest.MonkeyPatch) -> None:
         assert "Notifications_TestModel" in data["components"]["schemas"]
         assert "Safety_TestModel" in data["components"]["schemas"]
         assert "Eisf_TestModel" in data["components"]["schemas"]
-        assert "Tickets_TestModel" in data["components"]["schemas"]
 
 
 def test_get_openapi_json_error(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -279,21 +277,6 @@ def test_proxy_requests_paths(monkeypatch: pytest.MonkeyPatch) -> None:
         assert (
             str(mock_send.call_args.args[0].url)
             == "http://localhost:8010/events/publish"
-        )
-
-        # Test tickets prefix
-        res = client.get("/tickets/test", headers={"Authorization": f"Bearer {token}"})
-        assert res.status_code == 200
-        assert str(mock_send.call_args.args[0].url) == "http://localhost:8009/test"
-
-        # Test api/v1/tickets
-        res = client.get(
-            "/api/v1/tickets/test", headers={"Authorization": f"Bearer {token}"}
-        )
-        assert res.status_code == 200
-        assert (
-            str(mock_send.call_args.args[0].url)
-            == "http://localhost:8009/api/v1/tickets/test"
         )
 
         # Test default route
@@ -592,11 +575,6 @@ def test_gateway_subject_role_routing_restrictions(
             "/execution/test", headers={"Authorization": f"Bearer {token}"}
         )
         assert res_execution.status_code == 403
-
-        res_tickets = client.get(
-            "/tickets/test", headers={"Authorization": f"Bearer {token}"}
-        )
-        assert res_tickets.status_code == 403
 
 
 def test_signature_verification_success(monkeypatch: pytest.MonkeyPatch) -> None:

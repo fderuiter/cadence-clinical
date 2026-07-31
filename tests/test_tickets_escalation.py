@@ -40,7 +40,6 @@ async def setup_tickets_db():
 @pytest.mark.asyncio
 @patch("apps.tickets.notifications_client.publish_notification", new_callable=AsyncMock)
 async def test_escalation_eligibility_rules(mock_publish):
-    # @req:Trace-14
     """
     Verify escalation eligibility rules:
     - Only non-terminal, due_date-past tickets escalate.
@@ -161,7 +160,6 @@ async def test_escalation_eligibility_rules(mock_publish):
 @pytest.mark.asyncio
 @patch("apps.tickets.notifications_client.publish_notification", new_callable=AsyncMock)
 async def test_bounded_priority_advancement(mock_publish):
-    # @req:Trace-14
     """
     Verify stepwise bounded priority progression capped strictly at CRITICAL.
     LOW -> MEDIUM -> HIGH -> CRITICAL -> CRITICAL
@@ -239,7 +237,6 @@ async def test_bounded_priority_advancement(mock_publish):
 @pytest.mark.asyncio
 @patch("apps.tickets.notifications_client.publish_notification", new_callable=AsyncMock)
 async def test_cooldown_gating_and_idempotency(mock_publish):
-    # @req:Trace-14
     """
     Verify that cooldown gating prevents re-escalation within the cooldown window,
     and allows it once the window has elapsed.
@@ -295,7 +292,6 @@ async def test_cooldown_gating_and_idempotency(mock_publish):
 @pytest.mark.asyncio
 @patch("apps.tickets.notifications_client.publish_notification", new_callable=AsyncMock)
 async def test_audit_log_creation_on_escalate(mock_publish):
-    # @req:Trace-14
     """
     Verify that an audit log with TICKET_ESCALATE action is created for effective escalations.
     """
@@ -337,7 +333,6 @@ async def test_audit_log_creation_on_escalate(mock_publish):
 @pytest.mark.asyncio
 @patch("apps.tickets.notifications_client.publish_notification", new_callable=AsyncMock)
 async def test_notification_deduplication_and_partial_failures(mock_publish):
-    # @req:Trace-14
     """
     Simulate a 'commit-but-no-notify' gap:
     If ticket last_escalated_at is set but last_escalation_notified_at is missing,
@@ -400,7 +395,6 @@ async def test_notification_deduplication_and_partial_failures(mock_publish):
 
 @pytest.mark.asyncio
 async def test_startup_shutdown_and_resilience():
-    # @req:Trace-14
     """
     Test background task startup, shutdown, and resilience to database errors.
     """

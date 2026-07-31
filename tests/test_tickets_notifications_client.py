@@ -9,7 +9,6 @@ from packages.security.context import audit_context
 
 @pytest.mark.asyncio
 async def test_publish_notification_success():
-    # @req:Trace-14
     """
     Assert that publish_notification returns True on a successful 201 response,
     and that the outgoing request headers and JSON body are correct.
@@ -45,7 +44,6 @@ async def test_publish_notification_success():
 
 @pytest.mark.asyncio
 async def test_publish_notification_non_2xx_failure():
-    # @req:Trace-14
     """
     Assert that publish_notification returns False on non-201 response.
     """
@@ -63,7 +61,6 @@ async def test_publish_notification_non_2xx_failure():
 
 @pytest.mark.asyncio
 async def test_publish_notification_transport_exception():
-    # @req:Trace-14
     """
     Assert that publish_notification returns False when an exception is raised (e.g., ConnectTimeout).
     """

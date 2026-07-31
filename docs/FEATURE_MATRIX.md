@@ -26,7 +26,6 @@ This matrix details the distribution of core compliance and tracking features ac
 | **Governance & State Machine**    | Allowed transition validations and role gates (DRAFT to ARCHIVED) | N/A | v1.8.0 | Supported |
 | **In-Use Locks & Amendments**     | In-use template mutation write blocking, formal `/amend` cloning workflow | N/A | v1.8.0 | Supported |
 | **Native Part 11 eSignatures**    | Certificate-bound protocol-approval signing & graph version locking | Certificate-bound document-signing with 60s gateway step-up token, replay prevention & immutability locking | v1.9.0 | Supported |
-| **Tickets & Query Escalation**    | N/A | Secured query/ticket tracking including comments, status transitions, optimistic locking, and background SLA escalation with GxP audit logs | v1.5.0 | Supported |
 
 ---
 
@@ -58,7 +57,6 @@ The table below specifies how individual clinical domain entities are processed,
 | **Clinical Sites** | Organization Service | PostgreSQL/SQLite | Explicit `OrgAuditLog` writes with Part 11 metadata |
 | **Personnel** | Organization Service | PostgreSQL/SQLite | Explicit `OrgAuditLog` writes with Part 11 metadata |
 | **Delegation of Authority** | Organization Service | PostgreSQL/SQLite | Explicit `OrgAuditLog` writes with Part 11 metadata & dual eISF/eTMF archival handoff |
-| **Tickets** | Tickets Service | SQLite/PostgreSQL | TicketAuditLog explicit-write append-only pattern and Part 11 fields |
 
 ---
 
