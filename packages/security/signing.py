@@ -68,6 +68,7 @@ def generate_gateway_signature(
     sponsor_id: Optional[str] = None,
     unblinded_access: bool = False,
     tenant_id: Optional[str] = None,
+    sig_token: Optional[str] = None,
 ) -> str:
     """Generates an HMAC-SHA256 signature for API Gateway identity and scope headers."""
     payload = {
@@ -80,6 +81,8 @@ def generate_gateway_signature(
         "unblinded_access": unblinded_access,
         "tenant_id": tenant_id if tenant_id is not None else "",
     }
+    if sig_token is not None:
+        payload["sig_token"] = sig_token
     serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return hmac.new(secret, serialized.encode("utf-8"), hashlib.sha256).hexdigest()
 
@@ -95,6 +98,7 @@ def verify_gateway_signature(
     sponsor_id: Optional[str] = None,
     unblinded_access: bool = False,
     tenant_id: Optional[str] = None,
+    sig_token: Optional[str] = None,
 ) -> bool:
     """Verifies an HMAC-SHA256 signature for API Gateway identity and scope headers.
 
@@ -115,9 +119,28 @@ def verify_gateway_signature(
         sponsor_id=sponsor_id,
         unblinded_access=unblinded_access,
         tenant_id=tenant_id,
+        sig_token=sig_token,
     )
     if hmac.compare_digest(expected, signature):
         return True
+
+    # Fallback for signatures generated without sig_token covered (e.g. legacy/testing manually generated headers)
+    # Recursively try verify_gateway_signature with sig_token=None to invoke all compatibility fallbacks (1, 2, 3)
+    if sig_token is not None:
+        if verify_gateway_signature(
+            user_id=user_id,
+            roles=roles,
+            timestamp=timestamp,
+            signature=signature,
+            secret=secret,
+            change_reason=change_reason,
+            site_id=site_id,
+            sponsor_id=sponsor_id,
+            unblinded_access=unblinded_access,
+            tenant_id=tenant_id,
+            sig_token=None,
+        ):
+            return True
 
     # Fallback 1: Try verifying with the 7-field compatibility fallback (tenant_id=None)
     # for requests signed before tenant propagation was introduced.
@@ -135,6 +158,7 @@ def verify_gateway_signature(
             sponsor_id=sponsor_id,
             unblinded_access=unblinded_access,
             tenant_id=None,
+            sig_token=sig_token,
         )
         if hmac.compare_digest(fallback_tenant_expected, signature):
             return True
@@ -159,25 +183,27 @@ def verify_gateway_signature(
             sponsor_id=None,
             unblinded_access=False,
             tenant_id=None,
+            sig_token=sig_token,
         )
         if hmac.compare_digest(no_scope_expected, signature):
             return True
 
         # Fallback 3: Verify using the legacy 4-field V2 payload (backward compatibility for identity-only signatures).
-        legacy_payload = {
-            "change_reason": change_reason if change_reason is not None else "",
-            "roles": roles,
-            "timestamp": timestamp,
-            "user_id": user_id,
-        }
-        legacy_serialized = json.dumps(
-            legacy_payload, sort_keys=True, separators=(",", ":")
-        )
-        legacy_expected = hmac.new(
-            secret, legacy_serialized.encode("utf-8"), hashlib.sha256
-        ).hexdigest()
-        if hmac.compare_digest(legacy_expected, signature):
-            return True
+        if sig_token is None:
+            legacy_payload = {
+                "change_reason": change_reason if change_reason is not None else "",
+                "roles": roles,
+                "timestamp": timestamp,
+                "user_id": user_id,
+            }
+            legacy_serialized = json.dumps(
+                legacy_payload, sort_keys=True, separators=(",", ":")
+            )
+            legacy_expected = hmac.new(
+                secret, legacy_serialized.encode("utf-8"), hashlib.sha256
+            ).hexdigest()
+            if hmac.compare_digest(legacy_expected, signature):
+                return True
 
     return False
 

@@ -288,6 +288,7 @@ def generate_signature(
     sponsor_id: Optional[str] = None,
     unblinded_access: bool = False,
     tenant_id: Optional[str] = None,
+    sig_token: Optional[str] = None,
 ) -> str:
     """
     Generate an HMAC-SHA256 signature for identity and scope headers.
@@ -315,6 +316,7 @@ def generate_signature(
         sponsor_id=sponsor_id,
         unblinded_access=unblinded_access,
         tenant_id=tenant_id,
+        sig_token=sig_token,
     )
 
 
@@ -743,7 +745,7 @@ async def signature_verification(request: Request, body: SignatureVerificationRe
     )
 
     if not is_test_env:
-        token_url = JWKS_URL.replace("/certs", "/token")
+        token_url = os.getenv("KEYCLOAK_TOKEN_URL") or os.getenv("KEYCLOAK_TOKEN_ENDPOINT") or JWKS_URL.replace("/certs", "/token")
         try:
             data = {
                 "grant_type": "password",
@@ -751,8 +753,12 @@ async def signature_verification(request: Request, body: SignatureVerificationRe
                 "username": body.username,
                 "password": body.password,
             }
+            client_secret = os.getenv("KEYCLOAK_CLIENT_SECRET")
+            if client_secret:
+                data["client_secret"] = client_secret
             if body.totp:
                 data["totp"] = body.totp
+                data["otp"] = body.totp
 
             async with httpx.AsyncClient() as client:
                 resp = await client.post(token_url, data=data, timeout=5.0)
@@ -1163,6 +1169,8 @@ async def proxy_requests(request: Request, path: str) -> Response:
     else:
         tenant_id_val = str(tenant_id_val).strip()
 
+    sig_token_header = request.headers.get("X-Sig-Token") or request.headers.get("x-sig-token")
+
     timestamp = str(time.time())
     signature = generate_signature(
         user_id=user_id,
@@ -1174,6 +1182,7 @@ async def proxy_requests(request: Request, path: str) -> Response:
         sponsor_id=sponsor_id_val if sponsor_id_val else None,
         unblinded_access=unblinded_access_val,
         tenant_id=tenant_id_val,
+        sig_token=sig_token_header if sig_token_header else None,
     )
 
     headers["X-User-Id"] = user_id
@@ -1188,6 +1197,8 @@ async def proxy_requests(request: Request, path: str) -> Response:
         headers["X-Sponsor-Id"] = sponsor_id_val
     if unblinded_access_val:
         headers["X-Unblinded-Access"] = "true"
+    if sig_token_header:
+        headers["X-Sig-Token"] = sig_token_header
 
     try:
         body: bytes = await request.body()

@@ -1762,3 +1762,73 @@ def test_middleware_scope_header_mutation_and_injection_rejection() -> None:
     headers_injected_unblinded["X-Unblinded-Access"] = "true"
     res = client.get("/verify-context-scope", headers=headers_injected_unblinded)
     assert res.status_code in (401, 403)
+
+
+def test_middleware_sig_token_hmac_coverage() -> None:
+    """
+    # @req:Trace-15
+    Test that the gateway-generated signature covers the X-Sig-Token header,
+    and altering/tampering with X-Sig-Token downstream results in signature rejection.
+    """
+    client = TestClient(test_app)
+    timestamp = str(time.time())
+    user_id = "test_user"
+    roles = "investigator"
+    change_reason = "PI Sign-off"
+
+    # 1. Generate a valid sig_token
+    payload = {
+        "sub": user_id,
+        "username": "test_user",
+        "action": "/api/v1/execution/form-submissions/123/approve",
+        "roles": [roles],
+        "iat": time.time(),
+        "exp": time.time() + 60.0,
+    }
+    sig_token = jwt.encode(payload, "internal-gateway-secret-12345", algorithm="HS256")
+
+    # 2. Generate a valid gateway signature covering the sig_token
+    sig = generate_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        version="2",
+        change_reason=change_reason,
+        site_id=None,
+        sponsor_id=None,
+        unblinded_access=False,
+        tenant_id="tenant_default",
+        sig_token=sig_token,
+    )
+
+    base_headers = {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": sig,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": change_reason,
+        "X-Sig-Token": sig_token,
+    }
+
+    # 3. Request with valid, unmodified sig_token and correct signature -> 200 OK
+    res = client.post(
+        "/api/v1/execution/form-submissions/123/approve", headers=base_headers
+    )
+    assert res.status_code == 200
+
+    # 4. Request where X-Sig-Token is altered downstream -> Should fail signature verification (401/403)
+    altered_headers = base_headers.copy()
+    altered_headers["X-Sig-Token"] = sig_token[:-4] + "AAAA"
+    res_altered = client.post(
+        "/api/v1/execution/form-submissions/123/approve", headers=altered_headers
+    )
+    assert res_altered.status_code in (401, 403)
+
+    # 5. Request where X-Sig-Token is missing downstream -> Should fail signature verification or be rejected
+    missing_sig_token_headers = base_headers.copy()
+    missing_sig_token_headers.pop("X-Sig-Token")
+    res_missing = client.post(
+        "/api/v1/execution/form-submissions/123/approve", headers=missing_sig_token_headers
+    )
+    assert res_missing.status_code in (401, 403)

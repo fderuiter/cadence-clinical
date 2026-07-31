@@ -241,6 +241,7 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
                 sponsor_id=sponsor_id,
                 unblinded_access=unblinded_access,
                 tenant_id=tenant_id,
+                sig_token=request.headers.get("X-Sig-Token") or request.headers.get("x-sig-token"),
             )
         else:
             # Version 1/v1 (legacy colon concatenated format) - doesn't support scope
