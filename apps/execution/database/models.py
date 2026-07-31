@@ -1261,3 +1261,14 @@ class SyncedBatchIdempotencyKey(Base):
     device_id: Mapped[str] = mapped_column(String(255), nullable=False)
     processed_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     processed_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+
+
+class SDTMDomainRecord(AuditedModel):
+    """Represents a transformed, strongly-typed, validated SDTM domain record in the database."""
+
+    __tablename__ = "sdtm_domain_records"
+
+    study_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    domain: Mapped[str] = mapped_column(String(50), nullable=False)
+    usubjid: Mapped[str] = mapped_column(String(255), nullable=False)
+    record_data: Mapped[dict] = mapped_column(JSON, nullable=False)

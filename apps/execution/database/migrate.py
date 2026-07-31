@@ -22,6 +22,7 @@ from apps.execution.database.models import (  # noqa: F401
     MedDRATerm,
     PendingPredecessorCheck,
     RandomizationConfig,
+    SDTMDomainRecord,
     SDVSignOff,
     StratumState,
     StudyAuthoredRule,

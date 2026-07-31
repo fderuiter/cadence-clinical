@@ -31,6 +31,16 @@ from sdtm.models import (
     SUPPQUALRecord,
     VitalSign,
 )
+from sdtm.sdtm_models import (
+    SDTMRecordAE,
+    SDTMRecordCM,
+    SDTMRecordDM,
+    SDTMRecordDS,
+    SDTMRecordLB,
+    SDTMRecordMH,
+    SDTMRecordSV,
+    SDTMRecordVS,
+)
 from sdtm.terminology import (
     normalize_race,
     normalize_seriousness,
@@ -39,6 +49,14 @@ from sdtm.terminology import (
 )
 
 __all__ = [
+    "SDTMRecordDM",
+    "SDTMRecordAE",
+    "SDTMRecordVS",
+    "SDTMRecordLB",
+    "SDTMRecordSV",
+    "SDTMRecordCM",
+    "SDTMRecordDS",
+    "SDTMRecordMH",
     "SDTMDomain",
     "Sex",
     "Race",
