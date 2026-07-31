@@ -199,6 +199,63 @@ async def test_notification_creation_and_auditing():
 
 
 @pytest.mark.asyncio
+async def test_notification_creation_with_new_columns():
+    """
+    Verify that creating a notification with new optional columns (subject, subject_id, visit_id, query_id, site_id)
+    persists all fields correctly and returns them in the response.
+    """
+    client = TestClient(app)
+    headers = get_auth_headers(
+        user_id="user_creator",
+        roles="Grants Manager",
+        change_reason="Notify with explicit fields",
+    )
+
+    payload = {
+        "recipient_user_id": "pi_john",
+        "recipient_role": "investigator",
+        "category": "ACTION_ITEMS",
+        "priority": "HIGH",
+        "channels": "IN_APP",
+        "message_content": "Please sign off on the pending visit log.",
+        "related_entity_id": "visit_abc_123",
+        "related_entity_type": "VISIT",
+        "subject": "New Trial Notification",
+        "subject_id": "sub_999",
+        "visit_id": "visit_001",
+        "query_id": "query_555",
+        "site_id": "site_777",
+    }
+
+    # Create the notification
+    response = client.post("/api/v1/notifications", json=payload, headers=headers)
+    assert response.status_code == 201
+    data = response.json()
+    assert data["id"] is not None
+    assert data["recipient_user_id"] == "pi_john"
+    assert data["recipient_role"] == "investigator"
+    assert data["subject"] == "New Trial Notification"
+    assert data["subject_id"] == "sub_999"
+    assert data["visit_id"] == "visit_001"
+    assert data["query_id"] == "query_555"
+    assert data["site_id"] == "site_777"
+
+    notification_id = data["id"]
+
+    # Verify that the database contains the correct values
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(Notification).where(Notification.id == notification_id)
+        res = await session.execute(stmt)
+        notif = res.scalars().first()
+        assert notif is not None
+        assert notif.subject == "New Trial Notification"
+        assert notif.subject_id == "sub_999"
+        assert notif.visit_id == "visit_001"
+        assert notif.query_id == "query_555"
+        assert notif.site_id == "site_777"
+
+
+@pytest.mark.asyncio
 async def test_notification_list_visibility_and_filtering():
     """
     Verify target-based visibility: users can only fetch notifications for their user ID or roles, or global.

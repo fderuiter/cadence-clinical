@@ -1,9 +1,26 @@
 from contextlib import asynccontextmanager
+from datetime import datetime
 from typing import Any, AsyncGenerator, Optional
 
 from fastapi import FastAPI
-from sqlalchemy import event
+from sqlalchemy import DateTime, Integer, String, event, func
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import Mapped, declarative_mixin, mapped_column
+
+
+@declarative_mixin
+class AuditMixin:
+    """
+    SQLAlchemy declarative mixin that adds standard Part 11 compliant audit and metadata fields
+    (created_at, created_by, reason_for_change, version_index) to consolidate duplicated patterns.
+    """
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    reason_for_change: Mapped[str] = mapped_column(String(1000), nullable=False)
+    version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
 
 class RelationalDatabaseManager:
