@@ -160,9 +160,7 @@ async def test_eisf_site_isolation_and_redaction(
 
     # 1. Site 101 user attempts to access Site 102 binder -> Must raise PermissionError
     with pytest.raises(PermissionError):
-        await service.get_site_binder(
-            site_id="SITE-102", requesting_user=site_101_user
-        )
+        await service.get_site_binder(site_id="SITE-102", requesting_user=site_101_user)
 
     # 2. Redact eISF document and verify original is preserved
     doc_record = await service.upload_site_document(

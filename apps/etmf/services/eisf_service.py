@@ -7,7 +7,7 @@ import hashlib
 import uuid
 from typing import List, Optional
 
-from sqlalchemy import Boolean, LargeBinary, String, select
+from sqlalchemy import Boolean, String, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 import packages  # noqa: F401
@@ -37,13 +37,29 @@ class EISFBinderDocument(Base):
     )
     site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
-    content: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    _content: Mapped[str] = mapped_column("content", String, nullable=False)
     sha256_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     uploaded_by: Mapped[str] = mapped_column(String(255), nullable=False)
     is_redacted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     parent_document_id: Mapped[Optional[str]] = mapped_column(
         String(36), nullable=True, index=True
     )
+
+    @property
+    def content(self) -> bytes:
+        """Returns document content as bytes.
+
+        Requirements: PRD-SYS-001
+        """
+        return self._content.encode("utf-8")
+
+    @content.setter
+    def content(self, value: bytes) -> None:
+        """Sets document content from bytes.
+
+        Requirements: PRD-SYS-001
+        """
+        self._content = value.decode("utf-8", errors="ignore")
 
 
 class EISFBinderService:
