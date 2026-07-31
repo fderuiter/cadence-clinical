@@ -986,3 +986,128 @@ def test_notifications_negative_security_paths():
     resp = client.get("/api/v1/notifications", headers=headers_spoof)
     assert resp.status_code == 401
     assert "Invalid gateway signature" in resp.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_event_intake_endpoint_success():
+    """
+    Verify that the event intake /events/notify endpoint successfully processes
+    a list of targets, persists notifications/deliveries, and performs audit logging.
+    """
+    client = TestClient(app)
+    headers = get_auth_headers(
+        user_id="producer_service",
+        roles="admin",
+        change_reason="Clinical event ingestion",
+    )
+
+    payload = {
+        "category": "SYSTEM",
+        "targets": [
+            {"user_id": "user_foo", "role": None},
+            {"user_id": None, "role": "monitor"},
+        ],
+        "priority": "LOW",
+        "channels": "IN_APP",
+        "message": "New clinical trial event published.",
+        "related_entity_id": "event_123",
+        "related_entity_type": "STUDY_EVENT",
+    }
+
+    response = client.post("/events/notify", json=payload, headers=headers)
+    assert response.status_code == 201
+    data = response.json()
+    assert data["status"] == "success"
+    assert len(data["notifications"]) == 2
+
+    # Check database state
+    async with db_manager.get_session_maker()() as session:
+        stmt = select(Notification).where(
+            Notification.related_entity_id == "event_123"
+        )
+        res = await session.execute(stmt)
+        notifications = res.scalars().all()
+        assert len(notifications) == 2
+
+        targets = {(n.recipient_user_id, n.recipient_role) for n in notifications}
+        assert ("user_foo", None) in targets
+        assert (None, "monitor") in targets
+
+        for n in notifications:
+            assert n.category == NotificationCategory.SYSTEM
+            assert n.priority == NotificationPriority.LOW
+            assert n.message_content == "New clinical trial event published."
+
+
+@pytest.mark.asyncio
+async def test_dispatcher_start_stop():
+    """
+    Verify that the dispatcher thread can be successfully started and stopped
+    using the background management functions.
+    """
+    import apps.notifications.dispatcher as dispatcher
+
+    # Start with a very fast interval
+    await dispatcher.start_background_dispatcher(db_manager.get_session_maker(), interval=0.1)
+    assert dispatcher._should_run is True
+    assert dispatcher._dispatch_task is not None
+    assert not dispatcher._dispatch_task.done()
+
+    # Stop dispatcher
+    await dispatcher.stop_background_dispatcher()
+    assert dispatcher._should_run is False
+    assert dispatcher._dispatch_task is None
+
+
+@pytest.mark.asyncio
+async def test_email_rendering_with_fallback_directly():
+    """
+    Verify the rendering and SMTP sending capability on fake notification model
+    with both default fallback template and specific fallback templates.
+    """
+    from apps.notifications.email_client import send_email_notification
+
+    notif_generic = Notification(
+        recipient_user_id="doc_brown",
+        category=NotificationCategory.SYSTEM,
+        priority=NotificationPriority.MEDIUM,
+        message_content="Generic message",
+        delivery_state="PENDING",
+        created_by="system",
+        reason_for_change="Test",
+    )
+
+    notif_special = Notification(
+        recipient_user_id="doc_brown",
+        category=NotificationCategory.ALERTS,
+        priority=NotificationPriority.CRITICAL,
+        message_content="Special alert",
+        related_entity_type="ETMF_DOCUMENT_EXPIRING",
+        related_entity_id="doc_999",
+        delivery_state="PENDING",
+        created_by="system",
+        reason_for_change="Test",
+    )
+
+    mock_smtp_client = AsyncMock()
+    with patch("aiosmtplib.SMTP", return_value=mock_smtp_client):
+        # 1. Test generic fallback rendering & sending
+        await send_email_notification(notif_generic)
+        assert mock_smtp_client.connect.called
+        assert mock_smtp_client.send_message.called
+
+        called_msg = mock_smtp_client.send_message.call_args[0][0]
+        # Check that generic HTML elements are in there
+        assert "[MEDIUM] SYSTEM: New Notification" in called_msg["Subject"]
+
+        # Reset mock
+        mock_smtp_client.connect.reset_mock()
+        mock_smtp_client.send_message.reset_mock()
+
+        # 2. Test special event-based fallback template rendering & sending
+        await send_email_notification(notif_special)
+        assert mock_smtp_client.connect.called
+        assert mock_smtp_client.send_message.called
+
+        called_msg_special = mock_smtp_client.send_message.call_args[0][0]
+        assert "[CRITICAL] ALERTS: New Notification" in called_msg_special["Subject"]

@@ -68,6 +68,33 @@ class NotificationResponse(BaseModel):
     reason_for_change: str
 
 
+class EventTarget(BaseModel):
+    user_id: Optional[str] = Field(None, description="Target user ID")
+    role: Optional[str] = Field(None, description="Target role")
+
+
+class EventNotificationIntake(BaseModel):
+    category: NotificationCategory = Field(
+        ..., description="Category: ALERTS, SYSTEM, ACTION_ITEMS"
+    )
+    targets: List[EventTarget] = Field(
+        ..., description="List of target users/roles"
+    )
+    priority: NotificationPriority = Field(
+        ..., description="Priority: LOW, MEDIUM, HIGH, CRITICAL"
+    )
+    channels: str = Field(
+        "IN_APP", description="Comma-separated delivery channels (e.g. 'IN_APP,EMAIL')"
+    )
+    message: str = Field(..., description="Message content")
+    related_entity_id: Optional[str] = Field(
+        None, description="Optional related entity ID"
+    )
+    related_entity_type: Optional[str] = Field(
+        None, description="Optional related entity type"
+    )
+
+
 DATABASE_URL = os.getenv("NOTIFICATIONS_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 
@@ -219,43 +246,21 @@ async def deliver_channel(delivery_id: str) -> None:
         await session.commit()
 
 
-async def dispatcher_lifecycle_worker() -> None:
-    """
-    Background worker loop that periodically ticks the poller.
-    """
-    while True:
-        try:
-            await poll_and_dispatch()
-        except asyncio.CancelledError:
-            break
-        except Exception:
-            # Prevent failures from crashing the background loop
-            pass
-        await asyncio.sleep(1.0)
-
-
-dispatcher_task: Optional[asyncio.Task] = None
-
-
 async def start_dispatcher() -> None:
     """Startup hook to start the notifications background dispatcher."""
-    global dispatcher_task
     import sys
+    from apps.notifications.dispatcher import start_background_dispatcher
 
     if "pytest" in sys.modules or os.getenv("PYTEST_CURRENT_TEST"):
         return
-    dispatcher_task = asyncio.create_task(dispatcher_lifecycle_worker())
+    await start_background_dispatcher(db_manager.get_session_maker())
 
 
 async def stop_dispatcher() -> None:
     """Shutdown hook to cleanly cancel the notifications background dispatcher."""
-    global dispatcher_task
-    if dispatcher_task:
-        dispatcher_task.cancel()
-        try:
-            await dispatcher_task
-        except asyncio.CancelledError:
-            pass
+    from apps.notifications.dispatcher import stop_background_dispatcher
+
+    await stop_background_dispatcher()
 
 
 app = FastAPI(
@@ -402,6 +407,75 @@ async def create_notification(
         )
 
     return map_notification_to_response(notif)
+
+
+@app.post("/events/notify", status_code=201)
+async def event_intake_notify(
+    request: Request,
+    payload: EventNotificationIntake,
+    session: AsyncSession = Depends(get_db_session),
+) -> dict:
+    """
+    Event intake endpoint for producer services to emit notifications.
+    """
+    created_notifications = []
+    user_id = getattr(request.state, "user_id", "system")
+    user_roles_list = get_normalized_roles(request)
+    user_role = ",".join(user_roles_list) or "system"
+    change_reason = getattr(request.state, "change_reason", "Event intake notification creation")
+
+    requested_channels = [c.strip() for c in payload.channels.split(",") if c.strip()]
+    # Starts as PENDING if in_app is requested so it's not immediately visible on dashboard until processed.
+    initial_delivery_state = (
+        "PENDING" if "IN_APP" in requested_channels else "DELIVERED"
+    )
+
+    for target in payload.targets:
+        notif = Notification(
+            recipient_user_id=target.user_id,
+            recipient_role=target.role,
+            category=payload.category,
+            priority=payload.priority,
+            channels=payload.channels,
+            message_content=payload.message,
+            related_entity_id=payload.related_entity_id,
+            related_entity_type=payload.related_entity_type,
+            status=NotificationStatus.OPEN,
+            delivery_state=initial_delivery_state,
+            retries=0,
+            created_by=user_id,
+            version_index=1,
+            reason_for_change=change_reason,
+        )
+        session.add(notif)
+        await session.flush()
+
+        # Create associated NotificationDelivery rows for async channel dispatching
+        for channel in requested_channels:
+            delivery = NotificationDelivery(
+                notification_id=notif.id,
+                channel=channel,
+                status="PENDING",
+                attempts=0,
+                retry_eligible=True,
+            )
+            session.add(delivery)
+        await session.flush()
+
+        await write_audit_log(
+            session=session,
+            user_id=user_id,
+            user_role=user_role,
+            action="NOTIFICATION_CREATE",
+            details=f"Created event-intake notification ID '{notif.id}' targeting user '{target.user_id}' / role '{target.role}'.",
+        )
+
+        created_notifications.append(map_notification_to_response(notif))
+
+    return {
+        "status": "success",
+        "notifications": created_notifications,
+    }
 
 
 @app.get("/api/v1/notifications", response_model=List[NotificationResponse])
