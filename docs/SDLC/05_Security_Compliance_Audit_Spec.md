@@ -582,7 +582,7 @@ To satisfy regulatory standards during external reviews, audit exports, or scien
 When export datasets (e.g., CSV, ODM XML, SAS datasets) are requested by users, the platform applies a structural masking routine on demographic attributes:
 
 - **Patient Names / Initials:** Totally redacted or replaced with a deterministic code.
-- **Specific Dates (DOB, Enrollment Date):** Shifted deterministically by a random, site-specific integer offset value between -10 and +10 days, maintaining demographic timelines without leaking actual calendar dates.
+- **Specific Dates (DOB, Enrollment Date):** Shifted deterministically by a random, site-specific integer offset value between -365 and +365 days, maintaining demographic timelines without leaking actual calendar dates. To reconcile any historical discrepancies (such as earlier draft modules proposing either a ±10 day or ±30 day shift), the platform has standardized on a single unified platform-wide de-identification default of **±365 days** (exactly 1 year). This consistent offset preserves the relative chronological and longitudinal integrity of demographic and clinical trial timelines across multi-site SDTM/ADaM runs and documentation suites, while completely masking raw calendar dates from external reviewers.
 - **National Identifiers (SSN, Passport, National Health ID):** Permanently stripped from the dataset.
 - **Identifier Hashing:** Direct user and subject identifiers are replaced with deterministic salted hashes, allowing cross-table referencing without leaking identity.
 

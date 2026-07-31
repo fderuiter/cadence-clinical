@@ -213,6 +213,7 @@ The engine applies distinct, GxP-compliant transform strategies to the detected 
 3. **Age Capping (`age_cap`)**: Generalizes age values that exceed a set limit. Standard policy generalizes any age above 89 to `89+`.
 4. **Configurable Date-Shifting (`date_shift`)**:
    - **Default Date-Shift Policy**: By default, dates are shifted forward by exactly **365 days** (1 year) to preserve longitudinal intervals (e.g., matching subsequent visits, adverse event spans, or dosing times) while destroying original calendar values.
+   - **Reconciliation of Date-Shift Discrepancies**: To resolve historical inconsistencies across early specifications where some draft modules proposed a ±10 day shift and others proposed a ±30 day shift, the platform has standardized on a single unified platform-wide de-identification default of **±365 days** (exactly 1 year). This consistent offset preserves the relative chronological integrity of demographic and clinical trial timelines across multi-site SDTM/ADaM runs and documentation suites, while completely masking raw calendar dates from external reviewers.
    - **Configurability**: The date shifting offset is fully configurable via the `shift_days` parameter on the transform execution to handle study-specific anonymization schedules.
 
 ---

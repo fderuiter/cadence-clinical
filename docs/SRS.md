@@ -39,8 +39,17 @@ The Designer Service utilizes a Neo4j graph database to track the complex evolut
 
 ## 7. Privacy Controls & Exporting
 Regulatory compliance also dictates the strict protection of Personally Identifiable Information (PII) during audit trail exports for external reviews.
+
+### 7.1 Export Masking and Obfuscation
 * **User Masking:** During the generation of CSV export files for auditors, the system dynamically applies data masking to sensitive demographic or user identifiers.
 * **Cryptographic Identifier Hashing:** Rather than exposing plain-text user/subject IDs, the export engine outputs deterministic cryptographic hashes of the identifiers. This structural accountability allows auditors to track modifications made by the same individual or applied to the same subject across the audit ledger without exposing actual identities.
+
+### 7.2 eTMF Redaction Service Boundary & Compliance Profile Drivers
+To prevent the leakage of PII/PHI when sharing clinical records with external regulatory agencies or publishing documents, the platform exposes a server-side redaction boundary within the eTMF service (`apps/etmf`).
+
+* **Service Boundary & Data Flow:** Redactions do not alter the raw source document, complying with non-destructive GxP audits. Instead, the engine processes raw clinical document texts, executes de-identification patterns, and generates a redacted successor version with an incremented `version_index` linked to its original source via the `redaction_source_id` field.
+* **EU CTR compliance:** In addition to HIPAA Safe Harbor and GDPR profiles, the engine implements a dedicated **EU CTR (Clinical Trials Regulation - Regulation (EU) 536/2014) compliance profile**. The EU CTR profile governs the public-disclosure framing required for publishing clinical trial results onto the public EU database (CTIS) under strict disclosure rules. Under EU CTR, patient anonymity is absolute, requiring the masking of patient identifiers, precise dates, birth years, and age caps, while strategically preserving key study execution parameters and geographic elements (like ZIP codes and IP addresses) which are relevant to clinical trial execution and thus permitted for publication.
+* **Role-Based Access Gates:** Standard read-only roles (`auditor`, `inspector`, `regulatory_inspector`) are restricted solely to the redacted successor document view (returning HTTP 403 Forbidden for raw original documents once a redacted version exists), while write-privileged data management roles retain secure access to the original.
 
 ## 8. Traceability Mappings for Automated Compliance
 To simplify compliance verification and satisfy 21 CFR Part 11 auditing requirements, this platform explicitly links abstract regulatory rules to verifiable codebase implementation mechanics.
