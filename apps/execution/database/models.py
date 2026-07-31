@@ -616,6 +616,7 @@ class MedDRATerm(AuditedModel):
     """Represents a term in the MedDRA dictionary.
 
     Models five levels: LLT, PT, HLT, HLGT, and SOC.
+    Satisfies Epic #109 / Issue #1122 / Phase 16: Dictionary Ingestion & Persistence.
     """
 
     __tablename__ = "meddra_terms"
@@ -671,7 +672,10 @@ class MedDRAHierarchy(AuditedModel):
 
 
 class WHODrugRecord(AuditedModel):
-    """Represents a drug record in WHODrug."""
+    """Represents a drug record in WHODrug.
+
+    Satisfies Epic #109 / Issue #1122 / Phase 16: Dictionary Ingestion & Persistence.
+    """
 
     __tablename__ = "whodrug_records"
     __table_args__ = (
@@ -762,7 +766,10 @@ class WHODrugDrugIngredient(AuditedModel):
 
 
 class DictionaryImportJob(AuditedModel):
-    """Tracks dictionary import execution, status, and summary metrics."""
+    """Tracks dictionary import execution, status, and summary metrics.
+
+    Satisfies Epic #109 / Issue #1122 / Phase 16: Dictionary Ingestion & Persistence.
+    """
 
     __tablename__ = "dictionary_import_jobs"
 
@@ -829,7 +836,10 @@ class ClinicalCodingAssignment(AuditedModel):
 
 
 class ClinicalCodingLedger(AuditedModel):
-    """Maintains historical record of coding/recoding decisions and audit events."""
+    """Maintains historical record of coding/recoding decisions and audit events.
+
+    Satisfies Epic #109 / Issue #1122 / Phase 16: Dictionary Ingestion & Persistence.
+    """
 
     __tablename__ = "clinical_coding_ledger"
     __table_args__ = (
