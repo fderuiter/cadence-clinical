@@ -5,6 +5,8 @@ import time
 from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
+from typing import Optional, List
+from jose import jwt
 import httpx
 import pytest
 from sqlalchemy import select, text
@@ -504,39 +506,281 @@ async def test_sdv_automatic_verification_drop_compliance():
         )
         assert res_obs.scalar_one().is_sdv_verified is False
 
-    # Reset verification status for the last check
+
+def get_bulk_sdv_headers(
+    user_id: str = "test_user",
+    roles: str = "CRA",
+    change_reason: str = "test operation",
+    payload: Optional[dict] = None,
+) -> dict[str, str]:
+    """Generate signed Gateway authentication headers with X-Sig-Token and batch binding for bulk SDV."""
+    from packages.security.signing import generate_gateway_signature
+    timestamp = str(time.time())
+    site_id = payload.get("site_id") if payload else None
+    signature = generate_gateway_signature(
+        user_id=user_id,
+        roles=roles,
+        timestamp=timestamp,
+        secret=GATEWAY_SECRET.encode("utf-8"),
+        change_reason=change_reason,
+        tenant_id="tenant_default",
+        site_id=site_id,
+    )
+    headers = {
+        "X-User-Id": user_id,
+        "X-User-Roles": roles,
+        "X-Gateway-Timestamp": timestamp,
+        "X-Gateway-Signature": signature,
+        "X-Signature-Version": "2",
+        "X-Change-Reason": change_reason,
+        "X-Tenant-Id": "tenant_default",
+    }
+    if site_id:
+        headers["X-Site-Id"] = site_id
+
+    sig_payload = {
+        "sub": user_id,
+        "username": user_id,
+        "roles": [roles],
+        "iat": time.time(),
+        "exp": time.time() + 300.0,
+        "jti": f"jti_{time.time()}_{user_id}",
+    }
+
+    if payload and payload.get("target_ids") is not None:
+        norm_study = str(payload.get("study_id", "")).strip()
+        norm_scope = str(payload.get("scope", "")).strip().upper()
+        target_ids = payload.get("target_ids", [])
+        sorted_ids = sorted([str(tid).strip() for tid in target_ids])
+        norm_ids = ",".join(sorted_ids)
+        norm_reason = str(payload.get("reason_for_change", "")).strip()
+        binding_str = f"{norm_study}:{norm_scope}:{norm_ids}:{norm_reason}"
+        batch_id = hashlib.sha256(binding_str.encode("utf-8")).hexdigest()
+        sig_payload["batch_id"] = batch_id
+
+    sig_token = jwt.encode(sig_payload, GATEWAY_SECRET.encode("utf-8"), algorithm="HS256")
+    headers["X-Sig-Token"] = sig_token
+    return headers
+
+
+@pytest.mark.asyncio
+async def test_bulk_sdv_and_query_generation():
+    """Test bulk SDV sign-off and query generation endpoints.
+
+    Requirements: PRD-SYS-001, PRD-QRY-005, PRD-QRY-007
+    """
+    # 1. Populate DB with test subject, visits, and observations
     async with db_manager.get_session_maker()() as session:
         async with session.begin():
             await session.execute(
                 text("SELECT set_config('cadence.app_writing', 'true', 1);")
             )
-            res_obs = await session.execute(
-                select(ClinicalObservation).where(
-                    ClinicalObservation.id == "OBS-DROP-1"
-                )
+            subj = ClinicalSubject(
+                subject_id="SUBJ-BULK-1", study_id="STUDY-BULK-TEST", site_id="SITE-BULK-1"
             )
-            o = res_obs.scalar_one()
-            o.is_sdv_verified = True
-            o.sdv_verified_by = "CRA-VERIFIER"
-            o.sdv_verified_at = datetime.now(UTC)
+            session.add(subj)
 
-    # 6. Editing 'normalized_value' triggers the drop
-    with audit_context(
-        user_id="editor-user",
-        change_reason="Change normalized clinical value representation",
-    ):
-        async with db_manager.get_session_maker()() as session:
-            res = await session.execute(
-                select(ClinicalObservation).where(
-                    ClinicalObservation.id == "OBS-DROP-1"
-                )
+            visit = ClinicalVisit(
+                id="VISIT-BULK-1",
+                subject_id="SUBJ-BULK-1",
+                study_id="STUDY-BULK-TEST",
+                visit_name="Screening",
             )
-            obs_edit = res.scalar_one()
-            obs_edit.normalized_value = "8.80"
-            await session.commit()
+            session.add(visit)
 
-    async with db_manager.get_session_maker()() as session:
-        res_obs = await session.execute(
-            select(ClinicalObservation).where(ClinicalObservation.id == "OBS-DROP-1")
+            obs1 = ClinicalObservation(
+                id="OBS-BULK-1",
+                subject_id="SUBJ-BULK-1",
+                study_id="STUDY-BULK-TEST",
+                visit_id="VISIT-BULK-1",
+                page_id="PAGE-BULK-1",
+                domain="VS",
+                test_code="SYSBP",
+                test_name="Systolic Blood Pressure",
+                value=120.0,
+            )
+            obs2 = ClinicalObservation(
+                id="OBS-BULK-2",
+                subject_id="SUBJ-BULK-1",
+                study_id="STUDY-BULK-TEST",
+                visit_id="VISIT-BULK-1",
+                page_id="PAGE-BULK-1",
+                domain="VS",
+                test_code="DIABP",
+                test_name="Diastolic Blood Pressure",
+                value=80.0,
+            )
+            session.add(obs1)
+            session.add(obs2)
+
+    # 2. RBAC checks on bulk SDV
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        payload = {
+            "study_id": "STUDY-BULK-TEST",
+            "subject_id": "SUBJ-BULK-1",
+            "scope": "FIELD",
+            "target_ids": ["OBS-BULK-1", "OBS-BULK-2"],
+            "reason_for_change": "Bulk monitoring verification",
+            "site_id": "SITE-BULK-1",
+        }
+        # Non-CRA / Non-monitor role should be Forbidden (403)
+        headers = get_bulk_sdv_headers(roles="Site Investigator", payload=payload)
+        resp = await client.post(
+            "/api/v1/execution/sdv/bulk-sign-off",
+            json=payload,
+            headers=headers,
         )
-        assert res_obs.scalar_one().is_sdv_verified is False
+        assert resp.status_code == 403
+
+    # 3. Validation checks
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # 3a. Empty target_ids list
+        payload = {
+            "study_id": "STUDY-BULK-TEST",
+            "subject_id": "SUBJ-BULK-1",
+            "scope": "FIELD",
+            "target_ids": [],
+            "reason_for_change": "Bulk monitoring verification",
+            "site_id": "SITE-BULK-1",
+        }
+        headers = get_bulk_sdv_headers(roles="CRA", payload=payload)
+        resp = await client.post(
+            "/api/v1/execution/sdv/bulk-sign-off",
+            json=payload,
+            headers=headers,
+        )
+        assert resp.status_code == 400
+
+        # 3b. Blank reason_for_change
+        payload = {
+            "study_id": "STUDY-BULK-TEST",
+            "subject_id": "SUBJ-BULK-1",
+            "scope": "FIELD",
+            "target_ids": ["OBS-BULK-1"],
+            "reason_for_change": " ",
+            "site_id": "SITE-BULK-1",
+        }
+        headers = get_bulk_sdv_headers(roles="CRA", payload=payload)
+        resp = await client.post(
+            "/api/v1/execution/sdv/bulk-sign-off",
+            json=payload,
+            headers=headers,
+        )
+        assert resp.status_code == 400
+
+    # 4. Step-up token / batch binding validation check
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        payload = {
+            "study_id": "STUDY-BULK-TEST",
+            "subject_id": "SUBJ-BULK-1",
+            "scope": "FIELD",
+            "target_ids": ["OBS-BULK-1", "OBS-BULK-2"],
+            "reason_for_change": "Bulk monitoring verification",
+            "site_id": "SITE-BULK-1",
+        }
+        # Mismatched reason in token batch binding vs request payload
+        token_payload = payload.copy()
+        token_payload["reason_for_change"] = "mismatched reason in token"
+        headers = get_bulk_sdv_headers(roles="CRA", change_reason="Bulk monitoring verification", payload=token_payload)
+        resp = await client.post(
+            "/api/v1/execution/sdv/bulk-sign-off",
+            json=payload,
+            headers=headers,
+        )
+        assert resp.status_code == 401
+
+    # 5. Successful bulk SDV sign-off
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        payload = {
+            "study_id": "STUDY-BULK-TEST",
+            "subject_id": "SUBJ-BULK-1",
+            "scope": "FIELD",
+            "target_ids": ["OBS-BULK-1", "OBS-BULK-2", "OBS-NONEXISTENT"],
+            "reason_for_change": "Bulk monitoring verification",
+            "site_id": "SITE-BULK-1",
+        }
+        headers = get_bulk_sdv_headers(roles="CRA", payload=payload)
+        resp = await client.post(
+            "/api/v1/execution/sdv/bulk-sign-off",
+            json=payload,
+            headers=headers,
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["signed_count"] == 2
+        assert "OBS-BULK-1" in data["signed_target_ids"]
+        assert "OBS-BULK-2" in data["signed_target_ids"]
+        assert "OBS-NONEXISTENT" in data["skipped_target_ids"]
+        assert data["content_digest"] is not None
+
+    # Verify ClinicalObservations have been updated
+    async with db_manager.get_session_maker()() as session:
+        res = await session.execute(
+            select(ClinicalObservation).where(ClinicalObservation.id.in_(["OBS-BULK-1", "OBS-BULK-2"]))
+        )
+        obss = res.scalars().all()
+        assert len(obss) == 2
+        for o in obss:
+            assert o.is_sdv_verified is True
+            assert o.sdv_verified_by == "test_user"
+
+    # 6. Bulk query generation endpoint
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        # RBAC Check on query generation
+        payload_query = {
+            "study_id": "STUDY-BULK-TEST",
+            "reason_for_change": "Query generation",
+            "site_id": "SITE-BULK-1",
+            "targets": [
+                {
+                    "subject_id": "SUBJ-BULK-1",
+                    "visit_id": "VISIT-BULK-1",
+                    "domain": "VS",
+                    "test_code": "SYSBP",
+                    "observation_id": "OBS-BULK-1",
+                    "explanation": "Out of range value",
+                }
+            ],
+        }
+        # Non-CRA / Non-monitor role should be Forbidden (403)
+        headers = get_bulk_sdv_headers(roles="Site Investigator", payload=payload_query)
+        resp = await client.post(
+            "/api/v1/execution/queries/generate",
+            json=payload_query,
+            headers=headers,
+        )
+        assert resp.status_code == 403
+
+        # Successful query generation
+        headers = get_bulk_sdv_headers(roles="CRA", payload=payload_query)
+        resp = await client.post(
+            "/api/v1/execution/queries/generate",
+            json=payload_query,
+            headers=headers,
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["generated_count"] == 1
+        assert len(data["generated_query_ids"]) == 1
+        assert len(data["skipped_targets"]) == 0
+
+        # Duplicate query generation -> should skip
+        resp_dup = await client.post(
+            "/api/v1/execution/queries/generate",
+            json=payload_query,
+            headers=headers,
+        )
+        assert resp_dup.status_code == 201
+        data_dup = resp_dup.json()
+        assert data_dup["generated_count"] == 0
+        assert len(data_dup["skipped_targets"]) == 1

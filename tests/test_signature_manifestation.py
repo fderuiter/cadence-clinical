@@ -275,7 +275,7 @@ def test_part11_manifestation_mapping_and_validation(crypto_material):
     assert manifest.signing_timestamp_utc == now_utc
     assert manifest.signing_reason_code == SigningReasonCode.PI_APPROVAL
     assert (
-        "Indiana Jones" in manifest.signing_reason_text
+        manifest.signing_reason_text == "Indiana Jones" in manifest.signing_reason_text
         or "PI approval" in manifest.signing_reason_text
     )
     assert manifest.network_ip_address == "192.168.10.12"
