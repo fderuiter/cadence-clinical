@@ -12,6 +12,11 @@ from typing import Any, Dict, List
 import httpx
 import pytest
 import pytest_asyncio
+from execution.safety_models import (
+    CausalityEnum,
+    SAECaseRecord,
+    SeriousnessCriteriaEnum,
+)
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 
@@ -21,7 +26,6 @@ from apps.gateway.main import generate_signature
 from apps.safety.database import db_manager
 from apps.safety.main import app
 from apps.safety.models import Base, SafetyAuditLog
-from execution.safety_models import CausalityEnum, SAECaseRecord, SeriousnessCriteriaEnum
 
 
 @pytest_asyncio.fixture(autouse=True)
