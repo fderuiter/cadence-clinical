@@ -763,29 +763,26 @@ function selectView(viewId) {
 }
 
 function handleModalKeyDown(e) {
-  if (e.key === "Tab") {
-    const modal = document.getElementById("portal-sign-modal");
-    if (!modal) return;
-    const focusableSelectors =
-      "input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])";
-    const focusableElements = Array.from(
-      modal.querySelectorAll(focusableSelectors)
-    );
-    if (focusableElements.length === 0) return;
+  if (e.key !== "Tab") return;
+  const modal = document.getElementById("portal-sign-modal");
+  if (!modal) return;
 
-    const first = focusableElements[0];
-    const last = focusableElements[focusableElements.length - 1];
+  const selectors = ["input", "select", "textarea", "button"].map(tag => `${tag}:not([disabled])`).join(", ");
+  const elList = Array.from(modal.querySelectorAll(selectors));
+  if (!elList.length) return;
 
-    if (e.shiftKey) {
-      if (document.activeElement === first) {
-        last.focus();
-        e.preventDefault();
-      }
-    } else {
-      if (document.activeElement === last) {
-        first.focus();
-        e.preventDefault();
-      }
+  const firstEl = elList[0];
+  const lastEl = elList[elList.length - 1];
+
+  if (e.shiftKey) {
+    if (document.activeElement === firstEl) {
+      lastEl.focus();
+      e.preventDefault();
+    }
+  } else {
+    if (document.activeElement === lastEl) {
+      firstEl.focus();
+      e.preventDefault();
     }
   }
 }
