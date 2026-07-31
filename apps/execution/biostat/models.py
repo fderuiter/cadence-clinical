@@ -1,4 +1,3 @@
-# Phase 15: SDTM Domain Extraction Engine
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 

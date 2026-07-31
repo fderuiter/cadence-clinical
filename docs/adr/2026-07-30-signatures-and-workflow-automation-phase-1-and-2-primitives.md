@@ -34,5 +34,5 @@ Chosen option 1 because centralizing signature gating in `packages/security/gati
 
 ## 6. Implementation & Verification
 
-* Modified `packages/security/gating.py`, `packages/security/middleware.py`, `packages/security/rbac.py`, `apps/ctms/models.py`, `apps/org/models.py`, and `apps/tickets/models.py`.
+* Modified `packages/security/gating.py`, `packages/security/middleware.py`, `packages/security/rbac.py`, `apps/ctms/models.py`, `apps/org/models.py`, and `apps/tickets/models/__init__.py`.
 * Verified with automated unit and integration test suites.
