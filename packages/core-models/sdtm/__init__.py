@@ -31,6 +31,10 @@ from sdtm.models import (
     SUPPQUALRecord,
     VitalSign,
 )
+from sdtm.scrubber_models import (
+    DeidentConfig,
+    DeidentSummary,
+)
 from sdtm.sdtm_models import (
     SDTMRecordAE,
     SDTMRecordCM,
@@ -46,9 +50,12 @@ from sdtm.terminology import (
     normalize_seriousness,
     normalize_severity,
     normalize_sex,
+    validate_iso8601,
 )
 
 __all__ = [
+    "DeidentConfig",
+    "DeidentSummary",
     "SDTMRecordDM",
     "SDTMRecordAE",
     "SDTMRecordVS",

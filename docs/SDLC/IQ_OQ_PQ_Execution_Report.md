@@ -11,6 +11,8 @@ Based on the executed automated verification suite, the platform meets all prede
 ### Validation Result Summary
 - **Total Automated Test Cases Run:** 1713
 - **Passed:** 1713 🟢
+- **Total Automated Test Cases Run:** 28
+- **Passed:** 28 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1483,6 +1485,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_rewrite_references_nested_references` | `tests.test_schema_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_rewrite_references_recursion_protection` | `tests.test_schema_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_static_schema_validation_script` | `tests.test_schema_validation` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_free_text_pii_scrubbing` | `tests.test_deident_scrubber` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_scrubber_preserves_date_intervals` | `tests.test_deident_scrubber` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_scrubber_subject_id_non_reversible` | `tests.test_deident_scrubber` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_sdtm_json_builder_integration` | `tests.test_deident_scrubber` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ae_required_optional_and_date_order` | `tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_auditable_model_fields_and_validation` | `tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cm_required_optional_and_date_order` | `tests.test_sdtm_foundation` | *Regression/Helper* | 🟢 PASSED | < 1s |
