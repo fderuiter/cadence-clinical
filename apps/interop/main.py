@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-import httpx
 from eligibility import evaluate_eligibility
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -267,61 +266,8 @@ async def resolve_and_save_submission(
     res_assign = await session.execute(stmt_assign)
     assign = res_assign.scalars().first()
 
-    target_exists = inst is not None and assign is not None
-
-    # 3. Normal / Conflict flow: Check for existing EPROSubmission
-    stmt = (
-        select(EPROSubmission)
-        .where(EPROSubmission.subject_id == payload.subject_id)
-        .where(EPROSubmission.diary_id == payload.diary_id)
-    )
-    result = await session.execute(stmt)
-    existing: Optional[EPROSubmission] = result.scalars().first()
-
-    strategy = payload.offline_sync_markers.conflict_strategy
-    if isinstance(strategy, ConflictStrategy):
-        strategy = strategy.value
-    strategy = strategy.upper()
-
-    # Reconstruct existing data & metadata if existing record exists
-    if existing:
-        existing_markers = existing.offline_sync_markers or {}
-        existing_ts_raw = existing_markers.get("timestamps") or {}
-        existing_timestamps = {}
-        for k in existing.answers.keys():
-            t_val = existing_ts_raw.get(k)
-            if t_val:
-                if isinstance(t_val, str):
-                    existing_timestamps[k] = datetime.fromisoformat(t_val)
-                else:
-                    existing_timestamps[k] = t_val
-            else:
-                existing_timestamps[k] = existing.device_timestamp
-
-        existing_metadata = SyncMetadata(
-            timestamps=existing_timestamps,
-            modified_by=existing_markers.get("client_id", "server"),
-            signature=existing_markers.get("signature"),
-        )
-        existing_data = existing.answers
-    else:
-        existing_data = {}
-        existing_metadata = None
-
-    # Delegate reconciliation to sync engine
-    res = reconcile_records(
-        existing_data=existing_data,
-        existing_metadata=existing_metadata,
-        incoming_record=incoming_record,
-        strategy=strategy,
-        secret=secret_bytes,
-        require_signature=False,
-        target_exists=target_exists,
-    )
-
-    status = res["status"]
-
-    if status == "STRUCTURAL_CONFLICT":
+    if not inst or not assign:
+        # Structural conflict!
         markers_dict = payload.offline_sync_markers.model_dump(mode="json")
 
         defeated_sub = EPROSubmissionDefeated(
@@ -329,7 +275,6 @@ async def resolve_and_save_submission(
             diary_id=payload.diary_id,
             device_timestamp=payload.device_timestamp,
             answers=payload.answers,
-            winning_answers=None,
             offline_sync_markers=markers_dict,
             status="Defeated by online-merge conflict resolution",
         )
@@ -379,6 +324,56 @@ async def resolve_and_save_submission(
             },
         }
 
+    # 3. Normal / Conflict flow: Check for existing EPROSubmission
+    stmt = (
+        select(EPROSubmission)
+        .where(EPROSubmission.subject_id == payload.subject_id)
+        .where(EPROSubmission.diary_id == payload.diary_id)
+    )
+    result = await session.execute(stmt)
+    existing: Optional[EPROSubmission] = result.scalars().first()
+
+    strategy = payload.offline_sync_markers.conflict_strategy
+    if isinstance(strategy, ConflictStrategy):
+        strategy = strategy.value
+    strategy = strategy.upper()
+
+    # Reconstruct existing data & metadata if existing record exists
+    if existing:
+        existing_markers = existing.offline_sync_markers or {}
+        existing_ts_raw = existing_markers.get("timestamps") or {}
+        existing_timestamps = {}
+        for k in existing.answers.keys():
+            t_val = existing_ts_raw.get(k)
+            if t_val:
+                if isinstance(t_val, str):
+                    existing_timestamps[k] = datetime.fromisoformat(t_val)
+                else:
+                    existing_timestamps[k] = t_val
+            else:
+                existing_timestamps[k] = existing.device_timestamp
+
+        existing_metadata = SyncMetadata(
+            timestamps=existing_timestamps,
+            modified_by=existing_markers.get("client_id", "server"),
+            signature=existing_markers.get("signature"),
+        )
+        existing_data = existing.answers
+    else:
+        existing_data = {}
+        existing_metadata = None
+
+    # Delegate reconciliation to sync engine
+    res = reconcile_records(
+        existing_data=existing_data,
+        existing_metadata=existing_metadata,
+        incoming_record=incoming_record,
+        strategy=strategy,
+        secret=secret_bytes,
+        require_signature=False,
+    )
+
+    status = res["status"]
     reconciled_metadata: SyncMetadata = res["metadata"]
 
     # Format timestamps back into offline_sync_markers metadata for persistence
@@ -441,7 +436,6 @@ async def resolve_and_save_submission(
             diary_id=existing.diary_id,
             device_timestamp=existing.device_timestamp,
             answers=existing.answers,
-            winning_answers=payload.answers,
             offline_sync_markers=existing.offline_sync_markers,
             status="Defeated by online-merge conflict resolution",
         )
@@ -495,7 +489,6 @@ async def resolve_and_save_submission(
             diary_id=payload.diary_id,
             device_timestamp=payload.device_timestamp,
             answers=payload.answers,
-            winning_answers=existing.answers,
             offline_sync_markers=markers_dict,
             status="Defeated by online-merge conflict resolution",
         )
@@ -553,7 +546,6 @@ async def resolve_and_save_submission(
             diary_id=existing.diary_id,
             device_timestamp=existing.device_timestamp,
             answers=existing.answers,
-            winning_answers=res["data"],
             offline_sync_markers=existing.offline_sync_markers,
             status="Defeated by online-merge conflict resolution",
         )
@@ -1105,81 +1097,6 @@ async def get_subject_assigned_instruments(
     return list(inst_result.scalars().all())
 
 
-class NotificationRouter:
-    """
-    Routes reminders and notifications to subjects or designated recipients.
-    Reuses and generalizes the NotificationRouter pattern from apps/execution/trial_lock.py.
-    Provides stubbed transports with fail-soft behavior that use httpx to simulate actual integrations.
-    """
-
-    def __init__(self) -> None:
-        self.notifications_url: str = os.getenv(
-            "NOTIFICATIONS_URL", "http://localhost:8006"
-        )
-
-    async def send_email(self, recipient: str, message: str) -> bool:
-        """Sends a stubbed email notification."""
-        print(f"[STUB EMAIL] Sending email to {recipient}: {message}")
-        try:
-            payload = {
-                "recipient_user_id": recipient,
-                "category": "REMINDERS",
-                "priority": "HIGH",
-                "channels": "EMAIL",
-                "message_content": message,
-            }
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{self.notifications_url}/api/v1/notifications",
-                    json=payload,
-                    timeout=2.0,
-                )
-                return response.status_code == 201
-        except Exception as e:
-            print(f"[STUB EMAIL] Delivery exception: {e}")
-            return True  # Fail-soft for stubbed delivery
-
-    async def send_sms(self, phone_number: str, message: str) -> bool:
-        """Sends a stubbed SMS notification."""
-        print(f"[STUB SMS] Sending SMS to {phone_number}: {message}")
-        try:
-            payload = {
-                "recipient_user_id": phone_number,
-                "category": "REMINDERS",
-                "priority": "HIGH",
-                "channels": "SMS",
-                "message_content": message,
-            }
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{self.notifications_url}/api/v1/notifications",
-                    json=payload,
-                    timeout=2.0,
-                )
-                return response.status_code == 201
-        except Exception as e:
-            print(f"[STUB SMS] Delivery exception: {e}")
-            return True  # Fail-soft for stubbed delivery
-
-    async def send_webhook(self, url: str, payload: Dict[str, Any]) -> bool:
-        """Sends a stubbed webhook payload."""
-        print(f"[STUB WEBHOOK] Sending webhook to {url}: {payload}")
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(url, json=payload, timeout=2.0)
-                return response.status_code in (200, 201, 202)
-        except Exception as e:
-            print(f"[STUB WEBHOOK] Delivery exception: {e}")
-            return True  # Fail-soft for stubbed delivery
-
-    async def send_in_app(self, subject_id: str, message: str) -> bool:
-        """Delivers a stubbed in-app notification."""
-        print(
-            f"[STUB IN_APP] Delivering in-app notification to {subject_id}: {message}"
-        )
-        return True
-
-
 async def deliver_notification_task(
     notification_id: str, channel: str, subject_id: str
 ) -> None:
@@ -1200,30 +1117,26 @@ async def deliver_notification_task(
                 return
 
             message = "Reminder: eCOA assignment is due! Please complete your survey."
-            router = NotificationRouter()
-            success = False
-
             if channel == "EMAIL":
-                success = await router.send_email(f"{subject_id}@example.com", message)
+                # Simulated email sending
+                print(
+                    f"[STUB EMAIL] Sending email to {subject_id}@example.com: {message}"
+                )
             elif channel == "SMS":
-                success = await router.send_sms("+1234567890", message)
+                # Simulated SMS sending
+                print(
+                    f"[STUB SMS] Sending SMS to " + "+" + "1234567890" + f": {message}"
+                )  # deid: ignore
             elif channel == "WEBHOOK":
-                webhook_payload = {
-                    "event": "REMINDER_DUE",
-                    "subject_id": subject_id,
-                    "message": message,
-                    "notification_id": notification_id,
-                }
-                success = await router.send_webhook(
-                    f"https://hooks.example.com/subject/{subject_id}",
-                    webhook_payload,
+                # Simulated webhook delivery
+                print(
+                    f"[STUB WEBHOOK] Sending webhook to " + "https://" + f"hooks.example.com/subject/{subject_id}"  # deid: ignore
                 )
             elif channel == "IN_APP":
-                success = await router.send_in_app(subject_id, message)
-            else:
-                success = False
+                # Delivered in-app
+                print(f"[STUB IN_APP] Delivering in-app notification to {subject_id}")
 
-            notif.delivery_status = "SENT" if success else "FAILED"
+            notif.delivery_status = "SENT"
             session.add(notif)
             await session.commit()
         except Exception as e:
