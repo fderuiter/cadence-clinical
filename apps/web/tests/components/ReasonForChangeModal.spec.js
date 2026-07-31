@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
 import ReasonForChangeModal from "../../src/components/ReasonForChangeModal.vue";
 
@@ -32,7 +32,9 @@ describe("ReasonForChangeModal.vue - Wrapper Component", () => {
     expect(wrapper.emitted("cancel")).toBeTruthy();
 
     // Verify confirm event propagation
-    await wrapper.find("textarea").setValue("Adding custom verification details");
+    await wrapper
+      .find("textarea")
+      .setValue("Adding custom verification details");
     await wrapper.find("#evt-btn-save-change").trigger("click");
     expect(wrapper.emitted("confirm")).toBeTruthy();
     expect(wrapper.emitted("confirm")[0]).toEqual([

@@ -22,8 +22,8 @@ onMounted(async () => {
         compliantStandards: [
           "21 CFR Part 11",
           "GAMP 5 (Category 4/5)",
-          "IEC 62304",
-          "ISO 14155:2020",
+          /* deid: ignore */ "IEC 62304",
+          /* deid: ignore */ "ISO 14155:2020",
         ],
       },
       "System boot and cryptographic ledger initialized successfully."
