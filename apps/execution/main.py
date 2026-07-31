@@ -2490,80 +2490,23 @@ async def get_cdisc_export_dictionary(study_id: str) -> Response:
 # Medical Dictionary & UCUM Standardization API Contracts
 # ==========================================
 
-
-class DictTypeEnum(str, Enum):
-    MEDDRA = "MEDDRA"
-    WHODRUG = "WHODRUG"
-    LOINC = "LOINC"
-    SNOMED = "SNOMED"
-
-
-class JobStatusEnum(str, Enum):
-    PENDING = "PENDING"
-    PROCESSING = "PROCESSING"
-    COMPLETED = "COMPLETED"
-    FAILED = "FAILED"
-
-
-class JobStatusResponse(BaseModel):
-    job_id: str
-    dictionary_type: str
-    version: str
-    status: JobStatusEnum
-    started_at: datetime
-    completed_at: Optional[datetime] = None
-    progress_percentage: Optional[int] = None
-    records_imported: Optional[int] = None
-    errors_encountered: Optional[int] = None
-
-
-class PrimarySocFlagEnum(str, Enum):
-    Y = "Y"
-    N = "N"
-
-
-class MedDRACodeMatch(BaseModel):
-    llt_code: str
-    llt_name: str
-    pt_code: str
-    pt_name: str
-    hlt_code: str
-    hlt_name: str
-    hlgt_code: str
-    hlgt_name: str
-    soc_code: str
-    soc_name: str
-    primary_soc_flag: Optional[PrimarySocFlagEnum] = None
-    score: float
-
-
-class MedDRACodingResult(BaseModel):
-    status: str  # e.g., "AUTO-CODED", "SUGGESTIONS", "UNCODABLE"
-    matches: List[MedDRACodeMatch]
-
-
-class WHODrugATCContext(BaseModel):
-    atc_code: str
-    description: str
-
-
-class WHODrugIngredientItem(BaseModel):
-    ingredient_code: str
-    ingredient_name: str
-
-
-class WHODrugCodeMatch(BaseModel):
-    drug_code: str
-    preferred_name: str
-    drug_name: Optional[str] = None
-    score: float
-    atc_context: List[WHODrugATCContext] = []
-    ingredients: List[WHODrugIngredientItem] = []
-
-
-class WHODrugCodingResult(BaseModel):
-    status: str  # e.g., "AUTO-CODED", "SUGGESTIONS", "UNCODABLE"
-    matches: List[WHODrugCodeMatch]
+from apps.execution.routers.coding_schemas import (
+    DictTypeEnum,
+    JobStatusEnum,
+    JobStatusResponse,
+    PrimarySocFlagEnum,
+    MedDRACodeMatch,
+    MedDRACodingResult,
+    WHODrugATCContext,
+    WHODrugIngredientItem,
+    WHODrugCodeMatch,
+    WHODrugCodingResult,
+    ImpactAnalysisRequest,
+    ImpactAnalysisResponse,
+    ImpactMetrics,
+    CodingAssignmentResponse,
+    CoderActionRequest,
+)
 
 
 class UCUMConvertRequest(BaseModel):
@@ -2767,30 +2710,16 @@ async def get_meddra_code(
     roles: list[str] = Depends(get_normalized_roles),
 ) -> MedDRACodingResult:
     """Performs coding or interactive auto-complete lookup on adverse events using version-aware matcher."""
-    if not term or not term.strip():
-        raise HTTPException(
-            status_code=400,
-            detail="Term must be a non-empty string.",
-        )
-    if not version or not version.strip():
-        raise HTTPException(
-            status_code=400,
-            detail="Version must be a non-empty string.",
-        )
+    from apps.execution.coding import search_dictionary
 
     async with db_manager.get_session_maker()() as session:
-        try:
-            res = await match_verbatim_term(
-                session=session,
-                verbatim=term.strip(),
-                dictionary_type="MEDDRA",
-                version=version.strip(),
-                target_level=target_level.value if target_level else None,
-            )
-        except Exception as e:
-            raise HTTPException(
-                status_code=500, detail=f"Database or matcher error: {str(e)}"
-            )
+        res = await search_dictionary(
+            session=session,
+            term=term,
+            dictionary_type="MEDDRA",
+            version=version,
+            target_level=target_level.value if target_level else None,
+        )
 
         matches = []
         if res.get("match"):
@@ -2885,29 +2814,15 @@ async def get_whodrug_code(
     roles: list[str] = Depends(get_normalized_roles),
 ) -> WHODrugCodingResult:
     """Performs coding or interactive lookup on WHODrug database using version-aware matcher."""
-    if not term or not term.strip():
-        raise HTTPException(
-            status_code=400,
-            detail="Term must be a non-empty string.",
-        )
-    if not version or not version.strip():
-        raise HTTPException(
-            status_code=400,
-            detail="Version must be a non-empty string.",
-        )
+    from apps.execution.coding import search_dictionary
 
     async with db_manager.get_session_maker()() as session:
-        try:
-            res = await match_verbatim_term(
-                session=session,
-                verbatim=term.strip(),
-                dictionary_type="WHODRUG",
-                version=version.strip(),
-            )
-        except Exception as e:
-            raise HTTPException(
-                status_code=500, detail=f"Database or matcher error: {str(e)}"
-            )
+        res = await search_dictionary(
+            session=session,
+            term=term,
+            dictionary_type="WHODRUG",
+            version=version,
+        )
 
         matches = []
         if res.get("match"):
@@ -5306,18 +5221,6 @@ async def unlock_trial_endpoint(
 # ==========================================
 
 
-class ImpactAnalysisRequest(BaseModel):
-    dictionary_type: str
-    new_version: str
-
-
-class ImpactAnalysisResponse(BaseModel):
-    status: str
-    dictionary_type: str
-    new_version: str
-    metrics: dict[str, int]
-
-
 @app.post(
     "/api/v1/execution/coding/impact-analysis",
     response_model=ImpactAnalysisResponse,
@@ -5332,54 +5235,28 @@ async def post_impact_analysis(
     ),
 ) -> ImpactAnalysisResponse:
     """Manually triggers up-versioning impact analysis on existing coded assignments."""
-    from apps.execution.coding.impact import run_impact_analysis
+    from apps.execution.coding import trigger_impact_analysis
 
     async with db_manager.get_session_maker()() as session:
         async with session.begin():
-            try:
-                metrics = await run_impact_analysis(
-                    session=session,
-                    dictionary_type=payload.dictionary_type,
-                    new_version=payload.new_version,
-                    actor=current_user_id.get() or "system",
-                )
-            except ValueError as e:
-                raise HTTPException(status_code=400, detail=str(e))
+            metrics_dict = await trigger_impact_analysis(
+                session=session,
+                dictionary_type=payload.dictionary_type,
+                new_version=payload.new_version,
+                actor=current_user_id.get() or "system",
+            )
+            metrics = ImpactMetrics(
+                unchanged=metrics_dict.get("unchanged", 0),
+                reclassified=metrics_dict.get("reclassified", 0),
+                deprecated=metrics_dict.get("deprecated", 0),
+                skipped=metrics_dict.get("skipped", 0),
+            )
             return ImpactAnalysisResponse(
                 status="success",
                 dictionary_type=payload.dictionary_type,
                 new_version=payload.new_version,
                 metrics=metrics,
             )
-
-
-class CodingAssignmentResponse(BaseModel):
-    id: str
-    verbatim_text: str
-    source_field: Optional[str] = None
-    observation_id: Optional[str] = None
-    dictionary_type: str
-    dictionary_version: str
-    coded_code: Optional[str] = None
-    coded_term: Optional[str] = None
-    status: str
-    recoding_status: str
-    assigned_by: Optional[str] = None
-    assigned_at: datetime
-    score: Optional[float] = None
-    hierarchy: Optional[Union[dict[str, Any], list[Any]]] = None
-    suggestions: Optional[Union[list[Any], dict[str, Any]]] = None
-    domain: Optional[str] = None
-    version: int
-    is_deleted: bool
-
-
-class CoderActionRequest(BaseModel):
-    action: str  # "ACCEPT" or "OVERRIDE" or "QUERY"
-    code: Optional[str] = None  # required for OVERRIDE
-    term: Optional[str] = None  # required for OVERRIDE
-    suggestion_index: Optional[int] = None  # optional for ACCEPT
-    reason_for_change: Optional[str] = None  # required for OVERRIDE
 
 
 @app.get(
@@ -5394,24 +5271,16 @@ async def list_coding_assignments(
     roles: list[str] = Depends(get_normalized_roles),
 ) -> List[CodingAssignmentResponse]:
     """Lists and filters medical coding assignments."""
+    from apps.execution.coding import list_coding_assignments as list_assignments_service
+
     async with db_manager.get_session_maker()() as session:
-        stmt = select(ClinicalCodingAssignment).where(
-            ClinicalCodingAssignment.is_deleted.is_(False)
+        assignments = await list_assignments_service(
+            session=session,
+            observation_id=observation_id,
+            status=status,
+            verbatim_text=verbatim_text,
+            dictionary_type=dictionary_type,
         )
-        if observation_id:
-            stmt = stmt.where(ClinicalCodingAssignment.observation_id == observation_id)
-        if status:
-            stmt = stmt.where(ClinicalCodingAssignment.status == status.upper())
-        if verbatim_text:
-            stmt = stmt.where(ClinicalCodingAssignment.verbatim_text == verbatim_text)
-        if dictionary_type:
-            stmt = stmt.where(
-                ClinicalCodingAssignment.dictionary_type == dictionary_type.upper()
-            )
-
-        res = await session.execute(stmt)
-        assignments = res.scalars().all()
-
         return [
             CodingAssignmentResponse(
                 id=a.id,
@@ -5446,16 +5315,10 @@ async def get_coding_assignment(
     roles: list[str] = Depends(get_normalized_roles),
 ) -> CodingAssignmentResponse:
     """Retrieves a single medical coding assignment by ID."""
-    async with db_manager.get_session_maker()() as session:
-        stmt = select(ClinicalCodingAssignment).where(
-            ClinicalCodingAssignment.id == assignment_id,
-            ClinicalCodingAssignment.is_deleted.is_(False),
-        )
-        res = await session.execute(stmt)
-        a = res.scalars().first()
-        if not a:
-            raise HTTPException(status_code=404, detail="Coding assignment not found")
+    from apps.execution.coding import get_coding_assignment as get_assignment_service
 
+    async with db_manager.get_session_maker()() as session:
+        a = await get_assignment_service(session=session, assignment_id=assignment_id)
         return CodingAssignmentResponse(
             id=a.id,
             verbatim_text=a.verbatim_text,
@@ -5489,269 +5352,21 @@ async def process_coding_action(
     roles: list[str] = Depends(require_roles("data manager")),
 ) -> CodingAssignmentResponse:
     """Accepts a suggestion or submits a manual override, persisting results and updating the ledger."""
-    action_upper = payload.action.upper()
-    if action_upper not in ("ACCEPT", "OVERRIDE", "QUERY"):
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid action '{payload.action}'. Allowed actions: ACCEPT, OVERRIDE, QUERY.",
-        )
+    from apps.execution.coding import process_coding_action as process_action_service
 
+    actor = current_user_id.get() or "system"
     async with db_manager.get_session_maker()() as session:
-        # 1. Fetch existing assignment
-        stmt = select(ClinicalCodingAssignment).where(
-            ClinicalCodingAssignment.id == assignment_id,
-            ClinicalCodingAssignment.is_deleted.is_(False),
-        )
-        res = await session.execute(stmt)
-        assignment = res.scalars().first()
-        if not assignment:
-            raise HTTPException(status_code=404, detail="Coding assignment not found")
-
-        old_code = assignment.coded_code
-        old_term = assignment.coded_term
-        old_version = assignment.dictionary_version
-        dict_type = assignment.dictionary_type
-        version = assignment.dictionary_version
-
-        status = assignment.status
-        coded_code = assignment.coded_code
-        coded_term = assignment.coded_term
-        score = assignment.score
-        hierarchy = assignment.hierarchy
-
-        actor = current_user_id.get() or "system"
-
-        if action_upper == "ACCEPT":
-            # Must find a suggestion to accept
-            if payload.suggestion_index is not None:
-                sug_list = assignment.suggestions
-                if (
-                    not sug_list
-                    or not isinstance(sug_list, list)
-                    or payload.suggestion_index < 0
-                    or payload.suggestion_index >= len(sug_list)
-                ):
-                    raise HTTPException(
-                        status_code=400, detail="Invalid suggestion_index"
-                    )
-                sug = sug_list[payload.suggestion_index]
-                coded_code = sug.get("code") or sug.get("drug_code")
-                coded_term = sug.get("term_name") or sug.get("preferred_name")
-                score = sug.get("score")
-                if dict_type == DBDictionaryType.MEDDRA:
-                    hierarchy = sug.get("hierarchies")
-                else:
-                    hierarchy = {
-                        "atc_context": sug.get("atc_context", []),
-                        "ingredients": sug.get("ingredients", []),
-                    }
-            elif payload.code and payload.term:
-                # Direct accept of specified code/term if it matches one of the suggestions
-                sug_list = assignment.suggestions or []
-                found = False
-                for sug in sug_list:
-                    s_code = sug.get("code") or sug.get("drug_code")
-                    if s_code == payload.code:
-                        coded_code = s_code
-                        coded_term = sug.get("term_name") or sug.get("preferred_name")
-                        score = sug.get("score")
-                        if dict_type == DBDictionaryType.MEDDRA:
-                            hierarchy = sug.get("hierarchies")
-                        else:
-                            hierarchy = {
-                                "atc_context": sug.get("atc_context", []),
-                                "ingredients": sug.get("ingredients", []),
-                            }
-                        found = True
-                        break
-                if not found:
-                    raise HTTPException(
-                        status_code=400,
-                        detail="The provided code does not match any available suggestions. Use OVERRIDE for manual coding.",
-                    )
-            else:
-                # Accept highest suggestion if available
-                sug_list = assignment.suggestions
-                if sug_list and isinstance(sug_list, list) and len(sug_list) > 0:
-                    sug = sug_list[0]
-                    coded_code = sug.get("code") or sug.get("drug_code")
-                    coded_term = sug.get("term_name") or sug.get("preferred_name")
-                    score = sug.get("score")
-                    if dict_type == DBDictionaryType.MEDDRA:
-                        hierarchy = sug.get("hierarchies")
-                    else:
-                        hierarchy = {
-                            "atc_context": sug.get("atc_context", []),
-                            "ingredients": sug.get("ingredients", []),
-                        }
-                else:
-                    raise HTTPException(
-                        status_code=400,
-                        detail="No suggestions available to ACCEPT. Use OVERRIDE instead.",
-                    )
-
-            # Double check existence of the code/version in DB
-            if dict_type == DBDictionaryType.MEDDRA:
-                from apps.execution.database.models import MedDRATerm
-
-                stmt_valid = select(MedDRATerm).where(
-                    MedDRATerm.dictionary_version == version,
-                    MedDRATerm.code == coded_code,
-                )
-                res_valid = await session.execute(stmt_valid)
-                if not res_valid.scalars().first():
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Invalid code '{coded_code}' for MedDRA version '{version}'.",
-                    )
-            elif dict_type == DBDictionaryType.WHODRUG:
-                from apps.execution.database.models import WHODrugRecord
-
-                stmt_valid = select(WHODrugRecord).where(
-                    WHODrugRecord.dictionary_version == version,
-                    WHODrugRecord.drug_code == coded_code,
-                )
-                res_valid = await session.execute(stmt_valid)
-                if not res_valid.scalars().first():
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Invalid drug code '{coded_code}' for WHODrug version '{version}'.",
-                    )
-
-            status = CodingState.CODED
-
-        elif action_upper == "OVERRIDE":
-            # Override requires reason_for_change, code, and term
-            if not payload.reason_for_change or not payload.reason_for_change.strip():
-                raise HTTPException(
-                    status_code=400,
-                    detail="reason_for_change is required for OVERRIDE action and cannot be empty.",
-                )
-            if not payload.code or not payload.code.strip():
-                raise HTTPException(
-                    status_code=400, detail="code is required for OVERRIDE action."
-                )
-            if not payload.term or not payload.term.strip():
-                raise HTTPException(
-                    status_code=400, detail="term is required for OVERRIDE action."
-                )
-
-            # Validate target code/version
-            if dict_type == DBDictionaryType.MEDDRA:
-                from apps.execution.database.models import MedDRATerm
-
-                stmt_valid = select(MedDRATerm).where(
-                    MedDRATerm.dictionary_version == version,
-                    MedDRATerm.code == payload.code.strip(),
-                )
-                res_valid = await session.execute(stmt_valid)
-                if not res_valid.scalars().first():
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Invalid code '{payload.code}' for MedDRA version '{version}'.",
-                    )
-
-                # Fetch hierarchy for the overridden term if possible
-                from apps.execution.coding.matcher import _get_meddra_hierarchy
-
-                term_obj = MedDRATerm(
-                    code=payload.code.strip(),
-                    term_name=payload.term.strip(),
-                    level="LLT",
-                )
-                hierarchy = await _get_meddra_hierarchy(session, term_obj, version)
-
-            elif dict_type == DBDictionaryType.WHODRUG:
-                from apps.execution.database.models import WHODrugRecord
-
-                stmt_valid = select(WHODrugRecord).where(
-                    WHODrugRecord.dictionary_version == version,
-                    WHODrugRecord.drug_code == payload.code.strip(),
-                )
-                res_valid = await session.execute(stmt_valid)
-                if not res_valid.scalars().first():
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Invalid drug code '{payload.code}' for WHODrug version '{version}'.",
-                    )
-
-                # Fetch ATC context and ingredients for WHODrug override
-                from apps.execution.coding.matcher import _get_whodrug_context
-
-                rec_obj = WHODrugRecord(
-                    drug_code=payload.code.strip(), preferred_name=payload.term.strip()
-                )
-                atc_context, ingredients = await _get_whodrug_context(
-                    session, rec_obj, version
-                )
-                hierarchy = {"atc_context": atc_context, "ingredients": ingredients}
-
-            coded_code = payload.code.strip()
-            coded_term = payload.term.strip()
-            score = 1.0  # Perfect manual certainty
-            status = CodingState.CODED
-
-        elif action_upper == "QUERY":
-            status = CodingState.QUERY_PENDING
-            coded_code = None
-            coded_term = None
-            score = None
-            hierarchy = None
-
-        # 2. Update assignment state
-        assignment.status = status
-        assignment.coded_code = coded_code
-        assignment.coded_term = coded_term
-        assignment.score = score
-        assignment.hierarchy = hierarchy
-        assignment.assigned_by = actor
-        assignment.assigned_at = datetime.now(timezone.utc)
-
-        # 3. Create a ledger record for ACCEPT or OVERRIDE
-        if action_upper in ("ACCEPT", "OVERRIDE"):
-            ledger = ClinicalCodingLedger(
-                assignment_id=assignment.id,
-                verbatim_text=assignment.verbatim_text,
-                observation_id=assignment.observation_id,
-                dictionary_type=dict_type,
-                old_dictionary_version=old_version if old_code else None,
-                old_coded_code=old_code,
-                old_coded_term=old_term,
-                new_dictionary_version=version,
-                new_coded_code=coded_code,
-                new_coded_term=coded_term,
-                recoding_reason=payload.reason_for_change
-                or f"Manual decision: {action_upper}",
-                decision_by=actor,
-                decision_at=datetime.now(timezone.utc),
+        async with session.begin():
+            as_db = await process_action_service(
+                session=session,
+                assignment_id=assignment_id,
+                action=payload.action,
+                code=payload.code,
+                term=payload.term,
+                suggestion_index=payload.suggestion_index,
+                reason_for_change=payload.reason_for_change,
+                actor=actor,
             )
-            session.add(ledger)
-
-            # Close any open/active SYSTEM_CODING queries for this observation
-            stmt_active_q = select(ClinicalQuery).where(
-                ClinicalQuery.observation_id == assignment.observation_id,
-                ClinicalQuery.origin == "SYSTEM_CODING",
-                ClinicalQuery.status.in_(["CANDIDATE", "OPEN", "ANSWERED", "REOPENED"]),
-                ClinicalQuery.is_deleted.is_(False),
-            )
-            res_active_q = await session.execute(stmt_active_q)
-            active_queries = res_active_q.scalars().all()
-            for active_q in active_queries:
-                active_q.status = "CLOSED"
-                active_q.resolver = actor
-                active_q.resolved_at = datetime.now(timezone.utc)
-                active_q.response = f"Resolved via manual coding action: {action_upper} on code {coded_code}."
-                session.add(active_q)
-
-        await session.commit()
-
-        # Re-fetch
-        stmt_ref = select(ClinicalCodingAssignment).where(
-            ClinicalCodingAssignment.id == assignment_id
-        )
-        res_ref = await session.execute(stmt_ref)
-        as_db = res_ref.scalar_one()
-
         return CodingAssignmentResponse(
             id=as_db.id,
             verbatim_text=as_db.verbatim_text,
