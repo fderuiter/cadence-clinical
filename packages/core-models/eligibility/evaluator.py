@@ -6,7 +6,7 @@ entirely avoiding eval/exec. It tracks fine-grained node-level traceability
 explanations and aggregates individual criteria into a final eligibility report.
 """
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from eligibility.models import (
     AggregateEligibilityResult,
@@ -302,3 +302,62 @@ def evaluate_eligibility(
         indeterminate_criteria=indeterminate_criteria,
         criteria_evaluations=evaluations,
     )
+
+
+def evaluate_structured_expression(
+    tree: ExpressionNode, context: Dict[str, Any]
+) -> tuple[Optional[bool], str]:
+    """
+    Deterministically evaluates a structured expression tree against a context dict of eCRF field values.
+    Returns:
+        (result, explanation) where:
+        - result is a boolean value (True/False) or None (for indeterminate).
+        - explanation details why the expression evaluated to its current state.
+          If any node is missing/None, it explicitly yields "cannot determine / not yet eligible".
+    """
+    node_eval = evaluate_node(tree, context)
+    if node_eval.is_indeterminate:
+        return None, f"cannot determine / not yet eligible: {node_eval.explanation}"
+
+    explanation = node_eval.explanation
+    if node_eval.value is False:
+        # Walk the tree to gather detailed explanations of failing leaf comparison nodes
+        failed_parts = []
+
+        def walk(e: NodeEvaluation):
+            if e.node_type == "comparison" and e.value is False:
+                failed_parts.append(e.explanation)
+            for c in e.children:
+                walk(c)
+
+        walk(node_eval)
+        if failed_parts:
+            explanation += f" Failed comparisons: {'; '.join(failed_parts)}"
+
+    return node_eval.value, explanation
+
+
+def evaluate_criteria_group(
+    criteria: List[EligibilityCriterion], context: Dict[str, Any]
+) -> tuple[Optional[bool], List[str]]:
+    """
+    Aggregates evaluations across a list of inclusion/exclusion criteria.
+    Derives an overall outcome:
+    - Any inclusion criterion that is False, or any exclusion criterion that is True -> fail.
+    Returns:
+        (overall_eligible, failing_criterion_identifiers)
+        where overall_eligible is True, False, or None (if indeterminate and no hard failures exist),
+        and failing_criterion_identifiers are the identifier fields of the failing criteria.
+    """
+    result = evaluate_eligibility(criteria, context)
+
+    failing_identifiers = []
+    for crit_id in result.failed_criteria:
+        # Find the matching criterion to get its business 'identifier'
+        crit_obj = next((c for c in criteria if c.criterion_id == crit_id), None)
+        if crit_obj and getattr(crit_obj, "identifier", None):
+            failing_identifiers.append(crit_obj.identifier)
+        else:
+            failing_identifiers.append(crit_id)
+
+    return result.eligible, failing_identifiers

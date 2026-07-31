@@ -96,11 +96,17 @@ def get_bulk_sdv_auth_headers(
 
     p = token_payload if token_payload is not None else payload
     if p is not None and not omit_batch_id:
-        study_id = str(p.get("study_id")).strip() if p.get("study_id") is not None else ""
+        study_id = (
+            str(p.get("study_id")).strip() if p.get("study_id") is not None else ""
+        )
         scope = str(p.get("scope")).strip() if p.get("scope") is not None else ""
         target_ids = p.get("target_ids", [])
         sorted_ids = sorted([str(tid).strip() for tid in target_ids])
-        reason = str(p.get("reason_for_change")).strip() if p.get("reason_for_change") is not None else ""
+        reason = (
+            str(p.get("reason_for_change")).strip()
+            if p.get("reason_for_change") is not None
+            else ""
+        )
         binding_str = f"{study_id}:{scope}:{sorted_ids}:{reason}"
         batch_id = hashlib.sha256(binding_str.encode("utf-8")).hexdigest()
         sig_payload["batch_id"] = batch_id
@@ -578,7 +584,9 @@ async def test_bulk_sdv_signoff_happy_path():
                 text("SELECT set_config('cadence.app_writing', 'true', 1);")
             )
             subj = ClinicalSubject(
-                subject_id="SUBJ-BULK-1", study_id="STUDY-BULK-TEST", site_id="SITE-BULK-1"
+                subject_id="SUBJ-BULK-1",
+                study_id="STUDY-BULK-TEST",
+                site_id="SITE-BULK-1",
             )
             session.add(subj)
 
@@ -651,7 +659,7 @@ async def test_bulk_sdv_signoff_happy_path():
             select(SDVSignOff).where(
                 SDVSignOff.scope == "FIELD",
                 SDVSignOff.subject_id == "SUBJ-BULK-1",
-                SDVSignOff.study_id == "STUDY-BULK-TEST"
+                SDVSignOff.study_id == "STUDY-BULK-TEST",
             )
         )
         signoffs = res.scalars().all()
@@ -676,8 +684,7 @@ async def test_bulk_sdv_signoff_happy_path():
         # 5. Assert that AuditLog rows exist for the affected sdv_sign_offs records
         res_audit = await session.execute(
             select(AuditLog).where(
-                AuditLog.table_name == "sdv_sign_offs",
-                AuditLog.action == "INSERT"
+                AuditLog.table_name == "sdv_sign_offs", AuditLog.action == "INSERT"
             )
         )
         audit_records = res_audit.scalars().all()
@@ -701,7 +708,9 @@ async def test_bulk_sdv_signoff_rbac_and_idempotency():
                 text("SELECT set_config('cadence.app_writing', 'true', 1);")
             )
             subj = ClinicalSubject(
-                subject_id="SUBJ-RBAC-1", study_id="STUDY-RBAC-TEST", site_id="SITE-RBAC-1"
+                subject_id="SUBJ-RBAC-1",
+                study_id="STUDY-RBAC-TEST",
+                site_id="SITE-RBAC-1",
             )
             session.add(subj)
 
@@ -791,7 +800,9 @@ async def test_bulk_sdv_signoff_rbac_and_idempotency():
             "reason_for_change": "RBAC Monitor verification check",
             "site_id": "SITE-RBAC-1",
         }
-        headers_monitor = get_bulk_sdv_auth_headers(roles="monitor", payload=payload_mon)
+        headers_monitor = get_bulk_sdv_auth_headers(
+            roles="monitor", payload=payload_mon
+        )
         resp = await client.post(
             "/api/v1/execution/sdv/bulk-sign-off",
             json=payload_mon,
@@ -808,7 +819,9 @@ async def test_bulk_sdv_signoff_rbac_and_idempotency():
             "reason_for_change": "RBAC PI check",
             "site_id": "SITE-RBAC-1",
         }
-        headers_pi = get_bulk_sdv_auth_headers(roles="Site Investigator", payload=payload_pi)
+        headers_pi = get_bulk_sdv_auth_headers(
+            roles="Site Investigator", payload=payload_pi
+        )
         resp = await client.post(
             "/api/v1/execution/sdv/bulk-sign-off",
             json=payload_pi,
@@ -844,7 +857,9 @@ async def test_bulk_sdv_signoff_rbac_and_idempotency():
         }
 
         # Re-verify OBS-RBAC-IDEM with CRA role (first time)
-        headers_cra_1 = get_bulk_sdv_auth_headers(user_id="CRA-1", roles="CRA", payload=payload_idem)
+        headers_cra_1 = get_bulk_sdv_auth_headers(
+            user_id="CRA-1", roles="CRA", payload=payload_idem
+        )
         resp1 = await client.post(
             "/api/v1/execution/sdv/bulk-sign-off",
             json=payload_idem,
@@ -854,7 +869,9 @@ async def test_bulk_sdv_signoff_rbac_and_idempotency():
         assert resp1.json()["signed_count"] == 1
 
         # Re-send the exact same valid request (second time)
-        headers_cra_2 = get_bulk_sdv_auth_headers(user_id="CRA-1", roles="CRA", payload=payload_idem)
+        headers_cra_2 = get_bulk_sdv_auth_headers(
+            user_id="CRA-1", roles="CRA", payload=payload_idem
+        )
         resp2 = await client.post(
             "/api/v1/execution/sdv/bulk-sign-off",
             json=payload_idem,
@@ -868,8 +885,7 @@ async def test_bulk_sdv_signoff_rbac_and_idempotency():
         async with db_manager.get_session_maker()() as session:
             res_so = await session.execute(
                 select(SDVSignOff).where(
-                    SDVSignOff.target_id == "OBS-RBAC-IDEM",
-                    SDVSignOff.scope == "FIELD"
+                    SDVSignOff.target_id == "OBS-RBAC-IDEM", SDVSignOff.scope == "FIELD"
                 )
             )
             signoffs = res_so.scalars().all()
@@ -923,31 +939,53 @@ async def test_bulk_sdv_signoff_batch_binding_mismatch():
 
         # Case 1: Wrong study_id
         mismatched_study = dict(correct_payload, study_id="STUDY-WRONG")
-        headers = get_bulk_sdv_auth_headers(roles="CRA", payload=correct_payload, token_payload=mismatched_study)
-        resp = await client.post("/api/v1/execution/sdv/bulk-sign-off", json=correct_payload, headers=headers)
+        headers = get_bulk_sdv_auth_headers(
+            roles="CRA", payload=correct_payload, token_payload=mismatched_study
+        )
+        resp = await client.post(
+            "/api/v1/execution/sdv/bulk-sign-off", json=correct_payload, headers=headers
+        )
         assert resp.status_code == 401
 
         # Case 2: Wrong scope
         mismatched_scope = dict(correct_payload, scope="PAGE")
-        headers = get_bulk_sdv_auth_headers(roles="CRA", payload=correct_payload, token_payload=mismatched_scope)
-        resp = await client.post("/api/v1/execution/sdv/bulk-sign-off", json=correct_payload, headers=headers)
+        headers = get_bulk_sdv_auth_headers(
+            roles="CRA", payload=correct_payload, token_payload=mismatched_scope
+        )
+        resp = await client.post(
+            "/api/v1/execution/sdv/bulk-sign-off", json=correct_payload, headers=headers
+        )
         assert resp.status_code == 401
 
         # Case 3: Wrong target_ids
         mismatched_targets = dict(correct_payload, target_ids=["OBS-WRONG"])
-        headers = get_bulk_sdv_auth_headers(roles="CRA", payload=correct_payload, token_payload=mismatched_targets)
-        resp = await client.post("/api/v1/execution/sdv/bulk-sign-off", json=correct_payload, headers=headers)
+        headers = get_bulk_sdv_auth_headers(
+            roles="CRA", payload=correct_payload, token_payload=mismatched_targets
+        )
+        resp = await client.post(
+            "/api/v1/execution/sdv/bulk-sign-off", json=correct_payload, headers=headers
+        )
         assert resp.status_code == 401
 
         # Case 4: Wrong reason_for_change
-        mismatched_reason = dict(correct_payload, reason_for_change="Different reason entirely")
-        headers = get_bulk_sdv_auth_headers(roles="CRA", payload=correct_payload, token_payload=mismatched_reason)
-        resp = await client.post("/api/v1/execution/sdv/bulk-sign-off", json=correct_payload, headers=headers)
+        mismatched_reason = dict(
+            correct_payload, reason_for_change="Different reason entirely"
+        )
+        headers = get_bulk_sdv_auth_headers(
+            roles="CRA", payload=correct_payload, token_payload=mismatched_reason
+        )
+        resp = await client.post(
+            "/api/v1/execution/sdv/bulk-sign-off", json=correct_payload, headers=headers
+        )
         assert resp.status_code == 401
 
         # Case 5: Missing batch_id
-        headers = get_bulk_sdv_auth_headers(roles="CRA", payload=correct_payload, omit_batch_id=True)
-        resp = await client.post("/api/v1/execution/sdv/bulk-sign-off", json=correct_payload, headers=headers)
+        headers = get_bulk_sdv_auth_headers(
+            roles="CRA", payload=correct_payload, omit_batch_id=True
+        )
+        resp = await client.post(
+            "/api/v1/execution/sdv/bulk-sign-off", json=correct_payload, headers=headers
+        )
         assert resp.status_code == 401
 
         # After each case, re-query the database and assert that no SDVSignOff row was created or modified.
@@ -989,7 +1027,11 @@ async def test_bulk_sdv_signoff_input_validation():
             "site_id": "SITE-VAL-1",
         }
         headers = get_bulk_sdv_auth_headers(roles="CRA", payload=payload_blank_reason)
-        resp = await client.post("/api/v1/execution/sdv/bulk-sign-off", json=payload_blank_reason, headers=headers)
+        resp = await client.post(
+            "/api/v1/execution/sdv/bulk-sign-off",
+            json=payload_blank_reason,
+            headers=headers,
+        )
         assert resp.status_code == 400
 
         # Case 2: Empty target_ids list
@@ -1002,5 +1044,9 @@ async def test_bulk_sdv_signoff_input_validation():
             "site_id": "SITE-VAL-1",
         }
         headers = get_bulk_sdv_auth_headers(roles="CRA", payload=payload_empty_targets)
-        resp = await client.post("/api/v1/execution/sdv/bulk-sign-off", json=payload_empty_targets, headers=headers)
+        resp = await client.post(
+            "/api/v1/execution/sdv/bulk-sign-off",
+            json=payload_empty_targets,
+            headers=headers,
+        )
         assert resp.status_code == 400

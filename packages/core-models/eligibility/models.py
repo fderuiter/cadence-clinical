@@ -6,12 +6,34 @@ structured AST expression trees, and comprehensive detailed node/aggregate
 evaluation outputs. All models conform to FDA 21 CFR Part 11 auditing principles.
 """
 
+from enum import Enum
 import re
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, Union
 
 # Import standard GxP audit fields
-from audit import AuditFields
+from audit import AuditFields, Part11AuditMixin
 from pydantic import BaseModel, Field, field_validator, model_validator
+
+
+class ComparisonOperator(str, Enum):
+    """
+    Allowed binary comparison operators for criteria evaluations.
+    """
+    EQ = "=="
+    NE = "!="
+    LT = "<"
+    LE = "<="
+    GT = ">"
+    GE = ">="
+
+
+class LogicalOperator(str, Enum):
+    """
+    Allowed logical connectors for composite criteria expressions.
+    """
+    AND = "and"
+    OR = "or"
+    NOT = "not"
 
 # Regex pattern for eCRF.<DOMAIN>.<VARIABLE> references
 FIELD_REF_RE = re.compile(r"^eCRF\.([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)$")
@@ -74,7 +96,7 @@ class ExpressionNode(BaseModel):
         ...,
         description="Node type indicating the structure of the node.",
     )
-    operator: Optional[str] = Field(
+    operator: Optional[Union[ComparisonOperator, LogicalOperator, str]] = Field(
         None,
         description="Operator for logical (and, or, not) or comparison (==, !=, <, <=, >, >=) nodes.",
     )
@@ -127,29 +149,33 @@ class ExpressionNode(BaseModel):
 ExpressionNode.model_rebuild()
 
 
-class EligibilityCriterion(AuditFields):
+class EligibilityCriterion(Part11AuditMixin):
     """
     Represents a single inclusion or exclusion criterion with full GxP audit metadata.
     """
 
-    criterion_id: str = Field(
-        ...,
+    id: str = Field(
+        default="",
         description="Unique identifier of this eligibility criterion, e.g., 'INC_01'.",
     )
     criterion_type: Literal["inclusion", "exclusion"] = Field(
         ...,
         description="Whether this is an inclusion or exclusion criterion.",
     )
-    description: str = Field(
-        ...,
+    identifier: str = Field(
+        default="",
+        description="Business identifier of this criterion, e.g., 'INC-001'.",
+    )
+    human_readable_text: str = Field(
+        default="",
         description="Human-readable text description of the criterion.",
     )
-    dsl_source: str = Field(
-        ...,
+    dsl_expression_string: str = Field(
+        default="",
         description="The raw DSL statement source, e.g., 'eCRF.DM.AGE >= 18'.",
     )
-    condition: ExpressionNode = Field(
-        ...,
+    structured_expression_tree: ExpressionNode = Field(
+        default=None,  # type: ignore
         description="The parsed structured AST of this criterion.",
     )
     expected_outcome: bool = Field(
@@ -158,13 +184,96 @@ class EligibilityCriterion(AuditFields):
         "Typically True for inclusions and False for exclusions.",
     )
 
+    # For backward compatibility with existing code/tests:
+    criterion_id: str = Field(
+        default="",
+        description="Backward compatible criterion_id field.",
+    )
+    description: str = Field(
+        default="",
+        description="Backward compatible description field.",
+    )
+    dsl_source: str = Field(
+        default="",
+        description="Backward compatible dsl_source field.",
+    )
+    condition: ExpressionNode = Field(
+        default=None,  # type: ignore
+        description="Backward compatible condition field.",
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def sync_backwards_compatibility_before(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            # Resolve id / criterion_id / identifier
+            cid = data.get("criterion_id") or data.get("id") or data.get("identifier")
+            if cid:
+                if "id" not in data or not data["id"]:
+                    data["id"] = cid
+                if "criterion_id" not in data or not data["criterion_id"]:
+                    data["criterion_id"] = cid
+                if "identifier" not in data or not data["identifier"]:
+                    data["identifier"] = cid
+
+            # Resolve description / human_readable_text
+            desc = data.get("description") or data.get("human_readable_text")
+            if desc:
+                if "description" not in data or not data["description"]:
+                    data["description"] = desc
+                if "human_readable_text" not in data or not data["human_readable_text"]:
+                    data["human_readable_text"] = desc
+
+            # Resolve dsl_source / dsl_expression_string
+            dsl = data.get("dsl_source") or data.get("dsl_expression_string")
+            if dsl:
+                if "dsl_source" not in data or not data["dsl_source"]:
+                    data["dsl_source"] = dsl
+                if "dsl_expression_string" not in data or not data["dsl_expression_string"]:
+                    data["dsl_expression_string"] = dsl
+
+            # Resolve condition / structured_expression_tree
+            cond = data.get("condition") or data.get("structured_expression_tree")
+            if cond:
+                if "condition" not in data or not data["condition"]:
+                    data["condition"] = cond
+                if "structured_expression_tree" not in data or not data["structured_expression_tree"]:
+                    data["structured_expression_tree"] = cond
+
+        return data
+
     @model_validator(mode="after")
-    def validate_expected_outcome_defaults(self) -> "EligibilityCriterion":
-        """
-        Set or validate expected outcomes defaults if needed, aligning with the criterion type.
-        """
-        # Inclusions expect the condition to be True, exclusions expect the condition to be False (to not be excluded)
-        # However, users can override this. We keep the defaults.
+    def sync_backwards_compatibility_after(self) -> "EligibilityCriterion":
+        # Ensure all fields are fully synchronized on the instance
+        cid = self.id or self.criterion_id or self.identifier
+        if cid:
+            self.id = cid
+            self.criterion_id = cid
+            self.identifier = cid
+        else:
+            raise ValueError("Criterion unique identifier (id / criterion_id / identifier) must be provided.")
+
+        desc = self.human_readable_text or self.description
+        if desc:
+            self.human_readable_text = desc
+            self.description = desc
+        else:
+            raise ValueError("Criterion description (human_readable_text / description) must be provided.")
+
+        dsl = self.dsl_expression_string or self.dsl_source
+        if dsl:
+            self.dsl_expression_string = dsl
+            self.dsl_source = dsl
+        else:
+            raise ValueError("Criterion DSL expression string (dsl_expression_string / dsl_source) must be provided.")
+
+        cond = self.structured_expression_tree or self.condition
+        if cond:
+            self.structured_expression_tree = cond
+            self.condition = cond
+        else:
+            raise ValueError("Criterion structured expression tree (structured_expression_tree / condition) must be provided.")
+
         return self
 
 
