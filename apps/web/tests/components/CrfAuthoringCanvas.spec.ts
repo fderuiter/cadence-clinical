@@ -136,6 +136,13 @@ describe("CrfAuthoringCanvas.vue & Drag-and-Drop Authoring Component Suite", () 
       items: [],
     };
 
+    const store = useDesignerStore();
+    store.activeForm = {
+      id: "form-1",
+      name: "Draft",
+      sections: [section],
+    };
+
     const wrapper = mount(FormSectionContainer, {
       props: {
         section,
