@@ -1368,6 +1368,7 @@ async def get_subject_consent_status_endpoint(
 
     requires_reconsent = False
     from apps.econsent.models import ConsentTemplate
+
     stmt_tpl = select(ConsentTemplate).where(
         ConsentTemplate.study_id == sc.study_id,
         ConsentTemplate.is_published.is_(True),

@@ -222,7 +222,8 @@ def receive_before_flush(session: Session, flush_context, instances):
                                     subject_id = subj_res.subject_id
 
                             if study_id:
-                                # Automatically fetch canonical eConsent status and locally cache it
+                                consent_fetched = False
+                                consent_signed = False
                                 try:
                                     from apps.execution.econsent_client import (
                                         fetch_subject_consent_status,
@@ -236,7 +237,9 @@ def receive_before_flush(session: Session, flush_context, instances):
                                             subject_id, study_id
                                         )
                                     )
+                                    consent_fetched = True
                                     if consent_data and consent_data.get("signed"):
+                                        consent_signed = True
                                         version_index = consent_data.get(
                                             "version_index"
                                         )
@@ -293,6 +296,7 @@ def receive_before_flush(session: Session, flush_context, instances):
                                             for other_consent in others:
                                                 other_consent.requires_reconsent = False
                                     else:
+                                        consent_signed = False
                                         # Canonical eConsent says unsigned or not found
                                         # Mark all local SubjectConsent caches as unsigned
                                         stmt_all = select(SubjectConsent).where(
@@ -304,122 +308,164 @@ def receive_before_flush(session: Session, flush_context, instances):
                                         )
                                         for c in all_consents:
                                             c.icf_signed = False
-                                except Exception:
-                                    pass
+                                except Exception as exc:
+                                    from fastapi import HTTPException
 
-                                # 1. Fetch user's consented versions from DB and current session
-                                stmt_user_consents = select(SubjectConsent).where(
-                                    SubjectConsent.subject_id == subject_id,
-                                    SubjectConsent.study_id == study_id,
-                                    SubjectConsent.icf_signed.is_(True),
+                                    if (
+                                        isinstance(exc, HTTPException)
+                                        and exc.status_code != 502
+                                        and "Failed to connect" not in str(exc.detail)
+                                    ):
+                                        consent_fetched = True
+                                        consent_signed = False
+
+                                # Check if any SubjectConsent records exist for this study in DB or current session
+                                stmt_study_consents = select(SubjectConsent).where(
+                                    SubjectConsent.study_id == study_id
                                 )
-                                user_consents = (
-                                    session.execute(stmt_user_consents).scalars().all()
+                                study_consents_db = (
+                                    session.execute(stmt_study_consents)
+                                    .scalars()
+                                    .first()
                                 )
-                                user_consented_indices = {
-                                    c.version_index for c in user_consents
-                                }
-                                for new_obj in (
-                                    list(session.new)
+                                session_study_consents = any(
+                                    hasattr(new_obj, "__tablename__")
+                                    and new_obj.__tablename__ == "subject_consents"
+                                    and getattr(new_obj, "study_id", None) == study_id
+                                    for new_obj in list(session.new)
                                     + list(session.dirty)
                                     + list(session.identity_map.values())
-                                ):
-                                    if (
-                                        hasattr(new_obj, "__tablename__")
-                                        and new_obj.__tablename__ == "subject_consents"
-                                        and getattr(new_obj, "subject_id", None)
-                                        == subject_id
-                                        and getattr(new_obj, "study_id", None)
-                                        == study_id
-                                        and getattr(new_obj, "icf_signed", False)
-                                        is True
-                                    ):
-                                        user_consented_indices.add(
-                                            new_obj.version_index
-                                        )
-
-                                max_consented_v = (
-                                    max(user_consented_indices)
-                                    if user_consented_indices
-                                    else 0
+                                )
+                                study_has_consent_tracking = (
+                                    study_consents_db is not None
+                                    or session_study_consents
+                                    or consent_fetched
                                 )
 
-                                # 2. Check direct re-consent flag on any S's consent record from DB and current session
-                                direct_reconsent = False
-                                for new_obj in (
-                                    list(session.new)
-                                    + list(session.dirty)
-                                    + list(session.identity_map.values())
-                                ):
-                                    if (
-                                        hasattr(new_obj, "__tablename__")
-                                        and new_obj.__tablename__ == "subject_consents"
-                                        and getattr(new_obj, "subject_id", None)
-                                        == subject_id
-                                        and getattr(new_obj, "study_id", None)
-                                        == study_id
-                                        and getattr(
-                                            new_obj, "requires_reconsent", False
-                                        )
-                                        is True
-                                    ):
-                                        direct_reconsent = True
-                                        break
-
-                                if not direct_reconsent:
-                                    stmt_direct = select(SubjectConsent).where(
+                                if study_has_consent_tracking:
+                                    # 1. Fetch user's consented versions from DB and current session
+                                    stmt_user_consents = select(SubjectConsent).where(
                                         SubjectConsent.subject_id == subject_id,
                                         SubjectConsent.study_id == study_id,
-                                        SubjectConsent.requires_reconsent.is_(True),
+                                        SubjectConsent.icf_signed.is_(True),
                                     )
-                                    direct_reconsent_db = (
-                                        session.execute(stmt_direct).scalars().first()
+                                    user_consents = (
+                                        session.execute(stmt_user_consents)
+                                        .scalars()
+                                        .all()
                                     )
-                                    if direct_reconsent_db:
-                                        direct_reconsent = True
-
-                                # 3. Check for any newer version defined for this study that requires re-consent but is not consented by S
-                                higher_reconsent = False
-                                for new_obj in (
-                                    list(session.new)
-                                    + list(session.dirty)
-                                    + list(session.identity_map.values())
-                                ):
-                                    if (
-                                        hasattr(new_obj, "__tablename__")
-                                        and new_obj.__tablename__ == "subject_consents"
-                                        and getattr(new_obj, "study_id", None)
-                                        == study_id
-                                        and getattr(new_obj, "version_index", 0)
-                                        > max_consented_v
-                                        and getattr(
-                                            new_obj, "requires_reconsent", False
-                                        )
-                                        is True
+                                    user_consented_indices = {
+                                        c.version_index for c in user_consents
+                                    }
+                                    for new_obj in (
+                                        list(session.new)
+                                        + list(session.dirty)
+                                        + list(session.identity_map.values())
                                     ):
-                                        higher_reconsent = True
-                                        break
+                                        if (
+                                            hasattr(new_obj, "__tablename__")
+                                            and new_obj.__tablename__
+                                            == "subject_consents"
+                                            and getattr(new_obj, "subject_id", None)
+                                            == subject_id
+                                            and getattr(new_obj, "study_id", None)
+                                            == study_id
+                                            and getattr(new_obj, "icf_signed", False)
+                                            is True
+                                        ):
+                                            user_consented_indices.add(
+                                                new_obj.version_index
+                                            )
 
-                                if not higher_reconsent:
-                                    stmt_higher = select(SubjectConsent).where(
-                                        SubjectConsent.study_id == study_id,
-                                        SubjectConsent.version_index > max_consented_v,
-                                        SubjectConsent.requires_reconsent.is_(True),
+                                    max_consented_v = (
+                                        max(user_consented_indices)
+                                        if user_consented_indices
+                                        else 0
                                     )
-                                    higher_reconsent_db = (
-                                        session.execute(stmt_higher).scalars().first()
-                                    )
-                                    if higher_reconsent_db:
-                                        higher_reconsent = True
 
-                                if (
-                                    max_consented_v == 0
-                                    or direct_reconsent
-                                    or higher_reconsent
-                                ):
-                                    raise PermissionError(
-                                        "Re-Consent Required - Demographics & Visit Forms Locked"
-                                    )
+                                    # 2. Check direct re-consent flag on any S's consent record from DB and current session
+                                    direct_reconsent = False
+                                    for new_obj in (
+                                        list(session.new)
+                                        + list(session.dirty)
+                                        + list(session.identity_map.values())
+                                    ):
+                                        if (
+                                            hasattr(new_obj, "__tablename__")
+                                            and new_obj.__tablename__
+                                            == "subject_consents"
+                                            and getattr(new_obj, "subject_id", None)
+                                            == subject_id
+                                            and getattr(new_obj, "study_id", None)
+                                            == study_id
+                                            and getattr(
+                                                new_obj, "requires_reconsent", False
+                                            )
+                                            is True
+                                        ):
+                                            direct_reconsent = True
+                                            break
+
+                                    if not direct_reconsent:
+                                        stmt_direct = select(SubjectConsent).where(
+                                            SubjectConsent.subject_id == subject_id,
+                                            SubjectConsent.study_id == study_id,
+                                            SubjectConsent.requires_reconsent.is_(True),
+                                        )
+                                        direct_reconsent_db = (
+                                            session.execute(stmt_direct)
+                                            .scalars()
+                                            .first()
+                                        )
+                                        if direct_reconsent_db:
+                                            direct_reconsent = True
+
+                                    # 3. Check for any newer version defined for this study that requires re-consent but is not consented by S
+                                    higher_reconsent = False
+                                    for new_obj in (
+                                        list(session.new)
+                                        + list(session.dirty)
+                                        + list(session.identity_map.values())
+                                    ):
+                                        if (
+                                            hasattr(new_obj, "__tablename__")
+                                            and new_obj.__tablename__
+                                            == "subject_consents"
+                                            and getattr(new_obj, "study_id", None)
+                                            == study_id
+                                            and getattr(new_obj, "version_index", 0)
+                                            > max_consented_v
+                                            and getattr(
+                                                new_obj, "requires_reconsent", False
+                                            )
+                                            is True
+                                        ):
+                                            higher_reconsent = True
+                                            break
+
+                                    if not higher_reconsent:
+                                        stmt_higher = select(SubjectConsent).where(
+                                            SubjectConsent.study_id == study_id,
+                                            SubjectConsent.version_index
+                                            > max_consented_v,
+                                            SubjectConsent.requires_reconsent.is_(True),
+                                        )
+                                        higher_reconsent_db = (
+                                            session.execute(stmt_higher)
+                                            .scalars()
+                                            .first()
+                                        )
+                                        if higher_reconsent_db:
+                                            higher_reconsent = True
+
+                                    if (
+                                        max_consented_v == 0
+                                        or direct_reconsent
+                                        or higher_reconsent
+                                    ):
+                                        raise PermissionError(
+                                            "Re-Consent Required - Demographics & Visit Forms Locked"
+                                        )
                     except PermissionError:
                         raise
                     except Exception:

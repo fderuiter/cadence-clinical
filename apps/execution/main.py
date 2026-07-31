@@ -876,9 +876,6 @@ async def evaluate_and_transition_screening(
         )
 
 
-
-
-
 class SubjectRandomizationResponse(BaseModel):
     """Pydantic schema for returning blinded subject randomization details."""
 
