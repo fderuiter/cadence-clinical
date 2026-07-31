@@ -11,10 +11,6 @@ Based on the executed automated verification suite, the platform meets all prede
 ### Validation Result Summary
 - **Total Automated Test Cases Run:** 1725
 - **Passed:** 1725 🟢
-- **Total Automated Test Cases Run:** 1565
-- **Passed:** 1565 🟢
-- **Total Automated Test Cases Run:** 1626
-- **Passed:** 1626 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -620,13 +616,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_document_upload_success` | `tests.test_document_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_document_versions_lineage` | `tests.test_document_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_study_archival_job_flow` | `tests.test_document_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_doa_historical_audit_trail_logging` | `tests.test_doa_audit_suite` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_doa_assignment_record_creation` | `tests.test_doa_models` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_doa_assignment_and_signoff_api_flow` | `tests.test_doa_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_doa_service_assignment_and_pi_signoff` | `tests.test_doa_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_complete_doa_workflow_lifecycle` | `tests.test_doa_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_document_renderer_render_docx` | `tests.test_document_renderer` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_document_renderer_render_pdf` | `tests.test_document_renderer` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_parse_e2b_xml_valid_payload` | `tests.test_e2b_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_assignment_compliance_states_and_recalculations` | `tests.test_ecoa_coverage` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_instrument_retrieval_and_assignment_boundaries` | `tests.test_ecoa_coverage` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -718,8 +707,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_get_site_eisf_binder_authorized` | `tests.test_eisf_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_site_eisf_binder_unauthorized_cross_site` | `tests.test_eisf_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_upload_and_get_site_document` | `tests.test_eisf_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_get_site_regulatory_binder_endpoint` | `tests.test_eisf_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_upload_eisf_document_post_endpoint` | `tests.test_eisf_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_upload_and_watermark` | `tests.test_eisf_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_completeness_site_isolation` | `tests.test_eisf_site_scope` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_external_monitor_role` | `tests.test_eisf_site_scope` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1243,7 +1230,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_pdf_redaction_engine_bounding_box` | `tests.test_pdf_redactor` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_pdf_redaction_engine_purges_metadata_and_fields` | `tests.test_pdf_redactor` | PRD-SYS-001 | 🟢 PASSED | < 1s |
 | `test_pdf_redaction_overlay_generation` | `tests.test_pdf_redactor` | PRD-SYS-001 | 🟢 PASSED | < 1s |
-| `test_pdf_redaction_overlay_generation` | `tests.test_pdf_redactor` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_zero_phi_leak_in_redacted_pdf` | `tests.test_phi_redaction` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_build_comment_body` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_combined_audit_logic` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1351,9 +1337,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_quality_sentinel_router_endpoint` | `tests.test_quality_sentinel` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_readability_metrics_and_scoring` | `tests.test_quality_sentinel` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_syllable_counter_deterministic` | `tests.test_quality_sentinel` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_quality_sentinel_complete_protocol` | `tests.test_quality_sentinel` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_quality_sentinel_incomplete_protocol_detects_errors` | `tests.test_quality_sentinel` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_quality_sentinel_router_endpoint` | `tests.test_quality_sentinel` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_log_endpoint_properties` | `tests.test_quality_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_capa_approval_closure_requires_quality_oversight` | `tests.test_quality_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_capa_creation_validations` | `tests.test_quality_workflow` | PRD-SUB-001 | 🟢 PASSED | < 1s |
@@ -1580,7 +1563,6 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_middleware_unblinded_access_parametrization[random-False]` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_middleware_unblinded_access_parametrization[true-True]` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_middleware_unblinded_access_parametrization[yes-True]` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_middleware_unblinded_access_parametrization` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_middleware_unsupported_version_rejected` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_middleware_v2_invalid_signature` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_middleware_v2_mismatched_reason` | `tests.test_security_middleware` | *Regression/Helper* | 🟢 PASSED | < 1s |
