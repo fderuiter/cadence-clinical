@@ -11,7 +11,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, onMounted } from 'vue';
 import { useEtmfStore } from '../stores/etmf';
 import TmfBinderTree from '../components/etmf/TmfBinderTree.vue';
@@ -19,13 +19,13 @@ import DocumentGrid from '../components/etmf/DocumentGrid.vue';
 import PdfPreviewModal from '../components/etmf/PdfPreviewModal.vue';
 
 const etmfStore = useEtmfStore();
-const selectedDoc = ref<any | null>(null);
+const selectedDoc = ref(null);
 
-function handleArtifactSelect(artifactCode: string) {
+function handleArtifactSelect(artifactCode) {
   etmfStore.fetchDocuments(artifactCode);
 }
 
-function handlePreviewDocument(doc: any) {
+function handlePreviewDocument(doc) {
   selectedDoc.value = doc;
 }
 

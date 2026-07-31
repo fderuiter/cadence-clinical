@@ -1,20 +1,12 @@
 import { defineStore } from "pinia";
 import { etmfService } from "../api/etmf";
 
-export interface TmfNode {
-  id: string;
-  name: string;
-  code: string;
-  type: "zone" | "section" | "artifact";
-  children?: TmfNode[];
-}
-
 export const useEtmfStore = defineStore("etmf", {
   state: () => ({
-    binderTree: [] as TmfNode[],
-    selectedArtifactId: null as string | null,
-    documentsList: [] as any[],
-    activeDocument: null as any | null,
+    binderTree: [],
+    selectedArtifactId: null,
+    documentsList: [],
+    activeDocument: null,
     isUploading: false,
     currentStudyId: "STUDY-USDM-001",
   }),
@@ -24,7 +16,7 @@ export const useEtmfStore = defineStore("etmf", {
   },
 
   actions: {
-    async fetchBinderTree(studyId: string = "STUDY-USDM-001") {
+    async fetchBinderTree(studyId = "STUDY-USDM-001") {
       this.currentStudyId = studyId;
 
       // Seed hierarchical DIA TMF Reference Model v3.2.0-complete hierarchy
@@ -371,7 +363,7 @@ export const useEtmfStore = defineStore("etmf", {
       ];
     },
 
-    async fetchDocuments(artifactId: string) {
+    async fetchDocuments(artifactId) {
       this.selectedArtifactId = artifactId;
       try {
         const allDocs = await etmfService.getDocuments({
@@ -381,7 +373,7 @@ export const useEtmfStore = defineStore("etmf", {
         // Filter by selected artifact ID
         if (artifactId) {
           this.documentsList = (allDocs || []).filter(
-            (doc: any) => doc.artifact_code === artifactId
+            (doc) => doc.artifact_code === artifactId
           );
         } else {
           this.documentsList = allDocs || [];
@@ -392,24 +384,24 @@ export const useEtmfStore = defineStore("etmf", {
       }
     },
 
-    async uploadDocument(formData: any) {
+    async uploadDocument(formData) {
       this.isUploading = true;
       try {
-        let body: any = {};
+        let body = {};
         let changeReason = "Initial upload";
 
         if (formData instanceof FormData) {
-          changeReason = (formData.get("reason_for_change") as string) || "Initial upload";
+          changeReason = formData.get("reason_for_change") || "Initial upload";
           body = {
-            study_id: (formData.get("study_id") as string) || this.currentStudyId,
-            site_id: (formData.get("site_id") as string) || null,
-            artifact_type: (formData.get("artifact_type") as string) || "Clinical Trial Protocol",
-            filename: (formData.get("filename") as string) || "document.pdf",
-            content: (formData.get("content") as string) || "Mock base64 or plaintext content",
-            mime_type: (formData.get("mime_type") as string) || "application/pdf",
-            artifact_code: (formData.get("artifact_code") as string) || this.selectedArtifactId || "01.01.01",
-            zone: parseInt(formData.get("zone") as string) || 1,
-            section: (formData.get("section") as string) || "01.01",
+            study_id: formData.get("study_id") || this.currentStudyId,
+            site_id: formData.get("site_id") || null,
+            artifact_type: formData.get("artifact_type") || "Clinical Trial Protocol",
+            filename: formData.get("filename") || "document.pdf",
+            content: formData.get("content") || "Mock base64 or plaintext content",
+            mime_type: formData.get("mime_type") || "application/pdf",
+            artifact_code: formData.get("artifact_code") || this.selectedArtifactId || "01.01.01",
+            zone: parseInt(formData.get("zone")) || 1,
+            section: formData.get("section") || "01.01",
             reason_for_change: changeReason,
             taxonomy_version: "v3.2.0-complete",
           };

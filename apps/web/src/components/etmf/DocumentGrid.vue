@@ -211,17 +211,18 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, watch } from "vue";
 import { useEtmfStore } from "../../stores/etmf";
 
-const props = defineProps<{
-  documents: any[];
-}>();
+defineProps({
+  documents: {
+    type: Array,
+    required: true,
+  },
+});
 
-const emit = defineEmits<{
-  (e: "preview", doc: any): void;
-}>();
+defineEmits(["preview"]);
 
 const etmfStore = useEtmfStore();
 
@@ -232,8 +233,8 @@ const isSubmitting = ref(false);
 const uploadError = ref("");
 
 // Selected File reference
-const selectedFile = ref<File | null>(null);
-const fileInputRef = ref<HTMLInputElement | null>(null);
+const selectedFile = ref(null);
+const fileInputRef = ref(null);
 
 // Form Fields
 const studyId = ref("STUDY-USDM-001");
@@ -267,7 +268,7 @@ watch(
   { immediate: true }
 );
 
-function getStatusClass(status: string): string {
+function getStatusClass(status) {
   const s = (status || "").toLowerCase();
   if (s.includes("draft")) return "status-draft";
   if (s.includes("review") || s.includes("pending")) return "status-pending";
@@ -276,12 +277,12 @@ function getStatusClass(status: string): string {
   return "status-default";
 }
 
-function formatStatus(status: string): string {
+function formatStatus(status) {
   const s = status || "DRAFT";
   return s.toUpperCase().replace(/_/g, " ");
 }
 
-function formatDate(dateStr: string): string {
+function formatDate(dateStr) {
   if (!dateStr) return "N/A";
   try {
     const d = new Date(dateStr);
@@ -321,7 +322,7 @@ function onDragLeave() {
   isDragging.value = false;
 }
 
-function onDrop(e: DragEvent) {
+function onDrop(e) {
   isDragging.value = false;
   const files = e.dataTransfer?.files;
   if (files && files.length > 0) {
@@ -333,8 +334,8 @@ function triggerFileSelect() {
   fileInputRef.value?.click();
 }
 
-function onFileSelected(e: Event) {
-  const target = e.target as HTMLInputElement;
+function onFileSelected(e) {
+  const target = e.target;
   if (target.files && target.files.length > 0) {
     selectedFile.value = target.files[0];
   }
@@ -354,10 +355,10 @@ async function submitUpload() {
     const file = selectedFile.value;
 
     // Helper to read file as text to supply to the indexer/content payload field
-    const fileContent = await new Promise<string>((resolve) => {
+    const fileContent = await new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = (e) => {
-        resolve((e.target?.result as string) || "Mock text content of eTMF PDF");
+        resolve((e.target?.result) || "Mock text content of eTMF PDF");
       };
       reader.onerror = () => {
         resolve("Mock fallback PDF plain text index content.");
@@ -386,7 +387,7 @@ async function submitUpload() {
 
     // Success
     closeUploadModal();
-  } catch (err: any) {
+  } catch (err) {
     console.error("Upload failed in component:", err);
     uploadError.value = err.message || "Ingestion transaction rejected. Verify site/study lock status.";
   } finally {

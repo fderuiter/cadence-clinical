@@ -94,31 +94,24 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, computed, watch } from "vue";
 
-export interface TmfNode {
-  id: string;
-  name: string;
-  code: string;
-  type: "zone" | "section" | "artifact";
-  children?: TmfNode[];
-}
+const props = defineProps({
+  tree: {
+    type: Array,
+    required: true,
+  },
+});
 
-const props = defineProps<{
-  tree: TmfNode[];
-}>();
-
-const emit = defineEmits<{
-  (e: "select-artifact", artifactCode: string): void;
-}>();
+const emit = defineEmits(["select-artifact"]);
 
 const searchQuery = ref("");
 const selectedZoneFilter = ref("");
-const selectedArtifactId = ref<string | null>(null);
+const selectedArtifactId = ref(null);
 
 // Tracks open state of collapsible nodes
-const expandedNodes = ref<Record<string, boolean>>({});
+const expandedNodes = ref({});
 
 // Initialize expandedNodes with all zone nodes default open
 watch(
@@ -135,21 +128,21 @@ watch(
   { immediate: true }
 );
 
-function toggleNode(nodeId: string) {
+function toggleNode(nodeId) {
   expandedNodes.value[nodeId] = !expandedNodes.value[nodeId];
 }
 
-function isExpanded(nodeId: string): boolean {
+function isExpanded(nodeId) {
   return !!expandedNodes.value[nodeId];
 }
 
-function selectArtifact(artifact: TmfNode) {
+function selectArtifact(artifact) {
   selectedArtifactId.value = artifact.code;
   emit("select-artifact", artifact.code);
 }
 
 // Map of mocked unread notifications for demonstration purposes
-const mockUnreadBadges: Record<string, number> = {
+const mockUnreadBadges = {
   "01.01.01": 2, // Clinical Trial Protocol
   "01.01.02": 1, // Protocol Amendment
   "05.02.05": 3, // Informed Consent Form
@@ -157,7 +150,7 @@ const mockUnreadBadges: Record<string, number> = {
 };
 
 // Calculate unread counts dynamically for sections/zones
-function getUnreadBadgeCount(node: TmfNode): number {
+function getUnreadBadgeCount(node) {
   if (node.type === "artifact") {
     return mockUnreadBadges[node.code] || 0;
   }
@@ -213,7 +206,7 @@ const filteredTree = computed(() => {
           }
           return null;
         })
-        .filter((sec) => sec !== null) as TmfNode[];
+        .filter((sec) => sec !== null);
 
       const zoneMatchesQuery =
         zone.name.toLowerCase().includes(query) ||
@@ -230,7 +223,7 @@ const filteredTree = computed(() => {
 
       return null;
     })
-    .filter((zone) => zone !== null) as TmfNode[];
+    .filter((zone) => zone !== null);
 });
 </script>
 

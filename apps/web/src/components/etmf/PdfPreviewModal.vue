@@ -151,17 +151,18 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { computed } from "vue";
 import { useAuthStore } from "../../stores/auth";
 
-const props = defineProps<{
-  document: any;
-}>();
+const props = defineProps({
+  document: {
+    type: Object,
+    required: true,
+  },
+});
 
-defineEmits<{
-  (e: "close"): void;
-}>();
+defineEmits(["close"]);
 
 const authStore = useAuthStore();
 
@@ -195,7 +196,7 @@ const watermarkText = computed(() => {
   return `SECURE PREVIEW | USER: ${currentUserId.value} | VIEW TIME: ${viewTimestamp.value} | CLASS: ${auditClassification.value}`;
 });
 
-function getStatusClass(status: string): string {
+function getStatusClass(status) {
   const s = (status || "").toLowerCase();
   if (s.includes("draft")) return "text-muted";
   if (s.includes("review") || s.includes("pending")) return "text-warning";
@@ -204,7 +205,7 @@ function getStatusClass(status: string): string {
   return "";
 }
 
-function formatDate(dateStr: string): string {
+function formatDate(dateStr) {
   if (!dateStr) return "N/A";
   try {
     const d = new Date(dateStr);

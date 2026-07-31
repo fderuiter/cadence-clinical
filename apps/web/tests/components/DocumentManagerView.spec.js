@@ -36,7 +36,7 @@ vi.mock("../../src/api/etmf", () => ({
 }));
 
 describe("DocumentManagerView.vue Component Integration Tests", () => {
-  let pinia: any;
+  let pinia;
 
   beforeEach(() => {
     pinia = createPinia();
