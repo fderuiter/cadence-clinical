@@ -613,7 +613,7 @@ class WHODrugParser:
 
         if (
             "dada" in base_name
-            or "dda" in base_name
+            or "dda" in tokens
             or "drugatc" in base_name
             or "drug_at_c" in base_name
             or "drug_atc" in base_name

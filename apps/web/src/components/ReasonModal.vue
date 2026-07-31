@@ -9,31 +9,39 @@
     :aria-labelledby="idPrefix + 'modal-title'"
   >
     <div class="modal">
-      <div :id="idPrefix + 'modal-title'" class="modal-header">
+      <div
+        :id="idPrefix + 'modal-title'"
+        class="modal-header"
+      >
         {{ title }}
       </div>
       <div class="modal-body">
-        <p v-if="description">{{ description }}</p>
+        <p v-if="description">
+          {{ description }}
+        </p>
 
-        <div class="form-group" style="margin-bottom: 12px">
-          <label :for="idPrefix + 'change-reason-select'"
-            >Select Standard Reason</label
-          >
+        <div
+          class="form-group"
+          style="margin-bottom: 12px"
+        >
+          <label :for="idPrefix + 'change-reason-select'">Select Standard Reason</label>
           <select
             :id="idPrefix + 'change-reason-select'"
             v-model="selectedOption"
             @change="handleSelectChange"
           >
-            <option v-for="opt in options" :key="opt.value" :value="opt.value">
+            <option
+              v-for="opt in options"
+              :key="opt.value"
+              :value="opt.value"
+            >
               {{ opt.text }}
             </option>
           </select>
         </div>
 
         <div class="form-group">
-          <label :for="idPrefix + 'change-reason-text'"
-            >Custom Explanation (Optional)</label
-          >
+          <label :for="idPrefix + 'change-reason-text'">Custom Explanation (Optional)</label>
           <textarea
             :id="idPrefix + 'change-reason-text'"
             v-model="customText"
