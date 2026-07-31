@@ -27,6 +27,7 @@ This matrix details the distribution of core compliance and tracking features ac
 | **In-Use Locks & Amendments**     | In-use template mutation write blocking, formal `/amend` cloning workflow | N/A | v1.8.0 | Supported |
 | **Native Part 11 eSignatures**    | Certificate-bound protocol-approval signing & graph version locking | Certificate-bound document-signing with 60s gateway step-up token, replay prevention & immutability locking | v1.9.0 | Supported |
 | **Tickets & Query Escalation**    | N/A | Secured query/ticket tracking including comments, status transitions, optimistic locking, and background SLA escalation with GxP audit logs | v1.9.0 | Supported |
+| **CRF Builder**                    | Interactive graphical canvas layout design, Global Library template instantiation, peer reviews, cycle simulations, and XML/PDF exports | Local sync recovery database, FHIR pre-fill, and multi-channel reminders | v1.10.0 | In Progress |
 
 ---
 
@@ -59,6 +60,8 @@ The table below specifies how individual clinical domain entities are processed,
 | **Personnel** | Organization Service | PostgreSQL/SQLite | Explicit `OrgAuditLog` writes with Part 11 metadata |
 | **Delegation of Authority** | Organization Service | PostgreSQL/SQLite | Explicit `OrgAuditLog` writes with Part 11 metadata & dual eISF/eTMF archival handoff |
 | **Tickets & Comments** | Tickets Service | SQLite/PostgreSQL | Explicit `TicketAuditLog` append-only write pattern and 21 CFR Part 11 fields |
+
+*(Note: The CRF Builder does not introduce a new persisted database entity, but instead fully reuses the existing `eCRF Form Submissions` entity).*
 
 ---
 
