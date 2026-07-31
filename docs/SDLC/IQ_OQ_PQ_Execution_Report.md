@@ -9,6 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
+- **Total Automated Test Cases Run:** 1765
+- **Passed:** 1765 🟢
 - **Total Automated Test Cases Run:** 1763
 - **Passed:** 1763 🟢
 - **Failed/Errors:** 0 🔴
@@ -1904,6 +1906,13 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_execution_validation_error_rfc7807` | `tests.test_validation_problem_details` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_generate_alignment_report` | `tests.test_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_generate_alignment_report_with_mappings` | `tests.test_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_infer_usdm_version_default` | `tests.test_version_adapter` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_infer_usdm_version_heuristics` | `tests.test_version_adapter` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_infer_usdm_version_override` | `tests.test_version_adapter` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_normalize_payload_to_canonical_v2` | `tests.test_version_adapter` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_normalize_payload_to_canonical_v3` | `tests.test_version_adapter` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_scan_indicators_v2` | `tests.test_version_adapter` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_scan_indicators_v3` | `tests.test_version_adapter` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_extract_active_frontend_vulnerabilities_invalid` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_extract_active_frontend_vulnerabilities_valid` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_extract_active_vulnerabilities_invalid` | `tests.test_vulnerabilities` | *Regression/Helper* | 🟢 PASSED | < 1s |
