@@ -291,7 +291,12 @@ class StudyScopeChecker:
         if hasattr(request, "state") and not sponsor_id:
             sponsor_id = getattr(request.state, "sponsor_id", None)
 
-        if not study_id or not sponsor_id:
+        object_id = (
+            request.path_params.get("id")
+            or request.query_params.get("id")
+        )
+
+        if not study_id or not sponsor_id or not object_id:
             try:
                 content_type = request.headers.get("content-type", "")
                 if "application/json" in content_type:
@@ -301,6 +306,8 @@ class StudyScopeChecker:
                             study_id = body.get("study_id") or body.get("id")
                         if not sponsor_id:
                             sponsor_id = body.get("sponsor_id")
+                        if not object_id:
+                            object_id = body.get("id")
                     import json
 
                     body_bytes = json.dumps(body).encode()
@@ -1312,15 +1319,15 @@ class TransitionItemRequest(BaseModel):
 @app.post(
     "/api/v1/designer/ingestion/upload",
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_permission("protocol_ingestion:upload"))],
 )
 async def upload_protocol_ingestion(
     request: Request,
     file: UploadFile = File(...),
+    principal: Principal = Depends(require_permission("protocol_ingestion:upload")),
 ):
     import uuid
 
-    user_id = getattr(request.state, "user_id", "system")
+    user_id = principal.user_id
 
     contents = await file.read()
     filename = file.filename or "unknown"
@@ -1494,13 +1501,13 @@ async def get_ingestion_candidate(candidate_id: str):
 
 @app.post(
     "/api/v1/designer/ingestion/candidates/{candidate_id}/items/{item_id}/transition",
-    dependencies=[Depends(require_permission("protocol_ingestion:review"))],
 )
 async def transition_ingestion_item(
     candidate_id: str,
     item_id: str,
     payload: TransitionItemRequest,
     request: Request,
+    principal: Principal = Depends(require_permission("protocol_ingestion:review")),
 ):
     from datetime import timezone
 
@@ -1537,7 +1544,7 @@ async def transition_ingestion_item(
 
     transition_entry = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "actor": getattr(request.state, "user_id", "system"),
+        "actor": principal.user_id,
         "item_id": item_id,
         "type": item["type"],
         "prior_status": item.get("review_status", "PENDING"),
@@ -1551,12 +1558,12 @@ async def transition_ingestion_item(
 
 @app.post(
     "/api/v1/designer/ingestion/candidates/{candidate_id}/promote",
-    dependencies=[Depends(require_permission("protocol_ingestion:promote"))],
 )
 async def promote_ingestion_candidate(
     candidate_id: str,
     payload: PromoteRequest,
     request: Request,
+    principal: Principal = Depends(require_permission("protocol_ingestion:promote")),
 ):
     import uuid
     from datetime import timezone
@@ -1631,7 +1638,6 @@ async def promote_ingestion_candidate(
     "/api/v1/studies/{study_id}/versions/{version_id}/arms/{arm_id}",
     response_model=SoAEntityCreatedResponse,
     dependencies=[
-        Depends(require_permission("study_design:delete")),
         Depends(require_study_scope()),
     ],
 )
@@ -1640,10 +1646,11 @@ async def retire_arm_endpoint(
     version_id: str,
     arm_id: str,
     request: Request,
+    principal: Principal = Depends(require_permission("study_design:delete")),
 ) -> SoAEntityCreatedResponse:
     driver = await get_neo4j_driver(request)
-    user_id = getattr(request.state, "user_id", "system")
-    change_reason = resolve_change_reason(request, None)
+    user_id = principal.user_id
+    change_reason = principal.change_reason or resolve_change_reason(request, None)
 
     try:
         await retire_soa_entity(
@@ -1663,7 +1670,6 @@ async def retire_arm_endpoint(
     "/api/v1/studies/{study_id}/versions/{version_id}/epochs/{epoch_id}",
     response_model=SoAEntityCreatedResponse,
     dependencies=[
-        Depends(require_permission("study_design:delete")),
         Depends(require_study_scope()),
     ],
 )
@@ -1672,10 +1678,11 @@ async def retire_epoch_endpoint(
     version_id: str,
     epoch_id: str,
     request: Request,
+    principal: Principal = Depends(require_permission("study_design:delete")),
 ) -> SoAEntityCreatedResponse:
     driver = await get_neo4j_driver(request)
-    user_id = getattr(request.state, "user_id", "system")
-    change_reason = resolve_change_reason(request, None)
+    user_id = principal.user_id
+    change_reason = principal.change_reason or resolve_change_reason(request, None)
 
     try:
         await retire_soa_entity(
@@ -1695,7 +1702,6 @@ async def retire_epoch_endpoint(
     "/api/v1/studies/{study_id}/versions/{version_id}/visits/{visit_id}",
     response_model=SoAEntityCreatedResponse,
     dependencies=[
-        Depends(require_permission("study_design:delete")),
         Depends(require_study_scope()),
     ],
 )
@@ -1704,10 +1710,11 @@ async def retire_visit_endpoint(
     version_id: str,
     visit_id: str,
     request: Request,
+    principal: Principal = Depends(require_permission("study_design:delete")),
 ) -> SoAEntityCreatedResponse:
     driver = await get_neo4j_driver(request)
-    user_id = getattr(request.state, "user_id", "system")
-    change_reason = resolve_change_reason(request, None)
+    user_id = principal.user_id
+    change_reason = principal.change_reason or resolve_change_reason(request, None)
 
     try:
         await retire_soa_entity(
@@ -1727,7 +1734,6 @@ async def retire_visit_endpoint(
     "/api/v1/studies/{study_id}/versions/{version_id}/procedures/{procedure_id}",
     response_model=SoAEntityCreatedResponse,
     dependencies=[
-        Depends(require_permission("study_design:delete")),
         Depends(require_study_scope()),
     ],
 )
@@ -1736,10 +1742,11 @@ async def retire_procedure_endpoint(
     version_id: str,
     procedure_id: str,
     request: Request,
+    principal: Principal = Depends(require_permission("study_design:delete")),
 ) -> SoAEntityCreatedResponse:
     driver = await get_neo4j_driver(request)
-    user_id = getattr(request.state, "user_id", "system")
-    change_reason = resolve_change_reason(request, None)
+    user_id = principal.user_id
+    change_reason = principal.change_reason or resolve_change_reason(request, None)
 
     try:
         await retire_soa_entity(
@@ -1759,7 +1766,6 @@ async def retire_procedure_endpoint(
     "/api/v1/studies/{study_id}/versions/{version_id}/timing-windows/{timing_id}",
     response_model=SoAEntityCreatedResponse,
     dependencies=[
-        Depends(require_permission("study_design:delete")),
         Depends(require_study_scope()),
     ],
 )
@@ -1768,10 +1774,11 @@ async def retire_timing_window_endpoint(
     version_id: str,
     timing_id: str,
     request: Request,
+    principal: Principal = Depends(require_permission("study_design:delete")),
 ) -> SoAEntityCreatedResponse:
     driver = await get_neo4j_driver(request)
-    user_id = getattr(request.state, "user_id", "system")
-    change_reason = resolve_change_reason(request, None)
+    user_id = principal.user_id
+    change_reason = principal.change_reason or resolve_change_reason(request, None)
 
     try:
         await retire_soa_entity(
@@ -1791,7 +1798,6 @@ async def retire_timing_window_endpoint(
     "/api/v1/studies/{study_id}/versions/{version_id}/links/epoch-visit",
     response_model=SoALinkResponse,
     dependencies=[
-        Depends(require_permission("study_design:delete")),
         Depends(require_study_scope()),
     ],
 )
@@ -1800,10 +1806,11 @@ async def retire_epoch_visit_endpoint(
     version_id: str,
     payload: LinkEpochVisitRequest,
     request: Request,
+    principal: Principal = Depends(require_permission("study_design:delete")),
 ) -> SoALinkResponse:
     driver = await get_neo4j_driver(request)
-    user_id = getattr(request.state, "user_id", "system")
-    change_reason = resolve_change_reason(request, None)
+    user_id = principal.user_id
+    change_reason = principal.change_reason or resolve_change_reason(request, None)
 
     success = await retire_epoch_visit_link(
         driver=driver,
@@ -1822,7 +1829,6 @@ async def retire_epoch_visit_endpoint(
     "/api/v1/studies/{study_id}/versions/{version_id}/links/visit-procedure",
     response_model=SoALinkResponse,
     dependencies=[
-        Depends(require_permission("study_design:delete")),
         Depends(require_study_scope()),
     ],
 )
@@ -1831,10 +1837,11 @@ async def retire_visit_procedure_endpoint(
     version_id: str,
     payload: LinkVisitProcedureRequest,
     request: Request,
+    principal: Principal = Depends(require_permission("study_design:delete")),
 ) -> SoALinkResponse:
     driver = await get_neo4j_driver(request)
-    user_id = getattr(request.state, "user_id", "system")
-    change_reason = resolve_change_reason(request, None)
+    user_id = principal.user_id
+    change_reason = principal.change_reason or resolve_change_reason(request, None)
 
     success = await retire_visit_procedure_link(
         driver=driver,
@@ -1855,7 +1862,6 @@ async def retire_visit_procedure_endpoint(
     "/api/v1/studies/{study_id}/versions/{version_id}/links/timing",
     response_model=SoALinkResponse,
     dependencies=[
-        Depends(require_permission("study_design:delete")),
         Depends(require_study_scope()),
     ],
 )
@@ -1864,10 +1870,11 @@ async def retire_timing_endpoint(
     version_id: str,
     payload: LinkTimingRequest,
     request: Request,
+    principal: Principal = Depends(require_permission("study_design:delete")),
 ) -> SoALinkResponse:
     driver = await get_neo4j_driver(request)
-    user_id = getattr(request.state, "user_id", "system")
-    change_reason = resolve_change_reason(request, None)
+    user_id = principal.user_id
+    change_reason = principal.change_reason or resolve_change_reason(request, None)
 
     success = await retire_timing_link(
         driver=driver,
@@ -1889,7 +1896,6 @@ async def retire_timing_endpoint(
     "/api/v1/studies/{study_id}/versions/{version_id}/links/arm-applicability",
     response_model=SoALinkResponse,
     dependencies=[
-        Depends(require_permission("study_design:delete")),
         Depends(require_study_scope()),
     ],
 )
@@ -1898,10 +1904,11 @@ async def retire_arm_applicability_endpoint(
     version_id: str,
     payload: LinkArmApplicabilityRequest,
     request: Request,
+    principal: Principal = Depends(require_permission("study_design:delete")),
 ) -> SoALinkResponse:
     driver = await get_neo4j_driver(request)
-    user_id = getattr(request.state, "user_id", "system")
-    change_reason = resolve_change_reason(request, None)
+    user_id = principal.user_id
+    change_reason = principal.change_reason or resolve_change_reason(request, None)
 
     success = await retire_arm_applicability_link(
         driver=driver,
@@ -2297,7 +2304,6 @@ async def archive_approved_protocol_background_task(
     "/api/v1/studies/{study_id}/versions/{version_id}/approve",
     status_code=200,
     dependencies=[
-        Depends(require_permission("study_design:approve")),
         Depends(require_study_scope()),
     ],
 )
@@ -2305,7 +2311,6 @@ async def archive_approved_protocol_background_task(
     "/api/v1/studies/{study_id}/versions/{version_id}/sign-off",
     status_code=200,
     dependencies=[
-        Depends(require_permission("study_design:approve")),
         Depends(require_study_scope()),
     ],
 )
@@ -2315,6 +2320,7 @@ async def approve_study_version_endpoint(
     payload: ApproveProtocolRequest,
     request: Request,
     background_tasks: BackgroundTasks,
+    principal: Principal = Depends(require_permission("study_design:approve")),
 ) -> Dict[str, Any]:
     """
     Approve and cryptographically sign a Metadata Designer clinical protocol version, producing
@@ -2326,8 +2332,8 @@ async def approve_study_version_endpoint(
     driver = await get_neo4j_driver(request)
 
     # 1. Extract identity and scope
-    user_id = getattr(request.state, "user_id", "system")
-    change_reason = resolve_change_reason(request, None)
+    user_id = principal.user_id
+    change_reason = principal.change_reason or resolve_change_reason(request, None)
 
     # 3. Check if study version exists
     if driver is None:
@@ -3169,12 +3175,12 @@ async def delete_concept(id: str, request: Request) -> Dict[str, str]:
     status_code=status.HTTP_201_CREATED,
     dependencies=[
         Depends(require_permission("global_library:create")),
-        Depends(require_study_scope()),
     ],
 )
 async def create_library_object_endpoint(
     payload: CreateLibraryObjectRequest,
     request: Request,
+    principal: Principal = Depends(require_study_scope()),
 ) -> LibraryObjectDetail:
     """
     Creates a new Global Library object under the authenticated sponsor's scope.
@@ -3192,15 +3198,7 @@ async def create_library_object_endpoint(
             detail="Missing change justification reason",
         )
 
-    sponsor_id = getattr(request.state, "sponsor_id", None) or request.headers.get(
-        "X-Sponsor-Id"
-    )
-    if not sponsor_id or not isinstance(sponsor_id, str) or not sponsor_id.strip():
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Forbidden: Missing authenticated sponsor scope",
-        )
-    sponsor_id = sponsor_id.strip()
+    sponsor_id = principal.sponsor_id
 
     tenant_id = getattr(request.state, "tenant_id", None) or request.headers.get(
         "X-Tenant-Id", "tenant_default"
@@ -3254,6 +3252,7 @@ async def list_library_objects_endpoint(
     object_type: Optional[ObjectType] = None,
     limit: int = Query(50, le=250),
     starting_after: Optional[str] = None,
+    principal: Principal = Depends(require_study_scope()),
 ) -> LibraryObjectListResponse:
     """
     Lists latest global library objects under the authenticated sponsor.
@@ -3261,15 +3260,7 @@ async def list_library_objects_endpoint(
     """
     driver = await get_neo4j_driver(request)
 
-    sponsor_id = getattr(request.state, "sponsor_id", None) or request.headers.get(
-        "X-Sponsor-Id"
-    )
-    if not sponsor_id or not isinstance(sponsor_id, str) or not sponsor_id.strip():
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Forbidden: Missing authenticated sponsor scope",
-        )
-    sponsor_id = sponsor_id.strip()
+    sponsor_id = principal.sponsor_id
 
     # Fetch limit + 1 to detect has_more
     records = await list_library_objects(
@@ -3304,21 +3295,14 @@ async def get_library_object_endpoint(
     id: str,
     request: Request,
     version: Optional[int] = Query(None),
+    principal: Principal = Depends(require_study_scope()),
 ) -> LibraryObjectDetail:
     """
     Retrieves the latest version or a specific version of a global library object.
     """
     driver = await get_neo4j_driver(request)
 
-    sponsor_id = getattr(request.state, "sponsor_id", None) or request.headers.get(
-        "X-Sponsor-Id"
-    )
-    if not sponsor_id or not isinstance(sponsor_id, str) or not sponsor_id.strip():
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Forbidden: Missing authenticated sponsor scope",
-        )
-    sponsor_id = sponsor_id.strip()
+    sponsor_id = principal.sponsor_id
 
     if version is not None:
         record = await get_library_object_by_version(driver, id, sponsor_id, version)
@@ -3339,13 +3323,13 @@ async def get_library_object_endpoint(
     response_model=LibraryObjectDetail,
     dependencies=[
         Depends(require_permission("global_library:update")),
-        Depends(require_study_scope()),
     ],
 )
 async def update_library_object_endpoint(
     id: str,
     payload: UpdateLibraryObjectRequest,
     request: Request,
+    principal: Principal = Depends(require_study_scope()),
 ) -> LibraryObjectDetail:
     """
     Updates a global library object by creating a new version.
@@ -3362,15 +3346,7 @@ async def update_library_object_endpoint(
             detail="Missing change justification reason",
         )
 
-    sponsor_id = getattr(request.state, "sponsor_id", None) or request.headers.get(
-        "X-Sponsor-Id"
-    )
-    if not sponsor_id or not isinstance(sponsor_id, str) or not sponsor_id.strip():
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Forbidden: Missing authenticated sponsor scope",
-        )
-    sponsor_id = sponsor_id.strip()
+    sponsor_id = principal.sponsor_id
 
     # 1. Verify object exists and is owned by the sponsor
     latest = await get_latest_library_object(driver, id, sponsor_id)
@@ -3438,13 +3414,13 @@ class LibraryObjectAmendRequest(BaseModel):
     status_code=status.HTTP_201_CREATED,
     dependencies=[
         Depends(require_permission("global_library:amend")),
-        Depends(require_study_scope()),
     ],
 )
 async def amend_library_object_endpoint(
     id: str,
     payload: LibraryObjectAmendRequest,
     request: Request,
+    principal: Principal = Depends(require_study_scope()),
 ) -> LibraryObjectDetail:
     """
     Initiates an amendment on a library object that is in use by creating a successor draft version.
@@ -3460,15 +3436,7 @@ async def amend_library_object_endpoint(
             detail="Missing change justification reason",
         )
 
-    sponsor_id = getattr(request.state, "sponsor_id", None) or request.headers.get(
-        "X-Sponsor-Id"
-    )
-    if not sponsor_id or not isinstance(sponsor_id, str) or not sponsor_id.strip():
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Forbidden: Missing authenticated sponsor scope",
-        )
-    sponsor_id = sponsor_id.strip()
+    sponsor_id = principal.sponsor_id
 
     # 1. Verify object exists and is owned by the sponsor
     latest = await get_latest_library_object(driver, id, sponsor_id)
@@ -3521,21 +3489,14 @@ async def amend_library_object_endpoint(
 async def get_library_object_history_endpoint(
     id: str,
     request: Request,
+    principal: Principal = Depends(require_study_scope()),
 ) -> List[LibraryObjectDetail]:
     """
     Retrieves the complete version history of a global library object.
     """
     driver = await get_neo4j_driver(request)
 
-    sponsor_id = getattr(request.state, "sponsor_id", None) or request.headers.get(
-        "X-Sponsor-Id"
-    )
-    if not sponsor_id or not isinstance(sponsor_id, str) or not sponsor_id.strip():
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Forbidden: Missing authenticated sponsor scope",
-        )
-    sponsor_id = sponsor_id.strip()
+    sponsor_id = principal.sponsor_id
 
     records = await get_library_object_history(driver, id, sponsor_id)
     if not records:
@@ -3552,13 +3513,13 @@ async def get_library_object_history_endpoint(
     response_model=LibraryObjectDetail,
     dependencies=[
         Depends(require_permission("global_library:transition")),
-        Depends(require_study_scope()),
     ],
 )
 async def transition_library_object_endpoint(
     id: str,
     payload: LibraryObjectTransitionRequest,
     request: Request,
+    principal: Principal = Depends(require_study_scope()),
 ) -> LibraryObjectDetail:
     """
     Transitions the lifecycle status of a global library object.
@@ -3576,15 +3537,7 @@ async def transition_library_object_endpoint(
             detail="Missing change justification reason",
         )
 
-    sponsor_id = getattr(request.state, "sponsor_id", None) or request.headers.get(
-        "X-Sponsor-Id"
-    )
-    if not sponsor_id or not isinstance(sponsor_id, str) or not sponsor_id.strip():
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Forbidden: Missing authenticated sponsor scope",
-        )
-    sponsor_id = sponsor_id.strip()
+    sponsor_id = principal.sponsor_id
 
     # 2. Verify object exists and is owned by the sponsor
     latest = await get_latest_library_object(driver, id, sponsor_id)
@@ -4145,17 +4098,17 @@ class BlockDetailResponse(BaseModel):
     "/api/v1/studies/{study_id}/versions/{version_id}/blocks",
     response_model=BlockCreatedResponse,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_permission("study_design:create"))],
 )
 async def create_block_endpoint(
     study_id: str,
     version_id: str,
     payload: CreateBlockRequest,
     request: Request,
+    principal: Principal = Depends(require_permission("study_design:create")),
 ) -> BlockCreatedResponse:
     driver = await get_neo4j_driver(request)
-    user_id = getattr(request.state, "user_id", "system")
-    change_reason = resolve_change_reason(request, payload.change_reason)
+    user_id = principal.user_id
+    change_reason = principal.change_reason or resolve_change_reason(request, payload.change_reason)
 
     try:
         await create_block(
@@ -4180,7 +4133,6 @@ async def create_block_endpoint(
 @app.put(
     "/api/v1/studies/{study_id}/versions/{version_id}/blocks/{block_id}",
     response_model=BlockCreatedResponse,
-    dependencies=[Depends(require_permission("study_design:update"))],
 )
 async def update_block_endpoint(
     study_id: str,
@@ -4188,10 +4140,11 @@ async def update_block_endpoint(
     block_id: str,
     payload: UpdateBlockRequest,
     request: Request,
+    principal: Principal = Depends(require_permission("study_design:update")),
 ) -> BlockCreatedResponse:
     driver = await get_neo4j_driver(request)
-    user_id = getattr(request.state, "user_id", "system")
-    change_reason = resolve_change_reason(request, payload.change_reason)
+    user_id = principal.user_id
+    change_reason = principal.change_reason or resolve_change_reason(request, payload.change_reason)
 
     try:
         await update_block(
@@ -4212,17 +4165,17 @@ async def update_block_endpoint(
 @app.delete(
     "/api/v1/studies/{study_id}/versions/{version_id}/blocks/{block_id}",
     response_model=BlockCreatedResponse,
-    dependencies=[Depends(require_permission("study_design:delete"))],
 )
 async def delete_block_endpoint(
     study_id: str,
     version_id: str,
     block_id: str,
     request: Request,
+    principal: Principal = Depends(require_permission("study_design:delete")),
 ) -> BlockCreatedResponse:
     driver = await get_neo4j_driver(request)
-    user_id = getattr(request.state, "user_id", "system")
-    change_reason = resolve_change_reason(request, None)
+    user_id = principal.user_id
+    change_reason = principal.change_reason or resolve_change_reason(request, None)
 
     try:
         await delete_block(
@@ -4275,17 +4228,17 @@ async def list_blocks_endpoint(
 @app.post(
     "/api/v1/studies/{study_id}/versions/{version_id}/blocks/reorder",
     response_model=SoALinkResponse,
-    dependencies=[Depends(require_permission("study_design:reorder"))],
 )
 async def reorder_blocks_endpoint(
     study_id: str,
     version_id: str,
     payload: ReorderBlocksRequest,
     request: Request,
+    principal: Principal = Depends(require_permission("study_design:reorder")),
 ) -> SoALinkResponse:
     driver = await get_neo4j_driver(request)
-    user_id = getattr(request.state, "user_id", "system")
-    change_reason = resolve_change_reason(request, payload.change_reason)
+    user_id = principal.user_id
+    change_reason = principal.change_reason or resolve_change_reason(request, payload.change_reason)
 
     try:
         await reorder_blocks(
@@ -5034,13 +4987,13 @@ class LibraryInstanceResponse(BaseModel):
     status_code=status.HTTP_201_CREATED,
     dependencies=[
         Depends(require_permission("global_library:instantiate")),
-        Depends(require_study_scope()),
     ],
 )
 async def instantiate_library_object_endpoint(
     study_id: str,
     payload: InstantiateLibraryObjectRequest,
     request: Request,
+    principal: Principal = Depends(require_study_scope()),
 ) -> LibraryInstanceResponse:
     """
     Instantiates a specific version (or latest) of a Global Library object into a study-scoped instance.
@@ -5049,15 +5002,7 @@ async def instantiate_library_object_endpoint(
     driver = await get_neo4j_driver(request)
 
     # 1. Retrieve sponsor scope & user id
-    sponsor_id = getattr(request.state, "sponsor_id", None) or request.headers.get(
-        "X-Sponsor-Id"
-    )
-    if not sponsor_id or not isinstance(sponsor_id, str) or not sponsor_id.strip():
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Forbidden: Missing authenticated sponsor scope",
-        )
-    sponsor_id = sponsor_id.strip()
+    sponsor_id = principal.sponsor_id
 
     user_id = getattr(request.state, "user_id", "system")
 
@@ -5103,7 +5048,6 @@ class UpdateLibraryInstanceRequest(BaseModel):
     status_code=status.HTTP_200_OK,
     dependencies=[
         Depends(require_permission("global_library:update")),
-        Depends(require_study_scope()),
     ],
 )
 async def update_library_instance_endpoint(
@@ -5111,6 +5055,7 @@ async def update_library_instance_endpoint(
     instance_id: str,
     payload: UpdateLibraryInstanceRequest,
     request: Request,
+    principal: Principal = Depends(require_study_scope()),
 ) -> LibraryInstanceResponse:
     """
     Updates the payload of an instantiated library object inside a study.
@@ -5120,15 +5065,7 @@ async def update_library_instance_endpoint(
     driver = await get_neo4j_driver(request)
 
     # 1. Retrieve sponsor scope & user id
-    sponsor_id = getattr(request.state, "sponsor_id", None) or request.headers.get(
-        "X-Sponsor-Id"
-    )
-    if not sponsor_id or not isinstance(sponsor_id, str) or not sponsor_id.strip():
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Forbidden: Missing authenticated sponsor scope",
-        )
-    sponsor_id = sponsor_id.strip()
+    sponsor_id = principal.sponsor_id
 
     user_id = getattr(request.state, "user_id", "system")
 
@@ -5164,21 +5101,14 @@ async def get_library_instance_diff_endpoint(
     study_id: str,
     instance_id: str,
     request: Request,
+    principal: Principal = Depends(require_study_scope()),
 ) -> List[DifferenceResult]:
     """
     Returns field-level dot-notated differences between the library instance payload and its linked source version.
     """
     driver = await get_neo4j_driver(request)
 
-    sponsor_id = getattr(request.state, "sponsor_id", None) or request.headers.get(
-        "X-Sponsor-Id"
-    )
-    if not sponsor_id or not isinstance(sponsor_id, str) or not sponsor_id.strip():
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Forbidden: Missing authenticated sponsor scope",
-        )
-    sponsor_id = sponsor_id.strip()
+    sponsor_id = principal.sponsor_id
 
     try:
         instance = await get_library_instance_in_study(
