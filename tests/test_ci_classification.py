@@ -6,13 +6,14 @@ validation scripts from being classified as safe, while allowing standard,
 non-vulnerability markdown documentation and tests/scripts to proceed.
 """
 
-import fnmatch
-
 
 def classify_file(filepath: str) -> bool:
     """Python simulation of the bash classification logic in `.github/workflows/ci.yml`."""
     # Explicitly check for vulnerability ledger and validation scripts
-    if filepath == "docs/SDLC/vulnerability_exclusions_ledger.json" or "validate_vulnerabilities.py" in filepath:
+    if (
+        filepath == "docs/SDLC/vulnerability_exclusions_ledger.json"
+        or "validate_vulnerabilities.py" in filepath
+    ):
         return False
 
     # Check for safe patterns
