@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1823
-- **Passed:** 1823 🟢
+- **Total Automated Test Cases Run:** 1827
+- **Passed:** 1827 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1487,6 +1487,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_unknown_role_returns_empty_permissions` | `tests.test_rbac_permissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_subject_consent_blocking_and_reconsent_lifecycle` | `tests.test_reconsent_blocking` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_subject_consent_endpoint_lifecycle` | `tests.test_reconsent_blocking` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_fetch_all_issues` | `tests.test_remove_jules_labels` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_is_jules_label` | `tests.test_remove_jules_labels` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_remove_label_dry_run` | `tests.test_remove_jules_labels` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_remove_label_success` | `tests.test_remove_jules_labels` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reset_db_safety_guard_non_local` | `tests.test_reset_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reset_db_safety_guard_production` | `tests.test_reset_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_reset_db_success_offline` | `tests.test_reset_db` | *Regression/Helper* | 🟢 PASSED | < 1s |
