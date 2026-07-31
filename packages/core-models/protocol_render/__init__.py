@@ -14,6 +14,8 @@ from .models import (
     SoAMatrixView,
     SoARowView,
     SynopsisView,
+    NarrativeContent,
+    NarrativeContentItem,
 )
 
 __all__ = [
@@ -28,4 +30,6 @@ __all__ = [
     "SoARowView",
     "SoAMatrixView",
     "RenderedProtocolDocument",
+    "NarrativeContent",
+    "NarrativeContentItem",
 ]

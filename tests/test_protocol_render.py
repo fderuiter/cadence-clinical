@@ -414,3 +414,66 @@ def test_render_protocol_to_html_soa_only():
     assert soup.find("h1", string=re.compile("1. PROTOCOL SYNOPSIS")) is None
     assert soup.find("h1", string=re.compile("2. STUDY NARRATIVE")) is None
     assert soup.find("div", class_="soa-section") is not None
+
+
+def test_export_metadata_dual_fields():
+    """
+    Verify 21 CFR Part 11 compliant ExportMetadata synchronized/backward-compatible
+    fields behave correctly under bidirectional propagation.
+    """
+    # 1. Initialize with new-style created_by
+    meta1 = ExportMetadata(created_by="system_user")
+    assert meta1.created_by == "system_user"
+    assert meta1.creator == "system_user"
+    assert meta1.timestamp == meta1.created_at
+
+    # 2. Initialize with new-style reason_for_change and version_index > 1
+    meta2 = ExportMetadata(
+        created_by="system_user",
+        version_index=2,
+        reason_for_change="Corrected Section 1.2",
+    )
+    assert meta2.reason_for_change == "Corrected Section 1.2"
+    assert meta2.change_reason == "Corrected Section 1.2"
+
+    # 3. Validation failure when neither creator nor created_by is provided
+    with pytest.raises(ValidationError) as exc:
+        ExportMetadata(version_index=1)
+    assert "Field 'creator' or 'created_by' is required." in str(exc.value)
+
+
+def test_narrative_content_usdm_models():
+    """
+    Verify NarrativeContent and NarrativeContentItem can be constructed
+    properly conforming to CDISC USDM specification.
+    """
+    from protocol_render import NarrativeContent, NarrativeContentItem
+
+    # Create NarrativeContentItem
+    item = NarrativeContentItem(
+        id="item-abc-123",
+        name="objective_bullet_1",
+        text="To evaluate the efficacy of study treatment.",
+    )
+    assert item.id == "item-abc-123"
+    assert item.name == "objective_bullet_1"
+    assert item.text == "To evaluate the efficacy of study treatment."
+    assert item.instanceType == "NarrativeContentItem"
+
+    # Create NarrativeContent
+    section = NarrativeContent(
+        id="section-xyz-789",
+        name="objectives_section",
+        sectionNumber="1.1",
+        sectionTitle="Study Objectives",
+        displaySectionNumber=True,
+        displaySectionTitle=True,
+        childIds=["item-abc-123"],
+    )
+    assert section.id == "section-xyz-789"
+    assert section.sectionNumber == "1.1"
+    assert section.sectionTitle == "Study Objectives"
+    assert section.displaySectionNumber is True
+    assert section.displaySectionTitle is True
+    assert section.childIds == ["item-abc-123"]
+    assert section.instanceType == "NarrativeContent"
