@@ -34,17 +34,10 @@ importers:
         version: 3.9.6
       vitepress:
         specifier: ^1.6.4
-<<<<<<< HEAD
-        version: 1.6.4(@algolia/client-search@5.56.0)(lightningcss@1.33.0)(postcss@8.5.22)(search-insights@2.17.3)(sortablejs@1.14.0)
+        version: 1.6.4(@algolia/client-search@5.56.0)(lightningcss@1.33.0)(postcss@8.5.22)(search-insights@2.17.3)(sortablejs@1.14.0)(typescript@7.0.2)
       vitepress-plugin-mermaid:
         specifier: ^2.0.17
-        version: 2.0.17(mermaid@11.16.0)(vitepress@1.6.4(@algolia/client-search@5.56.0)(lightningcss@1.33.0)(postcss@8.5.22)(search-insights@2.17.3)(sortablejs@1.14.0))
-=======
-        version: 1.6.4(@algolia/client-search@5.56.0)(lightningcss@1.33.0)(postcss@8.5.22)(search-insights@2.17.3)(typescript@7.0.2)
-      vitepress-plugin-mermaid:
-        specifier: ^2.0.17
-        version: 2.0.17(mermaid@11.16.0)(vitepress@1.6.4(@algolia/client-search@5.56.0)(lightningcss@1.33.0)(postcss@8.5.22)(search-insights@2.17.3)(typescript@7.0.2))
->>>>>>> 19a38a3 (feat(offline): implement transactional delta sync engine and conflict resolution)
+        version: 2.0.17(mermaid@11.16.0)(vitepress@1.6.4(@algolia/client-search@5.56.0)(lightningcss@1.33.0)(postcss@8.5.22)(search-insights@2.17.3)(sortablejs@1.14.0)(typescript@7.0.2))
       vitest:
         specifier: ^4.1.10
         version: 4.1.10(jsdom@29.1.1)(vite@8.1.5(yaml@2.9.0))
@@ -78,7 +71,7 @@ importers:
         version: link:../../packages/ui
       vuedraggable:
         specifier: 4.1.0
-        version: 4.1.0(vue@3.5.40)
+        version: 4.1.0(vue@3.5.40(typescript@7.0.2))
     devDependencies:
       '@playwright/test':
         specifier: ^1.49.0
@@ -92,6 +85,9 @@ importers:
       eslint-plugin-vue:
         specifier: ^10.10.0
         version: 10.10.0(eslint@10.7.0)(vue-eslint-parser@10.4.1(eslint@10.7.0))
+      fake-indexeddb:
+        specifier: ^6.2.5
+        version: 6.2.5
       jsdom:
         specifier: ^29.1.1
         version: 29.1.1
@@ -3806,11 +3802,7 @@ snapshots:
     transitivePeerDependencies:
       - typescript
 
-<<<<<<< HEAD
-  '@vueuse/integrations@12.8.2(focus-trap@7.8.0)(sortablejs@1.14.0)':
-=======
-  '@vueuse/integrations@12.8.2(focus-trap@7.8.0)(typescript@7.0.2)':
->>>>>>> 19a38a3 (feat(offline): implement transactional delta sync engine and conflict resolution)
+  '@vueuse/integrations@12.8.2(focus-trap@7.8.0)(sortablejs@1.14.0)(typescript@7.0.2)':
     dependencies:
       '@vueuse/core': 12.8.2(typescript@7.0.2)
       '@vueuse/shared': 12.8.2(typescript@7.0.2)
@@ -5151,25 +5143,14 @@ snapshots:
       fsevents: 2.3.3
       yaml: 2.9.0
 
-<<<<<<< HEAD
-  vitepress-plugin-mermaid@2.0.17(mermaid@11.16.0)(vitepress@1.6.4(@algolia/client-search@5.56.0)(lightningcss@1.33.0)(postcss@8.5.22)(search-insights@2.17.3)(sortablejs@1.14.0)):
+  vitepress-plugin-mermaid@2.0.17(mermaid@11.16.0)(vitepress@1.6.4(@algolia/client-search@5.56.0)(lightningcss@1.33.0)(postcss@8.5.22)(search-insights@2.17.3)(sortablejs@1.14.0)(typescript@7.0.2)):
     dependencies:
       mermaid: 11.16.0
-      vitepress: 1.6.4(@algolia/client-search@5.56.0)(lightningcss@1.33.0)(postcss@8.5.22)(search-insights@2.17.3)(sortablejs@1.14.0)
+      vitepress: 1.6.4(@algolia/client-search@5.56.0)(lightningcss@1.33.0)(postcss@8.5.22)(search-insights@2.17.3)(sortablejs@1.14.0)(typescript@7.0.2)
     optionalDependencies:
       '@mermaid-js/mermaid-mindmap': 9.3.0
 
-  vitepress@1.6.4(@algolia/client-search@5.56.0)(lightningcss@1.33.0)(postcss@8.5.22)(search-insights@2.17.3)(sortablejs@1.14.0):
-=======
-  vitepress-plugin-mermaid@2.0.17(mermaid@11.16.0)(vitepress@1.6.4(@algolia/client-search@5.56.0)(lightningcss@1.33.0)(postcss@8.5.22)(search-insights@2.17.3)(typescript@7.0.2)):
-    dependencies:
-      mermaid: 11.16.0
-      vitepress: 1.6.4(@algolia/client-search@5.56.0)(lightningcss@1.33.0)(postcss@8.5.22)(search-insights@2.17.3)(typescript@7.0.2)
-    optionalDependencies:
-      '@mermaid-js/mermaid-mindmap': 9.3.0
-
-  vitepress@1.6.4(@algolia/client-search@5.56.0)(lightningcss@1.33.0)(postcss@8.5.22)(search-insights@2.17.3)(typescript@7.0.2):
->>>>>>> 19a38a3 (feat(offline): implement transactional delta sync engine and conflict resolution)
+  vitepress@1.6.4(@algolia/client-search@5.56.0)(lightningcss@1.33.0)(postcss@8.5.22)(search-insights@2.17.3)(sortablejs@1.14.0)(typescript@7.0.2):
     dependencies:
       '@docsearch/css': 3.8.2
       '@docsearch/js': 3.8.2(@algolia/client-search@5.56.0)(search-insights@2.17.3)
@@ -5181,13 +5162,8 @@ snapshots:
       '@vitejs/plugin-vue': 5.2.4(vite@5.4.21(lightningcss@1.33.0))(vue@3.5.40(typescript@7.0.2))
       '@vue/devtools-api': 7.7.10
       '@vue/shared': 3.5.40
-<<<<<<< HEAD
-      '@vueuse/core': 12.8.2
-      '@vueuse/integrations': 12.8.2(focus-trap@7.8.0)(sortablejs@1.14.0)
-=======
       '@vueuse/core': 12.8.2(typescript@7.0.2)
-      '@vueuse/integrations': 12.8.2(focus-trap@7.8.0)(typescript@7.0.2)
->>>>>>> 19a38a3 (feat(offline): implement transactional delta sync engine and conflict resolution)
+      '@vueuse/integrations': 12.8.2(focus-trap@7.8.0)(sortablejs@1.14.0)(typescript@7.0.2)
       focus-trap: 7.8.0
       mark.js: 8.11.1
       minisearch: 7.2.0
@@ -5310,10 +5286,10 @@ snapshots:
     optionalDependencies:
       typescript: 7.0.2
 
-  vuedraggable@4.1.0(vue@3.5.40):
+  vuedraggable@4.1.0(vue@3.5.40(typescript@7.0.2)):
     dependencies:
       sortablejs: 1.14.0
-      vue: 3.5.40
+      vue: 3.5.40(typescript@7.0.2)
 
   w3c-xmlserializer@5.0.0:
     dependencies:

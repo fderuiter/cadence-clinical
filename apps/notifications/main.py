@@ -12,7 +12,6 @@ from apps.notifications.database import db_manager
 from apps.notifications.models import (
     Base,
     Notification,
-    NotificationAuditLog,
     NotificationCategory,
     NotificationDelivery,
     NotificationPriority,
