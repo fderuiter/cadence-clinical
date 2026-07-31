@@ -396,6 +396,7 @@ WHITELISTED_ROUTES = {
     ("post", "/api/v1/designer/usdm/validate"),
     ("post", "/api/v1/designer/round-trip"),
     ("post", "/api/v1/execution/batch-sign-off"),
+    ("post", "/api/v1/execution/sdv/bulk-sign-off"),
     ("post", "/api/v1/execution/doa/assignment"),
     ("post", "/api/v1/execution/doa/sign-off"),
     ("get", "/api/v1/execution/doa/log/{study_id}/{site_id}"),

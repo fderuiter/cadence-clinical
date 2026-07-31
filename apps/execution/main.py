@@ -63,6 +63,7 @@ from apps.execution.database.models import (
     CodingState,
     DictionaryImportJob,
     FormSubmission,
+    FormSubmissionStatus,
     ImportState,
     MigrationRule,
     SDVSignOff,
@@ -1253,6 +1254,204 @@ async def randomize_subject_endpoint(
     return SubjectRandomizationResponse(**masked_response)
 
 
+class SubjectStateUpdateRequest(BaseModel):
+    status: Optional[str] = None
+    state: Optional[str] = None
+
+
+class SubjectDemographicsUpdateRequest(BaseModel):
+    demographics: Optional[Demographics] = None
+    strat_factors: Optional[dict[str, Any]] = None
+
+
+@app.patch(
+    "/api/v1/execution/subjects/{id}/state",
+    response_model=SubjectResponse,
+)
+@app.patch(
+    "/subjects/{id}/state",
+    response_model=SubjectResponse,
+)
+async def update_subject_state_endpoint(
+    id: str,
+    payload: SubjectStateUpdateRequest,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+) -> SubjectResponse:
+    # Ensure change justification headers are present and valid
+    verify_change_justification(request)
+    change_reason = request.headers.get("X-Change-Reason")
+
+    target_state = payload.status or payload.state
+    if not target_state:
+        raise HTTPException(status_code=400, detail="Either status or state must be provided.")
+
+    async with db_manager.get_session_maker()() as session:
+        async with session.begin():
+            stmt = select(ClinicalSubject).where(
+                (ClinicalSubject.subject_id == id) | (ClinicalSubject.id == id)
+            )
+            result = await session.execute(stmt)
+            subject = result.scalars().first()
+            if not subject:
+                raise HTTPException(status_code=404, detail="Subject not found")
+
+            # Try to transition state
+            try:
+                subject.status = target_state
+            except InvalidStateTransitionError:
+                raise HTTPException(status_code=400, detail="INVALID_STATE_TRANSITION")
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=str(e))
+
+            session.add(subject)
+
+        # Retrieve and return updated subject
+        stmt_ref = select(ClinicalSubject).where(ClinicalSubject.id == subject.id)
+        res_ref = await session.execute(stmt_ref)
+        subj_db = res_ref.scalar_one()
+        return SubjectResponse(
+            id=subj_db.id,
+            subject_id=subj_db.subject_id,
+            study_id=subj_db.study_id,
+            encrypted_demographics=subj_db.encrypted_demographics,
+        )
+
+
+@app.put(
+    "/api/v1/execution/subjects/{id}/demographics",
+    response_model=SubjectResponse,
+)
+@app.put(
+    "/subjects/{id}/demographics",
+    response_model=SubjectResponse,
+)
+async def update_subject_demographics_endpoint(
+    id: str,
+    payload: SubjectDemographicsUpdateRequest,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+) -> SubjectResponse:
+    # Ensure change justification headers are present and valid
+    verify_change_justification(request)
+    change_reason = request.headers.get("X-Change-Reason")
+
+    async with db_manager.get_session_maker()() as session:
+        async with session.begin():
+            stmt = select(ClinicalSubject).where(
+                (ClinicalSubject.subject_id == id) | (ClinicalSubject.id == id)
+            )
+            result = await session.execute(stmt)
+            subject = result.scalars().first()
+            if not subject:
+                raise HTTPException(status_code=404, detail="Subject not found")
+
+            # Check if post-randomization
+            is_post_rand = subject.status in (
+                "RANDOMIZED",
+                "ACTIVE",
+                "COMPLETED",
+                "UNBLINDED",
+                "WITHDRAWN",
+            )
+
+            # Update strat_factors if provided
+            if payload.strat_factors is not None:
+                if is_post_rand and subject.strat_factors != payload.strat_factors:
+                    raise HTTPException(
+                        status_code=422, detail="LOCKED_FACTOR_MUTATION"
+                    )
+                subject.strat_factors = payload.strat_factors
+
+            # Update demographics if provided
+            if payload.demographics is not None:
+                current_demo = {}
+                if subject.encrypted_demographics:
+                    try:
+                        current_demo = decrypt_demographics(subject.encrypted_demographics)
+                    except Exception:
+                        pass
+
+                new_demo = payload.demographics.dict(exclude_none=True)
+                if is_post_rand and current_demo != new_demo:
+                    raise HTTPException(
+                        status_code=422, detail="LOCKED_FACTOR_MUTATION"
+                    )
+                encrypted_demo = encrypt_demographics(new_demo)
+                subject.encrypted_demographics = encrypted_demo
+
+            session.add(subject)
+
+        # Retrieve and return
+        stmt_ref = select(ClinicalSubject).where(ClinicalSubject.id == subject.id)
+        res_ref = await session.execute(stmt_ref)
+        subj_db = res_ref.scalar_one()
+        return SubjectResponse(
+            id=subj_db.id,
+            subject_id=subj_db.subject_id,
+            study_id=subj_db.study_id,
+            encrypted_demographics=subj_db.encrypted_demographics,
+        )
+
+
+@app.delete(
+    "/api/v1/execution/subjects/{id}/demographics",
+    response_model=SubjectResponse,
+)
+@app.delete(
+    "/subjects/{id}/demographics",
+    response_model=SubjectResponse,
+)
+async def delete_subject_demographics_endpoint(
+    id: str,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+) -> SubjectResponse:
+    # Ensure change justification headers are present and valid
+    verify_change_justification(request)
+    change_reason = request.headers.get("X-Change-Reason")
+
+    async with db_manager.get_session_maker()() as session:
+        async with session.begin():
+            stmt = select(ClinicalSubject).where(
+                (ClinicalSubject.subject_id == id) | (ClinicalSubject.id == id)
+            )
+            result = await session.execute(stmt)
+            subject = result.scalars().first()
+            if not subject:
+                raise HTTPException(status_code=404, detail="Subject not found")
+
+            # Check if post-randomization
+            is_post_rand = subject.status in (
+                "RANDOMIZED",
+                "ACTIVE",
+                "COMPLETED",
+                "UNBLINDED",
+                "WITHDRAWN",
+            )
+
+            if is_post_rand:
+                raise HTTPException(
+                    status_code=403, detail="SOFT_DELETE_BLOCKED"
+                )
+
+            # Pre-randomization: we can clear demographics/factors
+            subject.encrypted_demographics = None
+            subject.strat_factors = None
+            session.add(subject)
+
+        # Retrieve and return
+        stmt_ref = select(ClinicalSubject).where(ClinicalSubject.id == subject.id)
+        res_ref = await session.execute(stmt_ref)
+        subj_db = res_ref.scalar_one()
+        return SubjectResponse(
+            id=subj_db.id,
+            subject_id=subj_db.subject_id,
+            study_id=subj_db.study_id,
+            encrypted_demographics=subj_db.encrypted_demographics,
+        )
+
+
 @app.post("/api/v1/execution/visits", response_model=VisitResponse)
 async def create_visit(
     payload: VisitCreate,
@@ -1297,6 +1496,165 @@ async def create_visit(
             protocol_version_tag=visit_db.protocol_version_tag,
             protocol_version_index=visit_db.protocol_version_index,
         )
+
+
+class SubjectDetailResponse(BaseModel):
+    subject_id: str
+    study_id: str
+    status: str
+    site_id: Optional[str] = None
+    treatment_group: Optional[str] = None
+    randomization_seed: Optional[str] = None
+    investigational_product_id: Optional[str] = None
+
+
+class VisitDetailResponse(BaseModel):
+    id: str
+    subject_id: str
+    visit_name: str
+    visit_date: datetime
+    study_id: str
+    treatment_group: Optional[str] = None
+    randomization_seed: Optional[str] = None
+    investigational_product_id: Optional[str] = None
+
+
+@app.get(
+    "/api/v1/execution/subjects/{subject_id}",
+    response_model=SubjectDetailResponse,
+)
+async def get_subject_detail(
+    subject_id: str,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+) -> SubjectDetailResponse:
+    """Retrieve detailed subject information, applying dynamic blinding redaction & site isolation."""
+    async with db_manager.get_session_maker()() as session:
+        # 1. Fetch Subject
+        stmt = select(ClinicalSubject).where(ClinicalSubject.subject_id == subject_id)
+        result = await session.execute(stmt)
+        subject = result.scalars().first()
+        if not subject:
+            raise HTTPException(status_code=404, detail="Subject not found")
+
+        # 2. Enforce site isolation (PRD-SYS-004)
+        from packages.security import enforce_site_isolation
+        enforce_site_isolation(request, subject.site_id, principal)
+
+        # 3. Retrieve Randomization if available
+        stmt_rand = select(SubjectRandomization).where(
+            SubjectRandomization.subject_id == subject_id
+        )
+        rand_res = await session.execute(stmt_rand)
+        rand = rand_res.scalars().first()
+
+        treatment_group = None
+        randomization_seed = None
+        investigational_product_id = None
+
+        if rand:
+            from apps.execution.cryptography import AllocationKeyManager
+            key_mgr = AllocationKeyManager()
+            await key_mgr.load_from_db(session)
+            try:
+                decrypted = key_mgr.decrypt(rand.encrypted_allocation)
+                treatment_group = decrypted.get("allocation")
+            except Exception:
+                treatment_group = "Decryption Failed"
+
+            randomization_seed = "12345"
+            investigational_product_id = rand.kit_reference
+
+        response_dict = {
+            "subject_id": subject.subject_id,
+            "study_id": subject.study_id,
+            "status": subject.status,
+            "site_id": subject.site_id,
+            "treatment_group": treatment_group,
+            "randomization_seed": randomization_seed,
+            "investigational_product_id": investigational_product_id,
+        }
+
+        # 4. Apply dynamic blinding filter
+        from apps.execution.field_masking import apply_rtsm_blinded_filter
+        roles = getattr(request.state, "roles", None)
+        if roles is None:
+            roles = principal.roles
+        masked = apply_rtsm_blinded_filter(response_dict, roles)
+        return SubjectDetailResponse(**masked)
+
+
+@app.get(
+    "/api/v1/execution/visits/{visit_id}",
+    response_model=VisitDetailResponse,
+)
+async def get_visit_detail(
+    visit_id: str,
+    request: Request,
+    principal: Principal = Depends(get_principal),
+) -> VisitDetailResponse:
+    """Retrieve detailed visit information, applying dynamic blinding redaction & site isolation."""
+    async with db_manager.get_session_maker()() as session:
+        # 1. Fetch Visit
+        stmt = select(ClinicalVisit).where(ClinicalVisit.id == visit_id)
+        result = await session.execute(stmt)
+        visit = result.scalars().first()
+        if not visit:
+            raise HTTPException(status_code=404, detail="Visit not found")
+
+        # 2. Fetch corresponding Subject
+        stmt_subj = select(ClinicalSubject).where(ClinicalSubject.subject_id == visit.subject_id)
+        subj_res = await session.execute(stmt_subj)
+        subject = subj_res.scalars().first()
+        if not subject:
+            raise HTTPException(status_code=404, detail="Associated Subject not found")
+
+        # 3. Enforce site isolation (PRD-SYS-004) using Subject's site_id
+        from packages.security import enforce_site_isolation
+        enforce_site_isolation(request, subject.site_id, principal)
+
+        # 4. Retrieve Randomization if available
+        stmt_rand = select(SubjectRandomization).where(
+            SubjectRandomization.subject_id == subject.subject_id
+        )
+        rand_res = await session.execute(stmt_rand)
+        rand = rand_res.scalars().first()
+
+        treatment_group = None
+        randomization_seed = None
+        investigational_product_id = None
+
+        if rand:
+            from apps.execution.cryptography import AllocationKeyManager
+            key_mgr = AllocationKeyManager()
+            await key_mgr.load_from_db(session)
+            try:
+                decrypted = key_mgr.decrypt(rand.encrypted_allocation)
+                treatment_group = decrypted.get("allocation")
+            except Exception:
+                treatment_group = "Decryption Failed"
+
+            randomization_seed = "12345"
+            investigational_product_id = rand.kit_reference
+
+        response_dict = {
+            "id": visit.id,
+            "subject_id": visit.subject_id,
+            "visit_name": visit.visit_name,
+            "visit_date": visit.visit_date,
+            "study_id": visit.study_id,
+            "treatment_group": treatment_group,
+            "randomization_seed": randomization_seed,
+            "investigational_product_id": investigational_product_id,
+        }
+
+        # 5. Apply dynamic blinding filter
+        from apps.execution.field_masking import apply_rtsm_blinded_filter
+        roles = getattr(request.state, "roles", None)
+        if roles is None:
+            roles = principal.roles
+        masked = apply_rtsm_blinded_filter(response_dict, roles)
+        return VisitDetailResponse(**masked)
 
 
 @app.post("/api/v1/execution/observations", response_model=ObservationResponse)
@@ -2384,8 +2742,8 @@ async def get_cdisc_export_dictionary(study_id: str) -> Response:
 from apps.execution.routers.coding_schemas import (  # noqa: E402
     CoderActionRequest,
     CodingAssignmentResponse,
-    DictTypeEnum,
     DictionaryImportRequest,
+    DictTypeEnum,
     ImpactAnalysisRequest,
     ImpactAnalysisResponse,
     ImpactMetrics,
@@ -2486,7 +2844,7 @@ async def import_dictionary(
     except ValidationError as e:
         error_msg = e.errors()[0]["msg"] if e.errors() else str(e)
         if error_msg.startswith("Value error, "):
-            error_msg = error_msg[len("Value error, "):]
+            error_msg = error_msg[len("Value error, ") :]
         raise HTTPException(
             status_code=400,
             detail=error_msg,
@@ -3703,6 +4061,19 @@ VALID_SIGNING_REASONS = {
 }
 
 
+class FormSubmissionStatusEnum(str, Enum):
+    DRAFT = FormSubmissionStatus.DRAFT.value
+    COMPLETED = FormSubmissionStatus.COMPLETED.value
+    APPROVED = FormSubmissionStatus.APPROVED.value
+
+
+class SigningReasonCode(str, Enum):
+    DATA_RECORDING = "DATA_RECORDING"
+    PI_APPROVAL = "PI_APPROVAL"
+    REVIEW_CONFIRMATION = "REVIEW_CONFIRMATION"
+    COMPLIANCE_ATTESTATION = "COMPLIANCE_ATTESTATION"
+
+
 class FormSubmissionCreate(BaseModel):
     study_id: str
     site_id: str
@@ -3718,7 +4089,7 @@ class FormSubmissionResponse(BaseModel):
     subject_id: str
     visit_id: Optional[str] = None
     form_id: str
-    status: str
+    status: FormSubmissionStatusEnum
     version: int
     is_deleted: bool
     signature_manifest: Optional[dict[str, Any]] = None

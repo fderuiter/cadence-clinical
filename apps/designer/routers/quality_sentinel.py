@@ -9,6 +9,7 @@ from cdisc.sentinel_models import ProtocolQualityScore
 from fastapi import APIRouter, Depends
 
 import packages  # noqa: F401
+from apps.designer.dependencies import get_quality_sentinel
 from apps.designer.services.quality_sentinel import ProtocolQualitySentinel
 from packages.security.rbac import (
     Principal,
@@ -28,12 +29,12 @@ router = APIRouter(prefix="/api/v1/designer/sentinel", tags=["QualitySentinel"])
 async def evaluate_protocol_quality_endpoint(
     payload: Dict[str, Any],
     principal: Principal = Depends(get_principal),
+    sentinel: ProtocolQualitySentinel = Depends(get_quality_sentinel),
 ) -> ProtocolQualityScore:
     """Evaluate authored protocol specification payload against quality and burden rules.
 
     Requirements: PRD-SYS-001
     """
-    sentinel = ProtocolQualitySentinel()
     report = sentinel.evaluate_protocol_quality(payload)
 
     # Apply masking for blinded users
