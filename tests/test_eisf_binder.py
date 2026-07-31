@@ -41,8 +41,6 @@ async def db_session() -> AsyncGenerator:
     async with session_maker() as session:
         yield session
 
-    async with engine.begin() as conn:
-        await conn.run_sync(ServiceBase.metadata.drop_all)
     await engine.dispose()
 
 
@@ -61,8 +59,6 @@ async def setup_eisf_db() -> AsyncGenerator:
     async with db_manager.engine.begin() as conn:
         await conn.run_sync(EisfModelBase.metadata.create_all)
     yield
-    async with db_manager.engine.begin() as conn:
-        await conn.run_sync(EisfModelBase.metadata.drop_all)
     await db_manager.close()
 
 
