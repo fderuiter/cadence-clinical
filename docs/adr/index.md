@@ -110,6 +110,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-09: eTMF Filterable and Paginated Audit Log API](2026-08-09-etmf-filterable-paginated-audit-log.md)
 
 ### 5. Compliance, Audit & Governance
+- [2026-07-31: GxP 21 CFR Part 11 eConsent Audit Trails](2026-07-31-gxp-21-cfr-part-11-econsent-audit-trails.md)
 
 - [2026-07-22: ADR 2026-07-22: Audit Log Design](2026-07-22-audit-log-design.md)
 - [2026-07-22: 2026-07-22 Compliance Tracing and Automated Trial Locks](2026-07-22-compliance-tracing-and-automated-trial-locks.md)
