@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1629
-- **Passed:** 1629 🟢
+- **Total Automated Test Cases Run:** 1637
+- **Passed:** 1637 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -541,6 +541,14 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_xpath_compile_simple` | `tests.test_designer_rules` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_version_diff_success` | `tests.test_designer_version_diff` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_version_diff_unrelated_or_nonexistent` | `tests.test_designer_version_diff` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_main_no_duplicates_scanned` | `tests.test_detect_duplication` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_main_url_logic_preservation` | `tests.test_detect_duplication` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_main_with_duplicates_detected` | `tests.test_detect_duplication` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_normalize_line_css` | `tests.test_detect_duplication` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_normalize_line_javascript` | `tests.test_detect_duplication` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_normalize_line_python` | `tests.test_detect_duplication` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_normalize_line_vue` | `tests.test_detect_duplication` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_scan_file_for_lines` | `tests.test_detect_duplication` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_doa_historical_audit_trail_logging` | `tests.test_doa_audit_suite` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_doa_assignment_record_creation` | `tests.test_doa_models` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_doa_assignment_and_signoff_api_flow` | `tests.test_doa_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
