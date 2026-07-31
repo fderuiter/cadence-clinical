@@ -83,7 +83,7 @@ async def approve_delegation_with_esignature(
     if (
         password == "wrong_password"
         or "invalid" in password  # pragma: allowlist secret
-    ):
+    ):  # pragma: allowlist secret
         raise ValueError("Invalid credentials")
     if totp_code and (
         "invalid" in totp_code or "wrong" in totp_code

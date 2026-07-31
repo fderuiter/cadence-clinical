@@ -276,3 +276,48 @@ def test_generic_natural_deduplication_key():
     res = reconcile_records({}, None, incoming, "CLIENT_WINS")
     assert res["status"] == "CREATED"
     assert res["data"]["status"] == "completed"
+
+
+def test_reconcile_records_with_generic_dictionary_payload():
+    """
+    Verify that reconcile_records accepts a raw generic dictionary payload shape and reconciles properly.
+    """
+    incoming_dict = {
+        "deduplication_key": "subj_1:diary_99",
+        "data": {"temperature": 37.5, "cough": "no"},
+        "metadata": {
+            "timestamps": {
+                "temperature": "2026-08-01T10:00:00+00:00",
+                "cough": "2026-08-01T10:15:00+00:00",
+            },
+            "modified_by": "subject_mobile_app",
+        }
+    }
+
+    # Verify when no existing record exists
+    res = reconcile_records(
+        existing_data={},
+        existing_metadata=None,
+        incoming_record=incoming_dict,
+        strategy="CLIENT_WINS",
+    )
+    assert res["status"] == "CREATED"
+    assert res["data"]["temperature"] == 37.5
+    assert res["metadata"].modified_by == "subject_mobile_app"
+
+    # Verify with MERGE strategy against existing record dictionary metadata
+    existing_data = {"temperature": 36.8}
+    existing_meta = {
+        "timestamps": {"temperature": "2026-08-01T09:00:00+00:00"},
+        "modified_by": "hospital_visit",
+    }
+
+    res_merge = reconcile_records(
+        existing_data=existing_data,
+        existing_metadata=existing_meta,
+        incoming_record=incoming_dict,
+        strategy="MERGE",
+    )
+    assert res_merge["status"] == "MERGED"
+    assert res_merge["data"]["temperature"] == 37.5  # newer (10:00 > 09:00) wins
+    assert res_merge["data"]["cough"] == "no"
