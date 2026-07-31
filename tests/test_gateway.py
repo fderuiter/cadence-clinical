@@ -10,14 +10,15 @@ from jose import jwt
 from apps.gateway.main import app, generate_signature, verify_token
 
 
-def test_verify_token_invalid() -> None:
+@pytest.mark.asyncio
+async def test_verify_token_invalid() -> None:
     """
     Test verifying an invalid token.
 
     Ensures that passing an invalid token to verify_token raises an exception.
     """
     with pytest.raises(Exception):
-        verify_token("invalid_token")
+        await verify_token("invalid_token")
 
 
 def test_generate_signature() -> None:
@@ -2117,3 +2118,182 @@ def test_gateway_startup_production_no_bypass_configs() -> None:
         text=True,
     )
     assert result.returncode == 0
+
+
+def generate_test_rsa_jwks_and_token(kid: str = "new-kid-123") -> tuple[dict, str]:
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography.hazmat.primitives import serialization
+    from jose import jwt
+    import base64
+
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption()
+    )
+    token = jwt.encode({"sub": "user_123", "preferred_username": "user_123"}, pem, algorithm="RS256", headers={"kid": kid})
+
+    def int_to_base64url(val: int) -> str:
+        val_bytes = val.to_bytes((val.bit_length() + 7) // 8, byteorder='big')
+        return base64.urlsafe_b64encode(val_bytes).decode('utf-8').rstrip('=')
+
+    numbers = private_key.public_key().public_numbers()
+    n = int_to_base64url(numbers.n)
+    e = int_to_base64url(numbers.e)
+
+    jwks = {
+        "keys": [
+            {
+                "kty": "RSA",
+                "kid": kid,
+                "use": "sig",
+                "n": n,
+                "e": e
+            }
+        ]
+    }
+    return jwks, token
+
+
+@pytest.mark.asyncio
+async def test_verify_token_on_demand_success(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Test that verifying a token with an unknown kid triggers a dynamic JWKS fetch
+    and succeeds once the key is updated in the cache.
+    """
+    from apps.gateway import main as gateway_main
+    
+    monkeypatch.setattr(gateway_main, "jwks_cache", {"keys": []})
+    
+    jwks, token = generate_test_rsa_jwks_and_token("new-kid-123")
+    
+    fetch_count = 0
+    
+    class MockResponse:
+        status_code = 200
+        def json(self):
+            return jwks
+
+    async def mock_get(*args, **kwargs):
+        nonlocal fetch_count
+        fetch_count += 1
+        return MockResponse()
+
+    if gateway_main.http_client is None:
+        gateway_main.http_client = httpx.AsyncClient()
+    monkeypatch.setattr(gateway_main.http_client, "get", mock_get)
+
+    payload = await gateway_main.verify_token(token)
+    assert payload["sub"] == "user_123"
+    assert fetch_count == 1
+    assert gateway_main.jwks_cache == jwks
+
+
+@pytest.mark.asyncio
+async def test_verify_token_stampede_protection(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Test that concurrent verification requests for an unknown kid
+    trigger exactly one network call to the identity provider.
+    """
+    from apps.gateway import main as gateway_main
+    import asyncio
+
+    monkeypatch.setattr(gateway_main, "jwks_cache", {"keys": []})
+
+    jwks, token = generate_test_rsa_jwks_and_token("stampede-kid")
+
+    fetch_count = 0
+    fetch_started = asyncio.Event()
+
+    class MockResponse:
+        status_code = 200
+        def json(self):
+            return jwks
+
+    async def mock_get(*args, **kwargs):
+        nonlocal fetch_count
+        fetch_count += 1
+        fetch_started.set()
+        await asyncio.sleep(0.1)
+        return MockResponse()
+
+    if gateway_main.http_client is None:
+        gateway_main.http_client = httpx.AsyncClient()
+    monkeypatch.setattr(gateway_main.http_client, "get", mock_get)
+
+    tasks = [gateway_main.verify_token(token) for _ in range(5)]
+    results = await asyncio.gather(*tasks)
+
+    for payload in results:
+        assert payload["sub"] == "user_123"
+
+    assert fetch_count == 1
+
+
+@pytest.mark.asyncio
+async def test_verify_token_fetch_failure_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Test that if an on-demand key fetch fails, the gateway falls back
+    to the existing cached key set and does not overwrite it.
+    """
+    from apps.gateway import main as gateway_main
+
+    jwks_old, token_old = generate_test_rsa_jwks_and_token("old-kid")
+    monkeypatch.setattr(gateway_main, "jwks_cache", jwks_old)
+
+    _, token_new = generate_test_rsa_jwks_and_token("new-kid")
+
+    class MockFailedResponse:
+        status_code = 500
+
+    async def mock_get_failed(*args, **kwargs):
+        return MockFailedResponse()
+
+    if gateway_main.http_client is None:
+        gateway_main.http_client = httpx.AsyncClient()
+    monkeypatch.setattr(gateway_main.http_client, "get", mock_get_failed)
+
+    with pytest.raises(Exception):
+        await gateway_main.verify_token(token_new)
+
+    payload_old = await gateway_main.verify_token(token_old)
+    assert payload_old["sub"] == "user_123"
+    assert gateway_main.jwks_cache == jwks_old
+
+
+@pytest.mark.asyncio
+async def test_gateway_startup_offline_idp_recovery(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Test that the gateway successfully starts up even if the identity provider is offline,
+    and subsequent incoming requests can fetch keys on-demand once the IDP comes online.
+    """
+    from apps.gateway import main as gateway_main
+
+    async def mock_get_offline(*args, **kwargs):
+        raise httpx.ConnectError("Connection refused")
+
+    if gateway_main.http_client is None:
+        gateway_main.http_client = httpx.AsyncClient()
+    monkeypatch.setattr(gateway_main.http_client, "get", mock_get_offline)
+
+    monkeypatch.setattr(gateway_main, "jwks_cache", None)
+    await gateway_main.startup()
+
+    assert gateway_main.jwks_cache is None
+
+    jwks, token = generate_test_rsa_jwks_and_token("online-kid")
+
+    class MockOnlineResponse:
+        status_code = 200
+        def json(self):
+            return jwks
+
+    async def mock_get_online(*args, **kwargs):
+        return MockOnlineResponse()
+
+    monkeypatch.setattr(gateway_main.http_client, "get", mock_get_online)
+
+    payload = await gateway_main.verify_token(token)
+    assert payload["sub"] == "user_123"
+    assert gateway_main.jwks_cache == jwks
