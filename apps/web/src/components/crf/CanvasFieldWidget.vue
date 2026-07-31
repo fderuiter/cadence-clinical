@@ -4,7 +4,9 @@
     :class="[
       isSelected
         ? 'border-indigo-600 ring-2 ring-indigo-100'
-        : 'border-gray-200 hover:border-gray-300',
+        : hasWarning
+          ? 'border-amber-400 bg-amber-50/10 hover:border-amber-500'
+          : 'border-gray-200 hover:border-gray-300',
     ]"
     @click="selectField"
   >
@@ -167,6 +169,15 @@
         Delete
       </button>
     </div>
+
+    <!-- Layout Warning Banner -->
+    <div
+      v-if="hasWarning"
+      class="layout-warning bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded p-2 mt-3 flex items-start gap-1.5"
+    >
+      <span class="flex-shrink-0">⚠️</span>
+      <span class="warning-text font-medium">{{ warningMessage }}</span>
+    </div>
   </div>
 </template>
 
@@ -181,6 +192,14 @@ const props = defineProps({
   selectedFieldId: {
     type: String,
     default: null,
+  },
+  hasWarning: {
+    type: Boolean,
+    default: false,
+  },
+  warningMessage: {
+    type: String,
+    default: "",
   },
 });
 
