@@ -458,6 +458,19 @@ async def upgrade_existing_tables(conn) -> None:
             text("ALTER TABLE clinical_subjects ADD COLUMN unblinded_signature TEXT;")
         )
 
+    if subj_cols:
+        new_subj_cols = [
+            ("treatment_group", "VARCHAR"),
+            ("randomization_seed", "INTEGER"),
+            ("investigational_product_id", "VARCHAR(255)"),
+        ]
+        for col_name, col_type in new_subj_cols:
+            if col_name not in subj_cols:
+                print(f"Adding missing column {col_name} to clinical_subjects table...")
+                await conn.execute(
+                    text(f"ALTER TABLE clinical_subjects ADD COLUMN {col_name} {col_type};")
+                )
+
     # Deterministic legacy-subject backfill
     try:
         subj_res = await conn.execute(

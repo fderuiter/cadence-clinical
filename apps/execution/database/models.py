@@ -200,6 +200,11 @@ class ClinicalSubject(AuditedModel):
     kit_reference: Mapped[str] = mapped_column(String(255), nullable=True)
     enrollment_index: Mapped[int] = mapped_column(Integer, nullable=True)
 
+    # RTSM / Randomization fields
+    treatment_group: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    randomization_seed: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    investigational_product_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+
     @validates("status")
     def validate_status(self, key, value):
         """Validates that transitions of status obey the allowed-transition guard."""
