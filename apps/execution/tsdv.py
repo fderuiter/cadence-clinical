@@ -168,8 +168,7 @@ def evaluate_tsdv_requirement(
 
 
 def evaluate_bulk_tsdv(
-    config,
-    targets: List[Tuple[str, int, Optional[str]]]
+    config, targets: List[Tuple[str, int, Optional[str]]]
 ) -> List[TSDVTargetEvaluation]:
     """Evaluate multiple targets for TSDV requirements against the provided configuration.
 

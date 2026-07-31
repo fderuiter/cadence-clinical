@@ -1,15 +1,15 @@
 import pytest
-from pydantic import ValidationError
-
-import packages  # noqa: F401
 from execution.sdv_transport_models import (
+    BulkQueryGenerationRequest,
+    BulkQueryGenerationResponse,
     BulkSdvSignOffRequest,
     BulkSdvSignOffResponse,
     QueryTargetDescriptor,
-    BulkQueryGenerationRequest,
-    BulkQueryGenerationResponse,
 )
-from apps.execution.tsdv import evaluate_bulk_tsdv, TSDVTargetEvaluation
+from pydantic import ValidationError
+
+import packages  # noqa: F401
+from apps.execution.tsdv import TSDVTargetEvaluation, evaluate_bulk_tsdv
 
 
 class MockTSDVConfig:
@@ -68,7 +68,7 @@ def test_bulk_sdv_signoff_response_validation():
         "signed_count": 2,
         "signed_target_ids": ["OBS-01", "OBS-02"],
         "skipped_target_ids": ["OBS-03"],
-        "content_digest": "abcdef1234567890",
+        "content_digest": "abcdef1234567890",  # pragma: allowlist secret
         "timestamp_utc": "2026-10-31T12:00:00Z",
         "audit_tx": "tx-12345",
     }
@@ -165,9 +165,21 @@ def test_evaluate_bulk_tsdv_pure():
 
     targets = [
         ("SUB-01", 0, "LB"),  # Within initial N (2) -> True
-        ("SUB-02", 1, "DM"),  # Within initial N but domain DM is zero-SDV -> False (absolute priority)
-        ("SUB-03", 2, "VS"),  # Beyond initial N but domain VS is safety/full-SDV -> True (absolute priority)
-        ("SUB-04", 3, "LB"),  # Beyond initial N with random_sample_percentage = 0.0 -> False
+        (
+            "SUB-02",
+            1,
+            "DM",
+        ),  # Within initial N but domain DM is zero-SDV -> False (absolute priority)
+        (
+            "SUB-03",
+            2,
+            "VS",
+        ),  # Beyond initial N but domain VS is safety/full-SDV -> True (absolute priority)
+        (
+            "SUB-04",
+            3,
+            "LB",
+        ),  # Beyond initial N with random_sample_percentage = 0.0 -> False
     ]
 
     results = evaluate_bulk_tsdv(config, targets)
