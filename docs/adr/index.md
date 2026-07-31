@@ -163,3 +163,4 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-27: Exposing Document Storage and Study Archival REST Endpoints](2026-08-27-document-management-and-study-archival-endpoints.md)
 - [2026-08-27: CDASH-to-SDTM Domain Mapping & Mapped Record Database Persistence](2026-08-27-cdash-to-sdtm-domain-mapping-and-persistence.md)
 - [2026-08-26: eSignature-Backed Delegation of Authority (DOA) Log and Task Delegation Service](2026-08-26-esignature-backed-doa-task-delegation-service.md)
+- [2026-08-27: Offline Data Ingestion & Sync Engine](2026-08-27-offline-data-reconciliation-integrity.md)
