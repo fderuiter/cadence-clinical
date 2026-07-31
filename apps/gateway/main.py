@@ -719,9 +719,10 @@ def generate_sig_token(
     roles: list[str],
     batch_id: Optional[str] = None,
     semantic_action: Optional[str] = None,
+    acr: str = "high-assurance-step-up",
 ) -> str:
     """
-    Generate a short-lived signature token (JWT) valid for 60 seconds.
+    Generate a short-lived signature token (JWT) valid for 60 seconds following Keycloak step-up guidance.
     """
     now = time.time()
     payload = {
@@ -732,6 +733,8 @@ def generate_sig_token(
         "iat": now,
         "exp": now + 60.0,
         "jti": str(uuid.uuid4()),
+        "acr": acr,
+        "auth_time": now,
     }
     if batch_id:
         payload["batch_id"] = batch_id
@@ -841,6 +844,9 @@ async def signature_verification(request: Request, body: SignatureVerificationRe
                 derived_semantic = resolved.value
                 break
 
+    # Keycloak Step-Up approach: enforce high-assurance context reference (ACR)
+    step_up_acr = "high-assurance-step-up"
+
     # Generate Short-Lived Sig Token
     sig_token = generate_sig_token(
         user_id=token_user_id,
@@ -849,6 +855,7 @@ async def signature_verification(request: Request, body: SignatureVerificationRe
         roles=normalized_roles,
         batch_id=body.batch_id,
         semantic_action=derived_semantic,
+        acr=step_up_acr,
     )
     return {"sig_token": sig_token}
 

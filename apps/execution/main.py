@@ -134,6 +134,7 @@ from packages.security import (
 from packages.security.middleware import GatewayAuthMiddleware
 from packages.security.rbac import SITE_SCOPED_ROLES, can_access_study, mask_payload
 from packages.security.signing import generate_canonical_signature
+from packages.security.sig_token_verifier import verify_and_consume_sig_token
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
@@ -4333,48 +4334,14 @@ async def post_batch_sign_off(
 ) -> BatchSignOffResponse:
     """Perform a PI-only, atomic batch electronic-signature for form-, visit-, and subject-level sign-off."""
     # Secondary safety validation of the signature token batch-binding
-    sig_token = request.headers.get("X-Sig-Token")
-    if not sig_token:
-        raise HTTPException(
-            status_code=401,
-            detail="REAUTHENTICATION_REQUIRED",
-        )
-
-    from jose import JWTError, jwt
-
-    secret = os.getenv("GATEWAY_SECRET", "internal-gateway-secret-12345").encode()
-    try:
-        sig_payload = jwt.decode(sig_token, secret, algorithms=["HS256"])
-    except JWTError:
-        raise HTTPException(
-            status_code=401,
-            detail="REAUTHENTICATION_REQUIRED",
-        )
-
-    token_batch_id = sig_payload.get("batch_id")
-    if not token_batch_id:
-        raise HTTPException(
-            status_code=401,
-            detail="REAUTHENTICATION_REQUIRED",
-        )
-
-    # Compute expected batch_id
-    norm_study = str(payload.study_id).strip()
-    norm_type = str(payload.target_type).strip().upper()
-    sorted_ids = sorted([str(tid).strip() for tid in payload.target_ids])
-    norm_ids = ",".join(sorted_ids)
-    norm_reason = str(payload.signing_reason).strip()
-
-    binding_str = f"{norm_study}:{norm_type}:{norm_ids}:{norm_reason}"
-    import hashlib
-
-    computed_batch_id = hashlib.sha256(binding_str.encode("utf-8")).hexdigest()
-
-    if token_batch_id != computed_batch_id:
-        raise HTTPException(
-            status_code=401,
-            detail="REAUTHENTICATION_REQUIRED",
-        )
+    sig_token = request.headers.get("X-Sig-Token") or request.headers.get("x-sig-token")
+    user_id = getattr(request.state, "user_id", "unknown")
+    verify_and_consume_sig_token(
+        sig_token=sig_token,
+        user_id=user_id,
+        request_path=request.url.path,
+        payload_dict=payload.model_dump(),
+    )
 
     target_type_upper = payload.target_type.upper()
 
