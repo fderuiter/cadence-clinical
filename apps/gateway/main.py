@@ -168,7 +168,9 @@ SERVICES = {
     "ctms": os.getenv("CTMS_URL", "http://localhost:8005"),
     "notifications": os.getenv("NOTIFICATIONS_URL", "http://localhost:8006"),
     "quality": os.getenv("QUALITY_URL", "http://localhost:8005"),
-    "safety": os.getenv("SAFETY_URL", "http://localhost:8008"),  # Registered Safety microservice scaffold URL
+    "safety": os.getenv(
+        "SAFETY_URL", "http://localhost:8008"
+    ),  # Registered Safety microservice scaffold URL
     "tickets": os.getenv("TICKETS_URL", "http://localhost:8009"),
     "org": os.getenv("ORG_URL", "http://localhost:8012"),
     "eisf": os.getenv("EISF_URL", "http://localhost:8010"),
@@ -775,7 +777,7 @@ async def signature_verification(request: Request, body: SignatureVerificationRe
 
     # Keycloak Step-Up & ACR / Max-Age Guidance Integration
     # If the token has a low-assurance ACR or has exceeded max_age, step-up is mandatory.
-    acr_claim = claims.get("acr")
+    _ = claims.get("acr")
     auth_time_claim = claims.get("auth_time")
 
     # Example: If the original auth time is too old (e.g., max_age > 10 hours), or ACR is not high-assurance
