@@ -132,7 +132,7 @@ def step_run_tests(dry_run: bool) -> None:
                 "run",
                 "pytest",
                 "-n",
-                "auto",
+                "2",
                 "--junitxml",
                 JUNIT_REPORT,
                 "-q",

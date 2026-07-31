@@ -529,7 +529,7 @@ The in-app Tickets and Query Escalation service manages operational issues, supp
 
 ### Directory Mapping & Active Utilities
 * Active ticket service routes and controllers reside in `apps/tickets/main.py`.
-* Relational database tables and Alembic configuration reside in `apps/tickets/database.py` and `apps/tickets/models.py`.
+* Relational database tables and Alembic configuration reside in `apps/tickets/database.py` and `apps/tickets/models/__init__.py`.
 * Dynamic notification generation logic resides in `apps/tickets/notification_events.py`.
 * Gate-signed internal service notification dispatch resides in `apps/tickets/notifications_client.py`.
 * Automated background priority escalation loops reside in `apps/tickets/escalation.py`.

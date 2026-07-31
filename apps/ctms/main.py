@@ -900,8 +900,21 @@ async def list_monitoring_visits(
         stmt = stmt.where(MonitoringVisit.study_id == study_id)
     if site_id:
         stmt = stmt.where(MonitoringVisit.site_id == site_id)
+
+    # Scoping filter: if cra_id is not explicitly passed and user lacks elevated admin/auditor roles, default to user_id
+    elevated_roles = {
+        "Admin",
+        "System Admin",
+        "Auditor",
+        "Sponsor Admin",
+        "Supervisor",
+        "SYSTEM_ADMIN",
+    }
     if cra_id:
         stmt = stmt.where(MonitoringVisit.cra_id == cra_id)
+    elif not any(role in elevated_roles for role in principal.raw_roles):
+        stmt = stmt.where(MonitoringVisit.cra_id == user_id)
+
     if status:
         stmt = stmt.where(MonitoringVisit.status == status)
 
