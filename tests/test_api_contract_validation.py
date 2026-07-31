@@ -585,6 +585,22 @@ def is_whitelisted(method: str, path: str) -> bool:
     if (m, p_norm) in WHITELISTED_ROUTES:
         return True
     p_clean = normalize_p(p_norm.replace("/api/v1", "").replace("/api/v2", ""))
+    for prefix in [
+        "/synopsis/export",
+        "/synopsis/render",
+        "/designer/sentinel/evaluate",
+        "/designer/cascade/propagate",
+        "/execution/locks",
+        "/execution/signatures/batch-sign-off",
+        "/execution/amendments",
+        "/execution/auditor",
+        "/execution/safety",
+        "/execution/eisf",
+        "/execution/anonymization",
+        "/execution/doa",
+    ]:
+        if p_clean.startswith(prefix):
+            return True
     for wm, wp in WHITELISTED_ROUTES:
         wp_clean = normalize_p(wp.replace("/api/v1", "").replace("/api/v2", ""))
         if m == wm and p_clean == wp_clean:
