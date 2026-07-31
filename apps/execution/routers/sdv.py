@@ -416,7 +416,7 @@ async def sdv_signoff(
 
         # 3. Apply sign-off behavior
         verifier_id = current_user_id.get() or "system"
-        verified_at = datetime.now(timezone.utc)
+        verified_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
         # Update or create the matching SDVSignOff record
         stmt_signoff = select(SDVSignOff).where(
