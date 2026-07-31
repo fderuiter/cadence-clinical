@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1774
-- **Passed:** 1774 🟢
+- **Total Automated Test Cases Run:** 1828
+- **Passed:** 1828 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1502,6 +1502,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_reconciliation_version_index_increment` | `tests.test_sae_reconciliation` | Trace-14 | 🟢 PASSED | < 1s |
 | `test_safety_mutations_negative_signatures` | `tests.test_sae_reconciliation` | Trace-14 | 🟢 PASSED | < 1s |
 | `test_safety_reads_negative_signatures` | `tests.test_sae_reconciliation` | Trace-14 | 🟢 PASSED | < 1s |
+| `test_terminology_cache_functionality` | `tests.test_sae_reconciliation` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_alert_dispatch_failure_exception` | `tests.test_sae_reconciliation_jobs` | Trace-14 | 🟢 PASSED | < 1s |
 | `test_alert_dispatch_failure_non_2xx` | `tests.test_sae_reconciliation_jobs` | Trace-14 | 🟢 PASSED | < 1s |
 | `test_notifications_gxp_medical_monitor_alert` | `tests.test_sae_reconciliation_jobs` | *Regression/Helper* | 🟢 PASSED | < 1s |

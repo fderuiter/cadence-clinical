@@ -1419,6 +1419,106 @@
         }
       }
     },
+    "/api/v1/execution/subjects/{subject_id}/consents": {
+      "post": {
+        "summary": "Record Subject Consent Endpoint",
+        "description": "Record/upload a signed informed consent form (ICF) for a subject, clearing any requires_reconsent gate.",
+        "operationId": "record_subject_consent_endpoint_api_v1_execution_subjects__subject_id__consents_post",
+        "parameters": [
+          {
+            "name": "subject_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Subject Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubjectConsentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubjectConsentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/subjects/{subject_id}/consent": {
+      "post": {
+        "summary": "Record Subject Consent Endpoint",
+        "description": "Record/upload a signed informed consent form (ICF) for a subject, clearing any requires_reconsent gate.",
+        "operationId": "record_subject_consent_endpoint_api_v1_execution_subjects__subject_id__consent_post",
+        "parameters": [
+          {
+            "name": "subject_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Subject Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubjectConsentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubjectConsentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/execution/subjects/{subject_id}/screening": {
       "post": {
         "summary": "Evaluate And Transition Screening",
@@ -5291,6 +5391,12 @@
             ],
             "title": "Site Id",
             "description": "Optional site identifier for the targets"
+          },
+          "signing_reason": {
+            "type": "string",
+            "title": "Signing Reason",
+            "description": "GxP Part 11 signature meaning or reason",
+            "default": "CRA/monitor-gated bulk SDV sign-off"
           }
         },
         "type": "object",
@@ -5306,6 +5412,76 @@
       },
       "BulkSdvSignOffResponse": {
         "properties": {
+          "bulk_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bulk Id",
+            "description": "Unique bulk signature operation identifier"
+          },
+          "content_digest": {
+            "type": "string",
+            "title": "Content Digest",
+            "description": "SHA-256 digest of bulk signed data"
+          },
+          "timestamp_utc": {
+            "type": "string",
+            "title": "Timestamp Utc",
+            "description": "UTC ISO timestamp of signature execution"
+          },
+          "audit_tx": {
+            "type": "string",
+            "title": "Audit Tx",
+            "description": "Immutable GxP audit ledger transaction ID"
+          },
+          "verified_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified Count",
+            "description": "Total number of successfully verified SDV items"
+          },
+          "verified_target_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified Target Ids",
+            "description": "List of target IDs that were successfully signed"
+          },
+          "skipped_targets": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skipped Targets",
+            "description": "List of skipped targets with details on skip reasons"
+          },
           "signed_count": {
             "type": "integer",
             "title": "Signed Count",
@@ -5326,31 +5502,16 @@
             "type": "array",
             "title": "Skipped Target Ids",
             "description": "List of target IDs that were skipped or already signed"
-          },
-          "content_digest": {
-            "type": "string",
-            "title": "Content Digest",
-            "description": "SHA-256 digest of bulk signed data"
-          },
-          "timestamp_utc": {
-            "type": "string",
-            "title": "Timestamp Utc",
-            "description": "UTC ISO timestamp of signature execution"
-          },
-          "audit_tx": {
-            "type": "string",
-            "title": "Audit Tx",
-            "description": "Immutable GxP audit ledger transaction ID"
           }
         },
         "type": "object",
         "required": [
-          "signed_count",
-          "signed_target_ids",
-          "skipped_target_ids",
           "content_digest",
           "timestamp_utc",
-          "audit_tx"
+          "audit_tx",
+          "signed_count",
+          "signed_target_ids",
+          "skipped_target_ids"
         ],
         "title": "BulkSdvSignOffResponse",
         "description": "Response payload following bulk SDV sign-off execution.\n\nRequirements: PRD-SYS-001"
@@ -8404,6 +8565,51 @@
         ],
         "title": "ProblemDetails"
       },
+      "ProtocolVersionRef": {
+        "properties": {
+          "study_id": {
+            "type": "string",
+            "title": "Study Id",
+            "description": "Unique identifier of the clinical study (e.g. 'STUDY-101')."
+          },
+          "version_tag": {
+            "type": "string",
+            "title": "Version Tag",
+            "description": "The semantic or alphanumeric version tag representing the protocol version (e.g. '1.0', 'v2.1')."
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index",
+            "description": "Chronological, incrementing index of the protocol version (must be >= 1)."
+          },
+          "status": {
+            "$ref": "#/components/schemas/ProtocolVersionStatus",
+            "description": "Current controlled status of this protocol version."
+          }
+        },
+        "type": "object",
+        "required": [
+          "study_id",
+          "version_tag",
+          "version_index",
+          "status"
+        ],
+        "title": "ProtocolVersionRef",
+        "description": "Pydantic v2 model representing a reference to a specific clinical trial protocol version.\n\nThis contract is shared between Execution, eTMF, and other services to prevent\nthe duplication of ad-hoc protocol reference fields and ensure consistent cross-service\npayload structures, validation, and serialization."
+      },
+      "ProtocolVersionStatus": {
+        "type": "string",
+        "enum": [
+          "DRAFT",
+          "ACTIVE",
+          "LOCKED",
+          "PUBLISHED",
+          "ARCHIVED",
+          "FROZEN"
+        ],
+        "title": "ProtocolVersionStatus",
+        "description": "Controlled vocabulary of statuses for a clinical protocol or study version."
+      },
       "PublishAmendmentRequest": {
         "properties": {
           "study_id": {
@@ -9476,6 +9682,102 @@
         ],
         "title": "StudyEvent",
         "description": "Pydantic model representing an incoming study publication event.\n\nAttributes:\n    study_id (str): The unique identifier of the study.\n    payload (dict[str, Any]): The raw USDM protocol payload."
+      },
+      "SubjectConsentRequest": {
+        "properties": {
+          "protocol_version": {
+            "$ref": "#/components/schemas/ProtocolVersionRef"
+          },
+          "icf_signed": {
+            "type": "boolean",
+            "title": "Icf Signed"
+          },
+          "icf_signed_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icf Signed Date"
+          },
+          "requires_reconsent": {
+            "type": "boolean",
+            "title": "Requires Reconsent",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "protocol_version",
+          "icf_signed"
+        ],
+        "title": "SubjectConsentRequest",
+        "description": "Pydantic schema for recording a subject's consent to a protocol version."
+      },
+      "SubjectConsentResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "subject_id": {
+            "type": "string",
+            "title": "Subject Id"
+          },
+          "study_id": {
+            "type": "string",
+            "title": "Study Id"
+          },
+          "version_tag": {
+            "type": "string",
+            "title": "Version Tag"
+          },
+          "version_index": {
+            "type": "integer",
+            "title": "Version Index"
+          },
+          "icf_signed": {
+            "type": "boolean",
+            "title": "Icf Signed"
+          },
+          "icf_signed_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icf Signed Date"
+          },
+          "requires_reconsent": {
+            "type": "boolean",
+            "title": "Requires Reconsent"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "subject_id",
+          "study_id",
+          "version_tag",
+          "version_index",
+          "icf_signed",
+          "requires_reconsent",
+          "version"
+        ],
+        "title": "SubjectConsentResponse",
+        "description": "Pydantic schema returning subject consent details."
       },
       "SubjectCreate": {
         "properties": {
