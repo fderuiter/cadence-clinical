@@ -678,6 +678,10 @@ class ObservationResponse(BaseModel):
     matched_normal_bounds: Optional[str] = None
     protocol_version_tag: Optional[str] = None
     protocol_version_index: Optional[int] = None
+    range_indicator: Optional[str] = None
+    is_out_of_range: Optional[bool] = None
+    reference_range_low: Optional[float] = None
+    reference_range_high: Optional[float] = None
 
 
 class MigrationRuleCreate(BaseModel):
@@ -1671,6 +1675,16 @@ async def create_observation(
             change_reason=change_reason,
         )
 
+        ref_low = None
+        ref_high = None
+        if obs_db.matched_normal_bounds:
+            try:
+                bounds = json.loads(obs_db.matched_normal_bounds)
+                ref_low = bounds.get("low")
+                ref_high = bounds.get("high")
+            except Exception:
+                pass
+
         return ObservationResponse(
             id=obs_db.id,
             subject_id=obs_db.subject_id,
@@ -1693,6 +1707,10 @@ async def create_observation(
             matched_normal_bounds=obs_db.matched_normal_bounds,
             protocol_version_tag=obs_db.protocol_version_tag,
             protocol_version_index=obs_db.protocol_version_index,
+            range_indicator=obs_db.lab_indicator,
+            is_out_of_range=obs_db.lab_out_of_range,
+            reference_range_low=ref_low,
+            reference_range_high=ref_high,
         )
 
 
