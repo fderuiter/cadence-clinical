@@ -367,6 +367,58 @@ We define precise mathematical bounds, UI representations, and JSON payload stru
 }
 ```
 
+### 5.6 CRF Builder Engine & Compliance Integrity
+The CRF Builder provides interactive authoring of Case Report Forms (CRFs), allowing sponsors to compile digital protocols into standardized layouts while enforcing rigid GxP and 21 CFR Part 11 electronic data controls.
+
+#### PRD-CRF-001: CRF Authoring & Global Library Instantiation
+The system must support graphical CRF layout design and template authoring in the `apps/designer` microservice. Users must be able to load, reference, and instantiate version-controlled templates (including Forms, Visits, Arms, and Data Elements) directly from the Global Library. All instantiations must preserve a strict, non-destructive trace link (`INSTANTIATED_FROM` relationship) to the source template's global library ID and version index without modifying the source template itself.
+
+#### PRD-CRF-002: Real-time Contextual Preview
+The `apps/designer` workspace must provide a real-time, high-fidelity contextual preview of CRF layouts, simulating exact web rendering grids and input controls (e.g., VAS sliders, repeating tables, body maps) directly within the authoring canvas.
+
+#### PRD-CRF-003: Collaborative Workspace Review Workflow
+The platform must support structured peer review and sign-off status controls (`DRAFT`, `IN_REVIEW`, `APPROVED`, `PUBLISHED`, `ARCHIVED`) for CRF drafts within `apps/designer`. The system must gate layout modifications when a draft is in locked/frozen review states and require dual-signature authorization prior to formal publication.
+
+#### PRD-CRF-004: Declarative Rule Generation & Multi-Layer Edit Checks
+The CRF Builder must programmatically output declarative, CDISC USDM-aligned rule structures covering:
+- **Skip Logic:** Dynamic field rendering based on preceding question states.
+- **Field Constraints:** Complex range, data type, and logical constraints.
+- **Cross-Form Validation:** Edit checks comparing clinical values across different forms or repeat visits.
+These declarations must be fully compiled into open-standard XPath expressions by compilers in `apps/designer`.
+
+#### PRD-CRF-005: Simulation and Dry-Run Cycle Detection
+Before study activation, `apps/designer` must provide a dry-run execution environment. This environment must automatically scan compiled rules and transition graphs, executing cycle-detection algorithms to detect infinite skip-logic loops or circular dependencies (e.g., Field A dependent on Field B, which depends on Field A) and abort publication on detection.
+
+#### PRD-CRF-006: CDASH, USDM, and CSV Mapping Fidelity
+The spreadsheet ingestion and mapping pipeline inside `apps/designer` must maintain 100% data fidelity when parsing CDASH variables, USDM schema structures, or tabular CSV specifications, ensuring that CDASH data structures are fully mapped to target SQLModel schemas without data truncation.
+
+#### PRD-CRF-007: FHIR eSource Readiness & CDASH Pre-fill
+The `apps/interop` service must support ingestion of HL7 FHIR resources, mapping FHIR demographics and clinical variables (e.g., Vital Signs, Labs) into CDASH/SDTM-conformant CRF fields to enable automated form pre-fill capabilities.
+
+#### PRD-CRF-008: Regulatory & Protocol Document Export
+The clinical protocol rendering module in `apps/designer` must support the compilation and PDF/DOCX generation of completed protocols, study layouts, and annotated eCRFs. This operation must offload CPU-heavy rendering to separate thread pools to preserve event-loop performance.
+
+#### PRD-CRF-009: Role-Based Authorization Gates
+To comply with FDA 21 CFR Part 11, the platform must restrict CRF creation, draft modification, rules configuration, and publication to authorized roles (e.g., `sponsor_designer`, `sponsor_dm`, `sponsor_admin`, or `sysadmin`) while blocking auditor, investigator, or regulatory inspector roles from accessing mutation endpoints. This control is satisfied by reusing RBAC checks in `packages/security`.
+
+#### PRD-CRF-010: GxP Change-Reason Justification
+Every save, update, state transition, or soft deletion of a CRF layout, clinical rule, or template mapping must capture a mandatory, user-supplied change justification string (`X-Change-Reason` or `reason_for_change`) of at least 10 characters to satisfy 21 CFR Part 11 audit trail requirements.
+
+#### PRD-CRF-011: Immutable Audit Attribution
+All modifications to the CRF designs or clinical rules must write transaction-bound, append-only log entries containing the UTC timestamp, user ID, version index, and change justification to the immutable audit database ledger. This control is satisfied by reusing audit logging structures in `packages/security`.
+
+#### PRD-CRF-012: Version Pinning and Lock Enforcement
+Once a CRF design or rule-set is marked as `APPROVED` or `PUBLISHED`, the specific version index must be pinned. Any subsequent update must require incrementing the version index by 1 and creating a new draft version, preventing retroactive modifications to active study-arm parameters.
+
+#### PRD-CRF-013: Site & Tenant Data Isolation
+Sponsor metadata partitions and multi-tenant namespaces must be strictly isolated. Users belonging to Sponsor A must be restricted from reading, listing, or cloning CRF templates and drafts belonging to Sponsor B, rejecting unauthorized cross-sponsor queries with a `403 Forbidden` response.
+
+#### PRD-CRF-014: Failure Recovery & High Availability
+The local storage sync engine (`apps/subject-portal` and `apps/interop` sync) must preserve CRF drafts and unsynced submissions in client-side IndexedDB caches during network disconnects. Upon reconnect, the system must support safe, transactional batch flushes with deterministic conflict resolution to prevent silent data loss.
+
+#### PRD-CRF-015: In-Memory Accessibility Auditing
+The frontend rendering canvas must support automated, in-memory WCAG 2.1 accessibility scans to verify structural layout contrast ratios, element labeling, and keyboard focus routing during form design time.
+
 ---
 
 ## 6. Subject Operations & Randomization Workflows

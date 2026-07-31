@@ -10,29 +10,6 @@ from typing import List
 from fastapi import HTTPException, Request, status
 
 
-def _is_subject(roles: List[str]) -> bool:
-    """
-    Helper predicate checking if roles contains "subject".
-    """
-    return any(r.strip().lower() == "subject" for r in roles)
-
-
-def _is_data_manager(roles: List[str]) -> bool:
-    """
-    Helper predicate checking if roles contains standard data manager roles.
-    """
-    dm_roles = {"data manager", "data_manager", "cra"}
-    return any(r.strip().lower() in dm_roles for r in roles)
-
-
-def _is_investigator(roles: List[str]) -> bool:
-    """
-    Helper predicate checking if roles contains standard investigator roles.
-    """
-    inv_roles = {"site investigator", "site_investigator", "investigator", "crc"}
-    return any(r.strip().lower() in inv_roles for r in roles)
-
-
 def has_subject_role(request: Request) -> bool:
     """
     Check if the authenticated requester possesses the Subject/Patient role.
@@ -49,7 +26,7 @@ def has_subject_role(request: Request) -> bool:
     """
     roles_str = getattr(request.state, "roles", "")
     roles = [r.strip().lower() for r in roles_str.split(",") if r.strip()]
-    return _is_subject(roles)
+    return "subject" in roles
 
 
 def verify_subject_identity(request: Request, subject_id: str) -> None:
@@ -73,15 +50,6 @@ def verify_subject_identity(request: Request, subject_id: str) -> None:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied: Subject cannot access or mutate records of another subject.",
             )
-
-
-def subject_identity_guard(request: Request, subject_id: str) -> str:
-    """
-    A FastAPI guard dependency that binds the request's subject_id to the authenticated principal from request.state.
-    Reject cross-subject access (any payload subject_id not matching the authenticated subject) with 403.
-    """
-    verify_subject_identity(request, subject_id)
-    return subject_id
 
 
 def verify_subject_bulk_identity(request: Request, subject_ids: List[str]) -> None:

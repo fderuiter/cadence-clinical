@@ -41,6 +41,17 @@ class EPROSubmission(Base):
     sync_status: Mapped[str] = mapped_column(
         String(50), default="RESOLVED", nullable=False
     )  # RESOLVED, CONFLICT, IGNORED
+
+    # 21 CFR Part 11 Compliance Auditing Metadata
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=func.now(), nullable=False
+    )
+    created_by: Mapped[str] = mapped_column(
+        String(255), default="system", nullable=False
+    )
+    reason_for_change: Mapped[str] = mapped_column(
+        String(1000), default="ePRO mobile submission", nullable=False
+    )
     version_index: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
 
@@ -192,9 +203,6 @@ class EPROSubmissionDefeated(Base):
     diary_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     device_timestamp: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     answers: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
-    winning_answers: Mapped[Optional[Dict[str, Any]]] = mapped_column(
-        JSON, nullable=True
-    )
     offline_sync_markers: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False)
     status: Mapped[str] = mapped_column(
         String(100),

@@ -6,30 +6,18 @@ from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
-from signature import (
-    ApprovalStatus,
-    SignatureManifestation,
-    SigningReason,
-    SigningReasonCode,
-)
+from signature import ApprovalStatus, SignatureManifestation, SigningReason
 
 from packages.security.context import (
     audit_context,
     audit_context_decorator,
     current_signature_context,
-    current_signature_manifestation,
 )
 from packages.security.signing import (
     asymmetric_sign,
     asymmetric_verify,
     capture_certificate_identifiers,
-    compute_manifestation_hash,
     compute_sha256_hash,
-    get_server_certificate_pem,
-    get_server_private_key_pem,
-    serialize_manifestation_canonically,
-    sign_manifestation,
-    verify_manifestation,
 )
 
 
