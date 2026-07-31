@@ -87,7 +87,7 @@ def test_batch_signature_sign_off_success() -> None:
         "target_ids": ["form_vs_01", "form_lb_01", "form_ae_01"],
         "target_form_ids": ["form_vs_01", "form_lb_01", "form_ae_01"],
         "signing_reason": "I approve the accuracy and completeness of this casebook",
-        "password": "SecretPassword123!",
+        "password": "SecretPassword123!",  # pragma: allowlist secret
         "printed_name": "Dr. Alice Smith, MD",
     }
 
@@ -154,7 +154,7 @@ def test_batch_signature_empty_target_forms_returns_400() -> None:
         "target_ids": [],
         "target_form_ids": [],
         "signing_reason": "Sign-off",
-        "password": "Password123!",
+        "password": "Password123!",  # pragma: allowlist secret
         "printed_name": "Dr. Bob",
     }
 

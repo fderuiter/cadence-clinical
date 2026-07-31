@@ -74,7 +74,7 @@ def get_sig_token(
         "iat": time.time(),
         "exp": time.time() + 60.0,
     }
-    return jwt.encode(payload, "internal-gateway-secret-12345", algorithm="HS256")
+    return jwt.encode(payload, "internal-gateway-secret-12345", algorithm="HS256")  # pragma: allowlist secret
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -343,7 +343,7 @@ async def test_emergency_unblinding_generates_notification():
             change_reason="Emergency unblinding: patient in critical state",
             unblinded_access=True,
         )
-        headers["X-Sig-Token"] = get_sig_token(
+        headers["X-Sig-Token"] = get_sig_token(  # pragma: allowlist secret
             user_id="pi_doctor", roles="principal_investigator"
         )
 
@@ -372,7 +372,7 @@ async def test_emergency_unblinding_generates_notification():
             ),
         ):
             res = await client.post(
-                "/api/v1/execution/subjects/SUBJ-UNBLIND-99/unblind",
+                "/api/v1/execution/subjects/SUBJ-UNBLIND-99/unblind",  # pragma: allowlist secret
                 headers=headers,
                 json=unblind_payload,
             )

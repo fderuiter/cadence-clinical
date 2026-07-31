@@ -29,7 +29,7 @@ def test_eisf_document_record_creation() -> None:
         version="2.0",
         file_name="PI_CV_Smith_2026.pdf",
         file_size_bytes=1048576,
-        sha256_hash="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        sha256_hash="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",  # pragma: allowlist secret
         uploaded_by="crc_user_01",
         uploaded_at=now_iso,
         expiration_date="2028-12-31",

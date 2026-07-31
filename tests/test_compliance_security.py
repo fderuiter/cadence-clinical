@@ -89,8 +89,8 @@ def test_crypto_verifier_valid_signature():
 
     Requirements: PRD-SYS-001, 21 CFR Part 11
     """
-    secret = "secret-key-123"
-    payload_hash = "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e"
+    secret = "secret-key-123"  # pragma: allowlist secret
+    payload_hash = "a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e"  # pragma: allowlist secret
 
     import base64
     import hashlib
@@ -119,7 +119,7 @@ def test_crypto_verifier_invalid_signature():
     Requirements: PRD-SYS-001, 21 CFR Part 11
     """
     req = SignatureVerificationRequest(
-        payload_hash="a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e",
+        payload_hash="a591a6d40bf420404a011733cfb7b190d62c65bf0bcda32b57b277d9ad9f146e",  # pragma: allowlist secret
         signature_bytes_b64="invalid_b64_signature==",
         signer_id="user_pi_1",
         signing_reason="AUTHORS_APPROVAL",

@@ -18,8 +18,8 @@ def test_generate_casebook_manifest_structure() -> None:
     now_iso = datetime.now(timezone.utc).isoformat()
 
     form_digests = {
-        "form_vs_01": "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90",
-        "form_lb_01": "90f8e7d6c5b4a39281706f5e4d3c2b1a90f8e7d6c5b4a39281706f5e4d3c2b1a",
+        "form_vs_01": "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90",  # pragma: allowlist secret
+        "form_lb_01": "90f8e7d6c5b4a39281706f5e4d3c2b1a90f8e7d6c5b4a39281706f5e4d3c2b1a",  # pragma: allowlist secret
     }
 
     manifest = generator.generate_casebook_manifest(
