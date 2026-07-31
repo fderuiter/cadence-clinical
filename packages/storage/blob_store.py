@@ -16,7 +16,6 @@ class StorageObjectNotFoundError(Exception):
 
 
 class BlobStorageProvider(abc.ABC):
-
     @abc.abstractmethod
     async def put_object(
         self, key: str, data: bytes, expected_sha256: Optional[str] = None

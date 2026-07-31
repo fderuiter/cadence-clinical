@@ -1257,18 +1257,18 @@ def test_new_execution_permissions() -> None:
     Resources: tsdv_config, form_submission, pi_signoff, medical_coding, trial_lock, export_unmasked
     """
     from packages.security.rbac import (
+        ROLE_AUDITOR_CANONICAL,
+        ROLE_CRA_CANONICAL,
         ROLE_CRC,
+        ROLE_EXTERNAL_MONITOR,
         ROLE_INVESTIGATOR,
         ROLE_SPONSOR_DESIGNER,
         ROLE_SPONSOR_DM,
         ROLE_SPONSOR_MM,
         ROLE_SPONSOR_STATISTICIAN,
-        ROLE_CRA_CANONICAL,
         ROLE_SUBJECT,
-        ROLE_AUDITOR_CANONICAL,
-        ROLE_EXTERNAL_MONITOR,
-        ROLE_UNBLINDED_STATISTICIAN,
         ROLE_SYSADMIN,
+        ROLE_UNBLINDED_STATISTICIAN,
         Principal,
         has_permission,
     )
