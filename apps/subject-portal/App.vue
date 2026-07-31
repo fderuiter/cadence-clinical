@@ -767,7 +767,9 @@ function handleModalKeyDown(e) {
   const modal = document.getElementById("portal-sign-modal");
   if (!modal) return;
 
-  const selectors = ["input", "select", "textarea", "button"].map(tag => `${tag}:not([disabled])`).join(", ");
+  const selectors = ["input", "select", "textarea", "button"]
+    .map((tag) => `${tag}:not([disabled])`)
+    .join(", ");
   const elList = Array.from(modal.querySelectorAll(selectors));
   if (!elList.length) return;
 

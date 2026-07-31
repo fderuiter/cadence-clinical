@@ -416,7 +416,7 @@ const hidePopover = () => {
   border: 1px solid var(--border);
   border-radius: 0 0 6px 6px;
   padding: 16px;
-  outline: none;
+  outline: 2px solid transparent;
   font-family: var(--font-sans, system-ui, sans-serif);
   line-height: 1.6;
   font-size: 0.95rem;
