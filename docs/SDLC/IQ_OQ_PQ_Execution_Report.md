@@ -9,11 +9,11 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1737
-- **Passed:** 1737 🟢
-- **Failed/Errors:** 0 🔴
+- **Total Automated Test Cases Run:** 1740
+- **Passed:** 1730 🟢
+- **Failed/Errors:** 10 🔴
 - **Skipped:** 0 ⚪
-- **Overall Operational Pass Rate:** 100.00%
+- **Overall Operational Pass Rate:** 99.43%
 
 ## 2. Installation Qualification (IQ)
 
@@ -316,9 +316,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_s3_storage_provider_lifecycle` | `tests.test_blob_store` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_s3_storage_provider_not_found` | `tests.test_blob_store` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_verify_checksum` | `tests.test_blob_store` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_cdisc_cache_purge_expired` | `tests.test_cdisc_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_cdisc_cache_save_and_get` | `tests.test_cdisc_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_cdisc_cache_ttl_expiration` | `tests.test_cdisc_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cdisc_cache_gxp_audit_trail` | `tests.test_cdisc_cache` | *Regression/Helper* | 🔴 FAILED | < 1s |
+| `test_cdisc_cache_postgres_detection` | `tests.test_cdisc_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_cdisc_cache_purge_expired` | `tests.test_cdisc_cache` | *Regression/Helper* | 🔴 FAILED | < 1s |
+| `test_cdisc_cache_save_and_get` | `tests.test_cdisc_cache` | *Regression/Helper* | 🔴 FAILED | < 1s |
+| `test_cdisc_cache_ttl_expiration` | `tests.test_cdisc_cache` | *Regression/Helper* | 🔴 FAILED | < 1s |
 | `test_cdisc_library_client_get_cdash_domain_fallback` | `tests.test_cdisc_library_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cdisc_library_client_get_codelist_fallback` | `tests.test_cdisc_library_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cdisc_library_client_get_sdtm_domain_fallback` | `tests.test_cdisc_library_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -883,6 +885,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_literal_and_constant` | `tests.test_evaluator` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_client_configuration_env_vars` | `tests.test_evs_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_client_configuration_overrides` | `tests.test_evs_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_evs_client_caching_and_gxp_audit` | `tests.test_evs_client` | *Regression/Helper* | 🔴 FAILED | < 1s |
 | `test_get_concept_http_status_error_404` | `tests.test_evs_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_concept_invalid_json` | `tests.test_evs_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_concept_invalid_via_400` | `tests.test_evs_client` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1064,11 +1067,11 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_lab_reference_range_audit_and_triggers` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_lab_reference_range_crud_and_precision` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001 | 🟢 PASSED | < 1s |
 | `test_schema_evolution_migration_upgrade` | `tests.test_lab_reference_range_persistence` | PRD-LAB-001, PRD-QRY-005 | 🟢 PASSED | < 1s |
-| `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_scrambled_sequence` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
-| `test_layout_validation_valid` | `tests.test_layout_validator` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_layout_validation_integration` | `tests.test_layout_validator` | *Regression/Helper* | 🔴 FAILED | < 1s |
+| `test_layout_validation_invisible` | `tests.test_layout_validator` | *Regression/Helper* | 🔴 FAILED | < 1s |
+| `test_layout_validation_overlap` | `tests.test_layout_validator` | *Regression/Helper* | 🔴 FAILED | < 1s |
+| `test_layout_validation_scrambled_sequence` | `tests.test_layout_validator` | *Regression/Helper* | 🔴 FAILED | < 1s |
+| `test_layout_validation_valid` | `tests.test_layout_validator` | *Regression/Helper* | 🔴 FAILED | < 1s |
 | `test_ledger_sealing_and_validation` | `tests.test_ledger_and_triggers` | PRD-SYS-003 | 🟢 PASSED | < 1s |
 | `test_out_of_band_update_triggers_audit_entry` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_prevent_audit_ledger_seals_mutation` | `tests.test_ledger_and_triggers` | *Regression/Helper* | 🟢 PASSED | < 1s |

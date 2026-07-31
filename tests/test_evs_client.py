@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
+from sqlmodel import Session, select
 
 from apps.designer import (
     EVSNotFoundError,
@@ -11,6 +12,7 @@ from apps.designer import (
     NCIEVSClient,
 )
 from apps.designer.evs_client import normalize_concept
+from apps.designer.services.evs_client import EvsConceptCacheEntry
 
 
 @pytest.mark.asyncio
@@ -367,3 +369,87 @@ def test_normalize_concept_edge_cases():
         "system": "ncit",
         "valid": False,
     }
+
+
+@pytest.mark.asyncio
+async def test_evs_client_caching_and_gxp_audit():
+    """Test NCIEVSClient local persistent caching, expiration, and GxP audit fields.
+
+    Requirements: PRD-SYS-001
+    """
+    # Use in-memory SQLite for testing persistent cache
+    client = NCIEVSClient(cache_db_url="sqlite:///:memory:", default_ttl_seconds=2)
+
+    # First fetch (cache miss) - Mock API response
+    mock_response = MagicMock(spec=httpx.Response)
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "code": "C999",
+        "name": "Cache Concept",
+        "terminology": "ncit",
+        "active": True,
+    }
+
+    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+        mock_get.return_value = mock_response
+        result1 = await client.get_concept("C999")
+        assert result1 == {
+            "code": "C999",
+            "decode": "Cache Concept",
+            "system": "ncit",
+            "valid": True,
+        }
+        mock_get.assert_called_once()
+
+    # Verify database entry has version_index = 1 and GxP audit fields
+    with Session(client.engine) as session:
+        statement = select(EvsConceptCacheEntry).where(
+            EvsConceptCacheEntry.code == "C999"
+        )
+        db_entry = session.exec(statement).first()
+        assert db_entry is not None
+        assert db_entry.version_index == 1
+        assert db_entry.created_by == "system"
+        assert db_entry.reason_for_change == "Initial cache write"
+        assert db_entry.created_at is not None
+
+    # Second fetch (cache hit) - Should return from cache and NOT make a network call
+    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+        result2 = await client.get_concept("C999")
+        assert result2 == result1
+        mock_get.assert_not_called()
+
+    # Successive save/update (simulate re-fetching on expiration) - version_index should increment
+    mock_response_updated = MagicMock(spec=httpx.Response)
+    mock_response_updated.status_code = 200
+    mock_response_updated.json.return_value = {
+        "code": "C999",
+        "name": "Cache Concept Updated",
+        "terminology": "ncit",
+        "active": True,
+    }
+
+    # Force fetch bypassing cache
+    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+        mock_get.return_value = mock_response_updated
+        result3 = await client.get_concept("C999", use_cache=False)
+        assert result3["decode"] == "Cache Concept Updated"
+
+    # Wait for the cache entry to expire (TTL is 2 seconds)
+    import asyncio
+
+    await asyncio.sleep(2.1)
+
+    # Now call with cache enabled. It should see the expired cache entry, trigger a network request, and update the cache!
+    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get:
+        mock_get.return_value = mock_response_updated
+        result4 = await client.get_concept("C999", use_cache=True)
+        assert result4["decode"] == "Cache Concept Updated"
+        mock_get.assert_called_once()
+
+    with Session(client.engine) as session:
+        db_entry_updated = session.exec(statement).first()
+        assert db_entry_updated is not None
+        assert db_entry_updated.version_index == 2
+        assert db_entry_updated.reason_for_change == "Concept caching"
+        assert db_entry_updated.created_at == db_entry.created_at
