@@ -3,9 +3,12 @@
 Requirements: PRD-QRY-005, PRD-QRY-006, PRD-QRY-007
 """
 
+import uuid
 from datetime import datetime, timezone
 from enum import Enum
 from typing import List, Optional
+
+from execution.sdv_transport_models import BulkSdvSignOffRequest, BulkSdvSignOffResponse
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, model_validator
@@ -477,4 +480,177 @@ async def sdv_signoff(
             verified_at=re_signoff.verified_at,
             dropped_reason=re_signoff.dropped_reason,
             dropped_at=re_signoff.dropped_at,
+        )
+
+
+@router.post(
+    "/sdv/bulk-sign-off",
+    response_model=BulkSdvSignOffResponse,
+)
+async def bulk_sdv_signoff(
+    payload: BulkSdvSignOffRequest,
+    principal: Principal = Depends(require_permission("sdv:update")),
+    _study_scope: Principal = Depends(require_study_scope()),
+) -> BulkSdvSignOffResponse:
+    """CRA/monitor-gated bulk SDV sign-off endpoint for Field, Page, or Visit scopes."""
+    # Validate request-body
+    if not payload.reason_for_change or not payload.reason_for_change.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="GxP Part 11: reason_for_change cannot be blank."
+        )
+    if not payload.target_ids:
+        raise HTTPException(
+            status_code=400,
+            detail="target_ids list cannot be empty."
+        )
+
+    async with db_manager.get_session_maker()() as session:
+        async with session.begin():
+            # Set GxP write permission config if needed
+            await session.execute(
+                text("SELECT set_config('cadence.app_writing', 'true', true);")
+            )
+
+            # Validate Subject exists and is consistent with Study
+            stmt_subj = select(ClinicalSubject).where(
+                ClinicalSubject.subject_id == payload.subject_id,
+                ClinicalSubject.study_id == payload.study_id,
+            )
+            res_subj = await session.execute(stmt_subj)
+            subj_db = res_subj.scalars().first()
+            if not subj_db:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Subject not found or inconsistent study reference.",
+                )
+
+            signed_target_ids = []
+            skipped_target_ids = []
+
+            # 2. Scope-specific validation & fetching
+            if payload.scope == "FIELD":
+                stmt_obs = select(ClinicalObservation).where(
+                    ClinicalObservation.id.in_(payload.target_ids),
+                    ClinicalObservation.subject_id == payload.subject_id,
+                    ClinicalObservation.study_id == payload.study_id,
+                )
+                res_obs = await session.execute(stmt_obs)
+                obs_map = {obs.id: obs for obs in res_obs.scalars().all()}
+
+                # Verify that all provided target_ids actually exist
+                for tid in payload.target_ids:
+                    if tid not in obs_map:
+                        raise HTTPException(
+                            status_code=404,
+                            detail=f"Clinical observation {tid} not found or inconsistent reference.",
+                        )
+            elif payload.scope == "VISIT":
+                stmt_visit = select(ClinicalVisit).where(
+                    ClinicalVisit.id.in_(payload.target_ids),
+                    ClinicalVisit.subject_id == payload.subject_id,
+                    ClinicalVisit.study_id == payload.study_id,
+                )
+                res_visit = await session.execute(stmt_visit)
+                visit_map = {v.id: v for v in res_visit.scalars().all()}
+                for tid in payload.target_ids:
+                    if tid not in visit_map:
+                        raise HTTPException(
+                            status_code=404,
+                            detail=f"Clinical visit {tid} not found or inconsistent reference.",
+                        )
+            elif payload.scope == "PAGE":
+                stmt_page_obs = select(ClinicalObservation).where(
+                    ClinicalObservation.page_id.in_(payload.target_ids),
+                    ClinicalObservation.subject_id == payload.subject_id,
+                    ClinicalObservation.study_id == payload.study_id,
+                )
+                res_page_obs = await session.execute(stmt_page_obs)
+                existing_pages = {obs.page_id for obs in res_page_obs.scalars().all()}
+                for tid in payload.target_ids:
+                    if tid not in existing_pages:
+                        raise HTTPException(
+                            status_code=404,
+                            detail=f"Page ID {tid} not found or inconsistent reference.",
+                        )
+            else:
+                raise HTTPException(status_code=400, detail="Invalid scope.")
+
+            # 3. Apply sign-off behavior
+            verifier_id = current_user_id.get() or "system"
+            verified_at = datetime.now(timezone.utc).replace(tzinfo=None)
+            site_id = payload.site_id or (subj_db.site_id if hasattr(subj_db, "site_id") else None)
+
+            # Query existing SDVSignOff records for these targets
+            stmt_signoffs = select(SDVSignOff).where(
+                SDVSignOff.scope == payload.scope,
+                SDVSignOff.target_id.in_(payload.target_ids),
+                SDVSignOff.subject_id == payload.subject_id,
+                SDVSignOff.study_id == payload.study_id,
+            )
+            res_signoffs = await session.execute(stmt_signoffs)
+            existing_signoffs = {so.target_id: so for so in res_signoffs.scalars().all()}
+
+            # We process each target_id
+            for tid in payload.target_ids:
+                signoff_db = existing_signoffs.get(tid)
+                if signoff_db and signoff_db.is_verified:
+                    skipped_target_ids.append(tid)
+                    continue
+
+                if signoff_db:
+                    signoff_db.is_verified = True
+                    signoff_db.verified_by = verifier_id
+                    signoff_db.verified_at = verified_at
+                    signoff_db.dropped_reason = None
+                    signoff_db.dropped_at = None
+                else:
+                    signoff_db = SDVSignOff(
+                        scope=payload.scope,
+                        target_id=tid,
+                        subject_id=payload.subject_id,
+                        study_id=payload.study_id,
+                        site_id=site_id,
+                        is_verified=True,
+                        verified_by=verifier_id,
+                        verified_at=verified_at,
+                    )
+                    session.add(signoff_db)
+
+                # For FIELD scope, update the ClinicalObservation too
+                if payload.scope == "FIELD":
+                    obs_db = obs_map.get(tid)
+                    if obs_db:
+                        obs_db.is_sdv_verified = True
+                        obs_db.sdv_verified_by = verifier_id
+                        obs_db.sdv_verified_at = verified_at
+
+                signed_target_ids.append(tid)
+
+            # Commit the transaction
+            await session.commit()
+
+        # Compute SHA256 digest of signed payload data
+        import json
+        import hashlib
+        digest_payload = {
+            "study_id": payload.study_id,
+            "subject_id": payload.subject_id,
+            "scope": payload.scope,
+            "target_ids": sorted(payload.target_ids),
+            "reason_for_change": payload.reason_for_change,
+        }
+        serialized_digest = json.dumps(digest_payload, sort_keys=True)
+        content_digest = hashlib.sha256(serialized_digest.encode("utf-8")).hexdigest()
+
+        # Use current timestamp for UTC
+        timestamp_str = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+        return BulkSdvSignOffResponse(
+            signed_count=len(signed_target_ids),
+            signed_target_ids=signed_target_ids,
+            skipped_target_ids=skipped_target_ids,
+            content_digest=content_digest,
+            timestamp_utc=timestamp_str,
+            audit_tx="tx-" + str(uuid.uuid4())[:8],
         )

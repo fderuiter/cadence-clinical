@@ -12,6 +12,8 @@ import re
 import sys
 from typing import Dict, List, Tuple
 
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
 
 def normalize_line(line: str) -> str:
     """Normalizes a single line of code to make the duplication check robust.
@@ -129,7 +131,7 @@ def main() -> None:
     window_size = 15
 
     # 1. Collect all source files in the entire codebase as reference
-    scan_dirs = ["/app/apps", "/app/packages"]
+    scan_dirs = [os.path.join(REPO_ROOT, "apps"), os.path.join(REPO_ROOT, "packages")]
     all_files = []
     for directory in scan_dirs:
         if not os.path.exists(directory):
@@ -210,8 +212,8 @@ def main() -> None:
                         loc1 = filtered_locations[i]
                         loc2 = filtered_locations[j]
 
-                        p_file1 = os.path.relpath(loc1[0], "/app")
-                        p_file2 = os.path.relpath(loc2[0], "/app")
+                        p_file1 = os.path.relpath(loc1[0], REPO_ROOT).replace("\\", "/")
+                        p_file2 = os.path.relpath(loc2[0], REPO_ROOT).replace("\\", "/")
 
                         if p_file1 == p_file2:
                             continue
@@ -272,8 +274,8 @@ def main() -> None:
     # Write summary
     summary_data = {"duplicates": []}
     for loc1, loc2 in duplicates_found:
-        p_file1 = os.path.relpath(loc1[0], "/app")
-        p_file2 = os.path.relpath(loc2[0], "/app")
+        p_file1 = os.path.relpath(loc1[0], REPO_ROOT).replace("\\", "/")
+        p_file2 = os.path.relpath(loc2[0], REPO_ROOT).replace("\\", "/")
         summary_data["duplicates"].append(
             {
                 "loc1": {"file": p_file1, "start": loc1[1], "end": loc1[2]},
@@ -282,7 +284,8 @@ def main() -> None:
             }
         )
     try:
-        with open("duplication_summary.json", "w", encoding="utf-8") as f:
+        summary_path = os.path.join(REPO_ROOT, "duplication_summary.json")
+        with open(summary_path, "w", encoding="utf-8") as f:
             json.dump(summary_data, f, indent=2)
     except Exception as e:
         print(f"Error writing duplication summary: {e}")
@@ -294,8 +297,8 @@ def main() -> None:
         )
 
         for loc1, loc2 in duplicates_found:
-            p_file1 = os.path.relpath(loc1[0], "/app")
-            p_file2 = os.path.relpath(loc2[0], "/app")
+            p_file1 = os.path.relpath(loc1[0], REPO_ROOT).replace("\\", "/")
+            p_file2 = os.path.relpath(loc2[0], REPO_ROOT).replace("\\", "/")
             print(f"  - Block 1: \033[93m{p_file1}\033[0m (Lines {loc1[1]}-{loc1[2]})")
             print(f"    Block 2: \033[93m{p_file2}\033[0m (Lines {loc2[1]}-{loc2[2]})")
             print("    Code Preview:")

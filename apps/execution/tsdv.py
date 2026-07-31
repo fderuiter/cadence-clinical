@@ -167,6 +167,7 @@ def evaluate_tsdv_requirement(
         return False, subject_selected, field_decision, explanation
 
 
+# Phase 1: Bulk TSDV evaluation helper (PRD-SYS-001)
 def evaluate_bulk_tsdv(
     config, targets: List[Tuple[str, int, Optional[str]]]
 ) -> List[TSDVTargetEvaluation]:
