@@ -8,7 +8,6 @@ import os
 import tempfile
 import uuid
 import zipfile
-from typing import Dict
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import FileResponse
@@ -20,7 +19,7 @@ from packages.security.middleware import get_current_user
 router = APIRouter(prefix="/api/v1/archive", tags=["Archive"])
 
 # In-memory database of archival jobs
-_ARCHIVE_JOBS: Dict[str, dict] = {}
+_ARCHIVE_JOBS: dict[str, dict] = {}
 
 
 def enforce_permission(request: Request, required_permission: str) -> None:

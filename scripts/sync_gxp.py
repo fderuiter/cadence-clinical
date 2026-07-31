@@ -112,14 +112,14 @@ def _merge_reports(main_path: str, notif_path: str, dest_path: str) -> None:
     import xml.etree.ElementTree as ET
 
     try:
-        main_tree = ET.parse(main_path)
+        main_tree = ET.parse(main_path)  # nosec B314
         main_root = main_tree.getroot()
 
         main_suite = main_root.find("testsuite")
         if main_suite is None:
             main_suite = main_root
 
-        notif_tree = ET.parse(notif_path)
+        notif_tree = ET.parse(notif_path)  # nosec B314
         notif_root = notif_tree.getroot()
         notif_suite = notif_root.find("testsuite")
         if notif_suite is None:

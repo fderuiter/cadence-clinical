@@ -3,7 +3,7 @@
 Requirements: PRD-SYS-001
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from execution.lock_models import (
@@ -24,7 +24,7 @@ def test_lock_enforcement_form_level_blocked() -> None:
 
     Requirements: PRD-SYS-001
     """
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now_iso = datetime.now(UTC).isoformat()
     form_lock = DataLockRecord(
         lock_id="dl_form_01",
         study_id="study_01",
@@ -54,7 +54,7 @@ def test_lock_enforcement_field_level_blocked() -> None:
 
     Requirements: PRD-SYS-001
     """
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now_iso = datetime.now(UTC).isoformat()
     field_lock = DataLockRecord(
         lock_id="dl_field_01",
         study_id="study_01",

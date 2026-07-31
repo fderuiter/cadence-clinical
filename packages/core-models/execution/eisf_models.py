@@ -3,13 +3,12 @@
 Requirements: PRD-SYS-001
 """
 
-from enum import Enum
-from typing import Optional
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class EISFTaxonomyCategoryEnum(str, Enum):
+class EISFTaxonomyCategoryEnum(StrEnum):
     """DIA eISF / Regulatory Binder document taxonomy categories.
 
     Requirements: PRD-SYS-001
@@ -44,7 +43,7 @@ class EISFDocumentRecord(BaseModel):
     sha256_hash: str = Field(..., description="SHA-256 integrity checksum hex string")
     uploaded_by: str = Field(..., description="User ID of uploader")
     uploaded_at: str = Field(..., description="UTC ISO timestamp of upload")
-    expiration_date: Optional[str] = Field(
+    expiration_date: str | None = Field(
         None, description="Optional document expiration date (YYYY-MM-DD)"
     )
     is_redacted: bool = Field(

@@ -3,8 +3,6 @@
 Requirements: PRD-SYS-001
 """
 
-from typing import List
-
 from execution.doa_models import (
     DOAAssignmentRecord,
     DOATaskDelegationEnum,
@@ -33,7 +31,7 @@ class AddDOAAssignmentRequest(BaseModel):
     personnel_name: str = Field(..., description="Full legal name")
     personnel_email: str = Field(..., description="Email address")
     role: DOATaskRoleEnum = Field(..., description="Site role")
-    delegated_tasks: List[DOATaskDelegationEnum] = Field(
+    delegated_tasks: list[DOATaskDelegationEnum] = Field(
         ..., description="List of delegated tasks"
     )
     start_date: str = Field(..., description="Delegation start date (YYYY-MM-DD)")
@@ -95,12 +93,12 @@ async def sign_off_doa_assignment_endpoint(
         raise HTTPException(status_code=404, detail=str(exc))
 
 
-@router.get("/log/{study_id}/{site_id}", response_model=List[DOAAssignmentRecord])
+@router.get("/log/{study_id}/{site_id}", response_model=list[DOAAssignmentRecord])
 async def get_site_doa_log_endpoint(
     study_id: str,
     site_id: str,
     current_user: dict = Depends(get_current_user),
-) -> List[DOAAssignmentRecord]:
+) -> list[DOAAssignmentRecord]:
     """Retrieve site-isolated Delegation of Authority log entries.
 
     Requirements: PRD-SYS-001

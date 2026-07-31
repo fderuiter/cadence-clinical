@@ -6,6 +6,7 @@ import { designerService } from "../src/api/designer";
 import { executionService } from "../src/api/execution";
 import { etmfService } from "../src/api/etmf";
 import { interopService } from "../src/api/interop";
+import apiService from "../src/services/api";
 
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch;
@@ -269,6 +270,12 @@ describe("Gateway API Clients and Service Modules Unit Tests", () => {
         "http://localhost:8000/api/v1/interop/subjects/SUB-01/instruments",
         expect.objectContaining({ method: "GET" })
       );
+    });
+  });
+
+  describe("services/api wrapper", () => {
+    it("should re-export apiClient correctly as the default export", () => {
+      expect(apiService).toBe(apiClient);
     });
   });
 });

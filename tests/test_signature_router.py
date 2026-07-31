@@ -6,7 +6,6 @@ Requirements: PRD-SYS-001
 import hashlib
 import os
 import time
-from typing import Optional
 
 from fastapi.testclient import TestClient
 from jose import jwt
@@ -26,7 +25,7 @@ def _make_auth_headers(
     roles: str = "principal_investigator",
     change_reason: str = "PI Casebook Approval",
     action: str = "/api/v1/execution/signatures/batch-sign-off",
-    payload: Optional[dict] = None,
+    payload: dict | None = None,
 ) -> dict:
     """Generate signed Gateway authentication headers with X-Sig-Token and batch binding for testing."""
     timestamp = str(time.time())

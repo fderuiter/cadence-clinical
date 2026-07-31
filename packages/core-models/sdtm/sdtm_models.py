@@ -5,8 +5,6 @@ Defines schemas with GxP audit metadata (inheriting from AuditableModel)
 for storing transformed SDTM domain data.
 """
 
-from typing import Optional, Union
-
 from pydantic import Field, field_validator
 
 from sdtm.models import AuditableModel, validate_dtc_format
@@ -20,20 +18,20 @@ class SDTMRecordDM(AuditableModel):
     STUDYID: str = Field(..., description="Study Identifier (Required)")
     DOMAIN: str = Field("DM", description="Domain Abbreviation (Required)")
     USUBJID: str = Field(..., description="Unique Subject Identifier (Required)")
-    SUBJID: Optional[str] = Field(None, description="Subject Identifier (Expected)")
-    RFSTDTC: Optional[str] = Field(
+    SUBJID: str | None = Field(None, description="Subject Identifier (Expected)")
+    RFSTDTC: str | None = Field(
         None, description="Subject Reference Start Date/Time (Expected)"
     )
-    BRTHDTC: Optional[str] = Field(None, description="Date of Birth (Permissible)")
-    AGE: Optional[Union[int, float]] = Field(None, description="Age (Expected)")
-    AGEU: Optional[str] = Field(None, description="Age Units (Expected)")
-    SEX: Optional[str] = Field(
+    BRTHDTC: str | None = Field(None, description="Date of Birth (Permissible)")
+    AGE: int | float | None = Field(None, description="Age (Expected)")
+    AGEU: str | None = Field(None, description="Age Units (Expected)")
+    SEX: str | None = Field(
         None, description="Sex (Required, normalizes to 'M', 'F', 'U')"
     )
-    RACE: Optional[str] = Field(
+    RACE: str | None = Field(
         None, description="Race (Required, normalizes to CDISC RACE CT)"
     )
-    ETHNIC: Optional[str] = Field(None, description="Ethnic Group")
+    ETHNIC: str | None = Field(None, description="Ethnic Group")
 
     @field_validator("STUDYID", "DOMAIN", "USUBJID")
     @classmethod
@@ -44,7 +42,7 @@ class SDTMRecordDM(AuditableModel):
 
     @field_validator("RFSTDTC", "BRTHDTC")
     @classmethod
-    def validate_dates(cls, v: Optional[str]) -> Optional[str]:
+    def validate_dates(cls, v: str | None) -> str | None:
         return validate_dtc_format(v)
 
 
@@ -60,15 +58,13 @@ class SDTMRecordAE(AuditableModel):
     AETERM: str = Field(
         ..., description="Reported Term for the Adverse Event (Required)"
     )
-    AEDECOD: Optional[str] = Field(
-        None, description="Dictionary-Derived Term (Expected)"
-    )
-    AESEV: Optional[str] = Field(None, description="Severity/Intensity (Permissible)")
+    AEDECOD: str | None = Field(None, description="Dictionary-Derived Term (Expected)")
+    AESEV: str | None = Field(None, description="Severity/Intensity (Permissible)")
     AESER: str = Field(..., description="Serious Adverse Event Flag (Required)")
-    AESTDTC: Optional[str] = Field(
+    AESTDTC: str | None = Field(
         None, description="Start Date/Time of Adverse Event (Expected)"
     )
-    AEENDTC: Optional[str] = Field(
+    AEENDTC: str | None = Field(
         None, description="End Date/Time of Adverse Event (Expected)"
     )
 
@@ -88,7 +84,7 @@ class SDTMRecordAE(AuditableModel):
 
     @field_validator("AESTDTC", "AEENDTC")
     @classmethod
-    def validate_dates(cls, v: Optional[str]) -> Optional[str]:
+    def validate_dates(cls, v: str | None) -> str | None:
         return validate_dtc_format(v)
 
 
@@ -103,25 +99,21 @@ class SDTMRecordVS(AuditableModel):
     VSSEQ: int = Field(..., description="Sequence Number (Required)")
     VSTESTCD: str = Field(..., description="Vital Signs Test Short Code (Required)")
     VSTEST: str = Field(..., description="Vital Signs Test Name (Required)")
-    VSORRES: Optional[Union[int, float]] = Field(
-        None, description="Original Result (Expected)"
-    )
-    VSORRESU: Optional[str] = Field(None, description="Original Result Unit (Expected)")
-    VSSTRESC: Optional[str] = Field(
+    VSORRES: int | float | None = Field(None, description="Original Result (Expected)")
+    VSORRESU: str | None = Field(None, description="Original Result Unit (Expected)")
+    VSSTRESC: str | None = Field(
         None, description="Standardized Result in Character Format (Expected)"
     )
-    VSSTRESN: Optional[float] = Field(
+    VSSTRESN: float | None = Field(
         None, description="Standardized Result in Numeric Format (Expected)"
     )
-    VSSTRESU: Optional[str] = Field(
+    VSSTRESU: str | None = Field(
         None, description="Standardized Result Unit (Expected)"
     )
-    VSDTC: Optional[str] = Field(
+    VSDTC: str | None = Field(
         None, description="Date/Time of Vital Signs Measurement (Expected)"
     )
-    VSDY: Optional[int] = Field(
-        None, description="Study Day of Vital Signs Measurement"
-    )
+    VSDY: int | None = Field(None, description="Study Day of Vital Signs Measurement")
 
     @field_validator("STUDYID", "DOMAIN", "USUBJID", "VSTESTCD", "VSTEST")
     @classmethod
@@ -139,7 +131,7 @@ class SDTMRecordVS(AuditableModel):
 
     @field_validator("VSDTC")
     @classmethod
-    def validate_dates(cls, v: Optional[str]) -> Optional[str]:
+    def validate_dates(cls, v: str | None) -> str | None:
         return validate_dtc_format(v)
 
 
@@ -154,21 +146,21 @@ class SDTMRecordLB(AuditableModel):
     LBSEQ: int = Field(..., description="Sequence Number (Required)")
     LBTESTCD: str = Field(..., description="Lab Test Short Code (Required)")
     LBTEST: str = Field(..., description="Lab Test Name (Required)")
-    LBORRES: Optional[str] = Field(None, description="Original Result (Expected)")
-    LBORRESU: Optional[str] = Field(None, description="Original Result Unit (Expected)")
-    LBSTRESC: Optional[str] = Field(
+    LBORRES: str | None = Field(None, description="Original Result (Expected)")
+    LBORRESU: str | None = Field(None, description="Original Result Unit (Expected)")
+    LBSTRESC: str | None = Field(
         None, description="Standardized Result in Character Format (Expected)"
     )
-    LBSTRESN: Optional[float] = Field(
+    LBSTRESN: float | None = Field(
         None, description="Standardized Result in Numeric Format (Expected)"
     )
-    LBSTRESU: Optional[str] = Field(
+    LBSTRESU: str | None = Field(
         None, description="Standardized Result Unit (Expected)"
     )
-    LBDTC: Optional[str] = Field(
+    LBDTC: str | None = Field(
         None, description="Date/Time of Specimen Collection (Expected)"
     )
-    LBDY: Optional[int] = Field(None, description="Study Day of Specimen Collection")
+    LBDY: int | None = Field(None, description="Study Day of Specimen Collection")
 
     @field_validator("STUDYID", "DOMAIN", "USUBJID", "LBTESTCD", "LBTEST")
     @classmethod
@@ -186,7 +178,7 @@ class SDTMRecordLB(AuditableModel):
 
     @field_validator("LBDTC")
     @classmethod
-    def validate_dates(cls, v: Optional[str]) -> Optional[str]:
+    def validate_dates(cls, v: str | None) -> str | None:
         return validate_dtc_format(v)
 
 
@@ -200,13 +192,11 @@ class SDTMRecordSV(AuditableModel):
     USUBJID: str = Field(..., description="Unique Subject Identifier (Required)")
     SVSEQ: int = Field(..., description="Sequence Number (Required)")
     VISIT: str = Field(..., description="Visit Name (Required)")
-    SVSTDTC: Optional[str] = Field(
-        None, description="Start Date/Time of Visit (Required)"
-    )
-    SVENDTC: Optional[str] = Field(
+    SVSTDTC: str | None = Field(None, description="Start Date/Time of Visit (Required)")
+    SVENDTC: str | None = Field(
         None, description="End Date/Time of Visit (Permissible)"
     )
-    SVDY: Optional[int] = Field(None, description="Study Day of Visit")
+    SVDY: int | None = Field(None, description="Study Day of Visit")
 
     @field_validator("STUDYID", "DOMAIN", "USUBJID", "VISIT")
     @classmethod
@@ -224,7 +214,7 @@ class SDTMRecordSV(AuditableModel):
 
     @field_validator("SVSTDTC", "SVENDTC")
     @classmethod
-    def validate_dates(cls, v: Optional[str]) -> Optional[str]:
+    def validate_dates(cls, v: str | None) -> str | None:
         return validate_dtc_format(v)
 
 
@@ -238,9 +228,9 @@ class SDTMRecordCM(AuditableModel):
     USUBJID: str = Field(..., description="Unique Subject Identifier (Required)")
     CMSEQ: int = Field(..., description="Sequence Number (Required)")
     CMTRT: str = Field(..., description="Reported Name of Medication (Required)")
-    CMDECOD: Optional[str] = Field(None, description="Standardized Medication Name")
-    CMSTDTC: Optional[str] = Field(None, description="Start Date/Time of Medication")
-    CMENDTC: Optional[str] = Field(None, description="End Date/Time of Medication")
+    CMDECOD: str | None = Field(None, description="Standardized Medication Name")
+    CMSTDTC: str | None = Field(None, description="Start Date/Time of Medication")
+    CMENDTC: str | None = Field(None, description="End Date/Time of Medication")
 
     @field_validator("STUDYID", "DOMAIN", "USUBJID", "CMTRT")
     @classmethod
@@ -258,7 +248,7 @@ class SDTMRecordCM(AuditableModel):
 
     @field_validator("CMSTDTC", "CMENDTC")
     @classmethod
-    def validate_dates(cls, v: Optional[str]) -> Optional[str]:
+    def validate_dates(cls, v: str | None) -> str | None:
         return validate_dtc_format(v)
 
 
@@ -273,8 +263,8 @@ class SDTMRecordDS(AuditableModel):
     DSSEQ: int = Field(..., description="Sequence Number (Required)")
     DSTERM: str = Field(..., description="Reported Term for Disposition Event")
     DSDECOD: str = Field(..., description="Standardized Disposition Term")
-    DSCAT: Optional[str] = Field(None, description="Category of Disposition Event")
-    DSSTDTC: Optional[str] = Field(
+    DSCAT: str | None = Field(None, description="Category of Disposition Event")
+    DSSTDTC: str | None = Field(
         None, description="Start Date/Time of Disposition Event"
     )
 
@@ -294,7 +284,7 @@ class SDTMRecordDS(AuditableModel):
 
     @field_validator("DSSTDTC")
     @classmethod
-    def validate_dates(cls, v: Optional[str]) -> Optional[str]:
+    def validate_dates(cls, v: str | None) -> str | None:
         return validate_dtc_format(v)
 
 
@@ -308,11 +298,9 @@ class SDTMRecordMH(AuditableModel):
     USUBJID: str = Field(..., description="Unique Subject Identifier (Required)")
     MHSEQ: int = Field(..., description="Sequence Number (Required)")
     MHTERM: str = Field(..., description="Reported Term for Medical History")
-    MHDECOD: Optional[str] = Field(
-        None, description="Standardized Medical History Term"
-    )
-    MHCAT: Optional[str] = Field(None, description="Category of Medical History")
-    MHDTC: Optional[str] = Field(None, description="Date/Time of History")
+    MHDECOD: str | None = Field(None, description="Standardized Medical History Term")
+    MHCAT: str | None = Field(None, description="Category of Medical History")
+    MHDTC: str | None = Field(None, description="Date/Time of History")
 
     @field_validator("STUDYID", "DOMAIN", "USUBJID", "MHTERM")
     @classmethod
@@ -330,5 +318,5 @@ class SDTMRecordMH(AuditableModel):
 
     @field_validator("MHDTC")
     @classmethod
-    def validate_dates(cls, v: Optional[str]) -> Optional[str]:
+    def validate_dates(cls, v: str | None) -> str | None:
         return validate_dtc_format(v)

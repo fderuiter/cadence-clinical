@@ -1,6 +1,6 @@
 import hashlib
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from io import BytesIO
 
 from execution.econsent_models import (
@@ -116,7 +116,7 @@ async def process_econsent_signature(
     ):
         raise ValueError("Invalid OTP authentication code")
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     sig_hash = hashlib.sha256(
         f"{payload.subject_id}:{payload.icf_version_id}:{now.isoformat()}".encode()
     ).hexdigest()
@@ -221,7 +221,7 @@ class EConsentWorkflowEngine:
 
         Requirements: PRD-SYS-001
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         sig_hash = hashlib.sha256(
             f"{subject_id}:{icf_version_id}:{now.isoformat()}".encode()
         ).hexdigest()

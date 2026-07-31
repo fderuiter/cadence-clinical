@@ -5,7 +5,7 @@ Provides deterministic pseudonymization, stable per-subject date-shifting, and a
 
 import re
 from datetime import timedelta
-from typing import Any, Dict, List, Union
+from typing import Any
 
 from dateutil import parser as date_parser
 
@@ -95,7 +95,7 @@ def shift_partial_date(date_str: str, shift_days: int) -> str:
     return shift_date_string(original_str, shift_days)
 
 
-def deidentify_record(row: Dict[str, Any], salt: str) -> Dict[str, Any]:
+def deidentify_record(row: dict[str, Any], salt: str) -> dict[str, Any]:
     """
     Transforms a single SDTM/ADaM record without mutating the input.
     """
@@ -155,9 +155,9 @@ def deidentify_record(row: Dict[str, Any], salt: str) -> Dict[str, Any]:
 
 
 def deidentify_export_data(
-    export_data: Union[Dict[str, List[Dict[str, Any]]], List[Dict[str, Any]]],
+    export_data: dict[str, list[dict[str, Any]]] | list[dict[str, Any]],
     salt: str,
-) -> Union[Dict[str, List[Dict[str, Any]]], List[Dict[str, Any]]]:
+) -> dict[str, list[dict[str, Any]]] | list[dict[str, Any]]:
     """
     Applies non-mutating de-identification transform over lists or bundles of SDTM/ADaM records.
     """

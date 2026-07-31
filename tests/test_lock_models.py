@@ -3,7 +3,7 @@
 Requirements: PRD-SYS-001
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from execution.lock_models import (
     DataLockRecord,
@@ -20,7 +20,7 @@ def test_data_lock_record_creation() -> None:
 
     Requirements: PRD-SYS-001
     """
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now_iso = datetime.now(UTC).isoformat()
 
     lock_record = DataLockRecord(
         lock_id="dl_001",
@@ -47,7 +47,7 @@ def test_data_unlock_record_creation() -> None:
 
     Requirements: PRD-SYS-001
     """
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now_iso = datetime.now(UTC).isoformat()
 
     unlock_record = DataUnlockRecord(
         unlock_id="du_001",

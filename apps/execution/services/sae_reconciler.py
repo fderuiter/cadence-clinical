@@ -3,7 +3,7 @@
 Requirements: PRD-SYS-001
 """
 
-from typing import Any, Dict, List
+from typing import Any
 
 from execution.safety_models import SAECaseRecord
 
@@ -18,9 +18,9 @@ class SAEReconciler:
 
     def reconcile_edc_and_safety(
         self,
-        edc_ae_events: List[Dict[str, Any]],
-        safety_cases: List[SAECaseRecord],
-    ) -> Dict[str, Any]:
+        edc_ae_events: list[dict[str, Any]],
+        safety_cases: list[SAECaseRecord],
+    ) -> dict[str, Any]:
         """Perform reconciliation between EDC AE events and Safety Database ICSR cases.
 
         Args:
@@ -31,7 +31,7 @@ class SAEReconciler:
             Structured reconciliation result report with flagged discrepancies.
         """
         matched_count = 0
-        discrepancies: List[Dict[str, Any]] = []
+        discrepancies: list[dict[str, Any]] = []
 
         safety_by_sub = {c.subject_id: c for c in safety_cases}
 

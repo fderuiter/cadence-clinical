@@ -12,10 +12,9 @@ Compliance:
 import os
 import subprocess
 import sys
-from typing import List
 
 
-def get_staged_files() -> List[str]:
+def get_staged_files() -> list[str]:
     """Retrieve the list of currently staged files in git.
 
     Returns:
@@ -36,7 +35,7 @@ def get_staged_files() -> List[str]:
         return []
 
 
-def should_trigger_schema_generation(staged_files: List[str]) -> bool:
+def should_trigger_schema_generation(staged_files: list[str]) -> bool:
     """Determine if any staged files should trigger OpenAPI regeneration.
 
     Args:

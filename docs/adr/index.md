@@ -10,6 +10,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 ## Domain-Based Decisions Log
 
 ### 1. Core Platform & Execution Engine
+- [2026-07-31: Modernize Python 3.10 Type Hint Syntax and Lock Ruff Rule Enforcements](2026-07-31-modernize-python-310-type-hint-syntax-and-lock-ruff-rule-enforcements.md)
 - [2026-07-31: Lab Master Catalog and Unit Conversion Data Models](2026-07-31-lab-master-catalog-and-unit-conversion-data-models.md)
 - [2026-07-31: On-Demand Consent Status Validation and Audit Hooks](2026-07-31-on-demand-consent-status-validation-and-audit-hooks.md)
 - [2026-07-29: Consolidated eClinical Services and Compliance Enhancements](2026-07-29-consolidated-eclinical-services-and-compliance-enhancements.md)
@@ -64,6 +65,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-24: Role Authorization for Granular Data-Lock Actions and Trust Boundary Verification](2026-08-24-role-authorization-for-granular-data-lock-actions.md)
 
 ### 3. Clinical Data Interoperability & Standards
+- [2026-09-01: SAE Reconciliation & Safety Gateway (E2B)](2026-09-01-sae-reconciliation-safety-gateway-e2b.md)
 - [2026-08-26: SAE Reconciliation Architecture](2026-08-26-sae-reconciliation-architecture.md)
 
 - [2026-06-06: ADR 2026-06-06: USDM Pydantic Models](2026-06-06-usdm-pydantic-models.md)

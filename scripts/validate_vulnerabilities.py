@@ -13,14 +13,14 @@ import re
 import shutil
 import subprocess
 import sys
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 # Resolve the repository root directory dynamically to support both local container and CI runner environments.
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.dirname(SCRIPT_DIR)
 
 
-def scan_for_inline_bypasses() -> List[Tuple[str, int, str]]:
+def scan_for_inline_bypasses() -> list[tuple[str, int, str]]:
     """Scan CI workflow files and scripts for undocumented inline bypass flags.
 
     Returns:
@@ -28,7 +28,7 @@ def scan_for_inline_bypasses() -> List[Tuple[str, int, str]]:
         where inline bypass flags were found.
     """
     bypass_pattern = re.compile(r"--(ignore-vuln|ignore-vulnerability)\b")
-    violations: List[Tuple[str, int, str]] = []
+    violations: list[tuple[str, int, str]] = []
 
     # Scan workflows and scripts for inline bypass flags
     scan_paths = [
@@ -45,7 +45,7 @@ def scan_for_inline_bypasses() -> List[Tuple[str, int, str]]:
                 if "validate_vulnerabilities.py" in file:
                     continue
                 try:
-                    with open(file_path, "r", encoding="utf-8") as f:
+                    with open(file_path, encoding="utf-8") as f:
                         for line_num, line in enumerate(f, 1):
                             if bypass_pattern.search(line):
                                 violations.append((file_path, line_num, line.strip()))
@@ -56,7 +56,7 @@ def scan_for_inline_bypasses() -> List[Tuple[str, int, str]]:
 
 def load_and_validate_ledger(
     ledger_path: str,
-) -> Tuple[List[Dict[str, Any]], List[str]]:
+) -> tuple[list[dict[str, Any]], list[str]]:
     """Load and perform strict schema and FMEA calculation validation on the ledger.
 
     Args:
@@ -69,7 +69,7 @@ def load_and_validate_ledger(
         return [], [f"Ledger file not found at path: {ledger_path}"]
 
     try:
-        with open(ledger_path, "r", encoding="utf-8") as f:
+        with open(ledger_path, encoding="utf-8") as f:
             data = json.load(f)
     except Exception as e:
         return [], [f"Failed to parse JSON ledger from {ledger_path}: {e}"]
@@ -77,8 +77,8 @@ def load_and_validate_ledger(
     if not isinstance(data, list):
         return [], ["Ledger format is invalid: top-level element must be a JSON array."]
 
-    entries: List[Dict[str, Any]] = []
-    errors: List[str] = []
+    entries: list[dict[str, Any]] = []
+    errors: list[str] = []
 
     for idx, entry in enumerate(data):
         if not isinstance(entry, dict):
@@ -155,7 +155,7 @@ def load_and_validate_ledger(
     return entries, errors
 
 
-def execute_pip_audit() -> Tuple[str, str, int]:
+def execute_pip_audit() -> tuple[str, str, int]:
     """Execute pip-audit in JSON format and return stdout, stderr, and exit code.
 
     Returns:
@@ -164,8 +164,7 @@ def execute_pip_audit() -> Tuple[str, str, int]:
     try:
         res = subprocess.run(
             ["uv", "run", "pip-audit", "--format", "json"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             text=True,
             check=False,
         )
@@ -174,7 +173,7 @@ def execute_pip_audit() -> Tuple[str, str, int]:
         return "", str(e), -1
 
 
-def extract_active_vulnerabilities(audit_json: str) -> Tuple[List[Dict[str, Any]], str]:
+def extract_active_vulnerabilities(audit_json: str) -> tuple[list[dict[str, Any]], str]:
     """Parse pip-audit output and extract individual vulnerability findings.
 
     Args:
@@ -191,7 +190,7 @@ def extract_active_vulnerabilities(audit_json: str) -> Tuple[List[Dict[str, Any]
     except Exception as e:
         return [], f"Failed to parse JSON output from pip-audit: {e}"
 
-    vulns_list: List[Dict[str, Any]] = []
+    vulns_list: list[dict[str, Any]] = []
     dependencies = data.get("dependencies", [])
     for dep in dependencies:
         dep_name = dep.get("name")
@@ -212,7 +211,7 @@ def extract_active_vulnerabilities(audit_json: str) -> Tuple[List[Dict[str, Any]
     return vulns_list, ""
 
 
-def execute_pnpm_audit() -> Tuple[str, str, int]:
+def execute_pnpm_audit() -> tuple[str, str, int]:
     """Execute pnpm audit in JSON format and return stdout, stderr, and exit code.
 
     Returns:
@@ -224,8 +223,7 @@ def execute_pnpm_audit() -> Tuple[str, str, int]:
     try:
         res = subprocess.run(
             cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             text=True,
             check=False,
         )
@@ -236,7 +234,7 @@ def execute_pnpm_audit() -> Tuple[str, str, int]:
 
 def extract_active_frontend_vulnerabilities(
     audit_json: str,
-) -> Tuple[List[Dict[str, Any]], str]:
+) -> tuple[list[dict[str, Any]], str]:
     """Parse pnpm audit output and extract individual vulnerability findings.
 
     Args:
@@ -253,7 +251,7 @@ def extract_active_frontend_vulnerabilities(
     except Exception as e:
         return [], f"Failed to parse JSON output from pnpm audit: {e}"
 
-    vulns_list: List[Dict[str, Any]] = []
+    vulns_list: list[dict[str, Any]] = []
     advisories = data.get("advisories", {})
     for adv_id, adv in advisories.items():
         v_id = adv.get("github_advisory_id") or adv.get("id") or str(adv_id)
@@ -307,7 +305,7 @@ def main() -> None:
     print("Running automated dependency vulnerability audit (pip-audit)...")
     stdout, stderr, code = execute_pip_audit()
 
-    active_vulnerabilities: List[Dict[str, Any]] = []
+    active_vulnerabilities: list[dict[str, Any]] = []
     audit_error = ""
 
     if code == 0:
@@ -328,7 +326,7 @@ def main() -> None:
     print("Running automated frontend dependency vulnerability audit (pnpm audit)...")
     p_stdout, p_stderr, p_code = execute_pnpm_audit()
 
-    active_frontend_vulnerabilities: List[Dict[str, Any]] = []
+    active_frontend_vulnerabilities: list[dict[str, Any]] = []
     frontend_audit_error = ""
 
     if p_code == 0:
@@ -349,7 +347,7 @@ def main() -> None:
 
     # Step 4: Map active vulnerabilities against validated ledger entries
     print("Mapping active vulnerabilities against the GxP FMEA exemption ledger...")
-    processed_vulns: List[Dict[str, Any]] = []
+    processed_vulns: list[dict[str, Any]] = []
     has_unapproved_vulns = False
 
     ledger_map = {entry["vulnerability_id"]: entry for entry in ledger_entries}

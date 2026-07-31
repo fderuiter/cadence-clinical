@@ -6,7 +6,7 @@ Requirements: PRD-SYS-001
 """
 
 import hashlib
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -84,7 +84,7 @@ class EConsentService:
             raise ValueError("Consent form record is already signed and immutable")
 
         # Update ConsentFormRecord status to SIGNED
-        now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+        now_utc = datetime.now(UTC).replace(tzinfo=None)
         record.status = "SIGNED"
         record.signed_at = now_utc
 

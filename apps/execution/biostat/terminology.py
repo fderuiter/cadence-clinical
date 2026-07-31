@@ -1,5 +1,3 @@
-from typing import List, Optional, Union
-
 from sdtm.enums import AESeverity, Race, Sex
 from sdtm.terminology import (
     normalize_race as _normalize_race,
@@ -22,7 +20,7 @@ VALID_RACE_VALUES = {r.value for r in Race}
 VALID_AESEV_VALUES = {s.value for s in AESeverity}
 
 
-def normalize_sex(val: Optional[str]) -> str:
+def normalize_sex(val: str | None) -> str:
     """Normalizes and validates SEX value to CDISC Controlled Terminology: 'M', 'F', 'U'.
 
     Delegates to standard implementation in core-models packages.
@@ -30,7 +28,7 @@ def normalize_sex(val: Optional[str]) -> str:
     return _normalize_sex(val)
 
 
-def normalize_race(val: Union[str, List[str]]) -> str:
+def normalize_race(val: str | list[str]) -> str:
     """Normalizes and validates RACE value to CDISC Controlled Terminology.
 
     Delegates to standard implementation in core-models packages.
@@ -38,7 +36,7 @@ def normalize_race(val: Union[str, List[str]]) -> str:
     return _normalize_race(val)
 
 
-def normalize_severity(val: Optional[str]) -> str:
+def normalize_severity(val: str | None) -> str:
     """Normalizes and validates AE severity (AESEV) to CDISC Controlled Terminology: 'MILD', 'MODERATE', 'SEVERE'.
 
     Delegates to standard implementation in core-models packages.
@@ -46,7 +44,7 @@ def normalize_severity(val: Optional[str]) -> str:
     return _normalize_severity(val)
 
 
-def normalize_seriousness(val: Optional[Union[str, bool]]) -> str:
+def normalize_seriousness(val: str | bool | None) -> str:
     """Normalizes and validates AE seriousness (AESER) to CDISC: 'Y' or 'N'.
 
     Delegates to standard implementation in core-models packages.

@@ -3,7 +3,7 @@
 Requirements: PRD-SYS-001
 """
 
-from typing import Any, Dict, List
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -15,7 +15,7 @@ class DelegationTaskRequest(BaseModel):
     staff_user_id: str = Field(
         ..., description="Unique user Keycloak subject ID of the staff member"
     )
-    task_codes: List[str] = Field(
+    task_codes: list[str] = Field(
         ..., description="List of delegated trial duty task codes"
     )
     start_date: str = Field(
@@ -33,11 +33,11 @@ class DOALogResponse(BaseModel):
     pi_name: str = Field(
         ..., description="Name of the Principal Investigator at the site"
     )
-    delegated_staff: List[Dict[str, Any]] = Field(
+    delegated_staff: list[dict[str, Any]] = Field(
         ...,
         description="List of active and inactive delegated site staff members and their tasks",
     )
-    audit_history: List[Dict[str, Any]] = Field(
+    audit_history: list[dict[str, Any]] = Field(
         ...,
         description="Immutable chronologically-ordered CTMS audit log history for this site's DOA",
     )

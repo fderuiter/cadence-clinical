@@ -4,8 +4,8 @@ Requirements: PRD-SYS-001
 """
 
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Dict
+from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
@@ -28,8 +28,8 @@ class PublishAmendmentRequest(BaseModel):
         ..., description="Amended protocol version string (e.g. 2.0)"
     )
     description: str = Field(..., description="Amendment summary description")
-    baseline_snapshot: Dict[str, Any] = Field(..., description="Previous USDM snapshot")
-    amended_snapshot: Dict[str, Any] = Field(
+    baseline_snapshot: dict[str, Any] = Field(..., description="Previous USDM snapshot")
+    amended_snapshot: dict[str, Any] = Field(
         ..., description="New amended USDM snapshot"
     )
 
@@ -54,7 +54,7 @@ class PublishAmendmentResponse(BaseModel):
 
 
 # In-memory store for amendment publications
-_AMENDMENT_STORE: Dict[str, dict] = {}
+_AMENDMENT_STORE: dict[str, dict] = {}
 
 
 @router.post("/publish", response_model=PublishAmendmentResponse)
@@ -72,7 +72,7 @@ async def publish_amendment_endpoint(
     )
 
     amendment_id = f"amd_{uuid.uuid4().hex[:8]}"
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now_iso = datetime.now(UTC).isoformat()
 
     record = {
         "amendment_id": amendment_id,
@@ -106,7 +106,7 @@ async def get_amendment_summary_endpoint(
     study_id: str,
     version: str,
     current_user: dict = Depends(get_current_user),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Export Summary of Changes report for specified study version.
 
     Requirements: PRD-SYS-001

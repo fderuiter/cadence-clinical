@@ -1,9 +1,9 @@
 import re
-from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from enum import StrEnum
+from typing import Any
 
 
-class SemanticAction(str, Enum):
+class SemanticAction(StrEnum):
     # Coordinated semantic action identifiers with #689
     CAPA_CLOSE = "quality.capa.close"
     CAPA_CANCEL = "quality.capa.cancel"
@@ -23,10 +23,10 @@ class DetectionRule:
     def __init__(
         self,
         action: SemanticAction,
-        methods: List[str],
+        methods: list[str],
         path_pattern: str,
         is_regex: bool = False,
-        body_conditions: Optional[Dict[str, Union[Any, List[Any]]]] = None,
+        body_conditions: dict[str, Any | list[Any]] | None = None,
     ):
         self.action = action
         self.methods = [m.upper() for m in methods]
@@ -42,7 +42,7 @@ class DetectionRule:
             return bool(re.search(self.path_pattern, path_lower))
         return self.path_pattern in path_lower
 
-    def matches_body(self, body: Optional[dict]) -> bool:
+    def matches_body(self, body: dict | None) -> bool:
         if not self.body_conditions:
             return True
         if body is None:
@@ -63,7 +63,7 @@ class DetectionRule:
 
 
 # Stable detection rules mapping
-DETECTION_RULES: List[DetectionRule] = [
+DETECTION_RULES: list[DetectionRule] = [
     # Body-driven rules
     DetectionRule(
         action=SemanticAction.CAPA_CLOSE,
@@ -133,8 +133,8 @@ DETECTION_RULES: List[DetectionRule] = [
 
 
 def resolve_regulated_action(
-    method: str, path: str, body: Optional[dict]
-) -> Optional[SemanticAction]:
+    method: str, path: str, body: dict | None
+) -> SemanticAction | None:
     """
     Pure resolver function to determine the semantic regulated action based on HTTP method, path, and parsed body.
     """
@@ -159,9 +159,7 @@ def resolve_regulated_action(
     return None
 
 
-def resolve_regulated_action_by_path(
-    method: str, path: str
-) -> Optional[SemanticAction]:
+def resolve_regulated_action_by_path(method: str, path: str) -> SemanticAction | None:
     """
     Path-only variant of resolver for fast middleware pre-checks where parsed body is not yet available.
     """

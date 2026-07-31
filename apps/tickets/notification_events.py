@@ -1,5 +1,4 @@
 import logging
-from typing import List, Optional
 
 from packages.security.context import current_user_id
 
@@ -9,10 +8,10 @@ logger = logging.getLogger("tickets-notification-events")
 def generate_ticket_notification_payloads(
     ticket,
     event_type: str,
-    old_status: Optional[str] = None,
-    new_status: Optional[str] = None,
-    comment_body: Optional[str] = None,
-) -> List[dict]:
+    old_status: str | None = None,
+    new_status: str | None = None,
+    comment_body: str | None = None,
+) -> list[dict]:
     """
     Generates list of notification payloads based on ticket state, event type, and recipient policy.
 

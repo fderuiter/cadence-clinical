@@ -49,7 +49,7 @@ def get_next_adr_number() -> int:
             continue
         filepath = os.path.join(ADR_DIR, filename)
         try:
-            with open(filepath, "r", encoding="utf-8") as f:
+            with open(filepath, encoding="utf-8") as f:
                 first_line = f.readline().strip()
                 match = re.search(r"ADR-(\d+):", first_line)
                 if match:
@@ -117,7 +117,7 @@ Chosen option: Option A because it satisfies {requirement_id} while ensuring sys
 
     # Index into docs/adr/index.md under specified domain
     if os.path.exists(INDEX_FILE):
-        with open(INDEX_FILE, "r", encoding="utf-8") as f:
+        with open(INDEX_FILE, encoding="utf-8") as f:
             index_content = f.read()
 
         domain_header = DOMAIN_MAP[domain_key]

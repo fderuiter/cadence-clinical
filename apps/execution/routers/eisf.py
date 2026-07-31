@@ -3,8 +3,6 @@
 Requirements: PRD-SYS-001
 """
 
-from typing import List
-
 from execution.eisf_models import (
     EISFDocumentRecord,
     EISFTaxonomyCategoryEnum,
@@ -70,12 +68,12 @@ async def upload_eisf_document_endpoint(
     )
 
 
-@router.get("/binder/{study_id}/{site_id}", response_model=List[EISFDocumentRecord])
+@router.get("/binder/{study_id}/{site_id}", response_model=list[EISFDocumentRecord])
 async def get_site_regulatory_binder_endpoint(
     study_id: str,
     site_id: str,
     current_user: dict = Depends(get_current_user),
-) -> List[EISFDocumentRecord]:
+) -> list[EISFDocumentRecord]:
     """Retrieve site-isolated regulatory binder documents for specified study and site.
 
     Requirements: PRD-SYS-001

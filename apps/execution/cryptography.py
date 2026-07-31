@@ -4,7 +4,7 @@ import json
 import os
 import secrets
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from cryptography.fernet import Fernet
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,7 +19,7 @@ along with automatic key rotation to ensure secure and compliant operations.
 PRIME = 170141183460469231731687303715884105727  # deid-ignore
 
 
-def _eval_poly(poly: List[int], x: int) -> int:
+def _eval_poly(poly: list[int], x: int) -> int:
     """Evaluates a polynomial at a given point x using Horner's method."""
     result = 0
     for coeff in reversed(poly):
@@ -27,7 +27,7 @@ def _eval_poly(poly: List[int], x: int) -> int:
     return result
 
 
-def _extended_gcd(a: int, b: int) -> Tuple[int, int, int]:
+def _extended_gcd(a: int, b: int) -> tuple[int, int, int]:
     """Computes the extended Greatest Common Divisor of two numbers."""
     x, y, u, v = 0, 1, 1, 0
     while a != 0:
@@ -54,7 +54,7 @@ class AllocationKeyManager:
 
     def __init__(self):
         # We store keys historically for decryption, and use the latest for encryption
-        self._keys: Dict[int, bytes] = {}
+        self._keys: dict[int, bytes] = {}
         self._current_version = 1
 
         # Default fallback salt for unit testing without database
@@ -64,7 +64,7 @@ class AllocationKeyManager:
         )
 
         # Track when keys were created to enforce rotation
-        self._key_creation_dates: Dict[int, datetime] = {
+        self._key_creation_dates: dict[int, datetime] = {
             self._current_version: datetime.now()
         }
         self._custody_versions = set()  # To track custody-restricted key versions
@@ -121,7 +121,7 @@ class AllocationKeyManager:
         """Generates a large integer master key for multi-share splitting."""
         return secrets.randbelow(PRIME)
 
-    def split_key(self, secret: int, n: int, k: int) -> List[Tuple[int, int]]:
+    def split_key(self, secret: int, n: int, k: int) -> list[tuple[int, int]]:
         """Splits a secret into n shares, requiring k to reconstruct."""
         if k > n:
             raise ValueError("k cannot be greater than n")
@@ -137,7 +137,7 @@ class AllocationKeyManager:
 
         return shares
 
-    def reconstruct_key(self, shares: List[Tuple[int, int]]) -> int:
+    def reconstruct_key(self, shares: list[tuple[int, int]]) -> int:
         """Reconstructs the secret from shares."""
         if not shares:
             raise ValueError("No shares provided")
@@ -169,7 +169,7 @@ class AllocationKeyManager:
         created = self._key_creation_dates[self._current_version]
         return datetime.now() - created > timedelta(days=365)
 
-    def rotate_keys(self, session: Optional[AsyncSession] = None):
+    def rotate_keys(self, session: AsyncSession | None = None):
         """Automatically rotates the encryption key."""
         self._current_version += 1
         salt = secrets.token_hex(16)
@@ -201,7 +201,7 @@ class AllocationKeyManager:
         key_hash = hashlib.sha256(master_bytes).digest()
         return base64.urlsafe_b64encode(key_hash)
 
-    def create_custody_key_version(self, version: int) -> List[Dict[str, Any]]:
+    def create_custody_key_version(self, version: int) -> list[dict[str, Any]]:
         """
         Creates a new key version designated for dual-custody access.
         Generates a master key, splits it into two shares for the Lead Unblinded Statistician and IDMC,
@@ -235,9 +235,7 @@ class AllocationKeyManager:
             },
         ]
 
-    def encrypt(
-        self, data: Dict[str, Any], session: Optional[AsyncSession] = None
-    ) -> str:
+    def encrypt(self, data: dict[str, Any], session: AsyncSession | None = None) -> str:
         """Encrypts data using the current active key version."""
         if self.check_rotation_needed():
             self.rotate_keys(session=session)
@@ -250,7 +248,7 @@ class AllocationKeyManager:
         version_bytes = self._current_version.to_bytes(4, byteorder="big")
         return base64.b64encode(version_bytes + encrypted).decode("utf-8")
 
-    def decrypt(self, encrypted_str: str) -> Dict[str, Any]:
+    def decrypt(self, encrypted_str: str) -> dict[str, Any]:
         """Decrypts data using the appropriate historical key."""
         raw_bytes = base64.b64decode(encrypted_str.encode("utf-8"))
         version = int.from_bytes(raw_bytes[:4], byteorder="big")
@@ -269,8 +267,8 @@ class AllocationKeyManager:
         return json.loads(decrypted.decode("utf-8"))
 
     def decrypt_with_shares(
-        self, encrypted_str: str, shares: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+        self, encrypted_str: str, shares: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         """
         Reconstructs the decryption key using two custody-bound shares
         and decrypts the given ciphertext. Enforces that both shares are valid,

@@ -1,8 +1,8 @@
 import hashlib
 import os
 import time
-from datetime import date, datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, date, datetime
+from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -34,18 +34,18 @@ class DocumentCreate(BaseModel):
     filename: str = Field(..., description="Document filename")
     content: str = Field(..., description="Base64 or raw content")
     mime_type: str = Field(..., description="MIME type")
-    metadata_json: Optional[Dict[str, Any]] = Field(None, description="Metadata JSON")
-    correlation_key: Optional[str] = Field(None, description="Correlation key")
-    content_checksum: Optional[str] = Field(None, description="Content checksum")
+    metadata_json: dict[str, Any] | None = Field(None, description="Metadata JSON")
+    correlation_key: str | None = Field(None, description="Correlation key")
+    content_checksum: str | None = Field(None, description="Content checksum")
     source_system: str = Field("eISF", description="Source system name")
     reason_for_change: str = Field(
         ..., min_length=10, max_length=1000, description="Part 11 reason for change"
     )
-    issue_date: Optional[date] = Field(None, description="Optional document issue date")
-    expiration_date: Optional[date] = Field(
+    issue_date: date | None = Field(None, description="Optional document issue date")
+    expiration_date: date | None = Field(
         None, description="Optional document expiration date"
     )
-    document_owner_id: Optional[str] = Field(
+    document_owner_id: str | None = Field(
         None, description="Optional document owner ID"
     )
 
@@ -64,18 +64,18 @@ class DocumentUpdate(BaseModel):
     filename: str = Field(..., description="Document filename")
     content: str = Field(..., description="Base64 or raw content")
     mime_type: str = Field(..., description="MIME type")
-    metadata_json: Optional[Dict[str, Any]] = Field(None, description="Metadata JSON")
-    correlation_key: Optional[str] = Field(None, description="Correlation key")
-    content_checksum: Optional[str] = Field(None, description="Content checksum")
+    metadata_json: dict[str, Any] | None = Field(None, description="Metadata JSON")
+    correlation_key: str | None = Field(None, description="Correlation key")
+    content_checksum: str | None = Field(None, description="Content checksum")
     source_system: str = Field("eISF", description="Source system name")
     reason_for_change: str = Field(
         ..., min_length=10, max_length=1000, description="Part 11 reason for change"
     )
-    issue_date: Optional[date] = Field(None, description="Optional document issue date")
-    expiration_date: Optional[date] = Field(
+    issue_date: date | None = Field(None, description="Optional document issue date")
+    expiration_date: date | None = Field(
         None, description="Optional document expiration date"
     )
-    document_owner_id: Optional[str] = Field(
+    document_owner_id: str | None = Field(
         None, description="Optional document owner ID"
     )
 
@@ -90,28 +90,26 @@ class DocumentUpdate(BaseModel):
 class EISFIngestionRequest(BaseModel):
     study_id: str = Field(..., description="The clinical study ID")
     site_id: str = Field(..., description="The clinical site ID")
-    binder_classification: Optional[str] = Field(
-        None, description="Binder classification"
-    )
-    artifact_type: Optional[str] = Field(
+    binder_classification: str | None = Field(None, description="Binder classification")
+    artifact_type: str | None = Field(
         None,
         description="Artifact classification metadata alias for binder_classification",
     )
     filename: str = Field(..., description="Document filename")
     content: str = Field(..., description="Base64 or raw content")
     mime_type: str = Field(..., description="MIME type")
-    metadata_json: Optional[Dict[str, Any]] = Field(None, description="Metadata JSON")
-    correlation_key: Optional[str] = Field(None, description="Correlation key")
-    content_checksum: Optional[str] = Field(None, description="Content checksum")
+    metadata_json: dict[str, Any] | None = Field(None, description="Metadata JSON")
+    correlation_key: str | None = Field(None, description="Correlation key")
+    content_checksum: str | None = Field(None, description="Content checksum")
     source_system: str = Field("eISF", description="Source system name")
-    reason_for_change: Optional[str] = Field(
+    reason_for_change: str | None = Field(
         None, min_length=10, max_length=1000, description="Part 11 reason for change"
     )
-    issue_date: Optional[date] = Field(None, description="Optional document issue date")
-    expiration_date: Optional[date] = Field(
+    issue_date: date | None = Field(None, description="Optional document issue date")
+    expiration_date: date | None = Field(
         None, description="Optional document expiration date"
     )
-    document_owner_id: Optional[str] = Field(
+    document_owner_id: str | None = Field(
         None, description="Optional document owner ID"
     )
 
@@ -138,27 +136,27 @@ class EISFIngestionRequest(BaseModel):
 
 
 class EISFSyncItem(BaseModel):
-    id: Optional[str] = None
+    id: str | None = None
     study_id: str = Field(..., description="The clinical study ID")
     site_id: str = Field(..., description="The clinical site ID")
     binder_classification: str = Field(..., description="Binder classification")
     filename: str = Field(..., description="Document filename")
     content: str = Field(..., description="Base64 or raw content")
     mime_type: str = Field(..., description="MIME type")
-    version_index: Optional[int] = Field(None, description="Optional version index")
-    metadata_json: Optional[Dict[str, Any]] = Field(None, description="Metadata JSON")
-    correlation_key: Optional[str] = Field(None, description="Correlation key")
-    content_checksum: Optional[str] = Field(None, description="Content checksum")
+    version_index: int | None = Field(None, description="Optional version index")
+    metadata_json: dict[str, Any] | None = Field(None, description="Metadata JSON")
+    correlation_key: str | None = Field(None, description="Correlation key")
+    content_checksum: str | None = Field(None, description="Content checksum")
     source_system: str = Field("eISF", description="Source system name")
     sync_status: str = Field("PENDING", description="Sync status")
     conflict_policy: str = Field(
         "CLIENT_WINS", description="CLIENT_WINS, SERVER_WINS, or MERGE"
     )
-    issue_date: Optional[date] = Field(None, description="Optional document issue date")
-    expiration_date: Optional[date] = Field(
+    issue_date: date | None = Field(None, description="Optional document issue date")
+    expiration_date: date | None = Field(
         None, description="Optional document expiration date"
     )
-    document_owner_id: Optional[str] = Field(
+    document_owner_id: str | None = Field(
         None, description="Optional document owner ID"
     )
 
@@ -181,7 +179,7 @@ class EISFSyncItem(BaseModel):
 
 
 class EISFSyncRequest(BaseModel):
-    submissions: List[EISFSyncItem] = Field(..., description="List of sync items")
+    submissions: list[EISFSyncItem] = Field(..., description="List of sync items")
 
 
 class EISFSyncResponse(BaseModel):
@@ -203,29 +201,29 @@ class DocumentResponse(BaseModel):
     version_index: int
     created_at: datetime
     created_by: str
-    metadata_json: Optional[Dict[str, Any]] = None
-    correlation_key: Optional[str] = None
-    content_checksum: Optional[str] = None
+    metadata_json: dict[str, Any] | None = None
+    correlation_key: str | None = None
+    content_checksum: str | None = None
     sync_status: str
     source_system: str
-    issue_date: Optional[date] = None
-    expiration_date: Optional[date] = None
-    document_owner_id: Optional[str] = None
+    issue_date: date | None = None
+    expiration_date: date | None = None
+    document_owner_id: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class BinderSectionStatus(BaseModel):
     section_name: str
-    required_artifacts: List[str]
-    present: List[str]
-    missing: List[str]
+    required_artifacts: list[str]
+    present: list[str]
+    missing: list[str]
 
 
 class BinderCompletenessResponse(BaseModel):
     site_id: str
     is_complete: bool
-    sections: List[BinderSectionStatus]
+    sections: list[BinderSectionStatus]
 
 
 app = FastAPI(
@@ -252,7 +250,7 @@ async def write_audit_log(
     actor_id: str,
     actor_role: str,
     action: str,
-    document_id: Optional[str],
+    document_id: str | None,
     details: str,
     reason_for_change: str,
 ) -> None:
@@ -334,7 +332,7 @@ async def health_check() -> dict[str, str]:
     return {"status": "ok", "service": "eisf"}
 
 
-@app.get("/api/v1/eisf/binders/{site_id}", response_model=List[DocumentResponse])
+@app.get("/api/v1/eisf/binders/{site_id}", response_model=list[DocumentResponse])
 async def get_site_binder_endpoint(
     site_id: str,
     session: AsyncSession = Depends(get_db_session),
@@ -351,15 +349,15 @@ async def get_site_binder_endpoint(
     return result.scalars().all()
 
 
-@app.get("/api/v1/eisf/documents", response_model=List[DocumentResponse])
+@app.get("/api/v1/eisf/documents", response_model=list[DocumentResponse])
 async def list_documents(
     request: Request,
-    study_id: Optional[str] = Query(None),
-    site_id: Optional[str] = Query(None),
-    binder_section: Optional[str] = Query(
+    study_id: str | None = Query(None),
+    site_id: str | None = Query(None),
+    binder_section: str | None = Query(
         None, description="Filter by binder section / classification"
     ),
-    binder_classification: Optional[str] = Query(
+    binder_classification: str | None = Query(
         None, description="Filter by binder section / classification"
     ),
     session: AsyncSession = Depends(get_db_session),
@@ -904,7 +902,7 @@ REQUIRED_BINDER_SECTIONS = {
 async def get_binder_completeness(
     request: Request,
     study_id: str = Query(..., description="The clinical study ID"),
-    site_id: Optional[str] = Query(None, description="The site ID"),
+    site_id: str | None = Query(None, description="The site ID"),
     session: AsyncSession = Depends(get_db_session),
     principal: Principal = Depends(get_principal),
 ):
@@ -1013,11 +1011,11 @@ async def propagate_to_etmf(
     filename: str,
     content: str,
     mime_type: str,
-    metadata_json: Optional[dict] = None,
-    correlation_key: Optional[str] = None,
-    content_checksum: Optional[str] = None,
-    source_system: Optional[str] = "eISF",
-    reason_for_change: Optional[str] = None,
+    metadata_json: dict | None = None,
+    correlation_key: str | None = None,
+    content_checksum: str | None = None,
+    source_system: str | None = "eISF",
+    reason_for_change: str | None = None,
 ) -> None:
     """
     Propagates the synchronized document to the eTMF service.
@@ -1338,7 +1336,7 @@ async def sync_documents(
                         t_inc = datetime.fromisoformat(str(ts_val))
                         # If timezone-aware, convert to naive UTC
                         if t_inc.tzinfo is not None:
-                            t_inc = t_inc.astimezone(timezone.utc).replace(tzinfo=None)
+                            t_inc = t_inc.astimezone(UTC).replace(tzinfo=None)
                     except Exception:
                         pass
             if not t_inc:
@@ -1353,9 +1351,7 @@ async def sync_documents(
                     try:
                         t_exist = datetime.fromisoformat(str(ts_val))
                         if t_exist.tzinfo is not None:
-                            t_exist = t_exist.astimezone(timezone.utc).replace(
-                                tzinfo=None
-                            )
+                            t_exist = t_exist.astimezone(UTC).replace(tzinfo=None)
                     except Exception:
                         pass
             if not t_exist:
@@ -1415,7 +1411,7 @@ async def sync_documents(
                             try:
                                 t_k_inc = datetime.fromisoformat(str(tk_val))
                                 if t_k_inc.tzinfo is not None:
-                                    t_k_inc = t_k_inc.astimezone(timezone.utc).replace(
+                                    t_k_inc = t_k_inc.astimezone(UTC).replace(
                                         tzinfo=None
                                     )
                             except Exception:
@@ -1429,9 +1425,9 @@ async def sync_documents(
                             try:
                                 t_k_exist = datetime.fromisoformat(str(tk_val))
                                 if t_k_exist.tzinfo is not None:
-                                    t_k_exist = t_k_exist.astimezone(
-                                        timezone.utc
-                                    ).replace(tzinfo=None)
+                                    t_k_exist = t_k_exist.astimezone(UTC).replace(
+                                        tzinfo=None
+                                    )
                             except Exception:
                                 pass
 

@@ -29,12 +29,13 @@ Boundary Inclusion Policy:
 
 import json
 import logging
-from typing import Any, Dict, Iterable, Optional, Tuple, Union
+from collections.abc import Iterable
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-def _get_val(obj: Union[object, Dict[str, Any]], key: str, default: Any = None) -> Any:
+def _get_val(obj: object | dict[str, Any], key: str, default: Any = None) -> Any:
     """Helper to fetch an attribute or dict key gracefully."""
     if isinstance(obj, dict):
         return obj.get(key, default)
@@ -42,15 +43,15 @@ def _get_val(obj: Union[object, Dict[str, Any]], key: str, default: Any = None) 
 
 
 def select_reference_range(
-    ranges: Iterable[Union[object, Dict[str, Any]]],
+    ranges: Iterable[object | dict[str, Any]],
     study_id: str,
     test_code: str,
     normalized_unit: str,
     lab_source: str,
-    sex: Optional[str],
-    age: Optional[float],
-    site_id: Optional[str] = None,
-) -> Optional[Union[object, Dict[str, Any]]]:
+    sex: str | None,
+    age: float | None,
+    site_id: str | None = None,
+) -> object | dict[str, Any] | None:
     """Selects an active LabReferenceRange based on study, test code, normalized unit,
     lab source, site, sex, and age, following a stable multi-dimensional specificity
     and tie-breaking policy.
@@ -221,9 +222,9 @@ def select_reference_range(
 
 
 def evaluate_lab_value(
-    value: Optional[float],
-    reference_range: Optional[Union[object, Dict[str, Any]]],
-) -> Tuple[Optional[str], bool, Optional[str]]:
+    value: float | None,
+    reference_range: object | dict[str, Any] | None,
+) -> tuple[str | None, bool, str | None]:
     """Evaluates a normalized numeric laboratory value against a matched reference range,
     incorporating normal and critical bounds.
 

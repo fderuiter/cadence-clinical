@@ -1,5 +1,5 @@
 import datetime
-from typing import Awaitable, Callable
+from collections.abc import Awaitable, Callable
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -48,7 +48,7 @@ class ContextResetMiddleware(BaseHTTPMiddleware):
         reason_token = current_change_reason.set(change_reason)
         ip_token = current_ip_address.set(ip_address)
         ts_token = current_timestamp.set(
-            datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+            datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
         )
 
         # Reset the database session token if any

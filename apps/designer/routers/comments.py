@@ -4,8 +4,8 @@ Requirements: PRD-SYS-001 | GxP 21 CFR Part 11 Regulated
 """
 
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Dict, List
+from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field
@@ -42,14 +42,14 @@ class FormReviewCommentResponse(BaseModel):
 
 
 # Global in-memory storage for FormReviewComments
-MOCK_FORM_COMMENTS: List[Dict[str, Any]] = []
+MOCK_FORM_COMMENTS: list[dict[str, Any]] = []
 
 
-@router.get("/forms/{form_id}/comments", response_model=List[FormReviewCommentResponse])
+@router.get("/forms/{form_id}/comments", response_model=list[FormReviewCommentResponse])
 async def get_form_comments(
     form_id: str,
     current_user: dict = Depends(get_current_user),
-) -> List[FormReviewCommentResponse]:
+) -> list[FormReviewCommentResponse]:
     """Fetch all review comments for a given form."""
     results = []
     for c in MOCK_FORM_COMMENTS:
@@ -85,7 +85,7 @@ async def post_form_comment(
     """Post a new review comment anchored to a field_id."""
     author_id = current_user.get("sub") if current_user else "test_author"
     comment_id = f"comment_{uuid.uuid4().hex[:12]}"
-    created_at_str = datetime.now(timezone.utc).isoformat()
+    created_at_str = datetime.now(UTC).isoformat()
 
     new_comment = {
         "id": comment_id,
@@ -142,7 +142,7 @@ async def resolve_comment(
     audit_entry = {
         "id": str(uuid.uuid4()),
         "actor": actor_id,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "change_reason": f"Resolved review comment thread: {comment_id}",
         "comment_id": comment_id,
         "type": "FORM_COMMENT_RESOLVE",

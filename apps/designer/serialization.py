@@ -3,7 +3,7 @@ USDM Serialization and Validation Engine for Phase 2.
 """
 
 import json
-from typing import Any, Dict, List
+from typing import Any
 
 import yaml
 
@@ -16,13 +16,13 @@ class USDMSerializationError(ValueError):
     Custom exception raised when exported USDM payload fails validation.
     """
 
-    def __init__(self, message: str, errors: List[Dict[str, Any]]):
+    def __init__(self, message: str, errors: list[dict[str, Any]]):
         self.errors = errors
         self.message = message
         super().__init__(message)
 
 
-def get_canonical_payload(usdm_dict: Dict[str, Any]) -> Dict[str, Any]:
+def get_canonical_payload(usdm_dict: dict[str, Any]) -> dict[str, Any]:
     """
     Extracts and normalizes standard canonical USDM structure from a mapped payload.
     """
@@ -51,7 +51,7 @@ def get_canonical_payload(usdm_dict: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def serialize_usdm(
-    usdm_dict: Dict[str, Any],
+    usdm_dict: dict[str, Any],
     format_type: str = "json",
     style: str = "canonical",
     validate: bool = True,

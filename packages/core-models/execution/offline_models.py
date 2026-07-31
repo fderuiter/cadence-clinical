@@ -3,7 +3,7 @@
 Requirements: PRD-SYS-001
 """
 
-from typing import Any, Dict, List, Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -20,7 +20,7 @@ class OfflineDeltaItem(BaseModel):
     action: Literal["CREATE", "UPDATE", "SUBMIT"] = Field(
         ..., description="Mutation action type"
     )
-    payload: Dict[str, Any] = Field(..., description="Payload data for the entity")
+    payload: dict[str, Any] = Field(..., description="Payload data for the entity")
     client_timestamp_utc: str = Field(
         ..., description="UTC timestamp of the mutation on client"
     )
@@ -39,7 +39,7 @@ class OfflineBatchSyncRequest(BaseModel):
     device_id: str = Field(
         ..., description="Identifier of the device performing the sync"
     )
-    deltas: List[OfflineDeltaItem] = Field(
+    deltas: list[OfflineDeltaItem] = Field(
         ..., description="List of sync deltas to process"
     )
 
@@ -59,7 +59,7 @@ class OfflineBatchSyncResponse(BaseModel):
     processed_count: int = Field(
         ..., description="Number of successfully processed deltas"
     )
-    conflicts: List[Dict[str, Any]] = Field(
+    conflicts: list[dict[str, Any]] = Field(
         default_factory=list,
         description="List of conflicts encountered during processing",
     )

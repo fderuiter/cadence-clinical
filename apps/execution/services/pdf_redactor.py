@@ -4,7 +4,7 @@ Requirements: PRD-SYS-001
 """
 
 import hashlib
-from typing import Any, Dict, List
+from typing import Any
 
 import fitz
 from pydantic import BaseModel
@@ -33,7 +33,7 @@ class PDFRedactionEngine:
     """
 
     def apply_bounding_box_redactions(
-        self, pdf_bytes: bytes, boxes: List[RedactionBox]
+        self, pdf_bytes: bytes, boxes: list[RedactionBox]
     ) -> bytes:
         """Apply irreversible PDF redaction overlays and purge underlying text/image content.
 
@@ -42,7 +42,7 @@ class PDFRedactionEngine:
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
 
         # Group boxes by page number to apply multiple redactions efficiently per page
-        boxes_by_page: Dict[int, List[RedactionBox]] = {}
+        boxes_by_page: dict[int, list[RedactionBox]] = {}
         for box in boxes:
             boxes_by_page.setdefault(box.page_number, []).append(box)
 
@@ -68,7 +68,7 @@ class PDFRedactionEngine:
 
         return doc.tobytes()
 
-    def sanitize_pdf_bytes(self, pdf_bytes: bytes, boxes: List[RedactionBox]) -> bytes:
+    def sanitize_pdf_bytes(self, pdf_bytes: bytes, boxes: list[RedactionBox]) -> bytes:
         """Apply irreversible PDF redaction overlays and purge underlying text/image content.
 
         Requirements: PRD-SYS-001
@@ -89,8 +89,8 @@ class PDFRedactorService:
     def apply_redaction_overlay(
         self,
         pdf_bytes: bytes,
-        target_snippets: List[str],
-    ) -> Dict[str, Any]:
+        target_snippets: list[str],
+    ) -> dict[str, Any]:
         """Apply non-destructive redaction overlays over specified target PHI snippets.
 
         Args:

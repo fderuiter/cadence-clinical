@@ -8,7 +8,7 @@ Part 11 and GxP standards.
 
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from sqlalchemy import JSON, Boolean, DateTime, Integer, String, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -47,13 +47,13 @@ class Organization(Base):
     )
 
     # Relationships
-    sites: Mapped[List["Site"]] = relationship(
+    sites: Mapped[list["Site"]] = relationship(
         "Site",
         primaryjoin="Organization.id == foreign(Site.organization_id)",
         back_populates="organization",
         cascade="all, delete-orphan",
     )
-    personnel: Mapped[List["Personnel"]] = relationship(
+    personnel: Mapped[list["Personnel"]] = relationship(
         "Personnel",
         primaryjoin="Organization.id == foreign(Personnel.organization_id)",
         back_populates="organization",
@@ -75,9 +75,7 @@ class Site(Base):
     site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     organization_id: Mapped[str] = mapped_column(String(36), nullable=False)
-    study_id: Mapped[Optional[str]] = mapped_column(
-        String(255), nullable=True, index=True
-    )
+    study_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
 
     # 21 CFR Part 11 Compliance Auditing Metadata
     created_at: Mapped[datetime] = mapped_column(
@@ -95,13 +93,13 @@ class Site(Base):
         primaryjoin="foreign(Site.organization_id) == remote(Organization.id)",
         back_populates="sites",
     )
-    personnel: Mapped[List["Personnel"]] = relationship(
+    personnel: Mapped[list["Personnel"]] = relationship(
         "Personnel",
         primaryjoin="foreign(Personnel.site_id) == Site.site_id",
         back_populates="site",
         cascade="all, delete-orphan",
     )
-    delegations: Mapped[List["DelegationOfAuthority"]] = relationship(
+    delegations: Mapped[list["DelegationOfAuthority"]] = relationship(
         "DelegationOfAuthority",
         primaryjoin="foreign(DelegationOfAuthority.site_id) == Site.site_id",
         back_populates="site",
@@ -120,7 +118,7 @@ class Personnel(Base):
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
-    keycloak_user_id: Mapped[Optional[str]] = mapped_column(
+    keycloak_user_id: Mapped[str | None] = mapped_column(
         String(255), nullable=True, index=True
     )
     first_name: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -128,13 +126,9 @@ class Personnel(Base):
     email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     role: Mapped[str] = mapped_column(String(100), nullable=False)  # ClinicalStaffRole
 
-    organization_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
-    site_id: Mapped[Optional[str]] = mapped_column(
-        String(255), nullable=True, index=True
-    )
-    study_id: Mapped[Optional[str]] = mapped_column(
-        String(255), nullable=True, index=True
-    )
+    organization_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    site_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    study_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
 
     # 21 CFR Part 11 Compliance Auditing Metadata
     created_at: Mapped[datetime] = mapped_column(
@@ -157,7 +151,7 @@ class Personnel(Base):
         primaryjoin="foreign(Personnel.site_id) == Site.site_id",
         back_populates="personnel",
     )
-    assignments: Mapped[List["PersonnelAssignment"]] = relationship(
+    assignments: Mapped[list["PersonnelAssignment"]] = relationship(
         "PersonnelAssignment",
         primaryjoin="Personnel.id == foreign(PersonnelAssignment.personnel_id)",
         back_populates="personnel",
@@ -219,23 +213,21 @@ class DelegationOfAuthority(Base):
     site_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     study_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
 
-    duties: Mapped[List[str]] = mapped_column(JSON, default=list, nullable=False)
+    duties: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
     start_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    end_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    end_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     # Cryptographic & Signatures metadata
-    signature: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
-    signed_payload: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
-    signed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    signed_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    signature: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    signed_payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    signed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    signed_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # Revocation metadata
-    revoked_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    revoked_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    revocation_reason: Mapped[Optional[str]] = mapped_column(
-        String(1000), nullable=True
-    )
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    revoked_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    revocation_reason: Mapped[str | None] = mapped_column(String(1000), nullable=True)
 
     # 21 CFR Part 11 Compliance Auditing Metadata
     created_at: Mapped[datetime] = mapped_column(
@@ -291,13 +283,11 @@ class TrainingLog(Base):
     )
 
     # Embedded signatures
-    signature_manifestation: Mapped[Optional[Dict[str, Any]]] = mapped_column(
+    signature_manifestation: Mapped[dict[str, Any] | None] = mapped_column(
         JSON, nullable=True
     )
-    signer: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    signing_timestamp: Mapped[Optional[datetime]] = mapped_column(
-        DateTime, nullable=True
-    )
+    signer: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    signing_timestamp: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class OrgAuditLog(Base):
@@ -317,7 +307,7 @@ class OrgAuditLog(Base):
     actor_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     actor_role: Mapped[str] = mapped_column(String(255), nullable=False)
     action: Mapped[str] = mapped_column(String(50), nullable=False)
-    record_id: Mapped[Optional[str]] = mapped_column(
+    record_id: Mapped[str | None] = mapped_column(
         String(255), nullable=True, index=True
     )
     details: Mapped[str] = mapped_column(String(1000), nullable=False)

@@ -3,7 +3,7 @@
 Requirements: PRD-SYS-001
 """
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -33,7 +33,7 @@ class GenerateAuditorTokenRequest(BaseModel):
 async def generate_auditor_token_endpoint(
     payload: GenerateAuditorTokenRequest,
     current_user: dict = Depends(get_current_user),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Generate temporary time-bounded access token for regulatory auditors.
 
     Requirements: PRD-SYS-001
@@ -55,9 +55,9 @@ async def generate_auditor_token_endpoint(
 @router.get("/inspect/audit-trail/{study_id}")
 async def inspect_study_audit_trail_endpoint(
     study_id: str,
-    limit: Optional[int] = 100,
+    limit: int | None = 100,
     current_user: dict = Depends(get_current_user),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Expose read-only 21 CFR Part 11 audit trail inspection endpoint for study.
 
     Requirements: PRD-SYS-001
