@@ -132,7 +132,7 @@ export class ClientSyncEngine {
   public dbManager: IndexedDBManager;
   private retryCount = 0;
   private initialRetryDelay = 1000;
-  private maxRetryDelay = 30000;
+  private maxRetryDelay = 30000; // deid-ignore
   private retryTimeoutId: any = null;
 
   constructor() {
