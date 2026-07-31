@@ -12,11 +12,11 @@ from apps.notifications.database import db_manager
 from apps.notifications.models import (
     Base,
     Notification,
-    NotificationAuditLog,
     NotificationCategory,
     NotificationDelivery,
     NotificationPriority,
     NotificationStatus,
+    write_audit_log,
 )
 from packages.database import DatabaseSessionDependency, get_relational_db_lifespan
 from packages.security.middleware import GatewayAuthMiddleware
@@ -45,6 +45,11 @@ class NotificationCreate(BaseModel):
     related_entity_type: Optional[str] = Field(
         None, description="Optional related entity type"
     )
+    subject: Optional[str] = Field(None, description="Optional subject")
+    subject_id: Optional[str] = Field(None, description="Optional related subject ID")
+    visit_id: Optional[str] = Field(None, description="Optional related visit ID")
+    query_id: Optional[str] = Field(None, description="Optional related query ID")
+    site_id: Optional[str] = Field(None, description="Optional related site ID")
 
 
 class NotificationResponse(BaseModel):
@@ -59,6 +64,11 @@ class NotificationResponse(BaseModel):
     message_content: str
     related_entity_id: Optional[str] = None
     related_entity_type: Optional[str] = None
+    subject: Optional[str] = None
+    subject_id: Optional[str] = None
+    visit_id: Optional[str] = None
+    query_id: Optional[str] = None
+    site_id: Optional[str] = None
     status: NotificationStatus
     delivery_state: str
     retries: int
@@ -277,26 +287,6 @@ app.add_middleware(GatewayAuthMiddleware)
 get_db_session = DatabaseSessionDependency(db_manager)
 
 
-async def write_audit_log(
-    session: AsyncSession,
-    user_id: str,
-    user_role: str,
-    action: str,
-    details: str,
-) -> None:
-    """
-    Utility helper to write to the append-only NotificationAuditLog.
-    """
-    log_entry = NotificationAuditLog(
-        user_id=user_id,
-        user_role=user_role,
-        action=action,
-        details=details,
-    )
-    session.add(log_entry)
-    await session.flush()
-
-
 def map_notification_to_response(notif: Notification) -> NotificationResponse:
     return NotificationResponse(
         id=notif.id,
@@ -308,6 +298,11 @@ def map_notification_to_response(notif: Notification) -> NotificationResponse:
         message_content=notif.message_content,
         related_entity_id=notif.related_entity_id,
         related_entity_type=notif.related_entity_type,
+        subject=notif.subject,
+        subject_id=notif.subject_id,
+        visit_id=notif.visit_id,
+        query_id=notif.query_id,
+        site_id=notif.site_id,
         status=notif.status,
         delivery_state=notif.delivery_state,
         retries=notif.retries,
@@ -355,6 +350,11 @@ async def create_notification(
         message_content=payload.message_content,
         related_entity_id=payload.related_entity_id,
         related_entity_type=payload.related_entity_type,
+        subject=payload.subject,
+        subject_id=payload.subject_id,
+        visit_id=payload.visit_id,
+        query_id=payload.query_id,
+        site_id=payload.site_id,
         status=NotificationStatus.OPEN,
         delivery_state=initial_delivery_state,
         retries=0,
