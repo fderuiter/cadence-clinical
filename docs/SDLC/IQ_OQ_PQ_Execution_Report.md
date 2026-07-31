@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1669
-- **Passed:** 1669 🟢
+- **Total Automated Test Cases Run:** 1671
+- **Passed:** 1671 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -338,6 +338,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_query_aging_generates_notification` | `tests.test_clinical_workflow_notifications_integration` | PRD-QRY-002 | 🟢 PASSED | < 1s |
 | `test_sdv_drop_generates_notification` | `tests.test_clinical_workflow_notifications_integration` | PRD-QRY-006 | 🟢 PASSED | < 1s |
 | `test_trial_lock_generates_notification` | `tests.test_clinical_workflow_notifications_integration` | PRD-SYS-003, PRD-SYS-004 | 🟢 PASSED | < 1s |
+| `test_create_and_retrieve_form_comments` | `tests.test_comments_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_resolve_form_comment_logs_gxp_audit` | `tests.test_comments_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_change_request_audit_trail_recorded` | `tests.test_compliance_change_request` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_change_request_requires_dual_approval` | `tests.test_compliance_change_request` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_compliance_change_request_audit_trail` | `tests.test_compliance_change_request` | *Regression/Helper* | 🟢 PASSED | < 1s |
