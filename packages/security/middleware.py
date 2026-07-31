@@ -227,6 +227,8 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
         else:
             tenant_id = str(tenant_id).strip()
 
+        sig_token = request.headers.get("X-Sig-Token")
+
         if version in ("2", "v2"):
             from packages.security.signing import verify_gateway_signature
 
@@ -241,6 +243,7 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
                 sponsor_id=sponsor_id,
                 unblinded_access=unblinded_access,
                 tenant_id=tenant_id,
+                sig_token=sig_token,
             )
         else:
             # Version 1/v1 (legacy colon concatenated format) - doesn't support scope
@@ -289,7 +292,6 @@ class GatewayAuthMiddleware(BaseHTTPMiddleware):
         )
 
         if is_signature_gated and is_mutation:
-            sig_token = request.headers.get("X-Sig-Token")
             success, result = verify_sig_token(
                 sig_token=sig_token,
                 user_id=user_id,

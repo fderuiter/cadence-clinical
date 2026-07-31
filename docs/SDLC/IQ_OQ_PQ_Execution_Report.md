@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1783
-- **Passed:** 1783 🟢
+- **Total Automated Test Cases Run:** 1742
+- **Passed:** 1742 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -606,6 +606,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_normalize_line_javascript` | `tests.test_detect_duplication` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_normalize_line_python` | `tests.test_detect_duplication` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_normalize_line_vue` | `tests.test_detect_duplication` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_path_normalization_win32` | `tests.test_detect_duplication` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_repo_root_resolution` | `tests.test_detect_duplication` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_scan_file_for_lines` | `tests.test_detect_duplication` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_doa_historical_audit_trail_logging` | `tests.test_doa_audit_suite` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_doa_assignment_record_creation` | `tests.test_doa_models` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -623,6 +625,10 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_document_upload_success` | `tests.test_document_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_document_versions_lineage` | `tests.test_document_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_study_archival_job_flow` | `tests.test_document_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_signature_verification_keycloak_token_secret` | `tests.test_double_auth` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_signature_verification_replay_attack_prevention` | `tests.test_double_auth` | PRD-QRY-005 | 🟢 PASSED | < 1s |
+| `test_signature_verification_role_insufficient_auth` | `tests.test_double_auth` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_signature_verification_token_expiration` | `tests.test_double_auth` | PRD-QRY-005 | 🟢 PASSED | < 1s |
 | `test_parse_e2b_xml_valid_payload` | `tests.test_e2b_parser` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_assignment_compliance_states_and_recalculations` | `tests.test_ecoa_coverage` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_instrument_retrieval_and_assignment_boundaries` | `tests.test_ecoa_coverage` | *Regression/Helper* | 🟢 PASSED | < 1s |
