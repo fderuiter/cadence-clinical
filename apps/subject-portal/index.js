@@ -1,3 +1,8 @@
+/**
+ * Cadence Clinical Subject Portal - Phase 19 Patient-Facing PWA
+ * Compliant with GxP, FDA 21 CFR Part 11, and GAMP 5.
+ * Reuses core UI components and implements secure offline capture and sync.
+ */
 // Upgraded eCOA Subject Portal Dispatch and Failure-State Rendering Contract
 import {
   buildLedgerBlock,

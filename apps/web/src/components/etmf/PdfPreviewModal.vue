@@ -1,5 +1,8 @@
 <template>
-  <div class="modal-backdrop" @click.self="$emit('close')">
+  <div
+    class="modal-backdrop"
+    @click.self="$emit('close')"
+  >
     <div class="modal-card pdf-preview-modal">
       <div class="modal-header">
         <div class="header-details">
@@ -12,7 +15,12 @@
             <strong>v{{ document.version_index }}.0</strong>
           </p>
         </div>
-        <button class="close-modal-btn" @click="$emit('close')">×</button>
+        <button
+          class="close-modal-btn"
+          @click="$emit('close')"
+        >
+          ×
+        </button>
       </div>
 
       <div class="modal-body-layout">
@@ -26,7 +34,10 @@
             </div>
             <div class="meta-row">
               <span class="meta-label">Status:</span>
-              <span class="meta-value font-bold" :class="getStatusClass(document.status)">
+              <span
+                class="meta-value font-bold"
+                :class="getStatusClass(document.status)"
+              >
                 {{ document.status }}
               </span>
             </div>
@@ -38,7 +49,10 @@
               <span class="meta-label">Uploaded At:</span>
               <span class="meta-value">{{ formatDate(document.created_at) }}</span>
             </div>
-            <div class="meta-row" v-if="document.site_id">
+            <div
+              v-if="document.site_id"
+              class="meta-row"
+            >
               <span class="meta-label">Site Scope:</span>
               <span class="meta-value font-mono">{{ document.site_id }}</span>
             </div>
@@ -52,13 +66,22 @@
                 {{ document.reason_for_change || "No change justification provided." }}
               </p>
             </div>
-            <div class="checksum-block" v-if="document.content_checksum">
+            <div
+              v-if="document.content_checksum"
+              class="checksum-block"
+            >
               <h5>SHA-256 Digest:</h5>
-              <code class="checksum-text" :title="document.content_checksum">
+              <code
+                class="checksum-text"
+                :title="document.content_checksum"
+              >
                 {{ document.content_checksum }}
               </code>
             </div>
-            <div class="checksum-block" v-else>
+            <div
+              v-else
+              class="checksum-block"
+            >
               <h5>Verification Integrity:</h5>
               <code class="checksum-text text-success">
                 MOCK-SHA256-VALIDATED-INTEGRITY-OK
@@ -69,8 +92,13 @@
           <!-- Electronic Signature Manifestation -->
           <div class="meta-section border-top manifestation-section">
             <h4>Digital Signature Manifestation</h4>
-            <div v-if="document.signer && document.signing_timestamp" class="manifest-card signed">
-              <p class="sign-status">📝 ELECTRONICALLY SIGNED</p>
+            <div
+              v-if="document.signer && document.signing_timestamp"
+              class="manifest-card signed"
+            >
+              <p class="sign-status">
+                📝 ELECTRONICALLY SIGNED
+              </p>
               <p class="signer-meta">
                 Signer: <strong>{{ document.signer }}</strong>
               </p>
@@ -81,8 +109,13 @@
                 Date: <span>{{ formatDate(document.signing_timestamp) }}</span>
               </p>
             </div>
-            <div v-else class="manifest-card unsigned">
-              <p class="sign-status">⚠️ UNSIGNED RECORD</p>
+            <div
+              v-else
+              class="manifest-card unsigned"
+            >
+              <p class="sign-status">
+                ⚠️ UNSIGNED RECORD
+              </p>
               <p class="unsigned-warning">
                 This document is a working electronic draft and has not been locked by signature manifestation.
               </p>
@@ -95,7 +128,11 @@
           <div class="pdf-document-canvas">
             <!-- Dynamic CSS Rotating Diagonal Watermark -->
             <div class="watermark-overlay-container">
-              <div v-for="n in 3" :key="n" class="diagonal-watermark-row">
+              <div
+                v-for="n in 3"
+                :key="n"
+                class="diagonal-watermark-row"
+              >
                 <span class="watermark-text">{{ watermarkText }}</span>
               </div>
             </div>
@@ -103,15 +140,23 @@
             <!-- Page 1 Content Sheet Mock -->
             <div class="document-page">
               <div class="page-header">
-                <div class="logo">Cadence Clinical Systems</div>
-                <div class="doc-code">ST-{{ document.study_id }}</div>
+                <div class="logo">
+                  Cadence Clinical Systems
+                </div>
+                <div class="doc-code">
+                  ST-{{ document.study_id }}
+                </div>
               </div>
 
               <div class="page-content">
-                <h1 class="doc-title">{{ document.artifact_type || "Clinical Trial Document" }}</h1>
-                <p class="doc-subtitle">DIA TMF Code: {{ document.artifact_code }} | Version Index: {{ document.version_index }}.0</p>
+                <h1 class="doc-title">
+                  {{ document.artifact_type || "Clinical Trial Document" }}
+                </h1>
+                <p class="doc-subtitle">
+                  DIA TMF Code: {{ document.artifact_code }} | Version Index: {{ document.version_index }}.0
+                </p>
 
-                <hr class="divider" />
+                <hr class="divider">
 
                 <section class="doc-section-content">
                   <h3>1. REGULATORY INTENT AND AUDIT CLASSIFICATION</h3>
@@ -123,10 +168,10 @@
                 <section class="doc-section-content">
                   <h3>2. DIGITAL TRACEABILITY DATA</h3>
                   <p>
-                    <strong>Parent Study:</strong> {{ document.study_id }}<br />
-                    <strong>Record ID:</strong> {{ document.id }}<br />
-                    <strong>Ingestion Filename:</strong> {{ document.filename }}<br />
-                    <strong>MIME Category:</strong> {{ document.mime_type }}<br />
+                    <strong>Parent Study:</strong> {{ document.study_id }}<br>
+                    <strong>Record ID:</strong> {{ document.id }}<br>
+                    <strong>Ingestion Filename:</strong> {{ document.filename }}<br>
+                    <strong>MIME Category:</strong> {{ document.mime_type }}<br>
                     <strong>Author Identity:</strong> {{ document.created_by }}
                   </p>
                 </section>

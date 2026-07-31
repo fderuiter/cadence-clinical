@@ -63,13 +63,12 @@ def handle_permission_error(stderr_msg):
         "forbidden",
         "permission",
         "rate limit",
-        "rate limit exceeded",
-        "api rate limit",
+        "rate_limit",
         "exceeded",
     ]
     if any(p in combined for p in patterns):
         print(
-            "WARNING: GitHub API permission, authentication, or rate limit error occurred.\n"
+            "WARNING: GitHub API permission or authentication error occurred.\n"
             f"Error details: {stderr_msg.strip()}\n"
             "Skipping automated project/issue synchronization.",
             file=sys.stderr,
@@ -404,11 +403,7 @@ def main():
     issue_by_num = fetch_all_issues_gql()
     if not issue_by_num:
         print("Failed to fetch repository issues.", file=sys.stderr)
-        if os.environ.get("FAIL_ON_PROJECT_SYNC_ERROR") == "true":
-            sys.exit(1)
-        else:
-            print("Exiting gracefully with code 0 (soft-failure allowed).")
-            sys.exit(0)
+        sys.exit(1)
 
     print(f"Fetched {len(issue_by_num)} total issues.", flush=True)
 

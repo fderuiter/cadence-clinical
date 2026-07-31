@@ -2,10 +2,17 @@
   <div class="authoring-canvas-stage p-6 bg-slate-100 rounded-2xl border border-slate-200 min-h-[400px]">
     <div class="canvas-header flex justify-between items-center mb-6">
       <div>
-        <h2 class="text-xl font-bold text-slate-800">eCRF Authoring Canvas</h2>
-        <p class="text-xs text-slate-500">Drag sections to reorder, drag fields to layout & configure responsive columns.</p>
+        <h2 class="text-xl font-bold text-slate-800">
+          eCRF Authoring Canvas
+        </h2>
+        <p class="text-xs text-slate-500">
+          Drag sections to reorder, drag fields to layout & configure responsive columns.
+        </p>
       </div>
-      <div v-if="formSchema" class="text-xs bg-indigo-50 border border-indigo-100 px-3 py-1 rounded-full text-indigo-700 font-medium">
+      <div
+        v-if="formSchema"
+        class="text-xs bg-indigo-50 border border-indigo-100 px-3 py-1 rounded-full text-indigo-700 font-medium"
+      >
         Active Form: {{ formSchema.name || 'Draft' }}
       </div>
     </div>
