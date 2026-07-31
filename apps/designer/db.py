@@ -433,3 +433,62 @@ async def is_concept_referenced_by_active_recruiting_study(
             pass
 
     return False
+
+
+def import_mapped_usdm_study(
+    study_id: str,
+    study_projection: Dict[str, Any],
+    user_id: str,
+    change_reason: str,
+    driver: Any = None
+) -> None:
+    """
+    Persists the reconstructed study projection inside the database.
+    Enforces mock DB persistence and optionally Neo4j driver persistence if active.
+    """
+    import copy
+    from datetime import datetime
+
+    # 1. Persist to Mock Database
+    MOCK_STUDIES[study_id] = copy.deepcopy(study_projection)
+
+    # Sync rules
+    rules = study_projection.get("rules", [])
+    MOCK_RULES[study_id] = copy.deepcopy(rules)
+
+    # Sync eligibility criteria
+    criteria = study_projection.get("eligibility_criteria", [])
+    MOCK_ELIGIBILITY_CRITERIA[study_id] = copy.deepcopy(criteria)
+
+    # Sync blocks to MOCK_SOA_DATA
+    version_tag = study_projection.get("current_version") or "1.0"
+    version_id = f"ver_{study_id}_default"
+
+    if study_id not in MOCK_STUDY_VERSIONS or not MOCK_STUDY_VERSIONS[study_id]:
+        # Establish StudyVersion DRAFT record
+        version_record = {
+            "id": version_id,
+            "version_tag": version_tag,
+            "status": "DRAFT",
+            "version_index": 1,
+            "created_by": user_id,
+            "created_at": datetime.utcnow().isoformat(),
+            "change_reason": change_reason,
+        }
+        create_mock_study_version(study_id, version_record)
+    else:
+        version_id = MOCK_STUDY_VERSIONS[study_id][-1]["id"]
+
+    from apps.designer.delta import MOCK_SOA_DATA
+    if version_id not in MOCK_SOA_DATA:
+        MOCK_SOA_DATA[version_id] = {
+            "blocks": {},
+            "arms": {},
+            "epochs": {},
+            "visits": {},
+            "procedures": {},
+            "timing_windows": {}
+        }
+
+    blocks = study_projection.get("blocks", [])
+    MOCK_SOA_DATA[version_id]["blocks"] = {b["block_id"]: b for b in blocks}

@@ -492,17 +492,12 @@ async def get_legacy_study(study_id: str) -> Dict[str, Any]:
 
 
 @app.get("/api/v2/studies/{study_id}/usdm")
-async def get_usdm_study(study_id: str) -> Dict[str, Any]:
+async def get_usdm_study(
+    study_id: str,
+    format: Optional[str] = Query(None, description="Output format ('json' or 'yaml')"),
+) -> Any:
     """Dynamically processes the internal projection and returns a compliant USDM structure.
-
-    Args:
-        study_id (str): The unique identifier of the study.
-
-    Returns:
-        Dict[str, Any]: The dynamically mapped USDM study data.
-
-    Raises:
-        HTTPException: If the study is not found or validation fails.
+    Supports format-driven serialization, validation reporting, and canonical HMAC-SHA256 signing.
     """
     start_time = time.perf_counter()
     study_data = get_study_projection(study_id)
@@ -521,7 +516,29 @@ async def get_usdm_study(study_id: str) -> Dict[str, Any]:
     if duration > 200:
         pass  # In a real app we might log a warning
 
-    return usdm_study
+    from packages.security.signing import generate_canonical_signature
+    secret = os.getenv("SIGNING_SECRET", "designer-amendment-secure-key-12345").encode("utf-8")
+    signature = generate_canonical_signature(usdm_study, secret)
+
+    headers = {
+        "X-USDM-Signature": signature,
+    }
+
+    if format:
+        fmt = format.strip().lower()
+        if fmt not in ("json", "yaml", "yml"):
+            raise HTTPException(status_code=400, detail="Invalid format. Supported: json, yaml")
+
+        from apps.designer.serialization import serialize_usdm, USDMSerializationError
+        try:
+            serialized = serialize_usdm(usdm_study, format_type=fmt, style="canonical", validate=True)
+        except USDMSerializationError as exc:
+            raise HTTPException(status_code=422, detail=f"Export validation failed: {exc.message}")
+
+        media_type = "application/json" if fmt == "json" else "application/x-yaml"
+        return Response(content=serialized, media_type=media_type, headers=headers)
+
+    return JSONResponse(content=usdm_study, headers=headers)
 
 
 @app.post(
@@ -2741,6 +2758,90 @@ async def validate_usdm_endpoint(
         )
 
     return report
+
+
+@app.post(
+    "/api/v2/studies/{study_id}/usdm",
+    status_code=status.HTTP_201_CREATED,
+)
+async def import_usdm_study(
+    study_id: str,
+    request: Request,
+    override: Optional[str] = Query(None, description="Optional explicit version override ('v2' or 'v3')"),
+):
+    """
+    Ingests, validates, inverse-maps and persists a USDM representation as a study projection.
+    Performs schema and circular rule validation, then persists within a GxP audit_context.
+    """
+    user_id = getattr(request.state, "user_id", "system")
+    change_reason = resolve_change_reason(request, None)
+
+    body_bytes = await request.body()
+    body_text = body_bytes.decode("utf-8")
+
+    report = validate_usdm_payload(body_text, override=override)
+
+    if not report.validity:
+        invalid_params = []
+        for err in report.errors:
+            invalid_params.append(
+                InvalidParam(
+                    field=err.field or "payload", reason=err.reason, value=err.value
+                )
+            )
+        problem = ProblemDetails(
+            type="https://api.cadence-clinical.com/errors/usdm-validation-failed",
+            title="USDM Ingestion Validation Failed",
+            status=422,
+            detail=f"The provided {report.format} payload failed USDM {report.version} validation.",
+            instance=request.url.path,
+            code="USDM_VALIDATION_ERROR",
+            invalid_params=invalid_params,
+        )
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content=problem.model_dump(exclude_none=True),
+        )
+
+    # 1. Parse and inverse map
+    from apps.designer.usdm_ingestion import safe_parse_payload, normalize_usdm_payload
+    parsed, detected_format = safe_parse_payload(body_text)
+    normalized = normalize_usdm_payload(parsed, report.version)
+
+    from apps.designer.inverse_mapper import map_usdm_to_study
+    try:
+        study_projection = map_usdm_to_study(normalized)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"USDM structural mapping failed: {str(exc)}",
+        )
+
+    # Validate study ID matching
+    if study_projection.get("study_id") != study_id:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"USDM study ID '{study_projection.get('study_id')}' does not match request path study_id '{study_id}'.",
+        )
+
+    # 2. Persist study projection within audit_context
+    from apps.designer.db import import_mapped_usdm_study
+    from packages.security import audit_context
+
+    with audit_context(user_id=user_id, change_reason=change_reason):
+        driver = await get_neo4j_driver(request)
+        import_mapped_usdm_study(
+            study_id=study_id,
+            study_projection=study_projection,
+            user_id=user_id,
+            change_reason=change_reason,
+            driver=driver,
+        )
+
+    return JSONResponse(
+        status_code=status.HTTP_201_CREATED,
+        content={"status": "success", "study_id": study_id},
+    )
 
 
 @app.post(
