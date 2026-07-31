@@ -177,6 +177,9 @@ SERVICES = {
 
 jwks_cache: Optional[Dict[str, Any]] = None
 http_client: Optional[httpx.AsyncClient] = None
+jwks_fetch_lock = asyncio.Lock()
+last_jwks_refresh: float = 0.0
+COOLDOWN_DURATION = 300.0  # 5 minutes
 
 
 @app.on_event("startup")
@@ -187,13 +190,14 @@ async def startup() -> None:
     Creates an HTTP client instance and attempts to fetch Keycloak JWKS
     public keys for local caching, unless SKIP_JWKS_FETCH is enabled.
     """
-    global jwks_cache, http_client
+    global jwks_cache, http_client, last_jwks_refresh
     http_client = httpx.AsyncClient()
     if not os.getenv("SKIP_JWKS_FETCH"):
         try:
             resp = await http_client.get(JWKS_URL, timeout=5.0)
             if resp.status_code == 200:
                 jwks_cache = resp.json()
+                last_jwks_refresh = time.time()
         except Exception:
             pass
 
@@ -210,7 +214,7 @@ async def shutdown() -> None:
         await http_client.aclose()
 
 
-def verify_token(token: str) -> Dict[str, Any]:
+async def verify_token(token: str) -> Dict[str, Any]:
     """
     Verify and decode a JSON Web Token (JWT).
 
@@ -227,6 +231,7 @@ def verify_token(token: str) -> Dict[str, Any]:
         HTTPException: If the token is invalid, signature verification fails,
                        or JWKS is unavailable.
     """
+    global jwks_cache, http_client, last_jwks_refresh
     test_secret = os.getenv("JWT_TEST_SECRET")
     if test_secret:
         try:
@@ -239,10 +244,43 @@ def verify_token(token: str) -> Dict[str, Any]:
         except JWTError:
             raise HTTPException(status_code=401, detail="Invalid token")
 
+    try:
+        unverified_header = jwt.get_unverified_header(token)
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    token_kid = unverified_header.get("kid")
+
+    def is_kid_cached(kid: Optional[str]) -> bool:
+        global jwks_cache
+        if not jwks_cache or not kid:
+            return False
+        for key in jwks_cache.get("keys", []):
+            if key.get("kid") == kid:
+                return True
+        return False
+
+    if not is_kid_cached(token_kid):
+        # We need to fetch, acquire lock to prevent concurrent fetches
+        async with jwks_fetch_lock:
+            # Re-check if kid is cached now (another thread/coroutine might have fetched it while we waited)
+            if not is_kid_cached(token_kid):
+                # Check cooldown
+                current_time = time.time()
+                if current_time - last_jwks_refresh >= COOLDOWN_DURATION:
+                    # Trigger async fetch
+                    if http_client is None:
+                        http_client = httpx.AsyncClient()
+                    try:
+                        resp = await http_client.get(JWKS_URL, timeout=5.0)
+                        if resp.status_code == 200:
+                            jwks_cache = resp.json()
+                            last_jwks_refresh = current_time
+                    except Exception:
+                        pass  # If fetch fails, we'll try to verify with what we have or raise 401 below
+
     if not jwks_cache:
         # Fallback if JWKS is unreachable and we have no test secret
-        # In a strict environment, we'd raise 401. To allow testing, if testing var is set we bypass,
-        # but the prompt requires strict 401 for invalid tokens.
         if os.getenv("ALLOW_UNVERIFIED_JWT_FOR_TEST"):
             try:
                 return jwt.get_unverified_claims(token)
@@ -253,10 +291,9 @@ def verify_token(token: str) -> Dict[str, Any]:
         )
 
     try:
-        unverified_header = jwt.get_unverified_header(token)
         rsa_key = {}
         for key in jwks_cache.get("keys", []):
-            if key["kid"] == unverified_header.get("kid"):
+            if key["kid"] == token_kid:
                 rsa_key = {
                     "kty": key["kty"],
                     "kid": key["kid"],
@@ -703,7 +740,7 @@ async def signature_verification(request: Request, body: SignatureVerificationRe
         raise HTTPException(status_code=401, detail="Missing active session token")
     token = auth_header.split(" ")[1]
     try:
-        claims = verify_token(token)
+        claims = await verify_token(token)
     except HTTPException as e:
         raise HTTPException(status_code=401, detail=e.detail)
 
@@ -884,7 +921,7 @@ async def proxy_requests(request: Request, path: str) -> Response:
     token = auth_header.split(" ")[1]
 
     try:
-        payload = verify_token(token)
+        payload = await verify_token(token)
     except HTTPException as e:
         return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
 

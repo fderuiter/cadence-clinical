@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1783
-- **Passed:** 1783 🟢
+- **Total Automated Test Cases Run:** 1788
+- **Passed:** 1788 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -924,6 +924,7 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_form_submission_lifecycle_happy_path` | `tests.test_form_submissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_form_submission_locks` | `tests.test_form_submissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_form_submission_validation` | `tests.test_form_submissions` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_concurrent_requests_do_not_duplicate_fetches` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_gateway_site_isolation_propagation` | `tests.test_gateway` | Trace-16 | 🟢 PASSED | < 1s |
 | `test_gateway_bearer_only_subject_routing_and_header_enforcement` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_gateway_comprehensive_scope_spoofing_prevention` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -947,6 +948,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_get_openapi_json` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_openapi_json_error` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_swagger_ui` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_jwks_refresh_cooldown_throttling` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_jwks_refresh_timeout_is_five_seconds` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_proxy_requests_change_reason_too_long` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_proxy_requests_invalid_auth` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_proxy_requests_no_auth` | `tests.test_gateway` | PRD-UNI-001 | 🟢 PASSED | < 1s |
@@ -954,6 +957,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_proxy_requests_terminology_paths` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_proxy_requests_v2_headers` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_proxy_requests_valid_auth` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_resiliency_after_offline_startup` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_seamless_key_rotation_on_demand_refresh` | `tests.test_gateway` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_signature_gated_mutation_enforcement` | `tests.test_gateway` | Trace-15 | 🟢 PASSED | < 1s |
 | `test_signature_gated_mutation_expired_token` | `tests.test_gateway` | Trace-15 | 🟢 PASSED | < 1s |
 | `test_signature_gated_mutation_mismatched_action` | `tests.test_gateway` | Trace-15 | 🟢 PASSED | < 1s |

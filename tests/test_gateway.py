@@ -10,14 +10,15 @@ from jose import jwt
 from apps.gateway.main import app, generate_signature, verify_token
 
 
-def test_verify_token_invalid() -> None:
+@pytest.mark.asyncio
+async def test_verify_token_invalid() -> None:
     """
     Test verifying an invalid token.
 
     Ensures that passing an invalid token to verify_token raises an exception.
     """
     with pytest.raises(Exception):
-        verify_token("invalid_token")
+        await verify_token("invalid_token")
 
 
 def test_generate_signature() -> None:
@@ -2117,3 +2118,316 @@ def test_gateway_startup_production_no_bypass_configs() -> None:
         text=True,
     )
     assert result.returncode == 0
+
+
+def generate_mock_jwk_and_token(kid: str, payload: dict) -> tuple[dict, str]:
+    """Helper to generate a mock JWK and a corresponding signed JWT."""
+    import base64
+
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from jose import jwt
+
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    numbers = private_key.public_key().public_numbers()
+
+    def to_base64url(val: int) -> str:
+        val_bytes = val.to_bytes((val.bit_length() + 7) // 8, byteorder="big")
+        return base64.urlsafe_b64encode(val_bytes).rstrip(b"=").decode("utf-8")
+
+    n_b64 = to_base64url(numbers.n)
+    e_b64 = to_base64url(numbers.e)
+
+    private_pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption(),
+    ).decode("utf-8")
+
+    token = jwt.encode(payload, private_pem, algorithm="RS256", headers={"kid": kid})
+    jwk = {"kty": "RSA", "kid": kid, "use": "sig", "n": n_b64, "e": e_b64}
+    return jwk, token
+
+
+@pytest.mark.asyncio
+async def test_seamless_key_rotation_on_demand_refresh(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Validate that gateway triggers on-demand retrieval of the key set when an unrecognized key ID is encountered.
+
+    Requirements: PRD-UNI-001
+    """
+    import asyncio
+
+    import apps.gateway.main as gm
+
+    # Reset globals
+    gm.jwks_cache = None
+    gm.last_jwks_refresh = 0.0
+    gm.jwks_fetch_lock = asyncio.Lock()
+
+    jwk_1, token_1 = generate_mock_jwk_and_token(
+        "kid_1", {"sub": "user1", "roles": ["admin"]}
+    )
+    jwk_2, token_2 = generate_mock_jwk_and_token(
+        "kid_2", {"sub": "user2", "roles": ["admin"]}
+    )
+
+    # Set initial cache with only jwk_1
+    gm.jwks_cache = {"keys": [jwk_1]}
+
+    # Mock the HTTP fetch to return both keys
+    fetch_count = 0
+
+    class MockResponse:
+        status_code = 200
+
+        def json(self):
+            return {"keys": [jwk_1, jwk_2]}
+
+    async def mock_get(url: str, *args, **kwargs) -> MockResponse:
+        nonlocal fetch_count
+        fetch_count += 1
+        return MockResponse()
+
+    # Create mock client and patch its get method
+    mock_client = MagicMock()
+    mock_client.get = mock_get
+    monkeypatch.setattr(gm, "http_client", mock_client)
+
+    # Verifying token_1 should NOT trigger a fetch since kid_1 is already cached
+    claims_1 = await gm.verify_token(token_1)
+    assert claims_1["sub"] == "user1"
+    assert fetch_count == 0
+
+    # Verifying token_2 (unrecognized kid_2) should trigger exactly one fetch
+    claims_2 = await gm.verify_token(token_2)
+    assert claims_2["sub"] == "user2"
+    assert fetch_count == 1
+    assert gm.last_jwks_refresh > 0.0
+
+
+@pytest.mark.asyncio
+async def test_jwks_refresh_cooldown_throttling(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Validate that JWKS retrieval is throttled using a cooldown to restrict updates.
+
+    Requirements: PRD-UNI-001
+    """
+    import asyncio
+
+    from fastapi import HTTPException
+
+    import apps.gateway.main as gm
+
+    # Reset globals
+    gm.jwks_cache = None
+    gm.last_jwks_refresh = 0.0
+    gm.jwks_fetch_lock = asyncio.Lock()
+
+    jwk_1, token_1 = generate_mock_jwk_and_token(
+        "kid_1", {"sub": "user1", "roles": ["admin"]}
+    )
+    jwk_2, token_2 = generate_mock_jwk_and_token(
+        "kid_2", {"sub": "user2", "roles": ["admin"]}
+    )
+    jwk_3, token_3 = generate_mock_jwk_and_token(
+        "kid_3", {"sub": "user3", "roles": ["admin"]}
+    )
+
+    # Initial cache with jwk_1
+    gm.jwks_cache = {"keys": [jwk_1]}
+
+    fetch_count = 0
+
+    class MockResponse:
+        status_code = 200
+
+        def __init__(self, keys):
+            self.keys = keys
+
+        def json(self):
+            return {"keys": self.keys}
+
+    async def mock_get(url: str, *args, **kwargs) -> MockResponse:
+        nonlocal fetch_count
+        fetch_count += 1
+        if fetch_count == 1:
+            return MockResponse([jwk_1, jwk_2])
+        else:
+            return MockResponse([jwk_1, jwk_2, jwk_3])
+
+    mock_client = MagicMock()
+    mock_client.get = mock_get
+    monkeypatch.setattr(gm, "http_client", mock_client)
+
+    # First unrecognized kid_2 triggers fetch and succeeds
+    claims_2 = await gm.verify_token(token_2)
+    assert claims_2["sub"] == "user2"
+    assert fetch_count == 1
+
+    # Second unrecognized kid_3 is requested within cooldown.
+    # It must NOT trigger any fetch and must fail immediately with 401.
+    with pytest.raises(HTTPException) as exc_info:
+        await gm.verify_token(token_3)
+    assert exc_info.value.status_code == 401
+    assert fetch_count == 1  # Still 1, no second fetch was triggered
+
+
+@pytest.mark.asyncio
+async def test_resiliency_after_offline_startup(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Validate that gateway recovers on-demand if the identity provider was temporarily offline during startup.
+
+    Requirements: PRD-UNI-001
+    """
+    import asyncio
+
+    import apps.gateway.main as gm
+
+    # Reset globals
+    gm.jwks_cache = None
+    gm.last_jwks_refresh = 0.0
+    gm.jwks_fetch_lock = asyncio.Lock()
+
+    jwk_1, token_1 = generate_mock_jwk_and_token(
+        "kid_1", {"sub": "user1", "roles": ["admin"]}
+    )
+
+    # Simulate offline on startup: fetch fails
+    async def mock_get_failed(url: str, *args, **kwargs):
+        raise httpx.ConnectError("Connection refused")
+
+    mock_client = MagicMock()
+    mock_client.get = mock_get_failed
+    monkeypatch.setattr(gm, "http_client", mock_client)
+
+    # Run startup which fails to fetch
+    await gm.startup()
+    assert gm.jwks_cache is None
+    assert gm.last_jwks_refresh == 0.0
+
+    # Keycloak is now online! Mock get to succeed
+    fetch_count = 0
+
+    class MockResponse:
+        status_code = 200
+
+        def json(self):
+            return {"keys": [jwk_1]}
+
+    async def mock_get_success(url: str, *args, **kwargs) -> MockResponse:
+        nonlocal fetch_count
+        fetch_count += 1
+        return MockResponse()
+
+    mock_client_success = MagicMock()
+    mock_client_success.get = mock_get_success
+    monkeypatch.setattr(gm, "http_client", mock_client_success)
+
+    # First request comes in. It should fetch on-demand and verify successfully.
+    claims = await gm.verify_token(token_1)
+    assert claims["sub"] == "user1"
+    assert fetch_count == 1
+    assert gm.jwks_cache is not None
+
+
+@pytest.mark.asyncio
+async def test_concurrent_requests_do_not_duplicate_fetches(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Validate that concurrent requests waiting on the same unrecognized key ID do not trigger duplicate network fetches.
+
+    Requirements: PRD-UNI-001
+    """
+    import asyncio
+
+    import apps.gateway.main as gm
+
+    # Reset globals
+    gm.jwks_cache = None
+    gm.last_jwks_refresh = 0.0
+    gm.jwks_fetch_lock = asyncio.Lock()
+
+    jwk_1, token_1 = generate_mock_jwk_and_token(
+        "kid_1", {"sub": "user1", "roles": ["admin"]}
+    )
+    jwk_2, token_2 = generate_mock_jwk_and_token(
+        "kid_2", {"sub": "user2", "roles": ["admin"]}
+    )
+
+    # Initial cache with jwk_1
+    gm.jwks_cache = {"keys": [jwk_1]}
+
+    fetch_count = 0
+
+    # We introduce a small delay in mock fetch to make concurrency realistic
+    class MockResponse:
+        status_code = 200
+
+        def json(self):
+            return {"keys": [jwk_1, jwk_2]}
+
+    async def mock_get(url: str, *args, **kwargs) -> MockResponse:
+        nonlocal fetch_count
+        fetch_count += 1
+        await asyncio.sleep(0.1)  # Simulate network delay
+        return MockResponse()
+
+    mock_client = MagicMock()
+    mock_client.get = mock_get
+    monkeypatch.setattr(gm, "http_client", mock_client)
+
+    # Trigger 3 concurrent requests for token_2
+    results = await asyncio.gather(
+        gm.verify_token(token_2),
+        gm.verify_token(token_2),
+        gm.verify_token(token_2),
+        return_exceptions=True,
+    )
+
+    # All three requests must succeed
+    for r in results:
+        assert not isinstance(r, Exception)
+        assert r["sub"] == "user2"
+
+    # Exactly one fetch must be triggered
+    assert fetch_count == 1
+
+
+@pytest.mark.asyncio
+async def test_jwks_refresh_timeout_is_five_seconds(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Validate that on-demand key set retrieval times out after 5.0 seconds.
+
+    Requirements: PRD-UNI-001
+    """
+    import asyncio
+
+    import apps.gateway.main as gm
+
+    # Reset globals
+    gm.jwks_cache = None
+    gm.last_jwks_refresh = 0.0
+    gm.jwks_fetch_lock = asyncio.Lock()
+
+    jwk_1, token_1 = generate_mock_jwk_and_token(
+        "kid_1", {"sub": "user1", "roles": ["admin"]}
+    )
+
+    timeout_value = None
+
+    async def mock_get(url: str, timeout: float, *args, **kwargs):
+        nonlocal timeout_value
+        timeout_value = timeout
+        return MagicMock(status_code=200, json=lambda: {"keys": [jwk_1]})
+
+    mock_client = MagicMock()
+    mock_client.get = mock_get
+    monkeypatch.setattr(gm, "http_client", mock_client)
+
+    await gm.verify_token(token_1)
+    assert timeout_value == 5.0
