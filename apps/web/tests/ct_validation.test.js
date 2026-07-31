@@ -20,6 +20,9 @@ describe("Controlled Terminology (CT) Live Validation Unit & UI Tests", () => {
   beforeEach(() => {
     const pinia = createPinia();
     setActivePinia(pinia);
+    if (typeof window !== "undefined" && window.localStorage) {
+      window.localStorage.clear();
+    }
     vi.resetAllMocks();
     vi.useFakeTimers();
   });

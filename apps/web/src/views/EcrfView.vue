@@ -8,6 +8,123 @@
       </p>
     </div>
 
+    <!-- Subject Enrollment & Management Panel (PRD-SYS-001) -->
+    <div class="card" style="margin-bottom: 24px;">
+      <div class="card-title">👥 Subject Session & Enrollment Management</div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start;">
+        <!-- Active Subject Selection -->
+        <div style="border-right: 1px solid var(--border); padding-right: 24px;">
+          <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 12px; color: var(--primary);">
+            Select Active Subject Session:
+          </h3>
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label for="active-subject-select">Active Subject ID</label>
+            <select
+              id="active-subject-select"
+              v-model="selectedActiveSubject"
+              style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-weight: bold;"
+              @change="switchActiveSubject"
+            >
+              <option v-for="subj in store.subjects" :key="subj" :value="subj">
+                {{ subj }}
+              </option>
+            </select>
+          </div>
+          <div style="font-size: 0.85rem; color: #475569; background-color: #f1f5f9; padding: 12px; border-radius: 6px;">
+            <strong>Session Scope:</strong> The form below is currently displaying and capturing electronic data specifically for
+            <strong style="color: var(--primary);" class="active-subj-display">{{ store.activeSubjectId }}</strong>.
+          </div>
+        </div>
+
+        <!-- Enroll New Subject Form -->
+        <div>
+          <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 12px; color: var(--primary);">
+            Enroll New Study Participant:
+          </h3>
+
+          <div v-if="!canEnroll" style="color: #991b1b; background-color: #fee2e2; padding: 12px; border-radius: 6px; font-size: 0.85rem;" class="gated-lock-msg">
+            🔒 <strong>Access Gated:</strong> Only Clinical Research Coordinators (CRCs) or Site Investigators can enroll new study subjects.
+          </div>
+          <div v-else style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div class="form-group">
+                <label for="enroll-subject-id">Subject ID</label>
+                <input
+                  id="enroll-subject-id"
+                  v-model="enrollForm.subjectId"
+                  type="text"
+                  placeholder="e.g. SUBJ-004"
+                  style="width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px;"
+                />
+              </div>
+              <div class="form-group">
+                <label for="enroll-site-id">Site ID</label>
+                <input
+                  id="enroll-site-id"
+                  v-model="enrollForm.siteId"
+                  type="text"
+                  placeholder="e.g. Site-01"
+                  style="width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px;"
+                />
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div class="form-group">
+                <label for="enroll-birth-date">Birth Date</label>
+                <input
+                  id="enroll-birth-date"
+                  v-model="enrollForm.birthDate"
+                  type="date"
+                  style="width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px;"
+                />
+              </div>
+              <div class="form-group">
+                <label for="enroll-sex">Sex at Birth</label>
+                <select
+                  id="enroll-sex"
+                  v-model="enrollForm.sex"
+                  style="width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px;"
+                >
+                  <option value="M">Male</option>
+                  <option value="F">Female</option>
+                  <option value="U">Unknown</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="enroll-reason">Enrollment Justification (Mandatory Reason)</label>
+              <input
+                id="enroll-reason"
+                v-model="enrollForm.reason"
+                type="text"
+                placeholder="Required for GxP Audit Traceability..."
+                style="width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px;"
+              />
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; margin-top: 4px;">
+              <button
+                id="btn-enroll-subject"
+                class="btn btn-primary"
+                type="button"
+                :disabled="isEnrollLoading || !enrollForm.subjectId.trim() || !enrollForm.reason.trim()"
+                @click="handleEnrollSubject"
+              >
+                {{ isEnrollLoading ? "Enrolling..." : "➕ Enroll Participant" }}
+              </button>
+            </div>
+
+            <div v-if="enrollError" style="color: #ef4444; font-size: 0.8rem; margin-top: 4px;" class="enroll-error-msg">
+              Error: {{ enrollError }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="grid-2">
       <!-- Dynamic eCRF Form -->
       <div class="card">
@@ -1097,6 +1214,68 @@ function handleLookupInput(field, value) {
   }, 300);
 }
 
+// Active Subject Session Management
+const selectedActiveSubject = ref(store.activeSubjectId);
+
+function switchActiveSubject() {
+  store.setActiveSubject(selectedActiveSubject.value);
+}
+
+// Enroll Participant Form
+const enrollForm = reactive({
+  subjectId: "",
+  siteId: "Site-01",
+  birthDate: "1990-01-01",
+  sex: "F",
+  reason: "",
+});
+const isEnrollLoading = ref(false);
+const enrollError = ref("");
+
+const canEnroll = computed(() => {
+  const roles = authStore.normalizedRoles || [];
+  return roles.some(role => ["crc", "site_investigator", "sponsor_admin"].includes(role));
+});
+
+async function handleEnrollSubject() {
+  if (!enrollForm.subjectId.trim()) {
+    enrollError.value = "Subject ID is required.";
+    return;
+  }
+  if (!enrollForm.reason.trim()) {
+    enrollError.value = "Enrollment justification reason is required.";
+    return;
+  }
+  try {
+    enrollError.value = "";
+    isEnrollLoading.value = true;
+    await store.enrollSubject({
+      subjectId: enrollForm.subjectId.trim(),
+      siteId: enrollForm.siteId.trim(),
+      birthDate: enrollForm.birthDate,
+      sex: enrollForm.sex,
+      reason: enrollForm.reason.trim(),
+    });
+    // Set selectedActiveSubject in UI
+    selectedActiveSubject.value = store.activeSubjectId;
+    // Clear form
+    enrollForm.subjectId = "";
+    enrollForm.reason = "";
+    alert(`Subject ${store.activeSubjectId} enrolled successfully!`);
+  } catch (err) {
+    enrollError.value = err.message || "Enrollment failed.";
+  } finally {
+    isEnrollLoading.value = false;
+  }
+}
+
+watch(
+  () => store.activeSubjectId,
+  (newVal) => {
+    selectedActiveSubject.value = newVal;
+  }
+);
+
 // Reason Modal States
 const showReasonModal = ref(false);
 const pendingValueChange = ref(null);
@@ -1116,7 +1295,7 @@ const signoffTargetId = ref("");
 const customTargetId = ref("");
 const signoffReason = ref("PI approval and sign-off.");
 
-const availableSubjects = ref(["SUBJ-001", "SUBJ-002", "SUBJ-003"]);
+const availableSubjects = computed(() => store.subjects);
 const availableVisits = ref(["V-SCR", "V-TRT-A1", "V-TRT-A2", "V-TRT-B1"]);
 const availableFormSubmissions = ref(["FSUB-001", "FSUB-002", "FSUB-003"]);
 

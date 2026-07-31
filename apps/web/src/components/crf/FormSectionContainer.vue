@@ -121,13 +121,14 @@ const items = computed({
 });
 
 function toggleCollapse() {
+  props.section.isCollapsed = !props.section.isCollapsed;
   const storeSection = designerStore.activeForm?.sections?.find(
     (s) => s.id === props.section.id
   );
   if (storeSection) {
-    storeSection.isCollapsed = !storeSection.isCollapsed;
+    storeSection.isCollapsed = props.section.isCollapsed;
   } else {
-    emit("update-section", { ...props.section, isCollapsed: !props.section.isCollapsed });
+    emit("update-section", { ...props.section, isCollapsed: props.section.isCollapsed });
   }
 }
 

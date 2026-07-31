@@ -12,6 +12,9 @@ export const useClinicalStore = defineStore("clinical", {
     let savedFormQueries = null;
     let savedLedgerBlocks = null;
     let savedUsdm = null;
+    let savedSubjects = null;
+    let savedActiveSubjectId = null;
+    let savedSubjectData = null;
     if (typeof window !== "undefined" && window.localStorage) {
       try {
         savedFormValues = JSON.parse(window.localStorage.getItem("formValues"));
@@ -22,12 +25,69 @@ export const useClinicalStore = defineStore("clinical", {
           window.localStorage.getItem("ledgerBlocks")
         );
         savedUsdm = JSON.parse(window.localStorage.getItem("currentUsdm"));
+        savedSubjects = JSON.parse(window.localStorage.getItem("subjects"));
+        savedActiveSubjectId = window.localStorage.getItem("activeSubjectId");
+        savedSubjectData = JSON.parse(window.localStorage.getItem("subjectData"));
       } catch (e) {
         console.error("Failed to parse saved state from localStorage", e);
       }
     }
 
+    const defaultSubjectData = {
+      "SUBJ-001": {
+        formValues: savedFormValues || {
+          concept_code: "",
+          brthdt: "1980-05-12", // deid-ignore
+          sex: "F",
+          vssbp: "120",
+          vsdpb: "80",
+          pulse: "72",
+          pulse_details: "",
+          weight: "70",
+          height: "1.75",
+          bmi_status: "Normal",
+        },
+        formQueries: savedFormQueries || {},
+      },
+      "SUBJ-002": {
+        formValues: {
+          concept_code: "",
+          brthdt: "1985-06-15", // deid-ignore
+          sex: "M",
+          vssbp: "130",
+          vsdpb: "85",
+          pulse: "76",
+          pulse_details: "",
+          weight: "80",
+          height: "1.80",
+          bmi_status: "Normal",
+        },
+        formQueries: {},
+      },
+      "SUBJ-003": {
+        formValues: {
+          concept_code: "",
+          brthdt: "1990-01-20", // deid-ignore
+          sex: "F",
+          vssbp: "115",
+          vsdpb: "75",
+          pulse: "68",
+          pulse_details: "",
+          weight: "65",
+          height: "1.65",
+          bmi_status: "Normal",
+        },
+        formQueries: {},
+      },
+    };
+
+    const activeSubId = savedActiveSubjectId || "SUBJ-001";
+    const subData = savedSubjectData || defaultSubjectData;
+
     return {
+      subjects: savedSubjects || ["SUBJ-001", "SUBJ-002", "SUBJ-003"],
+      activeSubjectId: activeSubId,
+      subjectData: subData,
       currentUsdm: savedUsdm || {
         studyId: "STUDY-USDM-001",
         studyTitle: "Phase II Trial of Cadence-001 in Essential Hypertension",
@@ -399,7 +459,7 @@ export const useClinicalStore = defineStore("clinical", {
           },
         },
       ],
-      formValues: savedFormValues || {
+      formValues: subData[activeSubId]?.formValues || {
         concept_code: "",
         brthdt: "1980-05-12", // deid-ignore
         sex: "F",
@@ -412,7 +472,7 @@ export const useClinicalStore = defineStore("clinical", {
         bmi_status: "Normal",
       },
       fieldVisibility: {},
-      formQueries: savedFormQueries || {},
+      formQueries: subData[activeSubId]?.formQueries || {},
       ledgerBlocks: savedLedgerBlocks || [],
       syncInterval: null,
 
@@ -485,12 +545,95 @@ export const useClinicalStore = defineStore("clinical", {
       }
     },
     triggerValueChange() {
+      if (this.subjectData[this.activeSubjectId]) {
+        this.subjectData[this.activeSubjectId].formValues = { ...this.formValues };
+      }
+      if (typeof window !== "undefined" && window.localStorage) {
+        window.localStorage.setItem("subjectData", JSON.stringify(this.subjectData));
+      }
       if (!this.debouncedEvaluateRules) {
         this.debouncedEvaluateRules = debounce(async () => {
           await this.evaluateRules();
         }, 50);
       }
       this.debouncedEvaluateRules();
+    },
+    async enrollSubject({ subjectId, siteId, birthDate, sex, reason }) {
+      if (!subjectId || !subjectId.trim()) {
+        throw new Error("Subject ID is required.");
+      }
+      if (this.subjects.includes(subjectId)) {
+        throw new Error(`Subject with ID ${subjectId} is already enrolled.`);
+      }
+
+      // Call backend API wrapper
+      await executionService.createSubject({
+        subject_id: subjectId,
+        site_id: siteId,
+        birth_date: birthDate,
+        sex: sex,
+      }, { changeReason: reason });
+
+      // Add to store state
+      this.subjects.push(subjectId);
+      this.subjectData[subjectId] = {
+        formValues: {
+          concept_code: "",
+          brthdt: birthDate || "",
+          sex: sex || "U",
+          vssbp: "",
+          vsdpb: "",
+          pulse: "",
+          pulse_details: "",
+          weight: "",
+          height: "",
+          bmi_status: "Normal",
+        },
+        formQueries: {},
+      };
+
+      // Set as active subject
+      await this.setActiveSubject(subjectId);
+
+      // Log GxP ledger block
+      await this.addLedgerBlock(
+        "SUBJECT_ENROLLED",
+        { subjectId, siteId, birthDate, sex },
+        reason || "New subject enrollment by site staff."
+      );
+
+      // Persist to local storage
+      if (typeof window !== "undefined" && window.localStorage) {
+        window.localStorage.setItem("subjects", JSON.stringify(this.subjects));
+        window.localStorage.setItem("subjectData", JSON.stringify(this.subjectData));
+      }
+    },
+    async setActiveSubject(subjectId) {
+      if (!this.subjects.includes(subjectId)) {
+        throw new Error(`Subject ${subjectId} is not enrolled.`);
+      }
+
+      // Save current active subject's data first
+      if (this.subjectData[this.activeSubjectId]) {
+        this.subjectData[this.activeSubjectId].formValues = { ...this.formValues };
+        this.subjectData[this.activeSubjectId].formQueries = { ...this.formQueries };
+      }
+
+      this.activeSubjectId = subjectId;
+
+      const targetData = this.subjectData[subjectId] || { formValues: {}, formQueries: {} };
+      this.formValues = targetData.formValues;
+      this.formQueries = targetData.formQueries;
+
+      // Persist active subject selection
+      if (typeof window !== "undefined" && window.localStorage) {
+        window.localStorage.setItem("activeSubjectId", subjectId);
+        window.localStorage.setItem("formValues", JSON.stringify(this.formValues));
+        window.localStorage.setItem("formQueries", JSON.stringify(this.formQueries));
+        window.localStorage.setItem("subjectData", JSON.stringify(this.subjectData));
+      }
+
+      await this.evaluateRules();
     },
     async addLedgerBlock(action, details, reason = "System Action") {
       const timestamp = new Date().toISOString();
@@ -512,6 +655,12 @@ export const useClinicalStore = defineStore("clinical", {
 
       this.ledgerBlocks.push(block);
 
+      // Keep subjectData in sync when queries or values are mutated
+      if (this.subjectData[this.activeSubjectId]) {
+        this.subjectData[this.activeSubjectId].formValues = { ...this.formValues };
+        this.subjectData[this.activeSubjectId].formQueries = { ...this.formQueries };
+      }
+
       // Save persistent fields to localStorage
       if (typeof window !== "undefined" && window.localStorage) {
         window.localStorage.setItem(
@@ -529,6 +678,18 @@ export const useClinicalStore = defineStore("clinical", {
         window.localStorage.setItem(
           "currentUsdm",
           JSON.stringify(this.currentUsdm)
+        );
+        window.localStorage.setItem(
+          "subjects",
+          JSON.stringify(this.subjects)
+        );
+        window.localStorage.setItem(
+          "subjectData",
+          JSON.stringify(this.subjectData)
+        );
+        window.localStorage.setItem(
+          "activeSubjectId",
+          this.activeSubjectId
         );
       }
 
