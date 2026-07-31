@@ -9,8 +9,8 @@ This report documents the Installation Qualification (IQ) and Operational Qualif
 Based on the executed automated verification suite, the platform meets all predefined structural, functional, and security compliance constraints.
 
 ### Validation Result Summary
-- **Total Automated Test Cases Run:** 1720
-- **Passed:** 1720 🟢
+- **Total Automated Test Cases Run:** 1783
+- **Passed:** 1783 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -1240,6 +1240,14 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_merge_outcomes` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_parse_existing_outcomes` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_traceability_outcome_handling` | `tests.test_pr_comment` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_check_and_run_exporter_bypass` | `tests.test_pre_commit_openapi` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_check_and_run_exporter_missing_dependencies` | `tests.test_pre_commit_openapi` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_check_and_run_exporter_missing_venv` | `tests.test_pre_commit_openapi` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_check_and_run_exporter_success` | `tests.test_pre_commit_openapi` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_check_and_run_exporter_validation_failure` | `tests.test_pre_commit_openapi` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_get_staged_files_failure` | `tests.test_pre_commit_openapi` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_get_staged_files_success` | `tests.test_pre_commit_openapi` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_should_trigger_schema_generation` | `tests.test_pre_commit_openapi` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_clinical_capture_provenance_and_version_stamping` | `tests.test_protocol_amendments_validation_suite` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_designer_amendment_immutability_and_race_safety` | `tests.test_protocol_amendments_validation_suite` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_designer_amendment_signature_validation` | `tests.test_protocol_amendments_validation_suite` | *Regression/Helper* | 🟢 PASSED | < 1s |
