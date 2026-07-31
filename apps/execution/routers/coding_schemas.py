@@ -7,17 +7,17 @@ from pydantic import BaseModel, ValidationInfo, field_validator, model_validator
 
 # Enums
 class DictTypeEnum(str, Enum):
-    MEDDRA = "MEDDRA"
-    WHODRUG = "WHODRUG"
-    LOINC = "LOINC"
-    SNOMED = "SNOMED"
+    MEDDRA = DictionaryType.MEDDRA.value
+    WHODRUG = DictionaryType.WHODRUG.value
+    LOINC = DictionaryType.LOINC.value
+    SNOMED = DictionaryType.SNOMED.value
 
 
 class JobStatusEnum(str, Enum):
-    PENDING = "PENDING"
-    PROCESSING = "PROCESSING"
-    COMPLETED = "COMPLETED"
-    FAILED = "FAILED"
+    PENDING = ImportState.PENDING.value
+    PROCESSING = ImportState.PROCESSING.value
+    COMPLETED = ImportState.COMPLETED.value
+    FAILED = ImportState.FAILED.value
 
 
 class PrimarySocFlagEnum(str, Enum):
@@ -31,13 +31,12 @@ class DictionaryImportRequest(BaseModel):
     version: str
     parse_multilingual: bool = True
 
-    @model_validator(mode="after")
-    def validate_dictionary_type(self) -> "DictionaryImportRequest":
-        if self.dictionary_type not in (DictTypeEnum.MEDDRA, DictTypeEnum.WHODRUG):
-            raise ValueError(
-                f"Unsupported dictionary type: {self.dictionary_type.value}"
-            )
-        return self
+    @field_validator("version")
+    @classmethod
+    def validate_version_non_empty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Version must be a non-empty string.")
+        return v
 
 
 class CoderActionRequest(BaseModel):

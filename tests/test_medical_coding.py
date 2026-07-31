@@ -752,3 +752,74 @@ async def test_lookup_endpoints_validation_errors() -> None:
             headers=headers,
         )
         assert resp.status_code == 400
+
+
+
+@pytest.mark.asyncio
+async def test_coding_schemas_validation() -> None:
+    """Verify schema-level validation of CoderActionRequest and DictionaryImportRequest."""
+    from pydantic import ValidationError
+    from apps.execution.routers.coding_schemas import CoderActionRequest, DictionaryImportRequest, DictTypeEnum
+
+    # 1. CoderActionRequest: Valid ACCEPT/QUERY without extra fields
+    req_accept = CoderActionRequest(action="ACCEPT", suggestion_index=0)
+    assert req_accept.action == "ACCEPT"
+
+    req_query = CoderActionRequest(action="QUERY")
+    assert req_query.action == "QUERY"
+
+    # 2. CoderActionRequest: Valid OVERRIDE
+    req_override = CoderActionRequest(
+        action="OVERRIDE",
+        code="10019211",
+        term="Headache",
+        reason_for_change="Clinically verified standard term",
+    )
+    assert req_override.action == "OVERRIDE"
+
+    # 3. CoderActionRequest: Invalid OVERRIDE missing reason
+    with pytest.raises(ValidationError) as exc_info:
+        CoderActionRequest(action="OVERRIDE", code="10019211", term="Headache")
+    assert "reason_for_change" in str(exc_info.value)
+
+    # 4. CoderActionRequest: Invalid OVERRIDE blank reason
+    with pytest.raises(ValidationError) as exc_info:
+        CoderActionRequest(
+            action="OVERRIDE",
+            code="10019211",
+            term="Headache",
+            reason_for_change="   ",
+        )
+    assert "reason_for_change" in str(exc_info.value)
+
+    # 5. CoderActionRequest: Invalid OVERRIDE missing code
+    with pytest.raises(ValidationError) as exc_info:
+        CoderActionRequest(
+            action="OVERRIDE",
+            term="Headache",
+            reason_for_change="Some reason",
+        )
+    assert "code" in str(exc_info.value)
+
+    # 6. DictionaryImportRequest: Valid request
+    import_req = DictionaryImportRequest(
+        dictionary_type=DictTypeEnum.MEDDRA,
+        version="26.0",
+    )
+    assert import_req.version == "26.0"
+
+    # 7. DictionaryImportRequest: Invalid request (empty version)
+    with pytest.raises(ValidationError) as exc_info:
+        DictionaryImportRequest(
+            dictionary_type=DictTypeEnum.MEDDRA,
+            version="",
+        )
+    assert "Version must be a non-empty string" in str(exc_info.value)
+
+    # 8. DictionaryImportRequest: Invalid request (blank version)
+    with pytest.raises(ValidationError) as exc_info:
+        DictionaryImportRequest(
+            dictionary_type=DictTypeEnum.MEDDRA,
+            version="    ",
+        )
+    assert "Version must be a non-empty string" in str(exc_info.value)
