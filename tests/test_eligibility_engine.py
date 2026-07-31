@@ -406,22 +406,30 @@ def test_evaluate_criteria_group_helper():
     ]
 
     # Overall Pass
-    res, fails = evaluate_criteria_group(criteria, {"eCRF.DM.AGE": 25, "eCRF.MH.DIABETES": False})
+    res, fails = evaluate_criteria_group(
+        criteria, {"eCRF.DM.AGE": 25, "eCRF.MH.DIABETES": False}
+    )
     assert res is True
     assert len(fails) == 0
 
     # Inclusion Fail
-    res, fails = evaluate_criteria_group(criteria, {"eCRF.DM.AGE": 16, "eCRF.MH.DIABETES": False})
+    res, fails = evaluate_criteria_group(
+        criteria, {"eCRF.DM.AGE": 16, "eCRF.MH.DIABETES": False}
+    )
     assert res is False
     assert fails == ["INC-001"]
 
     # Exclusion Fail
-    res, fails = evaluate_criteria_group(criteria, {"eCRF.DM.AGE": 25, "eCRF.MH.DIABETES": True})
+    res, fails = evaluate_criteria_group(
+        criteria, {"eCRF.DM.AGE": 25, "eCRF.MH.DIABETES": True}
+    )
     assert res is False
     assert fails == ["EXC-001"]
 
     # Both Fail
-    res, fails = evaluate_criteria_group(criteria, {"eCRF.DM.AGE": 16, "eCRF.MH.DIABETES": True})
+    res, fails = evaluate_criteria_group(
+        criteria, {"eCRF.DM.AGE": 16, "eCRF.MH.DIABETES": True}
+    )
     assert res is False
     # Both fail, let's verify both are returned
     assert set(fails) == {"INC-001", "EXC-001"}

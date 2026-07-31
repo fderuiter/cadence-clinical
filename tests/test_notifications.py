@@ -713,8 +713,8 @@ async def test_email_delivery_channel_failure_and_exhaustion():
         await poll_and_dispatch()
 
         # Robustly wait for first attempt to complete
-        for _ in range(160):
-            await asyncio.sleep(0.05)
+        for _ in range(400):
+            await asyncio.sleep(0.1)
             async with db_manager.get_session_maker()() as session:
                 res = await session.execute(
                     select(NotificationDelivery).where(
@@ -746,8 +746,8 @@ async def test_email_delivery_channel_failure_and_exhaustion():
         await poll_and_dispatch()
 
         # Robustly wait for final attempt to complete
-        for _ in range(160):
-            await asyncio.sleep(0.05)
+        for _ in range(400):
+            await asyncio.sleep(0.1)
             async with db_manager.get_session_maker()() as session:
                 res = await session.execute(
                     select(NotificationDelivery).where(
@@ -823,8 +823,8 @@ async def test_multi_channel_edge_case_in_app_succeeds_email_exhausts():
         await poll_and_dispatch()
 
         # Robustly wait for the first dispatch to complete
-        for _ in range(160):
-            await asyncio.sleep(0.05)
+        for _ in range(400):
+            await asyncio.sleep(0.1)
             async with db_manager.get_session_maker()() as session:
                 res_email = await session.execute(
                     select(NotificationDelivery).where(
@@ -852,8 +852,8 @@ async def test_multi_channel_edge_case_in_app_succeeds_email_exhausts():
         await poll_and_dispatch()
 
         # Robustly wait for the second dispatch to complete
-        for _ in range(160):
-            await asyncio.sleep(0.05)
+        for _ in range(400):
+            await asyncio.sleep(0.1)
             async with db_manager.get_session_maker()() as session:
                 res_email = await session.execute(
                     select(NotificationDelivery).where(

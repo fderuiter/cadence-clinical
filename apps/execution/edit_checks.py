@@ -1,3 +1,4 @@
+import contextlib
 import copy
 import logging
 from datetime import datetime
@@ -130,17 +131,13 @@ class AEConsentTemporalCheckRule(EditCheckRule):
         # Compare dates using the AST evaluator
         ae_date = ae_obs.observation_date
         if ae_obs.value_string:
-            try:
+            with contextlib.suppress(ValueError):
                 ae_date = datetime.fromisoformat(ae_obs.value_string)
-            except ValueError:
-                pass
 
         consent_date = consent_obs.observation_date
         if consent_obs.value_string:
-            try:
+            with contextlib.suppress(ValueError):
                 consent_date = datetime.fromisoformat(consent_obs.value_string)
-            except ValueError:
-                pass
 
         # Build context and AST for evaluate_ast
         context = {
@@ -263,9 +260,8 @@ async def resolve_authored_rule_context(
         )
         sub_res = await session.execute(sub_stmt)
         subs = sub_res.scalars().all()
-        if subs and any(sub.status == "DRAFT" for sub in subs):
-            if is_prior:
-                return None, "PENDING_PREDECESSOR"
+        if subs and any(sub.status == "DRAFT" for sub in subs) and is_prior:
+            return None, "PENDING_PREDECESSOR"
 
         # 4. Look up target observation
         # First check if the observation we are evaluating is the target observation

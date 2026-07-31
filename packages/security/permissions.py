@@ -216,10 +216,7 @@ def has_permission(
     Returns:
         True if the required permission is granted, False otherwise.
     """
-    if isinstance(roles, str):
-        role_list = [roles]
-    else:
-        role_list = roles
+    role_list = [roles] if isinstance(roles, str) else roles
 
     user_permissions = get_permissions_for_roles(role_list)
     return required_permission in user_permissions

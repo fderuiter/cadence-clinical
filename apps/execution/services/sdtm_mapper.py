@@ -147,8 +147,7 @@ def calculate_study_day(
     delta = (event_date - rfstdtc).days
     if delta >= 0:
         return delta + 1
-    else:
-        return delta
+    return delta
 
 
 class CDASHToSDTMMapper:

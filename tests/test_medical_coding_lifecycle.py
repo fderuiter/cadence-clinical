@@ -66,66 +66,65 @@ async def setup_test_db():
 
 async def seed_dictionaries():
     """Seed dictionaries in the database for version 26.0 of MedDRA and 2024-03 of WHODrug."""
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            # 1. MedDRA Headache
-            session.add(
-                MedDRATerm(
-                    dictionary_version="26.0",
-                    code="10019211",
-                    term_name="Headache",
-                    level="LLT",
-                )
+    async with db_manager.get_session_maker()() as session, session.begin():
+        # 1. MedDRA Headache
+        session.add(
+            MedDRATerm(
+                dictionary_version="26.0",
+                code="10019211",
+                term_name="Headache",
+                level="LLT",
             )
-            # MedDRA Migraine
-            session.add(
-                MedDRATerm(
-                    dictionary_version="26.0",
-                    code="10029300",
-                    term_name="Migraine",
-                    level="LLT",
-                )
+        )
+        # MedDRA Migraine
+        session.add(
+            MedDRATerm(
+                dictionary_version="26.0",
+                code="10029300",
+                term_name="Migraine",
+                level="LLT",
             )
-            # MedDRA Hierarchy
-            session.add(
-                MedDRAHierarchy(
-                    dictionary_version="26.0",
-                    llt_code="10019211",
-                    pt_code="10019211",
-                    hlt_code="10019231",
-                    hlgt_code="10029214",
-                    soc_code="10029205",
-                    primary_soc_flag="Y",
-                )
+        )
+        # MedDRA Hierarchy
+        session.add(
+            MedDRAHierarchy(
+                dictionary_version="26.0",
+                llt_code="10019211",
+                pt_code="10019211",
+                hlt_code="10019231",
+                hlgt_code="10029214",
+                soc_code="10029205",
+                primary_soc_flag="Y",
             )
+        )
 
-            # 2. WHODrug Aspirin
-            session.add(
-                WHODrugRecord(
-                    dictionary_version="2024-03",
-                    drug_code="00010101001",
-                    preferred_name="ASPIRIN",
-                    drug_name="ASPIRIN TABLET",
-                )
+        # 2. WHODrug Aspirin
+        session.add(
+            WHODrugRecord(
+                dictionary_version="2024-03",
+                drug_code="00010101001",
+                preferred_name="ASPIRIN",
+                drug_name="ASPIRIN TABLET",
             )
-            # WHODrug Ibuprofen
-            session.add(
-                WHODrugRecord(
-                    dictionary_version="2024-03",
-                    drug_code="00020202002",
-                    preferred_name="IBUPROFEN",
-                    drug_name="IBUPROFEN TABLET",
-                )
+        )
+        # WHODrug Ibuprofen
+        session.add(
+            WHODrugRecord(
+                dictionary_version="2024-03",
+                drug_code="00020202002",
+                preferred_name="IBUPROFEN",
+                drug_name="IBUPROFEN TABLET",
             )
+        )
 
-            # Seed a Clinical Subject
-            session.add(
-                ClinicalSubject(
-                    id="SUBJ-UUID-1",
-                    subject_id="SUBJ-001",
-                    study_id="STUDY-001",
-                )
+        # Seed a Clinical Subject
+        session.add(
+            ClinicalSubject(
+                id="SUBJ-UUID-1",
+                subject_id="SUBJ-001",
+                study_id="STUDY-001",
             )
+        )
 
 
 # =========================================================================

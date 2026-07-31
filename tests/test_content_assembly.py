@@ -389,15 +389,13 @@ def base_study():
     )
 
     # Parent Study
-    study = usdm_model.Study(
+    return usdm_model.Study(
         id=study_id,
         name="Compound Y Study",
         versions=[study_version],
         documentedBy=[def_doc],
         instanceType="Study",
     )
-
-    return study
 
 
 def test_successful_assembly_and_synopsis(base_study):

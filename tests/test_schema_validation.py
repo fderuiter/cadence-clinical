@@ -173,12 +173,11 @@ def test_gateway_graceful_handling_invalid_downstream(
         if "tickets" in url or "8009" in url:
             # Corrupt invalid response
             return MockCustomResponse(200, "not-a-valid-openapi-dict")
-        elif "safety" in url or "8008" in url:
+        if "safety" in url or "8008" in url:
             # Failed connection entirely
             raise httpx.ConnectError("Mock connection refused")
-        else:
-            # Successful healthy response
-            return MockCustomResponse(200, healthy_schema)
+        # Successful healthy response
+        return MockCustomResponse(200, healthy_schema)
 
     # Patch the AsyncClient instance method directly
     monkeypatch.setattr(httpx.AsyncClient, "get", mock_get_multi)

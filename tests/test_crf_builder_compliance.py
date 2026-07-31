@@ -118,11 +118,7 @@ async def test_simulation_dry_run_cycle_detection():
             rec_stack.remove(node)
             return False
 
-        for n in graph:
-            if n not in visited:
-                if dfs(n):
-                    return True
-        return False
+        return any(n not in visited and dfs(n) for n in graph)
 
     assert has_cycle(dependency_graph) is True
 
@@ -265,9 +261,8 @@ async def test_version_pinning_and_lock_enforcement():
                 "version_index": design["version_index"] + 1,
                 "payload": new_payload,
             }
-        else:
-            design["payload"] = new_payload
-            return design
+        design["payload"] = new_payload
+        return design
 
     new_design = update_crf(crf_design, {"items": []})
     assert new_design["version_index"] == 3

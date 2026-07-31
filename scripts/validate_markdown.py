@@ -308,11 +308,10 @@ def validate_docker_compose_args(
     i = 0
     limit = len(compose_args)
     while i < limit:
-        if compose_args[i] in ("-f", "--file"):
-            if i + 1 < limit:
-                compose_files.append(compose_args[i + 1])
-                i += 2
-                continue
+        if compose_args[i] in ("-f", "--file") and i + 1 < limit:
+            compose_files.append(compose_args[i + 1])
+            i += 2
+            continue
         i += 1
 
     for compose_file in compose_files:
@@ -409,13 +408,12 @@ def validate_cli_command(args, line_no, md_file_path, repo_root, root_dirs, root
 
     # Check flags for obvious typos (e.g. triple dash or trailing punctuation)
     for arg in args[1:]:
-        if arg.startswith("-"):
-            if not FLAG_PATTERN.match(arg):
-                add_error(
-                    md_file_path,
-                    line_no,
-                    f"Malformed or invalid CLI flag structure: '{arg}'",
-                )
+        if arg.startswith("-") and not FLAG_PATTERN.match(arg):
+            add_error(
+                md_file_path,
+                line_no,
+                f"Malformed or invalid CLI flag structure: '{arg}'",
+            )
 
     # Handle specialized tools
     if executable == "docker" and len(args) >= 2 and args[1] == "compose":
@@ -545,9 +543,7 @@ def get_model_fields_ast_from_map(class_name, codebase_map):
                                     if (
                                         isinstance(first_arg, ast.Constant)
                                         and first_arg.value is not Ellipsis
-                                    ):
-                                        is_required = False
-                                    elif (
+                                    ) or (
                                         isinstance(first_arg, ast.Name)
                                         and first_arg.id != "..."
                                     ):
@@ -557,9 +553,7 @@ def get_model_fields_ast_from_map(class_name, codebase_map):
                                         if (
                                             isinstance(kw.value, ast.Constant)
                                             and kw.value.value is not Ellipsis
-                                        ):
-                                            is_required = False
-                                        elif (
+                                        ) or (
                                             isinstance(kw.value, ast.Name)
                                             and kw.value.id != "..."
                                         ):
@@ -596,8 +590,7 @@ def clean_json_text(text):
     text = text.replace("\t", "    ")
     text = re.sub(r"(?<!:)\/\/.*$", "", text, flags=re.MULTILINE)
     text = re.sub(r"\.\.\.", "null", text)
-    text = re.sub(r",\s*([\]}])", r"\1", text)
-    return text
+    return re.sub(r",\s*([\]}])", r"\1", text)
 
 
 def validate_python_block(
@@ -807,9 +800,12 @@ def validate_json_block(
                 node = occ["node"]
                 is_pydantic = False
                 for base in node.bases:
-                    if isinstance(base, ast.Name) and base.id == "BaseModel":
-                        is_pydantic = True
-                    elif isinstance(base, ast.Attribute) and base.attr == "BaseModel":
+                    if (
+                        isinstance(base, ast.Name)
+                        and base.id == "BaseModel"
+                        or isinstance(base, ast.Attribute)
+                        and base.attr == "BaseModel"
+                    ):
                         is_pydantic = True
                 if is_pydantic and name not in pydantic_class_names:
                     pydantic_class_names.append(name)
@@ -1025,21 +1021,20 @@ def process_markdown_file(
                         not is_skip_block
                         and not has_skip_comment
                         and not has_preceding_skip
+                    ) and (
+                        "docs" in Path(file_path).parts
+                        and "adr" not in Path(file_path).parts
                     ):
-                        if (
-                            "docs" in Path(file_path).parts
-                            and "adr" not in Path(file_path).parts
-                        ):
-                            validate_python_block(
-                                file_path,
-                                code_block_start_line,
-                                block_content,
-                                codebase_map,
-                                lines,
-                                repo_root,
-                                root_dirs,
-                                root_files,
-                            )
+                        validate_python_block(
+                            file_path,
+                            code_block_start_line,
+                            block_content,
+                            codebase_map,
+                            lines,
+                            repo_root,
+                            root_dirs,
+                            root_files,
+                        )
 
                 elif is_json_block:
                     block_content = "".join(line for _, line in code_block_lines)

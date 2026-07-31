@@ -18,6 +18,7 @@ class TrialRole(str, Enum):
     IDMC = "idmc"
     PHARMACIST = "pharmacist"
 
+
 def get_normalized_request_roles(request: Request) -> list[str]:
     """
     Retrieves and normalizes request.state.roles or raw X-User-Roles headers.
@@ -25,7 +26,11 @@ def get_normalized_request_roles(request: Request) -> list[str]:
     """
     roles_val = getattr(request.state, "roles", None)
     if roles_val is None:
-        roles_val = request.headers.get("X-User-Roles") or request.headers.get("x-user-roles") or ""
+        roles_val = (
+            request.headers.get("X-User-Roles")
+            or request.headers.get("x-user-roles")
+            or ""
+        )
 
     if isinstance(roles_val, str):
         raw_roles = [r.strip() for r in roles_val.split(",") if r.strip()]
@@ -35,6 +40,7 @@ def get_normalized_request_roles(request: Request) -> list[str]:
         raw_roles = []
     return [normalize_role(r) for r in raw_roles]
 
+
 def check_trial_role(request: Request, role: TrialRole) -> bool:
     """
     Checks if any role in the request matches the specified TrialRole
@@ -43,9 +49,20 @@ def check_trial_role(request: Request, role: TrialRole) -> bool:
     user_roles = get_normalized_request_roles(request)
 
     role_map = {
-        TrialRole.SITE_PI: {"principal_investigator", "investigator", "lead_investigator", "authorized_er_physician"},
+        TrialRole.SITE_PI: {
+            "principal_investigator",
+            "investigator",
+            "lead_investigator",
+            "authorized_er_physician",
+        },
         TrialRole.CRA_MONITOR: {"cra", "monitor", "cra_monitor"},
-        TrialRole.DATA_MANAGER: {"sponsor_dm", "data_manager", "dm", "sponsor_admin", "admin"},
+        TrialRole.DATA_MANAGER: {
+            "sponsor_dm",
+            "data_manager",
+            "dm",
+            "sponsor_admin",
+            "admin",
+        },
         TrialRole.UNBLINDED_STATISTICIAN: {"unblinded_statistician"},
         TrialRole.IDMC: {"idmc"},
         TrialRole.PHARMACIST: {"pharmacist"},
@@ -54,7 +71,10 @@ def check_trial_role(request: Request, role: TrialRole) -> bool:
     allowed = role_map.get(role, set())
     return any(r in allowed for r in user_roles)
 
-def enforce_site_isolation(request: Request, site_id: str, principal: Principal) -> None:
+
+def enforce_site_isolation(
+    request: Request, site_id: str, principal: Principal
+) -> None:
     """
     Site-isolation guard (PRD-SYS-004):
     Raises a 403 Forbidden exception and writes a security audit alert to the audit log
@@ -70,9 +90,12 @@ def enforce_site_isolation(request: Request, site_id: str, principal: Principal)
 
     if is_site_scoped or principal.assigned_sites:
         if not can_access_site(principal, site_id):
-            ip_address = getattr(request.state, "ip_address", None) or (
-                request.client.host if request.client else "unknown"
-            ) or request.headers.get("X-Forwarded-For") or "unknown"
+            ip_address = (
+                getattr(request.state, "ip_address", None)
+                or (request.client.host if request.client else "unknown")
+                or request.headers.get("X-Forwarded-For")
+                or "unknown"
+            )
 
             # Log security alert to CentralAuditLogger
             CentralAuditLogger.log_event(
@@ -89,7 +112,7 @@ def enforce_site_isolation(request: Request, site_id: str, principal: Principal)
                     "requested_site_id": site_id,
                     "assigned_sites": principal.assigned_sites,
                     "roles": user_roles,
-                }
+                },
             )
 
             raise HTTPException(

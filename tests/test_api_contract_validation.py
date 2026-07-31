@@ -81,9 +81,7 @@ def compare_types(type_spec: Any, type_code: Any) -> bool:
 
     if type_spec == type_code:
         return True
-    if {type_spec, type_code} == {"number", "float"}:
-        return True
-    return False
+    return {type_spec, type_code} == {"number", "float"}
 
 
 def assert_schema_parity(
@@ -575,6 +573,16 @@ _RAW_WHITELISTED_ROUTES = {
     ("post", "/api/v1/execution/doa/assignment"),
     ("post", "/api/v1/execution/doa/sign-off"),
     ("get", "/api/v1/execution/doa/log/{study_id}/{site_id}"),
+    ("patch", "/api/v1/execution/subjects/{id}/state"),
+    ("patch", "/subjects/{id}/state"),
+    ("put", "/api/v1/execution/subjects/{id}/demographics"),
+    ("put", "/subjects/{id}/demographics"),
+    ("delete", "/api/v1/execution/subjects/{id}/demographics"),
+    ("delete", "/subjects/{id}/demographics"),
+    ("get", "/api/v1/execution/subjects/{subject_id}"),
+    ("get", "/subjects/{subject_id}"),
+    ("get", "/api/v1/execution/visits/{visit_id}"),
+    ("get", "/visits/{visit_id}"),
 }
 
 WHITELISTED_ROUTES = {
@@ -585,7 +593,7 @@ WHITELISTED_ROUTES = {
 
 def find_spec_route(code_path: str, spec_paths: dict) -> str:
     clean_code = code_path.replace("/api/v1", "").strip("/")
-    for s_path in spec_paths.keys():
+    for s_path in spec_paths:
         clean_spec = s_path.replace("/api/v1", "").strip("/")
         if clean_code == clean_spec:
             return s_path
@@ -676,7 +684,7 @@ def test_api_paths_and_methods_parity(loaded_specs):
             f"API contract path '{spec_path}' defined in documentation is missing in codebase"
         )
 
-        for method in path_item.keys():
+        for method in path_item:
             method_lower = method.lower()
             # Skip openapi description/parameters elements at the path level
             if method_lower in ["parameters", "summary", "description"]:

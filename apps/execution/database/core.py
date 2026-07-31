@@ -76,8 +76,7 @@ class DatabaseSessionManager:
                     if val is None:
                         if missing_ok:
                             return ""
-                        else:
-                            raise Exception(f"Setting {name} not found")
+                        raise Exception(f"Setting {name} not found")
                     return val
 
                 conn.create_function("set_config", 3, sqlite_set_config)

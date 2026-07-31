@@ -776,9 +776,7 @@ def can_access_site(principal: Principal, site_id: str) -> bool:
 
     # Fail-closed handling for missing/empty site_id on legacy/study-level rows
     if site_id is None or str(site_id).strip() == "":
-        if user_site_roles or principal.assigned_sites:
-            return False
-        return True
+        return not (user_site_roles or principal.assigned_sites)
 
     if user_site_roles:
         return site_id in principal.assigned_sites
@@ -795,9 +793,7 @@ def can_access_study(principal: Principal, study_id: str) -> bool:
     Study-scoped users are restricted to their assigned_studies.
     """
     if study_id is None or str(study_id).strip() == "":
-        if "external_monitor" in principal.roles or principal.assigned_studies:
-            return False
-        return True
+        return not ("external_monitor" in principal.roles or principal.assigned_studies)
 
     if "external_monitor" in principal.roles:
         return study_id in principal.assigned_studies
@@ -1153,17 +1149,21 @@ async def get_principal(request: Request) -> Principal:
         principal.change_reason = principal.change_reason.strip()
 
     # Reject write operations with a descriptive error if the resolved change justification is missing
-    if hasattr(request, "method") and request.method in (
-        "POST",
-        "PUT",
-        "PATCH",
-        "DELETE",
+    if (
+        hasattr(request, "method")
+        and request.method
+        in (
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE",
+        )
+        and (not principal.change_reason or not principal.change_reason.strip())
     ):
-        if not principal.change_reason or not principal.change_reason.strip():
-            raise HTTPException(
-                status_code=403,
-                detail="Missing change justification reason",
-            )
+        raise HTTPException(
+            status_code=403,
+            detail="Missing change justification reason",
+        )
 
     return principal
 

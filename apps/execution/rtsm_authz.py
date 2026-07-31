@@ -79,15 +79,14 @@ def verify_site_access(
     Raises:
         HTTPException: HTTP 403 Forbidden if site or study access isolation checks fail.
     """
-    if study_id is not None:
-        if not can_access_study(principal, study_id):
-            dispatch_access_violation_alert(
-                principal, site_id, study_id=study_id, subject_id=subject_id
-            )
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Forbidden: access restricted to your assigned study.",
-            )
+    if study_id is not None and not can_access_study(principal, study_id):
+        dispatch_access_violation_alert(
+            principal, site_id, study_id=study_id, subject_id=subject_id
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: access restricted to your assigned study.",
+        )
 
     # If the resource has no site restriction (site_id is None), site isolation does not apply
     if site_id is None or str(site_id).strip() == "":
