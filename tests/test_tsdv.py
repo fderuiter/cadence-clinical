@@ -93,7 +93,6 @@ class MockTSDVConfig:
 
 
 def test_tsdv_pure_first_n_selection():
-    # @Req:PRD-QRY-007
     # @req:PRD-QRY-007
     """Verify that all first-N subjects are always selected for full SDV."""
     config = MockTSDVConfig(
@@ -110,7 +109,6 @@ def test_tsdv_pure_first_n_selection():
 
 
 def test_tsdv_pure_deterministic_sampling():
-    # @Req:PRD-QRY-007
     # @req:PRD-QRY-007
     """Verify selection is completely stable/deterministic across repeated evaluations."""
     config = MockTSDVConfig(
@@ -131,7 +129,6 @@ def test_tsdv_pure_deterministic_sampling():
 
 
 def test_tsdv_pure_different_seeds_produce_different_values():
-    # @Req:PRD-QRY-007
     # @req:PRD-QRY-007
     """Verify different seeds and subject IDs produce different values while retaining determinism."""
     config_seed1 = MockTSDVConfig(
@@ -162,7 +159,6 @@ def test_tsdv_pure_different_seeds_produce_different_values():
 
 
 def test_tsdv_pure_percentage_boundaries():
-    # @Req:PRD-QRY-007
     # @req:PRD-QRY-007
     """Verify correct selection behavior with 0% and 100% random sample percentages."""
     config_0 = MockTSDVConfig(
@@ -186,7 +182,6 @@ def test_tsdv_pure_percentage_boundaries():
 
 
 def test_tsdv_pure_field_requirement_precedence():
-    # @Req:PRD-QRY-007
     # @req:PRD-QRY-007
     """Verify full-SDV/safety domains always require SDV, zero-SDV never require, and overrides are respected."""
     # Safety endpoints always override zero-SDV (Conflict management)
@@ -214,7 +209,6 @@ def test_tsdv_pure_field_requirement_precedence():
 
 
 def test_tsdv_pure_evaluation_sampling_models():
-    # @Req:PRD-QRY-007
     # @req:PRD-QRY-007
     """Verify combination logic and precedence of COMBINED, SUBJECT_BASED, and FIELD_BASED sampling models."""
     # 1. SUBJECT_BASED model
@@ -290,7 +284,6 @@ def test_tsdv_pure_evaluation_sampling_models():
 
 @pytest.mark.asyncio
 async def test_api_tsdv_configuration_rbac():
-    # @Req:PRD-QRY-007
     # @req:PRD-QRY-007
     """Verify write operations (creation/updating) are restricted to Allowed Data Manager/CRA roles, and check HTTP 403."""
     async with httpx.AsyncClient(
@@ -338,7 +331,6 @@ async def test_api_tsdv_configuration_rbac():
 
 @pytest.mark.asyncio
 async def test_api_tsdv_config_validation_rules():
-    # @Req:PRD-QRY-007
     # @req:PRD-QRY-007
     """Verify input validation rejects malformed percentages/counts/lists."""
     async with httpx.AsyncClient(
@@ -396,7 +388,6 @@ async def test_api_tsdv_config_validation_rules():
 
 @pytest.mark.asyncio
 async def test_api_tsdv_evaluation_integration_and_context_errors():
-    # @Req:PRD-QRY-007
     # @req:PRD-QRY-007
     """
     Verify TSDV evaluation API resolves correctly:
@@ -497,7 +488,6 @@ async def test_api_tsdv_evaluation_integration_and_context_errors():
 
 @pytest.mark.asyncio
 async def test_api_tsdv_immutable_enrollment_index_stability():
-    # @Req:PRD-QRY-007
     # @req:PRD-QRY-007
     """Verify that subject enrollment sequence is stable, immutable, and independent of alphabetical order.
 

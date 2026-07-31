@@ -74,7 +74,6 @@ async def setup_test_db():
 
 @pytest.mark.asyncio
 async def test_sdv_signoff_endpoints_rbac_and_target_validation():
-    # @Req:PRD-QRY-005
     # @req:PRD-QRY-005
     """
     Test CRA/monitor role-based access control, invalid/missing targets,
@@ -309,7 +308,6 @@ async def test_sdv_signoff_endpoints_rbac_and_target_validation():
 
 @pytest.mark.asyncio
 async def test_sdv_automatic_verification_drop_compliance():
-    # @Req:PRD-QRY-006
     # @req:PRD-QRY-006
     """
     Test that editing verified clinical value representations (value, value_string, normalized_value)

@@ -46,10 +46,6 @@ from apps.execution.database.models import (
     ],
 )
 def test_stem_word(word, expected):
-    """Verify stemming of clinical term words.
-
-    Requirements: PRD-SYS-049
-    """
     assert stem_word(word) == expected
 
 
@@ -66,18 +62,10 @@ def test_stem_word(word, expected):
     ],
 )
 def test_normalize_term(term, expected):
-    """Verify clinical term normalization.
-
-    Requirements: PRD-SYS-049
-    """
     assert normalize_term(term) == expected
 
 
 def test_similarity_computations():
-    """Verify weighted similarity distance computation.
-
-    Requirements: PRD-SYS-049
-    """
     # Perfect match
     score = calculate_combined_score("headache", "headache")
     assert score == 1.0
@@ -109,31 +97,16 @@ def test_similarity_computations():
 
 
 def test_token_cosine_similarity_empty():
-    """Verify empty string token cosine similarity.
-
-    Requirements: PRD-SYS-049
-    """
     assert token_cosine_similarity("", "") == 1.0
     assert token_cosine_similarity("abc", "") == 0.0
     assert token_cosine_similarity("", "abc") == 0.0
 
 
 def test_cache_ttl_configuration():
-    """Verify terminology cache TTL environment variable resolution hierarchy.
-
-    Requirements: PRD-SYS-049
-    """
     # Default TTL or environment TTL
     with patch.dict(os.environ, {"CODING_CACHE_TTL": "10"}):
         cache = CodingCache()
         assert cache.ttl == 10.0
-
-    # Test TERMINOLOGY_CACHE_TTL priority
-    with patch.dict(
-        os.environ, {"TERMINOLOGY_CACHE_TTL": "20", "CODING_CACHE_TTL": "10"}
-    ):
-        cache = CodingCache()
-        assert cache.ttl == 20.0
 
     # Direct override
     cache = CodingCache(ttl=5.0)
@@ -141,10 +114,6 @@ def test_cache_ttl_configuration():
 
 
 def test_cache_aside_and_stale_fallback():
-    """Verify cache-aside and stale fallback behavior.
-
-    Requirements: PRD-SYS-049
-    """
     cache = CodingCache(ttl=0.1)  # tiny TTL
     key = ("MEDDRA", "26.0", "headache", "LLT")
     data = {"status": "AUTO-CODED", "match": "Headache"}

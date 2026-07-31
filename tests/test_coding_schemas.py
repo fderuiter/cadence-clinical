@@ -1,10 +1,12 @@
 import pytest
 from pydantic import ValidationError
+
 from apps.execution.routers.coding_schemas import (
     CoderActionRequest,
     DictionaryImportRequest,
     DictTypeEnum,
 )
+
 
 def test_coder_action_request_validation_override_happy_path():
     # Correct override request
@@ -18,6 +20,7 @@ def test_coder_action_request_validation_override_happy_path():
     assert req.code == "12345"
     assert req.term == "Some AE term"
     assert req.reason_for_change == "Clinically more appropriate."
+
 
 def test_coder_action_request_validation_override_blank_fields():
     # Missing code
@@ -50,6 +53,7 @@ def test_coder_action_request_validation_override_blank_fields():
         )
     assert "reason_for_change is required and cannot be blank" in str(exc.value)
 
+
 def test_coder_action_request_validation_accept():
     # ACCEPT does not require these fields
     req = CoderActionRequest(
@@ -60,6 +64,7 @@ def test_coder_action_request_validation_accept():
     assert req.suggestion_index == 0
     assert req.code is None
     assert req.term is None
+
 
 def test_dictionary_import_request_blank_version():
     with pytest.raises(ValidationError) as exc:
