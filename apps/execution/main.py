@@ -2618,7 +2618,10 @@ async def import_dictionary(
     parse_multilingual: bool = Form(True),
     roles: list[str] = Depends(require_roles("TERMINOLOGY_MANAGER", "SYSTEM_ADMIN")),
 ) -> JobStatusResponse:
-    """Imports raw dictionary files and schedules a background parsing task."""
+    """Imports raw dictionary files and schedules a background parsing task.
+
+    Satisfies Epic #109 / Issue #1122 / Phase 16: Dictionary Ingestion & Persistence.
+    """
     if dictionary_type not in (DictTypeEnum.MEDDRA, DictTypeEnum.WHODRUG):
         raise HTTPException(
             status_code=400,
