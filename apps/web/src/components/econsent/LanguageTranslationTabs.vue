@@ -2,17 +2,17 @@
   <div class="language-translation-tabs-container card">
     <div class="tabs-header">
       <span class="tabs-label">🌍 Localized Consent Translations:</span>
-      <div
-        class="tabs-list"
-        role="tablist"
-      >
+      <div class="tabs-list" role="tablist">
         <button
           v-for="lang in availableLanguages"
           :key="lang.code"
           type="button"
           role="tab"
           :aria-selected="econsentStore.activeLanguage === lang.code"
-          :class="['tab-item', { active: econsentStore.activeLanguage === lang.code }]"
+          :class="[
+            'tab-item',
+            { active: econsentStore.activeLanguage === lang.code },
+          ]"
           @click="selectLanguage(lang.code)"
         >
           <span class="flag-icon">{{ lang.flag }}</span>
@@ -25,11 +25,14 @@
     <!-- Active Language Banner/Info -->
     <div class="active-lang-banner">
       <p>
-        Currently editing content in <strong>{{ activeLanguageName }}</strong>. All modifications to the section content will be saved under the <strong>{{ econsentStore.activeLanguage }}</strong> translation locale.
+        Currently editing content in <strong>{{ activeLanguageName }}</strong
+        >. All modifications to the section content will be saved under the
+        <strong>{{ econsentStore.activeLanguage }}</strong> translation locale.
       </p>
       <div class="completion-metrics">
         <span class="metric-badge">
-          Sections: {{ translatedSectionsCount }} / {{ econsentStore.sections.length }} Translated
+          Sections: {{ translatedSectionsCount }} /
+          {{ econsentStore.sections.length }} Translated
         </span>
       </div>
     </div>
@@ -37,27 +40,33 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
-import { useEconsentStore } from '../../stores/econsent.js';
+import { computed } from "vue";
+import { useEconsentStore } from "../../stores/econsent.js";
 
 const econsentStore = useEconsentStore();
 
 const availableLanguages = [
-  { code: 'en', name: 'English', flag: '🇬🇧' },
-  { code: 'es', name: 'Spanish', flag: '🇪🇸' },
-  { code: 'fr', name: 'French', flag: '🇫🇷' },
-  { code: 'de', name: 'German', flag: '🇩🇪' },
+  { code: "en", name: "English", flag: "🇬🇧" },
+  { code: "es", name: "Spanish", flag: "🇪🇸" },
+  { code: "fr", name: "French", flag: "🇫🇷" },
+  { code: "de", name: "German", flag: "🇩🇪" },
 ];
 
 const activeLanguageName = computed(() => {
-  const found = availableLanguages.find(l => l.code === econsentStore.activeLanguage);
+  const found = availableLanguages.find(
+    (l) => l.code === econsentStore.activeLanguage
+  );
   return found ? found.name : econsentStore.activeLanguage;
 });
 
 const translatedSectionsCount = computed(() => {
   const currentLang = econsentStore.activeLanguage;
-  return econsentStore.sections.filter(sec => {
-    return sec.translations && sec.translations[currentLang] && sec.translations[currentLang].html.trim() !== '';
+  return econsentStore.sections.filter((sec) => {
+    return (
+      sec.translations &&
+      sec.translations[currentLang] &&
+      sec.translations[currentLang].html.trim() !== ""
+    );
   }).length;
 });
 

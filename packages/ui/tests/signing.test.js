@@ -222,14 +222,20 @@ describe("cross-language parity", { timeout: 30000 }, () => {
     ];
     for (const pyPath of pythonPaths) {
       try {
-        return execSync(`${pyPath} -c "${pyScript}"`, { env, cwd, stdio: "pipe" })
+        return execSync(`${pyPath} -c "${pyScript}"`, {
+          env,
+          cwd,
+          stdio: "pipe",
+        })
           .toString()
           .trim();
       } catch {
         // Try next candidate path
       }
     }
-    throw new Error("Failed to execute Python script with any python interpreter.");
+    throw new Error(
+      "Failed to execute Python script with any python interpreter."
+    );
   };
 
   it("JS can decrypt a Python-produced AES-GCM envelope", async () => {

@@ -1,8 +1,5 @@
 <template>
-  <div
-    id="section-mdr"
-    class="dashboard-section active"
-  >
+  <div id="section-mdr" class="dashboard-section active">
     <div class="section-header">
       <h2>MDR / Protocol Visualizer & Interactive SoA Builder</h2>
       <p>
@@ -12,10 +9,7 @@
     </div>
 
     <!-- Interactive Builder Controls -->
-    <div
-      class="card"
-      style="margin-bottom: 24px; padding: 16px"
-    >
+    <div class="card" style="margin-bottom: 24px; padding: 16px">
       <div
         style="
           display: flex;
@@ -85,10 +79,7 @@
             <legend style="font-weight: bold; padding: 0 6px">
               Add Study Arm
             </legend>
-            <div
-              class="form-group"
-              style="margin-bottom: 8px"
-            >
+            <div class="form-group" style="margin-bottom: 8px">
               <label for="new-arm-id">Arm ID</label>
               <input
                 id="new-arm-id"
@@ -96,12 +87,9 @@
                 type="text"
                 placeholder="e.g. ARM-C"
                 style="width: 100%; padding: 6px"
-              >
+              />
             </div>
-            <div
-              class="form-group"
-              style="margin-bottom: 8px"
-            >
+            <div class="form-group" style="margin-bottom: 8px">
               <label for="new-arm-name">Arm Name</label>
               <input
                 id="new-arm-name"
@@ -109,7 +97,7 @@
                 type="text"
                 placeholder="e.g. Arm C: High Dose"
                 style="width: 100%; padding: 6px"
-              >
+              />
             </div>
             <div
               class="form-group"
@@ -123,7 +111,7 @@
                 placeholder="Search Arm Type CT..."
                 style="width: 100%; padding: 6px"
                 @input="searchArmTerminology($event.target.value)"
-              >
+              />
               <!-- Autocomplete Suggestion Dropdown -->
               <div
                 v-if="armSuggestions.length > 0"
@@ -172,13 +160,8 @@
               padding: 12px;
             "
           >
-            <legend style="font-weight: bold; padding: 0 6px">
-              Add Epoch
-            </legend>
-            <div
-              class="form-group"
-              style="margin-bottom: 8px"
-            >
+            <legend style="font-weight: bold; padding: 0 6px">Add Epoch</legend>
+            <div class="form-group" style="margin-bottom: 8px">
               <label for="new-epoch-id">Epoch ID</label>
               <input
                 id="new-epoch-id"
@@ -186,12 +169,9 @@
                 type="text"
                 placeholder="e.g. EP-FLW"
                 style="width: 100%; padding: 6px"
-              >
+              />
             </div>
-            <div
-              class="form-group"
-              style="margin-bottom: 8px"
-            >
+            <div class="form-group" style="margin-bottom: 8px">
               <label for="new-epoch-name">Epoch Name</label>
               <input
                 id="new-epoch-name"
@@ -199,33 +179,25 @@
                 type="text"
                 placeholder="e.g. Follow-up"
                 style="width: 100%; padding: 6px"
-              >
+              />
             </div>
-            <div
-              class="form-group"
-              style="margin-bottom: 8px"
-            >
+            <div class="form-group" style="margin-bottom: 8px">
               <label for="new-epoch-seq">Sequence</label>
               <input
                 id="new-epoch-seq"
                 v-model.number="newEpoch.sequence"
                 type="number"
                 style="width: 100%; padding: 6px"
-              >
+              />
             </div>
-            <div
-              class="form-group"
-              style="margin-bottom: 8px"
-            >
+            <div class="form-group" style="margin-bottom: 8px">
               <label for="new-epoch-arm">Associated Arm (Optional)</label>
               <select
                 id="new-epoch-arm"
                 v-model="newEpoch.arm_id"
                 style="width: 100%; padding: 6px"
               >
-                <option value="">
-                  -- None / Shared --
-                </option>
+                <option value="">-- None / Shared --</option>
                 <option
                   v-for="arm in store.currentUsdm.arms"
                   :key="arm.arm_id"
@@ -255,10 +227,7 @@
             <legend style="font-weight: bold; padding: 0 6px">
               Add Visit / Encounter
             </legend>
-            <div
-              class="form-group"
-              style="margin-bottom: 8px"
-            >
+            <div class="form-group" style="margin-bottom: 8px">
               <label for="new-enc-id">Encounter ID</label>
               <input
                 id="new-enc-id"
@@ -266,12 +235,9 @@
                 type="text"
                 placeholder="e.g. V-WEEK6"
                 style="width: 100%; padding: 6px"
-              >
+              />
             </div>
-            <div
-              class="form-group"
-              style="margin-bottom: 8px"
-            >
+            <div class="form-group" style="margin-bottom: 8px">
               <label for="new-enc-name">Encounter Name</label>
               <input
                 id="new-enc-name"
@@ -279,20 +245,17 @@
                 type="text"
                 placeholder="e.g. Week 6"
                 style="width: 100%; padding: 6px"
-              >
+              />
             </div>
 
-            <div
-              class="form-group"
-              style="margin-bottom: 8px"
-            >
+            <div class="form-group" style="margin-bottom: 8px">
               <label for="new-enc-seq">Sequence</label>
               <input
                 id="new-enc-seq"
                 v-model.number="newEnc.sequence"
                 type="number"
                 style="width: 100%; padding: 6px"
-              >
+              />
             </div>
             <div
               class="form-group"
@@ -306,7 +269,7 @@
                 placeholder="Search Visit Type CT..."
                 style="width: 100%; padding: 6px"
                 @input="searchEncTerminology($event.target.value)"
-              >
+              />
               <!-- Autocomplete Suggestion Dropdown -->
               <div
                 v-if="encSuggestions.length > 0"
@@ -338,19 +301,14 @@
                 </div>
               </div>
             </div>
-            <div
-              class="form-group"
-              style="margin-bottom: 8px"
-            >
+            <div class="form-group" style="margin-bottom: 8px">
               <label for="new-enc-epoch">Associated Epoch</label>
               <select
                 id="new-enc-epoch"
                 v-model="newEnc.epoch_id"
                 style="width: 100%; padding: 6px"
               >
-                <option value="">
-                  -- Select Epoch --
-                </option>
+                <option value="">-- Select Epoch --</option>
                 <option
                   v-for="ep in store.currentUsdm.epochs"
                   :key="ep.epoch_id"
@@ -380,10 +338,7 @@
             <legend style="font-weight: bold; padding: 0 6px">
               Add Activity / Procedure
             </legend>
-            <div
-              class="form-group"
-              style="margin-bottom: 8px"
-            >
+            <div class="form-group" style="margin-bottom: 8px">
               <label for="new-proc-id">Activity ID</label>
               <input
                 id="new-proc-id"
@@ -391,12 +346,9 @@
                 type="text"
                 placeholder="e.g. ACT-LAB"
                 style="width: 100%; padding: 6px"
-              >
+              />
             </div>
-            <div
-              class="form-group"
-              style="margin-bottom: 8px"
-            >
+            <div class="form-group" style="margin-bottom: 8px">
               <label for="new-proc-name">Activity Name</label>
               <input
                 id="new-proc-name"
@@ -404,7 +356,7 @@
                 type="text"
                 placeholder="e.g. Laboratory Blood Draw"
                 style="width: 100%; padding: 6px"
-              >
+              />
             </div>
             <button
               class="btn btn-primary"
@@ -436,9 +388,7 @@
                 v-model="linkPayload.procedure_id"
                 style="width: 100%; padding: 6px"
               >
-                <option value="">
-                  -- Select Procedure --
-                </option>
+                <option value="">-- Select Procedure --</option>
                 <option
                   v-for="row in store.currentUsdm.rows"
                   :key="row.activity_id"
@@ -455,9 +405,7 @@
                 v-model="linkPayload.visit_id"
                 style="width: 100%; padding: 6px"
               >
-                <option value="">
-                  -- Select Visit --
-                </option>
+                <option value="">-- Select Visit --</option>
                 <option
                   v-for="enc in store.currentUsdm.encounters"
                   :key="enc.encounter_id"
@@ -468,19 +416,18 @@
               </select>
             </div>
           </div>
-          <div
-            class="form-group"
-            style="margin-top: 8px"
-          >
-            <label for="link-timing">Custom Timing Window / Details (e.g. "Within 10 mins", "Day
-              1")</label>
+          <div class="form-group" style="margin-top: 8px">
+            <label for="link-timing"
+              >Custom Timing Window / Details (e.g. "Within 10 mins", "Day
+              1")</label
+            >
             <input
               id="link-timing"
               v-model="linkPayload.timing"
               type="text"
               placeholder="Leave empty for default applicability"
               style="width: 100%; padding: 6px"
-            >
+            />
           </div>
           <div
             style="
@@ -562,16 +509,15 @@
             margin-bottom: 16px;
           "
         >
-          <div style="display: flex; gap: 8px; align-items: center;">
-            <span
-              class="card-title"
-              style="margin-right: 12px;"
-            >Schedule of Activities (SoA) Matrix</span>
+          <div style="display: flex; gap: 8px; align-items: center">
+            <span class="card-title" style="margin-right: 12px"
+              >Schedule of Activities (SoA) Matrix</span
+            >
             <button
               id="btn-tab-soa"
               class="btn"
               :class="!showCanvas ? 'btn-primary' : 'btn-secondary'"
-              style="font-size: 0.85rem; padding: 6px 12px;"
+              style="font-size: 0.85rem; padding: 6px 12px"
               @click="showCanvas = false"
             >
               SoA Matrix
@@ -580,7 +526,7 @@
               id="btn-tab-canvas"
               class="btn"
               :class="showCanvas ? 'btn-primary' : 'btn-secondary'"
-              style="font-size: 0.85rem; padding: 6px 12px;"
+              style="font-size: 0.85rem; padding: 6px 12px"
               @click="showCanvas = true"
             >
               eCRF Canvas
@@ -589,20 +535,15 @@
           <span
             v-if="store.soaLoading"
             style="font-size: 0.8rem; font-weight: normal; color: #64748b"
-          >(Syncing...)</span>
+            >(Syncing...)</span
+          >
         </div>
 
-        <div
-          v-if="!showCanvas"
-          id="soa-matrix-container"
-        >
+        <div v-if="!showCanvas" id="soa-matrix-container">
           <ClinicalSoAMatrix :soa-data="soaData" />
         </div>
 
-        <div
-          v-else
-          id="crf-canvas-container"
-        >
+        <div v-else id="crf-canvas-container">
           <CrfAuthoringCanvas
             :form-schema="formSchema"
             :selected-field-id="selectedFieldId"
@@ -651,7 +592,7 @@ const formSchema = computed({
   get: () => designerStore.activeForm,
   set: (val) => {
     designerStore.activeForm = val;
-  }
+  },
 });
 const showCanvas = ref(false);
 
