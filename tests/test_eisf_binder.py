@@ -28,16 +28,19 @@ async def setup_eisf_db() -> AsyncGenerator:
 
     Requirements: PRD-SYS-001
     """
-    db_manager.init_db(
+    engine = create_async_engine(
         "sqlite+aiosqlite:///:memory:",
         poolclass=StaticPool,
         connect_args={"check_same_thread": False},
         echo=False,
     )
-    async with db_manager.engine.begin() as conn:
+    db_manager.engine = engine
+    db_manager.session_maker = async_sessionmaker(engine, expire_on_commit=False)
+    async with engine.begin() as conn:
         await conn.run_sync(EisfModelBase.metadata.create_all)
         await conn.run_sync(ServiceBase.metadata.create_all)
     yield
+    await engine.dispose()
 
 
 @pytest_asyncio.fixture
@@ -46,8 +49,7 @@ async def db_session() -> AsyncGenerator:
 
     Requirements: PRD-SYS-001
     """
-    session_maker = async_sessionmaker(db_manager.engine, expire_on_commit=False)
-    async with session_maker() as session:
+    async with db_manager.get_session_maker()() as session:
         yield session
 
 
