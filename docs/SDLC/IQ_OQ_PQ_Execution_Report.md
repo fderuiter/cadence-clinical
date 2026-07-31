@@ -11,6 +11,8 @@ Based on the executed automated verification suite, the platform meets all prede
 ### Validation Result Summary
 - **Total Automated Test Cases Run:** 1701
 - **Passed:** 1701 🟢
+- **Total Automated Test Cases Run:** 1634
+- **Passed:** 1634 🟢
 - **Failed/Errors:** 0 🔴
 - **Skipped:** 0 ⚪
 - **Overall Operational Pass Rate:** 100.00%
@@ -38,6 +40,13 @@ The Installation Qualification verifies that the software execution environment,
 ```
 Package                 Version     Editable project location
 ----------------------- ----------- -------------------------
+aioboto3                 15.5.0
+aiobotocore              2.25.1
+aiofiles                 25.1.0
+aiohappyeyeballs         2.7.1
+aiohttp                  3.14.3
+aioitertools             0.13.0
+aiosignal                1.4.0
 aiosmtplib               5.1.2
 aiosqlite                0.22.1
 annotated-doc            0.0.4
@@ -49,6 +58,8 @@ babel                    2.18.0
 bandit                   1.9.4
 beautifulsoup4           4.15.0
 boolean-py               5.0
+boto3                    1.40.61
+botocore                 1.40.61
 brotli                   1.2.0
 brotlicffi               1.2.0.1
 cachecontrol             0.14.4
@@ -77,6 +88,7 @@ fhir-core                1.1.9
 fhir-resources           8.3.0
 filelock                 3.32.0
 fonttools                4.63.0
+frozenlist               1.8.0
 greenlet                 3.5.4
 h11                      0.16.0
 httpcore                 1.0.9
@@ -88,12 +100,14 @@ iniconfig                2.3.0
 jinja2                   3.1.6
 jsonschema               4.26.0
 jsonschema-specifications 2025.9.1
+jmespath                 1.1.0
 license-expression       30.4.4
 lxml                     6.1.1
 markdown-it-py           4.2.0
 markupsafe               3.0.3
 mdurl                    0.1.2
 msgpack                  1.2.1
+multidict                6.7.1
 neo4j                    6.2.0
 nodeenv                  1.10.0
 numpy                    2.4.6
@@ -111,6 +125,7 @@ platformdirs             4.11.0
 playwright               1.61.0
 pluggy                   1.6.0
 pre-commit               4.6.1
+propcache                0.5.2
 py-serializable          2.1.0
 pyasn1                   0.6.4
 pycparser                3.0
@@ -143,6 +158,7 @@ rich                     15.0.0
 rpds-py                  2026.6.3
 rsa                      4.9.1
 ruff                     0.15.22
+s3transfer               0.14.0
 six                      1.17.0
 sortedcontainers         2.4.0
 soupsieve                2.9.1
@@ -169,6 +185,8 @@ watchfiles               1.2.0
 weasyprint               69.0
 webencodings             0.5.1
 websockets               16.1.1
+wrapt                    1.17.3
+yarl                     1.24.5
 yattag                   1.16.1
 zopfli                   0.4.3
 ```
@@ -291,6 +309,14 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_invalid_sdtm_domain_rejection` | `tests.test_biostat_exports` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_sdtm_domain_export_success` | `tests.test_biostat_exports` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_unauthenticated_access_rejection` | `tests.test_biostat_exports` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_local_storage_provider_integrity_failure` | `tests.test_blob_store` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_local_storage_provider_lifecycle` | `tests.test_blob_store` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_local_storage_provider_not_found` | `tests.test_blob_store` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_local_storage_provider_traversal_prevention` | `tests.test_blob_store` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_s3_storage_provider_integrity_failure` | `tests.test_blob_store` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_s3_storage_provider_lifecycle` | `tests.test_blob_store` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_s3_storage_provider_not_found` | `tests.test_blob_store` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_verify_checksum` | `tests.test_blob_store` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cdisc_cache_purge_expired` | `tests.test_cdisc_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cdisc_cache_save_and_get` | `tests.test_cdisc_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_cdisc_cache_ttl_expiration` | `tests.test_cdisc_cache` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -577,6 +603,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_doa_delegation_record_validation` | `tests.test_doa_models` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ctms_doa_lifecycle_flow` | `tests.test_doa_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_ctms_doa_rbac_violations` | `tests.test_doa_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_doa_historical_audit_trail_logging` | `tests.test_doa_audit_suite` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_doa_assignment_record_creation` | `tests.test_doa_models` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_doa_assignment_and_signoff_api_flow` | `tests.test_doa_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_doa_service_assignment_and_pi_signoff` | `tests.test_doa_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_complete_doa_workflow_lifecycle` | `tests.test_doa_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_document_renderer_render_docx` | `tests.test_document_renderer` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -677,6 +706,8 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_get_site_eisf_binder_authorized` | `tests.test_eisf_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_get_site_eisf_binder_unauthorized_cross_site` | `tests.test_eisf_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_upload_and_get_site_document` | `tests.test_eisf_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_get_site_regulatory_binder_endpoint` | `tests.test_eisf_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_upload_eisf_document_post_endpoint` | `tests.test_eisf_router` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_upload_and_watermark` | `tests.test_eisf_service` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_completeness_site_isolation` | `tests.test_eisf_site_scope` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_eisf_external_monitor_role` | `tests.test_eisf_site_scope` | *Regression/Helper* | 🟢 PASSED | < 1s |
@@ -1300,6 +1331,9 @@ The Operational Qualification verifies that individual clinical operations, stat
 | `test_quality_sentinel_router_endpoint` | `tests.test_quality_sentinel` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_readability_metrics_and_scoring` | `tests.test_quality_sentinel` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_syllable_counter_deterministic` | `tests.test_quality_sentinel` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_quality_sentinel_complete_protocol` | `tests.test_quality_sentinel` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_quality_sentinel_incomplete_protocol_detects_errors` | `tests.test_quality_sentinel` | *Regression/Helper* | 🟢 PASSED | < 1s |
+| `test_quality_sentinel_router_endpoint` | `tests.test_quality_sentinel` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_audit_log_endpoint_properties` | `tests.test_quality_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_capa_approval_closure_requires_quality_oversight` | `tests.test_quality_workflow` | *Regression/Helper* | 🟢 PASSED | < 1s |
 | `test_capa_creation_validations` | `tests.test_quality_workflow` | PRD-SUB-001 | 🟢 PASSED | < 1s |
