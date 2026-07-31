@@ -25,6 +25,7 @@
     "@vitejs/plugin-vue": "^6.0.8",
     "@vue/test-utils": "^2.4.11",
     "eslint-plugin-vue": "^10.10.0",
+    "fake-indexeddb": "^6.2.5",
     "jsdom": "^29.1.1",
     "keycloak-js": "^26.2.4",
     "pinia": "^4.0.2",
