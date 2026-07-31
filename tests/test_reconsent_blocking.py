@@ -268,6 +268,7 @@ async def test_subject_consent_endpoint_lifecycle() -> None:
     correctly registers a subject's consent and clears requires_reconsent gates.
     """
     from unittest.mock import patch
+
     from fastapi import HTTPException
 
     async def mock_fetch(subject_pseudonym, study_id=None):
@@ -310,7 +311,9 @@ async def test_subject_consent_endpoint_lifecycle() -> None:
                     json=visit_payload,
                     headers=get_auth_headers(),
                 )
-            assert "Re-Consent Required - Demographics & Visit Forms Locked" in str(exc_info.value)
+            assert "Re-Consent Required - Demographics & Visit Forms Locked" in str(
+                exc_info.value
+            )
 
             # 2. Record initial protocol version 1 consent using our new POST endpoint!
             consent_payload = {
@@ -318,7 +321,7 @@ async def test_subject_consent_endpoint_lifecycle() -> None:
                     "study_id": "STUDY-456",
                     "version_tag": "1.0",
                     "version_index": 1,
-                    "status": "PUBLISHED"
+                    "status": "PUBLISHED",
                 },
                 "icf_signed": True,
                 "requires_reconsent": False,
@@ -353,7 +356,7 @@ async def test_subject_consent_endpoint_lifecycle() -> None:
                     "study_id": "STUDY-456",
                     "version_tag": "1.0",
                     "version_index": 1,
-                    "status": "PUBLISHED"
+                    "status": "PUBLISHED",
                 },
                 "icf_signed": True,
                 "requires_reconsent": True,
@@ -378,7 +381,9 @@ async def test_subject_consent_endpoint_lifecycle() -> None:
                     json=visit_payload_2,
                     headers=get_auth_headers(),
                 )
-            assert "Re-Consent Required - Demographics & Visit Forms Locked" in str(exc_info_re.value)
+            assert "Re-Consent Required - Demographics & Visit Forms Locked" in str(
+                exc_info_re.value
+            )
 
             # 4. Clear the gate by recording signed ICF for version 2.0 (requires_reconsent = False)
             consent_payload_clear = {
@@ -386,7 +391,7 @@ async def test_subject_consent_endpoint_lifecycle() -> None:
                     "study_id": "STUDY-456",
                     "version_tag": "2.0",
                     "version_index": 2,
-                    "status": "PUBLISHED"
+                    "status": "PUBLISHED",
                 },
                 "icf_signed": True,
                 "requires_reconsent": False,
