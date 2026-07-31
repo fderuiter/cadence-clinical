@@ -645,7 +645,7 @@ Unlike generic, document-level redaction rules (which default to flat 365-day sh
 
 ### 1. Deterministic Pseudonymization
 - **Mechanism**: Subject identifiers (`USUBJID`, `SUBJID`) and site identifiers (`SITEID`) are pseudonymized using **HMAC-SHA256** over the verbatim values.
-- **Keying**: The hash is keyed by a secure, study-specific runtime secret: `BIOSTAT_EXPORT_SALT`.
+- **Keying**: The hash is keyed by a secure, study-specific runtime salt: `BIOSTAT_EXPORT_SALT`.
 - **Outcome**: A stable 64-character hexadecimal string is outputted. Because the hashing is deterministic, subject identifiers match perfectly across different datasets (e.g. DM, AE, ADSL) and subsequent export runs, preserving relational integrity (`RDOMAIN` / `IDVARVAL` joins) while fully isolating patient identity.
 
 ### 2. Stable Per-Subject Date Shifting
