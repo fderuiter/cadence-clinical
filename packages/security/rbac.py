@@ -136,20 +136,32 @@ ROLE_ALIASES = {
 # Declarative action vocabulary and role-to-permission matrix matching §2.2
 # Key format: ROLE -> RESOURCE -> SET OF ACTIONS
 # Actions: "create", "read", "update", "delete"
+# Phase 1: Expanded centralized RBAC matrix with designer resource keys and actions
 ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
     ROLE_SYSADMIN: {
         "study_design": {"create", "read", "update", "delete", "approve", "reorder"},
         "global_library": {
-            "create",
-            "update",
-            "amend",
-            "transition",
-            "instantiate",
-            "read",
+            "create",  # Phase 1: create global library object
+            "update",  # Phase 1: update global library object
+            "amend",  # Phase 1: amend global library object
+            "transition",  # Phase 1: transition global library object status
+            "instantiate",  # Phase 1: instantiate global library object in study
+            "read",  # Phase 1: read global library object
         },
-        "mdr_concept": {"create", "update", "rename", "delete", "read"},
-        "protocol_export": {"generate", "read"},
-        "designer_cache": {"admin"},
+        "mdr_concept": {
+            "create",  # Phase 1: create MDR biomedical concept
+            "update",  # Phase 1: update MDR biomedical concept
+            "rename",  # Phase 1: rename MDR biomedical concept
+            "delete",  # Phase 1: delete MDR biomedical concept
+            "read",  # Phase 1: read MDR biomedical concept
+        },
+        "protocol_export": {
+            "generate",  # Phase 1: generate protocol document export
+            "read",  # Phase 1: read protocol document export
+        },
+        "designer_cache": {
+            "admin",  # Phase 1: clear/administer designer cache
+        },
         "system_audit_logs": {"read"},
         "export_masked": {"read"},
         "protocol_ingestion": {"upload", "read", "review", "promote"},
@@ -201,20 +213,32 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "medical_coding": {"create", "read", "update", "delete"},
         "trial_lock": {"create", "read", "update", "delete"},
         "export_unmasked": {"create", "read", "update", "delete"},
+        "sdv": {"create", "read", "update", "delete"},
     },
     ROLE_SPONSOR_DESIGNER: {
         "study_design": {"create", "read", "update", "delete", "approve", "reorder"},
         "global_library": {
-            "create",
-            "update",
-            "amend",
-            "transition",
-            "instantiate",
-            "read",
+            "create",  # Phase 1: create global library object
+            "update",  # Phase 1: update global library object
+            "amend",  # Phase 1: amend global library object
+            "transition",  # Phase 1: transition global library status
+            "instantiate",  # Phase 1: instantiate global library object in study
+            "read",  # Phase 1: read global library object
         },
-        "mdr_concept": {"create", "update", "rename", "delete", "read"},
-        "protocol_export": {"generate", "read"},
-        "designer_cache": {"admin"},
+        "mdr_concept": {
+            "create",  # Phase 1: create MDR biomedical concept
+            "update",  # Phase 1: update MDR biomedical concept
+            "rename",  # Phase 1: rename MDR biomedical concept
+            "delete",  # Phase 1: delete MDR biomedical concept
+            "read",  # Phase 1: read MDR biomedical concept
+        },
+        "protocol_export": {
+            "generate",  # Phase 1: generate protocol document export
+            "read",  # Phase 1: read protocol document export
+        },
+        "designer_cache": {
+            "admin",  # Phase 1: clear/administer designer cache
+        },
         "system_audit_logs": {"read"},
         "protocol_ingestion": {"upload", "read", "review", "promote"},
         "protocol_version": {"sign", "transition_approved"},
@@ -230,9 +254,17 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
     },
     ROLE_SPONSOR_DM: {
         "study_design": {"read", "approve"},
-        "global_library": {"transition", "read"},
-        "mdr_concept": {"read"},
-        "protocol_export": {"generate", "read"},
+        "global_library": {
+            "transition",  # Phase 1: transition global library object status
+            "read",  # Phase 1: read global library object
+        },
+        "mdr_concept": {
+            "read",  # Phase 1: read MDR biomedical concept
+        },
+        "protocol_export": {
+            "generate",  # Phase 1: generate protocol document export
+            "read",  # Phase 1: read protocol document export
+        },
         "subject_enrollment": {"read"},
         "ecrf_data_entry": {"read"},
         "query_lifecycle": {"create", "read", "update", "delete"},
@@ -282,6 +314,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "pi_signoff": {"read"},
         "medical_coding": {"create", "read", "update", "delete"},
         "trial_lock": {"create", "read", "update", "delete"},
+        "sdv": {"read", "update"},
     },
     ROLE_SPONSOR_MM: {
         "study_design": {"read"},
@@ -428,6 +461,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "form_submission": {"read"},
         "pi_signoff": {"read"},
         "trial_lock": {"read"},
+        "sdv": {"create", "read", "update", "delete"},
     },
     ROLE_SUBJECT: {
         "ecrf_data_entry": {"create", "update"},  # 'Diary' maps to create/update
@@ -515,9 +549,17 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
     },
     "admin": {
         "study_design": {"create", "read", "update", "delete", "approve", "reorder"},
-        "global_library": {"transition", "read"},
-        "mdr_concept": {"read"},
-        "protocol_export": {"generate", "read"},
+        "global_library": {
+            "transition",  # Phase 1: transition global library object status
+            "read",  # Phase 1: read global library object
+        },
+        "mdr_concept": {
+            "read",  # Phase 1: read MDR biomedical concept
+        },
+        "protocol_export": {
+            "generate",  # Phase 1: generate protocol document export
+            "read",  # Phase 1: read protocol document export
+        },
         "subject_enrollment": {"read"},
         "ecrf_data_entry": {"read"},
         "query_lifecycle": {"create", "read", "update", "delete"},
@@ -569,6 +611,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "medical_coding": {"create", "read", "update", "delete"},
         "trial_lock": {"create", "read", "update", "delete"},
         "export_unmasked": {"create", "read", "update", "delete"},
+        "sdv": {"create", "read", "update", "delete"},
     },
     "quality_manager": {
         "quality_event": {"create", "read", "update", "delete", "investigate"},
@@ -620,6 +663,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
         "medical_coding": {"create", "read", "update", "delete"},
         "trial_lock": {"create", "read", "update", "delete"},
         "export_unmasked": {"create", "read", "update", "delete"},
+        "sdv": {"create", "read", "update", "delete"},
     },
     "anonymous": {
         "ctms_study": {"read"},
