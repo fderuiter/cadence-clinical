@@ -87,6 +87,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-14: Biostatistical Export Pipeline Interoperability and Architecture](2026-08-14-biostatistical-export-pipeline-interoperability.md)
 
 ### 4. Clinical Operations & Business Modules
+- [2026-07-31: Expose CRA Monitoring SDV Transport Models and Shared Sign-Off Logic](2026-07-31-expose-cra-monitoring-sdv-transport-models-and-shared-sign-off-logic.md)
 - [2026-07-31: Informed Consent Multi-Language Translation Management](2026-07-31-informed-consent-multi-language-translation-management.md)
 - [2026-08-27: Add SQLModel Dependency for eISF Structured Section Taxonomy and Versioning](2026-08-27-add-sqlmodel-dependency-for-eisf-taxonomy-and-versioning.md)
 - [2026-08-26: ADR-111: eISF Gateway Integration, Docker-Compose Wiring, and eTMF Sync Topology](2026-08-26-eisf-gateway-compose-and-etmf-sync-topology.md)
@@ -133,6 +134,8 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-18: Document Redaction Architecture, Regulatory Data-Handling, and Compliance Profiles](2026-08-18-document-redaction-architecture.md)
 
 ### 6. Frontend & Design System
+- [2026-07-31: Clinical Code Lookup Input Helper in Shared UI Package](2026-07-31-clinical-code-lookup-input-helper-in-shared-ui-package.md)
+- [2026-07-31: Vue SPA Component Smoke Test and Vitest Pipeline Integration](2026-07-31-vue-spa-component-smoke-test-and-vitest-pipeline-integration.md)
 - [2026-07-31: Resolve Vitest Peer Dependency Conflict in Shared UI Package](2026-07-31-resolve-vitest-peer-dependency-conflict-in-shared-ui-package.md)
 - [2026-07-30: Deprecate legacy econsent helper in packages ui](2026-07-30-deprecate-legacy-econsent-helper-in-packages-ui.md)
 - [2026-07-30: eConsent Visual Editor and Subject Consent Portal UI Architecture](2026-07-30-econsent-visual-editor-and-subject-consent-portal-ui-architecture.md)
