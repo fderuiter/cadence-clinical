@@ -55,8 +55,7 @@ class ContextResetMiddleware(BaseHTTPMiddleware):
         session_token = current_session.set(None)
 
         try:
-            response = await call_next(request)
-            return response
+            return await call_next(request)
         finally:
             current_user_id.reset(user_token)
             current_change_reason.reset(reason_token)

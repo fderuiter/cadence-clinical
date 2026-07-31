@@ -6,12 +6,12 @@ structured AST expression trees, and comprehensive detailed node/aggregate
 evaluation outputs. All models conform to FDA 21 CFR Part 11 auditing principles.
 """
 
-from enum import Enum
 import re
+from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Union
 
 # Import standard GxP audit fields
-from audit import AuditFields, Part11AuditMixin
+from audit import Part11AuditMixin
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 
@@ -19,6 +19,7 @@ class ComparisonOperator(str, Enum):
     """
     Allowed binary comparison operators for criteria evaluations.
     """
+
     EQ = "=="
     NE = "!="
     LT = "<"
@@ -31,9 +32,11 @@ class LogicalOperator(str, Enum):
     """
     Allowed logical connectors for composite criteria expressions.
     """
+
     AND = "and"
     OR = "or"
     NOT = "not"
+
 
 # Regex pattern for eCRF.<DOMAIN>.<VARIABLE> references
 FIELD_REF_RE = re.compile(r"^eCRF\.([a-zA-Z0-9_]+)\.([a-zA-Z0-9_]+)$")
@@ -229,7 +232,10 @@ class EligibilityCriterion(Part11AuditMixin):
             if dsl:
                 if "dsl_source" not in data or not data["dsl_source"]:
                     data["dsl_source"] = dsl
-                if "dsl_expression_string" not in data or not data["dsl_expression_string"]:
+                if (
+                    "dsl_expression_string" not in data
+                    or not data["dsl_expression_string"]
+                ):
                     data["dsl_expression_string"] = dsl
 
             # Resolve condition / structured_expression_tree
@@ -237,7 +243,10 @@ class EligibilityCriterion(Part11AuditMixin):
             if cond:
                 if "condition" not in data or not data["condition"]:
                     data["condition"] = cond
-                if "structured_expression_tree" not in data or not data["structured_expression_tree"]:
+                if (
+                    "structured_expression_tree" not in data
+                    or not data["structured_expression_tree"]
+                ):
                     data["structured_expression_tree"] = cond
 
         return data
@@ -251,28 +260,36 @@ class EligibilityCriterion(Part11AuditMixin):
             self.criterion_id = cid
             self.identifier = cid
         else:
-            raise ValueError("Criterion unique identifier (id / criterion_id / identifier) must be provided.")
+            raise ValueError(
+                "Criterion unique identifier (id / criterion_id / identifier) must be provided."
+            )
 
         desc = self.human_readable_text or self.description
         if desc:
             self.human_readable_text = desc
             self.description = desc
         else:
-            raise ValueError("Criterion description (human_readable_text / description) must be provided.")
+            raise ValueError(
+                "Criterion description (human_readable_text / description) must be provided."
+            )
 
         dsl = self.dsl_expression_string or self.dsl_source
         if dsl:
             self.dsl_expression_string = dsl
             self.dsl_source = dsl
         else:
-            raise ValueError("Criterion DSL expression string (dsl_expression_string / dsl_source) must be provided.")
+            raise ValueError(
+                "Criterion DSL expression string (dsl_expression_string / dsl_source) must be provided."
+            )
 
         cond = self.structured_expression_tree or self.condition
         if cond:
             self.structured_expression_tree = cond
             self.condition = cond
         else:
-            raise ValueError("Criterion structured expression tree (structured_expression_tree / condition) must be provided.")
+            raise ValueError(
+                "Criterion structured expression tree (structured_expression_tree / condition) must be provided."
+            )
 
         return self
 

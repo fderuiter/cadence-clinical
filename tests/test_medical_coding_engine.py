@@ -98,78 +98,77 @@ async def setup_db() -> AsyncGenerator[None, None]:
 
 async def seed_dictionary_data():
     """Seed dictionaries in the database for isolation and testing."""
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            # MedDRA Version 25.0
-            session.add(
-                MedDRATerm(
-                    dictionary_version="25.0",
-                    code="10019211",
-                    term_name="Headache",
-                    level="LLT",
-                )
+    async with db_manager.get_session_maker()() as session, session.begin():
+        # MedDRA Version 25.0
+        session.add(
+            MedDRATerm(
+                dictionary_version="25.0",
+                code="10019211",
+                term_name="Headache",
+                level="LLT",
             )
-            session.add(
-                MedDRAHierarchy(
-                    dictionary_version="25.0",
-                    llt_code="10019211",
-                    pt_code="10019211",
-                    hlt_code="10019231",
-                    hlgt_code="10029214",
-                    soc_code="10029205",
-                    primary_soc_flag="Y",
-                )
+        )
+        session.add(
+            MedDRAHierarchy(
+                dictionary_version="25.0",
+                llt_code="10019211",
+                pt_code="10019211",
+                hlt_code="10019231",
+                hlgt_code="10029214",
+                soc_code="10029205",
+                primary_soc_flag="Y",
             )
+        )
 
-            # MedDRA Version 26.0 (isolation check)
-            session.add(
-                MedDRATerm(
-                    dictionary_version="26.0",
-                    code="10019211",
-                    term_name="Severe Headache",
-                    level="LLT",
-                )
+        # MedDRA Version 26.0 (isolation check)
+        session.add(
+            MedDRATerm(
+                dictionary_version="26.0",
+                code="10019211",
+                term_name="Severe Headache",
+                level="LLT",
             )
-            session.add(
-                MedDRAHierarchy(
-                    dictionary_version="26.0",
-                    llt_code="10019211",
-                    pt_code="10019211",
-                    hlt_code="10019231",
-                    hlgt_code="10029214",
-                    soc_code="10029205",
-                    primary_soc_flag="Y",
-                )
+        )
+        session.add(
+            MedDRAHierarchy(
+                dictionary_version="26.0",
+                llt_code="10019211",
+                pt_code="10019211",
+                hlt_code="10019231",
+                hlgt_code="10029214",
+                soc_code="10029205",
+                primary_soc_flag="Y",
             )
+        )
 
-            # WHODrug Version 2023-03
-            session.add(
-                WHODrugRecord(
-                    dictionary_version="2023-03",
-                    drug_code="00010101001",
-                    preferred_name="ASPIRIN",
-                    drug_name="ASPIRIN TABLET v23",
-                )
+        # WHODrug Version 2023-03
+        session.add(
+            WHODrugRecord(
+                dictionary_version="2023-03",
+                drug_code="00010101001",
+                preferred_name="ASPIRIN",
+                drug_name="ASPIRIN TABLET v23",
             )
+        )
 
-            # WHODrug Version 2024-03
-            session.add(
-                WHODrugRecord(
-                    dictionary_version="2024-03",
-                    drug_code="00010101001",
-                    preferred_name="ASPIRIN",
-                    drug_name="ASPIRIN TABLET v24",
-                )
+        # WHODrug Version 2024-03
+        session.add(
+            WHODrugRecord(
+                dictionary_version="2024-03",
+                drug_code="00010101001",
+                preferred_name="ASPIRIN",
+                drug_name="ASPIRIN TABLET v24",
             )
+        )
 
-            # Clinical Subject
-            session.add(
-                ClinicalSubject(
-                    id="SUBJ-UUID-1",
-                    subject_id="SUBJ-001",
-                    study_id="STUDY-001",
-                )
+        # Clinical Subject
+        session.add(
+            ClinicalSubject(
+                id="SUBJ-UUID-1",
+                subject_id="SUBJ-001",
+                study_id="STUDY-001",
             )
+        )
 
 
 # =========================================================================
@@ -274,7 +273,7 @@ async def test_import_auth_and_job_status() -> None:
                 completed = True
                 assert status_info["records_imported"] > 0
                 break
-            elif status_info["status"] == "FAILED":
+            if status_info["status"] == "FAILED":
                 pytest.fail(f"Job failed: {status_info}")
             await asyncio.sleep(0.05)
 
@@ -553,191 +552,190 @@ async def test_uncodable_query_generation_and_pii_isolation() -> None:
 async def test_upversioning_ledger_outcomes() -> None:
     """Verify up-versioning compares assignments against new versions and logs to ClinicalCodingLedger."""
     # Let's seed direct records
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            # Old MedDRA (25.0)
-            session.add(
-                MedDRATerm(
-                    dictionary_version="25.0",
-                    code="M10",
-                    term_name="Headache",
-                    level="LLT",
-                )
+    async with db_manager.get_session_maker()() as session, session.begin():
+        # Old MedDRA (25.0)
+        session.add(
+            MedDRATerm(
+                dictionary_version="25.0",
+                code="M10",
+                term_name="Headache",
+                level="LLT",
             )
-            session.add(
-                MedDRATerm(
-                    dictionary_version="25.0",
-                    code="M20",
-                    term_name="Nausea",
-                    level="LLT",
-                )
+        )
+        session.add(
+            MedDRATerm(
+                dictionary_version="25.0",
+                code="M20",
+                term_name="Nausea",
+                level="LLT",
             )
-            session.add(
-                MedDRATerm(
-                    dictionary_version="25.0",
-                    code="M30",
-                    term_name="Fatigue",
-                    level="LLT",
-                )
+        )
+        session.add(
+            MedDRATerm(
+                dictionary_version="25.0",
+                code="M30",
+                term_name="Fatigue",
+                level="LLT",
             )
-            session.add(
-                MedDRAHierarchy(
-                    dictionary_version="25.0",
-                    llt_code="M10",
-                    pt_code="M10",
-                    hlt_code="H10",
-                    hlgt_code="HG10",
-                    soc_code="S10",
-                    primary_soc_flag="Y",
-                )
+        )
+        session.add(
+            MedDRAHierarchy(
+                dictionary_version="25.0",
+                llt_code="M10",
+                pt_code="M10",
+                hlt_code="H10",
+                hlgt_code="HG10",
+                soc_code="S10",
+                primary_soc_flag="Y",
             )
-            session.add(
-                MedDRAHierarchy(
-                    dictionary_version="25.0",
-                    llt_code="M20",
-                    pt_code="M20",
-                    hlt_code="H20",
-                    hlgt_code="HG20",
-                    soc_code="S20",
-                    primary_soc_flag="Y",
-                )
+        )
+        session.add(
+            MedDRAHierarchy(
+                dictionary_version="25.0",
+                llt_code="M20",
+                pt_code="M20",
+                hlt_code="H20",
+                hlgt_code="HG20",
+                soc_code="S20",
+                primary_soc_flag="Y",
             )
-            session.add(
-                MedDRAHierarchy(
-                    dictionary_version="25.0",
-                    llt_code="M30",
-                    pt_code="M30",
-                    hlt_code="H30",
-                    hlgt_code="HG30",
-                    soc_code="S30",
-                    primary_soc_flag="Y",
-                )
+        )
+        session.add(
+            MedDRAHierarchy(
+                dictionary_version="25.0",
+                llt_code="M30",
+                pt_code="M30",
+                hlt_code="H30",
+                hlgt_code="HG30",
+                soc_code="S30",
+                primary_soc_flag="Y",
             )
+        )
 
-            # New MedDRA (26.0)
-            # M10 is unchanged
-            session.add(
-                MedDRATerm(
-                    dictionary_version="26.0",
-                    code="M10",
-                    term_name="Headache",
-                    level="LLT",
-                )
+        # New MedDRA (26.0)
+        # M10 is unchanged
+        session.add(
+            MedDRATerm(
+                dictionary_version="26.0",
+                code="M10",
+                term_name="Headache",
+                level="LLT",
             )
-            session.add(
-                MedDRAHierarchy(
-                    dictionary_version="26.0",
-                    llt_code="M10",
-                    pt_code="M10",
-                    hlt_code="H10",
-                    hlgt_code="HG10",
-                    soc_code="S10",
-                    primary_soc_flag="Y",
-                )
+        )
+        session.add(
+            MedDRAHierarchy(
+                dictionary_version="26.0",
+                llt_code="M10",
+                pt_code="M10",
+                hlt_code="H10",
+                hlgt_code="HG10",
+                soc_code="S10",
+                primary_soc_flag="Y",
             )
-            # M20 is reclassified (different hlt_code)
-            session.add(
-                MedDRATerm(
-                    dictionary_version="26.0",
-                    code="M20",
-                    term_name="Nausea",
-                    level="LLT",
-                )
+        )
+        # M20 is reclassified (different hlt_code)
+        session.add(
+            MedDRATerm(
+                dictionary_version="26.0",
+                code="M20",
+                term_name="Nausea",
+                level="LLT",
             )
-            session.add(
-                MedDRAHierarchy(
-                    dictionary_version="26.0",
-                    llt_code="M20",
-                    pt_code="M20",
-                    hlt_code="H20_NEW",
-                    hlgt_code="HG20",
-                    soc_code="S20",
-                    primary_soc_flag="Y",
-                )
+        )
+        session.add(
+            MedDRAHierarchy(
+                dictionary_version="26.0",
+                llt_code="M20",
+                pt_code="M20",
+                hlt_code="H20_NEW",
+                hlgt_code="HG20",
+                soc_code="S20",
+                primary_soc_flag="Y",
             )
-            # M30 is deprecated (doesn't exist in 26.0)
+        )
+        # M30 is deprecated (doesn't exist in 26.0)
 
-            session.add(
-                ClinicalSubject(
-                    id="SUBJ-UUID-UP",
-                    subject_id="SUBJ-UP",
-                    study_id="STUDY-001",
-                )
+        session.add(
+            ClinicalSubject(
+                id="SUBJ-UUID-UP",
+                subject_id="SUBJ-UP",
+                study_id="STUDY-001",
             )
+        )
 
-            # Assignments (25.0)
-            session.add(
-                ClinicalCodingAssignment(
-                    id="A-M10",
-                    verbatim_text="Headache",
-                    source_field="AE.AETERM",
-                    dictionary_type="MEDDRA",
-                    dictionary_version="25.0",
-                    coded_code="M10",
-                    coded_term="Headache",
-                    status=CodingState.CODED,
-                    hierarchy={
-                        "hierarchies": [
-                            {
-                                "llt_code": "M10",
-                                "pt_code": "M10",
-                                "hlt_code": "H10",
-                                "hlgt_code": "HG10",
-                                "soc_code": "S10",
-                                "primary_soc_flag": "Y",
-                            }
-                        ]
-                    },
-                )
+        # Assignments (25.0)
+        session.add(
+            ClinicalCodingAssignment(
+                id="A-M10",
+                verbatim_text="Headache",
+                source_field="AE.AETERM",
+                dictionary_type="MEDDRA",
+                dictionary_version="25.0",
+                coded_code="M10",
+                coded_term="Headache",
+                status=CodingState.CODED,
+                hierarchy={
+                    "hierarchies": [
+                        {
+                            "llt_code": "M10",
+                            "pt_code": "M10",
+                            "hlt_code": "H10",
+                            "hlgt_code": "HG10",
+                            "soc_code": "S10",
+                            "primary_soc_flag": "Y",
+                        }
+                    ]
+                },
             )
-            session.add(
-                ClinicalCodingAssignment(
-                    id="A-M20",
-                    verbatim_text="Nausea",
-                    source_field="AE.AETERM",
-                    dictionary_type="MEDDRA",
-                    dictionary_version="25.0",
-                    coded_code="M20",
-                    coded_term="Nausea",
-                    status=CodingState.CODED,
-                    hierarchy={
-                        "hierarchies": [
-                            {
-                                "llt_code": "M20",
-                                "pt_code": "M20",
-                                "hlt_code": "H20",
-                                "hlgt_code": "HG20",
-                                "soc_code": "S20",
-                                "primary_soc_flag": "Y",
-                            }
-                        ]
-                    },
-                )
+        )
+        session.add(
+            ClinicalCodingAssignment(
+                id="A-M20",
+                verbatim_text="Nausea",
+                source_field="AE.AETERM",
+                dictionary_type="MEDDRA",
+                dictionary_version="25.0",
+                coded_code="M20",
+                coded_term="Nausea",
+                status=CodingState.CODED,
+                hierarchy={
+                    "hierarchies": [
+                        {
+                            "llt_code": "M20",
+                            "pt_code": "M20",
+                            "hlt_code": "H20",
+                            "hlgt_code": "HG20",
+                            "soc_code": "S20",
+                            "primary_soc_flag": "Y",
+                        }
+                    ]
+                },
             )
-            session.add(
-                ClinicalCodingAssignment(
-                    id="A-M30",
-                    verbatim_text="Fatigue",
-                    source_field="AE.AETERM",
-                    dictionary_type="MEDDRA",
-                    dictionary_version="25.0",
-                    coded_code="M30",
-                    coded_term="Fatigue",
-                    status=CodingState.CODED,
-                    hierarchy={
-                        "hierarchies": [
-                            {
-                                "llt_code": "M30",
-                                "pt_code": "M30",
-                                "hlt_code": "H30",
-                                "hlgt_code": "HG30",
-                                "soc_code": "S30",
-                                "primary_soc_flag": "Y",
-                            }
-                        ]
-                    },
-                )
+        )
+        session.add(
+            ClinicalCodingAssignment(
+                id="A-M30",
+                verbatim_text="Fatigue",
+                source_field="AE.AETERM",
+                dictionary_type="MEDDRA",
+                dictionary_version="25.0",
+                coded_code="M30",
+                coded_term="Fatigue",
+                status=CodingState.CODED,
+                hierarchy={
+                    "hierarchies": [
+                        {
+                            "llt_code": "M30",
+                            "pt_code": "M30",
+                            "hlt_code": "H30",
+                            "hlgt_code": "HG30",
+                            "soc_code": "S30",
+                            "primary_soc_flag": "Y",
+                        }
+                    ]
+                },
             )
+        )
 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=exec_app), base_url="http://test"
@@ -808,28 +806,24 @@ async def test_dictionary_version_isolation() -> None:
 @pytest.mark.asyncio
 async def test_audit_relevant_workflows() -> None:
     """Verify that coding assignment mutations write to the system AuditLog correctly."""
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            assignment = ClinicalCodingAssignment(
-                verbatim_text="headache symptom",
-                source_field="AE.AETERM",
-                observation_id="obs_999",
-                dictionary_type="MEDDRA",
-                dictionary_version="26.0",
-                coded_code="10019211",
-                coded_term="Headache",
-                status="CODED",
-            )
-            session.add(assignment)
+    async with db_manager.get_session_maker()() as session, session.begin():
+        assignment = ClinicalCodingAssignment(
+            verbatim_text="headache symptom",
+            source_field="AE.AETERM",
+            observation_id="obs_999",
+            dictionary_type="MEDDRA",
+            dictionary_version="26.0",
+            coded_code="10019211",
+            coded_term="Headache",
+            status="CODED",
+        )
+        session.add(assignment)
 
     # Confirm audit log records INSERT
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            res = await session.execute(
-                select(AuditLog).where(
-                    AuditLog.table_name == "clinical_coding_assignments"
-                )
-            )
-            logs = res.scalars().all()
-            assert len(logs) >= 1
-            assert any(lg.action == "INSERT" for lg in logs)
+    async with db_manager.get_session_maker()() as session, session.begin():
+        res = await session.execute(
+            select(AuditLog).where(AuditLog.table_name == "clinical_coding_assignments")
+        )
+        logs = res.scalars().all()
+        assert len(logs) >= 1
+        assert any(lg.action == "INSERT" for lg in logs)

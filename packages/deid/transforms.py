@@ -73,13 +73,13 @@ def shift_date_string(date_str: str, shift_days: int = DEFAULT_DATE_SHIFT_DAYS) 
         # Format preservation heuristics
         if re.match(r"^\d{4}-\d{2}-\d{2}$", date_str):
             return shifted_dt.strftime("%Y-%m-%d")
-        elif re.match(r"^\d{4}/\d{2}/\d{2}$", date_str):
+        if re.match(r"^\d{4}/\d{2}/\d{2}$", date_str):
             return shifted_dt.strftime("%Y/%m/%d")
-        elif re.match(r"^\d{2}/\d{2}/\d{4}$", date_str):
+        if re.match(r"^\d{2}/\d{2}/\d{4}$", date_str):
             return shifted_dt.strftime("%m/%d/%Y")
-        elif re.match(r"^\d{1,2}-[a-zA-Z]{3}-\d{4}$", date_str, re.IGNORECASE):
+        if re.match(r"^\d{1,2}-[a-zA-Z]{3}-\d{4}$", date_str, re.IGNORECASE):
             return shifted_dt.strftime("%d-%b-%Y")
-        elif re.match(r"^[a-zA-Z]{3}\s+\d{1,2},?\s+\d{4}$", date_str, re.IGNORECASE):
+        if re.match(r"^[a-zA-Z]{3}\s+\d{1,2},?\s+\d{4}$", date_str, re.IGNORECASE):
             # e.g., "Jan 15, 2026" or "Jan 15 2026"
             has_comma = "," in date_str
             fmt = "%b %d, %Y" if has_comma else "%b %d %Y"

@@ -347,7 +347,7 @@ async def test_successful_export_and_transmission():
     # Verify transmission occurred and the XML content is pseudonymized
     assert len(mock_client.posts) == 1
     transmitted_xml = mock_client.posts[0]["content"]
-    assert isinstance(transmitted_xml, str) or isinstance(transmitted_xml, bytes)
+    assert isinstance(transmitted_xml, (str, bytes))
     if isinstance(transmitted_xml, bytes):
         transmitted_xml = transmitted_xml.decode("utf-8")
 

@@ -173,37 +173,36 @@ async def test_query_aging_generates_notification():
     Verify that clinical query aging digest generates and persists real notifications.
     """
     cutoff_date = datetime.now() - timedelta(days=15)
-    async with exec_db_manager.get_session_maker()() as session:
-        async with session.begin():
-            # Seed clinical subject and visit
-            subj = ClinicalSubject(
-                subject_id="SUBJ-AGING-99",
-                study_id="STUDY-AGING-99",
-                site_id="SITE-AGING-99",
-            )
-            session.add(subj)
+    async with exec_db_manager.get_session_maker()() as session, session.begin():
+        # Seed clinical subject and visit
+        subj = ClinicalSubject(
+            subject_id="SUBJ-AGING-99",
+            study_id="STUDY-AGING-99",
+            site_id="SITE-AGING-99",
+        )
+        session.add(subj)
 
-            visit = ClinicalVisit(
-                id="VISIT-AGING-99",
-                subject_id="SUBJ-AGING-99",
-                study_id="STUDY-AGING-99",
-                visit_name="Baseline",
-            )
-            session.add(visit)
+        visit = ClinicalVisit(
+            id="VISIT-AGING-99",
+            subject_id="SUBJ-AGING-99",
+            study_id="STUDY-AGING-99",
+            visit_name="Baseline",
+        )
+        session.add(visit)
 
-            # Seed aging query
-            q = ClinicalQuery(
-                study_id="STUDY-AGING-99",
-                site_id="SITE-AGING-99",
-                subject_id="SUBJ-AGING-99",
-                visit_id="VISIT-AGING-99",
-                test_code="ALT",
-                explanation="Value exceeds protocol limits",
-                status="OPEN",
-                is_deleted=False,
-                created_at=cutoff_date,
-            )
-            session.add(q)
+        # Seed aging query
+        q = ClinicalQuery(
+            study_id="STUDY-AGING-99",
+            site_id="SITE-AGING-99",
+            subject_id="SUBJ-AGING-99",
+            visit_id="VISIT-AGING-99",
+            test_code="ALT",
+            explanation="Value exceeds protocol limits",
+            status="OPEN",
+            is_deleted=False,
+            created_at=cutoff_date,
+        )
+        session.add(q)
 
     # Trigger query escalation/aging cycle
     with audit_context(
@@ -239,35 +238,34 @@ async def test_sdv_drop_generates_notification():
     Verify that an automatic verification drop triggers a real notification to the original verifier.
     """
     # 1. Populate DB with a verified observation
-    async with exec_db_manager.get_session_maker()() as session:
-        async with session.begin():
-            await session.execute(
-                text("SELECT set_config('cadence.app_writing', 'true', 1);")
-            )
-            subj = ClinicalSubject(
-                subject_id="SUBJ-DROP-99",
-                study_id="STUDY-DROP-99",
-                site_id="SITE-DROP-99",
-            )
-            session.add(subj)
+    async with exec_db_manager.get_session_maker()() as session, session.begin():
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', 1);")
+        )
+        subj = ClinicalSubject(
+            subject_id="SUBJ-DROP-99",
+            study_id="STUDY-DROP-99",
+            site_id="SITE-DROP-99",
+        )
+        session.add(subj)
 
-            obs = ClinicalObservation(
-                id="OBS-DROP-99",
-                subject_id="SUBJ-DROP-99",
-                study_id="STUDY-DROP-99",
-                visit_id="VISIT-DROP-99",
-                page_id="PAGE-DROP-99",
-                domain="VS",
-                test_code="SYSBP",
-                test_name="Systolic Blood Pressure",
-                value=120.0,
-                value_string="120",
-                normalized_value="120",
-                is_sdv_verified=True,
-                sdv_verified_by="verifier_cra_99",
-                sdv_verified_at=datetime.now(UTC).replace(tzinfo=None),
-            )
-            session.add(obs)
+        obs = ClinicalObservation(
+            id="OBS-DROP-99",
+            subject_id="SUBJ-DROP-99",
+            study_id="STUDY-DROP-99",
+            visit_id="VISIT-DROP-99",
+            page_id="PAGE-DROP-99",
+            domain="VS",
+            test_code="SYSBP",
+            test_name="Systolic Blood Pressure",
+            value=120.0,
+            value_string="120",
+            normalized_value="120",
+            is_sdv_verified=True,
+            sdv_verified_by="verifier_cra_99",
+            sdv_verified_at=datetime.now(UTC).replace(tzinfo=None),
+        )
+        session.add(obs)
 
     # 2. Modify value of verified observation to trigger SDV-drop
     with audit_context(

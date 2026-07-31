@@ -1,3 +1,4 @@
+import contextlib
 import logging
 import os
 import zipfile
@@ -34,20 +35,19 @@ async def update_job_progress(
     session_maker: Callable[[], AsyncSession],
 ) -> None:
     """Updates the import job progress/status in a separate transactional session."""
-    async with session_maker() as session:
-        async with session.begin():
-            stmt = select(DictionaryImportJob).where(DictionaryImportJob.id == job_id)
-            res = await session.execute(stmt)
-            job = res.scalar_one_or_none()
-            if job:
-                job.status = status
-                job.progress_percentage = progress
-                job.records_imported = records_count
-                job.errors_encountered = errors_encountered
-                if error_details is not None:
-                    job.error_details = error_details[:1000]
-                if status in (ImportState.COMPLETED, ImportState.FAILED):
-                    job.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    async with session_maker() as session, session.begin():
+        stmt = select(DictionaryImportJob).where(DictionaryImportJob.id == job_id)
+        res = await session.execute(stmt)
+        job = res.scalar_one_or_none()
+        if job:
+            job.status = status
+            job.progress_percentage = progress
+            job.records_imported = records_count
+            job.errors_encountered = errors_encountered
+            if error_details is not None:
+                job.error_details = error_details[:1000]
+            if status in (ImportState.COMPLETED, ImportState.FAILED):
+                job.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 async def process_dictionary_import(
@@ -297,7 +297,5 @@ async def process_dictionary_import(
         finally:
             # Clean up the temporary uploaded distribution archive
             if temp_zip_path and os.path.exists(temp_zip_path):
-                try:
+                with contextlib.suppress(Exception):
                     os.remove(temp_zip_path)
-                except Exception:
-                    pass

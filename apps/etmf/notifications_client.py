@@ -67,10 +67,9 @@ async def publish_expiration_notification(
             if response.status_code == 201:
                 res_data = response.json()
                 return True, res_data.get("id"), None
-            else:
-                error_msg = f"HTTP {response.status_code}: {response.text}"
-                logger.error("Failed to publish notification: %s", error_msg)
-                return False, None, error_msg
+            error_msg = f"HTTP {response.status_code}: {response.text}"
+            logger.error("Failed to publish notification: %s", error_msg)
+            return False, None, error_msg
 
     except Exception as e:
         error_msg = str(e)

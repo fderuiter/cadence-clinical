@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import datetime as dt
 import functools
 import re
@@ -94,6 +95,7 @@ def verify_version_signature(version_props: Dict[str, Any]) -> bool:
         created_at_val = None
 
     import os
+
     from packages.security.signing import verify_canonical_signature
 
     secret = os.getenv("SIGNING_SECRET", "designer-amendment-secure-key-12345").encode(
@@ -108,7 +110,10 @@ def verify_version_signature(version_props: Dict[str, Any]) -> bool:
     created_by = version_props.get("created_by")
     change_reason = version_props.get("change_reason")
 
-    if all(v is not None for v in (study_id, version_index, version_tag, created_by, change_reason)):
+    if all(
+        v is not None
+        for v in (study_id, version_index, version_tag, created_by, change_reason)
+    ):
         payload_new = {
             "study_id": study_id,
             "version_index": int(version_index),
@@ -309,13 +314,12 @@ async def assert_library_object_mutable(
     If it is in use, raises LibraryObjectInUseError.
     """
     is_mock = driver_or_tx is None
-    if not is_mock:
-        if (
-            type(driver_or_tx).__name__ in ("MagicMock", "AsyncMock")
-            or hasattr(driver_or_tx, "assert_called")
-            or hasattr(driver_or_tx, "called")
-        ):
-            is_mock = True
+    if not is_mock and (
+        type(driver_or_tx).__name__ in ("MagicMock", "AsyncMock")
+        or hasattr(driver_or_tx, "assert_called")
+        or hasattr(driver_or_tx, "called")
+    ):
+        is_mock = True
 
     if is_mock:
         from apps.designer.db import MOCK_STUDIES, MOCK_STUDY_VERSIONS
@@ -489,10 +493,8 @@ def deserialize_library_props(props: Dict[str, Any]) -> Dict[str, Any]:
 
     new_props = dict(props)
     if "payload_json" in new_props:
-        try:
+        with contextlib.suppress(Exception):
             new_props["payload"] = json.loads(new_props["payload_json"])
-        except Exception:
-            pass
     return new_props
 
 
@@ -536,12 +538,11 @@ async def create_library_object_version(
             new_ver_dict["version"] = new_ver_num
             existing_versions.append(new_ver_dict)
             return deserialize_library_props(copy.deepcopy(new_ver_dict))
-        else:
-            new_ver_dict = copy.deepcopy(serialized_properties)
-            new_ver_dict["id"] = object_id
-            new_ver_dict["version"] = 1
-            MOCK_LIBRARY_OBJECTS[object_id] = [new_ver_dict]
-            return deserialize_library_props(copy.deepcopy(new_ver_dict))
+        new_ver_dict = copy.deepcopy(serialized_properties)
+        new_ver_dict["id"] = object_id
+        new_ver_dict["version"] = 1
+        MOCK_LIBRARY_OBJECTS[object_id] = [new_ver_dict]
+        return deserialize_library_props(copy.deepcopy(new_ver_dict))
 
     query = """
     MATCH (old:LibraryObject {id: $object_id})
@@ -3208,7 +3209,9 @@ async def approve_study_version_delta(
             secret = os.getenv(
                 "SIGNING_SECRET", "designer-amendment-secure-key-12345"
             ).encode("utf-8")
-            ver_record["signature"] = generate_canonical_signature(payload_to_sign, secret)
+            ver_record["signature"] = generate_canonical_signature(
+                payload_to_sign, secret
+            )
 
             # Record in action history
             action_id = str(uuid.uuid4())

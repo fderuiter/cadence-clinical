@@ -367,37 +367,36 @@ async def test_api_tsdv_evaluation_endpoint():
     # @req:PRD-QRY-007
     """Verify evaluation API resolves configs and missing subject enrollment index alphabetically."""
     # Seed subjects in database
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            # Set GxP audit parameters
-            await session.execute(
-                text("SELECT set_config('cadence.app_writing', 'true', 1);")
-            )
-            # Add subjects (unordered alphabetically by subject_id)
-            sub_c = ClinicalSubject(
-                id="SUB-UUID-C", subject_id="SUBJ-003", study_id="STUDY-EVAL"
-            )
-            sub_a = ClinicalSubject(
-                id="SUB-UUID-A", subject_id="SUBJ-001", study_id="STUDY-EVAL"
-            )
-            sub_b = ClinicalSubject(
-                id="SUB-UUID-B", subject_id="SUBJ-002", study_id="STUDY-EVAL"
-            )
-            session.add_all([sub_c, sub_a, sub_b])
+    async with db_manager.get_session_maker()() as session, session.begin():
+        # Set GxP audit parameters
+        await session.execute(
+            text("SELECT set_config('cadence.app_writing', 'true', 1);")
+        )
+        # Add subjects (unordered alphabetically by subject_id)
+        sub_c = ClinicalSubject(
+            id="SUB-UUID-C", subject_id="SUBJ-003", study_id="STUDY-EVAL"
+        )
+        sub_a = ClinicalSubject(
+            id="SUB-UUID-A", subject_id="SUBJ-001", study_id="STUDY-EVAL"
+        )
+        sub_b = ClinicalSubject(
+            id="SUB-UUID-B", subject_id="SUBJ-002", study_id="STUDY-EVAL"
+        )
+        session.add_all([sub_c, sub_a, sub_b])
 
-            # Add TSDV Config
-            cfg = TSDVConfig(
-                id="CFG-EVAL",
-                study_id="STUDY-EVAL",
-                sampling_model="SUBJECT_BASED",
-                initial_full_sdv_subject_count=2,
-                random_sample_percentage=0.0,
-                full_sdv_domains=["VS"],
-                safety_endpoints=["AE"],
-                zero_sdv_domains=["DM"],
-                trial_random_seed=42,
-            )
-            session.add(cfg)
+        # Add TSDV Config
+        cfg = TSDVConfig(
+            id="CFG-EVAL",
+            study_id="STUDY-EVAL",
+            sampling_model="SUBJECT_BASED",
+            initial_full_sdv_subject_count=2,
+            random_sample_percentage=0.0,
+            full_sdv_domains=["VS"],
+            safety_endpoints=["AE"],
+            zero_sdv_domains=["DM"],
+            trial_random_seed=42,
+        )
+        session.add(cfg)
 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"

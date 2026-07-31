@@ -51,16 +51,15 @@ async def test_prevent_audit_log_mutation():
     # @req:Trace-1
     # @req:PRD-SYS-001
     # Insert an audit log record first
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            log = AuditLog(
-                table_name="dummy",
-                record_id="rec_1",
-                action="INSERT",
-                user_id="user_1",
-                change_reason="test",
-            )
-            session.add(log)
+    async with db_manager.get_session_maker()() as session, session.begin():
+        log = AuditLog(
+            table_name="dummy",
+            record_id="rec_1",
+            action="INSERT",
+            user_id="user_1",
+            change_reason="test",
+        )
+        session.add(log)
 
     # Try to modify it directly via raw SQL - UPDATE
     async with db_manager.get_session_maker()() as session:
@@ -98,15 +97,14 @@ async def test_prevent_audit_log_mutation():
 @pytest.mark.asyncio
 async def test_prevent_audit_ledger_seals_mutation():
     # Insert an audit ledger seal record first
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            seal = AuditLedgerSeal(
-                previous_block_hash="0" * 64,
-                current_block_hash="abc",
-                sealed_record_count=1,
-                merkle_root_hash="merkle",
-            )
-            session.add(seal)
+    async with db_manager.get_session_maker()() as session, session.begin():
+        seal = AuditLedgerSeal(
+            previous_block_hash="0" * 64,
+            current_block_hash="abc",
+            sealed_record_count=1,
+            merkle_root_hash="merkle",
+        )
+        session.add(seal)
 
     # Try to modify it directly via raw SQL - UPDATE
     async with db_manager.get_session_maker()() as session:
@@ -125,20 +123,19 @@ async def test_prevent_audit_ledger_seals_mutation():
                 )
 
     # Try to modify it directly via raw SQL - DELETE
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            with pytest.raises(
-                Exception,
-                match="Modification or deletion of audit logs is strictly prohibited",
-            ):
-                await session.execute(
-                    text(
-                        clean_query(
-                            "DELETE FROM audit_schema.audit_ledger_seals;",
-                            session,
-                        )
+    async with db_manager.get_session_maker()() as session, session.begin():
+        with pytest.raises(
+            Exception,
+            match="Modification or deletion of audit logs is strictly prohibited",
+        ):
+            await session.execute(
+                text(
+                    clean_query(
+                        "DELETE FROM audit_schema.audit_ledger_seals;",
+                        session,
                     )
                 )
+            )
 
 
 @pytest.mark.asyncio
@@ -146,29 +143,24 @@ async def test_prevent_hard_delete_on_audited_model():
     # @req:Trace-1
     # @req:PRD-SYS-002
     # Insert an audited record first
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            rec = AuditedClinicalRecord(id="rec_100", data_value="important")
-            session.add(rec)
+    async with db_manager.get_session_maker()() as session, session.begin():
+        rec = AuditedClinicalRecord(id="rec_100", data_value="important")
+        session.add(rec)
 
     # Try to hard-delete it via raw SQL
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            with pytest.raises(
-                Exception, match="Hard deletions are strictly forbidden"
-            ):
-                await session.execute(
-                    text("DELETE FROM audited_clinical_records WHERE id = 'rec_100';")
-                )
+    async with db_manager.get_session_maker()() as session, session.begin():
+        with pytest.raises(Exception, match="Hard deletions are strictly forbidden"):
+            await session.execute(
+                text("DELETE FROM audited_clinical_records WHERE id = 'rec_100';")
+            )
 
 
 @pytest.mark.asyncio
 async def test_out_of_band_update_triggers_audit_entry():
     # Insert an audited record
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            rec = AuditedClinicalRecord(id="rec_200", data_value="original")
-            session.add(rec)
+    async with db_manager.get_session_maker()() as session, session.begin():
+        rec = AuditedClinicalRecord(id="rec_200", data_value="original")
+        session.add(rec)
 
     # Direct out-of-band SQL update (simulating direct DB admin change, app_writing is default 'false')
     async with db_manager.get_session_maker()() as session:
@@ -180,51 +172,47 @@ async def test_out_of_band_update_triggers_audit_entry():
             )
 
     # Verify that the DB trigger captured the out-of-band change and inserted an AuditLog record
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            res = await session.execute(
-                select(AuditLog).where(
-                    AuditLog.table_name == "audited_clinical_records"
-                )
-            )
-            logs = res.scalars().all()
-            update_logs = [log for log in logs if log.action == "UPDATE"]
+    async with db_manager.get_session_maker()() as session, session.begin():
+        res = await session.execute(
+            select(AuditLog).where(AuditLog.table_name == "audited_clinical_records")
+        )
+        logs = res.scalars().all()
+        update_logs = [log for log in logs if log.action == "UPDATE"]
 
-            assert len(update_logs) == 1
-            assert update_logs[0].new_values["data_value"] == "tampered"
-            assert update_logs[0].user_id in (
-                "system",
-                "system_process",
-            )  # default out-of-band value
-            assert update_logs[0].change_reason in (
-                "system_operation",
-                "Automated system operation",
-            )  # default out-of-band value
+        assert len(update_logs) == 1
+        assert update_logs[0].new_values["data_value"] == "tampered"
+        assert update_logs[0].user_id in (
+            "system",
+            "system_process",
+        )  # default out-of-band value
+        assert update_logs[0].change_reason in (
+            "system_operation",
+            "Automated system operation",
+        )  # default out-of-band value
 
 
 @pytest.mark.asyncio
 async def test_ledger_sealing_and_validation():
     # @req:PRD-SYS-003
     # Generate some unsealed audit logs
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            log1 = AuditLog(
-                id="log_1",
-                table_name="tb",
-                record_id="r1",
-                action="INSERT",
-                user_id="u1",
-                change_reason="r",
-            )
-            log2 = AuditLog(
-                id="log_2",
-                table_name="tb",
-                record_id="r2",
-                action="UPDATE",
-                user_id="u2",
-                change_reason="r",
-            )
-            session.add_all([log1, log2])
+    async with db_manager.get_session_maker()() as session, session.begin():
+        log1 = AuditLog(
+            id="log_1",
+            table_name="tb",
+            record_id="r1",
+            action="INSERT",
+            user_id="u1",
+            change_reason="r",
+        )
+        log2 = AuditLog(
+            id="log_2",
+            table_name="tb",
+            record_id="r2",
+            action="UPDATE",
+            user_id="u2",
+            change_reason="r",
+        )
+        session.add_all([log1, log2])
 
     # Execute sealing cycle
     async with db_manager.get_session_maker()() as session:
@@ -232,21 +220,20 @@ async def test_ledger_sealing_and_validation():
         assert block_hash is not None
 
     # Check that logs were sealed correctly
-    async with db_manager.get_session_maker()() as session:
-        async with session.begin():
-            res = await session.execute(
-                select(AuditLog).where(AuditLog.id.in_(["log_1", "log_2"]))
-            )
-            logs = res.scalars().all()
-            assert len(logs) == 2
-            for log in logs:
-                assert log.cryptographic_seal == block_hash
+    async with db_manager.get_session_maker()() as session, session.begin():
+        res = await session.execute(
+            select(AuditLog).where(AuditLog.id.in_(["log_1", "log_2"]))
+        )
+        logs = res.scalars().all()
+        assert len(logs) == 2
+        for log in logs:
+            assert log.cryptographic_seal == block_hash
 
-            res_seals = await session.execute(select(AuditLedgerSeal))
-            seals = res_seals.scalars().all()
-            assert len(seals) == 1
-            assert seals[0].current_block_hash == block_hash
-            assert seals[0].sealed_record_count == 2
+        res_seals = await session.execute(select(AuditLedgerSeal))
+        seals = res_seals.scalars().all()
+        assert len(seals) == 1
+        assert seals[0].current_block_hash == block_hash
+        assert seals[0].sealed_record_count == 2
 
     # Validate the intact ledger (should pass successfully)
     async with db_manager.get_session_maker()() as session:
