@@ -56,7 +56,9 @@ class ExportJob(Base):
     status: Mapped[str] = mapped_column(
         String(50), default="PENDING", nullable=False
     )  # PENDING, COMPLETED, FAILED
-    output: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # xml payload output
+    output: Mapped[Optional[str]] = mapped_column(
+        String, nullable=True
+    )  # xml payload output
     error: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # error message
 
     # 21 CFR Part 11 Compliance Auditing Metadata

@@ -491,7 +491,9 @@ async def upgrade_existing_tables(conn) -> None:
             if col_name not in subj_cols:
                 print(f"Adding missing column {col_name} to clinical_subjects table...")
                 await conn.execute(
-                    text(f"ALTER TABLE clinical_subjects ADD COLUMN {col_name} {col_type};")
+                    text(
+                        f"ALTER TABLE clinical_subjects ADD COLUMN {col_name} {col_type};"
+                    )
                 )
 
     # Deterministic legacy-subject backfill

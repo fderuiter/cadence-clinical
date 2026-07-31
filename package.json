@@ -28,7 +28,8 @@
     "docs:dev": "vitepress dev docs",
     "docs:build": "node scripts/build-docs.js",
     "build:docs": "node scripts/build-docs.js",
-    "project:sync": "python3 scripts/sync_github_project.py"
+    "project:sync": "python3 scripts/sync_github_project.py",
+    "labels:clean-jules": "python3 scripts/remove_jules_labels.py"
   },
   "repository": {
     "type": "git",

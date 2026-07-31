@@ -203,7 +203,9 @@ class ClinicalSubject(AuditedModel):
     # RTSM / Randomization fields
     treatment_group: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     randomization_seed: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    investigational_product_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    investigational_product_id: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True
+    )
 
     @validates("status")
     def validate_status(self, key, value):
@@ -1059,9 +1061,7 @@ class LabTestMasters(AuditedModel):
     """
 
     __tablename__ = "lab_test_masters"
-    __table_args__ = (
-        Index("idx_lab_test_masters_lookup", "study_id", "test_code"),
-    )
+    __table_args__ = (Index("idx_lab_test_master_lookup", "study_id", "test_code"),)
 
     study_id: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
     test_code: Mapped[str] = mapped_column(String(100), index=True, nullable=False)
