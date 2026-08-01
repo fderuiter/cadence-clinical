@@ -463,20 +463,24 @@ async def test_start_stop_notification_worker_integration():
     # Publish an event to the queue
     await publish_domain_event(event)
 
-    # Give a tiny slice of time for the async background worker task to pick up and process
-    await asyncio.sleep(0.2)
+    # Poll for the notification to be created in the database to prevent flakiness under heavy test runner load
+    notifs = []
+    for _ in range(50):
+        async with notifications_db_manager.get_session_maker()() as session:
+            stmt = select(Notification).where(
+                Notification.related_entity_id == "evt-integration-99"
+            )
+            res = await session.execute(stmt)
+            notifs = list(res.scalars().all())
+            if len(notifs) >= 1:
+                break
+        await asyncio.sleep(0.1)
 
     # Stop the worker cleanly
     await stop_notification_worker()
 
     # Check that a notification record was created in the Notifications database
-    async with notifications_db_manager.get_session_maker()() as session:
-        stmt = select(Notification).where(
-            Notification.related_entity_id == "evt-integration-99"
-        )
-        res = await session.execute(stmt)
-        notifs = res.scalars().all()
-        assert len(notifs) >= 1
-        assert notifs[0].category == "SYSTEM"
-        assert notifs[0].priority == "LOW"
-        assert "Protocol amendment submitted" in notifs[0].message_content
+    assert len(notifs) >= 1
+    assert notifs[0].category == "SYSTEM"
+    assert notifs[0].priority == "LOW"
+    assert "Protocol amendment submitted" in notifs[0].message_content
