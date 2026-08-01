@@ -159,7 +159,7 @@ __all__ = [
     "can_access_site",
     "can_access_study",
     "StudyScopeChecker",
-    "require_study_scope",
+    "require_study_scope",  # Exported security building block
     "mask_payload",
     "PermissionEnum",
     "RoleEnum",

@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+"""Static & dynamic cross-service import validator.
+
+Enforces package boundary rules and checks both standard and dynamic import pathways
+(such as importlib.import_module, __import__, sys.modules) across apps and packages.
+
+Requirements: PRD-SYS-001
+"""
+
 import ast
 import os
 import sys
@@ -6,6 +14,7 @@ from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 APPS_DIR = ROOT_DIR / "apps"
+PACKAGES_DIR = ROOT_DIR / "packages"
 
 
 def get_service_name(file_path: Path) -> str:
@@ -21,76 +30,149 @@ def get_service_name(file_path: Path) -> str:
 
 
 def check_file_imports(file_path: Path) -> list[str]:
-    """
-    Parses a python file using AST and returns a list of import violations.
-    """
+    """Parses a Python file using AST and returns a list of import violations."""
     violations = []
-    service_name = get_service_name(file_path)
-    if not service_name or service_name == "__pycache__":
+
+    # 1. Determine if file is under apps/ or packages/
+    is_app = False
+    is_package = False
+    entity_name = ""
+
+    try:
+        relative_to_apps = file_path.relative_to(APPS_DIR)
+        is_app = True
+        entity_name = relative_to_apps.parts[0]
+    except ValueError:
+        try:
+            relative_to_packages = file_path.relative_to(PACKAGES_DIR)
+            is_package = True
+            entity_name = relative_to_packages.parts[0]
+        except ValueError:
+            return violations
+
+    if not entity_name or entity_name == "__pycache__":
         return violations
 
     try:
         content = file_path.read_text(encoding="utf-8")
         tree = ast.parse(content, filename=str(file_path))
     except Exception as e:
-        # If a file fails to parse, count it as an issue or ignore if it's not valid Python
         return [f"Failed to parse file: {e}"]
 
-    # Determine absolute module components of the current file
-    # Example: apps/etmf/sub/file.py -> ['apps', 'etmf', 'sub']
-    try:
-        rel_parts = list(file_path.relative_to(ROOT_DIR).parent.parts)
-    except ValueError:
-        rel_parts = []
+    # Helper to check if a module name is prohibited
+    def check_module_prohibited(mod_name: str, lineno: int):
+        parts = mod_name.split(".")
+        if len(parts) >= 2 and parts[0] == "apps":
+            imported_service = parts[1]
+            if is_app:
+                if imported_service != entity_name:
+                    violations.append(
+                        f"Line {lineno}: Direct import of service '{imported_service}' via '{mod_name}' "
+                        f"is prohibited from within service '{entity_name}'."
+                    )
+            elif is_package:
+                violations.append(
+                    f"Line {lineno}: Package boundary violation! Package '{entity_name}' is importing "
+                    f"from app service '{imported_service}' via '{mod_name}'."
+                )
 
     for node in ast.walk(tree):
-        # Handle "import apps.execution.trial_lock" or "import apps.execution"
+        # 1. Standard "import apps.foo"
         if isinstance(node, ast.Import):
             for alias in node.names:
-                parts = alias.name.split(".")
-                if len(parts) >= 2 and parts[0] == "apps":
-                    imported_service = parts[1]
-                    if imported_service != service_name:
-                        violations.append(
-                            f"Line {node.lineno}: Direct import of service '{imported_service}' "
-                            f"via '{alias.name}' is prohibited from within service '{service_name}'."
-                        )
+                check_module_prohibited(alias.name, node.lineno)
 
-        # Handle "from apps.execution.trial_lock import TrialLockManager"
+        # 2. Standard "from apps.foo import bar"
         elif isinstance(node, ast.ImportFrom):
-            # Resolve relative imports if level > 0
             if node.level > 0:
-                # E.g., if rel_parts is ['apps', 'etmf', 'sub'] and level is 1 (current package):
-                # we drop 0 levels -> ['apps', 'etmf', 'sub']
-                # If level is 2 (parent package), we drop 1 level -> ['apps', 'etmf']
-                # If level is 3 (grandparent package), we drop 2 levels -> ['apps']
+                try:
+                    rel_parts = list(file_path.relative_to(ROOT_DIR).parent.parts)
+                except ValueError:
+                    rel_parts = []
                 drop_levels = node.level - 1
-                if len(rel_parts) >= drop_levels:
-                    base_parts = (
-                        rel_parts[:-drop_levels] if drop_levels > 0 else rel_parts
-                    )
-                else:
-                    base_parts = []
-
+                base_parts = (
+                    rel_parts[:-drop_levels]
+                    if (drop_levels > 0 and len(rel_parts) >= drop_levels)
+                    else rel_parts
+                )
                 if node.module:
                     resolved_parts = base_parts + node.module.split(".")
                 else:
                     resolved_parts = base_parts
+                resolved_module = ".".join(resolved_parts)
             else:
-                resolved_parts = node.module.split(".") if node.module else []
+                resolved_module = node.module if node.module else ""
 
-            if len(resolved_parts) >= 2 and resolved_parts[0] == "apps":
-                imported_service = resolved_parts[1]
-                if imported_service != service_name:
-                    import_str = (
-                        f"from {node.module or ''} import ..."
-                        if node.module
-                        else f"from {'.' * node.level} import ..."
-                    )
-                    violations.append(
-                        f"Line {node.lineno}: Direct import of service '{imported_service}' "
-                        f"via '{import_str}' is prohibited from within service '{service_name}'."
-                    )
+            if resolved_module:
+                check_module_prohibited(resolved_module, node.lineno)
+
+        # 3. Dynamic import via calls (importlib.import_module, __import__, etc.)
+        elif isinstance(node, ast.Call):
+            is_import_call = False
+            if isinstance(node.func, ast.Attribute):
+                if node.func.attr == "import_module":
+                    is_import_call = True
+            elif isinstance(node.func, ast.Name):
+                if node.func.id in ("import_module", "__import__"):
+                    is_import_call = True
+
+            if is_import_call and node.args:
+                first_arg = node.args[0]
+                if isinstance(first_arg, ast.Constant) and isinstance(
+                    first_arg.value, str
+                ):
+                    check_module_prohibited(first_arg.value, node.lineno)
+
+        # 4. Dynamic import via sys.modules["apps.foo"]
+        elif isinstance(node, ast.Subscript):
+            is_sys_modules = False
+            if isinstance(node.value, ast.Attribute):
+                if (
+                    node.value.attr == "modules"
+                    and isinstance(node.value.value, ast.Name)
+                    and node.value.value.id == "sys"
+                ):
+                    is_sys_modules = True
+            elif isinstance(node.value, ast.Name):
+                if node.value.id == "modules":
+                    is_sys_modules = True
+
+            if is_sys_modules:
+                slice_node = node.slice
+                # Support older python versions (ast.Index wrapper)
+                if isinstance(slice_node, ast.Index):
+                    slice_node = slice_node.value
+
+                if isinstance(slice_node, ast.Constant) and isinstance(
+                    slice_node.value, str
+                ):
+                    check_module_prohibited(slice_node.value, node.lineno)
+
+        # 5. Dynamic import via sys.modules.get("apps.foo")
+        elif (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "get"
+        ):
+            is_sys_modules_get = False
+            val = node.func.value
+            if isinstance(val, ast.Attribute):
+                if (
+                    val.attr == "modules"
+                    and isinstance(val.value, ast.Name)
+                    and val.value.id == "sys"
+                ):
+                    is_sys_modules_get = True
+            elif isinstance(val, ast.Name):
+                if val.id == "modules":
+                    is_sys_modules_get = True
+
+            if is_sys_modules_get and node.args:
+                first_arg = node.args[0]
+                if isinstance(first_arg, ast.Constant) and isinstance(
+                    first_arg.value, str
+                ):
+                    check_module_prohibited(first_arg.value, node.lineno)
 
     return violations
 
@@ -110,8 +192,20 @@ def main():
                 if violations:
                     violations_found[str(file_path.relative_to(ROOT_DIR))] = violations
 
+    # Walk all .py files in packages directory
+    for root, _, files in os.walk(PACKAGES_DIR):
+        for file in files:
+            if file.endswith(".py"):
+                file_path = Path(root) / file
+                total_files_checked += 1
+                violations = check_file_imports(file_path)
+                if violations:
+                    violations_found[str(file_path.relative_to(ROOT_DIR))] = violations
+
     if violations_found:
-        print("\n[ERROR] Direct cross-service Python imports detected!")
+        print(
+            "\n[ERROR] Direct/Dynamic cross-service or package boundary violations detected!"
+        )
         for file, errs in violations_found.items():
             print(f"\nIn file: {file}")
             for err in errs:
@@ -120,7 +214,7 @@ def main():
         sys.exit(1)
 
     print(
-        f"\n[SUCCESS] No cross-service import violations found across {total_files_checked} files."
+        f"\n[SUCCESS] No cross-service import or package boundary violations found across {total_files_checked} files."
     )
     sys.exit(0)
 

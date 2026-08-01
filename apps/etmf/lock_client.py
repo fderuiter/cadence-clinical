@@ -29,8 +29,9 @@ async def verify_trial_lock_status(is_testing: bool | None = None) -> bool:
         is_testing = "pytest" in sys.modules or "PYTEST_CURRENT_TEST" in os.environ
     if is_testing:
         try:
-            if "apps.execution.trial_lock" in sys.modules:
-                tl_mgr = sys.modules["apps.execution.trial_lock"].TrialLockManager
+            exec_lock_name = "apps.execution.trial_lock"
+            if exec_lock_name in sys.modules:
+                tl_mgr = sys.modules[exec_lock_name].TrialLockManager
                 if tl_mgr.is_locked():
                     return True
         except Exception:
@@ -98,8 +99,9 @@ async def trigger_global_trial_lock(
         is_testing = "pytest" in sys.modules or "PYTEST_CURRENT_TEST" in os.environ
     if is_testing:
         try:
-            if "apps.execution.trial_lock" in sys.modules:
-                tl_mgr = sys.modules["apps.execution.trial_lock"].TrialLockManager
+            exec_lock_name = "apps.execution.trial_lock"
+            if exec_lock_name in sys.modules:
+                tl_mgr = sys.modules[exec_lock_name].TrialLockManager
                 tl_mgr.lock_trial(reason=reason)
                 return
         except Exception:

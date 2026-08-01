@@ -132,6 +132,90 @@ Traditional clinical trial builds require manual, error-prone translation of pro
 
 ---
 
+## 2.2 Local Developer Runtime Topology
+
+Unlike the Production-Specific Architecture (which utilizes AWS infrastructure, multi-AZ PostgreSQL clusters, Redis distributed caching tiers, and Neo4j graph clusters), the developer-centric local environment runs as a lightweight, single-host orchestration configuration using Docker Compose.
+
+### Local Configuration Details:
+* **Relational Database:** A single PostgreSQL container (`postgres`) is utilized for the core EDC execution runtime (`execution`) and organization service (`org`).
+* **Graph Database:** A community-edition Neo4j container (`neo4j`) is utilized for the trial designer (`designer`).
+* **Local Identity & Access Management:** Keycloak (`keycloak`) runs locally in a development mode using an in-memory database (`dev-mem`).
+* **SQLite File Databases:** Microservices like Electronic Investigator Site File (`eisf`), Electronic Trial Master File (`etmf`), Clinical Trial Management System (`ctms`), Quality & CAPA Management (`quality`), EHR/ePRO Interoperability Gateway (`interop`), Ticket Tracking (`tickets`), Clinical Safety (`safety`), and Notifications Dispatcher (`notifications`) utilize local independent SQLite databases to maximize performance and isolation during local testing, avoiding the need for complex database migrations.
+* **In-Memory Messaging/Queues:** Local integrations utilize synchronous HTTP loops or lightweight in-memory queues instead of full enterprise brokers (e.g., RabbitMQ, AWS SQS) or caching layers (e.g., Redis clusters) which are reserved exclusively for production environments.
+
+The diagram below represents the local development runtime and mapping of all 16 active local services:
+
+```mermaid
+flowchart TD
+    subgraph Local Developer Host Environment
+        subject-portal[subject-portal - Subjects PWA Portal]
+        gateway[gateway - FastAPI API Gateway/Router]
+        keycloak[keycloak - Keycloak IAM]
+        designer[designer - MDR/SDR Service]
+        execution[execution - Trial EDC Runtime]
+        org[org - Organization boundaries service]
+        eisf[eisf - Electronic Investigator Site File]
+        etmf[etmf - Electronic Trial Master File]
+        ctms[ctms - Clinical Trial Management System]
+        quality[quality - Quality & CAPA Management]
+        interop[interop - EHR FHIR / ePRO Gateway]
+        tickets[tickets - Ticket tracking service]
+        safety[safety - Clinical safety microservice]
+        notifications[notifications - Notifications & Webhooks Dispatcher]
+
+        %% Databases
+        postgres[(postgres - Relational Database)]
+        neo4j[(neo4j - Graph Database)]
+
+        %% SQLite file boundaries
+        sqlite_eisf[(eisf.db - local SQLite)]
+        sqlite_etmf[(tmf.db - local SQLite)]
+        sqlite_ctms[(ctms.db - local SQLite)]
+        sqlite_quality[(quality.db - local SQLite)]
+        sqlite_interop[(interop.db - local SQLite)]
+        sqlite_tickets[(tickets.db - local SQLite)]
+        sqlite_safety[(safety.db - local SQLite)]
+        sqlite_notifications[(notifications.db - local SQLite)]
+    end
+
+    %% Routing Flow
+    subject-portal -->|HTTP Requests| gateway
+    gateway -->|Keycloak OIDC Auth| keycloak
+
+    %% API Routing
+    gateway --> designer
+    gateway --> execution
+    gateway --> org
+    gateway --> eisf
+    gateway --> etmf
+    gateway --> ctms
+    gateway --> quality
+    gateway --> interop
+    gateway --> tickets
+    gateway --> safety
+    gateway --> notifications
+
+    %% Shared storage connections
+    designer --> neo4j
+    execution --> postgres
+    org --> postgres
+
+    %% Individual SQLite files
+    eisf --> sqlite_eisf
+    etmf --> sqlite_etmf
+    ctms --> sqlite_ctms
+    quality --> sqlite_quality
+    interop --> sqlite_interop
+    tickets --> sqlite_tickets
+    safety --> sqlite_safety
+    notifications --> sqlite_notifications
+
+    %% Inter-service events
+    etmf -->|Sync Webhooks / Email| notifications
+```
+
+---
+
 ## 3. Data Transformation Flow
 
 ```mermaid
