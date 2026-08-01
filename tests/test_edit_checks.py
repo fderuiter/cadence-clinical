@@ -786,6 +786,7 @@ async def test_lab_out_of_range_and_auto_close() -> None:
         assert query["status"] == "OPEN"
         assert query["origin"] == "SYSTEM"
         assert query["created_by"] == "SYSTEM"
+        assert query["message"] == 'Laboratory observation is out of range: LOW (Matched bounds: {"low": 4.0, "high": 11.0})'
 
         # Verify the observation coordinates (study_id, subject_id, visit_id, domain, test_code)
         assert query["study_id"] == "STUDY-LAB-EDIT"
