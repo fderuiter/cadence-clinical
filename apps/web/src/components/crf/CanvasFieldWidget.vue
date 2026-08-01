@@ -182,6 +182,12 @@
 </template>
 
 <script setup>
+/**
+ * CanvasFieldWidget component
+ *
+ * Represents an individual interactive field widget on the eCRF designer canvas.
+ * Handles selection, duplication, deletion, property inspection, and live responsive width alerts.
+ */
 import { computed } from "vue";
 
 const props = defineProps({

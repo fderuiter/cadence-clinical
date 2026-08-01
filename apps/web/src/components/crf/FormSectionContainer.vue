@@ -90,6 +90,13 @@
 </template>
 
 <script setup>
+/**
+ * FormSectionContainer component
+ *
+ * Provides a collapsible visual container for a group of related clinical fields.
+ * Manages intra-section and inter-section dragging operations, row appending, collapsing,
+ * and passes viewport alerts downstream to individual CanvasFieldWidgets.
+ */
 import { ref, computed } from "vue";
 import draggable from "vuedraggable";
 import CanvasFieldWidget from "./CanvasFieldWidget.vue";

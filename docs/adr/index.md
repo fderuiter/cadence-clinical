@@ -138,6 +138,7 @@ This document tracks all Architectural Decision Records for the Cadence Clinical
 - [2026-08-18: Document Redaction Architecture, Regulatory Data-Handling, and Compliance Profiles](2026-08-18-document-redaction-architecture.md)
 
 ### 6. Frontend & Design System
+- [2026-07-31: Viewport-Aware Grid Inspector for eCRF designer](2026-07-31-viewport-aware-grid-inspector.md)
 - [2026-07-31: Clinical Code Lookup Input Helper in Shared UI Package](2026-07-31-clinical-code-lookup-input-helper-in-shared-ui-package.md)
 - [2026-07-31: Vue SPA Component Smoke Test and Vitest Pipeline Integration](2026-07-31-vue-spa-component-smoke-test-and-vitest-pipeline-integration.md)
 - [2026-07-31: Resolve Vitest Peer Dependency Conflict in Shared UI Package](2026-07-31-resolve-vitest-peer-dependency-conflict-in-shared-ui-package.md)

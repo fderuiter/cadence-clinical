@@ -303,6 +303,13 @@
 </template>
 
 <script setup>
+/**
+ * CrfAuthoringCanvas Component
+ *
+ * Provides the interactive, real-time responsive authoring stage for the eCRF designer.
+ * Integrates drag-and-drop sections/fields, a device switcher toolbar, real-time simulated column
+ * width validation, property inspector synchronizations, and compiler quality gating rules.
+ */
 import { computed, ref } from "vue";
 import draggable from "vuedraggable";
 import FormSectionContainer from "./FormSectionContainer.vue";

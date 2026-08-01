@@ -1,3 +1,12 @@
+/**
+ * useDesignerStore Pinia Store
+ *
+ * Manages the client-side state for the eCRF designer canvas, including
+ * the active form schema, selected field identifier, viewport layout simulation mode,
+ * and whether layout warnings have been explicitly bypassed by the designer.
+ *
+ * Conforms to clinical metadata-driven layout validation guidelines.
+ */
 import { defineStore } from "pinia";
 
 export const useDesignerStore = defineStore("designer", {
@@ -32,7 +41,9 @@ export const useDesignerStore = defineStore("designer", {
       ],
     },
     selectedFieldId: null,
+    // Manage simulated eCRF designer canvas viewports (desktop, tablet, mobile)
     viewport: "desktop",
+    // Track user explicit confirmation to override dense grid layouts during compilation
     dismissedWarnings: false,
   }),
   actions: {
