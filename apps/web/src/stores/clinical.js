@@ -413,6 +413,9 @@ export const useClinicalStore = defineStore("clinical", {
       },
       fieldVisibility: {},
       formQueries: savedFormQueries || {},
+      labAlerts: {},
+      labAlertsLoading: false,
+      labAlertsError: null,
       ledgerBlocks: savedLedgerBlocks || [],
       syncInterval: null,
 
@@ -596,6 +599,39 @@ export const useClinicalStore = defineStore("clinical", {
       } catch (err) {
         console.warn("Background sync failed (retrying automatically):", err);
         throw err;
+      }
+    },
+
+    // --- Lab Alerts Pinia Actions ---
+    async fetchLabAlerts(studyId, subjectId) {
+      this.labAlertsLoading = true;
+      this.labAlertsError = null;
+      try {
+        const data = await executionService.listLabAlerts({
+          study_id: studyId,
+          subject_id: subjectId,
+        });
+        const alertsMap = {};
+        if (Array.isArray(data)) {
+          for (const alert of data) {
+            const alertTestCode = alert.test_code;
+            if (!alertTestCode) continue;
+            const field = this.ecrfFields.find((f) => {
+              if (!f.cdash) return false;
+              const parts = f.cdash.split(".");
+              return parts[1] && parts[1].toUpperCase() === alertTestCode.toUpperCase();
+            });
+            if (field) {
+              alertsMap[field.id] = alert;
+            }
+          }
+        }
+        this.labAlerts = alertsMap || {};
+        this.labAlertsLoading = false;
+      } catch (err) {
+        this.labAlertsError = err.message;
+        this.labAlertsLoading = false;
+        console.warn("Backend lab alerts endpoint failed:", err);
       }
     },
 
