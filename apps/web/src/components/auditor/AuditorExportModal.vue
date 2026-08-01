@@ -1,6 +1,10 @@
 <template>
   <div
+    ref="modalRef"
     class="modal-backdrop"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Export Inspection Log Modal"
     style="
       position: fixed;
       top: 0;
@@ -192,8 +196,14 @@
 <script setup>
 import { ref } from "vue";
 import { useAuditorStore } from "../../stores/auditor";
+import { useFocusTrap } from "@/composables/useFocusTrap";
+import { useEscapeClose } from "@/composables/useEscapeClose";
 
 const emit = defineEmits(["close"]);
+
+const modalRef = ref(null);
+useFocusTrap(modalRef);
+useEscapeClose(() => emit("close"));
 
 const auditorStore = useAuditorStore();
 

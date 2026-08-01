@@ -3,6 +3,7 @@ import { EtmfPage } from "./pages/EtmfPage";
 import * as path from "path";
 import * as fs from "fs";
 import { fileURLToPath } from "url";
+import AxeBuilder from "@axe-core/playwright";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -81,6 +82,20 @@ test.describe("eTMF Document Management Workflow", () => {
       const previewPanel = page.locator(".secure-preview-panel");
       await expect(previewPanel).toBeVisible();
       await expect(previewPanel).toContainText("sample_protocol.pdf");
+
+      // Verify page layout complies with basic WCAG standards
+      const pageAudit = await new AxeBuilder({ page })
+        .include("#app")
+        .disableRules(["color-contrast"])
+        .analyze();
+      expect(pageAudit.violations).toEqual([]);
+
+      // Verify preview modal behaves accessibly under active state
+      const previewAudit = await new AxeBuilder({ page })
+        .include(".secure-preview-panel")
+        .disableRules(["color-contrast"])
+        .analyze();
+      expect(previewAudit.violations).toEqual([]);
     } finally {
       // Clean up temp file
       if (fs.existsSync(tempFilePath)) {
@@ -113,6 +128,13 @@ test.describe("eTMF Document Management Workflow", () => {
       // Complete SignatureCaptureModal inputs
       const modal = page.locator("#signature-capture-modal");
       await expect(modal).toBeVisible();
+
+      // Verify signature capture modal complies with basic WCAG standards in its active state
+      const modalAudit = await new AxeBuilder({ page })
+        .include("#signature-capture-modal")
+        .disableRules(["color-contrast"])
+        .analyze();
+      expect(modalAudit.violations).toEqual([]);
 
       await page.fill("#sig-username", "admin@cadence.clinical");
       await page.fill("#sig-password", "admin_password");

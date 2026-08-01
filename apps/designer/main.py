@@ -59,6 +59,7 @@ from apps.designer.db import (
     get_study_projection,
     import_mapped_usdm_study,
     is_concept_referenced_by_active_recruiting_study,
+    is_library_object_referenced_by_active_recruiting_study,
     terminology_cache,
     update_mock_rule,
 )
@@ -68,6 +69,7 @@ from apps.designer.delta import (
     ImmutabilityViolationError,
     InvalidSignatureError,
     LibraryObjectInUseError,
+    LibraryObjectLockedActiveStudyError,
     _init_mock_soa,
     amend_protocol_version,
     approve_study_version_delta,
@@ -162,6 +164,7 @@ from packages.security.rbac import (
     has_permission,
     require_permission,
 )
+from packages.security.signing import generate_canonical_signature
 
 
 class TerminologyConcept(BaseModel):
@@ -428,6 +431,21 @@ async def concept_locked_handler(request: Request, exc: ConceptLockedError):
             "message": exc.message,
             "concept_id": exc.concept_id,
             "workflow_suggestion": "To modify this concept, please initiate a protocol amendment workflow via POST /api/designer/protocols/{study_id}/amend.",
+        },
+    )
+
+
+@app.exception_handler(LibraryObjectLockedActiveStudyError)
+async def library_object_locked_active_study_handler(
+    request: Request, exc: LibraryObjectLockedActiveStudyError
+):
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={
+            "detail": "LIBRARY_OBJECT_LOCKED_ACTIVE_STUDY",
+            "message": exc.message,
+            "object_id": exc.object_id,
+            "workflow_suggestion": f"To modify this library object, please initiate an amendment workflow via POST /api/v1/mdr/library/{exc.object_id}/amend.",
         },
     )
 
@@ -3431,6 +3449,12 @@ async def update_library_object_endpoint(
             detail=f"Library object {id} not found under sponsor {sponsor_id}.",
         )
 
+    # 1.5. Check if referenced by active recruiting study
+    if await is_library_object_referenced_by_active_recruiting_study(
+        id, driver, version=latest.get("version")
+    ):
+        raise LibraryObjectLockedActiveStudyError(id)
+
     # 2. Check immutability
     if latest.get("status") in ("LOCKED", "PUBLISHED", "ARCHIVED"):
         raise HTTPException(
@@ -3638,6 +3662,7 @@ async def transition_library_object_endpoint(
     id: str,
     payload: LibraryObjectTransitionRequest,
     request: Request,
+    principal: Principal = Depends(get_principal),
 ) -> LibraryObjectDetail:
     """
     Transitions the lifecycle status of a global library object.
@@ -3646,7 +3671,7 @@ async def transition_library_object_endpoint(
     driver = await get_neo4j_driver(request)
 
     # 1. Extract identity and sponsor scope
-    user_id = getattr(request.state, "user_id", "system")
+    user_id = principal.user_id or getattr(request.state, "user_id", "system")
     change_reason = payload.change_reason
 
     if not change_reason or not change_reason.strip():
@@ -3741,6 +3766,37 @@ async def transition_library_object_endpoint(
             detail="User role is not authorized for this action.",
         )
 
+    # 3.5. Enforce fine-grained RBAC resource-verb checks
+    from packages.security.rbac import has_permission
+
+    if target_status in (LibraryStatus.APPROVED, LibraryStatus.REJECTED):
+        if not has_permission(principal, "library_object:approve"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: User is not authorized to approve/reject library objects.",
+            )
+        # Enforce Author cannot self-approve restriction
+        if target_status == LibraryStatus.APPROVED:
+            creator = latest.get("created_by")
+            updater = latest.get("updated_by")
+            if user_id in (creator, updater) and user_id != "system":
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Author cannot self-approve.",
+                )
+    elif target_status == LibraryStatus.PUBLISHED:
+        if not has_permission(principal, "library_object:publish"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: User is not authorized to publish library objects.",
+            )
+    elif target_status == LibraryStatus.ARCHIVED:
+        if not has_permission(principal, "library_object:release"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: User is not authorized to archive/release library objects.",
+            )
+
     # 4. Save new version capturing transition metadata
     properties = {
         "object_type": latest.get("object_type"),
@@ -3755,6 +3811,25 @@ async def transition_library_object_endpoint(
         "reason_for_change": change_reason,
         "payload": latest.get("payload") or {},
     }
+
+    # Generate canonical cryptographic signature for published objects
+    if target_status == LibraryStatus.PUBLISHED:
+        import os
+
+        signing_payload = {
+            "id": id,
+            "version": str(
+                int(latest.get("version", 1)) + 1
+            ),  # The next version being created
+            "status": "PUBLISHED",
+            "sponsor_id": sponsor_id,
+            "tenant_id": tenant_id,
+            "created_by": latest.get("created_by") or user_id,
+        }
+        secret = os.getenv(
+            "SIGNING_SECRET", "designer-amendment-secure-key-12345"
+        ).encode("utf-8")
+        properties["signature"] = generate_canonical_signature(signing_payload, secret)
 
     try:
         record = await create_library_object_version(

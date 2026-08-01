@@ -7,22 +7,30 @@ import uuid
 from datetime import UTC, datetime
 from enum import StrEnum
 
-from execution.sdv_transport_models import BulkSdvSignOffRequest, BulkSdvSignOffResponse
+from execution.sdv_transport_models import (
+    BulkQueryGenerationRequest,
+    BulkQueryGenerationResponse,
+    BulkSdvSignOffRequest,
+    BulkSdvSignOffResponse,
+)
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import select, text
 
-from apps.execution.database.context import current_user_id
+from apps.execution.database.context import audit_context, current_user_id
 from apps.execution.database.core import db_manager
 from apps.execution.database.models import (
     ClinicalObservation,
+    ClinicalQuery,
     ClinicalSubject,
     ClinicalVisit,
     SDVSignOff,
     TSDVConfig,
 )
+from apps.execution.rtsm_authz import verify_site_access
 from apps.execution.sdv_helper import validate_and_upsert_sdv_target
 from apps.execution.tsdv import evaluate_tsdv_requirement
+from packages.security import can_access_study, get_principal, run_async
 from packages.security.rbac import (
     ROLE_CRA,
     ROLE_DATA_MANAGER,
@@ -516,3 +524,154 @@ async def bulk_sdv_signoff(
             timestamp_utc=timestamp_str,
             audit_tx="tx-" + str(uuid.uuid4())[:8],
         )
+
+
+@router.post(
+    "/queries/generate",
+    response_model=BulkQueryGenerationResponse,
+)
+async def bulk_generate_queries(
+    payload: BulkQueryGenerationRequest,
+    principal: Principal = Depends(get_principal),
+    roles: list[str] = Depends(require_roles(ROLE_CRA, "monitor")),
+    _study_scope: Principal = Depends(require_study_scope()),
+) -> BulkQueryGenerationResponse:
+    """CRA/monitor-gated bulk query generation endpoint."""
+    # 1. Validation
+    if not payload.reason_for_change or not payload.reason_for_change.strip():
+        raise HTTPException(
+            status_code=400, detail="GxP Part 11: reason_for_change cannot be blank."
+        )
+    if not payload.targets:
+        raise HTTPException(status_code=400, detail="targets list cannot be empty.")
+
+    user_id = principal.user_id or "system"
+    change_reason = payload.reason_for_change
+
+    generated_query_ids = []
+    skipped_targets = []
+
+    async with db_manager.get_session_maker()() as session:
+        async with session.begin():
+            # Set GxP write permission config
+            await session.execute(
+                text("SELECT set_config('cadence.app_writing', 'true', true);")
+            )
+
+            with audit_context(user_id=user_id, change_reason=change_reason):
+                for target in payload.targets:
+                    # Resolve study_id
+                    target_study_id = target.study_id or payload.study_id
+                    if not target_study_id:
+                        skipped_targets.append(target)
+                        continue
+
+                    # Verify that the principal can access the target study
+                    if not can_access_study(principal, target_study_id):
+                        raise HTTPException(
+                            status_code=403,
+                            detail="Forbidden: access restricted to your assigned study.",
+                        )
+
+                    # Retrieve subject to find site_id
+                    stmt_subj = select(ClinicalSubject).where(
+                        ClinicalSubject.subject_id == target.subject_id,
+                        ClinicalSubject.study_id == target_study_id,
+                    )
+                    res_subj = await session.execute(stmt_subj)
+                    subj_db = res_subj.scalars().first()
+
+                    if not subj_db:
+                        # Subject not found or inconsistent study reference -> skip target
+                        skipped_targets.append(target)
+                        continue
+
+                    target_site_id = subj_db.site_id
+
+                    # Enforce site access verification
+                    verify_site_access(
+                        principal,
+                        target_site_id,
+                        study_id=target_study_id,
+                        subject_id=target.subject_id,
+                    )
+
+                    # Deduplication check: status in OPEN, REOPENED, ANSWERED and not deleted
+                    stmt_query = select(ClinicalQuery).where(
+                        ClinicalQuery.study_id == target_study_id,
+                        ClinicalQuery.subject_id == target.subject_id,
+                        ClinicalQuery.visit_id == target.visit_id,
+                        ClinicalQuery.domain == target.domain,
+                        ClinicalQuery.test_code == target.test_code,
+                        ClinicalQuery.status.in_(["OPEN", "REOPENED", "ANSWERED"]),
+                        ClinicalQuery.is_deleted.is_(False),
+                    )
+                    res_query = await session.execute(stmt_query)
+                    existing_query = res_query.scalars().first()
+
+                    if existing_query:
+                        # Skip target
+                        skipped_targets.append(target)
+                        continue
+
+                    # Create ClinicalQuery
+                    explanation_text = target.explanation or change_reason
+                    query_id = f"qry_{uuid.uuid4().hex[:8]}"
+                    q = ClinicalQuery(
+                        id=query_id,
+                        study_id=target_study_id,
+                        site_id=target_site_id,
+                        subject_id=target.subject_id,
+                        visit_id=target.visit_id,
+                        domain=target.domain,
+                        test_code=target.test_code,
+                        status="OPEN",
+                        explanation=explanation_text,
+                        message=explanation_text,
+                        origin="manual",
+                        created_by=user_id,
+                        observation_id=target.observation_id,
+                        form_id=target.form_id,
+                        field_id=target.field_id,
+                    )
+                    session.add(q)
+                    generated_query_ids.append(query_id)
+
+                # Explicitly flush
+                await session.flush()
+
+        # Commit has been executed, dispatch fire-and-forget notifications
+        from apps.execution.notifications_client import publish_notification
+
+        if generated_query_ids:
+            stmt_saved = select(ClinicalQuery).where(
+                ClinicalQuery.id.in_(generated_query_ids)
+            )
+            res_saved = await session.execute(stmt_saved)
+            saved_queries = res_saved.scalars().all()
+
+            for saved_q in saved_queries:
+                payload_notif = {
+                    "category": "ACTION_ITEMS",
+                    "priority": "HIGH",
+                    "channels": "IN_APP",
+                    "message_content": f"New clinical query raised for subject {saved_q.subject_id}, visit {saved_q.visit_id or 'N/A'}: {saved_q.explanation or 'discrepancy'}",
+                    "related_entity_type": "query",
+                    "related_entity_id": saved_q.id,
+                    "site_id": saved_q.site_id,
+                    "study_id": saved_q.study_id,
+                    "recipient_role": "site investigator",
+                }
+                run_async(publish_notification(payload_notif))
+
+    # Generate batch_id & audit_tx using the generated functions or uuid
+    batch_id = f"batch_{uuid.uuid4().hex[:8]}"
+    audit_tx_id = f"tx_{uuid.uuid4().hex[:12]}"
+
+    return BulkQueryGenerationResponse(
+        batch_id=batch_id,
+        audit_tx=audit_tx_id,
+        generated_count=len(generated_query_ids),
+        generated_query_ids=generated_query_ids,
+        skipped_targets=skipped_targets,
+    )
