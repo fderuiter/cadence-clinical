@@ -1081,7 +1081,7 @@ async def test_bulk_query_generation_happy_path(signed_headers):
                 "visit_id": "VISIT-1",
                 "domain": "VS",
                 "test_code": "SYSBP",
-                "explanation": "Please verify high systolic BP value."
+                "explanation": "Please verify high systolic BP value.",
             },
             {
                 "study_id": "STUDY-QGEN-TEST",
@@ -1089,12 +1089,13 @@ async def test_bulk_query_generation_happy_path(signed_headers):
                 "visit_id": "VISIT-1",
                 "domain": "VS",
                 "test_code": "DIABP",
-                "explanation": "Please verify low diastolic BP value."
-            }
-        ]
+                "explanation": "Please verify low diastolic BP value.",
+            },
+        ],
     }
 
     from unittest.mock import AsyncMock
+
     mock_notify = AsyncMock()
     with (
         patch(
@@ -1187,7 +1188,7 @@ async def test_bulk_query_generation_deduplication(signed_headers):
                 "visit_id": "VISIT-1",
                 "domain": "VS",
                 "test_code": "SYSBP",
-                "explanation": "Existing coordinate, should be skipped."
+                "explanation": "Existing coordinate, should be skipped.",
             },
             {
                 "study_id": "STUDY-QDUP-TEST",
@@ -1195,9 +1196,9 @@ async def test_bulk_query_generation_deduplication(signed_headers):
                 "visit_id": "VISIT-1",
                 "domain": "VS",
                 "test_code": "DIABP",
-                "explanation": "New coordinate, should be generated."
-            }
-        ]
+                "explanation": "New coordinate, should be generated.",
+            },
+        ],
     }
 
     async with httpx.AsyncClient(
@@ -1237,9 +1238,9 @@ async def test_bulk_query_generation_rbac_gating(signed_headers):
                 "visit_id": "VISIT-1",
                 "domain": "VS",
                 "test_code": "SYSBP",
-                "explanation": "Will fail auth."
+                "explanation": "Will fail auth.",
             }
-        ]
+        ],
     }
 
     async with httpx.AsyncClient(
@@ -1295,9 +1296,9 @@ async def test_bulk_query_generation_input_validation(signed_headers):
                     "visit_id": "VISIT-1",
                     "domain": "VS",
                     "test_code": "SYSBP",
-                    "explanation": "Will fail."
+                    "explanation": "Will fail.",
                 }
-            ]
+            ],
         }
         headers_blank_reason = signed_headers(
             user_id="CRA-USER-QVAL",
@@ -1319,7 +1320,7 @@ async def test_bulk_query_generation_input_validation(signed_headers):
         payload_empty_targets = {
             "study_id": "STUDY-QVAL-TEST",
             "reason_for_change": "Valid reason.",
-            "targets": []
+            "targets": [],
         }
         resp = await client.post(
             "/api/v1/execution/queries/generate",

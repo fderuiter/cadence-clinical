@@ -12,7 +12,6 @@ from execution.sdv_transport_models import (
     BulkQueryGenerationResponse,
     BulkSdvSignOffRequest,
     BulkSdvSignOffResponse,
-    QueryTargetDescriptor,
 )
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, model_validator
@@ -28,6 +27,7 @@ from apps.execution.database.models import (
     SDVSignOff,
     TSDVConfig,
 )
+from apps.execution.rtsm_authz import verify_site_access
 from apps.execution.sdv_helper import validate_and_upsert_sdv_target
 from apps.execution.tsdv import evaluate_tsdv_requirement
 from packages.security import can_access_study, get_principal, run_async
@@ -39,7 +39,6 @@ from packages.security.rbac import (
     require_roles,
     require_study_scope,
 )
-from apps.execution.rtsm_authz import verify_site_access
 
 router = APIRouter(prefix="/api/v1/execution", tags=["SDV/TSDV"])
 
@@ -645,7 +644,9 @@ async def bulk_generate_queries(
         from apps.execution.notifications_client import publish_notification
 
         if generated_query_ids:
-            stmt_saved = select(ClinicalQuery).where(ClinicalQuery.id.in_(generated_query_ids))
+            stmt_saved = select(ClinicalQuery).where(
+                ClinicalQuery.id.in_(generated_query_ids)
+            )
             res_saved = await session.execute(stmt_saved)
             saved_queries = res_saved.scalars().all()
 
