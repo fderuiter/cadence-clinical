@@ -155,30 +155,34 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     Yields:
         None
     """
-    # Initialize shared database library
-    db_manager.init_db(DATABASE_URL)
+    is_testing = "PYTEST_CURRENT_TEST" in os.environ or "TESTING" in os.environ
 
-    # Start the background ledger sealer
-    from apps.execution.database.sealer import (
-        start_background_sealer,
-        stop_background_sealer,
-    )
-    from apps.execution.queries_escalation import (
-        start_background_query_escalation,
-        stop_background_query_escalation,
-    )
+    if not is_testing:
+        # Initialize shared database library
+        db_manager.init_db(DATABASE_URL)
 
-    await start_background_sealer(db_manager.get_session_maker())
-    await start_background_query_escalation(db_manager.get_session_maker())
+        # Start the background ledger sealer
+        from apps.execution.database.sealer import (
+            start_background_sealer,
+            stop_background_sealer,
+        )
+        from apps.execution.queries_escalation import (
+            start_background_query_escalation,
+            stop_background_query_escalation,
+        )
+
+        await start_background_sealer(db_manager.get_session_maker())
+        await start_background_query_escalation(db_manager.get_session_maker())
 
     yield
 
-    # Stop background ledger sealer
-    await stop_background_sealer()
-    # Stop background query escalation
-    await stop_background_query_escalation()
-    # Cleanup database connection
-    await db_manager.close()
+    if not is_testing:
+        # Stop background ledger sealer
+        await stop_background_sealer()
+        # Stop background query escalation
+        await stop_background_query_escalation()
+        # Cleanup database connection
+        await db_manager.close()
 
 
 class InvalidParam(BaseModel):
@@ -2438,7 +2442,8 @@ async def create_lab_range(
             )
             session.add(lab_range)
             await session.flush()
-            lab_range_cache.invalidate(lab_range.study_id, lab_range.test_code)
+
+        lab_range_cache.invalidate(lab_range.study_id, lab_range.test_code)
 
         return LabReferenceRangeResponse(
             id=lab_range.id,
@@ -2619,10 +2624,9 @@ async def update_lab_range(
             r.critical_low = merged_data["critical_low"]
             r.critical_high = merged_data["critical_high"]
             await session.flush()
-
-            lab_range_cache.invalidate(original_study_id, original_test_code)
-            if original_study_id != r.study_id or original_test_code != r.test_code:
-                lab_range_cache.invalidate(r.study_id, r.test_code)
+        lab_range_cache.invalidate(original_study_id, original_test_code)
+        if original_study_id != r.study_id or original_test_code != r.test_code:
+            lab_range_cache.invalidate(r.study_id, r.test_code)
 
         return LabReferenceRangeResponse(
             id=r.id,
@@ -2669,7 +2673,8 @@ async def delete_lab_range(
 
             r.is_deleted = True
             await session.flush()
-            lab_range_cache.invalidate(r.study_id, r.test_code)
+
+        lab_range_cache.invalidate(r.study_id, r.test_code)
 
         return LabReferenceRangeResponse(
             id=r.id,
@@ -2849,10 +2854,7 @@ from apps.execution.routers.coding_schemas import (  # noqa: E402
     JobStatusEnum,
     JobStatusResponse,
     MedDRACodingResult,
-    WHODrugATCContext,
-    WHODrugCodeMatch,
     WHODrugCodingResult,
-    WHODrugIngredientItem,
 )
 
 
@@ -3097,7 +3099,7 @@ async def get_whodrug_code(
 
     async with db_manager.get_session_maker()() as session:
         try:
-            res = await search_dictionary(
+            return await search_dictionary(
                 session=session,
                 term=term,
                 dictionary_type="WHODRUG",
@@ -3105,61 +3107,6 @@ async def get_whodrug_code(
             )
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
-
-        matches = []
-        if res.get("match"):
-            m = res["match"]
-            matches.append(
-                WHODrugCodeMatch(
-                    drug_code=m.get("drug_code") or "",
-                    preferred_name=m.get("preferred_name") or "",
-                    drug_name=m.get("drug_name"),
-                    score=m.get("score", 0.0),
-                    atc_context=[
-                        WHODrugATCContext(
-                            atc_code=a.get("atc_code") or "",
-                            description=a.get("description") or "",
-                        )
-                        for a in m.get("atc_context", [])
-                    ],
-                    ingredients=[
-                        WHODrugIngredientItem(
-                            ingredient_code=i.get("ingredient_code") or "",
-                            ingredient_name=i.get("ingredient_name") or "",
-                        )
-                        for i in m.get("ingredients", [])
-                    ],
-                )
-            )
-        elif res.get("suggestions"):
-            for sug in res["suggestions"]:
-                matches.append(
-                    WHODrugCodeMatch(
-                        drug_code=sug.get("drug_code") or "",
-                        preferred_name=sug.get("preferred_name") or "",
-                        drug_name=sug.get("drug_name"),
-                        score=sug.get("score", 0.0),
-                        atc_context=[
-                            WHODrugATCContext(
-                                atc_code=a.get("atc_code") or "",
-                                description=a.get("description") or "",
-                            )
-                            for a in sug.get("atc_context", [])
-                        ],
-                        ingredients=[
-                            WHODrugIngredientItem(
-                                ingredient_code=i.get("ingredient_code") or "",
-                                ingredient_name=i.get("ingredient_name") or "",
-                            )
-                            for i in sug.get("ingredients", [])
-                        ],
-                    )
-                )
-
-        return WHODrugCodingResult(
-            status=res.get("status", "UNCODABLE"),
-            matches=matches,
-        )
 
 
 @app.post(

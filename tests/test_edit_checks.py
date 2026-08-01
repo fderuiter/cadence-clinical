@@ -788,7 +788,7 @@ async def test_lab_out_of_range_and_auto_close() -> None:
         assert query["created_by"] == "SYSTEM"
         assert "Laboratory observation is out of range" in query["message"]
         assert "Indicator: LOW" in query["message"]
-        assert "Bounds:" in query["message"]
+        assert "Normal bounds:" in query["message"]
 
         # Verify the observation coordinates (study_id, subject_id, visit_id, domain, test_code)
         assert query["study_id"] == "STUDY-LAB-EDIT"
@@ -796,6 +796,8 @@ async def test_lab_out_of_range_and_auto_close() -> None:
         assert query["visit_id"] == visit_id
         assert query["domain"] == "LB"
         assert query["test_code"] == "WBC"
+        assert "Indicator: LOW" in query["message"]
+        assert 'Normal bounds: {"low": 4.0, "high": 11.0}' in query["message"]
 
         # 3. Attempt duplicate submit with same value: should not open another query
         dup_resp = await client.post(

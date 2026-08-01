@@ -159,20 +159,10 @@ async def test_notification_creation_and_auditing():
     ):
         await poll_and_dispatch()
         # Allow async task processing robustly
-        for _ in range(160):
-            await asyncio.sleep(0.05)
-            headers_recipient = get_auth_headers(
-                user_id="pi_john",
-                roles="investigator",
-            )
-            response_detail = client.get(
-                f"/api/v1/notifications/{notification_id}", headers=headers_recipient
-            )
-            if (
-                response_detail.status_code == 200
-                and response_detail.json()["delivery_state"] == "DELIVERED"
-            ):
-                break
+        from apps.notifications.main import active_tasks
+
+        if active_tasks:
+            await asyncio.gather(*list(active_tasks), return_exceptions=True)
 
     # Re-fetch notification detail as the target recipient to satisfy visibility checks
     headers_recipient = get_auth_headers(
@@ -463,16 +453,10 @@ async def test_email_delivery_channel_success():
     with patch("aiosmtplib.SMTP", return_value=mock_smtp_client):
         await poll_and_dispatch()
         # Wait up to 8 seconds for the background task to update the status to SUCCESS
-        for _ in range(160):
-            await asyncio.sleep(0.05)
-            async with db_manager.get_session_maker()() as session:
-                stmt = select(NotificationDelivery).where(
-                    NotificationDelivery.id == delivery_id
-                )
-                res = await session.execute(stmt)
-                updated_delivery = res.scalars().first()
-                if updated_delivery.status == "SUCCESS":
-                    break
+        from apps.notifications.main import active_tasks
+
+        if active_tasks:
+            await asyncio.gather(*list(active_tasks), return_exceptions=True)
 
     # Assert SMTP interaction
     assert mock_smtp_client.connect.called
@@ -532,16 +516,10 @@ async def test_webhook_delivery_channel_success():
     with patch("httpx.AsyncClient", return_value=mock_context):
         await poll_and_dispatch()
         # Wait up to 8 seconds for the background task to update the status to SUCCESS
-        for _ in range(160):
-            await asyncio.sleep(0.05)
-            async with db_manager.get_session_maker()() as session:
-                stmt = select(NotificationDelivery).where(
-                    NotificationDelivery.id == delivery_id
-                )
-                res = await session.execute(stmt)
-                updated_delivery = res.scalars().first()
-                if updated_delivery.status == "SUCCESS":
-                    break
+        from apps.notifications.main import active_tasks
+
+        if active_tasks:
+            await asyncio.gather(*list(active_tasks), return_exceptions=True)
 
     # Assert httpx interaction
     assert mock_client.post.called
@@ -591,17 +569,10 @@ async def test_webhook_delivery_channel_failure_and_retry_backoff():
     # 1st Attempt: Fails with a network/timeout exception
     with patch("httpx.AsyncClient", side_effect=Exception("Connection timed out")):
         await poll_and_dispatch()
-        for _ in range(160):
-            await asyncio.sleep(0.05)
-            async with db_manager.get_session_maker()() as session:
-                res = await session.execute(
-                    select(NotificationDelivery).where(
-                        NotificationDelivery.id == delivery_id
-                    )
-                )
-                delivery_1 = res.scalars().first()
-                if delivery_1.status == "FAILED":
-                    break
+        from apps.notifications.main import active_tasks
+
+        if active_tasks:
+            await asyncio.gather(*list(active_tasks), return_exceptions=True)
 
     async with db_manager.get_session_maker()() as session:
         stmt = select(NotificationDelivery).where(
@@ -622,17 +593,10 @@ async def test_webhook_delivery_channel_failure_and_retry_backoff():
     # 2nd Attempt: Fails again
     with patch("httpx.AsyncClient", side_effect=Exception("Temporary server error")):
         await poll_and_dispatch()
-        for _ in range(160):
-            await asyncio.sleep(0.05)
-            async with db_manager.get_session_maker()() as session:
-                res = await session.execute(
-                    select(NotificationDelivery).where(
-                        NotificationDelivery.id == delivery_id
-                    )
-                )
-                delivery_2 = res.scalars().first()
-                if delivery_2.status == "FAILED" and delivery_2.attempts == 2:
-                    break
+        from apps.notifications.main import active_tasks
+
+        if active_tasks:
+            await asyncio.gather(*list(active_tasks), return_exceptions=True)
 
     async with db_manager.get_session_maker()() as session:
         stmt = select(NotificationDelivery).where(
@@ -653,17 +617,10 @@ async def test_webhook_delivery_channel_failure_and_retry_backoff():
     # 3rd Attempt: Reaches maximum allowed attempts
     with patch("httpx.AsyncClient", side_effect=Exception("Terminal failure")):
         await poll_and_dispatch()
-        for _ in range(160):
-            await asyncio.sleep(0.05)
-            async with db_manager.get_session_maker()() as session:
-                res = await session.execute(
-                    select(NotificationDelivery).where(
-                        NotificationDelivery.id == delivery_id
-                    )
-                )
-                delivery_3 = res.scalars().first()
-                if delivery_3.status == "FAILED" and delivery_3.attempts == 5:
-                    break
+        from apps.notifications.main import active_tasks
+
+        if active_tasks:
+            await asyncio.gather(*list(active_tasks), return_exceptions=True)
 
     async with db_manager.get_session_maker()() as session:
         stmt = select(NotificationDelivery).where(
@@ -713,17 +670,10 @@ async def test_email_delivery_channel_failure_and_exhaustion():
         await poll_and_dispatch()
 
         # Robustly wait for first attempt to complete
-        for _ in range(400):
-            await asyncio.sleep(0.1)
-            async with db_manager.get_session_maker()() as session:
-                res = await session.execute(
-                    select(NotificationDelivery).where(
-                        NotificationDelivery.id == delivery_id
-                    )
-                )
-                d = res.scalars().first()
-                if d.status == "FAILED":
-                    break
+        from apps.notifications.main import active_tasks
+
+        if active_tasks:
+            await asyncio.gather(*list(active_tasks), return_exceptions=True)
 
         # Confirm failure
         async with db_manager.get_session_maker()() as session:
@@ -746,17 +696,10 @@ async def test_email_delivery_channel_failure_and_exhaustion():
         await poll_and_dispatch()
 
         # Robustly wait for final attempt to complete
-        for _ in range(400):
-            await asyncio.sleep(0.1)
-            async with db_manager.get_session_maker()() as session:
-                res = await session.execute(
-                    select(NotificationDelivery).where(
-                        NotificationDelivery.id == delivery_id
-                    )
-                )
-                d = res.scalars().first()
-                if d.attempts == 5:
-                    break
+        from apps.notifications.main import active_tasks
+
+        if active_tasks:
+            await asyncio.gather(*list(active_tasks), return_exceptions=True)
 
     # Check exhaustion audit log
     async with db_manager.get_session_maker()() as session:
@@ -823,17 +766,10 @@ async def test_multi_channel_edge_case_in_app_succeeds_email_exhausts():
         await poll_and_dispatch()
 
         # Robustly wait for the first dispatch to complete
-        for _ in range(400):
-            await asyncio.sleep(0.1)
-            async with db_manager.get_session_maker()() as session:
-                res_email = await session.execute(
-                    select(NotificationDelivery).where(
-                        NotificationDelivery.id == delivery_email_id
-                    )
-                )
-                d_email = res_email.scalars().first()
-                if d_email.attempts == 1:
-                    break
+        from apps.notifications.main import active_tasks
+
+        if active_tasks:
+            await asyncio.gather(*list(active_tasks), return_exceptions=True)
 
         # Advance EMAIL to 4 attempts and past next_retry_at
         async with db_manager.get_session_maker()() as session:
@@ -852,17 +788,10 @@ async def test_multi_channel_edge_case_in_app_succeeds_email_exhausts():
         await poll_and_dispatch()
 
         # Robustly wait for the second dispatch to complete
-        for _ in range(400):
-            await asyncio.sleep(0.1)
-            async with db_manager.get_session_maker()() as session:
-                res_email = await session.execute(
-                    select(NotificationDelivery).where(
-                        NotificationDelivery.id == delivery_email_id
-                    )
-                )
-                d_email = res_email.scalars().first()
-                if d_email.attempts == 5:
-                    break
+        from apps.notifications.main import active_tasks
+
+        if active_tasks:
+            await asyncio.gather(*list(active_tasks), return_exceptions=True)
 
     # Verify both states
     async with db_manager.get_session_maker()() as session:
