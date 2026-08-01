@@ -9,30 +9,14 @@
     </div>
 
     <!-- Authorization Gating check -->
-    <div
-      v-if="!hasEditAccess"
-      class="card"
-      style="
-        border-left: 4px solid var(--error);
-        background-color: var(--error-bg);
-        padding: 24px;
-      "
-    >
-      <div style="display: flex; gap: 16px; align-items: flex-start">
-        <span style="font-size: 2rem">🚫</span>
+    <div v-if="!hasEditAccess" class="card rules-gating-banner">
+      <div class="rules-gating-content">
+        <span class="rules-gating-icon">🚫</span>
         <div>
-          <h3
-            style="color: var(--error); font-weight: bold; margin-bottom: 8px"
-          >
+          <h3 class="rules-gating-title">
             21 CFR Part 11 Role Gating - Access Denied
           </h3>
-          <p
-            style="
-              color: var(--neutral-dark);
-              font-size: 0.95rem;
-              line-height: 1.6;
-            "
-          >
+          <p class="rules-gating-text">
             You do not have the required <strong>STUDY_DESIGNER</strong> role to
             view or interact with the clinical study rules. Please authenticate
             with an authorized clinical design token or consult your system
@@ -111,24 +95,9 @@
             <div
               v-for="rule in activeRules"
               :key="rule.id"
-              class="rule-card"
-              style="
-                border: 1px solid var(--border);
-                border-radius: 8px;
-                padding: 16px;
-                margin-bottom: 12px;
-                background-color: var(--neutral-light);
-                transition: all 0.2s;
-              "
+              class="rule-card rule-card-item"
             >
-              <div
-                style="
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: flex-start;
-                  margin-bottom: 8px;
-                "
-              >
+              <div class="rule-card-header">
                 <strong
                   style="
                     color: var(--accent);
@@ -214,10 +183,10 @@
                   font-family: monospace;
                   font-size: 0.75rem;
                   color: #0284c7;
-                  background-color: #f0f9ff;
+                  background-color: rgb(240, 249, 255);
                   padding: 6px 10px;
                   border-radius: 4px;
-                  border: 1px solid #e0f2fe;
+                  border: 1px solid rgb(224, 242, 254);
                   word-break: break-all;
                 "
               >
@@ -289,7 +258,7 @@
             </legend>
             <div
               style="
-                background-color: #f1f5f9;
+                background-color: rgb(241, 245, 249);
                 padding: 12px;
                 border-radius: 8px;
                 font-family: monospace;
@@ -413,7 +382,7 @@ import {
   serializeConditionsTree,
   deserializeConditionsTree,
   generateGatewaySignature,
-  generateCanonicalSignature
+  generateCanonicalSignature,
 } from "ui";
 
 const rulesReasonOptions = [
@@ -499,9 +468,12 @@ const ruleEditorHtml = computed(() => {
 async function getSignedGatewayHeaders(changeReason = "") {
   const authStore = useAuthStore();
   const userId = authStore.userId || "usr_dm_fderuiter";
-  const roles = authStore.normalizedRoles ? authStore.normalizedRoles.join(",") : "data_manager";
+  const roles = authStore.normalizedRoles
+    ? authStore.normalizedRoles.join(",")
+    : "data_manager";
   const timestamp = String(Math.floor(Date.now() / 1000));
-  const secret = import.meta.env?.VITE_GATEWAY_SECRET || "internal-gateway-secret-12345";
+  const secret =
+    import.meta.env?.VITE_GATEWAY_SECRET || "internal-gateway-secret-12345";
 
   const signature = await generateGatewaySignature(
     userId,
@@ -657,14 +629,14 @@ async function triggerPreview() {
   };
 
   try {
-    const signedHeaders = await getSignedGatewayHeaders("Rule compilation preview");
+    const signedHeaders = await getSignedGatewayHeaders(
+      "Rule compilation preview"
+    );
 
     try {
-      await apiClient.post(
-        `/api/v1/studies/study_1/rules/validate`,
-        payload,
-        { headers: signedHeaders }
-      );
+      await apiClient.post(`/api/v1/studies/study_1/rules/validate`, payload, {
+        headers: signedHeaders,
+      });
     } catch (vErr) {
       console.warn("Live-validation endpoint returned errors:", vErr);
     }
@@ -847,7 +819,9 @@ async function confirmChangeReason(reasonText) {
       } catch (err) {
         console.warn("Save API failed, falling back to local mock save:", err);
         saved = {
-          id: isEdit ? editingRuleId.value : `rule_${Math.floor(Math.random() * 1000)}`,
+          id: isEdit
+            ? editingRuleId.value
+            : `rule_${Math.floor(Math.random() * 1000)}`,
           type: action.payload.type,
           target_field: action.payload.target_field,
           target_form: action.payload.target_form,
@@ -885,7 +859,10 @@ async function confirmChangeReason(reasonText) {
         signedHeaders = await getSignedGatewayHeaders(reasonText);
         await apiClient.delete(url, { headers: signedHeaders });
       } catch (err) {
-        console.warn("Delete API failed, falling back to local mock delete:", err);
+        console.warn(
+          "Delete API failed, falling back to local mock delete:",
+          err
+        );
         signedHeaders = {};
       }
 
@@ -938,5 +915,49 @@ onMounted(async () => {
 .rule-card:hover {
   border-color: var(--accent) !important;
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+}
+
+.rules-gating-banner {
+  border-left: 4px solid var(--error);
+  background-color: var(--error-bg);
+  padding: 24px;
+}
+
+.rules-gating-content {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.rules-gating-icon {
+  font-size: 2rem;
+}
+
+.rules-gating-title {
+  color: var(--error);
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.rules-gating-text {
+  color: var(--neutral-dark);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.rule-card-item {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  background-color: var(--neutral-light);
+  transition: all 0.2s;
+}
+
+.rule-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
 }
 </style>

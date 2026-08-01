@@ -105,7 +105,12 @@ export {
  * @param {Object} [initialData={}] - Initial data for pre-populating fields.
  * @returns {string} The HTML string.
  */
-export function createConditionRowHTML(index, forms = [], fields = [], initialData = {}) {
+export function createConditionRowHTML(
+  index,
+  forms = [],
+  fields = [],
+  initialData = {}
+) {
   const cond = {
     formId: "",
     fieldId: "",
@@ -114,12 +119,27 @@ export function createConditionRowHTML(index, forms = [], fields = [], initialDa
     rightValue: "",
     rightFieldId: "",
     rightFormId: "",
-    ...initialData
+    ...initialData,
   };
 
-  const formOptions = forms.map(f => `<option value="${f.id}" ${cond.formId === f.id ? "selected" : ""}>${f.name}</option>`).join("");
-  const fieldOptions = fields.map(f => `<option value="${f.id}" ${cond.fieldId === f.id ? "selected" : ""}>${f.name}</option>`).join("");
-  const rightFieldOptions = fields.map(f => `<option value="${f.id}" ${cond.rightFieldId === f.id ? "selected" : ""}>${f.name}</option>`).join("");
+  const formOptions = forms
+    .map(
+      (f) =>
+        `<option value="${f.id}" ${cond.formId === f.id ? "selected" : ""}>${f.name}</option>`
+    )
+    .join("");
+  const fieldOptions = fields
+    .map(
+      (f) =>
+        `<option value="${f.id}" ${cond.fieldId === f.id ? "selected" : ""}>${f.name}</option>`
+    )
+    .join("");
+  const rightFieldOptions = fields
+    .map(
+      (f) =>
+        `<option value="${f.id}" ${cond.rightFieldId === f.id ? "selected" : ""}>${f.name}</option>`
+    )
+    .join("");
 
   const operators = [
     { value: "==", text: "equals" },
@@ -129,12 +149,18 @@ export function createConditionRowHTML(index, forms = [], fields = [], initialDa
     { value: ">", text: "is greater than" },
     { value: ">=", text: "is greater than or equal to" },
     { value: "is_empty", text: "is empty" },
-    { value: "is_not_empty", text: "is not empty" }
+    { value: "is_not_empty", text: "is not empty" },
   ];
 
-  const operatorOptions = operators.map(op => `<option value="${op.value}" ${cond.operator === op.value ? "selected" : ""}>${op.text}</option>`).join("");
+  const operatorOptions = operators
+    .map(
+      (op) =>
+        `<option value="${op.value}" ${cond.operator === op.value ? "selected" : ""}>${op.text}</option>`
+    )
+    .join("");
 
-  const showRightOperand = cond.operator !== "is_empty" && cond.operator !== "is_not_empty";
+  const showRightOperand =
+    cond.operator !== "is_empty" && cond.operator !== "is_not_empty";
 
   let rightOperandHTML = "";
   if (showRightOperand) {
@@ -147,12 +173,15 @@ export function createConditionRowHTML(index, forms = [], fields = [], initialDa
         </select>
       </div>
 
-      ${cond.rightType === "constant" ? `
+      ${
+        cond.rightType === "constant"
+          ? `
         <div class="form-group cond-right-val-group" style="flex: 1; min-width: 100px;">
           <label for="cond-right-value-${index}" style="font-size: 0.75rem; display: block; margin-bottom: 4px;">Constant Value</label>
           <input id="cond-right-value-${index}" class="cond-right-value" data-index="${index}" type="text" placeholder="Value..." value="${cond.rightValue}" style="width: 100%; padding: 6px; font-size: 0.8rem; border-radius: 4px; border: 1px solid var(--border);" />
         </div>
-      ` : `
+      `
+          : `
         <div class="form-group cond-right-field-group" style="flex: 1; min-width: 100px;">
           <label for="cond-right-field-${index}" style="font-size: 0.75rem; display: block; margin-bottom: 4px;">Right Field</label>
           <select id="cond-right-field-${index}" class="cond-right-field" data-index="${index}" style="width: 100%; padding: 6px; font-size: 0.8rem; border-radius: 4px; border: 1px solid var(--border);">
@@ -160,7 +189,8 @@ export function createConditionRowHTML(index, forms = [], fields = [], initialDa
             ${rightFieldOptions}
           </select>
         </div>
-      `}
+      `
+      }
     `;
   }
 
@@ -216,23 +246,43 @@ export function createRuleEditorHTML(forms = [], fields = [], options = {}) {
     ruleAction: "show",
     targetForm: "",
     queryMessage: "",
-    ...options
+    ...options,
   };
 
   const ruleTypes = [
     { value: "skip_logic", text: "Skip Logic (Show/Hide fields)" },
-    { value: "constraint", text: "Field Constraint (Single field query validation)" },
-    { value: "cross_form_check", text: "Cross-Form / Longitudinal Check" }
+    {
+      value: "constraint",
+      text: "Field Constraint (Single field query validation)",
+    },
+    { value: "cross_form_check", text: "Cross-Form / Longitudinal Check" },
   ];
 
-  const typeOptions = ruleTypes.map(t => `<option value="${t.value}" ${opt.ruleType === t.value ? "selected" : ""}>${t.text}</option>`).join("");
-  const targetFieldOptions = fields.map(f => `<option value="${f.id}" ${opt.targetField === f.id ? "selected" : ""}>${f.name}</option>`).join("");
-  const targetFormOptions = forms.map(f => `<option value="${f.id}" ${opt.targetForm === f.id ? "selected" : ""}>${f.name}</option>`).join("");
+  const typeOptions = ruleTypes
+    .map(
+      (t) =>
+        `<option value="${t.value}" ${opt.ruleType === t.value ? "selected" : ""}>${t.text}</option>`
+    )
+    .join("");
+  const targetFieldOptions = fields
+    .map(
+      (f) =>
+        `<option value="${f.id}" ${opt.targetField === f.id ? "selected" : ""}>${f.name}</option>`
+    )
+    .join("");
+  const targetFormOptions = forms
+    .map(
+      (f) =>
+        `<option value="${f.id}" ${opt.targetForm === f.id ? "selected" : ""}>${f.name}</option>`
+    )
+    .join("");
 
   // Build rows HTML
-  const rowsHTML = (opt.conditions.length > 0 ? opt.conditions : [{}]).map((cond, idx) => {
-    return createConditionRowHTML(idx, forms, fields, cond);
-  }).join("\n");
+  const rowsHTML = (opt.conditions.length > 0 ? opt.conditions : [{}])
+    .map((cond, idx) => {
+      return createConditionRowHTML(idx, forms, fields, cond);
+    })
+    .join("\n");
 
   return `
     <div class="rule-editor-container" style="display: flex; flex-direction: column; gap: 16px;">
@@ -248,7 +298,7 @@ export function createRuleEditorHTML(forms = [], fields = [], options = {}) {
             </select>
           </div>
 
-          <div id="target-field-wrapper" class="form-group" style="${opt.ruleType === 'cross_form_check' ? 'display: none;' : ''}">
+          <div id="target-field-wrapper" class="form-group" style="${opt.ruleType === "cross_form_check" ? "display: none;" : ""}">
             <label for="target-field-select" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.85rem;">Target Field</label>
             <select id="target-field-select" class="target-field-selector" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
               <option value="">-- Select Target Field --</option>
@@ -258,7 +308,7 @@ export function createRuleEditorHTML(forms = [], fields = [], options = {}) {
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-          <div id="skip-action-wrapper" class="form-group" style="${opt.ruleType !== 'skip_logic' ? 'display: none;' : ''}">
+          <div id="skip-action-wrapper" class="form-group" style="${opt.ruleType !== "skip_logic" ? "display: none;" : ""}">
             <label for="rule-action-select" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.85rem;">Action on Target</label>
             <select id="rule-action-select" class="rule-action-selector" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
               <option value="show" ${opt.ruleAction === "show" ? "selected" : ""}>Show target field</option>
@@ -266,7 +316,7 @@ export function createRuleEditorHTML(forms = [], fields = [], options = {}) {
             </select>
           </div>
 
-          <div id="target-form-wrapper" class="form-group" style="${opt.ruleType !== 'skip_logic' ? 'display: none;' : ''}">
+          <div id="target-form-wrapper" class="form-group" style="${opt.ruleType !== "skip_logic" ? "display: none;" : ""}">
             <label for="target-form-select" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.85rem;">Target Form (Optional)</label>
             <select id="target-form-select" class="target-form-selector" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
               <option value="">-- Select Target Form --</option>
@@ -274,7 +324,7 @@ export function createRuleEditorHTML(forms = [], fields = [], options = {}) {
             </select>
           </div>
 
-          <div id="query-message-wrapper" class="form-group" style="grid-column: span 2; ${opt.ruleType === 'skip_logic' ? 'display: none;' : ''}">
+          <div id="query-message-wrapper" class="form-group" style="grid-column: span 2; ${opt.ruleType === "skip_logic" ? "display: none;" : ""}">
             <label for="query-message-input" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.85rem;">Auto-Query Discrepancy Message</label>
             <input id="query-message-input" class="query-message-input" type="text" placeholder="e.g., Systolic BP is out of logical range" value="${opt.queryMessage}" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px;" />
           </div>
@@ -313,7 +363,10 @@ export function createRuleEditorHTML(forms = [], fields = [], options = {}) {
  * @param {string} [matchOperator='and'] - Match conditions group operator.
  * @returns {Object} The compiled Pydantic Condition Expression Tree.
  */
-export function serializeConditionsTree(conditions = [], matchOperator = "and") {
+export function serializeConditionsTree(
+  conditions = [],
+  matchOperator = "and"
+) {
   const operands = [];
   conditions.forEach((cond) => {
     if (!cond.fieldId) return;
@@ -338,7 +391,8 @@ export function serializeConditionsTree(conditions = [], matchOperator = "and") 
         let val = cond.rightValue;
         if (val === "true") val = true;
         else if (val === "false") val = false;
-        else if (!isNaN(parseFloat(val)) && isFinite(val)) val = parseFloat(val);
+        else if (!isNaN(parseFloat(val)) && isFinite(val))
+          val = parseFloat(val);
 
         rightNode = {
           type: "constant",
@@ -389,7 +443,7 @@ export function deserializeConditionsTree(tree) {
   }
 
   let matchOperator = "and";
-  let operands = [];
+  let operands;
 
   if (tree.type === "logical") {
     matchOperator = tree.operator || "and";
@@ -400,33 +454,37 @@ export function deserializeConditionsTree(tree) {
     operands = [tree];
   }
 
-  const conditions = operands.map((node) => {
-    if (node.type === "comparison") {
-      const left = node.operands[0];
-      const right = node.operands[1];
-      return {
-        formId: left?.field_ref?.form_id || "",
-        fieldId: left?.field_ref?.field_id || "",
-        operator: node.operator || "==",
-        rightType: right?.type === "field_ref" ? "field_ref" : "constant",
-        rightValue: right?.type === "constant" ? String(right.value) : "",
-        rightFieldId: right?.type === "field_ref" ? right.field_ref.field_id || "" : "",
-        rightFormId: right?.type === "field_ref" ? right.field_ref.form_id || "" : "",
-      };
-    } else if (node.type === "function") {
-      const left = node.operands[0];
-      return {
-        formId: left?.field_ref?.form_id || "",
-        fieldId: left?.field_ref?.field_id || "",
-        operator: node.operator || "is_empty",
-        rightType: "constant",
-        rightValue: "",
-        rightFieldId: "",
-        rightFormId: "",
-      };
-    }
-    return null;
-  }).filter(Boolean);
+  const conditions = operands
+    .map((node) => {
+      if (node.type === "comparison") {
+        const left = node.operands[0];
+        const right = node.operands[1];
+        return {
+          formId: left?.field_ref?.form_id || "",
+          fieldId: left?.field_ref?.field_id || "",
+          operator: node.operator || "==",
+          rightType: right?.type === "field_ref" ? "field_ref" : "constant",
+          rightValue: right?.type === "constant" ? String(right.value) : "",
+          rightFieldId:
+            right?.type === "field_ref" ? right.field_ref.field_id || "" : "",
+          rightFormId:
+            right?.type === "field_ref" ? right.field_ref.form_id || "" : "",
+        };
+      } else if (node.type === "function") {
+        const left = node.operands[0];
+        return {
+          formId: left?.field_ref?.form_id || "",
+          fieldId: left?.field_ref?.field_id || "",
+          operator: node.operator || "is_empty",
+          rightType: "constant",
+          rightValue: "",
+          rightFieldId: "",
+          rightFormId: "",
+        };
+      }
+      return null;
+    })
+    .filter(Boolean);
 
   return { conditions, matchOperator };
 }

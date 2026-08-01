@@ -88,17 +88,17 @@ import {
   createConditionRowHTML,
   createRuleEditorHTML,
   serializeConditionsTree,
-  deserializeConditionsTree
+  deserializeConditionsTree,
 } from "../index.js";
 
 describe("Rule Builder Widgets & Serialization Helpers", () => {
   const forms = [
     { id: "form_vs", name: "Vital Signs" },
-    { id: "form_dm", name: "Demographics" }
+    { id: "form_dm", name: "Demographics" },
   ];
   const fields = [
     { id: "vssbp", name: "Systolic BP", formId: "form_vs" },
-    { id: "sex", name: "Sex", formId: "form_dm" }
+    { id: "sex", name: "Sex", formId: "form_dm" },
   ];
 
   describe("createConditionRowHTML", () => {
@@ -106,7 +106,7 @@ describe("Rule Builder Widgets & Serialization Helpers", () => {
       const html = createConditionRowHTML(0, forms, fields);
       expect(html).toContain('class="condition-row-fieldset"');
       expect(html).toContain('data-index="0"');
-      expect(html).toContain('Condition Element #1');
+      expect(html).toContain("Condition Element #1");
       expect(html).toContain('class="cond-form"');
       expect(html).toContain('class="cond-field"');
       expect(html).toContain('class="cond-operator"');
@@ -119,7 +119,7 @@ describe("Rule Builder Widgets & Serialization Helpers", () => {
         fieldId: "vssbp",
         operator: ">",
         rightType: "constant",
-        rightValue: "140"
+        rightValue: "140",
       };
       const html = createConditionRowHTML(1, forms, fields, initial);
       expect(html).toContain('value="form_vs" selected');
@@ -134,7 +134,7 @@ describe("Rule Builder Widgets & Serialization Helpers", () => {
     it("generates correct HTML structure for a rule editor", () => {
       const html = createRuleEditorHTML(forms, fields, {
         ruleType: "skip_logic",
-        targetField: "vssbp"
+        targetField: "vssbp",
       });
       expect(html).toContain('class="rule-editor-container"');
       expect(html).toContain('id="rule-type-select"');
@@ -152,8 +152,8 @@ describe("Rule Builder Widgets & Serialization Helpers", () => {
           fieldId: "vssbp",
           operator: ">",
           rightType: "constant",
-          rightValue: "140"
-        }
+          rightValue: "140",
+        },
       ];
       const tree = serializeConditionsTree(conditions, "and");
       expect(tree.type).toBe("comparison");
@@ -171,15 +171,15 @@ describe("Rule Builder Widgets & Serialization Helpers", () => {
           fieldId: "vssbp",
           operator: ">",
           rightType: "constant",
-          rightValue: "140"
+          rightValue: "140",
         },
         {
           formId: "form_dm",
           fieldId: "sex",
           operator: "==",
           rightType: "constant",
-          rightValue: "F"
-        }
+          rightValue: "F",
+        },
       ];
       const tree = serializeConditionsTree(conditions, "or");
       expect(tree.type).toBe("logical");
@@ -196,11 +196,14 @@ describe("Rule Builder Widgets & Serialization Helpers", () => {
             type: "comparison",
             operator: ">=",
             operands: [
-              { type: "field_ref", field_ref: { field_id: "vssbp", form_id: "form_vs" } },
-              { type: "constant", value: 120 }
-            ]
-          }
-        ]
+              {
+                type: "field_ref",
+                field_ref: { field_id: "vssbp", form_id: "form_vs" },
+              },
+              { type: "constant", value: 120 },
+            ],
+          },
+        ],
       };
 
       const result = deserializeConditionsTree(originalTree);

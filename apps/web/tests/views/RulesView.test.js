@@ -35,15 +35,18 @@ describe("RulesView.vue Component Unit & Integration Tests", () => {
       const urlStr = String(url);
       const method = options?.method ? options.method.toUpperCase() : "GET";
 
-      if (urlStr.includes("/rules/preview") || urlStr.includes("/rules/validate")) {
+      if (
+        urlStr.includes("/rules/preview") ||
+        urlStr.includes("/rules/validate")
+      ) {
         return {
           ok: true,
           status: 200,
           json: async () => ({
             xpath: "(/clinical_data/form_dm/sex = 'F')",
             failures: [],
-            circular_cycles: []
-          })
+            circular_cycles: [],
+          }),
         };
       }
 
@@ -55,8 +58,8 @@ describe("RulesView.vue Component Unit & Integration Tests", () => {
             json: async () => ({
               id: "saved_rule_99",
               type: "constraint",
-              compiled_xpath: "(/clinical_data/vssbp > 140)"
-            })
+              compiled_xpath: "(/clinical_data/vssbp > 140)",
+            }),
           };
         }
         // GET returns list
@@ -73,20 +76,23 @@ describe("RulesView.vue Component Unit & Integration Tests", () => {
                 type: "comparison",
                 operator: ">",
                 operands: [
-                  { type: "field_ref", field_ref: { field_id: "sex", form_id: "form_dm" } },
-                  { type: "constant", value: "F" }
-                ]
+                  {
+                    type: "field_ref",
+                    field_ref: { field_id: "sex", form_id: "form_dm" },
+                  },
+                  { type: "constant", value: "F" },
+                ],
               },
-              compiled_xpath: "/clinical_data/form_dm/sex = 'F'"
-            }
-          ]
+              compiled_xpath: "/clinical_data/form_dm/sex = 'F'",
+            },
+          ],
         };
       }
 
       return {
         ok: true,
         status: 200,
-        json: async () => ({})
+        json: async () => ({}),
       };
     });
   });
@@ -105,7 +111,9 @@ describe("RulesView.vue Component Unit & Integration Tests", () => {
       },
     });
 
-    expect(wrapper.text()).toContain("21 CFR Part 11 Role Gating - Access Denied");
+    expect(wrapper.text()).toContain(
+      "21 CFR Part 11 Role Gating - Access Denied"
+    );
     expect(wrapper.find(".grid-2").exists()).toBe(false);
   });
 
@@ -154,8 +162,12 @@ describe("RulesView.vue Component Unit & Integration Tests", () => {
 
     // Confirm endpoints were called
     const calls = mockFetch.mock.calls;
-    const validateCall = calls.find(call => call[0].includes("/rules/validate"));
-    const previewCall = calls.find(call => call[0].includes("/rules/preview"));
+    const validateCall = calls.find((call) =>
+      call[0].includes("/rules/validate")
+    );
+    const previewCall = calls.find((call) =>
+      call[0].includes("/rules/preview")
+    );
 
     expect(validateCall).toBeDefined();
     expect(previewCall).toBeDefined();
@@ -191,7 +203,9 @@ describe("RulesView.vue Component Unit & Integration Tests", () => {
     await queryMsgInput.trigger("input");
 
     // Click save
-    const saveBtn = wrapper.findAll("button").find(btn => btn.text().includes("Save Signed Rule"));
+    const saveBtn = wrapper
+      .findAll("button")
+      .find((btn) => btn.text().includes("Save Signed Rule"));
     await saveBtn.trigger("click");
 
     // ReasonModal should show up
@@ -201,7 +215,9 @@ describe("RulesView.vue Component Unit & Integration Tests", () => {
     await wrapper.vm.confirmChangeReason("Correction of vital range");
 
     // Clinical store should log the block
-    const ruleSaveBlock = clinicalStore.ledgerBlocks.find(b => b.action === "RULE_SAVE");
+    const ruleSaveBlock = clinicalStore.ledgerBlocks.find(
+      (b) => b.action === "RULE_SAVE"
+    );
     expect(ruleSaveBlock).toBeDefined();
     expect(ruleSaveBlock.reason).toBe("Correction of vital range");
     expect(ruleSaveBlock.details.ruleId).toBe("saved_rule_99");
