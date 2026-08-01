@@ -9,23 +9,35 @@ from apps.designer.db import (
 from apps.designer.delta import (
     MOCK_LIBRARY_INSTANCES,
 )
-from apps.designer.library import LibraryStatus
 from apps.designer.main import app
 from tests.test_global_library_api import get_auth_headers
 
 
 @pytest.fixture(autouse=True)
 def clean_mock_stores():
-    """Clears MOCK_LIBRARY_OBJECTS and MOCK_LIBRARY_INSTANCES before/after each test."""
-    MOCK_LIBRARY_OBJECTS.clear()
-    MOCK_LIBRARY_INSTANCES.clear()
-    MOCK_STUDIES.clear()
-    MOCK_STUDY_VERSIONS.clear()
+    """Clears and restores mock store baselines to prevent test pollution."""
+    import copy
+
+    # Backup
+    orig_studies = copy.deepcopy(MOCK_STUDIES)
+    orig_versions = copy.deepcopy(MOCK_STUDY_VERSIONS)
+    orig_lib_objs = copy.deepcopy(MOCK_LIBRARY_OBJECTS)
+    orig_lib_insts = copy.deepcopy(MOCK_LIBRARY_INSTANCES)
+
     yield
-    MOCK_LIBRARY_OBJECTS.clear()
-    MOCK_LIBRARY_INSTANCES.clear()
+
+    # Restore
     MOCK_STUDIES.clear()
+    MOCK_STUDIES.update(orig_studies)
+
     MOCK_STUDY_VERSIONS.clear()
+    MOCK_STUDY_VERSIONS.update(orig_versions)
+
+    MOCK_LIBRARY_OBJECTS.clear()
+    MOCK_LIBRARY_OBJECTS.update(orig_lib_objs)
+
+    MOCK_LIBRARY_INSTANCES.clear()
+    MOCK_LIBRARY_INSTANCES.update(orig_lib_insts)
 
 
 @pytest.mark.asyncio

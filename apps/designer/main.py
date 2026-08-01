@@ -164,6 +164,7 @@ from packages.security.rbac import (
     has_permission,
     require_permission,
 )
+from packages.security.signing import generate_canonical_signature
 
 
 class TerminologyConcept(BaseModel):
@@ -3814,7 +3815,6 @@ async def transition_library_object_endpoint(
     # Generate canonical cryptographic signature for published objects
     if target_status == LibraryStatus.PUBLISHED:
         import os
-        from packages.security.signing import generate_canonical_signature
 
         signing_payload = {
             "id": id,
