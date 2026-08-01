@@ -257,15 +257,13 @@ async def process_translation(
                         # Validate and structurally normalize all incoming USDM study payloads
                         # before compiling any XML translations.
                         import copy
-                        import importlib
                         import json
 
-                        _usdm_ingestion = importlib.import_module(
-                            "apps.designer.usdm_ingestion"
-                        )
-                        normalize_usdm_payload = _usdm_ingestion.normalize_usdm_payload
-                        resolve_usdm_version = _usdm_ingestion.resolve_usdm_version
-                        validate_usdm_payload = _usdm_ingestion.validate_usdm_payload
+                        import usdm_ingestion
+
+                        normalize_usdm_payload = usdm_ingestion.normalize_usdm_payload
+                        resolve_usdm_version = usdm_ingestion.resolve_usdm_version
+                        validate_usdm_payload = usdm_ingestion.validate_usdm_payload
 
                         v_payload = copy.deepcopy(payload)
 
