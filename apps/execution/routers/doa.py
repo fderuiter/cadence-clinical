@@ -3,10 +3,9 @@
 Requirements: PRD-SYS-001
 """
 
-from datetime import UTC, datetime
 import hashlib
+from datetime import UTC, datetime
 
-import packages  # noqa: F401
 from execution.doa_models import (
     DOAAssignmentRecord,
     DOATaskDelegationEnum,
@@ -16,6 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
+import packages  # noqa: F401
 from apps.execution.database import db_manager
 from apps.execution.database.models import (
     DOAAuditLog,
@@ -91,6 +91,7 @@ class DOADelegationRecordResponse(BaseModel):
     end_date: datetime | None = None
     reason_for_change: str | None = None
     is_active: bool
+
 
 router = APIRouter(prefix="/api/v1/execution/doa", tags=["DOA"])
 
@@ -396,4 +397,3 @@ async def get_delegations_endpoint():
         stmt = select(DOADelegationRecord)
         res = await session.execute(stmt)
         return list(res.scalars().all())
->>>>>>> origin/main

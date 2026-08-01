@@ -3,6 +3,7 @@ import contextlib
 import importlib
 import json
 import logging
+import os
 import sys
 from typing import Any
 
@@ -21,18 +22,18 @@ from apps.notifications.services.email_renderer import (
     get_template_name_for_event,
     render_email_template,
 )
-import os
 
 _org_database = importlib.import_module("apps.org.database")
 org_db_manager = _org_database.db_manager
 
-from packages.security.gateway_client import create_service_auth_headers
+from packages.security.gateway_client import create_service_auth_headers  # noqa: E402
 
 ORG_URL = (os.getenv("ORG_URL") or "http://localhost:8010").rstrip("/")
 
 
 def _get_auth_headers() -> dict[str, str]:
     return create_service_auth_headers(user_id="notifications-service")
+
 
 _org_models = importlib.import_module("apps.org.models")
 Personnel = _org_models.Personnel

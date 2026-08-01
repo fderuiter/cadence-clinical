@@ -16,50 +16,16 @@ from apps.execution.database.models import (
     ClinicalCodingLedger,
     ClinicalQuery,
     CodingState,
-    RecodingState,
 )
 from apps.execution.database.models import (
     DictionaryType as DBDictionaryType,
 )
 from apps.execution.routers.coding_schemas import (
-    CodingAssignmentResponse,
     MedDRACodeLookupResponse,
     MedDRACodeMatch,
-    WHODrugATCContext,
-    WHODrugCodeLookupResponse,
-    WHODrugCodeMatch,
-    WHODrugIngredientItem,
 )
 
 logger = logging.getLogger(__name__)
-
-
-def map_assignment_to_response(a: ClinicalCodingAssignment) -> CodingAssignmentResponse:
-    """Maps a ClinicalCodingAssignment database model to its response schema."""
-    return CodingAssignmentResponse(
-        id=a.id,
-        verbatim_text=a.verbatim_text,
-        source_field=a.source_field,
-        observation_id=a.observation_id,
-        dictionary_type=a.dictionary_type.value
-        if hasattr(a.dictionary_type, "value")
-        else str(a.dictionary_type),
-        dictionary_version=a.dictionary_version,
-        coded_code=a.coded_code,
-        coded_term=a.coded_term,
-        status=a.status.value if hasattr(a.status, "value") else str(a.status),
-        recoding_status=a.recoding_status.value
-        if hasattr(a.recoding_status, "value")
-        else str(a.recoding_status),
-        assigned_by=a.assigned_by,
-        assigned_at=a.assigned_at,
-        score=a.score,
-        hierarchy=a.hierarchy,
-        suggestions=a.suggestions,
-        domain=a.domain,
-        version=a.version,
-        is_deleted=a.is_deleted,
-    )
 
 
 async def search_dictionary(
@@ -68,11 +34,8 @@ async def search_dictionary(
     dictionary_type: str,
     version: str,
     target_level: str | None = None,
-) -> MedDRACodeLookupResponse | WHODrugCodeLookupResponse:
-    """Delegates interactive terminology search or auto-complete lookup to match_verbatim_term.
-
-    Reshapes the returned dict into the MedDRACodeLookupResponse/WHODrugCodeLookupResponse structures.
-    """
+) -> dict:
+    """Delegates interactive terminology search or auto-complete lookup to match_verbatim_term."""
     if not term or not term.strip():
         raise HTTPException(
             status_code=400,
@@ -84,13 +47,19 @@ async def search_dictionary(
             detail="Version must be a non-empty string.",
         )
 
-    res = await match_verbatim_term(
-        session=session,
-        verbatim=term.strip(),
-        dictionary_type=dictionary_type.upper(),
-        version=version.strip(),
-        target_level=target_level,
-    )
+    try:
+        res = await match_verbatim_term(
+            session=session,
+            verbatim=term.strip(),
+            dictionary_type=dictionary_type.upper(),
+            version=version.strip(),
+            target_level=target_level,
+        )
+    except Exception as e:
+        logger.error(f"Error matching verbatim term '{term}': {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500, detail=f"Database or matcher error: {str(e)}"
+        )
 
     matches = []
     dict_type_upper = dictionary_type.upper()
@@ -179,61 +148,7 @@ async def search_dictionary(
             matches=matches,
         )
 
-    if dict_type_upper == "WHODRUG":
-        if res.get("match"):
-            m = res["match"]
-            matches.append(
-                WHODrugCodeMatch(
-                    drug_code=m.get("drug_code") or "",
-                    preferred_name=m.get("preferred_name") or "",
-                    drug_name=m.get("drug_name"),
-                    score=m.get("score", 0.0),
-                    atc_context=[
-                        WHODrugATCContext(
-                            atc_code=a.get("atc_code") or "",
-                            description=a.get("description") or "",
-                        )
-                        for a in m.get("atc_context", [])
-                    ],
-                    ingredients=[
-                        WHODrugIngredientItem(
-                            ingredient_code=i.get("ingredient_code") or "",
-                            ingredient_name=i.get("ingredient_name") or "",
-                        )
-                        for i in m.get("ingredients", [])
-                    ],
-                )
-            )
-        elif res.get("suggestions"):
-            for sug in res["suggestions"]:
-                matches.append(
-                    WHODrugCodeMatch(
-                        drug_code=sug.get("drug_code") or "",
-                        preferred_name=sug.get("preferred_name") or "",
-                        drug_name=sug.get("drug_name"),
-                        score=sug.get("score", 0.0),
-                        atc_context=[
-                            WHODrugATCContext(
-                                atc_code=a.get("atc_code") or "",
-                                description=a.get("description") or "",
-                            )
-                            for a in sug.get("atc_context", [])
-                        ],
-                        ingredients=[
-                            WHODrugIngredientItem(
-                                ingredient_code=i.get("ingredient_code") or "",
-                                ingredient_name=i.get("ingredient_name") or "",
-                            )
-                            for i in sug.get("ingredients", [])
-                        ],
-                    )
-                )
-        return WHODrugCodeLookupResponse(
-            status=res.get("status", "UNCODABLE"),
-            matches=matches,
-        )
-
-    raise ValueError(f"Unsupported dictionary type: {dictionary_type}")
+    return res
 
 
 async def list_coding_assignments(
@@ -259,8 +174,7 @@ async def list_coding_assignments(
         )
 
     res = await session.execute(stmt)
-    assignments = res.scalars().all()
-    return list(assignments)
+    return list(res.scalars().all())
 
 
 async def get_coding_assignment(
@@ -424,7 +338,6 @@ async def process_coding_action(
                 )
 
         status = CodingState.CODED
-        assignment.recoding_status = RecodingState.NONE
 
     elif action_upper == "OVERRIDE":
         # Override requires reason_for_change, code, and term
@@ -555,11 +468,15 @@ async def trigger_impact_analysis(
     dictionary_type: str,
     new_version: str,
     actor: str = "system",
-) -> dict[str, int]:
+) -> dict:
     """Manually triggers up-versioning impact analysis on existing coded assignments."""
-    return await run_impact_analysis(
-        session=session,
-        dictionary_type=dictionary_type,
-        new_version=new_version,
-        actor=actor,
-    )
+    try:
+        return await run_impact_analysis(
+            session=session,
+            dictionary_type=dictionary_type,
+            new_version=new_version,
+            actor=actor,
+        )
+    except ValueError as e:
+        logger.error(f"ValueError in up-versioning impact analysis: {e}", exc_info=True)
+        raise HTTPException(status_code=400, detail=str(e))
