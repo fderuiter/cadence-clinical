@@ -213,7 +213,6 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "etmf_edl": {"read", "create"},
         "etmf_taxonomy": {"read"},
         "etmf_audit_logs": {"read"},
-        "etmf_taxonomy": {"read"},
         # Quality
         "quality_event": {"create", "read", "update", "delete", "investigate"},
         "quality_audit_logs": {"read"},
@@ -445,7 +444,14 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "ctms_cra_allocation": {"read"},
         "ctms_cra_workload": {"read"},
         # eTMF
-        "etmf_document": {"tag", "create", "read", "redact", "sign", "transition_clinical_qc"},
+        "etmf_document": {
+            "tag",
+            "create",
+            "read",
+            "redact",
+            "sign",
+            "transition_clinical_qc",
+        },
         "etmf_edl": {"read", "create"},
         "etmf_taxonomy": {"read"},
         # Quality
@@ -477,7 +483,14 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "ctms_cra_allocation": {"read"},
         "ctms_cra_workload": {"read"},
         # eTMF
-        "etmf_document": {"tag", "create", "read", "redact", "sign", "transition_clinical_qc"},
+        "etmf_document": {
+            "tag",
+            "create",
+            "read",
+            "redact",
+            "sign",
+            "transition_clinical_qc",
+        },
         "etmf_edl": {"read", "create"},
         "etmf_taxonomy": {"read"},
         # Quality
@@ -517,7 +530,6 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "etmf_edl": {"read"},
         "etmf_taxonomy": {"read"},
         "etmf_audit_logs": {"read"},
-        "etmf_taxonomy": {"read"},
         # Quality read-only
         "quality_event": {"read"},
         "quality_audit_logs": {"read"},
@@ -529,7 +541,6 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "etmf_edl": {"read"},
         "etmf_taxonomy": {"read"},
         "etmf_audit_logs": {"read"},
-        "etmf_taxonomy": {"read"},
         "eisf_document": {"read"},
         "regulatory_form": {"read"},
         "training_log": {"read"},
@@ -681,7 +692,6 @@ ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
         "etmf_edl": {"read", "create"},
         "etmf_taxonomy": {"read"},
         "etmf_audit_logs": {"read"},
-        "etmf_taxonomy": {"read"},
         "quality_event": {"create", "read", "update", "delete", "investigate"},
         "quality_audit_logs": {"read"},
         "protocol_version": {"sign", "transition_approved"},

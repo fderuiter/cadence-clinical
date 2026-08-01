@@ -1498,15 +1498,15 @@ def test_etmf_taxonomy_and_tag_permissions() -> None:
     Requirements: PRD-SYS-RBAC-001
     """
     from packages.security.rbac import (
-        ROLE_SYSADMIN,
-        ROLE_SPONSOR_DM,
-        ROLE_INVESTIGATOR,
-        ROLE_CRC,
-        ROLE_CRA_CANONICAL,
         ROLE_AUDITOR_CANONICAL,
+        ROLE_CRA_CANONICAL,
+        ROLE_CRC,
         ROLE_EXTERNAL_MONITOR,
+        ROLE_INVESTIGATOR,
         ROLE_SPONSOR_DESIGNER,
+        ROLE_SPONSOR_DM,
         ROLE_SUBJECT,
+        ROLE_SYSADMIN,
         Principal,
         has_permission,
     )
@@ -1536,11 +1536,15 @@ def test_etmf_taxonomy_and_tag_permissions() -> None:
 
     for role in allowed_taxonomy_roles:
         p = Principal(user_id="test_user", roles=[role])
-        assert has_permission(p, "etmf_taxonomy:read") is True, f"Role '{role}' should have etmf_taxonomy:read"
+        assert has_permission(p, "etmf_taxonomy:read") is True, (
+            f"Role '{role}' should have etmf_taxonomy:read"
+        )
 
     for role in denied_taxonomy_roles:
         p = Principal(user_id="test_user", roles=[role])
-        assert has_permission(p, "etmf_taxonomy:read") is False, f"Role '{role}' should NOT have etmf_taxonomy:read"
+        assert has_permission(p, "etmf_taxonomy:read") is False, (
+            f"Role '{role}' should NOT have etmf_taxonomy:read"
+        )
 
     # 2. Test etmf_document:tag permission
     allowed_tag_roles = [
@@ -1562,8 +1566,12 @@ def test_etmf_taxonomy_and_tag_permissions() -> None:
 
     for role in allowed_tag_roles:
         p = Principal(user_id="test_user", roles=[role])
-        assert has_permission(p, "etmf_document:tag") is True, f"Role '{role}' should have etmf_document:tag"
+        assert has_permission(p, "etmf_document:tag") is True, (
+            f"Role '{role}' should have etmf_document:tag"
+        )
 
     for role in denied_tag_roles:
         p = Principal(user_id="test_user", roles=[role])
-        assert has_permission(p, "etmf_document:tag") is False, f"Role '{role}' should NOT have etmf_document:tag"
+        assert has_permission(p, "etmf_document:tag") is False, (
+            f"Role '{role}' should NOT have etmf_document:tag"
+        )
