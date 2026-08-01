@@ -56,11 +56,25 @@ repos:
         files: ^(docs/adr/|apps/gateway/|packages/security/|packages/ui/|apps/execution/database/|pyproject.toml$|package.json$|apps/execution/.*(models|migrations))
         pass_filenames: true
 
+      - id: validate-architecture-drift
+        name: Validate Architecture Drift
+        entry: python3 scripts/validate_architecture_drift.py
+        language: system
+        files: ^(docker/docker-compose\.yml|ARCHITECTURE\.md|docs/SDLC/02_Technical_Design_Document_TDD\.md)$
+        pass_filenames: false
+
       - id: validate-markdown
         name: Validate Custom Markdown
         entry: python3 scripts/validate_markdown.py
         language: system
         files: \.md$
+
+      - id: validate-imports
+        name: Cross-Service Import Validator
+        entry: python3 scripts/validate_imports.py
+        language: system
+        files: ^(apps/|packages/|scripts/validate_imports\.py)
+        pass_filenames: false
 
       - id: deid-compliance-scan
         name: DEID Compliance Scan

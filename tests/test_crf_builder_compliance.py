@@ -323,25 +323,44 @@ async def test_failure_recovery_high_availability():
 async def test_in_memory_accessibility_auditing():
     # @req:PRD-CRF-015
     # @req:Trace-31
-    # Verifies automated in-memory WCAG 2.1 accessibility scan of contrast ratios/labels
-    elements = [
-        {"tag": "input", "aria-label": "Patient Age", "contrast_ratio": 4.5},
-        {
-            "tag": "button",
-            "aria-label": "",
-            "contrast_ratio": 2.1,
-        },  # fails on labels & contrast
-    ]
+    # Verifies automated HTML-based WCAG 2.1 accessibility scan of contrast ratios/labels
+    from apps.execution.services.layout_validator import (
+        run_layout_and_accessibility_checks,
+    )
 
-    def scan_wcag_2_1(nodes):
-        violations = []
-        for n in nodes:
-            if not n["aria-label"]:
-                violations.append(f"Missing label for {n['tag']}")
-            if n["contrast_ratio"] < 4.5:
-                violations.append(f"Low contrast for {n['tag']}")
-        return violations
+    html_content = """
+    <html>
+      <head>
+        <title>Test Form</title>
+        <style>
+          #my-button {
+            background-color: #eee;
+            color: #eed; /* extremely low contrast on light gray background */
+            width: 100px;
+            height: 50px;
+          }
+        </style>
+      </head>
+      <body>
+        <!-- valid input with label/aria-label -->
+        <input type="text" id="age" aria-label="Patient Age" style="width: 150px; height: 30px;" />
+        
+        <!-- invalid button (no discernible name/label AND low contrast) -->
+        <button id="my-button">Click Me</button>
+      </body>
+    </html>
+    """
 
-    violations = scan_wcag_2_1(elements)
-    assert len(violations) == 2
-    assert "Missing label" in violations[0]
+    (
+        violations,
+        passes,
+        incomplete,
+        inapplicable,
+        layout_errors,
+    ) = await run_layout_and_accessibility_checks(html_content)
+
+    # Verify that accessibility violations are detected on the rendered active DOM
+    assert len(violations) > 0
+    violation_ids = {v["id"] for v in violations}
+    # Color contrast should be violated
+    assert "color-contrast" in violation_ids

@@ -517,8 +517,10 @@ async def test_convert_lab_unit_db_and_fallback():
 def test_evaluate_lab_value_all_indicators():
     """Verify that evaluate_lab_value returns the expected lab_indicator values
     (NORMAL, LOW, HIGH, LOW LOW, HIGH HIGH, None) and lab_out_of_range boolean.
+
+    Requirements: PRD-SYS-001 (Step 1 — Test the alert engine - Task 1 unit test)
     """
-    # Create reference range with normal limits [10.0, 20.0] and critical limits [5.0, 25.0]
+    # Active validation check: Create reference range with normal limits [10.0, 20.0] and critical limits [5.0, 25.0]
     r_range = create_mock_range(
         low_bound=10.0,
         high_bound=20.0,
@@ -569,3 +571,61 @@ def test_evaluate_lab_value_all_indicators():
         ind, out_of_range, _ = evaluate_lab_value(v, r_range)
         assert ind == "HIGH HIGH"
         assert out_of_range is True
+
+
+@pytest.mark.asyncio
+async def test_lab_reference_range_synonyms_and_audit():
+    """Verify synonym columns map to physical columns without affecting audit-field behavior.
+    """
+    from apps.execution.database.core import db_manager
+    from apps.execution.database.models import Base, LabReferenceRange
+    from sqlalchemy import select
+
+    db_manager.init_db("sqlite+aiosqlite:///:memory:", echo=False)
+    try:
+        async with db_manager.engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
+        session_maker = db_manager.get_session_maker()
+        async with session_maker() as session:
+            # Create range using synonyms
+            lab_range = LabReferenceRange(
+                study_id="STUDY-SYN",
+                test_code="WBC",
+                test_name="White Blood Cells",
+                source="LOCAL",  # synonym for lab_source
+                sex_applicability="ALL",  # synonym for sex
+                low_bound=4.0,  # synonym for range_low
+                high_bound=11.0,  # synonym for range_high
+                created_by="synonym_test",
+                reason_for_change="Testing synonym mapping",
+                version_index=1,
+            )
+            session.add(lab_range)
+            await session.commit()
+
+        # Re-open and assert
+        async with session_maker() as session:
+            result = await session.execute(
+                select(LabReferenceRange).where(LabReferenceRange.study_id == "STUDY-SYN")
+            )
+            saved = result.scalar_one()
+
+            # Assert they map to physical columns
+            assert saved.lab_source == "LOCAL"
+            assert saved.source == "LOCAL"
+            assert saved.sex == "ALL"
+            assert saved.sex_applicability == "ALL"
+            assert saved.range_low == 4.0
+            assert saved.low_bound == 4.0
+            assert saved.range_high == 11.0
+            assert saved.high_bound == 11.0
+
+            # Assert audit fields persist
+            assert saved.created_at is not None
+            assert saved.created_by == "synonym_test"
+            assert saved.reason_for_change == "Testing synonym mapping"
+            assert saved.version_index == 1
+
+    finally:
+        await db_manager.close()

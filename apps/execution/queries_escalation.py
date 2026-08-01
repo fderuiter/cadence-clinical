@@ -132,6 +132,11 @@ async def start_background_query_escalation(
 ) -> None:
     """Start the asynchronous background query escalation polling loop."""
     global _escalation_task, _should_run
+    if _escalation_task and not _escalation_task.done():
+        _escalation_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await _escalation_task
+
     if interval is None:
         interval = float(os.getenv("QUERY_ESCALATION_INTERVAL_SECONDS", "86400.0"))
     _should_run = True
@@ -163,6 +168,7 @@ async def stop_background_query_escalation() -> None:
     global _escalation_task, _should_run
     _should_run = False
     if _escalation_task:
+        _escalation_task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await _escalation_task
         _escalation_task = None

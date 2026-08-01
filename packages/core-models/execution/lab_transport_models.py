@@ -5,9 +5,10 @@ Requirements: PRD-SYS-001
 
 from datetime import datetime
 
+from execution.lab_models import (
+    LabSourceEnum,
+)
 from pydantic import BaseModel, Field
-
-from .lab_models import LabSource, SexApplicability
 
 
 class LabReferenceRangeCreate(BaseModel):
@@ -23,7 +24,7 @@ class LabReferenceRangeCreate(BaseModel):
         ..., description="Standardized laboratory test code, e.g. 'WBC'"
     )
     test_name: str = Field(..., description="Descriptive name of the test parameter")
-    lab_source: LabSource = Field(
+    source: LabSourceEnum = Field(
         ..., description="Source type of the range, either 'CENTRAL' or 'LOCAL'"
     )
     site_id: str | None = Field(
@@ -33,7 +34,7 @@ class LabReferenceRangeCreate(BaseModel):
     normalized_unit: str = Field(
         ..., description="Standardized target unit of measurement"
     )
-    sex: SexApplicability = Field(
+    sex_applicability: str = Field(
         ..., description="Sex applicability of the reference range"
     )
     age_low: float | None = Field(
@@ -42,10 +43,10 @@ class LabReferenceRangeCreate(BaseModel):
     age_high: float | None = Field(
         None, description="Nullable upper bound of age applicability"
     )
-    range_low: float | None = Field(
+    low_bound: float | None = Field(
         None, description="Nullable lower limit of normal range"
     )
-    range_high: float | None = Field(
+    high_bound: float | None = Field(
         None, description="Nullable upper limit of normal range"
     )
     critical_low: float | None = Field(
@@ -65,10 +66,12 @@ class LabReferenceRangeUpdate(BaseModel):
     Requirements: PRD-SYS-001
     """
 
+    study_id: str | None = Field(None, description="Unique protocol study identifier")
+    test_code: str | None = Field(None, description="Standardized laboratory test code")
     test_name: str | None = Field(
         None, description="Updated descriptive name of the test"
     )
-    lab_source: LabSource | None = Field(
+    source: LabSourceEnum | None = Field(
         None, description="Updated source type of the range"
     )
     site_id: str | None = Field(
@@ -78,17 +81,17 @@ class LabReferenceRangeUpdate(BaseModel):
     normalized_unit: str | None = Field(
         None, description="Updated standardized unit of measurement"
     )
-    sex: SexApplicability | None = Field(None, description="Updated sex applicability")
+    sex_applicability: str | None = Field(None, description="Updated sex applicability")
     age_low: float | None = Field(
         None, description="Updated lower bound of age applicability"
     )
     age_high: float | None = Field(
         None, description="Updated upper bound of age applicability"
     )
-    range_low: float | None = Field(
+    low_bound: float | None = Field(
         None, description="Updated lower limit of normal range"
     )
-    range_high: float | None = Field(
+    high_bound: float | None = Field(
         None, description="Updated upper limit of normal range"
     )
     critical_low: float | None = Field(
@@ -112,29 +115,19 @@ class LabReferenceRangeResponse(BaseModel):
     study_id: str = Field(..., description="Unique trial study identifier")
     test_code: str = Field(..., description="Standardized lab test code")
     test_name: str = Field(..., description="Descriptive test name")
-    lab_source: LabSource = Field(..., description="Source type of the range")
+    source: LabSourceEnum = Field(..., description="Source type of the range")
     site_id: str | None = Field(
         None, description="Optional investigator site identifier"
     )
     unit: str = Field(..., description="Original unit of measurement")
     normalized_unit: str = Field(..., description="Standardized unit")
-    sex: SexApplicability = Field(..., description="Sex applicability")
+    sex_applicability: str = Field(..., description="Sex applicability")
     age_low: float | None = Field(None, description="Lower age applicability limit")
     age_high: float | None = Field(None, description="Upper age applicability limit")
-    range_low: float | None = Field(None, description="Lower normal limit")
-    range_high: float | None = Field(None, description="Upper normal limit")
+    low_bound: float | None = Field(None, description="Lower normal limit")
+    high_bound: float | None = Field(None, description="Upper normal limit")
     critical_low: float | None = Field(None, description="Lower critical bound")
     critical_high: float | None = Field(None, description="Upper critical bound")
-    created_at: datetime | None = Field(
-        None, description="Chronological creation timestamp"
-    )
-    created_by: str | None = Field(
-        None, description="Identifier of the user who created this range"
-    )
-    reason_for_change: str | None = Field(
-        None, description="GxP Part 11 justification description"
-    )
-    version_index: int = Field(..., description="Sequence row version identifier")
     version: int = Field(
         ..., description="Optimistic locking entity version identifier"
     )
